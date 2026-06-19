@@ -952,6 +952,7 @@ com.openggf.game.sonic3k.objects.CnzHoverFanInstance#finalScalar#xWindowMax
 com.openggf.game.sonic3k.objects.CnzHoverFanInstance#finalScalar#xWindowMin
 com.openggf.game.sonic3k.objects.CnzHoverFanInstance#recreate
 com.openggf.game.sonic3k.objects.CnzLightBulbInstance#recreate
+com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance#objectRef#boss
 com.openggf.game.sonic3k.objects.CnzMinibossDebrisChild#finalScalar#gravity
 com.openggf.game.sonic3k.objects.CnzMinibossDebrisChild#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.CnzMinibossInstance#recreate

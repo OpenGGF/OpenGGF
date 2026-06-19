@@ -99,7 +99,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     Sonic3kInvincibilityStarsObjectInstance.class,
                     com.openggf.level.objects.InvincibilityStarsObjectInstance.class),
             cnzMinibossChildCodec(CnzMinibossTopInstance.class, CnzMinibossTopInstance::new),
-            cnzMinibossChildCodec(CnzMinibossCoilInstance.class, CnzMinibossCoilInstance::new),
+            // CnzMinibossCoilInstance codec deleted (Phase-2 batch 46):
+            // compact restore resolves the parent object reference after generic recreate.
             cnzMinibossChildCodec(CnzMinibossSparkInstance.class, CnzMinibossSparkInstance::new),
             // CnzMinibossScrollControlInstance codec deleted (Phase-2 batch 2):
             // now implements RewindRecreatable -> genericRecreate Path 1.

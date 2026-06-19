@@ -18,6 +18,9 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.ConveyorObjectInstance;
 import com.openggf.game.sonic2.objects.PointsObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
+import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
@@ -444,6 +447,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> BATCH45_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(MhzEndBossRobotnikShipFlameInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> BATCH46_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(CnzMinibossCoilInstance.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -2989,6 +2995,172 @@ public class TestScalarOnlyCodecDeletion {
                         + result);
     }
 
+    // =====================================================================
+    // Batch 46: S3K CNZ miniboss coil, parent ref restored by identity
+    // =====================================================================
+
+    @Test
+    void batch46ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH46_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 46)");
+        }
+    }
+
+    @Test
+    void batch46ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH46_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-46 deletion; "
+                            + "session restore must use genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch46ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH46_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x3220, 0x280, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void cnzMinibossCoilGenericRecreateRestoresParentByIdentity() {
+        ObjectSpawn parentSpawn =
+                new ObjectSpawn(160, 240, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 46);
+        CnzMinibossInstance sourceParent = new CnzMinibossInstance(parentSpawn);
+        ObjectSpawn coilSpawn = new ObjectSpawn(152, 260, 0, 0, 0, false, 47);
+        CnzMinibossCoilInstance source = new CnzMinibossCoilInstance(coilSpawn);
+        source.attachBossForTest(sourceParent);
+
+        RewindCaptureContext missingCaptureContext =
+                RewindCaptureContext.withIdentityTable(new RewindIdentityTable());
+        assertThrows(IllegalStateException.class,
+                () -> source.captureRewindState(missingCaptureContext),
+                "non-null CNZ miniboss parent must be registered before object-ref capture");
+
+        ObjectRefId parentId = ObjectRefId.dynamic(4, 1, 46);
+        RewindIdentityTable captureTable = new RewindIdentityTable();
+        captureTable.registerObject(sourceParent, parentId);
+        RewindCaptureContext captureContext = RewindCaptureContext.withIdentityTable(captureTable);
+        PerObjectRewindSnapshot state = source.captureRewindState(captureContext);
+
+        ObjectInstance unresolved = invokeGenericRecreateWithState(
+                CnzMinibossCoilInstance.class.getName(), coilSpawn, state, GameId.S3K);
+        RewindCaptureContext missingParentContext =
+                RewindCaptureContext.withIdentityTable(new RewindIdentityTable());
+        assertThrows(IllegalStateException.class,
+                () -> ((AbstractObjectInstance) unresolved).restoreRewindState(state, missingParentContext),
+                "non-null CNZ miniboss parent must use required object-ref resolve during compact restore");
+
+        ObjectInstance recreated = invokeGenericRecreateWithState(
+                CnzMinibossCoilInstance.class.getName(), coilSpawn, state, GameId.S3K);
+        CnzMinibossInstance restoredParent = new CnzMinibossInstance(parentSpawn);
+        RewindIdentityTable restoreTable = new RewindIdentityTable();
+        restoreTable.registerObject(restoredParent, parentId);
+        RewindCaptureContext restoreContext = RewindCaptureContext.withIdentityTable(restoreTable);
+        assertNotNull(recreated, "genericRecreate must return a CNZ miniboss coil child");
+        assertEquals(CnzMinibossCoilInstance.class, recreated.getClass(),
+                "genericRecreate must return the same concrete coil class before restore");
+        ((AbstractObjectInstance) recreated).restoreRewindState(state, restoreContext);
+
+        assertSame(restoredParent, readObjectField(recreated, "boss"),
+                "compact restore must resolve the CNZ miniboss parent through the restore identity table");
+        assertEquals(readIntField(source, "parentOffsetX"), readIntField(recreated, "parentOffsetX"),
+                "standard scalar restore must reapply the captured parent X offset");
+        assertEquals(readIntField(source, "parentOffsetY"), readIntField(recreated, "parentOffsetY"),
+                "standard scalar restore must reapply the captured parent Y offset");
+    }
+
+    @Test
+    void cnzMinibossCoilRestoresThroughObjectManagerIdentityPath() {
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        StubObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+        };
+        ObjectSpawn parentSpawn =
+                new ObjectSpawn(160, 240, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 46);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(parentSpawn),
+                cnzMinibossParentTestRegistry(),
+                0,
+                null,
+                null,
+                GraphicsManager.getInstance(),
+                camera,
+                services);
+        holder[0] = objectManager;
+        objectManager.reset(0);
+
+        CnzMinibossInstance sourceParent = singleLiveObject(objectManager, CnzMinibossInstance.class);
+        ObjectSpawn coilSpawn = new ObjectSpawn(152, 260, 0, 0, 0, false, 47);
+        CnzMinibossCoilInstance sourceCoil = objectManager.createDynamicObject(
+                () -> new CnzMinibossCoilInstance(coilSpawn));
+        sourceCoil.attachBossForTest(sourceParent);
+        assertEquals(1, liveObjects(objectManager, CnzMinibossInstance.class).size(),
+                "precondition: exactly one captured CNZ miniboss parent is live before snapshot");
+        assertEquals(1, liveObjects(objectManager, CnzMinibossCoilInstance.class).size(),
+                "precondition: exactly one captured coil child is live before snapshot");
+
+        RewindIdentityTable captureTable = objectManager.captureIdentityContext().requireIdentityTable();
+        ObjectRefId capturedParentId = captureTable.idFor(sourceParent);
+        ObjectRefId capturedCoilId = captureTable.idFor(sourceCoil);
+        assertNotNull(capturedParentId, "ObjectManager capture identity table must register the CNZ miniboss");
+        assertNotNull(capturedCoilId, "ObjectManager capture identity table must register the coil child");
+
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = registry.capture();
+
+        objectManager.removeDynamicObject(sourceCoil);
+        objectManager.createDynamicObject(() -> new CnzMinibossCoilInstance(
+                new ObjectSpawn(180, 268, 0, 0, 0, false, 48)));
+        assertEquals(1, liveObjects(objectManager, CnzMinibossCoilInstance.class).size(),
+                "diverge step should leave one unrelated live coil before restore");
+
+        registry.restore(snapshot);
+
+        CnzMinibossInstance restoredParent = singleLiveObject(objectManager, CnzMinibossInstance.class);
+        CnzMinibossCoilInstance restoredCoil =
+                singleLiveObject(objectManager, CnzMinibossCoilInstance.class);
+        assertFalse(restoredCoil == sourceCoil,
+                "restore should not retain the removed captured coil instance");
+
+        RewindIdentityTable restoredTable = objectManager.captureIdentityContext().requireIdentityTable();
+        assertEquals(capturedParentId, restoredTable.idFor(restoredParent),
+                "restored CNZ miniboss parent must retain the captured ObjectManager rewind identity");
+        assertEquals(capturedCoilId, restoredTable.idFor(restoredCoil),
+                "restored coil child must retain the captured ObjectManager rewind identity");
+        assertSame(restoredParent, readObjectField(restoredCoil, "boss"),
+                "restored coil parent must resolve through ObjectManager's restore identity table");
+        assertEquals(readIntField(sourceCoil, "parentOffsetX"), readIntField(restoredCoil, "parentOffsetX"),
+                "ObjectManager restore must reapply the captured parent X offset");
+        assertEquals(readIntField(sourceCoil, "parentOffsetY"), readIntField(restoredCoil, "parentOffsetY"),
+                "ObjectManager restore must reapply the captured parent Y offset");
+    }
+
+    @Test
+    void batch46ClassRoundTripPassedThroughHarnessParentSeedPath() {
+        CodecDeletionCandidate candidate = BATCH46_DELETED_CODECS.getFirst();
+        RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+        assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                candidate.fqn()
+                        + " must round-trip as Passed through the harness parent-seed path; got: "
+                        + result);
+    }
+
     /**
      * Returns true if the given FQN has a registered dynamic rewind codec in the
      * shared codecs or in any of the three per-game registries. Distinct from
@@ -3058,6 +3230,49 @@ public class TestScalarOnlyCodecDeletion {
                 new ObjectManagerSnapshot.DynamicObjectEntry(fqn, spawn, 0, state);
         DynamicObjectRecreateContext ctx = new DynamicObjectRecreateContext(om);
         return ObjectRewindDynamicCodecs.genericRecreate(entry, ctx);
+    }
+
+    private static ObjectRegistry cnzMinibossParentTestRegistry() {
+        Sonic3kObjectRegistry delegate = new Sonic3kObjectRegistry();
+        return new ObjectRegistry() {
+            @Override
+            public ObjectInstance create(ObjectSpawn spawn) {
+                if (spawn.objectId() == Sonic3kObjectIds.CNZ_MINIBOSS) {
+                    return new CnzMinibossInstance(spawn);
+                }
+                return delegate.create(spawn);
+            }
+
+            @Override
+            public void reportCoverage(List<ObjectSpawn> spawns) {
+                delegate.reportCoverage(spawns);
+            }
+
+            @Override
+            public String getPrimaryName(int objectId) {
+                return delegate.getPrimaryName(objectId);
+            }
+
+            @Override
+            public com.openggf.level.objects.ObjectSlotLayout objectSlotLayout() {
+                return delegate.objectSlotLayout();
+            }
+
+            @Override
+            public com.openggf.level.objects.ObjectWindowingStrategy objectWindowingStrategy() {
+                return delegate.objectWindowingStrategy();
+            }
+
+            @Override
+            public List<com.openggf.level.objects.DynamicObjectRewindCodec> dynamicRewindCodecs() {
+                return delegate.dynamicRewindCodecs();
+            }
+
+            @Override
+            public List<String> getAliases(int objectId) {
+                return delegate.getAliases(objectId);
+            }
+        };
     }
 
     private static int readIntRecordComponent(Object record, String componentName) {

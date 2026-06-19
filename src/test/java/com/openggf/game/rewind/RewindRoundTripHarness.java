@@ -7,6 +7,8 @@ import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
@@ -622,6 +624,53 @@ public final class RewindRoundTripHarness {
         };
     }
 
+    private static ObjectRegistry registryForSeededParent(GameId gameId, String parentFqn) {
+        if (gameId == GameId.S3K
+                && "com.openggf.game.sonic3k.objects.CnzMinibossInstance".equals(parentFqn)) {
+            Sonic3kObjectRegistry delegate = new Sonic3kObjectRegistry();
+            return new ObjectRegistry() {
+                @Override
+                public ObjectInstance create(ObjectSpawn spawn) {
+                    if (spawn.objectId() == Sonic3kObjectIds.CNZ_MINIBOSS) {
+                        return new CnzMinibossInstance(spawn);
+                    }
+                    return delegate.create(spawn);
+                }
+
+                @Override
+                public void reportCoverage(List<ObjectSpawn> spawns) {
+                    delegate.reportCoverage(spawns);
+                }
+
+                @Override
+                public String getPrimaryName(int objectId) {
+                    return delegate.getPrimaryName(objectId);
+                }
+
+                @Override
+                public com.openggf.level.objects.ObjectSlotLayout objectSlotLayout() {
+                    return delegate.objectSlotLayout();
+                }
+
+                @Override
+                public com.openggf.level.objects.ObjectWindowingStrategy objectWindowingStrategy() {
+                    return delegate.objectWindowingStrategy();
+                }
+
+                @Override
+                public List<DynamicObjectRewindCodec> dynamicRewindCodecs() {
+                    return delegate.dynamicRewindCodecs();
+                }
+
+                @Override
+                public List<String> getAliases(int objectId) {
+                    return delegate.getAliases(objectId);
+                }
+            };
+        }
+        return registryFor(gameId);
+    }
+
     private static GameId inferGameIdFromFqn(String fqn) {
         if (fqn.startsWith("com.openggf.game.sonic1.")) return GameId.S1;
         if (fqn.startsWith("com.openggf.game.sonic2.")) return GameId.S2;
@@ -927,7 +976,7 @@ public final class RewindRoundTripHarness {
             @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
             @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
         };
-        ObjectRegistry registry = registryFor(gameId);
+        ObjectRegistry registry = registryForSeededParent(gameId, parentFqn);
 
         // The parent's objectId is looked up from PARENT_SPAWN_OBJECT_IDS so the registry
         // creates it via its normal factory. Fall back to dynamic (no-codec) add if not found.
