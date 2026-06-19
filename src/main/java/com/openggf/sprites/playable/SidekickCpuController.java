@@ -1645,7 +1645,7 @@ public class SidekickCpuController {
             return;
         }
 
-        AbstractPlayableSprite effectiveLeader = getEffectiveLeader();
+        AbstractPlayableSprite effectiveLeader = resolveApproachLeader();
         if (effectiveLeader == null) {
             return;
         }
@@ -1696,6 +1696,22 @@ public class SidekickCpuController {
             current = ctrl.getLeader();
         }
         return root;
+    }
+
+    private AbstractPlayableSprite resolveActiveFollowLeader() {
+        if (sidekickCount > 1 && leader != null && leader.isCpuControlled()) {
+            SidekickCpuController leaderController = leader.getCpuController();
+            if (leaderController == null || leaderController.state == State.NORMAL) {
+                return leader;
+            }
+        }
+        return getEffectiveLeader();
+    }
+
+    private AbstractPlayableSprite resolveApproachLeader() {
+        return respawnStrategy.requiresPhysics()
+                ? getEffectiveLeader()
+                : resolveActiveFollowLeader();
     }
 
     private boolean crossedOrReachedMainLeaderDuringApproach(int previousCentreX, AbstractPlayableSprite mainLeader) {
@@ -1884,7 +1900,7 @@ public class SidekickCpuController {
             normalFrameCount = 0;
         }
 
-        AbstractPlayableSprite effectiveLeader = getEffectiveLeader();
+        AbstractPlayableSprite effectiveLeader = resolveActiveFollowLeader();
         if (effectiveLeader == null) {
             updateNormalPushingGrace(currentPushing);
             finishNormalStepDiagnostics(diagnostics, "no_effective_leader", -1, -1,

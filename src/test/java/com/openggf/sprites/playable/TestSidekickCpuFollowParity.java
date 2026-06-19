@@ -383,6 +383,101 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s2NormalFollowUsesDirectCpuLeaderBeforeSettledThreshold() {
+        TestableSprite rootSonic = new TestableSprite("sonic");
+        rootSonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        rootSonic.setCentreX((short) 100);
+        rootSonic.setCentreY((short) 655);
+
+        TestableSprite sonicLeader = new TestableSprite("sonic_p3");
+        sonicLeader.setCpuControlled(true);
+        sonicLeader.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonicLeader.setCentreX((short) 180);
+        sonicLeader.setCentreY((short) 655);
+        SidekickCpuController sonicController = new SidekickCpuController(sonicLeader, rootSonic);
+        sonicController.setSidekickCount(2);
+        sonicController.forceStateForTest(SidekickCpuController.State.NORMAL, 0);
+
+        TestableSprite tails = new TestableSprite("tails_p4");
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setCentreX((short) 100);
+        tails.setCentreY((short) 655);
+        tails.setAir(false);
+        tails.setDirection(Direction.RIGHT);
+
+        short[] rootXHistory = new short[64];
+        short[] rootYHistory = new short[64];
+        short[] leaderXHistory = new short[64];
+        short[] leaderYHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(rootXHistory, (short) 100);
+        Arrays.fill(rootYHistory, (short) 655);
+        Arrays.fill(leaderXHistory, (short) 180);
+        Arrays.fill(leaderYHistory, (short) 655);
+        rootSonic.hydrateRecordedHistory(rootXHistory, rootYHistory, inputHistory, statusHistory, 16);
+        sonicLeader.hydrateRecordedHistory(leaderXHistory, leaderYHistory, inputHistory, statusHistory, 16);
+
+        SidekickCpuController tailsController = new SidekickCpuController(tails, sonicLeader);
+        tailsController.setSidekickCount(2);
+        tailsController.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        tailsController.update(1);
+
+        assertTrue(tailsController.getInputRight(),
+                "A direct CPU leader that has already reached NORMAL should be the follow target immediately; "
+                        + "the 15-frame settled gate is only for healing broken chains");
+    }
+
+    @Test
+    void s2TailsFlyInUsesDirectCpuLeaderBeforeSettledThreshold() {
+        TestableSprite rootSonic = new TestableSprite("sonic");
+        rootSonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        rootSonic.setCentreX((short) 100);
+        rootSonic.setCentreY((short) 655);
+
+        TestableSprite sonicLeader = new TestableSprite("sonic_p3");
+        sonicLeader.setCpuControlled(true);
+        sonicLeader.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonicLeader.setCentreX((short) 180);
+        sonicLeader.setCentreY((short) 655);
+        SidekickCpuController sonicController = new SidekickCpuController(sonicLeader, rootSonic);
+        sonicController.setSidekickCount(2);
+        sonicController.forceStateForTest(SidekickCpuController.State.NORMAL, 0);
+
+        short[] rootXHistory = new short[64];
+        short[] rootYHistory = new short[64];
+        short[] leaderXHistory = new short[64];
+        short[] leaderYHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(rootXHistory, (short) 100);
+        Arrays.fill(rootYHistory, (short) 655);
+        Arrays.fill(leaderXHistory, (short) 180);
+        Arrays.fill(leaderYHistory, (short) 655);
+        rootSonic.hydrateRecordedHistory(rootXHistory, rootYHistory, inputHistory, statusHistory, 16);
+        sonicLeader.hydrateRecordedHistory(leaderXHistory, leaderYHistory, inputHistory, statusHistory, 16);
+
+        TestableSprite tails = new TestableSprite("tails_p4");
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setCentreX((short) 100);
+        tails.setCentreY((short) 655);
+        tails.setAir(true);
+
+        SidekickCpuController tailsController = new SidekickCpuController(tails, sonicLeader);
+        tailsController.setSidekickCount(2);
+        tailsController.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
+
+        tailsController.update(1);
+
+        assertTrue(tails.getCentreX() > 100,
+                "Tails fly-in should continue targeting its direct CPU leader once that leader is NORMAL, "
+                        + "even before the chain-settled threshold elapses");
+    }
+
+    @Test
     void groundedFollowNudgeClearsQueuedLateContactBridge() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
