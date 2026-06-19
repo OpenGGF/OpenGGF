@@ -435,20 +435,17 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                             s.x(), s.y())),
             // HCZ water-drop cosmetic child codec deleted in Phase-2 batch 3:
             // self-contained private nested class now uses genericRecreate Path 1.
-            // Blastoid in-flight projectile (self-contained, private nested).
-            blastoidProjectileCodec(),
+            // Blastoid/SnaleBlaster/Spiker in-flight projectile codecs deleted in
+            // Phase-2 batch 19: self-contained private nested classes now use
+            // genericRecreate Path 1.
             // Corkey laser shot (relink to nearest live nozzle for the script).
             corkeyShotCodec(),
             // Dragonfly swinging body segment (relink to live parent / prior sibling).
             dragonflyLinkedBodyChildCodec(),
             // Ribot leg/swing appendage (relink to nearest live Ribot body).
             ribotActiveChildCodec(),
-            // SnaleBlaster fired projectile (self-contained, private nested).
-            snaleBlasterProjectileCodec(),
             // Spiker spring-loaded top spike (relink to nearest live Spiker).
             spikerTopSpikeCodec(),
-            // Spiker fired spike projectile (relink to nearest live Spiker).
-            spikerSpikeProjectileCodec(),
             // Star Pointer orbiting/launched point (relink to nearest live parent).
             starPointerPointCodec(),
             // Orbinaut orbiting orb (relink to nearest live parent).
@@ -950,12 +947,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     // Batch-inner1: inner-class hazard/solid/cosmetic child rewind codecs
     // ===================================================================
 
-    private static final String BLASTOID_PROJECTILE_CLASS =
-            "com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance$BlastoidProjectile";
-    private static final String SNALE_BLASTER_PROJECTILE_CLASS =
-            "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterProjectile";
-    private static final String SPIKER_SPIKE_PROJECTILE_CLASS =
-            "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSpikeProjectile";
     private static final String SPIKER_TOP_SPIKE_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild";
     private static final String RIBOT_ACTIVE_CHILD_CLASS =
@@ -1014,36 +1005,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 }
                 return new AizSpikedLogObjectInstance.SpikedLogCollisionChild(
                         entry.spawn(), parent);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec blastoidProjectileCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(BLASTOID_PROJECTILE_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return BLASTOID_PROJECTILE_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    ObjectSpawn spawn = entry.spawn();
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(
-                            ObjectSpawn.class, int.class, int.class, int.class, int.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(spawn, spawn.x(), spawn.y(), 0, 0);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
             }
         };
     }
@@ -1162,39 +1123,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         };
     }
 
-    private static DynamicObjectRewindCodec snaleBlasterProjectileCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(SNALE_BLASTER_PROJECTILE_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return SNALE_BLASTER_PROJECTILE_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(
-                            ObjectSpawn.class, int.class, int.class,
-                            int.class, int.class, boolean.class);
-                    ctor.setAccessible(true);
-                    // velocities/hFlip placeholders; the capturer reapplies the
-                    // captured trajectory + (now non-final) hFlip after recreate.
-                    return (ObjectInstance) ctor.newInstance(
-                            entry.spawn(), entry.spawn().x(), entry.spawn().y(), 0, 0, false);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
     private static DynamicObjectRewindCodec spikerTopSpikeCodec() {
         return new DynamicObjectRewindCodec() {
             @Override
@@ -1220,44 +1148,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     var ctor = cls.getDeclaredConstructor(SpikerBadnikInstance.class);
                     ctor.setAccessible(true);
                     return (ObjectInstance) ctor.newInstance(parent);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec spikerSpikeProjectileCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(SPIKER_SPIKE_PROJECTILE_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return SPIKER_SPIKE_PROJECTILE_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                SpikerBadnikInstance parent = findNearestLiveInstance(
-                        context, SpikerBadnikInstance.class, entry.spawn());
-                if (parent == null) {
-                    return null;
-                }
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(
-                            SpikerBadnikInstance.class, int.class, int.class,
-                            int.class, int.class, boolean.class);
-                    ctor.setAccessible(true);
-                    // x/y/velocity/hFlip placeholders; the capturer reapplies the
-                    // captured trajectory + (now non-final) hFlip after recreate.
-                    return (ObjectInstance) ctor.newInstance(
-                            parent, entry.spawn().x(), entry.spawn().y(), 0, 0, false);
                 } catch (ReflectiveOperationException e) {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);

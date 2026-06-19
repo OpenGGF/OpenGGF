@@ -11,6 +11,8 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -311,7 +313,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
      * Shield reaction: bounce (bit 3) via {@code bset #3,shield_reaction(a0)}.
      */
     private static final class BlastoidProjectile extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, RewindRecreatable {
 
         // loc_86D4A: bset #3,shield_reaction(a0)
         private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
@@ -346,6 +348,10 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
         private int animFrame;
         private boolean collisionEnabled = true;
 
+        private BlastoidProjectile() {
+            this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), 0, 0, 0, 0);
+        }
+
         BlastoidProjectile(ObjectSpawn ownerSpawn, int x, int y,
                            int xVel, int yVel) {
             super(ownerSpawn, "BlastoidProjectile");
@@ -354,6 +360,12 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
             this.xVelocity = xVel;
             this.yVelocity = yVel;
             this.animFrame = FRAME_A;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            return new BlastoidProjectile(spawn, spawn.x(), spawn.y(), 0, 0);
         }
 
         @Override

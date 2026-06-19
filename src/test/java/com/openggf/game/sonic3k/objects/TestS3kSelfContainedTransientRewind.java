@@ -22,6 +22,7 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.LinkedHashMap;
@@ -41,6 +42,12 @@ class TestS3kSelfContainedTransientRewind {
 
     private static final int ZONE_AIZ = 0;
     private static final int ACT_2 = 1;
+    private static final String BLASTOID_PROJECTILE_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance$BlastoidProjectile";
+    private static final String SNALE_BLASTER_PROJECTILE_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterProjectile";
+    private static final String SPIKER_SPIKE_PROJECTILE_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSpikeProjectile";
 
     @AfterEach
     void cleanup() {
@@ -63,6 +70,9 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(IczEndBossEggCapsuleInstance.class);
         assertNoRegisteredS3kDynamicCodec(MhzEndBossEggCapsuleInstance.class);
         assertNoRegisteredS3kDynamicCodec(Mgz2EndEggCapsuleInstance.class);
+        assertNoRegisteredS3kDynamicCodec(classForName(BLASTOID_PROJECTILE_CLASS));
+        assertNoRegisteredS3kDynamicCodec(classForName(SNALE_BLASTER_PROJECTILE_CLASS));
+        assertNoRegisteredS3kDynamicCodec(classForName(SPIKER_SPIKE_PROJECTILE_CLASS));
     }
 
     @Test
@@ -143,6 +153,28 @@ class TestS3kSelfContainedTransientRewind {
                 () -> new MhzEndBossEggCapsuleInstance(baseX + 0x160, baseY + 0x80));
         Mgz2EndEggCapsuleInstance mgz2EggCapsule = objectManager.createDynamicObject(
                 () -> new Mgz2EndEggCapsuleInstance(baseX + 0x180, baseY + 0x88));
+        AbstractObjectInstance blastoidProjectile = objectManager.createDynamicObject(
+                () -> instantiatePrivateDynamic(
+                        BLASTOID_PROJECTILE_CLASS,
+                        new Class<?>[]{ObjectSpawn.class, int.class, int.class, int.class, int.class},
+                        new ObjectSpawn(baseX + 0x20, baseY + 0x18, 0, 0, 0, false, 0),
+                        baseX + 0x20, baseY + 0x18, 0x180, -0x40));
+        AbstractObjectInstance snaleBlasterProjectile = objectManager.createDynamicObject(
+                () -> instantiatePrivateDynamic(
+                        SNALE_BLASTER_PROJECTILE_CLASS,
+                        new Class<?>[]{
+                                ObjectSpawn.class, int.class, int.class, int.class, int.class, boolean.class},
+                        new ObjectSpawn(baseX + 0x40, baseY + 0x20, 0, 0, 1, false, 0),
+                        baseX + 0x40, baseY + 0x20, -0x140, 0x20, true));
+        AbstractObjectInstance spikerSpikeProjectile = objectManager.createDynamicObject(
+                () -> instantiatePrivateDynamic(
+                        SPIKER_SPIKE_PROJECTILE_CLASS,
+                        new Class<?>[]{
+                                classForName("com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance"),
+                                int.class, int.class, int.class, int.class, boolean.class},
+                        new com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance(
+                                new ObjectSpawn(baseX + 0x60, baseY + 0x28, 0, 0, 0, false, 0)),
+                        baseX + 0x60, baseY + 0x28, 0x100, -0x180, false));
 
         List<AbstractObjectInstance> tracked = List.of(
                 aizRockFragment,
@@ -167,7 +199,10 @@ class TestS3kSelfContainedTransientRewind {
                 hczEggCapsule,
                 iczEggCapsule,
                 mhzEggCapsule,
-                mgz2EggCapsule);
+                mgz2EggCapsule,
+                blastoidProjectile,
+                snaleBlasterProjectile,
+                spikerSpikeProjectile);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
@@ -225,6 +260,12 @@ class TestS3kSelfContainedTransientRewind {
                 "precondition: exactly one MHZ egg capsule fixture is live");
         assertEquals(1, countLive(objectManager, Mgz2EndEggCapsuleInstance.class),
                 "precondition: exactly one MGZ2 egg capsule fixture is live");
+        assertEquals(1, countLive(objectManager, classForName(BLASTOID_PROJECTILE_CLASS)),
+                "precondition: exactly one Blastoid projectile fixture is live");
+        assertEquals(1, countLive(objectManager, classForName(SNALE_BLASTER_PROJECTILE_CLASS)),
+                "precondition: exactly one SnaleBlaster projectile fixture is live");
+        assertEquals(1, countLive(objectManager, classForName(SPIKER_SPIKE_PROJECTILE_CLASS)),
+                "precondition: exactly one Spiker spike projectile fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -283,6 +324,12 @@ class TestS3kSelfContainedTransientRewind {
                 "diverge step must remove the MHZ egg capsule");
         assertEquals(0, countLive(objectManager, Mgz2EndEggCapsuleInstance.class),
                 "diverge step must remove the MGZ2 egg capsule");
+        assertEquals(0, countLive(objectManager, classForName(BLASTOID_PROJECTILE_CLASS)),
+                "diverge step must remove the Blastoid projectile");
+        assertEquals(0, countLive(objectManager, classForName(SNALE_BLASTER_PROJECTILE_CLASS)),
+                "diverge step must remove the SnaleBlaster projectile");
+        assertEquals(0, countLive(objectManager, classForName(SPIKER_SPIKE_PROJECTILE_CLASS)),
+                "diverge step must remove the Spiker spike projectile");
 
         registry.restore(snapshot);
 
@@ -309,6 +356,9 @@ class TestS3kSelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, IczEndBossEggCapsuleInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, MhzEndBossEggCapsuleInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, Mgz2EndEggCapsuleInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, classForName(BLASTOID_PROJECTILE_CLASS), capturedState);
+        assertSimpleStateRoundTrip(objectManager, classForName(SNALE_BLASTER_PROJECTILE_CLASS), capturedState);
+        assertSimpleStateRoundTrip(objectManager, classForName(SPIKER_SPIKE_PROJECTILE_CLASS), capturedState);
     }
 
     private static void assertNoRegisteredS3kDynamicCodec(Class<?> type) {
@@ -338,6 +388,26 @@ class TestS3kSelfContainedTransientRewind {
                 .filter(o -> o.getClass() == type && !o.isDestroyed())
                 .map(type::cast)
                 .toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Class<? extends AbstractObjectInstance> classForName(String className) {
+        try {
+            return (Class<? extends AbstractObjectInstance>) Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError("Missing class " + className, e);
+        }
+    }
+
+    private static AbstractObjectInstance instantiatePrivateDynamic(
+            String className, Class<?>[] parameterTypes, Object... args) {
+        try {
+            Constructor<?> ctor = Class.forName(className).getDeclaredConstructor(parameterTypes);
+            ctor.setAccessible(true);
+            return (AbstractObjectInstance) ctor.newInstance(args);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to instantiate " + className, e);
+        }
     }
 
     private static Map<String, Object> simpleRewindFieldValues(ObjectInstance instance) throws Exception {

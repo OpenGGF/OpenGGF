@@ -8,6 +8,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -496,7 +498,8 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance 
         }
     }
 
-    private static final class SnaleBlasterProjectile extends AbstractObjectInstance implements TouchResponseProvider {
+    private static final class SnaleBlasterProjectile extends AbstractObjectInstance
+            implements TouchResponseProvider, RewindRecreatable {
         private static final int COLLISION_FLAGS = 0x98; // ObjDat3_8C27E.
         private static final int PRIORITY_BUCKET = 4;    // ObjDat3_8C27E priority $200.
         private static final int MAPPING_FRAME = 9;
@@ -520,8 +523,12 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance 
         private int xSubpixel;
         private int ySubpixel;
         // Un-final so the generic field capturer reapplies it after a rewind
-        // recreate (not spawn-derivable; the codec passes a placeholder).
+        // recreate (not spawn-derivable; generic recreate uses a placeholder).
         private boolean hFlip;
+
+        private SnaleBlasterProjectile() {
+            this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), 0, 0, 0, 0, false);
+        }
 
         private SnaleBlasterProjectile(ObjectSpawn spawn, int x, int y,
                 int xVelocity, int yVelocity, boolean hFlip) {
@@ -531,6 +538,12 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance 
             this.xVelocity = xVelocity;
             this.yVelocity = yVelocity;
             this.hFlip = hFlip;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            return new SnaleBlasterProjectile(spawn, spawn.x(), spawn.y(), 0, 0, false);
         }
 
         @Override

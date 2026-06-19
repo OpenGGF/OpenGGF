@@ -12,15 +12,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic3kObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-inner1 inner-class
- * child that was previously dropped on a held-rewind restore.
+ * still exposes a dynamic rewind recreate codec for batch-inner1 inner-class
+ * children that have not moved to the Phase-2 generic recreate path.
  *
  * <p>These are static nested children (hazards, ridable platforms, projectiles,
  * a logic shim, and a defeat-cutscene ship) keyed by their JVM binary name
- * ({@code Outer$Inner}). Each codec either relinks the live parent recreated
- * earlier in the restore or re-runs the child's constructor from the captured
- * spawn; non-spawn differentiator scalars were un-finaled so the generic field
- * capturer reapplies them after recreate.
+ * ({@code Outer$Inner}).
  *
  * <p>Pure registry-content test: it constructs a registry and reads
  * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
@@ -49,14 +46,10 @@ class TestRewindFixS3KInnerBatch1Codecs {
                 "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild",
                 "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild",
                 "com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance$AizTreeRevealControlObjectInstance",
-                "com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance$WaterDropChild",
-                "com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance$BlastoidProjectile",
                 "com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyShotChild",
                 "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild",
                 "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild",
-                "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterProjectile",
                 "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild",
-                "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSpikeProjectile",
                 "com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance$OrbitingPointInstance",
                 "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance$OrbinautOrbInstance",
                 "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",

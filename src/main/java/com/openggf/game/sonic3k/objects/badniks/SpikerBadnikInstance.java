@@ -10,6 +10,8 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -513,7 +515,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private static final class SpikerSpikeProjectile extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, RewindRecreatable {
 
         private static final int COLLISION_FLAGS = 0x98;
         private static final int PRIORITY_BUCKET = 5;
@@ -540,20 +542,35 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
         private int xSubpixel;
         private int ySubpixel;
         // Un-final so the generic field capturer reapplies it after a rewind
-        // recreate (not spawn-derivable; the codec passes a placeholder).
+        // recreate (not spawn-derivable; generic recreate uses a placeholder).
         private boolean hFlip;
         private int animFrame;
         private int animTimer;
         private boolean collisionEnabled = true;
 
+        private SpikerSpikeProjectile() {
+            this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), 0, 0, 0, 0, false);
+        }
+
         private SpikerSpikeProjectile(SpikerBadnikInstance parent, int x, int y,
                 int xVelocity, int yVelocity, boolean hFlip) {
-            super(parent.getSpawn(), "SpikerSpikeProjectile");
+            this(parent.getSpawn(), x, y, xVelocity, yVelocity, hFlip);
+        }
+
+        private SpikerSpikeProjectile(ObjectSpawn spawn, int x, int y,
+                int xVelocity, int yVelocity, boolean hFlip) {
+            super(spawn, "SpikerSpikeProjectile");
             this.currentX = x;
             this.currentY = y;
             this.xVelocity = xVelocity;
             this.yVelocity = yVelocity;
             this.hFlip = hFlip;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            return new SpikerSpikeProjectile(spawn, spawn.x(), spawn.y(), 0, 0, false);
         }
 
         @Override
