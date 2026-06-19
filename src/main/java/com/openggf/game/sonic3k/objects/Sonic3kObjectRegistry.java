@@ -425,11 +425,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     AizFallingLogObjectInstance.FallingLogChild.class,
                     s -> new AizFallingLogObjectInstance.FallingLogChild(
                             s.x(), s.y(), Sonic3kObjectArtKeys.AIZ1_FALLING_LOG)),
-            // AIZ tree-reveal control shim (self-contained logic object).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class,
-                    s -> new AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance(
-                            s.x(), s.y())),
+            // AIZ tree-reveal control shim codec deleted (Phase-2 batch 21):
+            // self-contained nested class now uses genericRecreate Path 1.
             // HCZ water-drop cosmetic child codec deleted in Phase-2 batch 3:
             // self-contained private nested class now uses genericRecreate Path 1.
             // Blastoid/SnaleBlaster/Spiker in-flight projectile codecs deleted in
@@ -463,14 +460,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // captured spawn. Non-spawn differentiator scalars were un-finaled so the
             // generic field capturer reapplies them after recreate.
 
-            // MGZ miniboss ceiling spire (free-falling hurt hazard; relink parent).
-            mgzCeilingSpireCodec(),
+            // MGZ miniboss ceiling spire codec deleted (Phase-2 batch 21):
+            // self-contained nested class now uses genericRecreate Path 1.
             // MGZ miniboss drill arm (one-shot hurt hitbox; relink live boss).
             mgzDrillArmCodec(),
             // Gumball ExitTriggerChild codec deleted (Phase-2 batch 5):
             // now implements RewindRecreatable -> genericRecreate Path 1.
-            // MGZ head-trigger stone chip (cosmetic; self-contained private nested).
-            mgzHeadTriggerStoneChipCodec(),
+            // MGZ head-trigger stone chip codec deleted (Phase-2 batch 21):
+            // self-contained nested class now uses genericRecreate Path 1.
             // MHZ1 cutscene Player-2 stopper (sidekick lock; relink cutscene owner).
             mhz1CutscenePlayerTwoStopperCodec(),
             // MHZ2 cutscene route-switch carrier (cosmetic; relink cutscene parent).
@@ -962,12 +959,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossRobotnikEscapeShip";
 
     // Batch-inner2 binary-name keys (private/nested children -> no Class literal).
-    private static final String MGZ_CEILING_SPIRE_CHILD_CLASS =
-            "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild";
     private static final String MGZ_DRILL_ARM_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild";
-    private static final String MGZ_STONE_CHIP_CHILD_CLASS =
-            "com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance$HeadTriggerStoneChipChild";
     private static final String MHZ1_CUTSCENE_P2_STOPPER_CLASS =
             "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper";
     private static final String MHZ2_KNUX_ROUTE_SWITCH_CHILD_CLASS =
@@ -1323,49 +1316,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     // ===================================================================
 
     /**
-     * Codec for the MGZ miniboss free-falling ceiling spire (a HURT hazard, anim
-     * collision flags 0x84). The parent miniboss emits NEW random debris each
-     * ceiling-shake tick but never re-creates or re-positions an existing spire,
-     * so a dropped spire is a live in-flight hazard that is lost (parentReEmits=
-     * false) and must be restored. The live {@link MgzMinibossInstance} is relinked
-     * only for restore-ordering sanity (the ctor takes no parent reference); the
-     * trajectory scalars are already non-final and reapplied by the capturer, and
-     * {@code mappingFrame}/{@code spire} on the superclass were un-finaled so they
-     * too are reapplied after this placeholder recreate.
-     */
-    private static DynamicObjectRewindCodec mgzCeilingSpireCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(MGZ_CEILING_SPIRE_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return MGZ_CEILING_SPIRE_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                MgzMinibossInstance parent = findLiveInstance(context, MgzMinibossInstance.class);
-                if (parent == null) {
-                    return null;
-                }
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(int.class, int.class, int.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(entry.spawn().x(), entry.spawn().y(), 0);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
-    /**
      * Codec for the MGZ miniboss drill arm (a HURT hitbox, ARM_COLLISION_FLAGS
      * 0x9E). The arms are spawned ONCE at the arena-engage transition, not per
      * frame, so the restored boss never re-emits them (parentReEmits=false) and a
@@ -1403,43 +1353,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 } catch (ReflectiveOperationException e) {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + MGZ_DRILL_ARM_CHILD_CLASS, e);
-                }
-            }
-        };
-    }
-
-    /**
-     * Codec for the MGZ head-trigger stone chip (cosmetic; a transient animated
-     * chip that self-destructs in ~7 frames). It holds no parent reference and is
-     * self-contained, so the codec re-runs its private ctor from the captured
-     * spawn (which carries x/y). {@code hFlipCopied} and the originX/originY mirror
-     * were un-finaled so the capturer reapplies them after this placeholder
-     * recreate (the spawn does not carry the h-flip).
-     */
-    private static DynamicObjectRewindCodec mgzHeadTriggerStoneChipCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(MGZ_STONE_CHIP_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return MGZ_STONE_CHIP_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    ObjectSpawn spawn = entry.spawn();
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(int.class, int.class, boolean.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(spawn.x(), spawn.y(), false);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
                 }
             }
         };

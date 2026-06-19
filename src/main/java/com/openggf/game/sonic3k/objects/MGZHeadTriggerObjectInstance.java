@@ -13,6 +13,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -518,7 +520,8 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
      * frame (5) with an empty frame (7) three times, then $FB moves it offscreen
      * which we translate to {@code setDestroyed(true)}.
      */
-    private static final class HeadTriggerStoneChipChild extends AbstractObjectInstance {
+    private static final class HeadTriggerStoneChipChild extends AbstractObjectInstance
+            implements RewindRecreatable {
 
         private static final int FRAME_STONE_CHIP = 5;
         private static final int[] ANIM_STONE_CHIP = {1, 5, 7, 5, 7, 5, 7, 0xFB};
@@ -533,6 +536,10 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
         private int animFrameIndex;
         private int animFrameTimer;
 
+        private HeadTriggerStoneChipChild() {
+            this(0, 0, false);
+        }
+
         private HeadTriggerStoneChipChild(int x, int y, boolean hFlip) {
             super(new ObjectSpawn(x, y, 0xFF, 0, 0, false, 0), "MGZHeadTriggerStoneChip");
             this.originX = x;
@@ -541,6 +548,12 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
             this.currentFrame = FRAME_STONE_CHIP;
             this.animFrameIndex = 0;
             this.animFrameTimer = 0;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            return new HeadTriggerStoneChipChild(spawn.x(), spawn.y(), false);
         }
 
         @Override

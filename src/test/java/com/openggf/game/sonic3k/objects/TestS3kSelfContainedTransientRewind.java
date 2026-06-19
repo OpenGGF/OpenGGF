@@ -49,6 +49,10 @@ class TestS3kSelfContainedTransientRewind {
             "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterProjectile";
     private static final String SPIKER_SPIKE_PROJECTILE_CLASS =
             "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSpikeProjectile";
+    private static final String MGZ_HEAD_TRIGGER_STONE_CHIP_CLASS =
+            "com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance$HeadTriggerStoneChipChild";
+    private static final String MGZ_CEILING_SPIRE_CLASS =
+            "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild";
 
     @AfterEach
     void cleanup() {
@@ -74,6 +78,9 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(S3kSignpostInstance.class);
         assertNoRegisteredS3kDynamicCodec(HczEndBossGeyserCutscene.class);
         assertNoRegisteredS3kDynamicCodec(Mgz2CapsuleAnimalInstance.class);
+        assertNoRegisteredS3kDynamicCodec(AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class);
+        assertNoRegisteredS3kDynamicCodec(classForName(MGZ_HEAD_TRIGGER_STONE_CHIP_CLASS));
+        assertNoRegisteredS3kDynamicCodec(classForName(MGZ_CEILING_SPIRE_CLASS));
         assertNoRegisteredS3kDynamicCodec(classForName(BLASTOID_PROJECTILE_CLASS));
         assertNoRegisteredS3kDynamicCodec(classForName(SNALE_BLASTER_PROJECTILE_CLASS));
         assertNoRegisteredS3kDynamicCodec(classForName(SPIKER_SPIKE_PROJECTILE_CLASS));
@@ -165,6 +172,20 @@ class TestS3kSelfContainedTransientRewind {
                 () -> new Mgz2CapsuleAnimalInstance(
                         new ObjectSpawn(baseX + 0x1E0, baseY + 0xA8, 0, 0, 0, false, 0),
                         6, 1, 0x18));
+        AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance aizTreeRevealControl =
+                objectManager.createDynamicObject(
+                        () -> new AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance(
+                                baseX + 0x200, baseY + 0xB0));
+        AbstractObjectInstance mgzHeadTriggerStoneChip = objectManager.createDynamicObject(
+                () -> instantiatePrivateDynamic(
+                        MGZ_HEAD_TRIGGER_STONE_CHIP_CLASS,
+                        new Class<?>[]{int.class, int.class, boolean.class},
+                        baseX + 0x220, baseY + 0xB8, true));
+        AbstractObjectInstance mgzCeilingSpire = objectManager.createDynamicObject(
+                () -> instantiatePrivateDynamic(
+                        MGZ_CEILING_SPIRE_CLASS,
+                        new Class<?>[]{int.class, int.class, int.class},
+                        baseX + 0x240, baseY + 0xC0, 0));
         AbstractObjectInstance blastoidProjectile = objectManager.createDynamicObject(
                 () -> instantiatePrivateDynamic(
                         BLASTOID_PROJECTILE_CLASS,
@@ -215,6 +236,9 @@ class TestS3kSelfContainedTransientRewind {
                 signpost,
                 hczGeyserCutscene,
                 mgz2CapsuleAnimal,
+                aizTreeRevealControl,
+                mgzHeadTriggerStoneChip,
+                mgzCeilingSpire,
                 blastoidProjectile,
                 snaleBlasterProjectile,
                 spikerSpikeProjectile);
@@ -286,6 +310,13 @@ class TestS3kSelfContainedTransientRewind {
                 "precondition: exactly one HCZ geyser cutscene fixture is live");
         assertEquals(1, countLive(objectManager, Mgz2CapsuleAnimalInstance.class),
                 "precondition: exactly one MGZ2 capsule animal fixture is live");
+        assertEquals(1, countLive(
+                        objectManager, AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class),
+                "precondition: exactly one AIZ tree-reveal control fixture is live");
+        assertEquals(1, countLive(objectManager, classForName(MGZ_HEAD_TRIGGER_STONE_CHIP_CLASS)),
+                "precondition: exactly one MGZ head-trigger stone chip fixture is live");
+        assertEquals(1, countLive(objectManager, classForName(MGZ_CEILING_SPIRE_CLASS)),
+                "precondition: exactly one MGZ ceiling spire fixture is live");
         assertEquals(1, countLive(objectManager, classForName(BLASTOID_PROJECTILE_CLASS)),
                 "precondition: exactly one Blastoid projectile fixture is live");
         assertEquals(1, countLive(objectManager, classForName(SNALE_BLASTER_PROJECTILE_CLASS)),
@@ -356,6 +387,13 @@ class TestS3kSelfContainedTransientRewind {
                 "diverge step must remove the HCZ geyser cutscene");
         assertEquals(0, countLive(objectManager, Mgz2CapsuleAnimalInstance.class),
                 "diverge step must remove the MGZ2 capsule animal");
+        assertEquals(0, countLive(
+                        objectManager, AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class),
+                "diverge step must remove the AIZ tree-reveal control");
+        assertEquals(0, countLive(objectManager, classForName(MGZ_HEAD_TRIGGER_STONE_CHIP_CLASS)),
+                "diverge step must remove the MGZ head-trigger stone chip");
+        assertEquals(0, countLive(objectManager, classForName(MGZ_CEILING_SPIRE_CLASS)),
+                "diverge step must remove the MGZ ceiling spire");
         assertEquals(0, countLive(objectManager, classForName(BLASTOID_PROJECTILE_CLASS)),
                 "diverge step must remove the Blastoid projectile");
         assertEquals(0, countLive(objectManager, classForName(SNALE_BLASTER_PROJECTILE_CLASS)),
@@ -391,6 +429,10 @@ class TestS3kSelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, S3kSignpostInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, HczEndBossGeyserCutscene.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, Mgz2CapsuleAnimalInstance.class, capturedState);
+        assertSimpleStateRoundTrip(
+                objectManager, AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, classForName(MGZ_HEAD_TRIGGER_STONE_CHIP_CLASS), capturedState);
+        assertSimpleStateRoundTrip(objectManager, classForName(MGZ_CEILING_SPIRE_CLASS), capturedState);
         assertSimpleStateRoundTrip(objectManager, classForName(BLASTOID_PROJECTILE_CLASS), capturedState);
         assertSimpleStateRoundTrip(objectManager, classForName(SNALE_BLASTER_PROJECTILE_CLASS), capturedState);
         assertSimpleStateRoundTrip(objectManager, classForName(SPIKER_SPIKE_PROJECTILE_CLASS), capturedState);
