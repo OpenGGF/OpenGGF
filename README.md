@@ -238,6 +238,11 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Slope turn-around sprite orientation fix (2026-06-19).** Merged
+  `bugfix/ai-slope-sprite-orientation`, matching the ROM `prev_anim=Run`
+  sentinel on grounded S2/S3K facing flips so slow slope reversals restart the
+  walk script instead of briefly reusing a stale slope frame with the new render
+  flips.
 - **Rewind Phase 2 — generic-recreate mechanism foundation (2026-06-18).** Merged
   `feature/ai-rewind-phase2-generic-recreate` (Tasks 1-5 of the plan). Lays the groundwork to retire
   the ~200 hand-written rewind codecs: a real capture→restore round-trip harness gate
