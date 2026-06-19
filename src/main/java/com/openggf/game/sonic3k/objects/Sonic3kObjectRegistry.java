@@ -406,8 +406,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     MgzDrillingRobotnikInstance.class,
                     s -> new MgzDrillingRobotnikInstance(s, false)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    MgzEndBossInstance.class, s -> new MgzEndBossInstance(s)),
+            // MgzEndBossInstance codec deleted (Phase-2 batch 5):
+            // now implements RewindRecreatable -> genericRecreate Path 1.
 
             // MHZ1 Knuckles cutscene door (relink to the placed button parent).
             mhz1CutsceneDoorCodec(),
@@ -538,8 +538,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             mgzCeilingSpireCodec(),
             // MGZ miniboss drill arm (one-shot hurt hitbox; relink live boss).
             mgzDrillArmCodec(),
-            // Gumball bonus-stage exit trigger (gameplay-critical; gate on live machine).
-            gumballExitTriggerCodec(),
+            // Gumball ExitTriggerChild codec deleted (Phase-2 batch 5):
+            // now implements RewindRecreatable -> genericRecreate Path 1.
             // MGZ head-trigger stone chip (cosmetic; self-contained private nested).
             mgzHeadTriggerStoneChipCodec(),
             // MHZ1 cutscene Player-2 stopper (sidekick lock; relink cutscene owner).
@@ -1582,42 +1582,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + MGZ_DRILL_ARM_CHILD_CLASS, e);
                 }
-            }
-        };
-    }
-
-    /**
-     * Codec for the gumball-machine bonus-stage exit trigger (gameplay-critical:
-     * detects the player in the exit box and calls {@code requestBonusStageExit()},
-     * the only way the bonus stage ends). The parent spawns its children once
-     * behind a one-shot {@code childrenSpawned} latch and never re-emits them
-     * (parentReEmits=false), so a dropped trigger would softlock the bonus stage.
-     * Gates restore on the live machine and rebuilds from the spawn; {@code
-     * exitFired} is non-final and reapplied by the capturer. The ctor is
-     * package-private and lives in this package, so no reflection is needed.
-     */
-    private static DynamicObjectRewindCodec gumballExitTriggerCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass()
-                        == GumballMachineObjectInstance.ExitTriggerChild.class;
-            }
-
-            @Override
-            public String className() {
-                return GumballMachineObjectInstance.ExitTriggerChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                GumballMachineObjectInstance machine =
-                        findLiveInstance(context, GumballMachineObjectInstance.class);
-                if (machine == null) {
-                    return null;
-                }
-                return new GumballMachineObjectInstance.ExitTriggerChild(entry.spawn());
             }
         };
     }

@@ -159,9 +159,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                         int zoneIndex = (os != null) ? os.romZoneId() : -1;
                         return new Sonic1StomperDoorObjectInstance(spawn, zoneIndex);
                     }),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1TeleporterObjectInstance.class,
-                    spawn -> new Sonic1TeleporterObjectInstance(spawn)),
+            // Sonic1TeleporterObjectInstance codec deleted (Phase-2 batch 5):
+            // now implements RewindRecreatable -> genericRecreate Path 1.
             // Batch-7 S1 rewind codec (shared boss-defeat explosion).
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     BossExplosionObjectInstance.class,

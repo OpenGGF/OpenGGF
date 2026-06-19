@@ -82,6 +82,17 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> BATCH5_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ExitTriggerChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzEndBossInstance",
+                    GameId.S3K));
+
     @BeforeEach
     void initHeadless() { GraphicsManager.getInstance().initHeadless(); }
 
@@ -276,6 +287,51 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void batch4ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : BATCH4_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // Batch 5: gumball bonus-stage exit trigger - codec deleted
+    // =====================================================================
+
+    @Test
+    void batch5ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH5_DELETED_CODECS) {
+            Class<?> cls;
+            try { cls = Class.forName(candidate.fqn()); }
+            catch (ClassNotFoundException e) { throw new AssertionError(e); }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 5)");
+        }
+    }
+
+    @Test
+    void batch5ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH5_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-5 deletion; "
+                            + "it should round-trip purely via genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch5ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH5_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void batch5ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : BATCH5_DELETED_CODECS) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

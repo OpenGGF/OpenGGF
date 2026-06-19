@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 
 /**
  * S3K Obj $A1 — Marble Garden Act 2 end boss.
@@ -11,9 +14,14 @@ import com.openggf.level.objects.ObjectSpawn;
  * from the dynamic-resize gate. This class currently shares the composite
  * vehicle implementation while the arena event owns the ROM spawn/lock path.
  */
-public final class MgzEndBossInstance extends MgzDrillingRobotnikInstance {
+public final class MgzEndBossInstance extends MgzDrillingRobotnikInstance implements RewindRecreatable {
 
     public MgzEndBossInstance(ObjectSpawn spawn) {
         super(spawn, false);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MgzEndBossInstance(ctx.spawn());
     }
 }
