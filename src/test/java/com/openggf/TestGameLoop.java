@@ -158,10 +158,16 @@ public class TestGameLoop {
     public void userPauseIndicatorIsNotDebugViewGated() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
         int userPaused = source.indexOf("gameLoop.isUserPaused()");
-        int needsOverlay = source.indexOf("debugViewEnabled || playbackHud || userPaused");
+        int screenshotSuppression = source.indexOf("isUserPauseScreenshotSuppressionKeyPressed(inputHandler)");
+        int visibility = source.indexOf("shouldRenderUserPauseIndicator(");
+        int needsOverlay = source.indexOf("debugViewEnabled || playbackHud || userPauseIndicatorVisible");
         int render = source.indexOf("renderUserPauseIndicator();");
 
         assertTrue(userPaused >= 0, "Engine display path must observe GameLoop user pause state");
+        assertTrue(screenshotSuppression > userPaused,
+                "Screenshot keys should update pause indicator suppression before overlay visibility is resolved");
+        assertTrue(visibility > screenshotSuppression,
+                "Pause indicator visibility should account for screenshot suppression before overlay setup");
         assertTrue(needsOverlay > userPaused,
                 "The pause overlay should contribute to overlay setup independently of DEBUG_VIEW_ENABLED");
         assertTrue(render > needsOverlay,
@@ -193,6 +199,35 @@ public class TestGameLoop {
         assertEquals(0, Engine.userPauseIndicatorAlpha(500_000_000L), 1);
         assertEquals(128, Engine.userPauseIndicatorAlpha(750_000_000L), 1);
         assertEquals(255, Engine.userPauseIndicatorAlpha(1_000_000_000L));
+    }
+
+    @Test
+    public void userPauseIndicatorHidesForOneSecondAfterScreenshotKey() {
+        long keyPressNanos = 3_000_000_000L;
+        long hiddenUntilNanos = Engine.userPauseIndicatorHiddenUntilAfterScreenshotKey(keyPressNanos);
+
+        assertFalse(Engine.shouldRenderUserPauseIndicator(true, keyPressNanos, hiddenUntilNanos));
+        assertFalse(Engine.shouldRenderUserPauseIndicator(true, keyPressNanos + 999_999_999L, hiddenUntilNanos));
+        assertTrue(Engine.shouldRenderUserPauseIndicator(true, keyPressNanos + 1_000_000_000L, hiddenUntilNanos));
+        assertFalse(Engine.shouldRenderUserPauseIndicator(false, keyPressNanos + 1_000_000_000L, hiddenUntilNanos));
+    }
+
+    @Test
+    public void userPauseIndicatorScreenshotSuppressionUsesF12AndPrintScreenEdges() {
+        InputHandler input = new InputHandler();
+
+        assertFalse(Engine.isUserPauseScreenshotSuppressionKeyPressed(input));
+
+        input.handleKeyEvent(GLFW_KEY_F12, GLFW_PRESS);
+        assertTrue(Engine.isUserPauseScreenshotSuppressionKeyPressed(input));
+
+        input.update();
+        assertFalse(Engine.isUserPauseScreenshotSuppressionKeyPressed(input));
+
+        input.handleKeyEvent(GLFW_KEY_F12, GLFW_RELEASE);
+        input.update();
+        input.handleKeyEvent(GLFW_KEY_PRINT_SCREEN, GLFW_PRESS);
+        assertTrue(Engine.isUserPauseScreenshotSuppressionKeyPressed(input));
     }
 
     @Test

@@ -124,6 +124,7 @@ public class Engine {
 	private static final int USER_PAUSE_INDICATOR_MARGIN = 8;
 	private static final long USER_PAUSE_INDICATOR_HALF_PERIOD_NANOS = 500_000_000L;
 	private static final long USER_PAUSE_INDICATOR_PERIOD_NANOS = USER_PAUSE_INDICATOR_HALF_PERIOD_NANOS * 2L;
+	private static final long USER_PAUSE_SCREENSHOT_HIDE_NANOS = 1_000_000_000L;
 	private DisplayColorProfileController displayColorProfileController;
 	private DisplayShaderController displayShaderController;
 	private DisplayShaderPickerController displayShaderPickerController;
@@ -205,6 +206,7 @@ public class Engine {
 	private int targetFps;
 	private long lastFrameTime;
 	private boolean paused = false;
+	private long userPauseIndicatorHiddenUntilNanos;
 
 	private DebugRenderer getDebugRenderer() {
 		if (debugRenderer == null) {
@@ -1611,14 +1613,24 @@ public class Engine {
 
 		boolean playbackHud = playbackDebugManager.isHudVisible();
 		boolean userPaused = gameLoop != null && gameLoop.isUserPaused();
+		long pauseIndicatorNowNanos = System.nanoTime();
+		if (isUserPauseScreenshotSuppressionKeyPressed(inputHandler)) {
+			userPauseIndicatorHiddenUntilNanos =
+					userPauseIndicatorHiddenUntilAfterScreenshotKey(pauseIndicatorNowNanos);
+		}
+		boolean userPauseIndicatorVisible = shouldRenderUserPauseIndicator(
+				userPaused,
+				pauseIndicatorNowNanos,
+				userPauseIndicatorHiddenUntilNanos);
 		boolean needsOverlay = (getCurrentGameMode() == GameMode.SPECIAL_STAGE) ||
-				((debugViewEnabled || playbackHud || userPaused) && getCurrentGameMode() != GameMode.SPECIAL_STAGE);
+				((debugViewEnabled || playbackHud || userPauseIndicatorVisible)
+						&& getCurrentGameMode() != GameMode.SPECIAL_STAGE);
 
 		if (needsOverlay) {
 			prepareOverlayState();
 		}
 
-		if (userPaused) {
+		if (userPauseIndicatorVisible) {
 			renderUserPauseIndicator();
 		}
 
@@ -1749,6 +1761,20 @@ public class Engine {
 		double phase = cycleNanos / (double) USER_PAUSE_INDICATOR_PERIOD_NANOS;
 		double alpha = (0.5d + 0.5d * Math.cos(phase * Math.PI * 2.0d)) * 255.0d;
 		return Math.max(0, Math.min(255, (int) Math.round(alpha)));
+	}
+
+	static long userPauseIndicatorHiddenUntilAfterScreenshotKey(long keyPressNanos) {
+		return keyPressNanos + USER_PAUSE_SCREENSHOT_HIDE_NANOS;
+	}
+
+	static boolean shouldRenderUserPauseIndicator(boolean userPaused, long nowNanos, long hiddenUntilNanos) {
+		return userPaused && nowNanos >= hiddenUntilNanos;
+	}
+
+	static boolean isUserPauseScreenshotSuppressionKeyPressed(InputHandler inputHandler) {
+		return inputHandler != null
+				&& (inputHandler.isKeyPressed(GLFW_KEY_F12)
+				|| inputHandler.isKeyPressed(GLFW_KEY_PRINT_SCREEN));
 	}
 
 	private void applyLevelClearColor() {
