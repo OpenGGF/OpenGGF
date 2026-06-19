@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
-import com.openggf.game.sonic3k.events.Sonic3kMGZEvents;
 import com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance;
@@ -348,7 +347,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // character/act/player-ref state is restored after generic recreate.
             // Mgz2ResultsScreenObjectInstance codec deleted (Phase-2 MGZ2 results):
             // subclass identity and scalar state are restored after generic recreate.
-            mgz2CollapseSolidCodec(),
+            // Mgz2LevelCollapseSolidInstance codec deleted (Phase-2 MGZ2 collapse solid):
+            // RewindRecreatable relinks the live Sonic3kMGZEvents owner via ObjectServices.
             // MgzDrillingRobotnikInstance codec deleted (Phase-2 batch 6):
             // now implements RewindRecreatable -> genericRecreate Path 1.
             // MgzEndBossInstance codec deleted (Phase-2 batch 5):
@@ -1678,46 +1678,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 return new CutsceneKnuxCnz2WallInstance(entry.spawn(), parent);
             }
         };
-    }
-
-    /**
-     * Codec for the MGZ2 level-collapse solids. The solid's scroll/delete suppliers
-     * are bound to the live {@link Sonic3kMGZEvents} manager, so this relinks
-     * through the event provider and rebuilds the solid via the owner-side
-     * {@link Sonic3kMGZEvents#recreateCollapseSolidForRewind(ObjectSpawn)} factory.
-     * Dropped if the MGZ event manager is gone (cannot rebind suppliers).
-     */
-    private static DynamicObjectRewindCodec mgz2CollapseSolidCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Mgz2LevelCollapseSolidInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return Mgz2LevelCollapseSolidInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic3kMGZEvents mgz = findLiveMgzEventsForRewind(context);
-                if (mgz == null) {
-                    return null;
-                }
-                return mgz.recreateCollapseSolidForRewind(entry.spawn());
-            }
-        };
-    }
-
-    private static Sonic3kMGZEvents findLiveMgzEventsForRewind(
-            DynamicObjectRecreateContext context) {
-        if (context.objectServices().levelEventProvider()
-                instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager mgr) {
-            return mgr.getMgzEvents();
-        }
-        return null;
     }
 
     /**
