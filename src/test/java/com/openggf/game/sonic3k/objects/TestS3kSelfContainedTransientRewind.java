@@ -5,6 +5,7 @@ import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -80,6 +81,14 @@ class TestS3kSelfContainedTransientRewind {
                 () -> new RockDebrisChild(
                         new ObjectSpawn(baseX + 0x50, baseY + 0x10, 0, 0, 0, false, 0),
                         -0x80, -0x100, 2, Sonic3kObjectArtKeys.AIZ2_ROCK));
+        MGZHeadTriggerProjectileInstance mgzHeadProjectile = objectManager.createDynamicObject(
+                () -> new MGZHeadTriggerProjectileInstance(baseX + 0x60, baseY + 0x18, -0x200, true));
+        SongFadeTransitionInstance songFade = objectManager.createDynamicObject(
+                () -> new SongFadeTransitionInstance(30, 0x8A));
+        EggPrisonAnimalInstance eggPrisonAnimal = objectManager.createDynamicObject(
+                () -> new EggPrisonAnimalInstance(
+                        new ObjectSpawn(baseX + 0x90, baseY + 0x30, 0x28, 0, 0, false, 0),
+                        8, 1));
 
         List<AbstractObjectInstance> tracked = List.of(
                 aizRockFragment,
@@ -87,7 +96,10 @@ class TestS3kSelfContainedTransientRewind {
                 bossExplosion,
                 pollen,
                 lightningSpark,
-                rockDebris);
+                rockDebris,
+                mgzHeadProjectile,
+                songFade,
+                eggPrisonAnimal);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
@@ -109,6 +121,12 @@ class TestS3kSelfContainedTransientRewind {
                 "precondition: exactly one lightning spark fixture is live");
         assertEquals(1, countLive(objectManager, RockDebrisChild.class),
                 "precondition: exactly one rock debris fixture is live");
+        assertEquals(1, countLive(objectManager, MGZHeadTriggerProjectileInstance.class),
+                "precondition: exactly one MGZ head projectile fixture is live");
+        assertEquals(1, countLive(objectManager, SongFadeTransitionInstance.class),
+                "precondition: exactly one song fade fixture is live");
+        assertEquals(1, countLive(objectManager, EggPrisonAnimalInstance.class),
+                "precondition: exactly one egg-prison animal fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -133,6 +151,12 @@ class TestS3kSelfContainedTransientRewind {
                 "diverge step must remove the lightning spark");
         assertEquals(0, countLive(objectManager, RockDebrisChild.class),
                 "diverge step must remove the rock debris");
+        assertEquals(0, countLive(objectManager, MGZHeadTriggerProjectileInstance.class),
+                "diverge step must remove the MGZ head projectile");
+        assertEquals(0, countLive(objectManager, SongFadeTransitionInstance.class),
+                "diverge step must remove the song fade");
+        assertEquals(0, countLive(objectManager, EggPrisonAnimalInstance.class),
+                "diverge step must remove the egg-prison animal");
 
         registry.restore(snapshot);
 
@@ -142,6 +166,9 @@ class TestS3kSelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, MhzPollenParticleInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, LightningSparkObjectInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, RockDebrisChild.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, MGZHeadTriggerProjectileInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, SongFadeTransitionInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, EggPrisonAnimalInstance.class, capturedState);
     }
 
     private static <T extends AbstractObjectInstance> void assertSimpleStateRoundTrip(

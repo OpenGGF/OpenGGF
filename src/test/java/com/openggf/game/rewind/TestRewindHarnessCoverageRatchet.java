@@ -85,12 +85,14 @@ public class TestRewindHarnessCoverageRatchet {
  *       codecs.</li>
  *   <li>2026-06-19: raised to 53 after session-level verification deleted six
  *       self-contained S3K transient/effect codecs.</li>
+ *   <li>2026-06-19: raised to 56 after session-level verification deleted three
+ *       S3K release-sequence/effect dynamic codecs.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 53;
+    static final int RATCHET_FLOOR = 56;
 
     @BeforeEach
     void initHeadless() {

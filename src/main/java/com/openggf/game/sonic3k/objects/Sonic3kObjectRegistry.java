@@ -193,9 +193,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     S3kBadnikProjectileInstance.class,
                     s -> S3kBadnikProjectileInstance.forRewindRecreate(s)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    MGZHeadTriggerProjectileInstance.class,
-                    s -> new MGZHeadTriggerProjectileInstance(s.x(), s.y(), 0, false)),
+            // MGZHeadTriggerProjectileInstance codec deleted (Phase-2 batch 13):
+            // xVel/hFlip are reapplied after genericRecreate Path 1.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     S3kSignpostInstance.class, s -> new S3kSignpostInstance(0, 0)),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
@@ -416,19 +415,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     s -> new S3kBossDefeatSignpostFlow(
                             s.x(), 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE)),
 
-            // Pending music-transition object (persistent; owns a queued fade ->
-            // playMusic). delayFrames/musicId un-finaled and reapplied; codec
-            // uses a placeholder ctor since the ObjectSpawn carries no state.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    SongFadeTransitionInstance.class,
-                    spawn -> new SongFadeTransitionInstance(0, 0)),
-
-            // Egg-prison released animal (persistent; spawned by S1/S2/S3K
-            // capsules). delay/artVariant fields already non-final; codec passes
-            // placeholder 0s. Mirrors the Mgz2CapsuleAnimalInstance sibling.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    EggPrisonAnimalInstance.class,
-                    s -> new EggPrisonAnimalInstance(s, 0, 0)),
+            // SongFadeTransitionInstance and EggPrisonAnimalInstance codecs
+            // deleted (Phase-2 batch 13): placeholder constructor args are now
+            // supplied by RewindRecreatable; scalar state is reapplied afterward.
 
             // --- Release-slice batch 8: Slot-machine bonus-stage objects --------
             // Without these codecs, recreateDynamicObject() returns null for the

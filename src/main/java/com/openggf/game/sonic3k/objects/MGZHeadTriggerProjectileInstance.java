@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -29,7 +31,7 @@ import java.util.List;
  * index 0x1B. Non-attackable — the projectile can only damage the player.
  */
 public class MGZHeadTriggerProjectileInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_HEAD_TRIGGER;
 
@@ -80,6 +82,11 @@ public class MGZHeadTriggerProjectileInstance extends AbstractObjectInstance
         this.worldY = spawnY;
         this.xVel = xVel;
         this.hFlip = hFlip;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MGZHeadTriggerProjectileInstance(ctx.spawn().x(), ctx.spawn().y(), 0, false);
     }
 
     @Override
