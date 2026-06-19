@@ -15,6 +15,9 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -59,7 +62,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/53 Collapsing Floors.asm
  */
 public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // From disassembly: move.w #$20,d1 (half-width for PlatformObject)
     private static final int PLATFORM_HALF_WIDTH = 0x20;
@@ -150,6 +153,13 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         // Skip init routine, start at routine 2 (CFlo_Touch)
         this.routine = 2;
         updateDynamicSpawn(x, y);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectServices objectServices = ctx.objectServices();
+        int rewindZoneIndex = objectServices != null ? objectServices.romZoneId() : -1;
+        return new Sonic1CollapsingFloorObjectInstance(ctx.spawn(), rewindZoneIndex);
     }
 
     @Override

@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -29,7 +31,7 @@ import java.util.List;
  * </ul>
  */
 public class Sonic1RingInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
     /** S1 ring collision type: $47 = powerup category ($40) + size index 7. */
     public static final int RING_COLLISION_FLAGS = 0x47;
@@ -74,6 +76,19 @@ public class Sonic1RingInstance extends AbstractObjectInstance
         this.childRingSpawns = List.of();
         this.outOfRangeAnchorX = outOfRangeAnchorX;
         this.state = State.ANIMATE;
+    }
+
+    private Sonic1RingInstance() {
+        this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), new RingSpawn(0, 0), 0);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn rewindSpawn = ctx.spawn();
+        return new Sonic1RingInstance(
+                rewindSpawn,
+                new RingSpawn(rewindSpawn.x(), rewindSpawn.y()),
+                rewindSpawn.x());
     }
 
     @Override

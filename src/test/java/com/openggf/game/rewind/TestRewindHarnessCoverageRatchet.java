@@ -132,12 +132,17 @@ public class TestRewindHarnessCoverageRatchet {
  *       ResultsScreen dynamic codec.</li>
  *   <li>2026-06-19: raised to 107 after deleting the S3K ICZ end-boss
  *       escape-ship dynamic codec.</li>
+ *   <li>2026-06-19: raised to 111 after deleting six S1 scalar/no-reference
+ *       exact-spawn/session-only codecs; EndingEmeralds, ExplosionItem,
+ *       MonitorPowerUp, and Ring are now headlessly probeable, while
+ *       CollapsingFloor and SpikedBallChain remain honest no-probe session-tail
+ *       classes.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 107;
+    static final int RATCHET_FLOOR = 111;
 
     @BeforeEach
     void initHeadless() {

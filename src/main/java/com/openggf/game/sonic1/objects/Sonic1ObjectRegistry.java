@@ -79,7 +79,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             fzPlasmaLauncherCodec(),
             fzPlasmaBallCodec(),
             bossBlockCodec(),
-            collapsingFloorCodec(),
             falseFloorBlockCodec(),
             orbSpikeCodec(),
             // NOTE: scrapEggmanButtonCodec intentionally REMOVED.
@@ -92,40 +91,17 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     Sonic1EggPrisonObjectInstance.class,
                     spawn -> new Sonic1EggPrisonObjectInstance(spawn)),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1EndingEmeraldsObjectInstance.class,
-                    spawn -> new Sonic1EndingEmeraldsObjectInstance(
-                            spawn.x(), spawn.y(), 0, 0)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1EndingSonicObjectInstance.class,
                     spawn -> new Sonic1EndingSonicObjectInstance(spawn.x(), spawn.y())),
             glassReflectionCodec(),
             // Sonic1ResultsScreenObjectInstance now implements RewindRecreatable
             // -> genericRecreate Path 1.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1ExplosionItemObjectInstance.class,
-                    spawn -> new Sonic1ExplosionItemObjectInstance(spawn.x(), spawn.y(), null, 0)),
             // Sonic1FloatingBlockObjectInstance now implements RewindRecreatable
             // -> genericRecreate Path 1.
             grassFireChildCodec(),
             lamppostTwirlCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1MonitorPowerUpObjectInstance.class,
-                    spawn -> new Sonic1MonitorPowerUpObjectInstance(
-                            spawn.x(), spawn.y(), spawn.subtype(), null)),
             ringFlashCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1RingInstance.class,
-                    spawn -> new Sonic1RingInstance(
-                            spawn,
-                            new RingSpawn(spawn.x(), spawn.y()),
-                            spawn.x())),
             seesawBallCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1SpikedBallChainObjectInstance.class,
-                    (spawn, os) -> {
-                        int zoneIndex = (os != null) ? os.romZoneId() : -1;
-                        return new Sonic1SpikedBallChainObjectInstance(spawn, zoneIndex);
-                    }),
             // Sonic1SplashObjectInstance (LZ water splash, object 0x08) is accept-drop:
             // a sub-1-second purely-cosmetic splash re-emitted naturally on water
             // entry/exit. See docs/KNOWN_DISCREPANCIES.md "Batch-3 Rewind: Transient
@@ -505,29 +481,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     }
                 }
                 return block;
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec collapsingFloorCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic1CollapsingFloorObjectInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic1CollapsingFloorObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // Conceptually exactSpawnCodec: recreate purely from spawn + live zone
-                // (the same ROM zone id the production factory uses).
-                int zoneIndex = context.objectServices().romZoneId();
-                return new Sonic1CollapsingFloorObjectInstance(entry.spawn(), zoneIndex);
             }
         };
     }

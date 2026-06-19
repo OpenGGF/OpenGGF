@@ -380,6 +380,26 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossRobotnikEscapeShip",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> BATCH38_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1EndingEmeraldsObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1MonitorPowerUpObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1RingInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance",
+                    GameId.S1));
+
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
     private static final ObjectRenderManager INERT_RENDER_MANAGER =
@@ -2202,6 +2222,61 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void batch37ClassesRoundTripDoesNotFailWhenProbeable() {
         for (CodecDeletionCandidate candidate : BATCH37_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            if (result instanceof RoundTripSweepResult.Unprobed unprobed) {
+                assertTrue(unprobed.reason().contains("No probe-compatible constructor"),
+                        candidate.fqn()
+                                + " may remain session-verified only, but not fail hard; got: "
+                                + result);
+                continue;
+            }
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed through the ObjectManager session path; got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // Batch 38: S1 scalar/no-reference session-only exact-spawn dynamics
+    // =====================================================================
+
+    @Test
+    void batch38ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH38_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 38)");
+        }
+    }
+
+    @Test
+    void batch38ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH38_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-38 deletion; "
+                            + "session restore must use genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch38ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH38_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void batch38ClassesRoundTripDoesNotFailWhenProbeable() {
+        for (CodecDeletionCandidate candidate : BATCH38_DELETED_CODECS) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             if (result instanceof RoundTripSweepResult.Unprobed unprobed) {
                 assertTrue(unprobed.reason().contains("No probe-compatible constructor"),
