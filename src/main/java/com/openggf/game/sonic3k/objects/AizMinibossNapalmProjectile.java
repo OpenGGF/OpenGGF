@@ -6,6 +6,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -18,7 +20,7 @@ import java.util.List;
  *
  * State machine: LAUNCH -> REPOSITION -> DROP -> EXPLODE -> destroyed
  */
-public class AizMinibossNapalmProjectile extends AbstractObjectInstance {
+public class AizMinibossNapalmProjectile extends AbstractObjectInstance implements RewindRecreatable {
 
     /** Upward velocity (fixed-point 8.8, negative = up). */
     private static final int LAUNCH_VEL = -0x400;
@@ -57,6 +59,30 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance {
         this.worldX = startX;
         this.worldY = startY;
         this.yVel = LAUNCH_VEL;
+    }
+
+    /**
+     * Probe constructor used by
+     * {@link com.openggf.level.objects.ObjectRewindDynamicCodecs#genericRecreate} to
+     * obtain an instance on which {@link #recreateForRewind(RewindRecreateContext)} can
+     * be called. Delegates to the primary constructor with spawn coordinates.
+     */
+    AizMinibossNapalmProjectile(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Creates a fresh {@code AizMinibossNapalmProjectile} at the spawn coordinates.
+     * Scalar fields ({@code worldX}, {@code worldY}, {@code yVel}, {@code lifetime},
+     * {@code smokeTimer}, {@code explodeTimer}, {@code state}) are left at their
+     * constructor-default values because the standard scalar-restore pass overwrites
+     * them immediately after this method returns.
+     */
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizMinibossNapalmProjectile(ctx.spawn().x(), ctx.spawn().y());
     }
 
     @Override

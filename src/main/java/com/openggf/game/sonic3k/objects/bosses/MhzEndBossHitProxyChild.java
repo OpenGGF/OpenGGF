@@ -34,6 +34,11 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
     private int x;
     private int y;
 
+    /** Rewind-restore entry: relinks to the live parent boss (cross-package codec access). */
+    public static MhzEndBossHitProxyChild forRewindRecreate(MhzEndBossInstance parent) {
+        return new MhzEndBossHitProxyChild(parent);
+    }
+
     MhzEndBossHitProxyChild(MhzEndBossInstance parent) {
         super(new ObjectSpawn(
                         parent.getX() + X_OFFSET,

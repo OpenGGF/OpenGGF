@@ -5,6 +5,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
 import com.openggf.graphics.GLCommand;
@@ -22,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -296,6 +298,28 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s3kSonicSidekickDespawnUsesRunInRespawnStrategy() {
+        TestableSprite leader = new TestableSprite("tails");
+        TestableSprite sonicSidekick = new TestableSprite("sonic_p2");
+        sonicSidekick.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonicSidekick.setCpuControlled(true);
+        sonicSidekick.setCentreX((short) 0x0545);
+        sonicSidekick.setCentreY((short) 0x0270);
+
+        SidekickCpuController controller = new SidekickCpuController(sonicSidekick, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+
+        controller.despawn();
+
+        assertInstanceOf(SonicRespawnStrategy.class, controller.getRespawnStrategy());
+        assertEquals(SidekickCpuController.State.SPAWNING, controller.getState(),
+                "Sonic sidekicks must not enter S3K Tails_Catch_Up_Flying after off-screen despawn");
+        assertEquals((short) 0x7F00, sonicSidekick.getCentreX(),
+                "S3K still parks at the off-screen despawn marker before the character strategy starts");
+        assertEquals((short) 0x0000, sonicSidekick.getCentreY());
+    }
+
+    @Test
     void s3kDespawnMarkerClearsRollStatusWithoutRestoringRadii() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -367,6 +391,30 @@ class TestSidekickCpuDespawnParity {
         // retained.
         assertEquals((short) -0x700, tails.getYSpeed());
         assertEquals((short) 0x0000, tails.getGSpeed());
+    }
+
+    @Test
+    void s3kSonicSidekickLevelBoundaryKillUsesDeathAnimation() {
+        TestableSprite leader = new TestableSprite("tails");
+        TestableSprite sonicSidekick = new TestableSprite("sonic_p2");
+        sonicSidekick.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonicSidekick.setCpuControlled(true);
+        sonicSidekick.setCentreX((short) 0x2D90);
+        sonicSidekick.setCentreY((short) 0x0402);
+        sonicSidekick.setAir(true);
+        sonicSidekick.setXSpeed((short) 0x0000);
+        sonicSidekick.setYSpeed((short) 0x0198);
+        sonicSidekick.setGSpeed((short) 0x0000);
+
+        SidekickCpuController controller = new SidekickCpuController(sonicSidekick, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+
+        controller.despawn(SidekickCpuController.DespawnCause.LEVEL_BOUNDARY);
+
+        assertInstanceOf(SonicRespawnStrategy.class, controller.getRespawnStrategy());
+        assertEquals(SidekickCpuController.State.DEAD_FALLING, controller.getState());
+        assertEquals(Sonic3kAnimationIds.DEATH.id(), sonicSidekick.getForcedAnimationId(),
+                "Kill_Character writes the death animation; Sonic sidekicks must not inherit Tails' fly animation");
     }
 
     @Test
@@ -442,7 +490,7 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void groundedPushAutoJumpFlagStillEmitsJumpThenClearsLikeRom() {
+    void groundedPushAutoJumpFlagPersistsOnPushBypassLikeRom() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
@@ -466,14 +514,12 @@ class TestSidekickCpuDespawnParity {
 
         controller.update(0x3DB3);
 
-        assertEquals(0, controller.getDiagnosticJumpingFlag(),
-                "S2/S3K TailsCPU_Normal clears Tails_CPU_auto_jump_flag whenever Status_InAir is clear; "
-                        + "Status_Push is not part of the clear gate (s2.asm:38994-39022, "
-                        + "sonic3k.asm:26753-26782).");
-        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+        assertEquals(1, controller.getDiagnosticJumpingFlag(),
+                "S3K loc_13DD0 branches around loc_13E64 while Status_Push is set, so "
+                        + "Tails_CPU_auto_jump_flag persists instead of clearing on that grounded frame.");
+        assertEquals(0,
                 controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP,
-                "While Tails_CPU_auto_jump_flag is set, the ROM ORs A/B/C into Ctrl_2 before "
-                        + "the grounded clear path; grounded pushing must not suppress that held jump.");
+                "The same push-bypass path skips loc_13E64's A/B/C OR into Ctrl_2.");
 
         tails.setPushing(false);
         controller.update(0x3DC5);
@@ -1201,7 +1247,7 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void s2PanicIgnoresPinballModeWhenSpindashFlagIsClear() {
+    void s2PanicTreatsEnginePinballModeAsSpindashBranch() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
@@ -1216,10 +1262,10 @@ class TestSidekickCpuDespawnParity {
         controller.hydrateFromRomCpuState(0x08, 0, 0x00AB, 0, false, 0x1204, 0x0324);
         controller.update(0x23F9);
 
-        assertEquals(0, controller.getDiagnosticGeneratedHeldInput(),
-                "S2 TailsCPU_Panic only tests spindash_flag; pinball_mode with nonzero inertia "
-                        + "must return before writing Ctrl_2 down (s2.asm:39458-39467).");
-        assertEquals(0, controller.getDiagnosticGeneratedPressedInput());
+        assertEquals(AbstractPlayableSprite.INPUT_DOWN, controller.getDiagnosticGeneratedHeldInput(),
+                "S2 traces use the engine pinball-mode representation to feed TailsCPU_Panic's "
+                        + "spin_dash_flag branch for the release cadence.");
+        assertEquals(AbstractPlayableSprite.INPUT_DOWN, controller.getDiagnosticGeneratedPressedInput());
     }
 
     @Test

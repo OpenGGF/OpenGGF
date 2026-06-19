@@ -34,6 +34,9 @@ import com.openggf.physics.Direction;
 import com.openggf.physics.SensorResult;
 import com.openggf.game.GroundMode;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
+import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.playable.SuperState;
 import java.lang.reflect.Field;
@@ -739,30 +742,40 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void testTerrainCollisionWithFlaggedAngle() throws Exception {
-                // Test cases: Current Angle -> Snapped Angle
-                // When a tile returns 0xFF angle, it means "snap to nearest cardinal angle"
-                // Formula: (angle + 0x20) & 0xC0
-                // 0x00 (0 deg) -> 0x00
-                // 0x10 (22.5 deg) -> 0x00
-                // 0x30 (67.5 deg) -> 0x40 (90 deg)
-                // 0x70 (157.5 deg) -> 0x80 (180 deg)
-
-                byte[][] testCases = {
-                                { (byte) 0x00, (byte) 0x00 },
-                                { (byte) 0x10, (byte) 0x00 },
-                                { (byte) 0x30, (byte) 0x40 },
-                                { (byte) 0x70, (byte) 0x80 },
-                                { (byte) 0xE0, (byte) 0x00 } // -32 -> 0
+                // When a tile's collision angle has bit 0 set (the 0xFF "flat/flagged"
+                // sentinel), doTerrainCollisionAir must IGNORE the player's stale angle
+                // and snap to flat ground (0x00). Drive the real production routine for
+                // a spread of stale starting angles; the expected snapped value (0x00)
+                // is an independent hand-known constant, NOT recomputed by the SUT.
+                byte[] staleAngles = {
+                                (byte) 0x00, // already flat
+                                (byte) 0x10, // shallow slope
+                                (byte) 0x30, // steep slope
+                                (byte) 0x70, // near-vertical
+                                (byte) 0xC0, // right-wall (the original stale-angle bug)
+                                (byte) 0xE0  // shallow left slope
                 };
 
-                for (byte[] testCase : testCases) {
-                        byte currentAngle = testCase[0];
-                        byte expectedSnappedAngle = testCase[1];
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doTerrainCollisionAir",
+                                SensorResult[].class);
+                method.setAccessible(true);
 
-                        // Test the direct formula: (angle + 0x20) & 0xC0
-                        byte actual = (byte) ((currentAngle + 0x20) & 0xC0);
-                        assertEquals(expectedSnappedAngle, actual, "Angle " + String.format("0x%02X", currentAngle) + " should snap to "
-                                                        + String.format("0x%02X", expectedSnappedAngle));
+                for (byte staleAngle : staleAngles) {
+                        mockSprite.setAngle(staleAngle);
+                        mockSprite.setAir(true);
+                        mockSprite.setGroundMode(GroundMode.GROUND);
+                        mockSprite.setYSpeed((short) 1000); // falling so landing can occur
+                        mockSprite.setXSpeed((short) 0);
+
+                        // Flagged tile: angle 0xFF (bit 0 set) at the player's feet, landable.
+                        SensorResult result = new SensorResult((byte) 0xFF, (byte) -1, 0, Direction.DOWN);
+                        SensorResult[] results = { result, result };
+
+                        method.invoke(manager, (Object) results);
+
+                        assertEquals((byte) 0x00, mockSprite.getAngle(),
+                                        "Flagged 0xFF tile should snap stale angle "
+                                                        + String.format("0x%02X", staleAngle) + " to flat ground (0x00)");
                 }
         }
 
@@ -2438,7 +2451,7 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void testS3kLeftWallPushSurvivesFacingFlipClearWhenContactIsLive() throws Exception {
+        public void testS3kFacingFlipClearsLeftWallPushLatchLikeRom() throws Exception {
                 setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);
@@ -2460,8 +2473,49 @@ public class TestPlayableSpriteMovement {
 
                 assertEquals(Direction.LEFT, mockSprite.getDirection(),
                                 "Pressing left from rest should face into the left wall before CalcRoomInFront");
-                assertTrue(mockSprite.getPushing(),
-                                "Live left-wall push contact must not be cleared by the prior facing-flip latch");
+                assertFalse(mockSprite.getPushing(),
+                                "S3K grounded facing-flip push clear is unconditional; a later CalcRoomInFront "
+                                                + "contact can set Status_Push again in the normal movement path");
+        }
+
+        @Test
+        public void groundedFacingFlipRestartsWalkScriptLikeRomPrevAnimSentinel() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                SpriteAnimationSet animations = new SpriteAnimationSet();
+                animations.addScript(0, new SpriteAnimationScript(0xFF,
+                                List.of(10, 11, 12, 13), SpriteAnimationEndAction.LOOP, 0));
+                animations.addScript(1, new SpriteAnimationScript(0xFF,
+                                List.of(20, 21, 22, 23), SpriteAnimationEndAction.LOOP, 0));
+                animations.addScript(5, new SpriteAnimationScript(0,
+                                List.of(30), SpriteAnimationEndAction.LOOP, 0));
+                mockSprite.setAnimationSet(animations);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(5)
+                                .setWalkAnimId(0)
+                                .setRunAnimId(1)
+                                .setRunSpeedThreshold(0x600));
+                mockSprite.setAnimationId(0);
+                mockSprite.setMovementInputActive(true);
+                mockSprite.setDirection(Direction.RIGHT);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+
+                mockSprite.getAnimationManager().update(0);
+                mockSprite.setAnimationFrameIndex(2);
+                mockSprite.setAnimationTick(0);
+
+                Method updatePush = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "updatePushingOnDirectionChange", boolean.class, boolean.class);
+                updatePush.setAccessible(true);
+                updatePush.invoke(manager, true, false);
+                mockSprite.setDirection(Direction.LEFT);
+
+                mockSprite.getAnimationManager().update(1);
+
+                assertEquals(10, mockSprite.getMappingFrame(),
+                                "S2/S3K MoveLeft/MoveRight force prev_anim=Run on a grounded facing flip, "
+                                                + "so Animate_* must restart the walk script from frame 0");
         }
 
         /**

@@ -152,6 +152,17 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     public int getY() {
         return currentY;
     }
+
+    /**
+     * Stable home (spawn) Y used as the burner flame's parent identity on rewind relink.
+     * The flame child spawns at {@code homeY - 0x10}, so a dropped flame can be re-bound to
+     * its platform by matching {@code getX() == flameSpawn.x()} and
+     * {@code getHomeY() == flameSpawn.y() + 0x10}.
+     */
+    public int getHomeY() {
+        return homeY;
+    }
+
     @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(3);

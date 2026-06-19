@@ -23,6 +23,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 10. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset)
 11. [LBZ2 End Boss Smoke Puffs: Immortal-Object Quirk Not Replicated](#lbz2-end-boss-smoke-puffs-immortal-object-quirk-not-replicated)
 12. [LBZ2 Finale Player Scripts: Engine Animation IDs Instead of Raw Mapping Frames](#lbz2-finale-player-scripts-engine-animation-ids-instead-of-raw-mapping-frames)
+13. [AIZ2 Boss Rewind: Transient Combat/Cosmetic Children Restored](#aiz2-boss-rewind-transient-combatcosmetic-children-restored)
 
 ---
 
@@ -472,3 +473,122 @@ ROM exactly via the object mapping-frame control used elsewhere.
 `TestLbzFinalBoss1Instance` covers the milestone-A freeze/look-up and finale
 phases; `TestLbz2RideCameoInstances` covers the grab, pin frames, release
 velocities, and final-boss spawn coordinates.
+
+
+---
+
+## AIZ2 Boss Rewind: Transient Combat/Cosmetic Children Restored
+
+**Location:** `Sonic3kObjectRegistry.java` (`DYNAMIC_REWIND_CODECS`), `ObjectManager.recreateDynamicObject`
+
+### Behaviour
+
+The held-rewind system recreates dynamic objects on a backward seek via per-class
+rewind codecs. Held rewind restores the nearest keyframe and then re-simulates forward
+to the displayed frame every frame, so an object reverses cleanly only if it is captured
+in the keyframe and recreated on restore. The AIZ2 ship-loop driver objects
+(`AizBattleshipInstance`, `AizBossSmallInstance`, `AizBgTreeSpawnerInstance`,
+`AizBgTreeInstance`), the boss-endgame `Aiz2BossEndSequenceController`, and the
+**structural** miniboss/end-boss children (body, arm, ship, flame column, napalm
+controller, flame barrel) have codecs.
+
+In addition, all of the short-lived **combat and cosmetic** children now have codecs and
+are restored across a rewind boundary:
+
+`AizShipBombInstance`, `AizBombExplosionInstance`, `AizMinibossBarrelShotChild`,
+`AizMinibossBarrelShotFlareChild`, `AizMinibossImpactFlameChild`,
+`AizMinibossFlameChild`, `AizMinibossDebrisChild`, `AizEndBossPropellerChild`,
+`AizEndBossFlameChild`, `AizEndBossBombChild`, `AizEndBossSmokeChild`,
+`AizEndBossDebrisChild`.
+
+There are no longer any intentionally-dropped AIZ2 battleship/boss transient children.
+
+### Rationale
+
+Previously these children were given no codec, so a rewind restore dropped them and the
+forward re-simulation re-emitted them from scratch — bombs and boss attacks visibly
+played *forward* and re-triggered/stacked instead of reversing. Restoring them makes the
+whole scene rewind cleanly.
+
+Each codec only builds a structurally-correct instance and relies on the generic field
+capturer to reapply the captured non-final scalar state afterward:
+
+- **Parent relink.** Codecs that need the live boss/ship find it in
+  `getActiveObjects()`. Dynamic entries are captured and restored in spawn order, and a
+  parent always spawns before its children, so the parent is already recreated when the
+  child's codec runs. `AizShipBombInstance` relinks the live `AizBattleshipInstance`;
+  the end-boss bomb/smoke and the miniboss flame relink their boss.
+- **Sibling relink.** Some children also need a live sibling, not just the boss:
+  `AizEndBossPropellerChild` needs its `AizEndBossArmChild`, `AizEndBossFlameChild` needs
+  its `AizEndBossPropellerChild`, `AizMinibossBarrelShotChild` needs its
+  `AizMinibossFlameBarrelChild`, and `AizMinibossBarrelShotFlareChild` needs its
+  anchoring barrel shot. Siblings are recreated earlier in spawn order, so they are
+  present. When several live siblings of the same type exist, the child is relinked to
+  the one nearest its captured spawn position; if no live sibling/boss is present the
+  child is dropped (codec returns null) rather than recreated with a dangling reference.
+- **Self-contained.** `AizBombExplosionInstance`, `AizEndBossDebrisChild`,
+  `AizMinibossImpactFlameChild`, and `AizMinibossDebrisChild` carry their world position
+  in their spawn and need no relink.
+
+To make the differentiating constructor arguments survive recreate, the fields that were
+derived from non-spawn constructor args were made non-final so the generic field capturer
+captures and reapplies them (the codec passes placeholders). Object-reference fields
+(`sourceShip`, `boss`, `parent`, `arm`, `propeller`, `barrel`, `anchor`) remain final and
+are relinked by the codec.
+
+The bosses themselves (`AizMinibossInstance` id `0x91`, `AizEndBossInstance` id `0x92`)
+are layout-spawned and recreated by the object registry, and they re-spawn their children
+from a routine (not the constructor), so no double-spawn occurs.
+
+### Verification
+
+`TestAiz2ObjectRewindCodecs` asserts a codec exists for each restored class (including
+the formerly-dropped transients). `TestAiz2TransientChildRewind` boots AIZ act 2, drops a
+battleship bomb, captures, removes it, restores, and asserts the bomb is recreated with
+its mid-flight scalar state (not reset to spawn defaults) and relinked to the live ship.
+## Batch-2 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+`MgzEndBossDefeatDebrisChild` is intentionally **not** captured/recreated across a
+held-rewind boundary (no rewind codec; its `#recreate` and `#finalScalar` keys stay in
+`src/test/resources/rewind/coverage-baseline.txt`). It is short-lived cosmetic debris:
+three MGZ end-boss fragments emitted at defeat that drift at constant velocity, render a
+static frame, and self-destruct the moment they pass the offscreen margin. They hold no
+player, score, terrain, or arena state, so a one-frame catch-up on forward re-simulation
+is invisible. This mirrors the AIZ2 transient-children precedent above: capture is only
+worthwhile when a dropped object would otherwise visibly re-emit and play forward; a
+sub-lifetime cosmetic fragment that re-emits in-frame does not qualify.
+
+All other batch-2 S3K transient/relink children (`AizRockFragmentChild`,
+`CnzMinibossDebrisChild`, `S3kBossExplosionChild`, `S3kSignpostSparkleChild`,
+`MhzPollenParticleInstance`, `MhzMinibossFlameInstance`, `MhzMinibossEscapeShardInstance`,
+`Sonic3kStarPostBonusStarChild`, `Sonic3kSSEntryFlashObjectInstance`,
+`IczEndBossEggCapsuleInstance`, `CaterkillerJrBodyInstance`, `BuggernautBabyInstance`) now
+have rewind codecs in `Sonic3kObjectRegistry` and are restored on a backward seek.
+
+## Batch-4 Rewind: Transient Cosmetic Children Not Rewound
+
+`AizIntroEmeraldGlowChild` is intentionally **not** given its own rewind codec (its
+`#recreate` and `#finalScalar#xOffset` / `#finalScalar#yOffset` keys stay in
+`src/test/resources/rewind/coverage-baseline.txt`). It is the AIZ1 intro-biplane emerald
+glow — a purely cosmetic 3-frame cycle that does **not** even render
+(`AizIntroPlaneChild.appendRenderCommands` omits it) and holds no player, score, or
+terrain state. More importantly it is never a dynamic-object snapshot entry: the two glow
+children are created with raw `new` and held only as `glowChild1`/`glowChild2` fields on
+`AizIntroPlaneChild` (already enrolled as structural sub-object refs in
+`DefaultObjectRewindPolicies.STRUCTURAL_OBJECT_FIELD_NAMES`); they are never passed to
+`addDynamicObject`, so there is no `DynamicObjectEntry` / `entry.spawn()` to drive an
+`exactSpawnCodec` or relink codec. The coverage-baseline keys are over-approximation false
+positives from the spawnable-class scan. Restoring the glow follows transitively for free
+from the owning `AizIntroPlaneChild` relink codec (which re-creates its boosters and is
+relinked to the live `AizPlaneIntroInstance`), so no separate codec is warranted.
+
+This mirrors the AIZ2/Batch-2 transient-children precedent above: capture is only
+worthwhile when a dropped object would otherwise visibly re-emit and play forward.
+
+The other batch-4 HCZ end-boss scene objects (`HczEndBossInstance`,
+`HczEndBossEggCapsuleInstance`, `HczEndBossGeyserCutscene`, `HczEndBossRobotnikShip`,
+`HczEndBossTurbine`, `HczEndBossBlade`, `HczEndBossBladeSplash`,
+`HczEndBossBladeWaterChute`, `HczEndBossWaterColumn`) plus the AIZ boss/intro objects
+(`AizEndBossInstance`, `Aiz2EndEggCapsuleInstance`, `AizIntroPlaneChild`,
+`AizIntroWaveChild`) now have rewind codecs in `Sonic3kObjectRegistry` and are restored on
+a backward seek.

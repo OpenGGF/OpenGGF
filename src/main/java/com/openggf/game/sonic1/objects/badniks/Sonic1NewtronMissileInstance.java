@@ -40,7 +40,7 @@ public class Sonic1NewtronMissileInstance extends AbstractProjectileInstance {
     // From Ani_Missile animation 1: dc.b 1, 2, 3, afEnd
     private static final int ACTIVE_ANIM_SPEED = 2;
 
-    private final boolean facingLeft;
+    private boolean facingLeft;
     private int animTimer;
     private int animFrame;
 

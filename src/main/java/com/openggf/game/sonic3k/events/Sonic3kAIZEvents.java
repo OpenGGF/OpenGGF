@@ -1597,6 +1597,74 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 .anyMatch(object -> object instanceof AizEndBossInstance boss && !boss.isDestroyed());
     }
 
+    /**
+     * Post-rewind-restore reconciliation of the AIZ2 ship-loop / boss sequence.
+     *
+     * <p>The one-shot spawn guards ({@code minibossSpawned}, {@code battleshipSpawned},
+     * {@code endBossSpawned}) and the auto-scroll camera lock are reflectively captured
+     * by the AIZ event sidecar, but the dynamic objects they gate are recreated by the
+     * object-manager rewind codecs. If a sequence-driving object failed to be recreated,
+     * a restore can leave an impossible state: a guard marked spawned with no live object,
+     * or {@code battleshipAutoScrollActive} true with no battleship/small-boss left to
+     * call {@link #onBattleshipComplete()}/{@link #onBossSmallComplete()} — which would
+     * force-lock the camera every frame forever (softlock).
+     *
+     * <p>This is a live-object predicate, not a zone/frame/route carve-out: with the
+     * codecs in place the driver objects are present and nothing here fires. It is a
+     * defense-in-depth backstop guaranteeing the camera lock is never left orphaned.
+     */
+    public void reconcileSequenceAfterRewindRestore() {
+        // End-boss/miniboss latches: clear when their instance is gone so the normal
+        // spawn path can re-fire (updateAiz2EndBossSpawn already re-checks live presence).
+        if (endBossSpawned && !hasLiveAizEndBoss()) {
+            endBossSpawned = false;
+        }
+        if (minibossSpawned
+                && !anyLiveObject(o -> o instanceof AizMinibossInstance b && !b.isDestroyed())) {
+            minibossSpawned = false;
+        }
+
+        // Battleship auto-scroll loop: ended only by the battleship (pre-bombing) or the
+        // small boss craft (post-bombing). If that driver is gone, the loop can never end,
+        // so release it the same way onBossSmallComplete() does (unlock camera bounds).
+        if (battleshipAutoScrollActive) {
+            boolean driverLive = (battleshipWrapX == BATTLESHIP_WRAP_X_POST_BOMBING)
+                    ? anyLiveObject(o -> o instanceof AizBossSmallInstance b && !b.isDestroyed())
+                    : anyLiveObject(o -> o instanceof AizBattleshipInstance b && !b.isDestroyed());
+            if (!driverLive) {
+                onBossSmallComplete();
+            }
+        }
+
+        // Rebind the boss-endgame Knuckles cutscene pointer to the restored
+        // object (or null). Runs after object-manager restore so it overrides
+        // the stale reference dropped by Aiz2BossEndSequenceState.restore().
+        rebindCutsceneKnucklesAfterRestore();
+    }
+
+    private void rebindCutsceneKnucklesAfterRestore() {
+        var objManager = levelManager() != null ? levelManager().getObjectManager() : null;
+        com.openggf.game.sonic3k.objects.CutsceneKnucklesAiz2Instance live = null;
+        if (objManager != null) {
+            for (var obj : objManager.getActiveObjects()) {
+                if (obj instanceof com.openggf.game.sonic3k.objects.CutsceneKnucklesAiz2Instance k
+                        && !k.isDestroyed()) {
+                    live = k;
+                    break;
+                }
+            }
+        }
+        com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState.setActiveKnuckles(live);
+    }
+
+    private boolean anyLiveObject(java.util.function.Predicate<Object> predicate) {
+        var objManager = levelManager() != null ? levelManager().getObjectManager() : null;
+        if (objManager == null) {
+            return false;
+        }
+        return objManager.getActiveObjects().stream().anyMatch(predicate);
+    }
+
     private void ensureBattleshipTerrainLoaded() {
         if (battleshipTerrainLoaded) {
             return;

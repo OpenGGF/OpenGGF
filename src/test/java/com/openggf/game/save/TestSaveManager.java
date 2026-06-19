@@ -150,12 +150,53 @@ class TestSaveManager {
     }
 
     @Test
-    void writeSlot_usesTempFileAndAtomicMove() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/game/save/SaveManager.java"));
+    void writeSlot_publishesAtomicallyAndLeavesNoTempArtifact() throws Exception {
+        SaveManager manager = new SaveManager(root);
 
-        assertTrue(source.contains("StandardCopyOption.ATOMIC_MOVE"),
-                "writeSlot must publish saves with an atomic move");
-        assertTrue(source.contains(".tmp"),
-                "writeSlot must write the envelope to a sibling temp file before publishing");
+        manager.writeSlot("s3k", 1, Map.of("zone", 4, "act", 1));
+
+        Path slotDir = root.resolve("s3k");
+        Path slot = slotDir.resolve("slot1.json");
+        // A successful write must leave a valid, loadable slot...
+        assertTrue(Files.exists(slot), "slot file must exist after a successful write");
+        SaveSlotSummary summary = manager.readSlotSummary("s3k", 1);
+        assertEquals(SaveSlotState.VALID, summary.state());
+        assertEquals(4, summary.payload().get("zone"));
+        // ...and never leave a half-written sibling temp file behind.
+        assertNoTempArtifacts(slotDir);
+    }
+
+    @Test
+    void writeSlot_failedWriteLeavesPriorSlotIntactAndNoPartialFile() throws Exception {
+        SaveManager manager = new SaveManager(root);
+        manager.writeSlot("s3k", 1, Map.of("zone", 4, "act", 1));
+        Path slotDir = root.resolve("s3k");
+        Path slot = slotDir.resolve("slot1.json");
+        String before = Files.readString(slot);
+
+        // A self-referential structure cannot be serialized by Jackson, so the
+        // write fails before the atomic publish. The prior slot must survive
+        // untouched and no partial/temp file may be left in its place.
+        java.util.List<Object> cyclic = new java.util.ArrayList<>();
+        cyclic.add(cyclic);
+        Map<String, Object> poison = Map.of("zone", 9, "bad", cyclic);
+
+        assertThrows(Exception.class, () -> manager.writeSlot("s3k", 1, poison),
+                "an unserializable payload must fail the write");
+
+        assertTrue(Files.exists(slot), "prior valid slot must remain after a failed write");
+        assertEquals(before, Files.readString(slot),
+                "failed write must not mutate the previously published slot");
+        assertNoTempArtifacts(slotDir);
+    }
+
+    private static void assertNoTempArtifacts(Path slotDir) throws Exception {
+        try (var stream = Files.list(slotDir)) {
+            var leftovers = stream
+                    .filter(p -> p.getFileName().toString().contains(".tmp"))
+                    .toList();
+            assertTrue(leftovers.isEmpty(),
+                    "no temp publish artifacts may remain, found: " + leftovers);
+        }
     }
 }

@@ -28,7 +28,7 @@ import java.util.List;
  *   <li>4-5: MonkeyDude art, frame 3 (coconut), collision 0x98, no projectiles</li>
  * </ul>
  */
-final class CaterkillerJrBodyInstance extends AbstractObjectInstance
+public final class CaterkillerJrBodyInstance extends AbstractObjectInstance
         implements TouchResponseProvider {
 
     private static final int COLLISION_BODY = 0x97;
@@ -57,11 +57,14 @@ final class CaterkillerJrBodyInstance extends AbstractObjectInstance
     private static final int[] PROJ_ANIM_FRAMES = {2, 2, 3, 4};
     private static final int PROJ_FIRE_COOLDOWN = 0x1A;
 
-    private final int segmentIndex;
-    private final String rendererKey;
-    private final int mappingFrame;
-    private final int collisionFlags;
-    private final boolean canFire;
+    // Non-final so the generic field capturer reapplies them after a rewind
+    // recreate. segmentIndex (and the art/collision/fire flags it derives) is not
+    // recoverable from the body's own spawn, which carries only position.
+    private int segmentIndex;
+    private String rendererKey;
+    private int mappingFrame;
+    private int collisionFlags;
+    private boolean canFire;
 
     private int currentX;
     private int currentY;
@@ -113,6 +116,19 @@ final class CaterkillerJrBodyInstance extends AbstractObjectInstance
         }
 
         this.waitTimer = waitDelay;
+    }
+
+    /**
+     * Rewind recreate factory. The body holds no live parent reference, so a
+     * structurally-valid instance positioned at the captured spawn is enough; the
+     * non-final differentiator fields (segmentIndex, rendererKey, mappingFrame,
+     * collisionFlags, canFire) and the in-flight motion/animation scalars are
+     * reapplied by the generic field capturer immediately after recreate, so
+     * placeholders are passed here. Exposed publicly so {@code Sonic3kObjectRegistry}
+     * (in the parent package) can reach the package-private constructor.
+     */
+    public static CaterkillerJrBodyInstance forRewindRecreate(ObjectSpawn spawn) {
+        return new CaterkillerJrBodyInstance(spawn, 0, 0);
     }
 
     @Override

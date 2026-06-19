@@ -1,0 +1,59 @@
+package com.openggf.game.sonic3k.objects;
+
+import com.openggf.game.sonic3k.objects.badniks.S3kBadnikProjectileInstance;
+import com.openggf.level.objects.DynamicObjectRewindCodec;
+import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import org.junit.jupiter.api.Test;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Verifies that {@link Sonic3kObjectRegistry} (unioned with the shared codecs)
+ * now exposes a dynamic rewind recreate codec for every HCZ/MHZ/MGZ/ICZ
+ * release-slice object that was previously dropped on a held-rewind restore.
+ *
+ * <p>Pure registry-content test: it constructs a registry and reads
+ * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
+ * session. A full session round-trip is a separate concern handled by the
+ * rewind campaign / coverage guard.
+ */
+class TestS3kRewindFixBatch1Codecs {
+
+    private static Set<String> codecClassNames() {
+        Set<String> names = new HashSet<>();
+        List<DynamicObjectRewindCodec> codecs = new Sonic3kObjectRegistry().dynamicRewindCodecs();
+        for (DynamicObjectRewindCodec codec : codecs) {
+            names.add(codec.className());
+        }
+        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
+            names.add(codec.className());
+        }
+        return names;
+    }
+
+    @Test
+    void registersCodecsForReleaseSliceBatch1Objects() {
+        Set<String> names = codecClassNames();
+
+        List<String> required = List.of(
+                HCZConveyorBeltObjectInstance.class.getName(),
+                MhzPulleyLiftObjectInstance.class.getName(),
+                MhzSwingVineObjectInstance.class.getName(),
+                S3kBadnikProjectileInstance.class.getName(),
+                MGZHeadTriggerProjectileInstance.class.getName(),
+                IczBigSnowPileInstance.class.getName(),
+                S3kSignpostInstance.class.getName(),
+                S3kSignpostStubChild.class.getName(),
+                S3kAirCountdownObjectInstance.class.getName(),
+                Sonic3kStarPostStarChild.class.getName());
+
+        for (String name : required) {
+            assertTrue(names.contains(name),
+                    "missing rewind recreate codec for " + name);
+        }
+    }
+}

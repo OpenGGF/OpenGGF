@@ -8,6 +8,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -37,7 +39,8 @@ import java.util.List;
  * the data table ({@code word_31124}). Each entry defines left/right X boundaries.
  * Status bit 0 (render_flags bit 0) controls orientation: 0 = rightward, 1 = leftward.
  */
-public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
+public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
+        implements RewindRecreatable {
 
     // ===== Conveyor belt boundary data table (word_31124, sonic3k.asm:66287-66303) =====
     // Each entry: { leftX, rightX } defining the horizontal bounds of a belt.
@@ -179,6 +182,20 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
             this.activeLeftBound = leftBound;
             this.activeRightBound = rightBound + 8;
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Self-contained: all state (including the {@code final} bound fields) is
+     * derived deterministically from the captured spawn, so re-running the constructor
+     * reproduces it exactly. Replaces the former
+     * {@code exactSpawnCodec(HCZConveyorBeltObjectInstance.class, HCZConveyorBeltObjectInstance::new)}
+     * (Phase-2 codec-deletion batch 2).
+     */
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HCZConveyorBeltObjectInstance(ctx.spawn());
     }
 
     @Override

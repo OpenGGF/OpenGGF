@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
@@ -43,7 +44,7 @@ import java.util.List;
  * <h3>Deletion:</h3>
  * Uses {@code Sprite_CheckDeleteTouchXY} (both X and Y bounds check).
  */
-final class BuggernautBabyInstance extends AbstractObjectInstance {
+public final class BuggernautBabyInstance extends AbstractObjectInstance {
 
     // --- Chase physics ---
 
@@ -94,6 +95,9 @@ final class BuggernautBabyInstance extends AbstractObjectInstance {
     private int animIndex;
 
     /** Reference to the current parent (ROM: parent3 at $42). */
+    @RewindTransient(reason = "Structural parent link; relinked to the nearest live "
+            + "Buggernaut on rewind recreate. State/velocity/facing are reapplied by "
+            + "the generic field capturer.")
     private BuggernautBadnikInstance parent;
 
     BuggernautBabyInstance(ObjectSpawn ownerSpawn, int x, int y,

@@ -443,13 +443,13 @@ class TestBuildToolingGuard {
         String workflow = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
         List<String> violations = new ArrayList<>();
 
-        if (!workflow.contains("release:\n    needs: build\n    if: github.event_name == 'workflow_dispatch'")) {
+        if (!workflow.contains("release:\n    needs: [build, universal-jar]\n    if: github.event_name == 'workflow_dispatch'")) {
             violations.add(".github/workflows/release.yml release job must be gated to manual workflow_dispatch");
         }
-        if (workflow.contains("release:\n    needs: build\n    if: github.event_name == 'push'")) {
+        if (workflow.contains("release:\n    needs: [build, universal-jar]\n    if: github.event_name == 'push'")) {
             violations.add(".github/workflows/release.yml still publishes releases automatically on every master push");
         }
-        if (!workflow.contains("release:\n    needs: build\n    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'")) {
+        if (!workflow.contains("release:\n    needs: [build, universal-jar]\n    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'")) {
             violations.add(".github/workflows/release.yml manual publishing must be restricted to refs/heads/master");
         }
         if (!workflow.contains("Check release tag does not already exist")) {
@@ -599,6 +599,55 @@ class TestBuildToolingGuard {
 
         if (!violations.isEmpty()) {
             fail("release artifacts must be structurally smoke-validated before upload:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void releaseWorkflowShouldPublishUniversalJvmJar() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        String normalizedWorkflow = normalizeLineEndings(workflow);
+        String pom = Files.readString(Path.of("pom.xml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!pom.contains("<id>universal-jar</id>")) {
+            violations.add("pom.xml does not define a universal-jar profile");
+        }
+        List<String> expectedClassifiers = List.of(
+                "natives-linux",
+                "natives-linux-arm32",
+                "natives-linux-arm64",
+                "natives-windows",
+                "natives-windows-arm64",
+                "natives-windows-x86",
+                "natives-macos",
+                "natives-macos-arm64");
+        for (String classifier : expectedClassifiers) {
+            if (!pom.contains("<classifier>" + classifier + "</classifier>")) {
+                violations.add("pom.xml universal-jar profile does not include LWJGL " + classifier);
+            }
+        }
+        if (!normalizedWorkflow.contains("universal-jar:\n    needs: test")) {
+            violations.add(".github/workflows/release.yml does not build the universal JVM jar after release tests");
+        }
+        if (!workflow.contains("mvn -Dmse=off package -Puniversal-jar -DskipTests -B")) {
+            violations.add(".github/workflows/release.yml does not build the universal JVM jar with the universal-jar profile");
+        }
+        if (!workflow.contains("OpenGGF-universal.jar")) {
+            violations.add(".github/workflows/release.yml does not publish a stable OpenGGF-universal.jar artifact");
+        }
+        for (String classifier : expectedClassifiers) {
+            if (!workflow.contains(classifier)) {
+                violations.add(".github/workflows/release.yml does not validate the universal jar native classifier "
+                        + classifier);
+            }
+        }
+        if (!normalizedWorkflow.contains("release:\n    needs: [build, universal-jar]")) {
+            violations.add(".github/workflows/release.yml release job does not wait for the universal jar artifact");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release workflow must publish a smoke-validated universal JVM jar:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }

@@ -17,7 +17,7 @@ import java.util.List;
  * Shared projectile object for S3K badniks that use Map_Bloominator / Map_MonkeyDude
  * projectile frames and hurt-category touch flags.
  */
-final class S3kBadnikProjectileInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public final class S3kBadnikProjectileInstance extends AbstractObjectInstance implements TouchResponseProvider {
     private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
     private static final int DEFLECT_SPEED = 0x800;
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
@@ -33,12 +33,16 @@ final class S3kBadnikProjectileInstance extends AbstractObjectInstance implement
                     com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy
                             .STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS));
 
-    private final String rendererKey;
-    private final int mappingFrame;
-    private final int collisionSizeIndex;
-    private final int priorityBucket;
-    private final boolean hFlip;
-    private final int gravity;
+    // These fields are made non-final (not derivable from the captured
+    // ObjectSpawn, which only carries position + the parent badnik's
+    // id/subtype/render flags) so GenericFieldCapturer reapplies their exact
+    // values after a rewind recreate from forRewindRecreate(...) placeholders.
+    private String rendererKey;
+    private int mappingFrame;
+    private int collisionSizeIndex;
+    private int priorityBucket;
+    private boolean hFlip;
+    private int gravity;
 
     private int currentX;
     private int currentY;
@@ -70,6 +74,19 @@ final class S3kBadnikProjectileInstance extends AbstractObjectInstance implement
         this.collisionSizeIndex = collisionSizeIndex;
         this.priorityBucket = priorityBucket;
         this.hFlip = hFlip;
+    }
+
+    /**
+     * Rewind recreate factory. The codec only needs a structurally-valid
+     * instance positioned at the captured spawn; the non-final differentiator
+     * fields (rendererKey, mappingFrame, gravity, collisionSizeIndex,
+     * priorityBucket, hFlip) and the in-flight motion scalars are reapplied by
+     * the generic field capturer immediately after recreate, so placeholders
+     * are passed here. {@code appendRenderCommands} tolerates the empty
+     * rendererKey for the single pre-reapply frame (getRenderer returns null).
+     */
+    public static S3kBadnikProjectileInstance forRewindRecreate(ObjectSpawn spawn) {
+        return new S3kBadnikProjectileInstance(spawn, "", 0, spawn.x(), spawn.y(), 0, 0, 0, 0, 0, false);
     }
 
     @Override

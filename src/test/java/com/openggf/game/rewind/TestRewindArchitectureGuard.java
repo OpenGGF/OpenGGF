@@ -43,6 +43,11 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/ARZPlatformObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/ConveyorObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/ConveyorObjectInstance.java#restoreRewindState", 1),
+            // Obj70 compresses eight ROM SST cog teeth into one multi-piece
+            // object plus slot-pressure children, so rewind must capture the
+            // rotating tooth phase/offsets and whether child slots were spawned.
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/CogObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/CogObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/BadnikProjectileInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/BadnikProjectileInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/BuzzerBadnikInstance.java#captureRewindState", 2),
@@ -50,7 +55,11 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/CoconutsBadnikInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/CoconutsBadnikInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/MasherBadnikInstance.java#captureRewindState", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/MasherBadnikInstance.java#restoreRewindState", 1)
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/MasherBadnikInstance.java#restoreRewindState", 1),
+            // Obj08 skid dust has transient animation/delete/DPLC-preload state
+            // that is not reconstructible from placement data alone.
+            Map.entry("src/main/java/com/openggf/level/objects/SkidDustObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/level/objects/SkidDustObjectInstance.java#restoreRewindState", 1)
     );
 
     private static final Map<String, Integer> OBJECT_REWIND_ANNOTATION_BASELINE = Map.ofEntries(
@@ -65,6 +74,14 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/IczTensionPlatformObjectInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Mhz1CutsceneKnucklesInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/CluckoidBadnikInstance.java#@RewindTransient", 1),
+            // BuggernautBaby's parent pointer is live object-graph structure relinked
+            // to the nearest live parent on recreate, not rewindable scalar state.
+            // Same structural-parent triage precedent as the entries above.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/BuggernautBabyInstance.java#@RewindTransient", 1),
+            // Sonic3kObjectRegistry's single occurrence is a javadoc {@code @RewindTransient}
+            // reference in a codec doc-comment, not a field annotation; counted because the
+            // annotation scan does not strip comments.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossArenaHelperInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossHitProxyChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossRobotnikHeadChild.java#@RewindTransient", 1),

@@ -318,6 +318,17 @@ public class TestHtzBgTilemapDiagnostic {
             }
         }
 
+        // HTZ's BG tilemap must actually contain the dynamic mountain-range
+        // ($0500-$0517) and cloud ($0518-$051F) tile indices, and must not
+        // reference patterns past the loaded pattern set.
+        assertTrue(mountainTiles > 0,
+                "HTZ BG tilemap should contain dynamic mountain tiles ($0500-$0517)");
+        assertTrue(cloudTiles > 0,
+                "HTZ BG tilemap should contain dynamic cloud tiles ($0518-$051F)");
+        assertTrue(maxPatIdx < patternCount,
+                "BG VDP rows must not reference a pattern index (" + maxPatIdx
+                        + ") at or beyond the loaded pattern count (" + patternCount + ")");
+
         // Also scan the raw BG block/chunk data to see what chunks reference
         System.out.println("\n--- Direct chunk pattern scan (BG rows 0-1, cols 0-7) ---");
         Map map = level.getMap();

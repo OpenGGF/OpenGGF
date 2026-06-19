@@ -8,6 +8,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -22,7 +24,8 @@ import java.util.logging.Logger;
  * <p>ROM reference: {@code Obj_PachinkoEnergyTrap}. Spawns the paired column, emits
  * beam particles, captures the player on the beam line, and ends the bonus stage.
  */
-public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance {
+public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
+        implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(PachinkoEnergyTrapObjectInstance.class.getName());
 
     private static final int COLUMN_SPACING = 0x190;
@@ -54,6 +57,22 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance {
         super(spawn, "PachinkoEnergyTrap");
         currentX = spawn.x();
         currentY = spawn.y();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Self-contained: the constructor only derives position from the captured spawn
+     * and does not spawn any children (column/beam children are spawned lazily from
+     * {@code update()}), so re-running it on restore is side-effect free. Scalar fields
+     * are reapplied by the standard scalar-restore pass; the captured-player back-reference
+     * is not wired here (it was not captured by the deleted codec either). Replaces the
+     * former {@code exactSpawnCodec(PachinkoEnergyTrapObjectInstance.class, PachinkoEnergyTrapObjectInstance::new)}
+     * (Phase-2 codec-deletion batch 2).
+     */
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new PachinkoEnergyTrapObjectInstance(ctx.spawn());
     }
 
     @Override

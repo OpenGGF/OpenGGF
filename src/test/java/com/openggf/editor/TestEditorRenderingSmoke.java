@@ -58,8 +58,29 @@ class TestEditorRenderingSmoke {
 
     @Test
     void focusedPaneRenderer_buildsWithoutPermanentSidebarAssumptions() {
-        FocusedEditorPaneRenderer renderer = new FocusedEditorPaneRenderer(null, TEST_GRAPHICS);
+        InspectableFocusedEditorPaneRenderer renderer = new InspectableFocusedEditorPaneRenderer();
 
+        // With no controller attached the renderer must still emit a defined
+        // fallback: the static pane chrome plus a translucent backdrop, and no
+        // controller-driven preview placements.
+        List<GLCommand> blockChrome = renderer.buildBlockCommands();
+        List<GLCommand> chunkChrome = renderer.buildChunkCommands();
+        assertFalse(blockChrome.isEmpty(),
+                "block pane must emit fallback chrome commands with a null controller");
+        assertFalse(chunkChrome.isEmpty(),
+                "chunk pane must emit fallback chrome commands with a null controller");
+
+        assertEquals(1, renderer.buildBlockBackdropCommands().size(),
+                "block pane must emit exactly one fallback backdrop command");
+        assertEquals(1, renderer.buildChunkBackdropCommands().size(),
+                "chunk pane must emit exactly one fallback backdrop command");
+
+        assertTrue(renderer.buildBlockPreviewPlacements().isEmpty(),
+                "no preview placements without a controller");
+        assertTrue(renderer.buildChunkPreviewPlacements().isEmpty(),
+                "no preview placements without a controller");
+
+        // The full render path must also remain exception-free.
         assertDoesNotThrow(renderer::renderBlockEditorPane);
         assertDoesNotThrow(renderer::renderChunkEditorPane);
     }

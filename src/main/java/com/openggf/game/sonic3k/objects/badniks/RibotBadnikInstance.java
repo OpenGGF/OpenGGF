@@ -166,9 +166,11 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance {
         }
 
         private final transient RibotBadnikInstance parent;
-        private final int childIndex;
-        private final int originX;
-        private final int originY;
+        // Un-final so the generic field capturer reapplies the captured values
+        // after a rewind recreate (the codec passes placeholders).
+        private int childIndex;
+        private int originX;
+        private int originY;
         private State state = State.WAIT_GATE;
         private int currentX;
         private int currentY;

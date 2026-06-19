@@ -50,10 +50,13 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
     // ROM: obActWid = $20; Solid_Landed uses this narrower width for top-standing checks.
     private static final int TOP_LANDING_HALF_WIDTH = 0x20;
 
-    private final int subtype;      // 0, 2, 4, or 6
-    private final boolean isBottom;  // subtypes 0-2 are bottom, 4-6 are top
-    private final int baseX;
-    private final int baseY;         // objoff_38 — base Y position
+    // Un-finaled for rewind: subtype is NOT spawn-derivable (AbstractBossChild's ctor
+    // hardcodes ObjectSpawn subtype 0), so the generic field capturer reapplies the
+    // captured per-cylinder values after the codec recreates with placeholder subtype 0.
+    private int subtype;      // 0, 2, 4, or 6
+    private boolean isBottom;  // subtypes 0-2 are bottom, 4-6 are top
+    private int baseX;
+    private int baseY;         // objoff_38 — base Y position
 
     // Extension state
     private int direction;           // objoff_29: -1 = extending (bottom), +1 = extending (top), 0 = idle

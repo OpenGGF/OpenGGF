@@ -45,11 +45,13 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen {
     private boolean perfectBonus;
     private int perfectBonusRemaining;
 
-    // Input data
-    private final int elapsedTimeSeconds;
-    private final int ringCount;
-    private final int actNumber;
-    private final boolean allRingsCollected;
+    // Input data. Non-final so GenericFieldCapturer captures them and restoreObjectRewindState
+    // reapplies them after the rewind codec recreates this screen with placeholder ctor args
+    // (these gameplay-derived values are not encoded in the ObjectSpawn).
+    private int elapsedTimeSeconds;
+    private int ringCount;
+    private int actNumber;
+    private boolean allRingsCollected;
 
     // Screen-space positions for text elements (center of 320x224 screen)
     private static final int TEXT_Y_GOT_THROUGH = 56;

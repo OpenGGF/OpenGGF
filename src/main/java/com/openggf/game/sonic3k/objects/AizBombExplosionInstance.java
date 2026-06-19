@@ -33,8 +33,10 @@ public class AizBombExplosionInstance extends AbstractObjectInstance implements 
     /** World-space X position. */
     private int posX;
     private final int posY;
-    private final int animIndex;
-    private final int initialDelay;
+    // animIndex/initialDelay are non-final so the rewind field capturer reapplies
+    // them after the codec recreates the fragment from its spawn (placeholders 0).
+    private int animIndex;
+    private int initialDelay;
 
     private int delayTimer;
     private int scriptStep;

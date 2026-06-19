@@ -35,6 +35,10 @@ import java.util.logging.Logger;
 public class Sonic2ObjectArt {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectArt.class.getName());
     private static final int ANIMAL_TILE_OFFSET = 0x14;
+    private static final int TORNADO_ART_TILE = Sonic2Constants.ART_TILE_ENDING_TORNADO;
+    private static final int TORNADO_SONIC_RIDER_OFFSET = Sonic2Constants.ART_TILE_SONIC - TORNADO_ART_TILE;
+    private static final int TORNADO_TAILS_RIDER_OFFSET = Sonic2Constants.ART_TILE_TAILS - TORNADO_ART_TILE;
+    private static final int TORNADO_RIDER_TILE_COUNT = 6;
 
     /**
      * VRAM tile index of the 1-up monitor's life-counter icon piece (obj26 frame 2,
@@ -966,7 +970,8 @@ public class Sonic2ObjectArt {
             return null;
         }
         List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJB2_A_ADDR);
-        return new ObjectSpriteSheet(patterns, mappings, 0, 1);
+        Pattern[] combined = createTornadoCombinedPatterns(patterns, mappings);
+        return new ObjectSpriteSheet(combined, mappings, 0, 1);
     }
 
     /**
@@ -2002,6 +2007,31 @@ public class Sonic2ObjectArt {
 
     private List<SpriteMappingFrame> loadMappingFramesWithTileOffset(int mappingAddr, int tileOffset) {
         return S2SpriteDataLoader.loadMappingFramesWithTileOffset(reader, mappingAddr, tileOffset);
+    }
+
+    private Pattern[] createTornadoCombinedPatterns(Pattern[] tornadoPatterns, List<SpriteMappingFrame> mappings) {
+        int requiredSize = Math.max(tornadoPatterns.length, computeMaxTileIndex(mappings) + 1);
+        Pattern[] combined = createBlankPatterns(requiredSize);
+
+        System.arraycopy(tornadoPatterns, 0, combined, 0, Math.min(tornadoPatterns.length, combined.length));
+        copyTornadoRiderPatterns(combined, Sonic2Constants.ART_UNC_SONIC_ADDR,
+                TORNADO_SONIC_RIDER_OFFSET, "TornadoSonicRider");
+        copyTornadoRiderPatterns(combined, Sonic2Constants.ART_UNC_TAILS_ADDR,
+                TORNADO_TAILS_RIDER_OFFSET, "TornadoTailsRider");
+
+        return combined;
+    }
+
+    private void copyTornadoRiderPatterns(Pattern[] combined, int artAddr, int targetOffset, String assetName) {
+        if (targetOffset < 0 || targetOffset >= combined.length) {
+            return;
+        }
+        Pattern[] riderPatterns = safeLoadUncompressedPatterns(
+                artAddr, TORNADO_RIDER_TILE_COUNT * Pattern.PATTERN_SIZE_IN_ROM, assetName);
+        int copyLength = Math.min(riderPatterns.length, combined.length - targetOffset);
+        if (copyLength > 0) {
+            System.arraycopy(riderPatterns, 0, combined, targetOffset, copyLength);
+        }
     }
 
     /**

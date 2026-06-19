@@ -336,7 +336,7 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
                 pathData = PATH_WAYPOINTS[pathIndex];
                 pathLength = pathData.length * 4;
             }
-            updateDynamicSpawn(x, y);
+            rebuildDynamicSpawn(x, y);
         }
     }
 

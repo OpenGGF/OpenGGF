@@ -502,15 +502,12 @@ public abstract class AbstractTraceReplayTest {
                     && driveTraceIndex == replayStart.startingTraceIndex()
                     && TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace)) {
                 // The handoff row is skipped for gameplay comparison, but ROM ran a
-                // full LevelLoop on it and incremented Level_frame_counter before
-                // Process_Sprites (sonic3k.asm:7889-7894). Mirror that single counter
-                // tick so the S3K Tails-CPU gates read the ROM-visible
-                // Level_frame_counter natively for the rest of the replay, with no
-                // trace-gated compensation inside the shared sidekick controller.
-                SpriteManager handoffSprites = GameServices.spritesOrNull();
-                if (handoffSprites != null) {
-                    handoffSprites.setFrameCounter(handoffSprites.getFrameCounter() + 1);
-                }
+                // full LevelLoop on it: Level_frame_counter increments before
+                // Process_Sprites and Animate_Tiles runs after it
+                // (sonic3k.asm:7889-7906). Mirror both native post-row effects so
+                // the next driven row observes the same ROM-visible counters, with
+                // no trace-gated compensation inside gameplay object code.
+                TraceReplaySessionBootstrap.applyS3kCompleteRunHandoffNativePostRowEffects(trace);
             }
 
             if (!binder.validateInput(driveFrame, bk2Input)) {

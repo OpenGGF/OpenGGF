@@ -28,14 +28,14 @@ public final class MhzEndBossVisualChild extends AbstractObjectInstance {
 
     @RewindTransient(reason = "Structural parent link; visual position and flip derive from parent state.")
     private final MhzEndBossInstance parent;
-    private final int mappingFrame;
-    private final int priorityBucket;
-    private final boolean promoteOnArenaAnchor;
+    private int mappingFrame;
+    private int priorityBucket;
+    private boolean promoteOnArenaAnchor;
     private int x;
     private int y;
     private boolean highPriority;
 
-    MhzEndBossVisualChild(
+    public MhzEndBossVisualChild(
             MhzEndBossInstance parent,
             int mappingFrame,
             int priorityBucket,

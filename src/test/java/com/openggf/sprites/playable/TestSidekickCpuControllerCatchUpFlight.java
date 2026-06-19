@@ -34,6 +34,32 @@ class TestSidekickCpuControllerCatchUpFlight {
         @Override protected void createSensorLines() {}
     }
 
+    static class RecordingRunInStrategy implements SidekickRespawnStrategy {
+        boolean began;
+
+        @Override
+        public boolean beginApproach(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
+            began = true;
+            sidekick.setCentreX((short) 0x1234);
+            sidekick.setCentreY((short) 0x0456);
+            sidekick.setControlLocked(false);
+            sidekick.setForcedAnimationId(-1);
+            ObjectControlState.none().applyTo(sidekick);
+            return true;
+        }
+
+        @Override
+        public boolean updateApproaching(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader,
+                                         int frameCounter) {
+            return false;
+        }
+
+        @Override
+        public boolean requiresPhysics() {
+            return true;
+        }
+    }
+
     @Test
     void catchUpTeleportsTailsToSonicMinus0xC0Y_onCtrl2ABCPress() {
         TestableSprite sonic = new TestableSprite("sonic");
@@ -69,6 +95,31 @@ class TestSidekickCpuControllerCatchUpFlight {
                 "object_control=$81 must keep normal movement suppressed");
         assertSame(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, controller.getState(),
                 "Transitions to routine 0x04 (FLIGHT_AUTO_RECOVERY) on trigger");
+    }
+
+    @Test
+    void dormantReleaseUsesConfiguredNonTailsRunInStrategy() {
+        TestableSprite leader = new TestableSprite("tails");
+        TestableSprite sonicSidekick = new TestableSprite("sonic_p2");
+        sonicSidekick.setCpuControlled(true);
+        sonicSidekick.setObjectControlAllowsCpu(false);
+        sonicSidekick.setObjectControlSuppressesMovement(true);
+        sonicSidekick.setForcedAnimationId(sonicSidekick.resolveAnimationId(com.openggf.game.CanonicalAnimation.FLY));
+
+        SidekickCpuController controller = new SidekickCpuController(sonicSidekick, leader);
+        RecordingRunInStrategy strategy = new RecordingRunInStrategy();
+        controller.setRespawnStrategy(strategy);
+        controller.forceStateForTest(SidekickCpuController.State.DORMANT_MARKER, 0);
+
+        assertTrue(controller.releaseDormantMarkerForLevelEvent());
+
+        assertTrue(strategy.began, "A non-Tails sidekick must enter its configured run-in strategy");
+        assertSame(SidekickCpuController.State.APPROACHING, controller.getState());
+        assertEquals(0x1234, sonicSidekick.getCentreX() & 0xFFFF);
+        assertFalse(sonicSidekick.isObjectControlSuppressesMovement(),
+                "Sonic run-in must not remain in Tails object-controlled flight");
+        assertEquals(-1, sonicSidekick.getForcedAnimationId(),
+                "Sonic run-in must not keep the Tails fly animation forced");
     }
 
     @Test
@@ -147,6 +198,7 @@ class TestSidekickCpuControllerCatchUpFlight {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
         sonic.setCentreX((short) 0x1000);
         sonic.setCentreY((short) 0x0400);
         tails.setCentreX((short) 0x7F00);

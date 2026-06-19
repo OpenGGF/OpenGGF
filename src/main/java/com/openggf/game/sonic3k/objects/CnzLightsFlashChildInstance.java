@@ -55,7 +55,7 @@ public final class CnzLightsFlashChildInstance extends AbstractObjectInstance {
     /** ROM: restore branch copies {@code Pal_CNZ+$20}. */
     private static final int PAL_CNZ_RESTORE_OFFSET = 0x20;
 
-    private final boolean restoreAfter;
+    private boolean restoreAfter;
 
     private byte[] flashData;
     private int step;

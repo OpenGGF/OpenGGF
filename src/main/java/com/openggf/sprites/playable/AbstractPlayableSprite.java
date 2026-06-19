@@ -939,6 +939,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         suppressedObjectMoveAndFallAxes,
                         hidden,
                         renderFlagOnScreen, renderFlagOnScreenValid,
+                        renderHFlip, renderVFlip,
                         mgzTopPlatformSpringHandoffPending,
                         mgzTopPlatformSpringHandoffXVel,
                         mgzTopPlatformSpringHandoffYVel,
@@ -1098,6 +1099,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.hidden = extra.hidden();
                 this.renderFlagOnScreen = extra.renderFlagOnScreen();
                 this.renderFlagOnScreenValid = extra.renderFlagOnScreenValid();
+                this.renderHFlip = extra.renderHFlip();
+                this.renderVFlip = extra.renderVFlip();
                 this.mgzTopPlatformSpringHandoffPending = extra.mgzTopPlatformSpringHandoffPending();
                 this.mgzTopPlatformSpringHandoffXVel = extra.mgzTopPlatformSpringHandoffXVel();
                 this.mgzTopPlatformSpringHandoffYVel = extra.mgzTopPlatformSpringHandoffYVel();
@@ -2221,6 +2224,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public boolean isDrowningDeath() {
                 return drowningDeath;
+        }
+
+        public void clearDrowningDeathState() {
+                drowningDeath = false;
+                drownPreDeathTimer = 0;
         }
 
         /**

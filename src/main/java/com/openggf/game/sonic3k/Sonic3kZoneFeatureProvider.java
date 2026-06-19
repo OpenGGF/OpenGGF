@@ -18,6 +18,7 @@ import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.sonic3k.features.AizBattleshipRenderFeature;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.features.AizTransitionRenderFeature;
+import com.openggf.game.sonic3k.render.HczBgHighPriorityForegroundOverlayEffect;
 import com.openggf.game.sonic3k.render.HczWallChaseBgOverlayEffect;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotMachinePanelAnimator;
 import com.openggf.game.sonic3k.features.HCZWaterSkimHandler;
@@ -58,6 +59,8 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     private final AizBattleshipRenderFeature aizBattleshipRenderFeature = new AizBattleshipRenderFeature();
     private final AizTransitionRenderFeature aizTransitionRenderFeature = new AizTransitionRenderFeature();
+    private final SpecialRenderEffect hczBgHighPriorityForegroundOverlayEffect =
+            new HczBgHighPriorityForegroundOverlayEffect();
     private final SpecialRenderEffect hczWallChaseBgOverlayEffect = new HczWallChaseBgOverlayEffect();
     private final SpecialRenderEffect iczBigSnowPileBackgroundEffect = new IczBigSnowPileBackgroundEffect();
     private final SpecialRenderEffect iczBigSnowPilePriorityMaskEffect = new IczBigSnowPilePriorityMaskEffect();
@@ -374,6 +377,8 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         AizZoneRuntimeState aizState = getAizState();
         boolean forestFrontPhaseActive = aizState != null && aizState.isBattleshipForestFrontPhaseActive();
         boolean bossArenaFrontPriority = aizState != null && aizState.isBossFlagActive();
+        var gameState = GameServices.gameStateOrNull();
+        boolean endSignResultsActive = gameState != null && gameState.isEndOfLevelActive();
 
         // ROM: During the post-boss cutscene (egg capsule, results, walk-right,
         // bridge collapse) the player's art_tile high-priority bit stays set.
@@ -382,7 +387,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         boolean postBossCutsceneActive = com.openggf.game.sonic3k.objects
                 .Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive();
 
-        if (forestFrontPhaseActive || bossArenaFrontPriority || postBossCutsceneActive) {
+        if (forestFrontPhaseActive || bossArenaFrontPriority || endSignResultsActive || postBossCutsceneActive) {
             player.setHighPriority(true);
             player.setPriorityBucket(RenderPriority.MIN);
             forcedAizForestFrontPrioritySprites.add(player);
@@ -534,6 +539,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
             }
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
+            registry.register(hczBgHighPriorityForegroundOverlayEffect);
             registry.register(hczWallChaseBgOverlayEffect);
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_ICZ && actIndex == 0) {

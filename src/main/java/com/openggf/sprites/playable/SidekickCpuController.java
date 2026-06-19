@@ -75,6 +75,8 @@ public class SidekickCpuController {
     private static final int ESTABLISHED_FOLLOWER_ENTRY_BAND = 0x40;
     private static final int DESPAWN_TIMEOUT = 300;
     private static final int MANUAL_CONTROL_FRAMES = 600;
+    private static final int MULTI_SIDEKICK_RESPAWN_APPROACH_ANCHOR_FRAMES = 12;
+    private static final int MULTI_SIDEKICK_RESPAWN_FALLBACK_FRAMES = 64;
     /**
      * ROM {@code interact(a0)} defaults to SST slot 0 = MainCharacter
      * (s2.constants.asm:1101), whose id is {@code ObjID_Sonic} = 0x01
@@ -311,9 +313,26 @@ public class SidekickCpuController {
         if (sidekick.getCpuController() == null) {
             sidekick.setCpuController(this);
         }
-        this.respawnStrategy = new TailsRespawnStrategy(this);
+        this.respawnStrategy = createDefaultRespawnStrategy();
         this.flyAnimId = sidekick.resolveAnimationId(CanonicalAnimation.FLY);
         this.duckAnimId = sidekick.resolveAnimationId(CanonicalAnimation.DUCK);
+    }
+
+    private SidekickRespawnStrategy createDefaultRespawnStrategy() {
+        String code = sidekick.getCode();
+        String lowerCode = code != null ? code.toLowerCase(java.util.Locale.ROOT) : "";
+        if (sidekick instanceof Knuckles || lowerCode.startsWith("knuckles") || lowerCode.startsWith("knux")) {
+            return new KnucklesRespawnStrategy(this);
+        }
+        if (sidekick instanceof Sonic || lowerCode.startsWith("sonic")) {
+            return new SonicRespawnStrategy(this);
+        }
+        return new TailsRespawnStrategy(this);
+    }
+
+    private boolean usesS3kCatchUpMarker() {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        return respawnStrategy.usesS3kCatchUpMarker(fs);
     }
 
     public void update(int frameCount) {
@@ -1523,11 +1542,15 @@ public class SidekickCpuController {
         diagnosticCtrl2HeldLatch = controller2Held & MANUAL_HELD_MASK;
         diagnosticCtrl2PressedLatch = controller2Logical & MANUAL_HELD_MASK;
 
-        // Use effective leader for respawn checks — if our direct leader is also
-        // despawned, chain-heal to whoever IS available (allows parallel respawn
-        // instead of sequential cascade).
-        AbstractPlayableSprite target = getEffectiveLeader();
+        // Multi-sidekick respawn keeps the daisy-chain cadence: a lower sidekick
+        // waits for its direct leader to become a usable anchor before entering.
+        // If that leader never becomes usable, the timeout path falls back to the
+        // effective leader so the chain cannot deadlock.
+        AbstractPlayableSprite target = resolveRespawnStartTarget();
         if (target == null || target.getDead()) {
+            if (target == null) {
+                controlCounter++;
+            }
             return;
         }
         if ((controller2Logical & RESPAWN_BYPASS_MASK) != 0) {
@@ -1557,11 +1580,38 @@ public class SidekickCpuController {
         respawnToApproaching(target);
     }
 
+    private AbstractPlayableSprite resolveRespawnStartTarget() {
+        if (sidekickCount <= 1 || leader == null || !leader.isCpuControlled()) {
+            return getEffectiveLeader();
+        }
+        SidekickCpuController leaderController = leader.getCpuController();
+        if (leaderController == null) {
+            return leader;
+        }
+        if (isUsableRespawnAnchor(leaderController)) {
+            return leader;
+        }
+        if (leaderController.state == State.APPROACHING) {
+            return null;
+        }
+        if (controlCounter >= MULTI_SIDEKICK_RESPAWN_FALLBACK_FRAMES) {
+            return getEffectiveLeader();
+        }
+        return null;
+    }
+
+    private static boolean isUsableRespawnAnchor(SidekickCpuController leaderController) {
+        return leaderController.isSettled()
+                || (leaderController.state == State.APPROACHING
+                && leaderController.controlCounter >= MULTI_SIDEKICK_RESPAWN_APPROACH_ANCHOR_FRAMES);
+    }
+
     private void respawnToApproaching(AbstractPlayableSprite target) {
         boolean started = respawnStrategy.beginApproach(sidekick, target);
         if (!started) {
             return; // Strategy can't start — stay in SPAWNING
         }
+        clearRespawnAnimationState();
         state = State.APPROACHING;
         controlCounter = 0;
         despawnCounter = 0;
@@ -1579,6 +1629,7 @@ public class SidekickCpuController {
 
     void returnApproachToSpawningAfterFlyingTimeout() {
         state = State.SPAWNING;
+        controlCounter = 0;
         despawnCounter = 0;
         normalFrameCount = 0;
         suppressNextAirbornePushFollowSteering = false;
@@ -1586,20 +1637,34 @@ public class SidekickCpuController {
     }
 
     private void updateApproaching() {
+        controlCounter++;
+
         if (!respawnStrategy.handlesApproachDespawn() && checkDespawn()) {
             normalPushingGraceFrames = 0;
             suppressNextAirbornePushFollowSteering = false;
             return;
         }
 
-        AbstractPlayableSprite effectiveLeader = getEffectiveLeader();
+        AbstractPlayableSprite effectiveLeader = resolveApproachLeader();
         if (effectiveLeader == null) {
             return;
         }
+        int previousCentreX = sidekick.getCentreX();
         boolean approachComplete = respawnStrategy.updateApproaching(sidekick, effectiveLeader, frameCounter);
+        AbstractPlayableSprite completionLeader = effectiveLeader;
+        if (!approachComplete && respawnStrategy.requiresPhysics()) {
+            AbstractPlayableSprite mainLeader = getRootLeader();
+            if (mainLeader != null
+                    && mainLeader != effectiveLeader
+                    && crossedOrReachedMainLeaderDuringApproach(previousCentreX, mainLeader)) {
+                approachComplete = true;
+                completionLeader = mainLeader;
+            }
+        }
         syncApproachTargetDiagnostics();
         if (approachComplete) {
-            respawnStrategy.onApproachComplete(sidekick, effectiveLeader);
+            respawnStrategy.onApproachComplete(sidekick, completionLeader);
+            clearRespawnAnimationState();
             sidekick.setForcedAnimationId(-1);
             sidekick.setControlLocked(false);
             ObjectControlState.none().applyTo(sidekick);
@@ -1610,9 +1675,68 @@ public class SidekickCpuController {
             sidekick.setHurt(false);
             sidekick.setAir(true);
             state = State.NORMAL;
+            controlCounter = 0;
             normalFrameCount = 0;
             despawnCounter = Math.max(0, respawnStrategy.consumeApproachDespawnCarryFrames());
         }
+    }
+
+    AbstractPlayableSprite getRootLeader() {
+        AbstractPlayableSprite current = leader;
+        AbstractPlayableSprite root = null;
+        int maxSteps = sidekickCount + 1;
+        while (current != null && maxSteps-- > 0) {
+            root = current;
+            if (!current.isCpuControlled()) {
+                return current;
+            }
+            SidekickCpuController ctrl = current.getCpuController();
+            if (ctrl == null) {
+                return current;
+            }
+            current = ctrl.getLeader();
+        }
+        return root;
+    }
+
+    private AbstractPlayableSprite resolveActiveFollowLeader() {
+        if (sidekickCount > 1 && leader != null && leader.isCpuControlled()) {
+            SidekickCpuController leaderController = leader.getCpuController();
+            if (leaderController == null || leaderController.hasWarmNormalFollowHistory()) {
+                return leader;
+            }
+        }
+        return getEffectiveLeader();
+    }
+
+    private boolean hasWarmNormalFollowHistory() {
+        return state == State.NORMAL && normalFrameCount >= ROM_FOLLOW_DELAY_FRAMES;
+    }
+
+    private AbstractPlayableSprite resolveApproachLeader() {
+        return respawnStrategy.requiresPhysics()
+                ? getEffectiveLeader()
+                : resolveActiveFollowLeader();
+    }
+
+    private boolean crossedOrReachedMainLeaderDuringApproach(int previousCentreX, AbstractPlayableSprite mainLeader) {
+        if (sidekickCount <= 1 || leader == null || !leader.isCpuControlled()) {
+            return false;
+        }
+        int mainX = mainLeader.getCentreX();
+        int previousDx = previousCentreX - mainX;
+        int currentDx = sidekick.getCentreX() - mainX;
+        return Math.abs(currentDx) <= 32
+                || previousDx == 0
+                || currentDx == 0
+                || (previousDx < 0 && currentDx > 0)
+                || (previousDx > 0 && currentDx < 0);
+    }
+
+    private void clearRespawnAnimationState() {
+        sidekick.setObjectMappingFrameControl(false);
+        sidekick.clearDrowningDeathState();
+        sidekick.forceAnimationRestart();
     }
 
     private void updateNormal() {
@@ -1781,7 +1905,7 @@ public class SidekickCpuController {
             normalFrameCount = 0;
         }
 
-        AbstractPlayableSprite effectiveLeader = getEffectiveLeader();
+        AbstractPlayableSprite effectiveLeader = resolveActiveFollowLeader();
         if (effectiveLeader == null) {
             updateNormalPushingGrace(currentPushing);
             finishNormalStepDiagnostics(diagnostics, "no_effective_leader", -1, -1,
@@ -4078,7 +4202,8 @@ public class SidekickCpuController {
         sidekick.setSpindashCounter((short) 0);
         sidekick.setAir(true);
         sidekick.setMoveLockTimer(0);
-        sidekick.setForcedAnimationId(flyAnimId);
+        clearRespawnAnimationState();
+        sidekick.setForcedAnimationId(resolveDeathAnimationId());
         sidekick.setControlLocked(true);
         // NOT object_controlled - DEAD_FALLING is its own dispatch state
         // so updateDeadFalling fires on the next tick regardless.
@@ -4087,6 +4212,11 @@ public class SidekickCpuController {
         // S3K Kill_Character likewise leaves Tails_CPU_interact alone. Preserve
         // the ROM-visible latch until active play samples another stood-on
         // object or active play RAM is explicitly reset.
+    }
+
+    private int resolveDeathAnimationId() {
+        int deathAnimId = sidekick.resolveAnimationId(CanonicalAnimation.DEATH);
+        return deathAnimId >= 0 ? deathAnimId : flyAnimId;
     }
 
     private void applyKillCharacterTouchFloorReset() {
@@ -4270,8 +4400,7 @@ public class SidekickCpuController {
     }
 
     private int resolveDeadFallMarkerThresholdY() {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        boolean s3kCatchUpMarker = fs != null && fs.sidekickRespawnEntersCatchUpFlight();
+        boolean s3kCatchUpMarker = usesS3kCatchUpMarker();
         if (s3kCatchUpMarker) {
             Camera camera = sidekick.currentCamera();
             if (camera != null) {
@@ -4308,8 +4437,7 @@ public class SidekickCpuController {
      *        do NOT run that block, so they keep sub_13ECA's cleared facing.
      */
     private void applyDespawnMarker(boolean fromStuckRespawnRoutine8) {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        boolean s3kCatchUpMarker = fs != null && fs.sidekickRespawnEntersCatchUpFlight();
+        boolean s3kCatchUpMarker = usesS3kCatchUpMarker();
         state = s3kCatchUpMarker
                 ? State.CATCH_UP_FLIGHT
                 : State.SPAWNING;
@@ -4371,6 +4499,7 @@ public class SidekickCpuController {
         sidekick.setDeathCountdown(0);
         sidekick.setSpindash(false);
         sidekick.setSpindashCounter((short) 0);
+        clearRespawnAnimationState();
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
@@ -4399,6 +4528,9 @@ public class SidekickCpuController {
         if (state != State.DORMANT_MARKER) {
             return false;
         }
+        if (!usesS3kCatchUpMarker()) {
+            return releaseDormantMarkerThroughRespawnStrategy();
+        }
         LevelManager levelManager = sidekick.currentLevelManager();
         if (levelManager != null) {
             // ROM LevelLoop increments Level_frame_counter before Process_Sprites
@@ -4419,7 +4551,32 @@ public class SidekickCpuController {
         sidekick.setAir(true);
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        clearRespawnAnimationState();
         sidekick.setForcedAnimationId(flyAnimId);
+        return true;
+    }
+
+    private boolean releaseDormantMarkerThroughRespawnStrategy() {
+        AbstractPlayableSprite target = getEffectiveLeader();
+        if (target == null) {
+            return false;
+        }
+        boolean started = respawnStrategy.beginApproach(sidekick, target);
+        state = started ? State.APPROACHING : State.SPAWNING;
+        if (started) {
+            clearRespawnAnimationState();
+        }
+        despawnCounter = 0;
+        controlCounter = 0;
+        normalFrameCount = 0;
+        jumpingFlag = false;
+        suppressNextLevelEventNormalMovement = false;
+        catchUpUsesRomVisibleLevelFrameCounter = false;
+        levelEventDormantMarkerReleasePending = false;
+        catchUpFrameCounterOverride = -1;
+        if (started) {
+            syncApproachTargetDiagnostics();
+        }
         return true;
     }
 
@@ -4510,7 +4667,7 @@ public class SidekickCpuController {
         levelEventDormantMarkerReleasePending = false;
         skipPhysicsThisFrame = false;
         lastNormalAutoJumpPressFrameCounter = -1;
-        normalFrameCount = state == State.NORMAL ? SETTLED_FRAME_THRESHOLD : 0;
+        normalFrameCount = state == State.NORMAL ? ROM_FOLLOW_DELAY_FRAMES : 0;
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
         releasedUnderwaterPushConsumed = false;
@@ -4543,7 +4700,7 @@ public class SidekickCpuController {
         this.diagnosticS3kInteractWord = usesS3kPointerInteract() ? interactId & 0xFFFF : 0;
         sidekick.setLatchedSolidObjectId(interactId);
         this.jumpingFlag = jumping;
-        this.normalFrameCount = state == State.NORMAL ? SETTLED_FRAME_THRESHOLD : 0;
+        this.normalFrameCount = state == State.NORMAL ? ROM_FOLLOW_DELAY_FRAMES : 0;
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
         releasedUnderwaterPushConsumed = false;

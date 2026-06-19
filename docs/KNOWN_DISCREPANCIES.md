@@ -1023,3 +1023,271 @@ these files so this debt cannot reappear silently under the release branch.
 Replace each embedded table with ROM-backed loaders or generated mappings
 through the normal user-supplied ROM pipeline, then reduce or remove the
 `sonic1EmbeddedRuntimeDataExceptionsStayDocumentedAndBounded` ratchet.
+
+## Batch-2 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+`Sonic1MotobugSmokeInstance` is intentionally **not** captured/recreated across a
+held-rewind boundary (no rewind codec; its `#recreate` and `#finalScalar` keys stay in
+`src/test/resources/rewind/coverage-baseline.txt`). It is the Motobug exhaust puff:
+an animation-only object with no collision and no player/score/terrain state that plays a
+short smoke script then self-deletes. The parent `Sonic1MotobugBadnikInstance` already has
+a rewind `#recreate` path and continuously re-emits a fresh puff within ~1 frame on
+forward re-simulation, so a dropped in-flight puff is visually undetectable. An
+`exactSpawnCodec` is also the wrong tool here because the captured `ObjectSpawn` does not
+carry the puff's facing bit. This mirrors the AIZ2 transient-children precedent (and the
+S3K `MgzEndBossDefeatDebrisChild` case in `docs/S3K_KNOWN_DISCREPANCIES.md`): capture is
+only worthwhile when a dropped object would otherwise visibly re-emit and play forward; a
+sub-lifetime cosmetic that re-emits in-frame does not qualify.
+
+All other batch-2 S1 transient/relink children (`Sonic1BombFuseInstance`,
+`Sonic1BombShrapnelInstance`, `Sonic1BuzzBomberMissileInstance`,
+`Sonic1BuzzBomberMissileDissolveInstance`, `Sonic1CannonballInstance`,
+`Sonic1CaterkillerBodyInstance`, `Sonic1CrabmeatProjectileInstance`,
+`Sonic1NewtronMissileInstance`, `GHZBossWreckingBall`, `Sonic1SLZBossSpikeball`)
+now have rewind codecs in `Sonic1ObjectRegistry` and are restored on a backward seek.
+`SYZBossSpike` intentionally has no codec — see "Construction-Spawned Boss/Object Children"
+below.
+
+## Batch-3 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+`Sonic1SplashObjectInstance` (LZ water splash, object `0x08`) is intentionally **not**
+captured/recreated across a held-rewind boundary (no rewind codec; its `#recreate` and
+`#finalScalar` keys stay in `src/test/resources/rewind/coverage-baseline.txt`). It is a
+short-lived, purely cosmetic water splash with no collision and no player/score/terrain
+state: a 3-frame animation (~12 game ticks) that self-deletes, spawned on water
+entry/exit. The water-entry/exit code path naturally re-emits it within ~1 frame on
+forward re-simulation, so a dropped in-flight splash is visually undetectable. This
+mirrors the AIZ2 transient-children precedent and the batch-2 `Sonic1MotobugSmokeInstance`
+case above: capture is only worthwhile when a dropped object would otherwise visibly
+re-emit and play forward; a sub-lifetime cosmetic that re-emits in-frame does not qualify.
+
+All other batch-3 S1 objects that were previously dropped now have rewind codecs in
+`Sonic1ObjectRegistry` and are restored on a backward seek: `FZCylinder`,
+`FZPlasmaLauncher`, `FZPlasmaBall`, `Sonic1BossBlockInstance` (boss + fragment forms),
+`Sonic1CollapsingFloorObjectInstance`, `Sonic1EggPrisonObjectInstance`,
+`Sonic1ExplosionItemObjectInstance`, `Sonic1FloatingBlockObjectInstance`,
+`Sonic1GrassFireObjectInstance`, `Sonic1LamppostTwirlInstance`,
+`Sonic1MonitorPowerUpObjectInstance`, `Sonic1RingFlashObjectInstance`,
+`Sonic1RingInstance` (collected/animating child rings),
+`Sonic1SeesawBallObjectInstance`, `Sonic1SpikedBallChainObjectInstance`,
+`Sonic1StomperDoorObjectInstance`, and `Sonic1TeleporterObjectInstance`.
+
+## Batch-4 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+`CPZBossSmokePuff` (CPZ boss retreat smoke) is intentionally **not** captured/recreated
+across a held-rewind boundary (no rewind codec; its `#recreate` key stays in
+`src/test/resources/rewind/coverage-baseline.txt`). It is a purely cosmetic smoke effect
+with no collision and no player/score/terrain state: it re-derives its X/Y from the live
+boss every frame (`x = mainBoss.getX() - 0x28`, `y = mainBoss.getY() + 4`) and
+self-destructs when the boss is destroyed. It is also currently dead code — nothing in
+`src/main` or the tests ever constructs it (the CPZ boss only spawns Robotnik/Flame/Pump/
+Container/Pipe), so it can never enter a rewind snapshot at runtime. This mirrors the AIZ2
+transient-children precedent and the batch-2/3 cosmetic cases above. All other batch-4 S2
+CPZ-boss components and hazards that were previously dropped now have rewind codecs in
+`Sonic2ObjectRegistry` and are restored on a backward seek: `CPZBossContainer`,
+`CPZBossContainerFloor`, `CPZBossFallingPart`, `CPZBossFlame`, `CPZBossGunk`,
+`CPZBossPipe`, `CPZBossPipePump`, `CPZBossPump`, `CPZBossRobotnik`,
+`LavaBubbleObjectInstance`, `MCZFallingDebrisInstance`, `BubbleObjectInstance`, and
+`OOZBurnerFlameObjectInstance`.
+
+## Batch-5 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+`Sonic1TryAgainEmeraldsObjectInstance` (S1 Object-8C "TRY AGAIN" chaos-emerald orbit
+display) is intentionally **not** captured/recreated across a held-rewind boundary (no
+rewind codec; its `#recreate` key stays in `src/test/resources/rewind/coverage-baseline.txt`).
+It is a `GameMode.TRY_AGAIN_END` end-screen display object that is never instantiated in
+production gameplay (no `new Sonic1TryAgainEmeraldsObjectInstance` outside its own file and
+no registry/ObjectId binding; the live Try-Again screen is rendered by
+`com.openggf.game.sonic1.credits.TryAgainEndManager`, which re-implements the emerald orbit
+standalone). Rewind capture is gameplay-mode-scoped (`RewindRegistry`/`RewindController` live
+on `GameplayModeContext`), so this object can never appear in a held-rewind snapshot and the
+"dropped on restore -> vanishes" failure mode cannot occur. It also has no `ObjectSpawn`
+(`super(null, "TryChaos")`) and derives all per-emerald state lazily from
+`GameStateManager` emerald data, so `exactSpawnCodec` is structurally inapplicable. It holds
+no player/score/terrain state. This mirrors the AIZ2 transient-children precedent and the
+batch-2/3/4 cosmetic cases above. All other batch-5 S1 objects that were previously dropped
+now have rewind codecs in `Sonic1ObjectRegistry` and are restored on a backward seek:
+`Sonic1EndingEmeraldsObjectInstance`, `Sonic1EndingSonicObjectInstance`,
+`Sonic1GlassReflectionInstance`, and `Sonic1ResultsScreenObjectInstance`.
+
+## Batch-6 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+Two batch-6 cosmetic transient children are intentionally **not** captured/recreated across
+a held-rewind boundary (no rewind codec; their `#recreate` / `#finalScalar` keys stay in
+`src/test/resources/rewind/coverage-baseline.txt`). Both self-regenerate, hold no
+player/score/terrain state, and are structurally awkward to codec because their only
+constructor takes the live player rather than an `ObjectSpawn`. This mirrors the AIZ2
+transient-children precedent and the batch-2/3/4/5 cosmetic cases above.
+
+- `com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance` (S2 Super Sonic sparkle/trail,
+  ROM Obj7E): every scalar field (`animActive`, `freezeFlag`, `mappingFrame`, `frameTimer`,
+  `visible`, `snapX`, `snapY`) is re-derived each frame from the live player's speed and centre
+  position, and a full 6-frame cycle re-emits continuously while `|gSpeed| >= 0x800`. Its only
+  ctor is `(AbstractPlayableSprite player)` (`super(null, ...)`, no `ObjectSpawn`), so
+  `exactSpawnCodec` cannot supply the arg; it is owned and re-spawned by
+  `Sonic2SuperStateController` (not the power-up spawner), so a deferred player-bound codec
+  would orphan the pending entry. Dropping it causes at most a brief cosmetic absence that
+  naturally re-emits.
+- `com.openggf.level.objects.SplashObjectInstance` (water splash; spawned on the S2 power-up path
+  and the S3K HCZ miniboss path): a ~30-frame animation (10 frames x 3 ticks) that self-expires
+  via `ObjectLifetimeOps.expireDynamic(this)`, re-emitted on every water entry/exit. Its direct
+  S1 sibling `Sonic1SplashObjectInstance` is already an established accept-drop with the same
+  rationale. `facingLeft` is spawn-derivable and the renderer is transient.
+
+All other batch-6 S2 objects that were previously dropped now have rewind codecs in
+`Sonic2ObjectRegistry` and are restored on a backward seek: `RingPrizeObjectInstance` (CNZ
+slot-machine ring prize), `SteamPuffObjectInstance` (MTZ steam puff), `SeesawBallObjectInstance`
+(HTZ seesaw ball, parent-relink), and `CPZBossContainerExtend` (CPZ-boss container extend,
+boss+container relink).
+
+## Batch-7 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+Several batch-7 cosmetic objects are intentionally **not** captured/recreated across a held-rewind
+boundary (no rewind codec; their `#recreate` / `#finalScalar` keys stay in
+`src/test/resources/rewind/coverage-baseline.txt`). This mirrors the AIZ2 transient-children
+precedent and the batch-2/3/4/5/6 cosmetic cases above.
+
+- `com.openggf.level.objects.BoxObjectInstance` (debug-box base class; renders only a coloured
+  outline + crosshair, holds no player/score/terrain state): it is **never** registered as a
+  factory in any `*ObjectRegistry` and is never spawned as its own concrete type in gameplay —
+  all real instances are subclasses (checkpoints, springs, bridges, CNZ blocks, elevators, etc.),
+  each with its own object ID and its own codec. Its baseline keys
+  (`#recreate` + `#finalScalar#{b,g,halfHeight,halfWidth,highPriority,r}`) are a
+  `RewindCoverageAnalyzer` static over-approximation of a base class that no live carry path can
+  produce as itself, so it can never actually be dropped on a held rewind. Accept-drop-as-baseline
+  rather than registering a production codec for an abstract-role base class with no spawn factory.
+- `com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance` (S1 TRY AGAIN / END ending
+  Eggman, object 0x8B): the class is **never** instantiated in `src/main` — no `new`, no factory
+  registration, no `spawnChild`. The live TRY AGAIN / END ending-screen Eggman state machine and
+  rendering are fully reimplemented inline inside `com.openggf.game.sonic1.credits.TryAgainEndManager`,
+  so the instance class is orphaned/dead code and never enters the rewindable dynamic-object list — it
+  can never actually be dropped on a held rewind. Its baseline `#recreate` key is a
+  `RewindCoverageAnalyzer` static over-approximation ("No probe-compatible constructor found"). It is
+  not spawn-constructible anyway (super ctor passes `null` spawn, fixed screen-space coords, and it
+  holds a live sibling `emeralds` ref + a renderer), so even if wired up it would need a sibling-relink
+  codec, not an `exactSpawnCodec`. Accept-drop-as-baseline rather than adding a codec for dead code.
+- `com.openggf.level.objects.BreathingBubbleInstance` (game-agnostic underwater drowning bubble,
+  spawned by the shared `com.openggf.sprites.playable.DrowningController` for both S1 LZ Obj0A and S2
+  drowning; reported as S1 because its disasm refs/primary use are S1 LZ): a short-lived cosmetic
+  bubble/particle continuously re-emitted (every `nextBubbleTimer` frames) by `DrowningController`
+  while the player is submerged, holding no player/score/terrain state (the air timer lives on the
+  player). An `exactSpawnCodec` is impossible: the ctor takes 6 non-spawn args (`startsFacingLeft`,
+  `countdownNumber`, `artKey`, `countdownFrameMap`, `maxBubbleFrame`, `riseVelocity`) while
+  `ObjectSpawn` only carries x/y/objectId=0x0A/subtype=0 — the per-game art config and the RNG-gated
+  `countdownNumber` (a one-time snapshot of player air at spawn) are not spawn-derivable, and it is not
+  parent/sibling-linked. Its baseline keys (`#recreate` + `#finalScalar#maxBubbleFrame` +
+  `#finalScalar#riseVelocity`) stay in the baseline. Dropping it on rewind only briefly blanks bubbles
+  until the next in-frame emit, directly analogous to the accepted `Sonic1SplashObjectInstance`
+  precedent ("Batch-3 Rewind: Transient Cosmetic Children Not Rewound"). Accept-drop.
+
+All other batch-7 objects now have rewind codecs and are restored on a backward seek:
+`com.openggf.level.objects.boss.BossExplosionObjectInstance` (shared boss-defeat explosion,
+registered per-game in `Sonic1ObjectRegistry`/`Sonic2ObjectRegistry`) and
+`com.openggf.level.objects.SignpostSparkleObjectInstance` (shared S1+S2 signpost ring sparkle,
+in `ObjectRewindDynamicCodecs.sharedCodecs()`; its non-final `worldX`/`worldY` are reapplied after
+recreate). S3K's signpost sparkle (`S3kSignpostSparkleChild`) is already codec'd separately.
+
+## Batch-inner1 Rewind: Inner-Class Children Re-Established By Parent
+
+Static nested children whose restored parent deterministically re-emits/re-positions them on the
+next update are intentionally **not** captured/recreated across a held-rewind boundary (no rewind
+codec; their `#recreate` key stays in `src/test/resources/rewind/coverage-baseline.txt`).
+
+- `com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance` (SBZ
+  Rotating Junction object 0x66, display-only `Jun_Display` backdrop child): a static nested class
+  spawned lazily by the parent via `childInstance = spawnFreeChild(() -> new
+  Sonic1JunctionChildInstance(spawn))` whenever `childInstance == null` (parent `update()`). It does
+  not implement `TouchResponseProvider` or `SolidObjectProvider`, owns no boss/cutscene state machine,
+  and its `update()` is empty (ROM `Jun_Display` routine 4 = display only) — it renders only the
+  full-circle backdrop sprite behind the disc, so dropping it loses a purely visual backdrop, never a
+  hazard or a ridable platform (the HURT/grab/solid behavior all lives on the parent). It is fully
+  parent-derived from `spawn` (no independent trajectory), so the parent re-emits it for free every
+  frame its `childInstance` reference is null. After a held rewind drops the child, the parent is
+  re-established via placed-object respawn (its ctor leaves `childInstance == null`), so the lazy
+  re-emit fires naturally. Accept-drop-as-baseline rather than registering a codec for a deterministically
+  re-emitted display-only child.
+
+Two batch-inner1 S1 inner-class children now have parent-relink rewind codecs in
+`Sonic1ObjectRegistry` and are restored on a backward seek:
+`Sonic1FalseFloorInstance$FalseFloorBlock` (SBZ2 boss collapsing-floor tile; un-finaled
+`currentX`/`currentY`/`blockIndex`, re-registered into the master's `childBlocks`),
+`Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance` (Orbinaut HURT satellite/projectile;
+reflection-constructed, parent relinked).
+`Sonic1ScrapEggmanInstance$ScrapEggmanButton` intentionally has no codec — see
+"Construction-Spawned Boss/Object Children" below.
+
+## Construction-Spawned Boss/Object Children: Adopted In Place At Exact State, No Codec
+
+When a boss or object is a **placed/active object** (in the level spawn list), rewind restore
+reconstructs it by calling `registry.create(spawn)` → constructor → `initializeBossState()`.
+If that constructor/initializer also spawns permanent child objects, those children are
+**adopted in place** by the restore: the reconstructed parent wires its back-references
+(`childComponents`, named child fields) to the constructed children, and the step-4
+dynamic-object reconciliation loop in `ObjectManager.restore()` then registers each one at its
+captured slot and applies its **exact captured state** on top.
+
+To make this work, `AbstractObjectInstance.spawnChild`/`spawnFreeChild` route child spawns
+through `ObjectManager.registerRewindReconstructionChild(...)` (instead of `addDynamicObject*`)
+whenever `ObjectConstructionContext.isRewindActiveRestore()` is true. The reconciliation loop
+matches each captured `DynamicObjectEntry` to the pending reconstruction child of the same class
+in first-in (spawn) order — construction order is deterministic and equals the capture order —
+and adopts it, falling back to a codec recreate only for routine-spawned children that have no
+construction counterpart. This gives **exact-state fidelity** for construction children with
+`target == keyframe` (zero re-simulation), keeps the parent's child references valid (they point
+at the very instances that get the captured state), and avoids the double-spawn a codec recreate
+would cause.
+
+**Principle:** Construction-spawned children do **not** need (and must not have) a
+`DYNAMIC_REWIND_CODECS` entry — adoption restores them. Only children spawned from
+**update/attack routines** (no construction counterpart to adopt) need codecs. Construction
+children remain absent from `DYNAMIC_REWIND_CODECS`; their `#recreate` keys stay in the coverage
+baseline because the static `RewindCoverageAnalyzer` is codec-based and cannot see the adoption
+path (it documents such no-codec-but-correctly-restored classes as acceptable `#recreate`
+over-approximations). Verified by `TestBossChildNoDoubleSpawnParity` (count parity) and
+`TestBossChildExactStateRewind` (exact non-init state + reference integrity).
+
+**Affected children (no codec, construction-spawned, adopted in place at exact state):**
+
+- `com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild`
+  (×6 spawned in `initializeBossState()` → `spawnChildren()`; DEZ Death Egg Robot body parts)
+- `com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$HeadChild`
+  (×1 spawned in `initializeBossState()` → `spawnChildren()`; DEZ hittable head)
+- `com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$JetChild`
+  (×1 spawned in `initializeBossState()` → `spawnChildren()`; DEZ jet exhaust)
+- `com.openggf.game.sonic1.objects.bosses.SYZBossSpike`
+  (×1 spawned in `Sonic1SYZBossInstance.initializeBossState()` → `spawnSpikeChild()`)
+- `com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton`
+  (×1 spawned directly in `Sonic1ScrapEggmanInstance` constructor via `spawnDynamicObject()`)
+- `com.openggf.game.sonic2.objects.bosses.EHZBossSpike`,
+  `EHZBossWheel` (×3), `EHZBossGroundVehicle`, `EHZBossPropeller`, `EHZBossVehicleTop`
+  (all spawned in `Sonic2EHZBossInstance.initializeBossState()` → `spawnChildComponents()`;
+  7 construction children total. The Propeller is additionally reloaded from a routine
+  (`reloadPropeller()` during the fly-off phase) but that is the same singleton child, so the
+  construction instance is still adopted in place at exact state. All five codecs were removed
+  in the EHZ pass; their `#recreate` keys are in the coverage baseline.)
+
+**Construction children that were never codec'd (correct, verified, no change needed):**
+
+- `Sonic2MTZBossInstance$MTZBossOrb` (×7) and `Sonic2MTZBossInstance$MTZLaserShooter` (×1) —
+  both spawned in `initializeBossState()` (`spawnOrbs()` / direct). Neither has ever had a codec,
+  so MTZ never double-spawned. `MTZBossLaser` is fired from a routine (`fireLaser()`) and KEEPS
+  its codec. (MTZ is event-spawned with no registry factory, so it is not reconstructed via
+  `registry.create()` during restore the way EHZ/DEZ are.)
+- `Sonic2MechaSonicInstance$MechaSonicLEDWindow`, `$MechaSonicTargetingSensor`,
+  `$MechaSonicDEZWindow` — all spawned in `initializeBossState()` → `spawnChildObjects()`.
+  None has ever had a codec, so Mecha Sonic never double-spawned. `MechaSonicSpikeball` is
+  routine-spawned (`fireSpikeballs()`).
+
+The MTZ/Mecha cases are guarded statically by `TestBossChildNoDoubleSpawnParity`
+(`mtzBossConstructionChildrenHaveNoCodecs`, `mechaSonicConstructionChildrenHaveNoCodecs`):
+those construction children must never gain a codec.
+
+**Children with codecs (routine-spawned, NOT construction):**
+
+- `Sonic2DeathEggRobotInstance$BombChild` — spawned from attack routine `fireBombs()`
+- `Sonic2DeathEggRobotInstance$ForearmChild` — no codec (construction-spawned, same as above;
+  plus `isFront` is a final field; baseline carries `#finalScalar#isFront` and `#recreate`)
+- `Sonic2DeathEggRobotInstance$SensorChild` — no codec (spawned from update targeting routine;
+  transient, re-emitted by parent; accepted as drop)
+- All WFZ boss children (`WFZFloatingPlatform`, `WFZLaserWall`, `WFZPlatformHurt`) — spawned
+  from `updateSpawnChildren()` (update routine `ROUTINE_SPAWN_CHILDREN`, not construction)

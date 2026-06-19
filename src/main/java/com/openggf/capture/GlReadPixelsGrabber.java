@@ -21,16 +21,33 @@ public final class GlReadPixelsGrabber implements VideoFrameGrabber {
         this.height = height;
     }
 
+    /** RGBA8888 — 4 bytes per pixel. */
+    static final int BYTES_PER_PIXEL = 4;
+
     @Override public int width() { return width; }
     @Override public int height() { return height; }
 
+    /**
+     * The exact RGBA byte size of one grabbed frame at the given dimensions.
+     * Both the read buffer and the returned array are sized from this, so it
+     * is the single source of truth for the {@code grab()} byte contract.
+     */
+    static int frameByteSize(int width, int height) {
+        return width * height * BYTES_PER_PIXEL;
+    }
+
+    /** Byte size of a frame at this grabber's configured dimensions. */
+    int frameByteSize() {
+        return frameByteSize(width, height);
+    }
+
     @Override
     public byte[] grab() {
-        ByteBuffer buf = MemoryUtil.memAlloc(width * height * 4);
+        ByteBuffer buf = MemoryUtil.memAlloc(frameByteSize());
         try {
             glReadBuffer(GL_BACK);
             glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buf);
-            byte[] out = new byte[width * height * 4];
+            byte[] out = new byte[frameByteSize()];
             buf.get(out);            // tight copy, bottom-up as GL provides
             return out;
         } finally {

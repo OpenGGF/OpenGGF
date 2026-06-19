@@ -9,6 +9,7 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.debug.DebugOverlayManager;
+import com.openggf.game.BonusStageProvider;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.session.EngineContext;
@@ -255,6 +256,16 @@ public interface ObjectServices {
      * Wraps {@link com.openggf.game.BonusStageProvider#requestExit()}.
      */
     void requestBonusStageExit();
+
+    /**
+     * Returns the active bonus-stage provider, or {@code null} when no bonus
+     * stage is active. Exposes the gameplay-scoped provider through the injected
+     * object-service handle so object/codec code can resolve bonus-stage state
+     * without a global {@code GameServices.bonusStageOrNull()} lookup.
+     */
+    default BonusStageProvider bonusStageProviderOrNull() {
+        return null;
+    }
 
     /**
      * Adds rings to the bonus stage coordinator's saved ring count.

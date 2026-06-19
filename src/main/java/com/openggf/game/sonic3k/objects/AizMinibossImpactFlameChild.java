@@ -24,7 +24,9 @@ public class AizMinibossImpactFlameChild extends AbstractObjectInstance implemen
 
     private final int worldX;
     private final int worldY;
-    private final boolean hazardous;
+    // hazardous is non-final so the rewind field capturer reapplies it after the
+    // codec recreates the impact flame from its spawn (placeholder false).
+    private boolean hazardous;
 
     private int delayTimer;
     private boolean active;

@@ -17,8 +17,8 @@ includes IntelliJ project files. Any IDE with Maven support will work.
 ## Clone and Build
 
 ```bash
-git clone https://github.com/jamesj999/sonic-engine.git
-cd sonic-engine
+git clone https://github.com/OpenGGF/OpenGGF.git
+cd OpenGGF
 mvn package
 ```
 
@@ -79,7 +79,7 @@ absent.
 ## Project Structure
 
 ```
-sonic-engine/
+OpenGGF/
   pom.xml                    -- Maven build file
   config.yaml                -- Runtime configuration (gitignored if custom)
   src/

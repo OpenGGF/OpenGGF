@@ -58,7 +58,7 @@ public class GrounderRockProjectile extends AbstractObjectInstance {
     private int mappingFrame;
     private boolean activated;
     private final GrounderBadnikInstance parent;
-    private final int rockIndex;
+    private int rockIndex;
 
     /**
      * Creates a rock projectile at the specified position.

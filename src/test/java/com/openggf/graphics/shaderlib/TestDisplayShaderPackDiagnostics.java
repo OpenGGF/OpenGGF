@@ -1,5 +1,6 @@
 package com.openggf.graphics.shaderlib;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.opengl.GL;
@@ -17,6 +18,7 @@ public class TestDisplayShaderPackDiagnostics {
     private static final String ROOT_PROPERTY = "shaderlib.diagnostic.root";
     private static final String REPORT_PROPERTY = "shaderlib.diagnostic.report";
     private static final String MAX_PROPERTY = "shaderlib.diagnostic.max";
+    private static final String ALLOWED_FAILURES_PROPERTY = "shaderlib.diagnostic.allowedFailures";
 
     @Test
     public void writeCompatibilityReportForLocalShaderPack() throws Exception {
@@ -63,9 +65,28 @@ public class TestDisplayShaderPackDiagnostics {
         }
 
         Files.createDirectories(report.getParent());
-        Files.writeString(report, reportText(root, attempted, passed, failures));
+        String reportText = reportText(root, attempted, passed, failures);
+        Files.writeString(report, reportText);
         System.out.println("Display shader diagnostic report: " + report);
         System.out.println("Attempted " + attempted + ", passed " + passed + ", failed " + failures.size());
+
+        // Guard against vacuous runs: when the diagnostic is opted in, it must actually
+        // exercise at least one shader preset, otherwise an empty/misconfigured pack
+        // would trivially "pass" with zero failures.
+        Assertions.assertTrue(attempted > 0,
+                "Diagnostic was enabled but no shader presets were attempted under " + root
+                        + " -- check the shader root/library contents");
+
+        // Fail on real shader-compat regressions. The opt-in path only runs when the
+        // operator sets -Dshaderlib.diagnostic.enabled=true; once it does, a shader that
+        // fails to compile/activate must fail the test. An optional documented budget
+        // (-Dshaderlib.diagnostic.allowedFailures=N, default 0) covers packs with known,
+        // accepted incompatibilities; any overage fails with the full report attached.
+        int allowedFailures = Integer.getInteger(ALLOWED_FAILURES_PROPERTY, 0);
+        Assertions.assertTrue(failures.size() <= allowedFailures,
+                "Display shader compatibility regression: " + failures.size()
+                        + " failure(s) exceed the allowed budget of " + allowedFailures
+                        + ".\n" + reportText);
     }
 
     private static String reportText(Path root, int attempted, int passed, List<String> failures) {

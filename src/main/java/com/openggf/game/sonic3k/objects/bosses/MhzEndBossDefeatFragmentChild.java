@@ -17,7 +17,7 @@ import java.util.List;
  * {@code Set_IndexedVelocity} with base index $08 and then runs
  * {@code Obj_FlickerMove}.
  */
-final class MhzEndBossDefeatFragmentChild extends AbstractObjectInstance {
+public final class MhzEndBossDefeatFragmentChild extends AbstractObjectInstance {
     private static final int[] MAPPING_FRAMES = {0x12, 0x13, 0x14, 0x15, 0x16, 0x17};
     private static final int[] PRIORITY_BUCKETS = {4, 4, 6, 6, 4, 4};
     private static final int[][] VELOCITIES = {
@@ -37,6 +37,18 @@ final class MhzEndBossDefeatFragmentChild extends AbstractObjectInstance {
     private int xFixed;
     private int yFixed;
     private int flickerCounter;
+
+    /**
+     * Rewind-restore entry: relinks to the live parent boss and reconstructs the
+     * fragment with its captured {@code subtype} (cross-package codec access).
+     * {@code xVel} is re-derived in the constructor from subtype + the relinked
+     * parent's renderFlags; the remaining scalar state is reapplied by the generic
+     * field capturer after recreate.
+     */
+    public static MhzEndBossDefeatFragmentChild forRewindRecreate(
+            MhzEndBossInstance parent, int subtype) {
+        return new MhzEndBossDefeatFragmentChild(parent, subtype);
+    }
 
     MhzEndBossDefeatFragmentChild(MhzEndBossInstance parent, int subtype) {
         super(new ObjectSpawn(parent.getX(), parent.getY(), Sonic3kObjectIds.MHZ_END_BOSS, subtype, 0, false, 0),

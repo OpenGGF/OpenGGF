@@ -1181,17 +1181,10 @@ public class SpriteManager {
 		// and appear in front. Sonic occupies slot 0 and Tails slot 1, so Sonic
 		// must be drawn last in painter's-algorithm order.
 		Collection<Sprite> sprites = getAllSprites();
-		for (Sprite sprite : sprites) {
-			if (isSuppressedSidekickSprite(sprite)) {
-				continue;
-			}
-			if (sprite instanceof AbstractPlayableSprite playable && playable.isCpuControlled()) {
-				int bucket = RenderPriority.clamp(playable.getPriorityBucket());
-				int idx = bucket - RenderPriority.MIN;
-				if (playable.isHighPriority()) {
-					highPriorityBuckets[idx].add(sprite);
-				} else {
-					lowPriorityBuckets[idx].add(sprite);
+		if (!currentSuppressed) {
+			for (AbstractPlayableSprite sidekick : sidekicks) {
+				if (sprites.contains(sidekick)) {
+					addPlayableToRenderBucket(sidekick);
 				}
 			}
 		}
@@ -1203,19 +1196,23 @@ public class SpriteManager {
 				if (playable.isCpuControlled()) {
 					continue; // already added in first pass
 				}
-				int bucket = RenderPriority.clamp(playable.getPriorityBucket());
-				int idx = bucket - RenderPriority.MIN;
-				if (playable.isHighPriority()) {
-					highPriorityBuckets[idx].add(sprite);
-				} else {
-					lowPriorityBuckets[idx].add(sprite);
-				}
+				addPlayableToRenderBucket(playable);
 			} else {
 				nonPlayableSprites.add(sprite);
 			}
 		}
 
 		captureRenderBucketSnapshot();
+	}
+
+	private void addPlayableToRenderBucket(AbstractPlayableSprite playable) {
+		int bucket = RenderPriority.clamp(playable.getPriorityBucket());
+		int idx = bucket - RenderPriority.MIN;
+		if (playable.isHighPriority()) {
+			highPriorityBuckets[idx].add(playable);
+		} else {
+			lowPriorityBuckets[idx].add(playable);
+		}
 	}
 
 	private LevelManager getLevelManager() {
@@ -1616,11 +1613,13 @@ public class SpriteManager {
 
 			@Override
 			public com.openggf.game.rewind.snapshot.SpriteManagerSnapshot capture() {
-				boolean includeFollowHistory = true;
+				Set<AbstractPlayableSprite> leadersWithFollowers = currentDirectSidekickLeaders();
 				java.util.List<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry> snap =
 						new java.util.ArrayList<>();
 				for (Sprite sprite : sprites.values()) {
 					if (sprite instanceof AbstractPlayableSprite aps) {
+						boolean includeFollowHistory =
+								!aps.isCpuControlled() || leadersWithFollowers.contains(aps);
 						snap.add(new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry(
 								aps.getCode(), aps.captureRewindState(includeFollowHistory)));
 					}
@@ -1673,6 +1672,17 @@ public class SpriteManager {
 				}
 			}
 		};
+	}
+
+	private Set<AbstractPlayableSprite> currentDirectSidekickLeaders() {
+		Set<AbstractPlayableSprite> leaders = Collections.newSetFromMap(new IdentityHashMap<>());
+		for (AbstractPlayableSprite sidekick : sidekicks) {
+			SidekickCpuController controller = sidekick.getCpuController();
+			if (controller != null && controller.getLeader() != null) {
+				leaders.add(controller.getLeader());
+			}
+		}
+		return leaders;
 	}
 
 }

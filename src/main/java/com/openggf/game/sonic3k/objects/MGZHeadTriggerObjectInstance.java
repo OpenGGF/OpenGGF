@@ -523,9 +523,12 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
         private static final int FRAME_STONE_CHIP = 5;
         private static final int[] ANIM_STONE_CHIP = {1, 5, 7, 5, 7, 5, 7, 0xFB};
 
-        private final int originX;
-        private final int originY;
-        private final boolean hFlipCopied;
+        // Non-final so the generic rewind field capturer can reapply the captured
+        // values after the codec recreates this chip with placeholder ctor args
+        // (the chip's ObjectSpawn carries x/y but not the h-flip).
+        private int originX;
+        private int originY;
+        private boolean hFlipCopied;
         private int currentFrame;
         private int animFrameIndex;
         private int animFrameTimer;

@@ -77,8 +77,10 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance implement
     private final AbstractBossInstance parent;
     /** ROM: parent3 of the shot = the barrel that spawned it. */
     private final AizMinibossFlameBarrelChild barrel;
-    private final int barrelSubtype;
-    private final Mode mode;
+    // barrelSubtype/mode are non-final so the rewind field capturer reapplies them
+    // after the codec recreates the shot (placeholders; parent/barrel are relinked).
+    private int barrelSubtype;
+    private Mode mode;
 
     private int currentX;
     private int currentY;

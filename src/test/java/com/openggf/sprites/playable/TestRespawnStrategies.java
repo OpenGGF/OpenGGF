@@ -9,12 +9,20 @@ import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.level.ChunkDesc;
+import com.openggf.level.Level;
+import com.openggf.level.LevelManager;
+import com.openggf.level.SolidTile;
 import com.openggf.level.WaterSystem;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestRespawnStrategies {
 
@@ -40,6 +48,10 @@ class TestRespawnStrategies {
         void setPhysicsFeatureSetForTest(PhysicsFeatureSet featureSet) {
             setPhysicsFeatureSet(featureSet);
         }
+        void enterDrowningPreDeathForTest() {
+            drowningDeath = true;
+            drownPreDeathTimer = 60;
+        }
     }
 
     static class GameplayWaterLineSystem extends WaterSystem {
@@ -54,12 +66,57 @@ class TestRespawnStrategies {
         }
     }
 
+    static class CountingRespawnStrategy implements SidekickRespawnStrategy {
+        int beginCount;
+        AbstractPlayableSprite lastLeader;
+
+        @Override
+        public boolean updateApproaching(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader,
+                                         int frameCounter) {
+            return false;
+        }
+
+        @Override
+        public boolean beginApproach(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
+            beginCount++;
+            lastLeader = leader;
+            return true;
+        }
+    }
+
+    static class CrossingRespawnStrategy implements SidekickRespawnStrategy {
+        @Override
+        public boolean updateApproaching(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader,
+                                         int frameCounter) {
+            sidekick.setCentreX((short) (sidekick.getCentreX() + 20));
+            return false;
+        }
+
+        @Override
+        public boolean beginApproach(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
+            return true;
+        }
+
+        @Override
+        public boolean requiresPhysics() {
+            return true;
+        }
+    }
+
     @Test
     void tailsIsDefaultStrategy() {
         TestableSprite sk = new TestableSprite("tails_p2");
         TestableSprite main = new TestableSprite("sonic");
         SidekickCpuController ctrl = new SidekickCpuController(sk, main);
         assertInstanceOf(TailsRespawnStrategy.class, ctrl.getRespawnStrategy());
+    }
+
+    @Test
+    void sonicSidekickUsesSonicRespawnStrategyByDefault() {
+        TestableSprite sk = new TestableSprite("sonic_p2");
+        TestableSprite main = new TestableSprite("tails");
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        assertInstanceOf(SonicRespawnStrategy.class, ctrl.getRespawnStrategy());
     }
 
     @Test
@@ -80,6 +137,276 @@ class TestRespawnStrategies {
         SonicRespawnStrategy strategy = new SonicRespawnStrategy(ctrl);
         // No level loaded = no terrain = beginApproach returns false
         assertFalse(strategy.beginApproach(sk, main));
+    }
+
+    @Test
+    void sonicRunInSpeedOutpacesFastMovingLeader() {
+        installFlatFloorLevelManager();
+
+        TestableSprite sk = new TestableSprite("sonic_p2");
+        TestableSprite main = new TestableSprite("sonic");
+        main.setXSpeed((short) 0x0900);
+        main.setGSpeed((short) 0x0900);
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        SonicRespawnStrategy strategy = new SonicRespawnStrategy(ctrl);
+
+        assertTrue(strategy.beginApproach(sk, main));
+
+        assertTrue(sk.getRolling(), "Fast Sonic sidekick entries should still use the rolling run-in state");
+        assertEquals((short) 0x0B00, sk.getGSpeed(),
+                "The sidekick needs a meaningful ground-speed reserve over the running leader to close the gap");
+    }
+
+    @Test
+    void sonicRunInSpeedKeepsApproachDirectionWhenLeaderRunsLeft() {
+        installFlatFloorLevelManager();
+
+        TestableSprite sk = new TestableSprite("sonic_p2");
+        TestableSprite main = new TestableSprite("sonic");
+        main.setXSpeed((short) -0x0900);
+        main.setGSpeed((short) -0x0900);
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        SonicRespawnStrategy strategy = new SonicRespawnStrategy(ctrl);
+
+        assertTrue(strategy.beginApproach(sk, main));
+
+        assertTrue(sk.getRolling(), "Fast Sonic sidekick entries should still use the rolling run-in state");
+        assertEquals((short) -0x0B00, sk.getGSpeed(),
+                "The sidekick should outpace the leader in the direction it is running in from");
+    }
+
+    @Test
+    void staggeredSonicRunInUsesMainPlayerSpeedWhenDirectParentIsSlow() {
+        installFlatFloorLevelManager();
+
+        TestableSprite main = new TestableSprite("sonic");
+        main.setCentreX((short) 0x0180);
+        main.setXSpeed((short) 0x0600);
+        main.setGSpeed((short) 0x0600);
+        TestableSprite parent = new TestableSprite("tails_p2");
+        parent.setCpuControlled(true);
+        parent.setCentreX((short) 0x0120);
+        parent.setXSpeed((short) 0x0100);
+        parent.setGSpeed((short) 0x0100);
+        TestableSprite subSidekick = new TestableSprite("sonic_p3");
+        subSidekick.setCpuControlled(true);
+
+        SidekickCpuController parentCtrl = new SidekickCpuController(parent, main);
+        SidekickCpuController subCtrl = new SidekickCpuController(subSidekick, parent);
+        parentCtrl.setSidekickCount(2);
+        subCtrl.setSidekickCount(2);
+        parentCtrl.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        subCtrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+
+        subCtrl.update(64);
+
+        assertEquals(SidekickCpuController.State.APPROACHING, subCtrl.getState());
+        assertEquals((short) 0x0800, subSidekick.getGSpeed(),
+                "A staggered Sonic should reserve enough entry speed to catch the main player, not just its slow parent");
+    }
+
+    @Test
+    void sonicRunInSkipsScreenEdgeFloorWhenBodyWouldOverlapWallTerrain() {
+        installScreenEdgeWallThenClearFloorLevelManager();
+
+        TestableSprite sk = new TestableSprite("sonic_p2");
+        TestableSprite main = new TestableSprite("sonic");
+        main.setXSpeed((short) 0x0100);
+        main.setGSpeed((short) 0x0100);
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        SonicRespawnStrategy strategy = new SonicRespawnStrategy(ctrl);
+
+        assertTrue(strategy.beginApproach(sk, main));
+
+        assertEquals((short) 16, sk.getCentreX(),
+                "The run-in spawn should move inward to the first floor position whose wall probes are clear");
+    }
+
+    @Test
+    void sonicRespawnClearsStaleObjectAnimationAndDrowningState() {
+        installFlatFloorLevelManager();
+
+        TestableSprite sk = new TestableSprite("sonic_p2");
+        sk.setCpuControlled(true);
+        sk.setObjectMappingFrameControl(true);
+        sk.enterDrowningPreDeathForTest();
+        TestableSprite main = new TestableSprite("sonic");
+        main.setAir(false);
+        main.setRollingJump(false);
+        main.setInWater(false);
+        main.setPreventTailsRespawn(false);
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        ctrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+
+        ctrl.update(0);
+
+        assertEquals(SidekickCpuController.State.APPROACHING, ctrl.getState());
+        assertFalse(sk.isObjectMappingFrameControl(),
+                "Respawn must drop stale object-controlled mapping frames from cylinders and similar objects");
+        assertFalse(sk.isDrowningPreDeath(),
+                "Respawn must cancel the pre-death drowning animation state");
+    }
+
+    @Test
+    void multiSidekickRespawnStartsOnlyFirstSidekickOnSharedFrame() {
+        TestableSprite main = new TestableSprite("sonic");
+        TestableSprite first = new TestableSprite("tails_p2");
+        TestableSprite second = new TestableSprite("sonic_p3");
+        TestableSprite third = new TestableSprite("knux_p4");
+        first.setCpuControlled(true);
+        second.setCpuControlled(true);
+        third.setCpuControlled(true);
+
+        SidekickCpuController firstCtrl = new SidekickCpuController(first, main);
+        SidekickCpuController secondCtrl = new SidekickCpuController(second, first);
+        SidekickCpuController thirdCtrl = new SidekickCpuController(third, second);
+        CountingRespawnStrategy firstStrategy = new CountingRespawnStrategy();
+        CountingRespawnStrategy secondStrategy = new CountingRespawnStrategy();
+        CountingRespawnStrategy thirdStrategy = new CountingRespawnStrategy();
+        firstCtrl.setRespawnStrategy(firstStrategy);
+        secondCtrl.setRespawnStrategy(secondStrategy);
+        thirdCtrl.setRespawnStrategy(thirdStrategy);
+        firstCtrl.setSidekickCount(3);
+        secondCtrl.setSidekickCount(3);
+        thirdCtrl.setSidekickCount(3);
+        firstCtrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+        secondCtrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+        thirdCtrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+
+        firstCtrl.update(64);
+        secondCtrl.update(64);
+        thirdCtrl.update(64);
+
+        assertEquals(SidekickCpuController.State.APPROACHING, firstCtrl.getState());
+        assertEquals(SidekickCpuController.State.SPAWNING, secondCtrl.getState(),
+                "The second sidekick should wait until its direct leader has become a usable respawn anchor");
+        assertEquals(SidekickCpuController.State.SPAWNING, thirdCtrl.getState(),
+                "The third sidekick should not skip over an unsettled direct leader and spawn on the same frame");
+        assertEquals(1, firstStrategy.beginCount);
+        assertEquals(0, secondStrategy.beginCount);
+        assertEquals(0, thirdStrategy.beginCount);
+    }
+
+    @Test
+    void multiSidekickRespawnUsesDirectLeaderAfterApproachAnchorDelay() {
+        TestableSprite main = new TestableSprite("sonic");
+        TestableSprite first = new TestableSprite("tails_p2");
+        TestableSprite second = new TestableSprite("sonic_p3");
+        first.setCpuControlled(true);
+        second.setCpuControlled(true);
+
+        SidekickCpuController firstCtrl = new SidekickCpuController(first, main);
+        SidekickCpuController secondCtrl = new SidekickCpuController(second, first);
+        CountingRespawnStrategy firstStrategy = new CountingRespawnStrategy();
+        CountingRespawnStrategy secondStrategy = new CountingRespawnStrategy();
+        firstCtrl.setRespawnStrategy(firstStrategy);
+        secondCtrl.setRespawnStrategy(secondStrategy);
+        firstCtrl.setSidekickCount(2);
+        secondCtrl.setSidekickCount(2);
+        firstCtrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+        secondCtrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+
+        firstCtrl.update(64);
+        for (int frame = 65; frame < 77; frame++) {
+            firstCtrl.update(frame);
+        }
+        secondCtrl.update(128);
+
+        assertEquals(SidekickCpuController.State.APPROACHING, secondCtrl.getState());
+        assertSame(first, secondStrategy.lastLeader,
+                "A staggered sidekick should approach its direct sidekick leader once that leader is usable");
+    }
+
+    @Test
+    void multiSidekickRespawnFallsBackWhenDirectLeaderNeverBecomesUsable() {
+        TestableSprite main = new TestableSprite("sonic");
+        TestableSprite stuckLeader = new TestableSprite("tails_p2");
+        TestableSprite second = new TestableSprite("sonic_p3");
+        stuckLeader.setCpuControlled(true);
+        second.setCpuControlled(true);
+
+        SidekickCpuController stuckCtrl = new SidekickCpuController(stuckLeader, main);
+        SidekickCpuController secondCtrl = new SidekickCpuController(second, stuckLeader);
+        CountingRespawnStrategy secondStrategy = new CountingRespawnStrategy();
+        stuckCtrl.setSidekickCount(2);
+        secondCtrl.setSidekickCount(2);
+        stuckCtrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+        secondCtrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+        secondCtrl.setRespawnStrategy(secondStrategy);
+
+        for (int frame = 64; frame < 192; frame++) {
+            secondCtrl.update(frame);
+        }
+
+        assertEquals(SidekickCpuController.State.APPROACHING, secondCtrl.getState(),
+                "The stagger gate must not deadlock if an earlier sidekick cannot begin respawn");
+        assertSame(main, secondStrategy.lastLeader,
+                "After the fallback timeout, the sidekick should recover through the nearest effective leader");
+    }
+
+    @Test
+    void multiSidekickFallbackStartsOnlyNextBlockedSidekick() {
+        TestableSprite main = new TestableSprite("sonic");
+        TestableSprite stuckLeader = new TestableSprite("tails_p2");
+        TestableSprite second = new TestableSprite("sonic_p3");
+        TestableSprite third = new TestableSprite("knux_p4");
+        stuckLeader.setCpuControlled(true);
+        second.setCpuControlled(true);
+        third.setCpuControlled(true);
+
+        SidekickCpuController stuckCtrl = new SidekickCpuController(stuckLeader, main);
+        SidekickCpuController secondCtrl = new SidekickCpuController(second, stuckLeader);
+        SidekickCpuController thirdCtrl = new SidekickCpuController(third, second);
+        CountingRespawnStrategy secondStrategy = new CountingRespawnStrategy();
+        CountingRespawnStrategy thirdStrategy = new CountingRespawnStrategy();
+        stuckCtrl.setSidekickCount(3);
+        secondCtrl.setSidekickCount(3);
+        thirdCtrl.setSidekickCount(3);
+        stuckCtrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+        secondCtrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+        thirdCtrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+        secondCtrl.setRespawnStrategy(secondStrategy);
+        thirdCtrl.setRespawnStrategy(thirdStrategy);
+
+        for (int frame = 64; frame <= 128; frame++) {
+            secondCtrl.update(frame);
+            thirdCtrl.update(frame);
+        }
+
+        assertEquals(SidekickCpuController.State.APPROACHING, secondCtrl.getState(),
+                "The next blocked sidekick should recover through the fallback timeout");
+        assertEquals(SidekickCpuController.State.SPAWNING, thirdCtrl.getState(),
+                "Lower sidekicks should not all consume their expired fallback timers on the same frame");
+        assertEquals(1, secondStrategy.beginCount);
+        assertEquals(0, thirdStrategy.beginCount);
+    }
+
+    @Test
+    void subSidekickApproachCompletesWhenCrossingMainPlayerBeforeParent() {
+        TestableSprite main = new TestableSprite("sonic");
+        main.setCentreX((short) 100);
+        main.setCentreY((short) 200);
+        TestableSprite parent = new TestableSprite("tails_p2");
+        parent.setCpuControlled(true);
+        parent.setCentreX((short) 200);
+        parent.setCentreY((short) 200);
+        TestableSprite subSidekick = new TestableSprite("sonic_p3");
+        subSidekick.setCpuControlled(true);
+        subSidekick.setCentreX((short) 90);
+        subSidekick.setCentreY((short) 200);
+
+        SidekickCpuController parentCtrl = new SidekickCpuController(parent, main);
+        SidekickCpuController subCtrl = new SidekickCpuController(subSidekick, parent);
+        parentCtrl.setSidekickCount(2);
+        subCtrl.setSidekickCount(2);
+        parentCtrl.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        subCtrl.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
+        subCtrl.setRespawnStrategy(new CrossingRespawnStrategy());
+
+        subCtrl.update(1);
+
+        assertEquals(SidekickCpuController.State.NORMAL, subCtrl.getState(),
+                "A lower sidekick should finish approach when it crosses the main player, even if its parent is farther ahead");
     }
 
     @Test
@@ -399,5 +726,48 @@ class TestRespawnStrategies {
         assertEquals(0x0102, sk.getCentreX() & 0xFFFF,
                 "ROM uses the signed high byte of Sonic's x_vel during Tails fly-in, so 0xFF82 adds a +1 speed bonus");
     }
-}
 
+    private static void installFlatFloorLevelManager() {
+        GameplayModeContext mode = TestEnvironment.activeGameplayMode();
+        LevelManager levelManager = mock(LevelManager.class);
+        ChunkDesc solidFloor = new ChunkDesc(7 | 0x1000);
+        byte[] heights = new byte[SolidTile.TILE_SIZE_IN_ROM];
+        Arrays.fill(heights, (byte) 8);
+        SolidTile flatTile = new SolidTile(7, heights, new byte[SolidTile.TILE_SIZE_IN_ROM], (byte) 0);
+
+        when(levelManager.getCurrentLevel()).thenReturn(mock(Level.class));
+        when(levelManager.getChunkDescAt(eq((byte) 0), anyInt(), anyInt())).thenReturn(solidFloor);
+        when(levelManager.getSolidTileForChunkDesc(solidFloor, 0x0C)).thenReturn(flatTile);
+
+        mode.attachLevelManagers(mode.getWaterSystem(), mode.getParallaxManager(),
+                mode.getTerrainCollisionManager(), mode.getCollisionSystem(),
+                mode.getSpriteManager(), levelManager);
+    }
+
+    private static void installScreenEdgeWallThenClearFloorLevelManager() {
+        GameplayModeContext mode = TestEnvironment.activeGameplayMode();
+        LevelManager levelManager = mock(LevelManager.class);
+        ChunkDesc edgeWallFloor = new ChunkDesc(8 | 0x3000);
+        ChunkDesc clearFloor = new ChunkDesc(7 | 0x1000);
+        byte[] floorHeights = new byte[SolidTile.TILE_SIZE_IN_ROM];
+        byte[] wallWidths = new byte[SolidTile.TILE_SIZE_IN_ROM];
+        Arrays.fill(floorHeights, (byte) 8);
+        Arrays.fill(wallWidths, (byte) 16);
+        SolidTile wallFloorTile = new SolidTile(8, floorHeights, wallWidths, (byte) 0);
+        SolidTile clearFloorTile = new SolidTile(7, floorHeights, new byte[SolidTile.TILE_SIZE_IN_ROM], (byte) 0);
+
+        when(levelManager.getCurrentLevel()).thenReturn(mock(Level.class));
+        when(levelManager.getChunkDescAt(eq((byte) 0), anyInt(), anyInt()))
+                .thenAnswer(invocation -> {
+                    int x = invocation.getArgument(1);
+                    return x < 0 ? edgeWallFloor : clearFloor;
+                });
+        when(levelManager.getSolidTileForChunkDesc(edgeWallFloor, 0x0C)).thenReturn(wallFloorTile);
+        when(levelManager.getSolidTileForChunkDesc(edgeWallFloor, 0x0D)).thenReturn(wallFloorTile);
+        when(levelManager.getSolidTileForChunkDesc(clearFloor, 0x0C)).thenReturn(clearFloorTile);
+
+        mode.attachLevelManagers(mode.getWaterSystem(), mode.getParallaxManager(),
+                mode.getTerrainCollisionManager(), mode.getCollisionSystem(),
+                mode.getSpriteManager(), levelManager);
+    }
+}

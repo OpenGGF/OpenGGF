@@ -306,6 +306,27 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
         return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
+    /**
+     * Rewind-restore hook: re-registers a recreated {@link FalseFloorBlock} into
+     * {@code childBlocks} so the disintegration sequence
+     * ({@code childBlocks.get(currentFrame).signalBreak()}) still resolves after a
+     * held rewind. Inserts ordered by {@link FalseFloorBlock#blockIndex} so the
+     * left-to-right collapse order matches the ROM regardless of restore order.
+     */
+    public void reattachChildBlock(FalseFloorBlock block) {
+        if (block == null) {
+            return;
+        }
+        int insertAt = childBlocks.size();
+        for (int i = 0; i < childBlocks.size(); i++) {
+            if (childBlocks.get(i).blockIndex > block.blockIndex) {
+                insertAt = i;
+                break;
+            }
+        }
+        childBlocks.add(insertAt, block);
+    }
+
     // =========================================================================
     // Inner class: FalseFloorBlock - child block (routine 8)
     // =========================================================================
@@ -336,9 +357,12 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
         // Fragment mapping frame indices (1-4 for quarter pieces)
         private static final int[] FRAGMENT_FRAMES = {1, 2, 3, 4};
 
-        private final int blockIndex;
-        private final int currentX;
-        private final int currentY;
+        // Non-final so the generic rewind field capturer can reapply the captured
+        // values after the parent-relink codec recreates the block with placeholder
+        // (0, 0, 0) ctor args. See Sonic1ObjectRegistry.falseFloorBlockCodec().
+        private int blockIndex;
+        private int currentX;
+        private int currentY;
         private boolean broken = false;
         private boolean goSignal = false;
 

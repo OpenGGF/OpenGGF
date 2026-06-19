@@ -44,8 +44,10 @@ public class AizRockFragmentChild extends GravityDebrisChild {
             {  -0x60,  -0xC0 }, {   0x60,  -0xC0 },
     };
 
-    private final int mappingFrame;
-    private final int pieceIndex;
+    // Non-final so the generic field capturer reapplies them after a rewind
+    // recreate (passed-in differentiators not recoverable from the ObjectSpawn).
+    private int mappingFrame;
+    private int pieceIndex;
 
     public AizRockFragmentChild(ObjectSpawn spawn, int xVel, int yVel, int mappingFrame, int pieceIndex) {
         super(spawn, "RockFragment", xVel, yVel, GRAVITY);

@@ -179,4 +179,11 @@ class TestRewindFieldInventoryTool {
         assertEquals(AnnotationDensityFixture.class.getName() + "#renderer", annotation.field());
         assertEquals(ObjectRenderManager.class.getName(), annotation.declaredType());
     }
+
+    @Test
+    void coverageModeRendersSummary() {
+        String out = RewindFieldInventoryTool.renderCoverageReport();
+        assertTrue(out.contains("coverage:"), "must include a coverage summary line");
+        assertTrue(out.contains("gaps"), "must report gap count");
+    }
 }

@@ -37,7 +37,7 @@ public final class MhzEndBossRobotnikHeadChild extends AbstractObjectInstance {
     private int rawMappingFrame;
     private int mappingFrame;
 
-    MhzEndBossRobotnikHeadChild(MhzEndBossInstance parent) {
+    public MhzEndBossRobotnikHeadChild(MhzEndBossInstance parent) {
         super(new ObjectSpawn(parent.getX(), parent.getY() + Y_OFFSET,
                         Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0),
                 "MHZEndBossRobotnikHead");

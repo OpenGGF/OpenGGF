@@ -308,6 +308,7 @@ public class PlayableSpriteAnimation {
         int duration = sprite.getAnimationTick() - 1;
         if (duration >= 0) {
             sprite.setAnimationTick(duration);
+            refreshDelayedMappingFrame(script, frameOffset);
             return;
         }
 
@@ -332,6 +333,17 @@ public class PlayableSpriteAnimation {
         int mappingFrame = script.frames().get(frameIndex) + frameOffset;
         sprite.setMappingFrame(mappingFrame);
         sprite.setAnimationFrameIndex(frameIndex + 1);
+    }
+
+    private void refreshDelayedMappingFrame(SpriteAnimationScript script, int frameOffset) {
+        int displayedFrameIndex = sprite.getAnimationFrameIndex() - 1;
+        if (displayedFrameIndex < 0) {
+            displayedFrameIndex = 0;
+        }
+        if (displayedFrameIndex >= script.frames().size()) {
+            displayedFrameIndex = script.frames().size() - 1;
+        }
+        sprite.setMappingFrame(script.frames().get(displayedFrameIndex) + frameOffset);
     }
 
     private boolean processEndAction(SpriteAnimationScript script) {

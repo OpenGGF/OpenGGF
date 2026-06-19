@@ -133,11 +133,16 @@ final class ObjectTouchResponseController {
             OverlapBufferPair pair = entry.getValue();
             String code = sk instanceof com.openggf.sprites.Sprite s ? s.getCode() : null;
             if (code == null) continue;
+            int[] overlappingSlots = collectSlotIndices(pair.overlapping);
+            int[] buildingSlots = collectSlotIndices(pair.building);
+            if (overlappingSlots.length == 0 && buildingSlots.length == 0) {
+                continue;
+            }
             sidekickEntries.add(
                     new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SidekickOverlapEntry(
                             code,
-                            collectSlotIndices(pair.overlapping),
-                            collectSlotIndices(pair.building),
+                            overlappingSlots,
+                            buildingSlots,
                             pair.overlapping == pair.bufferB));
         }
         return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState(

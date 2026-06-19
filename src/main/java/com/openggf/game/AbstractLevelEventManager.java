@@ -104,6 +104,26 @@ public abstract class AbstractLevelEventManager
         onUpdate();
     }
 
+    /**
+     * Hook invoked by the rewind registry after a keyframe restore so a game's
+     * level-event handlers can reconcile any one-shot state that gates dynamic
+     * objects against the actually-restored object set. Default is a no-op;
+     * game subclasses override where a sequence can be left in an impossible
+     * state after restore (e.g. S3K AIZ2 ship-loop/boss). Must be a live-state
+     * reconciliation, never a zone/frame carve-out.
+     */
+    public void reconcileAfterRewindRestore() {
+    }
+
+    /**
+     * Game-specific rewind adapters this level-event manager contributes;
+     * {@link com.openggf.game.session.GameplayModeContext} registers them with
+     * the level adapters. Default none.
+     */
+    public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
+        return java.util.List.of();
+    }
+
     @Override
     public void updatePrePhysics() {
         // Runs before the player physics step; the frame counter is advanced by

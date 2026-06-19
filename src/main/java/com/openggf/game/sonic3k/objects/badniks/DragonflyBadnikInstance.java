@@ -310,8 +310,10 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
 
         private final DragonflyBadnikInstance parent;
         private final AbstractObjectInstance followAnchor;
-        private final int subtype;
-        private final int segmentIndex;
+        // Un-final so the generic field capturer reapplies the captured values
+        // after a rewind recreate (the codec passes spawn-derived placeholders).
+        private int subtype;
+        private int segmentIndex;
         private int childX;
         private int childY;
         private int childXSubpixel;

@@ -4,6 +4,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.level.LevelManager;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.RequiresRomCondition;
@@ -19,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestS3kSlotGlassPriority {
 
     @Test
-    void runtimePromotesCentralSlotMachineGlassToLiveHighPriorityForegroundTiles() {
+    void runtimePromotesCentralSlotMachineGlassAndKeepsSlotPlayerLowPriority() {
         SonicConfigurationService.getInstance()
                 .setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         HeadlessTestFixture.builder()
@@ -35,10 +36,29 @@ class TestS3kSlotGlassPriority {
 
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
         runtime.bootstrap();
-        runtime.ensureForegroundGlassPriority();
 
-        assertTrue(countHighPriorityGlassTiles(level, true) > 20,
-                "The live foreground tilemap needs high-priority glass cells to cover the slot player");
+        assertTrue(runtime.isInitialized());
+        int liveHighPriorityCellsAfterBootstrap = countHighPriorityGlassTiles(level, true);
+        assertTrue(liveHighPriorityCellsAfterBootstrap > 20,
+                "Bootstrap should promote and retain high-priority glass cells in the live foreground tilemap");
+        int promotedCells = runtime.ensureForegroundGlassPriority();
+        assertFalse(promotedCells > 0,
+                "Foreground glass promotion should be idempotent after bootstrap"
+                        + " (secondPassPromoted=" + promotedCells + ")");
+        int liveHighPriorityCells = countHighPriorityGlassTiles(level, true);
+        assertTrue(liveHighPriorityCells > 20,
+                "The promoted live foreground tilemap should retain high-priority glass cells"
+                        + " (promoted=" + promotedCells + ", liveHigh=" + liveHighPriorityCells + ")");
+
+        assertTrue(GameServices.sprites().getSprite("sonic") instanceof S3kSlotBonusPlayer);
+        AbstractPlayableSprite slotPlayer = (AbstractPlayableSprite) GameServices.sprites().getSprite("sonic");
+        assertFalse(slotPlayer.isHighPriority(),
+                "ROM Obj_Sonic_RotatingSlotBonus keeps the slot player low-priority for foreground/layout layering");
+
+        runtime.update(0);
+        assertTrue(runtime.activeVisibleCellsForTest().stream()
+                        .anyMatch(cell -> (cell.cellId() & 0xFF) != 0x09),
+                "The visible cage/walls should also be available through the slot layout pass");
     }
 
     private static boolean hasAnyHighPriorityGlassTile(LevelManager level, boolean liveTilemap) {

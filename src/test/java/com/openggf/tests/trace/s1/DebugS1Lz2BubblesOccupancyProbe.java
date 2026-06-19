@@ -34,6 +34,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 /**
  * Local comparison-only probe for the S1 LZ2 Obj64 frontier. This class is not
  * picked up by the default Surefire include pattern; run it explicitly while
@@ -110,8 +113,16 @@ class DebugS1Lz2BubblesOccupancyProbe {
                     LABEL,
                     TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
                     boot.replayStart().startingTraceIndex());
+            String postBootstrapObj64 = summarizeEngineObj64(objectManager);
             System.out.println("[" + LABEL + "-obj64-count] post-bootstrap engine Obj64: "
-                    + summarizeEngineObj64(objectManager));
+                    + postBootstrapObj64);
+
+            // characterization guard: the bootstrap must produce a usable
+            // occupancy scan to compare against. trace data is read-only here;
+            // these only assert the probe actually loaded/bootstrapped a
+            // non-empty trace and computed its reported Obj64 occupancy string.
+            assertTrue(trace.frameCount() > 0, "trace loaded no frames");
+            assertNotNull(postBootstrapObj64, "post-bootstrap Obj64 occupancy was not computed");
 
             int startTraceIndex = boot.replayStart().startingTraceIndex();
             boolean objectSlotDivergenceReported = false;
@@ -122,6 +133,8 @@ class DebugS1Lz2BubblesOccupancyProbe {
             boolean ringCountDivergenceReported = false;
             int lastEngineRingCount = fixture.sprite().getRingCount();
             ObjectSpawn targetSpawn = HAS_TARGET ? findTargetSpawn(objectManager) : null;
+            assertTrue(startTraceIndex < trace.frameCount(),
+                    "occupancy scan window is empty (startTraceIndex past trace end)");
             for (int i = startTraceIndex; i < trace.frameCount(); i++) {
                 TraceFrame expected = trace.getFrame(i);
                 TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;

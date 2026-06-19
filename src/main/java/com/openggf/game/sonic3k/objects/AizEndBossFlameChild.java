@@ -55,9 +55,11 @@ public class AizEndBossFlameChild extends AbstractObjectInstance implements Touc
     };
     private final AizEndBossInstance boss;
     private final AizEndBossPropellerChild propeller;
-    private final int angle;
-    private final int offsetX;
-    private final int offsetY;
+    // angle and its derived offsets are non-final so the rewind field capturer
+    // reapplies them after the codec recreates the flame (placeholder angle 0).
+    private int angle;
+    private int offsetX;
+    private int offsetY;
     private int currentX;
     private int currentY;
     private int animTimer;

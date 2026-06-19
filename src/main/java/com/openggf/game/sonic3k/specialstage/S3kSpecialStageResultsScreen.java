@@ -344,6 +344,55 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     }
 
     // ================================================================
+    // Test accessors (package-private) — expose tally/visibility outputs
+    // computed by the constructor and update() state machine so unit tests
+    // can validate them without rendering or reflection.
+    // ================================================================
+
+    /** Current ring-bonus countdown value (rings x 10 at construction). */
+    int ringBonusForTest() {
+        return ringBonus;
+    }
+
+    /** Current time-bonus countdown value (5000 if perfect at construction, else 0). */
+    int timeBonusForTest() {
+        return timeBonus;
+    }
+
+    /** Phase-1 element index of the continue-prompt label (loc_2EBxx element 5). */
+    private static final int CONTINUE_LABEL_INDEX = 5;
+    /** Phase-1 element index of the failure message (loc_2EAC8 element 13). */
+    private static final int FAIL_MESSAGE_INDEX = 13;
+    /** Phase-1 element index of the character name (loc_2EAD8 element 14). */
+    private static final int CHAR_NAME_INDEX = 14;
+    /** Phase-1 element index of the "SUPER SONIC" label (loc_2EBCC element 18). */
+    private static final int SUPER_TEXT_INDEX = 18;
+
+    /** Whether the continue-prompt label is visible (rings &gt;= continue threshold). */
+    boolean continueLabelVisibleForTest() {
+        return phase1ElementVisible(CONTINUE_LABEL_INDEX);
+    }
+
+    /** Whether the failure message is visible (no emerald earned). */
+    boolean failMessageVisibleForTest() {
+        return phase1ElementVisible(FAIL_MESSAGE_INDEX);
+    }
+
+    /** Whether the character-name label is visible (emerald earned). */
+    boolean charNameVisibleForTest() {
+        return phase1ElementVisible(CHAR_NAME_INDEX);
+    }
+
+    /** Whether the "SUPER SONIC" label is visible (emerald earned + all 7). */
+    boolean superTextVisibleForTest() {
+        return phase1ElementVisible(SUPER_TEXT_INDEX);
+    }
+
+    private boolean phase1ElementVisible(int index) {
+        return index >= 0 && index < phase1Elements.size() && phase1Elements.get(index).visible;
+    }
+
+    // ================================================================
     // Element creation
     // ================================================================
 

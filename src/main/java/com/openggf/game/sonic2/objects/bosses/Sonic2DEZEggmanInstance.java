@@ -524,8 +524,11 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
         private static final int[] OPENING_FRAMES = { 0, 1, 2, 3 };
         private static final int OPENING_ANIM_SPEED = 1;
 
-        private final int wallX;
-        private final int wallY;
+        // Un-final for rewind: GenericFieldCapturer skips final scalars; the
+        // parent-relink codec reconstructs via the (x,y) ctor and the capturer
+        // reapplies wallX/wallY on restore (dezBarrierWallCodec).
+        private int wallX;
+        private int wallY;
         private int wallState;
         private boolean eggmanRunning;
 
@@ -569,32 +572,27 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
         }
 
         @Override
-        public SolidExecutionMode solidExecutionMode() {
-            return SolidExecutionMode.MANUAL_CHECKPOINT;
-        }
-
-        @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (isDestroyed()) return;
 
             switch (wallState) {
                 case WALL_STATE_SOLID -> {
+                    // Wait for Eggman's running signal
                     if (eggmanRunning) {
                         wallState = WALL_STATE_OPENING;
                         openingFrameIndex = 0;
                         openingAnimTimer = OPENING_ANIM_SPEED;
                     } else {
-                        // ROM ObjC6_State3_State1 calls SolidObject only while
-                        // Eggman's misc flag is clear; once set it advances to
-                        // the opening animation and only displays this frame.
-                        services().solidExecutionRegistry().currentObject().resolveSolidNowAll();
+                        checkpointAll();
                     }
                 }
                 case WALL_STATE_OPENING -> {
-                    // ROM ObjC6_State3_State2 calls SolidObject before
-                    // AnimateSprite, so the final opening tick still blocks.
-                    services().solidExecutionRegistry().currentObject().resolveSolidNowAll();
+                    // ROM ObjC6_State3_State2 calls SolidObject before AnimateSprite
+                    // can advance the wall to State3 (docs/s2disasm/s2.asm:82163-82170).
+                    checkpointAll();
+
+                    // Play opening animation
                     openingAnimTimer--;
                     if (openingAnimTimer < 0) {
                         openingAnimTimer = OPENING_ANIM_SPEED;
@@ -618,6 +616,11 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
         @Override
         public SolidObjectParams getSolidParams() {
             return new SolidObjectParams(WALL_HALF_WIDTH, WALL_HALF_HEIGHT, WALL_HALF_HEIGHT);
+        }
+
+        @Override
+        public SolidExecutionMode solidExecutionMode() {
+            return SolidExecutionMode.MANUAL_CHECKPOINT;
         }
 
         @Override

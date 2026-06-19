@@ -194,8 +194,9 @@ public class LevelTilemapManager {
             backgroundTilemapDirty = true;
             bgWindowShiftCandidate = false;
         }
-        if (!backgroundTilemapDirty && backgroundTilemapData != null && patternLookupData != null) {
+        if (!backgroundTilemapDirty && backgroundTilemapData != null) {
             lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
+            ensurePatternLookupData();
             // Tilemap data already up to date — but still push VDP wrap height
             // to the renderer in case it was null during the initial build.
             TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
@@ -271,14 +272,16 @@ public class LevelTilemapManager {
 
         // FG ring active and already built: incremental leading-edge fill only.
         if (fgWrap && !foregroundTilemapDirty && foregroundTilemapData != null
-                && patternLookupData != null && foregroundRingSeeded) {
+                && foregroundRingSeeded) {
             if (foregroundRingFillLeadingEdge(blockLookup, level)) {
                 uploadForegroundTilemap();
             }
+            ensurePatternLookupData();
             return;
         }
 
-        if (!foregroundTilemapDirty && foregroundTilemapData != null && patternLookupData != null) {
+        if (!foregroundTilemapDirty && foregroundTilemapData != null) {
+            ensurePatternLookupData();
             return;
         }
 
@@ -870,6 +873,75 @@ public class LevelTilemapManager {
         foregroundTilemapDirty = true;
         backgroundTilemapDirty = true;
         bgWindowShiftCandidate = false;
+    }
+
+    /**
+     * Forces the AIZ2 ship-loop foreground "ring" tilemap to be fully rebuilt and
+     * re-seeded on the next {@link #ensureForegroundTilemapData} call, dropping the
+     * incrementally-filled leading-edge state.
+     * <p>
+     * The persistent $200 FG ring is built incrementally: only the camera's
+     * leading-edge column is filled each frame ({@link #foregroundRingFillLeadingEdge}),
+     * so the other ring cells RETAIN whatever forest columns were drawn into them as
+     * the camera advanced. After a rewind restore jumps the camera backward (or to an
+     * arbitrary earlier position), those retained cells hold columns from the
+     * discarded forward timeline and no longer match the flat layout at the restored
+     * camera-X. Because the ring is a PURE FUNCTION of (restored camera-X + static
+     * layout), it does not need to be snapshotted — only force-rebuilt from scratch.
+     * <p>
+     * This clears the seed/dirty latches so the next full build re-seeds every ring
+     * cell from the flat layout at the restored camera position (via
+     * {@link #foregroundRingSeed}), then resumes the cheap incremental fill. The
+     * incremental path is left intact for normal play; only the rewind hook calls
+     * this.
+     * <p>
+     * Real fields reset: {@code foregroundTilemapDirty}=true,
+     * {@code foregroundRingSeeded}=false, {@code lastForegroundWrap}=null.
+     */
+    public void resetForegroundRingForRewind() {
+        foregroundTilemapDirty = true;
+        foregroundRingSeeded = false;
+        // Drop the wrap-state latch so the next ensure treats the current fgWrap as a
+        // state change and forces the full (re-seeding) build rather than the
+        // incremental leading-edge fill.
+        lastForegroundWrap = null;
+    }
+
+    /**
+     * Invalidates the incremental BG-window-shift baseline so the first
+     * post-rewind {@link #ensureBackgroundTilemapData} performs a full rebuild from
+     * the restored camera window rather than an in-place one-column arraycopy shift.
+     * <p>
+     * The incremental shift ({@link #tryIncrementalBgWindowShift}) drops one chunk
+     * column and rebuilds the entering one, assuming the live bytes still match a
+     * from-scratch build at the previous window base. After a rewind restore the
+     * camera jumps to an arbitrary earlier base-X, so the retained
+     * {@code backgroundTilemapData} reflects the discarded forward window and a
+     * single-column shift would be wrong. Like the FG ring, the BG window is a PURE
+     * FUNCTION of (restored camera-X + static layout), so it just needs a forced
+     * full rebuild — no snapshotting required.
+     * <p>
+     * Real fields reset: {@code bgLastBuildValid}=false (snapshot no longer trusted),
+     * {@code bgWindowShiftCandidate}=false (decline the shift path),
+     * {@code backgroundTilemapDirty}=true (force a build next ensure).
+     */
+    public void resetBgIncrementalShiftBaseline() {
+        bgLastBuildValid = false;
+        bgWindowShiftCandidate = false;
+        backgroundTilemapDirty = true;
+    }
+
+    /**
+     * Convenience hook for the rewind system: force-rebuilds both the AIZ2 FG ring
+     * and the BG incremental-shift window after a rewind restore. The integrator
+     * registers this as a single post-restore callback. Both underlying tilemaps are
+     * pure functions of the restored camera-X plus static layout, so this only
+     * invalidates — the next-frame {@code ensure*TilemapData} full-build paths do the
+     * actual rebuild.
+     */
+    public void resetTilemapsForRewindRestore() {
+        resetForegroundRingForRewind();
+        resetBgIncrementalShiftBaseline();
     }
 
     /**

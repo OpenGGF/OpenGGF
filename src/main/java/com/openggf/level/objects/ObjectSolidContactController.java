@@ -898,6 +898,8 @@ final class ObjectSolidContactController {
     short getPreContactYSpeed() { return preContactYSpeed; }
     /** Player rolling state captured before any solid contact resolution modified it. */
     boolean getPreContactRolling() { return preContactRolling; }
+    /** Player animation ID captured before any solid contact resolution modified it. */
+    int getPreContactAnimationId() { return preContactAnimationId; }
 
     void beginInlineFrame(PlayableEntity player, List<? extends PlayableEntity> sidekicks,
             boolean postMovement) {

@@ -418,6 +418,7 @@ public final class GameplayModeContext implements ModeContext {
         rewindRegistry.deregister("object-manager");
         rewindRegistry.deregister("level-event");
         rewindRegistry.deregister("solid-execution");
+        rewindRegistry.deregisterPostRestoreCallback("level-tilemap-event-reconcile");
         rewindRegistry.register(levelManager.levelRewindSnapshottable());
         if (levelManager.getObjectManager() != null) {
             rewindRegistry.register(levelManager.getObjectManager().rewindSnapshottable());
@@ -426,12 +427,38 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.register(dser);
         }
         // Register level-event manager adapter (available after gameModule is set).
+        AbstractLevelEventManager levelEventManager = null;
         if (levelManager.getGameModule() != null) {
             LevelEventProvider lep = levelManager.getGameModule().getLevelEventProvider();
             if (lep instanceof AbstractLevelEventManager alem) {
+                levelEventManager = alem;
                 rewindRegistry.register(alem);
             }
         }
+        // Register game-specific extra adapters contributed by the level-event manager
+        // (e.g. S3K AIZ2 boss-endgame static latches). Deregister first for idempotency.
+        if (levelEventManager != null) {
+            for (com.openggf.game.rewind.RewindSnapshottable<?> extra : levelEventManager.extraRewindAdapters()) {
+                rewindRegistry.deregister(extra.key());
+                rewindRegistry.register(extra);
+            }
+        }
+        // Post-restore reconciliation (runs after all entry restores, i.e. after
+        // object-manager recreate): let level-event handlers reconcile one-shot
+        // sequence state against the restored object set (e.g. S3K AIZ2
+        // ship-loop/boss softlock guards), and force a tilemap rebuild so the
+        // camera-history-dependent FG ring / BG window re-derive from the
+        // restored camera position. No-ops outside the zones that need them.
+        final AbstractLevelEventManager reconcileTarget = levelEventManager;
+        rewindRegistry.registerPostRestoreCallback("level-tilemap-event-reconcile", () -> {
+            if (reconcileTarget != null) {
+                reconcileTarget.reconcileAfterRewindRestore();
+            }
+            var tilemapManager = levelManager.getTilemapManager();
+            if (tilemapManager != null) {
+                tilemapManager.resetTilemapsForRewindRestore();
+            }
+        });
     }
 
     /**

@@ -60,10 +60,17 @@ public class MGZHeadTriggerProjectileInstance extends AbstractObjectInstance
     private int xSub;
     /** Y position is fixed — ROM {@code MoveSprite2} with y_vel = 0. */
     private final int worldY;
-    /** ROM x_vel in 16:8 fixed-point subpixels (e.g. $400 = 4px/frame). */
-    private final int xVel;
-    /** ROM child copies the parent's render_flags, including horizontal flip. */
-    private final boolean hFlip;
+    /**
+     * ROM x_vel in 16:8 fixed-point subpixels (e.g. $400 = 4px/frame).
+     * Non-final so the generic field capturer reapplies it after a rewind
+     * recreate (the captured ObjectSpawn does not encode velocity).
+     */
+    private int xVel;
+    /**
+     * ROM child copies the parent's render_flags, including horizontal flip.
+     * Non-final so it is reapplied after a rewind recreate.
+     */
+    private boolean hFlip;
 
     public MGZHeadTriggerProjectileInstance(int spawnX, int spawnY, int xVel, boolean hFlip) {
         super(new ObjectSpawn(spawnX, spawnY, 0xFF, 0, 0, false, 0),

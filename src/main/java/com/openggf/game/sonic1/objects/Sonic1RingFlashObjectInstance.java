@@ -45,7 +45,10 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance {
     private final Sonic1GiantRingObjectInstance parent;
     private final int posX;
     private final int posY;
-    private final boolean hFlip;
+    // Un-finaled for rewind: hFlip is NOT spawn-derivable (it encodes the player's
+    // approach direction, not packed in ObjectSpawn), so the generic field capturer
+    // reapplies the captured value after the codec recreates with placeholder false.
+    private boolean hFlip;
 
     // ROM: obFrame starts at $FF, obTimeFrame starts at 0
     // First tick: timer=0 -> subq makes it $FF (negative) -> advances frame from $FF to $00

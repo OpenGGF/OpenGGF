@@ -74,6 +74,28 @@ public class TestSonic3kZoneFeatureProvider {
     }
 
     @Test
+    public void aizEndSignSequenceKeepsBossArenaPriorityAfterBossFlagClears() {
+        TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        FakeAizEvents aizEvents = new FakeAizEvents();
+        provider.setAizEvents(aizEvents);
+
+        aizEvents.setBossFlag(true);
+        provider.update(player, 0x10E0, Sonic3kZoneIds.ZONE_AIZ);
+        assertTrue(player.isHighPriority(), "AIZ boss arena should force Sonic in front of foreground masks");
+
+        aizEvents.setBossFlag(false);
+        GameServices.gameState().setEndOfLevelActive(true);
+        provider.update(player, 0x10E0, Sonic3kZoneIds.ZONE_AIZ);
+
+        assertTrue(player.isHighPriority(),
+                "Obj_EndSignControl clears Boss_flag before the falling signpost/results flow finishes; "
+                        + "Sonic's art_tile priority bit must survive that handoff");
+        assertEquals(RenderPriority.MIN, player.getPriorityBucket(),
+                "The AIZ end-sign flow should keep Sonic in the front display bucket while results are active");
+    }
+
+    @Test
     public void forestFrontPhaseAlsoForcesCpuSidekickInFrontOfForestMask() {
         TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);

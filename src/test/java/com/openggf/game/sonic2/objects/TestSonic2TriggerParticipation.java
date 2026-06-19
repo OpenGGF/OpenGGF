@@ -27,6 +27,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -43,6 +44,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestSonic2TriggerParticipation {
+
+    @BeforeEach
+    void resetObjectCameraBounds() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x2000, 0x2000, 0);
+    }
 
     @Test
     void arrowShooterDetectsQueryOnlySidekick() throws Exception {
@@ -613,6 +619,7 @@ class TestSonic2TriggerParticipation {
     void wfzRivetStillBustsForRollingNativeMainCharacter() {
         TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
         main.setRolling(true);
+        main.setAnimationId(Sonic2AnimationIds.ROLL.id());
         RivetObjectInstance rivet = new RivetObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.RIVET, 0, 0, false, 0),
                 "Rivet");
@@ -625,6 +632,61 @@ class TestSonic2TriggerParticipation {
                 "ObjC2 should still bust when native P1 is rolling on the rivet");
         assertTrue(main.getAir());
         assertFalse(main.isOnObject());
+    }
+
+    @Test
+    void wfzRivetBustsFromCachedRollAnimationNotRollingStatus() {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        main.setRolling(false);
+        main.setAnimationId(Sonic2AnimationIds.ROLL.id());
+        RivetObjectInstance rivet = new RivetObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.RIVET, 0, 0, false, 0),
+                "Rivet");
+        rivet.setServices(new QueryOnlyPlayerServices(main, List.of()).withCamera(focusedCamera(main)));
+
+        rivet.update(0, main);
+        main.setAnimationId(0);
+        rivet.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
+
+        assertTrue(rivet.isDestroyed(),
+                "ObjC2 caches MainCharacter+anim before SolidObject and busts on cached anim==2");
+    }
+
+    @Test
+    void cpzBreakableBlockBreaksFromRollAnimationNotRollingStatus() {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        main.setRolling(false);
+        main.setAnimationId(Sonic2AnimationIds.ROLL.id());
+        BreakableBlockObjectInstance block = new BreakableBlockObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_BLOCK, 0, 0, false, 0),
+                "BreakableBlock");
+        block.setServices(new QueryOnlyPlayerServices(main, List.of()).withGameState(new GameStateManager()));
+
+        block.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
+
+        assertTrue(block.isDestroyed(),
+                "Obj32 snapshots player anim before SolidObject and breaks on anim==Roll");
+        assertEquals(0xFD00, main.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
+    void htzSmashableGroundBreaksFromRollAnimationNotRollingStatus() {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        main.setRolling(false);
+        main.setAnimationId(Sonic2AnimationIds.ROLL.id());
+        main.setTopSolidBit((byte) 0x0E);
+        SmashableGroundObjectInstance ground = new SmashableGroundObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.SMASHABLE_GROUND, 0, 0, false, 0),
+                "SmashableGround");
+        GameStateManager gameState = new GameStateManager();
+        ground.setServices(new QueryOnlyPlayerServices(main, List.of()).withGameState(gameState));
+
+        ground.update(0, main);
+        ground.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
+
+        assertTrue(ground.isDestroyed(),
+                "Obj2F snapshots player anim before SolidObject and breaks on anim==Roll");
+        assertTrue(main.getAir());
     }
 
     @Test

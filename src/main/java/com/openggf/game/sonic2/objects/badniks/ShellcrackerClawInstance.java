@@ -76,8 +76,10 @@ public class ShellcrackerClawInstance extends AbstractObjectInstance
         FALLING          // Routine 4: parent dead, falling
     }
     private final ShellcrackerBadnikInstance parent;
-    private final int pieceIndex; // 0, 2, 4, 6, 8, 10, 12, 14
-    private final boolean facingRight;
+    // Un-final for rewind: GenericFieldCapturer reapplies these captured non-spawn
+    // scalars after the parent-relink codec recreates the claw with placeholders.
+    private int pieceIndex; // 0, 2, 4, 6, 8, 10, 12, 14
+    private boolean facingRight;
     private int currentX;
     private int currentY;
     private final SubpixelMotion.State motionState = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);

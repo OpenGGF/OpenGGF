@@ -149,9 +149,14 @@ public class TestSonic1CaterkillerBodyChaining {
 
         head.triggerFragmentFromBodyHit();
         body.update(0, null); // enters fragment mode
-        body.update(1, null); // fragment physics + off-screen delete check
+        body.update(1, null); // fragment physics + refreshes the ROM obRender latch
 
-        assertTrue(body.isDestroyed(), "Fragmenting body segments should self-delete once off-screen");
+        assertFalse(body.isDestroyed(),
+                "The first fragment update should only refresh the stale on-screen render flag");
+
+        body.update(2, null); // next exec observes the cleared render flag and deletes
+
+        assertTrue(body.isDestroyed(), "Fragmenting body segments should self-delete after obRender clears");
     }
 
     @Test
@@ -276,5 +281,4 @@ public class TestSonic1CaterkillerBodyChaining {
         }
     }
 }
-
 

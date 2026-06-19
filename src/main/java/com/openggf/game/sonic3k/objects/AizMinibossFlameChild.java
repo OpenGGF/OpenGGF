@@ -52,9 +52,11 @@ public class AizMinibossFlameChild extends AbstractObjectInstance implements Tou
         EXPLODE
     }
     private final AbstractBossInstance parent;
-    private final int xOffset;
-    private final int yOffset;
-    private final int subtype;
+    // xOffset/yOffset/subtype are non-final so the rewind field capturer reapplies
+    // them after the codec recreates the flame (placeholders 0; parent is relinked).
+    private int xOffset;
+    private int yOffset;
+    private int subtype;
 
     private Phase phase = Phase.WAIT;
     private int waitTimer;

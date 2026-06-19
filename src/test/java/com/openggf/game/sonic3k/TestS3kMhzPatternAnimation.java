@@ -99,6 +99,21 @@ class TestS3kMhzPatternAnimation {
     }
 
     @Test
+    void mhzMushroomCapCounterStartsAfterRomPreLoopAnimateTilesPass() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
+                .build();
+
+        MhzZoneRuntimeState state = GameServices.zoneRuntimeRegistry()
+                .currentAs(MhzZoneRuntimeState.class)
+                .orElseThrow(() -> new AssertionError("MHZ runtime state should be installed"));
+
+        assertEquals(2, state.mushroomCapPositionCounter(),
+                "Level setup runs Process_Sprites then Animate_Tiles before LevelLoop; "
+                        + "AnimateTiles_MHZ increments Anim_Counters+$F before mushroom caps' first loop read");
+    }
+
+    @Test
     void mhzCustomPathChangesDestinationTilesForAtLeastOnePhaseShift() {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)

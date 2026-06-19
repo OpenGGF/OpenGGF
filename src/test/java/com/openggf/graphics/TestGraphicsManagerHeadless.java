@@ -170,14 +170,27 @@ public class TestGraphicsManagerHeadless {
     public void testFlushClearsCommandsInHeadlessMode() {
         graphicsManager.initHeadless();
 
-        // Register a command
-        graphicsManager.registerCommand((cX, cY, cW, cH) -> {});
+        // Register a command that records whether it was ever executed.
+        boolean[] executed = {false};
+        graphicsManager.registerCommand((cX, cY, cW, cH) -> executed[0] = true);
 
-        // Flush should clear
-        graphicsManager.flush();
+        // The queue should now hold exactly the registered command.
+        assertEquals(1, graphicsManager.commands.size(),
+                "registerCommand should enqueue exactly one pending command");
 
-        // Flush again - should not throw (commands already cleared)
+        // Flush should clear the queue without executing the command in headless mode.
         graphicsManager.flush();
+        assertTrue(graphicsManager.commands.isEmpty(),
+                "flush should clear the command queue in headless mode");
+        assertFalse(executed[0],
+                "headless flush must not execute queued GL commands");
+
+        // Second flush proves the queue was actually cleared: nothing left to run.
+        graphicsManager.flush();
+        assertFalse(executed[0],
+                "a previously cleared command must not re-execute on a second flush");
+        assertTrue(graphicsManager.commands.isEmpty(),
+                "command queue should remain empty after a second flush");
     }
 
     // ==================== Batching Tests ====================
@@ -186,27 +199,38 @@ public class TestGraphicsManagerHeadless {
     public void testBeginPatternBatchInHeadlessModeDoesNotThrow() {
         graphicsManager.initHeadless();
 
-        // Should not throw or crash
-        graphicsManager.beginPatternBatch();
+        assertDoesNotThrow(graphicsManager::beginPatternBatch,
+                "beginPatternBatch must be a safe no-op in headless mode");
+        // Beginning a batch must not enqueue any GL command in headless mode.
+        assertTrue(graphicsManager.commands.isEmpty(),
+                "beginPatternBatch must not queue GL commands in headless mode");
     }
 
     @Test
     public void testFlushPatternBatchInHeadlessModeDoesNotThrow() {
         graphicsManager.initHeadless();
 
-        // Should not throw or crash
-        graphicsManager.flushPatternBatch();
+        assertDoesNotThrow(graphicsManager::flushPatternBatch,
+                "flushPatternBatch must be a safe no-op in headless mode");
+        // Flushing an (empty, never-begun) batch must not enqueue any GL command.
+        assertTrue(graphicsManager.commands.isEmpty(),
+                "flushPatternBatch must not queue GL commands in headless mode");
     }
 
     @Test
     public void testBatchingOperationsInHeadlessMode() {
         graphicsManager.initHeadless();
 
-        // Full batching cycle should work
-        graphicsManager.beginPatternBatch();
-        graphicsManager.flushPatternBatch();
-        graphicsManager.beginPatternBatch();
-        graphicsManager.flushPatternBatch();
+        // A full begin/flush cycle (repeated) must stay a no-op in headless mode:
+        // never throw and never produce queued GL commands to run later.
+        assertDoesNotThrow(() -> {
+            graphicsManager.beginPatternBatch();
+            graphicsManager.flushPatternBatch();
+            graphicsManager.beginPatternBatch();
+            graphicsManager.flushPatternBatch();
+        }, "repeated headless batch cycles must not throw");
+        assertTrue(graphicsManager.commands.isEmpty(),
+                "headless batch cycles must leave the command queue empty");
     }
 
     // ==================== Cleanup Tests ====================

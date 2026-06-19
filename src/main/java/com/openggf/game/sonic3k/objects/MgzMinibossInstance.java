@@ -744,8 +744,10 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
     private static final class DrillArmChild extends AbstractObjectInstance implements TouchResponseProvider {
         private static final int PRIORITY_BUCKET = 5;
         private final MgzMinibossInstance parent;
-        private final int xOffset;
-        private final int yOffset;
+        // Non-final so the generic rewind field capturer can reapply the captured
+        // left/right differentiator after the codec recreates this child.
+        private int xOffset;
+        private int yOffset;
         private int currentX;
         private int currentY;
 
@@ -823,8 +825,10 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         private static final int GRAVITY = 0x18;
         private static final int LIFE = 0x5F;
 
-        private final int mappingFrame;
-        private final boolean spire;
+        // Non-final so the generic rewind field capturer can reapply the captured
+        // values after a codec recreates this child with placeholder ctor args.
+        private int mappingFrame;
+        private boolean spire;
         private int xFixed;
         private int yFixed;
         private int yVel;

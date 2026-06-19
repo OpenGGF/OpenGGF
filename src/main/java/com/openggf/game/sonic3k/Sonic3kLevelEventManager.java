@@ -708,6 +708,18 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void reconcileAfterRewindRestore() {
+        if (aizEvents != null) {
+            aizEvents.reconcileSequenceAfterRewindRestore();
+        }
+    }
+
+    @Override
+    public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
+        return java.util.List.of(new com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceStaticAdapter());
+    }
+
+    @Override
     public void setBossFlag(boolean value) {
         if (aizEvents != null) {
             aizEvents.setBossFlag(value);

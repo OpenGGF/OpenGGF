@@ -65,4 +65,39 @@ public final class Aiz2BossEndSequenceState {
     public static void setActiveKnuckles(CutsceneKnucklesAiz2Instance knuckles) {
         activeKnuckles = knuckles;
     }
+
+    /**
+     * Immutable rewind snapshot of the boss-endgame static latches. These
+     * ratchet forward (bridge drop, button press, capsule release, cutscene
+     * overrides, draw-bridge burn) and are consulted as {@code !instanceFlag
+     * && staticLatch}; without rewind coverage they desync against the
+     * rewound instance flags (bridge re-drops, cutscene-override objects get
+     * deleted). The live {@code activeKnuckles} pointer is NOT captured here —
+     * it is a reference to a dynamic object and is rebound from the restored
+     * object set post-restore.
+     */
+    public record Snapshot(boolean bridgeDropTriggered,
+                           boolean buttonPressed,
+                           boolean eggCapsuleReleased,
+                           boolean cutsceneOverrideObjectsActive,
+                           boolean drawBridgeBurnActive) {
+    }
+
+    public static Snapshot snapshot() {
+        return new Snapshot(bridgeDropTriggered, buttonPressed, eggCapsuleReleased,
+                cutsceneOverrideObjectsActive,
+                AizCollapsingLogBridgeObjectInstance.isDrawBridgeBurnActive());
+    }
+
+    public static void restore(Snapshot snapshot) {
+        bridgeDropTriggered = snapshot.bridgeDropTriggered();
+        buttonPressed = snapshot.buttonPressed();
+        eggCapsuleReleased = snapshot.eggCapsuleReleased();
+        cutsceneOverrideObjectsActive = snapshot.cutsceneOverrideObjectsActive();
+        AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(
+                snapshot.drawBridgeBurnActive());
+        // Drop any stale live pointer; rebound from the restored object set by
+        // the AIZ post-restore reconciliation.
+        activeKnuckles = null;
+    }
 }

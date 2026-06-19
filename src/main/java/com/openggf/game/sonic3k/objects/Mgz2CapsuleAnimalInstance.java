@@ -23,8 +23,12 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance {
     private static final int FRAMES_PER_MAPPING = 3;
     private static final int ART_VARIANT_COUNT = 2;
 
-    private final int index;
-    private final int artVariant;
+    // Un-finaled for rewind: index (animal loop counter) and artVariant (RNG-derived
+    // at spawn) are not spawn-derivable, so the exactSpawnCodec passes placeholder 0
+    // and the GenericFieldCapturer (which skips final scalars) reapplies the captured
+    // values after recreate.
+    private int index;
+    private int artVariant;
     private int currentX;
     private int currentY;
     private int xSubpixel;

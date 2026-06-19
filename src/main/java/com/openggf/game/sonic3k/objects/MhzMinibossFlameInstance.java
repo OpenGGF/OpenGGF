@@ -50,7 +50,9 @@ final class MhzMinibossFlameInstance extends AbstractObjectInstance implements T
     };
 
     private final MhzMinibossInstance parent;
-    private final int childIndex;
+    // Non-final so the generic field capturer reapplies it after a rewind
+    // recreate (childIndex 0/1 is not spawn-derivable: both flames share subtype 0).
+    private int childIndex;
     private int x;
     private int y;
     private int mappingFrame;

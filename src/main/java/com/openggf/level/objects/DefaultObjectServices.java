@@ -520,6 +520,11 @@ public class DefaultObjectServices implements ObjectServices {
     }
 
     @Override
+    public BonusStageProvider bonusStageProviderOrNull() {
+        return bonusStageProvider;
+    }
+
+    @Override
     public void addBonusStageRings(int count) {
         try {
             bonusStageProvider.addRings(count);

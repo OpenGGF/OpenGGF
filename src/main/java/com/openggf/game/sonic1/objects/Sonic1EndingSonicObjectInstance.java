@@ -96,7 +96,10 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance {
 
     /** Reference to the spawned emerald master for radius checking. */
     private Sonic1EndingEmeraldsObjectInstance emeraldMaster;
-    private final List<Sonic1EndingEmeraldsObjectInstance> emeralds = new ArrayList<>(6);
+    // Un-final so an exactSpawnCodec recreate does not leave an un-restorable final
+    // reference; children are re-spawned via the emeraldsSpawned latch and the ending
+    // sequence tolerates stale/empty child refs (advances on timers/anim commands).
+    private List<Sonic1EndingEmeraldsObjectInstance> emeralds = new ArrayList<>(6);
 
     public Sonic1EndingSonicObjectInstance(int x, int y) {
         super(null, "EndSonic");

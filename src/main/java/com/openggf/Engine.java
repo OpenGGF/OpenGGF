@@ -120,6 +120,11 @@ public class Engine {
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private final PixelFontTextRenderer pauseTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+	private static final String USER_PAUSE_INDICATOR_TEXT = "PAUSED";
+	private static final int USER_PAUSE_INDICATOR_MARGIN = 8;
+	private static final long USER_PAUSE_INDICATOR_HALF_PERIOD_NANOS = 500_000_000L;
+	private static final long USER_PAUSE_INDICATOR_PERIOD_NANOS = USER_PAUSE_INDICATOR_HALF_PERIOD_NANOS * 2L;
+	private static final long USER_PAUSE_SCREENSHOT_HIDE_NANOS = 1_000_000_000L;
 	private DisplayColorProfileController displayColorProfileController;
 	private DisplayShaderController displayShaderController;
 	private DisplayShaderPickerController displayShaderPickerController;
@@ -164,6 +169,9 @@ public class Engine {
 	record ResolvedDisplayDimensions(int pixelWidth, int pixelHeight, int windowWidth, int windowHeight) {
 	}
 
+	record PauseIndicatorPlacement(int x, int y) {
+	}
+
 	private boolean overlayStateReady = false;
 
 	// Input handler for keyboard input
@@ -198,6 +206,7 @@ public class Engine {
 	private int targetFps;
 	private long lastFrameTime;
 	private boolean paused = false;
+	private long userPauseIndicatorHiddenUntilNanos;
 
 	private DebugRenderer getDebugRenderer() {
 		if (debugRenderer == null) {
@@ -1604,14 +1613,24 @@ public class Engine {
 
 		boolean playbackHud = playbackDebugManager.isHudVisible();
 		boolean userPaused = gameLoop != null && gameLoop.isUserPaused();
+		long pauseIndicatorNowNanos = System.nanoTime();
+		if (isUserPauseScreenshotSuppressionKeyPressed(inputHandler)) {
+			userPauseIndicatorHiddenUntilNanos =
+					userPauseIndicatorHiddenUntilAfterScreenshotKey(pauseIndicatorNowNanos);
+		}
+		boolean userPauseIndicatorVisible = shouldRenderUserPauseIndicator(
+				userPaused,
+				pauseIndicatorNowNanos,
+				userPauseIndicatorHiddenUntilNanos);
 		boolean needsOverlay = (getCurrentGameMode() == GameMode.SPECIAL_STAGE) ||
-				((debugViewEnabled || playbackHud || userPaused) && getCurrentGameMode() != GameMode.SPECIAL_STAGE);
+				((debugViewEnabled || playbackHud || userPauseIndicatorVisible)
+						&& getCurrentGameMode() != GameMode.SPECIAL_STAGE);
 
 		if (needsOverlay) {
 			prepareOverlayState();
 		}
 
-		if (userPaused) {
+		if (userPauseIndicatorVisible) {
 			renderUserPauseIndicator();
 		}
 
@@ -1623,7 +1642,7 @@ public class Engine {
 					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
 				}
 				ssProvider.renderAlignmentOverlay(windowWidth, windowHeight);
-			} else {
+			} else if (ssProvider.isLagCompensationDisplayEnabled()) {
 				if (postFadeRecorder != null) {
 					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
 				}
@@ -1714,9 +1733,48 @@ public class Engine {
 
 	private void renderUserPauseIndicator() {
 		pauseTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		String text = "PAUSED";
-		int x = Math.max(0, (viewportWidth - pauseTextRenderer.measureWidth(text)) / 2);
-		pauseTextRenderer.drawShadowedText(text, x, 32, DebugColor.WHITE);
+		PauseIndicatorPlacement placement = userPauseIndicatorPlacement(
+				(int) projectionWidth,
+				(int) realHeight,
+				pauseTextRenderer.measureWidth(USER_PAUSE_INDICATOR_TEXT),
+				pauseTextRenderer.lineHeight());
+		DebugColor color = new DebugColor(255, 255, 255, userPauseIndicatorAlpha(System.nanoTime()));
+		pauseTextRenderer.drawShadowedText(
+				USER_PAUSE_INDICATOR_TEXT,
+				placement.x(),
+				placement.y(),
+				color);
+	}
+
+	static PauseIndicatorPlacement userPauseIndicatorPlacement(
+			int logicalWidth,
+			int logicalHeight,
+			int textWidth,
+			int textHeight) {
+		int x = Math.max(0, logicalWidth - textWidth - USER_PAUSE_INDICATOR_MARGIN);
+		int y = Math.max(0, logicalHeight - textHeight - USER_PAUSE_INDICATOR_MARGIN);
+		return new PauseIndicatorPlacement(x, y);
+	}
+
+	static int userPauseIndicatorAlpha(long elapsedNanos) {
+		long cycleNanos = Math.floorMod(elapsedNanos, USER_PAUSE_INDICATOR_PERIOD_NANOS);
+		double phase = cycleNanos / (double) USER_PAUSE_INDICATOR_PERIOD_NANOS;
+		double alpha = (0.5d + 0.5d * Math.cos(phase * Math.PI * 2.0d)) * 255.0d;
+		return Math.max(0, Math.min(255, (int) Math.round(alpha)));
+	}
+
+	static long userPauseIndicatorHiddenUntilAfterScreenshotKey(long keyPressNanos) {
+		return keyPressNanos + USER_PAUSE_SCREENSHOT_HIDE_NANOS;
+	}
+
+	static boolean shouldRenderUserPauseIndicator(boolean userPaused, long nowNanos, long hiddenUntilNanos) {
+		return userPaused && nowNanos >= hiddenUntilNanos;
+	}
+
+	static boolean isUserPauseScreenshotSuppressionKeyPressed(InputHandler inputHandler) {
+		return inputHandler != null
+				&& (inputHandler.isKeyPressed(GLFW_KEY_F12)
+				|| inputHandler.isKeyPressed(GLFW_KEY_PRINT_SCREEN));
 	}
 
 	private void applyLevelClearColor() {

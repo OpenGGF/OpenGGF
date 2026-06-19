@@ -49,8 +49,10 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild {
         IDLE
     }
 
-    private final int barrelIndex;
-    private final boolean cutsceneVariant;
+    // Non-final so the generic rewind field capturer reapplies them after a
+    // codec-driven recreate (the codec passes placeholder barrelIndex/false).
+    private int barrelIndex;
+    private boolean cutsceneVariant;
 
     private State state = State.INIT;
     private int timer;

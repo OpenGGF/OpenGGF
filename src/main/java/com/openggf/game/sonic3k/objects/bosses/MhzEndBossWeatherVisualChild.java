@@ -52,12 +52,34 @@ public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance {
     private int frameTimer;
     private int mappingFrame;
 
+    /**
+     * Bit 0 of {@code rawYWord} encodes the {@code spark} discriminator so a
+     * rewind codec can re-derive it from the captured spawn (which round-trips
+     * through {@link #buildSpawnAt}). {@code subtype} round-trips as the spawn's
+     * subtype field. The high {@code rawFlags()} bits ({@code 0xF000}) are
+     * untouched.
+     */
+    private static final int SPARK_SPAWN_BIT = 0x0001;
+
     static MhzEndBossWeatherVisualChild animatedPart(MhzEndBossWeatherMachineChild parent, int subtype) {
         return new MhzEndBossWeatherVisualChild(parent, subtype, false);
     }
 
     static MhzEndBossWeatherVisualChild spark(MhzEndBossWeatherMachineChild parent, int subtype) {
         return new MhzEndBossWeatherVisualChild(parent, subtype, true);
+    }
+
+    /**
+     * Rewind-restore entry: re-derives {@code subtype} and {@code spark} from the
+     * captured spawn and routes through the correct static factory so the
+     * construction-time branch matches the original instance. The live parent is
+     * relinked by the codec.
+     */
+    public static MhzEndBossWeatherVisualChild forRewindRecreate(
+            MhzEndBossWeatherMachineChild parent, ObjectSpawn spawn) {
+        int subtype = spawn.subtype();
+        boolean spark = (spawn.rawYWord() & SPARK_SPAWN_BIT) != 0;
+        return spark ? spark(parent, subtype) : animatedPart(parent, subtype);
     }
 
     private MhzEndBossWeatherVisualChild(MhzEndBossWeatherMachineChild parent, int subtype, boolean spark) {
@@ -68,7 +90,7 @@ public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance {
                         subtype,
                         0,
                         false,
-                        0),
+                        spark ? SPARK_SPAWN_BIT : 0),
                 spark ? "MHZEndBossWeatherSpark" : "MHZEndBossWeatherAnimatedPart");
         this.parent = parent;
         this.subtype = subtype;

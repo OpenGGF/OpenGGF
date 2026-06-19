@@ -5,11 +5,17 @@ import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindScanSupport;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.coverage.RewindCoverageAnalyzer;
+import com.openggf.game.rewind.coverage.RewindCoverageReport;
 import com.openggf.game.rewind.schema.RewindCodec;
 import com.openggf.game.rewind.schema.RewindCodecs;
 import com.openggf.game.rewind.schema.RewindFieldPolicy;
 import com.openggf.game.rewind.schema.RewindPolicyRegistry;
+import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
+import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.DynamicObjectRewindCodec;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -19,7 +25,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class RewindFieldInventoryTool {
     public static void main(String[] args) throws Exception {
@@ -42,6 +51,11 @@ public final class RewindFieldInventoryTool {
             return;
         }
 
+        if (args.length == 1 && "--coverage".equals(args[0])) {
+            System.out.print(renderCoverageReport());
+            return;
+        }
+
         List<String> unsupported = unsupportedFields();
         if (unsupported.isEmpty()) {
             System.out.println("No unsupported rewind fields found.");
@@ -51,6 +65,44 @@ public final class RewindFieldInventoryTool {
         System.err.println("Unsupported rewind fields:");
         unsupported.forEach(System.err::println);
         System.exit(1);
+    }
+
+    /**
+     * Collects the union of all per-game registry codec class names.
+     * This tool lives in {@code com.openggf.tools.*}, which is explicitly exempted
+     * from the ArchUnit rules that forbid shared {@code game.*} packages from depending
+     * on game-specific packages, so it may freely construct concrete game registries.
+     */
+    private static Set<String> allGameCodecClassNames() {
+        return Stream.of(
+                new Sonic1ObjectRegistry().dynamicRewindCodecs(),
+                new Sonic2ObjectRegistry().dynamicRewindCodecs(),
+                new Sonic3kObjectRegistry().dynamicRewindCodecs()
+        ).flatMap(List::stream)
+         .map(DynamicObjectRewindCodec::className)
+         .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * Runs the coverage analyzer across all games and returns the rendered report
+     * with a summary line appended.
+     *
+     * <p>The summary line always contains the literal substrings {@code "coverage:"}
+     * and {@code "gaps"}, e.g.:
+     * <pre>coverage: 42/100 covered, 58 gaps</pre>
+     *
+     * @return the full rendered text of the coverage report plus the summary line
+     */
+    public static String renderCoverageReport() {
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyzeAll(allGameCodecClassNames());
+        int totalCount = report.objects().size();
+        int gapCount = report.gapKeys().size();
+        int coveredCount = totalCount - (int) report.objects().stream()
+                .filter(obj -> !obj.gapKeys().isEmpty())
+                .count();
+        String rendered = report.render();
+        return rendered + "coverage: " + coveredCount + "/" + totalCount
+                + " covered, " + gapCount + " gaps\n";
     }
 
     static List<String> unsupportedFields() throws Exception {

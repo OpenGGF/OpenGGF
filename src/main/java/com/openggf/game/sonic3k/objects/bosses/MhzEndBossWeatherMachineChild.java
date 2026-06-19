@@ -55,7 +55,7 @@ public final class MhzEndBossWeatherMachineChild extends AbstractObjectInstance
     private int weatherSoundTimer;
     private int destructionWaitTimer;
 
-    MhzEndBossWeatherMachineChild(MhzEndBossInstance parent) {
+    public MhzEndBossWeatherMachineChild(MhzEndBossInstance parent) {
         super(new ObjectSpawn(
                         parent.getX() + X_OFFSET,
                         parent.getY() + Y_OFFSET,

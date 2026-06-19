@@ -120,9 +120,12 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         DEATH_DROP
     }
     private final RexonBadnikInstance parent;
-    private final int headIndex;  // 0, 2, 4, 6, or 8
-    private final int headNumber; // 0-4 for array indexing
-    private final boolean xFlip;
+    // headIndex/headNumber/xFlip are non-final so GenericFieldCapturer captures them and
+    // restoreObjectRewindState reapplies them after the rewind codec recreates this head
+    // (the codec passes placeholders; these values are not derivable from the ObjectSpawn).
+    private int headIndex;  // 0, 2, 4, 6, or 8
+    private int headNumber; // 0-4 for array indexing
+    private boolean xFlip;
 
     private State state;
     private int currentX;

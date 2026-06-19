@@ -547,7 +547,10 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance {
 
     private static final class Mhz2KnucklesRouteSwitchChild extends AbstractObjectInstance {
         private final CutsceneKnucklesMhz2Instance parent;
-        private final boolean knucklesRoute;
+        // Non-final so the generic rewind field capturer can reapply the captured
+        // value after the codec recreates this child (the ctor recomputes it from
+        // the parent, but the capturer restores the exact captured value).
+        private boolean knucklesRoute;
 
         private Mhz2KnucklesRouteSwitchChild(CutsceneKnucklesMhz2Instance parent) {
             super(new ObjectSpawn(parent.getX() + KNUCKLES_ROUTE_SWITCH_CHILD_X_OFFSET, parent.getY(),

@@ -54,8 +54,12 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance {
     private Phase phase;
     private int timer;
     private final int signpostX;
-    private final int apparentAct;
-    private final CleanupAction cleanupAction;
+    // Non-final: apparentAct/cleanupAction are not derivable from the carried
+    // ObjectSpawn (only getX()/getY() are captured -> signpostX/0). The rewind
+    // codec passes placeholders (0, CleanupAction.NONE) and the
+    // GenericFieldCapturer reapplies these captured values after recreate.
+    private int apparentAct;
+    private CleanupAction cleanupAction;
     private boolean initialized;
 
     /**

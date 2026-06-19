@@ -35,7 +35,9 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance 
     };
 
     private int routine;
-    private final int subtype;
+    // Non-final so the generic field capturer reapplies it after a rewind
+    // recreate (this object's spawn is null, so the codec passes placeholders).
+    private int subtype;
     private int x;
     private int y;
     private int ySubpixel;
@@ -48,7 +50,8 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance 
     private int obj34;
     private int obj3c;
     private int angle;
-    private final int initialDisplayTimer;
+    // Non-final so the generic field capturer reapplies it after a rewind recreate.
+    private int initialDisplayTimer;
 
     public S3kAirCountdownObjectInstance(int x, int y, int subtype, int angle) {
         this(x, y, subtype, angle, 0);

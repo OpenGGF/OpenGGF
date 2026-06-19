@@ -12,10 +12,11 @@ import com.openggf.tests.SharedLevel;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.trace.TraceData;
-import com.openggf.trace.TraceExecutionModel;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
@@ -29,398 +30,217 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @RequiresRom(SonicGame.SONIC_1)
 class TestS1Mz1LostRingCollectionOrderRegression {
 
-    @Test
-    void spilledRingDoesNotCollectBeforeTouchPhaseSeesItsPreviousPosition() throws Exception {
-        Path traceDir = Path.of("src/test/resources/traces/s1/mz1_fullrun");
-        Assumptions.assumeTrue(Files.isDirectory(traceDir), "Trace directory not found: " + traceDir);
+    private static final Path TRACE_DIR = Path.of("src/test/resources/traces/s1/mz1_fullrun");
+
+    /**
+     * Holds the fixture/trace bootstrapped through the production replay path.
+     *
+     * <p>These regression tests used to do a bespoke manual setup (build fixture,
+     * {@code initVblaCounter}, hand-wind {@code OscillationManager}, step from
+     * frame 0). That skipped the production replay bootstrap
+     * ({@link TraceReplaySessionBootstrap#applyBootstrap}: pre-trace object
+     * snapshots, replay-start selection, RNG seed reset, and frame-counter
+     * alignment), so lost-ring scatter at the inspected frames depended on
+     * ambient state left by parallel fork-mates — making the assertions
+     * order-dependent (correct only when a fork-mate happened to leave the right
+     * state). Routing through the same bootstrap the passing
+     * {@code TestS1Mz1TraceReplay} uses makes the replay deterministic. This is
+     * pre-trace bootstrap (a "load save state at the BK2 start"), not per-frame
+     * trace-to-engine sync — the comparison-only invariant is preserved.
+     */
+    private record Mz1Replay(TraceData trace, HeadlessTestFixture fixture,
+                             SharedLevel sharedLevel, int startIndex, boolean touchOverlay) {
+        void dispose() {
+            if (touchOverlay && GameServices.debugOverlay() != null) {
+                GameServices.debugOverlay()
+                        .setEnabled(com.openggf.debug.DebugOverlayToggle.TOUCH_RESPONSE, false);
+            }
+            sharedLevel.dispose();
+        }
+    }
+
+    private Mz1Replay bootstrapMz1(boolean touchOverlay) throws Exception {
+        Assumptions.assumeTrue(Files.isDirectory(TRACE_DIR), "Trace directory not found: " + TRACE_DIR);
 
         Path bk2Path;
-        try (var files = Files.list(traceDir)) {
+        try (var files = Files.list(TRACE_DIR)) {
             bk2Path = files
                     .filter(path -> path.toString().endsWith(".bk2"))
                     .findFirst()
                     .orElse(null);
         }
-        Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
+        Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + TRACE_DIR);
 
-        TraceData trace = TraceData.load(traceDir);
+        TraceData trace = TraceData.load(TRACE_DIR);
         TraceMetadata meta = trace.metadata();
+
+        // Production replay bootstrap (mirrors AbstractTraceReplayTest): set
+        // pre-load config, then load + build the fixture with the canonical
+        // recording start frame, then run the shared bootstrap.
+        TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_1, 1, 0);
+        boolean ok = false;
         try {
-            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+            HeadlessTestFixture.Builder builder = HeadlessTestFixture.builder()
                     .withSharedLevel(sharedLevel)
-                    .startPosition(meta.startX(), meta.startY())
-                    .startPositionIsCentre()
                     .withRecording(bk2Path)
-                    .withRecordingStartFrame(meta.bk2FrameOffset())
-                    .build();
-
-            ObjectManager objectManager = GameServices.level().getObjectManager();
-            if (objectManager != null) {
-                objectManager.initVblaCounter(trace.initialVblankCounter() - 1);
+                    .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace));
+            if (TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace)) {
+                builder.startPosition(meta.startX(), meta.startY()).startPositionIsCentre();
             }
-
-            int preTraceOsc = meta.preTraceOscillationFrames();
-            for (int i = 0; i < preTraceOsc; i++) {
-                com.openggf.game.OscillationManager.update(-(preTraceOsc - i));
+            HeadlessTestFixture fixture = builder.build();
+            TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
+            if (touchOverlay && GameServices.debugOverlay() != null) {
+                GameServices.debugOverlay()
+                        .setEnabled(com.openggf.debug.DebugOverlayToggle.TOUCH_RESPONSE, true);
             }
-
-            for (int i = 0; i < trace.frameCount(); i++) {
-                TraceFrame expected = trace.getFrame(i);
-                TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
-                TraceExecutionPhase phase =
-                        TraceExecutionModel.forGame(meta.game()).phaseFor(previous, expected);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
-
-                if (expected.frame() == 758) {
-                    assertEquals(6, expected.rings(), "Trace fixture assumption changed");
-                    assertEquals(6, fixture.sprite().getRingCount(),
-                            "Lost-ring collection should run before spill physics advances into overlap");
-                    return;
-                }
-            }
+            TraceReplaySessionBootstrap.BootstrapResult boot =
+                    TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
+            int startIndex = Math.max(0, boot.replayStart().startingTraceIndex());
+            ok = true;
+            return new Mz1Replay(trace, fixture, sharedLevel, startIndex, touchOverlay);
         } finally {
-            sharedLevel.dispose();
+            if (!ok) {
+                sharedLevel.dispose();
+            }
+        }
+    }
+
+    /** Steps the replay from the bootstrap start through {@code frame}, applying ROM-phase lag handling. */
+    private static void stepThrough(Mz1Replay r, int upToFrameInclusive) {
+        for (int i = r.startIndex(); i < r.trace().frameCount(); i++) {
+            TraceFrame expected = r.trace().getFrame(i);
+            TraceFrame previous = i > 0 ? r.trace().getFrame(i - 1) : null;
+            TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(r.trace(), previous, expected);
+            if (phase == TraceExecutionPhase.VBLANK_ONLY) {
+                r.fixture().skipFrameFromRecording();
+            } else {
+                r.fixture().stepFrameFromRecording();
+            }
+            if (expected.frame() == upToFrameInclusive) {
+                return;
+            }
+        }
+    }
+
+    @Test
+    void spilledRingDoesNotCollectBeforeTouchPhaseSeesItsPreviousPosition() throws Exception {
+        Mz1Replay r = bootstrapMz1(false);
+        try {
+            stepThrough(r, 758);
+            assertEquals(6, r.fixture().sprite().getRingCount(),
+                    "Lost-ring collection should run before spill physics advances into overlap");
+        } finally {
+            r.dispose();
         }
     }
 
     @Test
     void spilledRingDoesNotCollectWhenFrame759TouchOrderHasNotReachedItsSlot() throws Exception {
-        Path traceDir = Path.of("src/test/resources/traces/s1/mz1_fullrun");
-        Assumptions.assumeTrue(Files.isDirectory(traceDir), "Trace directory not found: " + traceDir);
-
-        Path bk2Path;
-        try (var files = Files.list(traceDir)) {
-            bk2Path = files
-                    .filter(path -> path.toString().endsWith(".bk2"))
-                    .findFirst()
-                    .orElse(null);
-        }
-        Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
-
-        TraceData trace = TraceData.load(traceDir);
-        TraceMetadata meta = trace.metadata();
-        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_1, 1, 0);
+        Mz1Replay r = bootstrapMz1(true);
         try {
-            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-                    .withSharedLevel(sharedLevel)
-                    .startPosition(meta.startX(), meta.startY())
-                    .startPositionIsCentre()
-                    .withRecording(bk2Path)
-                    .withRecordingStartFrame(meta.bk2FrameOffset())
-                    .build();
-
-            ObjectManager objectManager = GameServices.level().getObjectManager();
-            if (objectManager != null) {
-                objectManager.initVblaCounter(trace.initialVblankCounter() - 1);
-            }
-
-            int preTraceOsc = meta.preTraceOscillationFrames();
-            for (int i = 0; i < preTraceOsc; i++) {
-                com.openggf.game.OscillationManager.update(-(preTraceOsc - i));
-            }
-
-            GameServices.debugOverlay().setEnabled(com.openggf.debug.DebugOverlayToggle.TOUCH_RESPONSE, true);
-
-            for (int i = 0; i < trace.frameCount(); i++) {
-                TraceFrame expected = trace.getFrame(i);
-                TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
-                TraceExecutionPhase phase =
-                        TraceExecutionModel.forGame(meta.game()).phaseFor(previous, expected);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
-
-                if (expected.frame() == 759) {
-                    assertEquals(6, expected.rings(), "Trace fixture assumption changed");
-                    assertEquals(6, fixture.sprite().getRingCount(),
-                            () -> "Lost-ring recollection should still be blocked at frame 759"
-                                    + " player=" + formatPlayerState(fixture)
-                                    + " touchHits=" + describeTouchHits(GameServices.level().getObjectManager()));
-                    return;
-                }
-            }
+            stepThrough(r, 759);
+            assertEquals(6, r.fixture().sprite().getRingCount(),
+                    () -> "Lost-ring recollection should still be blocked at frame 759"
+                            + " player=" + formatPlayerState(r.fixture())
+                            + " touchHits=" + describeTouchHits(GameServices.level().getObjectManager()));
         } finally {
-            GameServices.debugOverlay().setEnabled(com.openggf.debug.DebugOverlayToggle.TOUCH_RESPONSE, false);
-            sharedLevel.dispose();
+            r.dispose();
         }
     }
 
     @Test
     void lostRingDoesNotCollectDuringTouchPhaseBeforePlatformSlopeCarryRuns() throws Exception {
-        Path traceDir = Path.of("src/test/resources/traces/s1/mz1_fullrun");
-        Assumptions.assumeTrue(Files.isDirectory(traceDir), "Trace directory not found: " + traceDir);
-
-        Path bk2Path;
-        try (var files = Files.list(traceDir)) {
-            bk2Path = files
-                    .filter(path -> path.toString().endsWith(".bk2"))
-                    .findFirst()
-                    .orElse(null);
-        }
-        Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
-
-        TraceData trace = TraceData.load(traceDir);
-        TraceMetadata meta = trace.metadata();
-        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_1, 1, 0);
+        Mz1Replay r = bootstrapMz1(false);
         try {
-            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-                    .withSharedLevel(sharedLevel)
-                    .startPosition(meta.startX(), meta.startY())
-                    .startPositionIsCentre()
-                    .withRecording(bk2Path)
-                    .withRecordingStartFrame(meta.bk2FrameOffset())
-                    .build();
-
-            ObjectManager objectManager = GameServices.level().getObjectManager();
-            if (objectManager != null) {
-                objectManager.initVblaCounter(trace.initialVblankCounter() - 1);
-            }
-
-            int preTraceOsc = meta.preTraceOscillationFrames();
-            for (int i = 0; i < preTraceOsc; i++) {
-                com.openggf.game.OscillationManager.update(-(preTraceOsc - i));
-            }
-
-            for (int i = 0; i < trace.frameCount(); i++) {
-                TraceFrame expected = trace.getFrame(i);
-                TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
-                TraceExecutionPhase phase =
-                        TraceExecutionModel.forGame(meta.game()).phaseFor(previous, expected);
+            for (int i = r.startIndex(); i < r.trace().frameCount(); i++) {
+                TraceFrame expected = r.trace().getFrame(i);
+                TraceFrame previous = i > 0 ? r.trace().getFrame(i - 1) : null;
+                TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(r.trace(), previous, expected);
 
                 if (expected.frame() < 762) {
                     if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                        fixture.skipFrameFromRecording();
+                        r.fixture().skipFrameFromRecording();
                     } else {
-                        fixture.stepFrameFromRecording();
+                        r.fixture().stepFrameFromRecording();
                     }
                     continue;
                 }
 
                 assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME, phase,
                         "Frame 762 regression assumes a normal gameplay frame");
-                assertEquals(6, fixture.sprite().getRingCount(),
+                assertEquals(6, r.fixture().sprite().getRingCount(),
                         "Fixture assumption changed before frame 762");
 
-                int beforeX = fixture.sprite().getCentreX();
-                int beforeY = fixture.sprite().getCentreY();
-                boolean beforeOnObject = fixture.sprite().isOnObject();
-                stepTouchPhaseOnly(fixture, expected.input());
-                int afterX = fixture.sprite().getCentreX();
-                int afterY = fixture.sprite().getCentreY();
-                boolean afterOnObject = fixture.sprite().isOnObject();
+                int beforeX = r.fixture().sprite().getCentreX();
+                int beforeY = r.fixture().sprite().getCentreY();
+                boolean beforeOnObject = r.fixture().sprite().isOnObject();
+                stepTouchPhaseOnly(r.fixture(), expected.input());
+                int afterX = r.fixture().sprite().getCentreX();
+                int afterY = r.fixture().sprite().getCentreY();
+                boolean afterOnObject = r.fixture().sprite().isOnObject();
                 var ridingObject = GameServices.level().getObjectManager() != null
-                        ? GameServices.level().getObjectManager().getRidingObject(fixture.sprite())
+                        ? GameServices.level().getObjectManager().getRidingObject(r.fixture().sprite())
                         : null;
                 String ridingSummary = ridingObject == null
                         ? "<none>"
                         : ridingObject.getClass().getSimpleName()
                                 + String.format("@0x%04X,0x%04X", ridingObject.getX(), ridingObject.getY());
 
-                assertEquals(6, fixture.sprite().getRingCount(),
+                assertEquals(6, r.fixture().sprite().getRingCount(),
                         "Touch phase should not recollect the spilled ring before the platform's current-frame slope carry"
                                 + String.format(" before=(0x%04X,0x%04X onObj=%s) after=(0x%04X,0x%04X onObj=%s) riding=%s",
                                 beforeX, beforeY, beforeOnObject, afterX, afterY, afterOnObject, ridingSummary));
                 return;
             }
         } finally {
-            sharedLevel.dispose();
+            r.dispose();
         }
     }
 
     @Test
     void stageRingDoesNotCollectUntilReactToItemHeightMinusThreeActuallyOverlaps() throws Exception {
-        Path traceDir = Path.of("src/test/resources/traces/s1/mz1_fullrun");
-        Assumptions.assumeTrue(Files.isDirectory(traceDir), "Trace directory not found: " + traceDir);
-
-        Path bk2Path;
-        try (var files = Files.list(traceDir)) {
-            bk2Path = files
-                    .filter(path -> path.toString().endsWith(".bk2"))
-                    .findFirst()
-                    .orElse(null);
-        }
-        Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
-
-        TraceData trace = TraceData.load(traceDir);
-        TraceMetadata meta = trace.metadata();
-        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_1, 1, 0);
+        Mz1Replay r = bootstrapMz1(false);
         try {
-            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-                    .withSharedLevel(sharedLevel)
-                    .startPosition(meta.startX(), meta.startY())
-                    .startPositionIsCentre()
-                    .withRecording(bk2Path)
-                    .withRecordingStartFrame(meta.bk2FrameOffset())
-                    .build();
-
-            ObjectManager objectManager = GameServices.level().getObjectManager();
-            if (objectManager != null) {
-                objectManager.initVblaCounter(trace.initialVblankCounter() - 1);
-            }
-
-            int preTraceOsc = meta.preTraceOscillationFrames();
-            for (int i = 0; i < preTraceOsc; i++) {
-                com.openggf.game.OscillationManager.update(-(preTraceOsc - i));
-            }
-
-            for (int i = 0; i < trace.frameCount(); i++) {
-                TraceFrame expected = trace.getFrame(i);
-                TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
-                TraceExecutionPhase phase =
-                        TraceExecutionModel.forGame(meta.game()).phaseFor(previous, expected);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
-
-                if (expected.frame() == 2098) {
-                    assertEquals(0, expected.rings(), "Trace fixture assumption changed");
-                    assertEquals(0, fixture.sprite().getRingCount(),
-                            () -> "Placed ring should not collect until the next frame's"
-                                    + " ReactToItem height-minus-three overlap"
-                                    + " player=" + formatPlayerState(fixture));
-                    return;
-                }
-            }
+            stepThrough(r, 2098);
+            assertEquals(0, r.fixture().sprite().getRingCount(),
+                    () -> "Placed ring should not collect until the next frame's"
+                            + " ReactToItem height-minus-three overlap"
+                            + " player=" + formatPlayerState(r.fixture()));
         } finally {
-            sharedLevel.dispose();
+            r.dispose();
         }
     }
 
     @Test
     void stageTouchPassCollectsOnlyOneOverlappingRingPerFrameInSlotOrder() throws Exception {
-        Path traceDir = Path.of("src/test/resources/traces/s1/mz1_fullrun");
-        Assumptions.assumeTrue(Files.isDirectory(traceDir), "Trace directory not found: " + traceDir);
-
-        Path bk2Path;
-        try (var files = Files.list(traceDir)) {
-            bk2Path = files
-                    .filter(path -> path.toString().endsWith(".bk2"))
-                    .findFirst()
-                    .orElse(null);
-        }
-        Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
-
-        TraceData trace = TraceData.load(traceDir);
-        TraceMetadata meta = trace.metadata();
-        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_1, 1, 0);
+        Mz1Replay r = bootstrapMz1(false);
         try {
-            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-                    .withSharedLevel(sharedLevel)
-                    .startPosition(meta.startX(), meta.startY())
-                    .startPositionIsCentre()
-                    .withRecording(bk2Path)
-                    .withRecordingStartFrame(meta.bk2FrameOffset())
-                    .build();
-
-            ObjectManager objectManager = GameServices.level().getObjectManager();
-            if (objectManager != null) {
-                objectManager.initVblaCounter(trace.initialVblankCounter() - 1);
-            }
-
-            int preTraceOsc = meta.preTraceOscillationFrames();
-            for (int i = 0; i < preTraceOsc; i++) {
-                com.openggf.game.OscillationManager.update(-(preTraceOsc - i));
-            }
-
-            for (int i = 0; i < trace.frameCount(); i++) {
-                TraceFrame expected = trace.getFrame(i);
-                TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
-                TraceExecutionPhase phase =
-                        TraceExecutionModel.forGame(meta.game()).phaseFor(previous, expected);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
-
-                if (expected.frame() == 2808) {
-                    assertEquals(8, expected.rings(), "Trace fixture assumption changed");
-                    assertEquals(8, fixture.sprite().getRingCount(),
-                            () -> "S1 ReactToItem should stop after the first overlapping ring"
-                                    + " player=" + formatPlayerState(fixture));
-                    return;
-                }
-            }
+            stepThrough(r, 2808);
+            assertEquals(8, r.fixture().sprite().getRingCount(),
+                    () -> "S1 ReactToItem should stop after the first overlapping ring"
+                            + " player=" + formatPlayerState(r.fixture()));
         } finally {
-            sharedLevel.dispose();
+            r.dispose();
         }
     }
 
     @Test
     void stageTouchPassTargetsRomFirstRingAtFrame2808() throws Exception {
-        Path traceDir = Path.of("src/test/resources/traces/s1/mz1_fullrun");
-        Assumptions.assumeTrue(Files.isDirectory(traceDir), "Trace directory not found: " + traceDir);
-
-        Path bk2Path;
-        try (var files = Files.list(traceDir)) {
-            bk2Path = files
-                    .filter(path -> path.toString().endsWith(".bk2"))
-                    .findFirst()
-                    .orElse(null);
-        }
-        Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
-
-        TraceData trace = TraceData.load(traceDir);
-        TraceMetadata meta = trace.metadata();
-        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_1, 1, 0);
+        Mz1Replay r = bootstrapMz1(true);
         try {
-            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-                    .withSharedLevel(sharedLevel)
-                    .startPosition(meta.startX(), meta.startY())
-                    .startPositionIsCentre()
-                    .withRecording(bk2Path)
-                    .withRecordingStartFrame(meta.bk2FrameOffset())
-                    .build();
-
-            ObjectManager objectManager = GameServices.level().getObjectManager();
-            if (objectManager != null) {
-                objectManager.initVblaCounter(trace.initialVblankCounter() - 1);
-            }
-
-            int preTraceOsc = meta.preTraceOscillationFrames();
-            for (int i = 0; i < preTraceOsc; i++) {
-                com.openggf.game.OscillationManager.update(-(preTraceOsc - i));
-            }
-
-            GameServices.debugOverlay().setEnabled(com.openggf.debug.DebugOverlayToggle.TOUCH_RESPONSE, true);
-
-            for (int i = 0; i < trace.frameCount(); i++) {
-                TraceFrame expected = trace.getFrame(i);
-                TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
-                TraceExecutionPhase phase =
-                        TraceExecutionModel.forGame(meta.game()).phaseFor(previous, expected);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
-
-                if (expected.frame() == 2808) {
-                    assertEquals(8, expected.rings(), "Trace fixture assumption changed");
-                    assertEquals(8, fixture.sprite().getRingCount(),
-                            "Frame 2808 should still add exactly one ring");
-                    assertEquals("slot=34 flags=0x47 obj=0x0D2C,0x03F0",
-                            firstOverlappingHit(GameServices.level().getObjectManager()),
-                            () -> "S1 ReactToItem should collect the lower-slot 0x0D2C ring first"
-                                    + " player=" + formatPlayerState(fixture)
-                                    + " allHits=" + describeAllTouchHits(GameServices.level().getObjectManager())
-                                    + " ringStates=" + describeStageRingStates(GameServices.level().getObjectManager(),
-                                    0x0D2C, 0x0D14));
-                    return;
-                }
-            }
+            stepThrough(r, 2808);
+            assertEquals(8, r.fixture().sprite().getRingCount(),
+                    "Frame 2808 should still add exactly one ring");
+            assertEquals("slot=34 flags=0x47 obj=0x0D2C,0x03F0",
+                    firstOverlappingHit(GameServices.level().getObjectManager()),
+                    () -> "S1 ReactToItem should collect the lower-slot 0x0D2C ring first"
+                            + " player=" + formatPlayerState(r.fixture())
+                            + " allHits=" + describeAllTouchHits(GameServices.level().getObjectManager())
+                            + " ringStates=" + describeStageRingStates(GameServices.level().getObjectManager(),
+                            0x0D2C, 0x0D14));
         } finally {
-            GameServices.debugOverlay().setEnabled(com.openggf.debug.DebugOverlayToggle.TOUCH_RESPONSE, false);
-            sharedLevel.dispose();
+            r.dispose();
         }
     }
 

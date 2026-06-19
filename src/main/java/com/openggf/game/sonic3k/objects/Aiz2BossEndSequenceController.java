@@ -48,8 +48,11 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance {
     private static final int POST_BUTTON_CAMERA_MAX_Y_TARGET = 0x1000;
     private static final int INC_LEVEL_END_Y_GRADUAL_STEP = 0x8000;
 
-    private final int arenaMaxX;
-    private final int arenaBaseY;
+    // Non-final so the generic rewind field capturer reapplies them after a
+    // codec-driven recreate. The codec also passes the captured spawn x/y, so
+    // these are already correct before reapply.
+    private int arenaMaxX;
+    private int arenaBaseY;
     private boolean initialized;
     private boolean postCapsuleSequenceStarted;
     private boolean knucklesSpawned;

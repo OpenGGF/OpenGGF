@@ -1,9 +1,10 @@
 package com.openggf.game.sonic1.events;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.ShieldType;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.DrowningController;
+
+import java.util.function.Supplier;
 
 /**
  * Sonic 1 fixed {@code v_sonicbubbles} sidecar for Obj0A drowning bubbles.
@@ -24,6 +25,11 @@ final class Sonic1FixedAirCountdownManager {
     private static final int INITIAL_COUNTER = 59;
 
     private final FixedController p1 = new FixedController();
+    private final Supplier<AbstractPlayableSprite> primaryPlayerSupplier;
+
+    Sonic1FixedAirCountdownManager(Supplier<AbstractPlayableSprite> primaryPlayerSupplier) {
+        this.primaryPlayerSupplier = primaryPlayerSupplier;
+    }
 
     void reset() {
         p1.reset();
@@ -46,11 +52,7 @@ final class Sonic1FixedAirCountdownManager {
     }
 
     private AbstractPlayableSprite primaryPlayer() {
-        try {
-            return GameServices.camera().getFocusedSprite();
-        } catch (IllegalStateException ex) {
-            return null;
-        }
+        return primaryPlayerSupplier.get();
     }
 
     private static final class FixedController {

@@ -300,6 +300,27 @@ public class TestTornadoObjectInstance {
     }
 
     @Test
+    public void wfzBlinkerDisplaysOnFirstActiveTickThenAlternates() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x700, 0x100, 0x58, new TestObjectServices());
+
+        assertEquals(Sonic2ObjectArtKeys.WFZ_THRUST,
+                invokePrivate(tornado, "resolveRenderArtKey", new Class<?>[0]));
+        assertEquals(4, tornado.getPriorityBucket());
+
+        tornado.update(1, null);
+        assertTrue((boolean) getField(tornado, "renderThisFrame"),
+                "ObjB2 loc_3AD0C displays when status.npc.misc was initially clear");
+
+        tornado.update(2, null);
+        assertFalse((boolean) getField(tornado, "renderThisFrame"),
+                "ObjB2 loc_3AD0C skips the next frame after bchg sets the misc bit");
+
+        tornado.update(3, null);
+        assertTrue((boolean) getField(tornado, "renderThisFrame"),
+                "ObjB2 loc_3AD0C alternates back to visible on the following frame");
+    }
+
+    @Test
     public void wfzStartUsesDeleteOffScreenCulling() {
         GameServices.camera().setX((short) 0);
 

@@ -24,8 +24,8 @@ public final class MhzEndBossPaletteFadeController extends AbstractObjectInstanc
     private static final int FADE_STEPS = 8;
 
     private final byte[][] targetLines;
-    private final int delay;
-    private final boolean fadeBackToTarget;
+    private int delay;
+    private boolean fadeBackToTarget;
     private int[][] currentWords;
     private int timer;
     private int step;

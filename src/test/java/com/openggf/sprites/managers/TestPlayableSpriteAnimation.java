@@ -3,6 +3,7 @@ package com.openggf.sprites.managers;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
@@ -208,6 +209,36 @@ public class TestPlayableSpriteAnimation {
                 "A one-frame $FD script must hold its frame for its delay before switching.");
         assertEquals(0x8E, sprite.getMappingFrame(),
                 "The first update should display the scripted frame, not immediately fall through.");
+    }
+
+    @Test
+    public void slowSteepSlopeTurnaroundRefreshesMappingFrameBeforeWalkTickExpires() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        SpriteAnimationScript walk = new SpriteAnimationScript(0xFF,
+                List.of(10, 11, 12, 13), SpriteAnimationEndAction.LOOP, 0);
+        animations.addScript(0, walk);
+        animations.addScript(1, walk);
+        sprite.setAnimationSet(animations);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x0100);
+        sprite.setAngle((byte) 0x60);
+        sprite.setDirection(Direction.LEFT);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(22, sprite.getMappingFrame(),
+                "Left-facing steep slope should display the matching high-angle walk set");
+        assertFalse(sprite.getRenderVFlip(),
+                "The first steep slope orientation should not be vertically flipped");
+
+        sprite.setDirection(Direction.RIGHT);
+        sprite.getAnimationManager().update(1);
+
+        assertEquals(14, sprite.getMappingFrame(),
+                "Changing facing on the same steep slope must refresh the slope frame set even while the walk delay is live");
+        assertTrue(sprite.getRenderVFlip(),
+                "The refreshed frame set is intentionally paired with the flipped render flags");
     }
 
     private static TestablePlayableSprite createSprite(PhysicsFeatureSet featureSet) {

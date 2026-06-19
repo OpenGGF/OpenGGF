@@ -1,15 +1,20 @@
 package com.openggf.game.sonic2.objects.badniks;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
 import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.sprites.playable.Sonic;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import java.lang.reflect.Field;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,8 +44,38 @@ class TestCrawlBadnikInstance {
         assertTrue(crawl.requiresRenderFlagForTouch());
         assertEquals(0x17, crawl.getCollisionFlags());
         assertEquals(0, crawl.getCollisionProperty());
-        assertDoesNotThrow(() -> CrawlBadnikInstance.class.getDeclaredMethod("getTouchResponseProfile"));
         assertEquals(profile, crawl.getTouchResponseProfile(false));
-        assertDoesNotThrow(() -> CrawlBadnikInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class));
+    }
+
+    @Test
+    void nonRollingSpecialTouchSwitchesAttackingCrawlToHurtCollision() throws Exception {
+        CrawlBadnikInstance crawl = new CrawlBadnikInstance(
+                new ObjectSpawn(0x0F00, 0x0400, 0xC8, 0, 0, false, 0));
+        crawl.setServices(new TestObjectServices());
+        forceState(crawl, "ATTACKING", "WALKING");
+
+        Sonic sonic = new Sonic("sonic", (short) 0x0F00, (short) 0x0400);
+        sonic.setRolling(false);
+        sonic.setRollingJump(false);
+        sonic.setJumping(false);
+        sonic.setAir(false);
+        sonic.setInvincibleFrames(0);
+
+        crawl.onTouchResponse(sonic, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 0);
+        crawl.update(0, sonic);
+
+        assertEquals(0x97, crawl.getCollisionFlags());
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void forceState(CrawlBadnikInstance crawl, String stateName, String previousStateName)
+            throws ReflectiveOperationException {
+        Field stateField = CrawlBadnikInstance.class.getDeclaredField("state");
+        stateField.setAccessible(true);
+        stateField.set(crawl, Enum.valueOf((Class<Enum>) stateField.getType(), stateName));
+
+        Field previousStateField = CrawlBadnikInstance.class.getDeclaredField("previousState");
+        previousStateField.setAccessible(true);
+        previousStateField.set(crawl, Enum.valueOf((Class<Enum>) previousStateField.getType(), previousStateName));
     }
 }

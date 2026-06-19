@@ -78,7 +78,10 @@ public class Sonic1BossBlockInstance extends AbstractObjectInstance
     private int y;
 
     // Instance fields
-    private final int blockColumn;   // 0-9, from low byte of obSubtype
+    // Un-finaled for rewind: blockColumn is NOT spawn-derivable for the fragment form
+    // (it is -1 while spawn.subtype()==0), so the generic field capturer reapplies the
+    // captured value after the codec recreates via the public column ctor.
+    private int blockColumn;   // 0-9, from low byte of obSubtype
     private int blockState;
     private Sonic1SYZBossInstance grabbingBoss;
 
@@ -177,6 +180,16 @@ public class Sonic1BossBlockInstance extends AbstractObjectInstance
     public void setGrabbedByBoss(Sonic1SYZBossInstance boss) {
         this.grabbingBoss = boss;
         this.blockState = STATE_GRABBED;
+    }
+
+    /**
+     * Rewind relink: reattach the grabbing-boss object reference to the live SYZ boss
+     * after a held-rewind restore, WITHOUT touching blockState (the generic capturer
+     * reapplies the captured blockState; setGrabbedByBoss() would corrupt it). Only
+     * meaningful when blockState==STATE_GRABBED; harmless otherwise.
+     */
+    public void relinkGrabbingBoss(Sonic1SYZBossInstance boss) {
+        this.grabbingBoss = boss;
     }
 
     /**

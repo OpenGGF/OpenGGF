@@ -58,8 +58,8 @@ Linux terminal example:
 
 1. Clone the repository:
    ```
-   git clone https://github.com/jamesj999/sonic-engine.git
-   cd sonic-engine
+   git clone https://github.com/OpenGGF/OpenGGF.git
+   cd OpenGGF
    ```
 2. Build with Maven:
    ```

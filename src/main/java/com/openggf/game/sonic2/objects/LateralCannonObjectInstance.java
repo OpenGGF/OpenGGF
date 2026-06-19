@@ -311,6 +311,12 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean isHighPriority() {
+        // ROM: make_art_tile(ArtTile_ArtNem_WfzGunPlatform,3,1)
+        return true;
+    }
+
+    @Override
     public int getOnScreenHalfWidth() {
         // ROM ObjBE_SubObjData sets width_pixels=$18 for MarkObjGone/render bounds.
         return WIDTH_PIXELS;

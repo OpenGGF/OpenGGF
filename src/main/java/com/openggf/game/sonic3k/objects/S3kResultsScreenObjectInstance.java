@@ -74,8 +74,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
     private static final int[] DIVISORS = {1000000, 100000, 10000, 1000, 100, 10, 1};
 
     // State
-    private final PlayerCharacter character;
-    private final int act;  // 0-indexed: 0=Act 1, 1=Act 2
+    // Un-finaled for rewind: character/act are constructor args not carried by any
+    // ObjectSpawn, so the exactSpawnCodec passes placeholders and the
+    // GenericFieldCapturer (which skips final scalars) reapplies the captured values
+    // after recreate. Covers this class and its Mgz2 subclass.
+    private PlayerCharacter character;
+    private int act;  // 0-indexed: 0=Act 1, 1=Act 2
 
     // Tally values
     private int timeBonus;

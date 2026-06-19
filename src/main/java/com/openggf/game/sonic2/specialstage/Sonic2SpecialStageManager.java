@@ -220,6 +220,7 @@ public class Sonic2SpecialStageManager {
      */
     private double lagCompensation = 0.35;
     private double lagAccumulator = 0.0;
+    private boolean lagCompensationDisplayEnabled = false;
 
     // Skydome scroll state (accumulated horizontal scroll for background)
     private int skydomeScrollX = 0;
@@ -1836,7 +1837,7 @@ public class Sonic2SpecialStageManager {
      * Displayed when not in alignment test mode.
      */
     public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) {
-        if (alignmentTestMode) {
+        if (alignmentTestMode || !lagCompensationDisplayEnabled) {
             return;
         }
 
@@ -1896,6 +1897,24 @@ public class Sonic2SpecialStageManager {
         return lagCompensation;
     }
 
+    public boolean isLagCompensationDisplayEnabled() {
+        return lagCompensationDisplayEnabled;
+    }
+
+    public void toggleLagCompensationDisplay() {
+        lagCompensationDisplayEnabled = !lagCompensationDisplayEnabled;
+        LOGGER.info("Lag compensation display: " + (lagCompensationDisplayEnabled ? "ON" : "OFF"));
+    }
+
+    public boolean adjustLagCompensationIfDisplayEnabled(double delta) {
+        if (!lagCompensationDisplayEnabled) {
+            return false;
+        }
+
+        setLagCompensation(lagCompensation + delta);
+        return true;
+    }
+
     /**
      * Sets the lag compensation factor.
      * Value of 0.35 means ~35% of frames are "lag frames" (entire update skipped).
@@ -1939,6 +1958,7 @@ public class Sonic2SpecialStageManager {
         initialized = false;
         currentStage = 0;
         lagAccumulator = 0.0;
+        lagCompensationDisplayEnabled = false;
 
         trackAnimator = null;
         decodedTrackFrame = null;

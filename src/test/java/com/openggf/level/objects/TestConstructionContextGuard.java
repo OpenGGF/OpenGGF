@@ -74,7 +74,7 @@ class TestConstructionContextGuard {
     void runtimeChildCreation_mustSetConstructionContext() throws IOException {
         Path srcMain = findSourceRoot();
         if (srcMain == null) {
-            return;
+            fail("could not locate src/main/java for guard scan");
         }
 
         // Phase 1: Find all object classes whose constructors call services()

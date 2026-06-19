@@ -98,6 +98,12 @@ public class VPropellerObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean isHighPriority() {
+        // ROM: make_art_tile(ArtTile_ArtNem_WfzVrtclPrpllr,1,1)
+        return true;
+    }
+
+    @Override
     public int getCollisionFlags() {
         return collisionFlags;
     }

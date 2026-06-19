@@ -99,8 +99,12 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
 
     private int[] animSequence;
 
-    /** ROM's Apparent_act — display-only act number, not affected by seamless reloads. */
-    private final int apparentAct;
+    /**
+     * ROM's Apparent_act — display-only act number, not affected by seamless reloads.
+     * Non-final so the generic field capturer reapplies it after a rewind recreate
+     * (the signpost's spawn is null, so the codec passes a placeholder).
+     */
+    private int apparentAct;
 
     /**
      * Creates the signpost at the given X position.

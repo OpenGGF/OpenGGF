@@ -929,15 +929,6 @@ public final class LevelRenderer {
         graphicsManager.setCurrentSpriteHighPriority(false);
         graphicsManager.beginPatternBatch();
 
-        if (ringManager != null) {
-            ringManager.draw(lm.frameCounter);
-            // ROM: Lost rings (Ring_LostRing) use art_tile with priority bit set,
-            // rendering them in front of both playfield layers (including waterfalls).
-            graphicsManager.setCurrentSpriteHighPriority(true);
-            ringManager.drawLostRings(lm.frameCounter);
-            graphicsManager.setCurrentSpriteHighPriority(false);
-        }
-
         boolean bonusStageSpriteSatOrdering = zoneFeatureProvider != null
                 && zoneFeatureProvider.useSpriteSatMasking(lm.currentZone);
         boolean useSpriteSatMasking = bonusStageSpriteSatOrdering;
@@ -956,6 +947,7 @@ public final class LevelRenderer {
                 if (spriteManager != null) {
                     spriteManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                 }
+                drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
             }
             graphicsManager.endSpriteSatCollectionAndReplay();
         } else {
@@ -970,6 +962,7 @@ public final class LevelRenderer {
                     if (spriteManager != null) {
                         spriteManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                     }
+                    drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
                 } else {
                     if (spriteManager != null) {
                         int layerBucket = bucket;
@@ -982,6 +975,7 @@ public final class LevelRenderer {
                     if (objectManager != null) {
                         objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                     }
+                    drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
                 }
             }
         }
@@ -1030,13 +1024,6 @@ public final class LevelRenderer {
         graphicsManager.setCurrentSpriteHighPriority(false);
         graphicsManager.beginPatternBatch();
 
-        if (ringManager != null && options.includeRings()) {
-            ringManager.draw(lm.frameCounter);
-            graphicsManager.setCurrentSpriteHighPriority(true);
-            ringManager.drawLostRings(lm.frameCounter);
-            graphicsManager.setCurrentSpriteHighPriority(false);
-        }
-
         for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
             if (spriteManager != null && options.includePlayerSprites()) {
                 spriteManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
@@ -1044,6 +1031,7 @@ public final class LevelRenderer {
             if (objectManager != null && options.includeObjectSprites()) {
                 objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
             }
+            drawStageRingsForBucket(ringManager, graphicsManager, bucket, options.includeRings());
         }
 
         graphicsManager.flushPatternBatch();
@@ -1057,6 +1045,31 @@ public final class LevelRenderer {
             zoneFeatureProvider.render(lm.camera, lm.frameCounter);
         }
         graphicsManager.registerCommand(disableWaterShaderCommand);
+    }
+
+    private void drawStageRingsForBucket(RingManager ringManager,
+                                         GraphicsManager graphicsManager,
+                                         int bucket,
+                                         boolean includeRings) {
+        if (ringManager == null || !includeRings || bucket != RenderPriority.PLAYER_DEFAULT) {
+            return;
+        }
+
+        graphicsManager.flushPatternBatch();
+        graphicsManager.setCurrentSpriteHighPriority(false);
+        graphicsManager.beginPatternBatch();
+        ringManager.draw(lm.frameCounter);
+
+        // ROM: Lost rings (Ring_LostRing) use art_tile with priority bit set,
+        // rendering them in front of both playfield layers (including waterfalls).
+        graphicsManager.flushPatternBatch();
+        graphicsManager.setCurrentSpriteHighPriority(true);
+        graphicsManager.beginPatternBatch();
+        ringManager.drawLostRings(lm.frameCounter);
+
+        graphicsManager.flushPatternBatch();
+        graphicsManager.setCurrentSpriteHighPriority(false);
+        graphicsManager.beginPatternBatch();
     }
 
     /**

@@ -291,10 +291,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // Each script entry: positive = keyframe index, negative = inline flag encoding
     // -1 = sound marker (plays SndID_Hammer at that point in the sequence)
     // <= -100 = reversed keyframe (e.g. -108 = reversed keyframe 8, computed as -(entry+100))
-    // SCRIPT_END = ROM $C0/$FF end marker. Completion happens when this byte is read,
-    // one call after the final keyframe reaches its speed threshold.
-
-    private static final int SCRIPT_END = -1000;
+    // End of sequence = implicit when groupAnimFrameIdx reaches sequence.length
 
     // ROM script: off_3E2F6 — half-step walk forward (steps 0-3, end)
     // Keyframe table: HALF_STEP_KEYFRAMES
@@ -314,21 +311,21 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // Positive values = keyframe index; negative values = flags
     private static final int[][] SCRIPT_SEQUENCES = {
         // 0: off_3E2F6 — half-step walk forward
-        { 0, 1, 2, 3, SCRIPT_END },
+        { 0, 1, 2, 3 },
         // 1: off_3E300 — half-step walk backward
-        { 5, 6, 7, 8, SCRIPT_END },
+        { 5, 6, 7, 8 },
         // 2: off_3E30A — full walk cycle (used in stomp recovery)
-        { 0, 1, 2, 3, 4, 5, 6, 7, 8, SCRIPT_END },
+        { 0, 1, 2, 3, 4, 5, 6, 7, 8 },
         // 3: off_3E3D0 — crouch
-        { 0, 1, 2, SCRIPT_END },
+        { 0, 1, 2 },
         // 4: off_3E40C — walk attack forward (with hammer sounds at key points)
         // ROM: 0, 1, 2, 3, $40, SndID_Hammer, 4, 5, 6, 7, 8, $40, SndID_Hammer, ...
         // We encode sound triggers as negative markers and play them in the engine
-        { 0, 1, 2, 3, -1/*sound*/, 4, 5, 6, 7, 8, -1/*sound*/, 9, 10, 1, 2, 3, -1/*sound*/, 4, 5, 6, 7, 8, -1/*sound*/, SCRIPT_END },
+        { 0, 1, 2, 3, -1/*sound*/, 4, 5, 6, 7, 8, -1/*sound*/, 9, 10, 1, 2, 3, -1/*sound*/, 4, 5, 6, 7, 8, -1/*sound*/ },
         // 5: off_3E42C — walk attack backward (reversed keyframes + landing)
         // ROM: $88, $87, $86, $85, $B, $40, SndID_Hammer
         // $88 = $80|8 = reversed keyframe 8, etc.
-        { -108/*rev8*/, -107/*rev7*/, -106/*rev6*/, -105/*rev5*/, 11, -1/*sound*/, SCRIPT_END },
+        { -108/*rev8*/, -107/*rev7*/, -106/*rev6*/, -105/*rev5*/, 11, -1/*sound*/ },
     };
 
     /** Get the keyframe table for a script */
@@ -404,11 +401,9 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
 
     // Targeting sensor data
     private int targetedPlayerX; // ROM: objoff_28(a0) - reported by targeting sensor
-    private int sensorReportFrame = -1;
 
     // Defeat sub-state
     private int defeatPhase;    // 0=fall, 2=explode, 4=walk, 6=setupEnding, 8=fade, 10=terminal
-    private boolean deferDefeatDispatch;
 
     // Setup-ending state (ObjC7_SetupEnding, s2.asm:83050-83124)
     private int robotFollowOffset;  // Robot trails player by this amount, decremented every 32 frames
@@ -449,12 +444,10 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         attackPhase = 0;
         facingLeft = false; // ROM: x_flip = 0 (ObjC7_SubObjData render_flags bit 0 clear), art naturally faces LEFT
         defeatPhase = 0;
-        deferDefeatDispatch = false;
         robotFollowOffset = 0;
         defeatFrameCounter = 0;
         fadeTimer = 0;
         targetedPlayerX = 0;
-        sensorReportFrame = -1;
         frontPunchTriggered = false;
         backPunchTriggered = false;
         groupAnimScript = -1;
@@ -572,6 +565,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
      */
     @Override
     public void onPlayerAttack(PlayableEntity playerEntity, TouchResponseResult result) {
+        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         onHeadHit();
     }
 
@@ -587,7 +581,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             case BODY_COUNTDOWN -> updateCountdown();
             case BODY_RISE -> updateRise(frameCounter);
             case BODY_WAIT_READY -> updateWaitReady();
-            case BODY_SELECT_ATTACK -> updateSelectAttack(frameCounter);
+            case BODY_SELECT_ATTACK -> updateSelectAttack();
             case BODY_EXECUTE_ATTACK -> updateExecuteAttack(frameCounter, player);
             case BODY_DEFEAT -> updateDefeat(frameCounter, player);
         }
@@ -653,9 +647,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
 
     /** State 8: WaitReady - brief pause before attacks begin */
     private void updateWaitReady() {
-        if (checkHit()) {
-            return;
-        }
+        checkHit();
         actionTimer--;
         if (actionTimer < 0) {
             bodyRoutine = BODY_SELECT_ATTACK;
@@ -663,10 +655,8 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     }
 
     /** State A: SelectAttack - pick next attack from pattern {2,0,2,4} */
-    private void updateSelectAttack(int frameCounter) {
-        if (checkHit()) {
-            return;
-        }
+    private void updateSelectAttack() {
+        checkHit();
         bodyRoutine = BODY_EXECUTE_ATTACK;
         actionTimer = ATTACK_SELECT_PAUSE;
 
@@ -684,9 +674,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
 
     /** State C: ExecuteAttack - dispatch to current attack type */
     private void updateExecuteAttack(int frameCounter, AbstractPlayableSprite player) {
-        if (checkHit()) {
-            return;
-        }
+        checkHit();
         switch (currentAttack) {
             case 0 -> updateAttackWalkPunch(frameCounter, player);
             case 2 -> updateAttackJetStomp(frameCounter, player);
@@ -759,7 +747,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                     state.yVel = 0;
                     // Spawn targeting sensor
                     targetedPlayerX = 0;
-                    spawnSensor(frameCounter, player);
+                    spawnSensor(player);
                     return;
                 }
                 // Fire sound every 32 frames
@@ -774,15 +762,13 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                 positionChildren();
             }
             case 6 -> { // Wait for sensor to report player X
-                // ROM order: the body (slot 17) only polls objoff_28 here.
-                // The targeting sensor is a separate ObjC7 child that runs later
-                // in ExecuteObjects and writes objoff_28 after this poll.
-                if (targetedPlayerX != 0 && sensorReportFrame >= 0 && sensorReportFrame < frameCounter) {
+                if (sensorChild != null) {
+                    sensorChild.update(frameCounter, player);
+                }
+                if (targetedPlayerX != 0) {
                     attackPhase = 8;
                     state.x = targetedPlayerX;
-                    // ROM loc_3D784 writes move.w d0,x_pos(a0), replacing
-                    // only the high position word and preserving x_sub.
-                    bodyXFixed = ((long) state.x << 16) | (bodyXFixed & 0xFFFFL);
+                    bodyXFixed = (long) state.x << 16;
                     state.xFixed = (int) bodyXFixed;
                     // Set facing based on position
                     facingLeft = targetedPlayerX < 0x780;
@@ -927,10 +913,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // ========================================================================
 
     private void updateDefeat(int frameCounter, AbstractPlayableSprite player) {
-        if (deferDefeatDispatch) {
-            deferDefeatDispatch = false;
-            return;
-        }
         switch (defeatPhase) {
             case 0 -> updateDefeatFall(frameCounter);
             case 2 -> updateDefeatExplode(frameCounter);
@@ -963,9 +945,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
 
         if (state.y >= DEFEAT_FLOOR_Y) {
             state.y = DEFEAT_FLOOR_Y;
-            // ROM loc_3D8E6 writes move.w #$15C,y_pos(a0), replacing only
-            // the high position word and preserving y_sub for the next bounce.
-            bodyYFixed = ((long) state.y << 16) | (bodyYFixed & 0xFFFFL);
+            bodyYFixed = (long) state.y << 16;
             state.yFixed = (int) bodyYFixed;
             int absVel = state.yVel;
             if (absVel < 0) {
@@ -1106,12 +1086,10 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // HIT DETECTION (custom - head is only hittable part)
     // ========================================================================
 
-    private boolean checkHit() {
+    private void checkHit() {
         if (state.hitCount <= 0 && !state.defeated) {
             triggerDefeatSequence();
-            return true;
         }
-        return false;
     }
 
     void onHeadHit() {
@@ -1135,9 +1113,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         services().gameState().addScore(1000);
         bodyRoutine = BODY_DEFEAT;
         defeatPhase = 0;
-        // ROM ObjC7_CheckHit reaches ObjC7_Beaten and then skips the caller's
-        // remaining dispatch with addq.w #4,sp; ObjC7_Phase1 starts next frame.
-        deferDefeatDispatch = true;
         state.xVel = 0;
         state.yVel = 0;
         removeAllCollision();
@@ -1189,10 +1164,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         }
 
         int entry = sequence[groupAnimFrameIdx];
-        if (entry == SCRIPT_END) {
-            resetGroupAnim();
-            return true;
-        }
 
         // Decode reversed keyframes (encoded as negative values <= -100)
         boolean reversed = false;
@@ -1450,20 +1421,16 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     }
 
     /** Spawn the targeting sensor child */
-    private void spawnSensor(int frameCounter, AbstractPlayableSprite player) {
+    private void spawnSensor(AbstractPlayableSprite player) {
         if (player == null) return;
         int playerX = player.getCentreX();
         int playerY = player.getCentreY();
-        int playerXVel = player.getXSpeed();
-        int playerYVel = player.getYSpeed();
-        sensorReportFrame = -1;
-        sensorChild = spawnFreeChild(() -> new SensorChild(this, playerX, playerY, playerXVel, playerYVel));
+        sensorChild = spawnFreeChild(() -> new SensorChild(this, playerX, playerY));
     }
 
     /** Report player X from targeting sensor */
-    void reportTargetedPlayerX(int frameCounter, int x) {
+    void reportTargetedPlayerX(int x) {
         this.targetedPlayerX = x;
-        this.sensorReportFrame = frameCounter;
     }
 
     // ========================================================================
@@ -2030,8 +1997,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         private int beepCounter;    // Frames until next beep
         private int animIdx;        // Current frame in SENSOR_ANIM_FRAMES
         private int animTimer;      // Speed counter
-        private long xFixed;
-        private long yFixed;
 
         // Lock-on visual state (ROM: ObjC7_TargettingLock child at routine $1A)
         // ROM spawns a separate child that renders mapping_frame $14 with palette
@@ -2048,18 +2013,13 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         // slot 0 traverses 3 shifts before being consumed at slot 3.
         private final int[] xVelBuffer = new int[4];
         private final int[] yVelBuffer = new int[4];
+        private int bufferIdx = 0;
+        private boolean bufferSeeded = false;
 
         SensorChild(Sonic2DeathEggRobotInstance parent, int playerX, int playerY) {
-            this(parent, playerX, playerY, 0, 0);
-        }
-
-        SensorChild(Sonic2DeathEggRobotInstance parent, int playerX, int playerY,
-                    int initialXVel, int initialYVel) {
             super(parent, "Sensor", 1, Sonic2ObjectIds.DEATH_EGG_ROBOT);
             this.currentX = playerX;
             this.currentY = playerY;
-            this.xFixed = (long) playerX << 16;
-            this.yFixed = (long) playerY << 16;
             this.sensorRoutine = 0;
             this.countdown = 0xA0; // 160 frames
             this.beepInterval = 0x18; // Initial interval = 24 frames
@@ -2069,13 +2029,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             this.lockOnActive = false;
             this.lockOnPaletteFlip = false;
             this.lockOnFlashCounter = 0;
-            this.xVelBuffer[0] = initialXVel;
-            this.yVelBuffer[0] = initialYVel;
-        }
-
-        @Override
-        public boolean skipsSameFrameUpdateAfterSpawn() {
-            return true;
         }
 
         @Override
@@ -2102,8 +2055,8 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                         lockOnPaletteFlip = false;
                         // ROM: Snap sensor to player position when transitioning to lock-on
                         if (player != null) {
-                            snapXTo(player.getCentreX());
-                            snapYTo(player.getCentreY());
+                            currentX = player.getCentreX();
+                            currentY = player.getCentreY();
                         }
                     } else {
                         // ROM loc_3DDA6: reads player's OWN velocity (x_vel/y_vel),
@@ -2114,13 +2067,29 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
 
                             // ROM: snap sensor to player position when velocity is 0
                             if (playerXVel == 0) {
-                                snapXTo(player.getCentreX());
+                                currentX = player.getCentreX();
                             }
                             if (playerYVel == 0) {
-                                snapYTo(player.getCentreY());
+                                currentY = player.getCentreY();
                             }
 
-                            moveWithRomVelocityFifo(playerXVel, playerYVel);
+                            // ROM: Seed buffer slot 0 with player's initial velocity on first update
+                            // move.w x_vel(a1),objoff_30(a0) / move.w y_vel(a1),objoff_32(a0)
+                            if (!bufferSeeded) {
+                                xVelBuffer[0] = playerXVel;
+                                yVelBuffer[0] = playerYVel;
+                                bufferSeeded = true;
+                            }
+
+                            // Push player velocity into FIFO
+                            xVelBuffer[bufferIdx] = playerXVel;
+                            yVelBuffer[bufferIdx] = playerYVel;
+
+                            // Apply oldest velocity (3-frame delay via 4-slot buffer)
+                            int applyIdx = (bufferIdx + 1) % 4;
+                            currentX += (xVelBuffer[applyIdx] >> 8); // 8.8 fixed -> pixel
+                            currentY += (yVelBuffer[applyIdx] >> 8);
+                            bufferIdx = (bufferIdx + 1) % 4;
                         }
 
                         // Beep with decreasing interval
@@ -2140,7 +2109,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                     // ROM: subq.w #1,objoff_2A(a0) / bmi.s — fires when result goes negative
                     if (countdown < 0) {
                         // Report final position to body and self-destruct
-                        boss.reportTargetedPlayerX(frameCounter, currentX);
+                        boss.reportTargetedPlayerX(currentX);
                         setDestroyed(true);
                         return;
                     }
@@ -2160,32 +2129,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                 }
             }
             updateDynamicSpawn();
-        }
-
-        private void moveWithRomVelocityFifo(int playerXVel, int playerYVel) {
-            int appliedXVel = xVelBuffer[3];
-            int appliedYVel = yVelBuffer[3];
-            for (int i = 3; i > 0; i--) {
-                xVelBuffer[i] = xVelBuffer[i - 1];
-                yVelBuffer[i] = yVelBuffer[i - 1];
-            }
-            xVelBuffer[0] = playerXVel;
-            yVelBuffer[0] = playerYVel;
-
-            xFixed += (long) appliedXVel << 8;
-            yFixed += (long) appliedYVel << 8;
-            currentX = (int) (xFixed >> 16);
-            currentY = (int) (yFixed >> 16);
-        }
-
-        private void snapXTo(int x) {
-            currentX = x;
-            xFixed = ((long) x << 16) | (xFixed & 0xFFFFL);
-        }
-
-        private void snapYTo(int y) {
-            currentY = y;
-            yFixed = ((long) y << 16) | (yFixed & 0xFFFFL);
         }
 
         private void stepAnim() {
@@ -2216,14 +2159,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
 
         boolean isLockOnActive() {
             return lockOnActive;
-        }
-
-        @Override
-        public String traceDebugDetails() {
-            return String.format("sensorRoutine=%d countdown=%04X pos=%04X,%04X fixed=%08X,%08X fifo=[%04X,%04X,%04X,%04X]",
-                    sensorRoutine, countdown & 0xFFFF, currentX & 0xFFFF, currentY & 0xFFFF,
-                    (int) xFixed, (int) yFixed, xVelBuffer[0] & 0xFFFF, xVelBuffer[1] & 0xFFFF,
-                    xVelBuffer[2] & 0xFFFF, xVelBuffer[3] & 0xFFFF);
         }
 
         boolean isLockOnPaletteFlip() {

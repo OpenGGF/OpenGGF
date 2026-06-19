@@ -207,7 +207,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     private boolean levelLayoutPatched;
     private boolean spawnedWfzDockChildren;
     private boolean grabberCollisionProperty;
-    private boolean blinkerVisible;
+    private boolean blinkerMiscBit;
     private TornadoObjectInstance thrusterFollowerChild;
 
     public TornadoObjectInstance(ObjectSpawn spawn) {
@@ -229,7 +229,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         this.mappingFrame = 0;
         this.animId = 0;
         this.animFrameIndex = 0;
-        this.blinkerVisible = true;
+        this.blinkerMiscBit = false;
     }
 
     @Override
@@ -761,9 +761,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     // ------------------------------------------------------------------------
 
     private void updateBlinker() {
-        // ROM toggles status.npc.misc and displays every other frame.
-        blinkerVisible = !blinkerVisible;
-        renderThisFrame = blinkerVisible;
+        // ROM bchg toggles status.npc.misc, then bne skips display when the old bit was set.
+        boolean wasSet = blinkerMiscBit;
+        blinkerMiscBit = !blinkerMiscBit;
+        renderThisFrame = !wasSet;
     }
 
     // ------------------------------------------------------------------------

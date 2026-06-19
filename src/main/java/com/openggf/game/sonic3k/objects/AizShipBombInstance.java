@@ -54,8 +54,12 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
     // ROM: move.w #$10,(Screen_shake_flag).w — screen shake duration on impact
     private static final int SCREEN_SHAKE_FRAMES = 0x10;
 
-    /** Bomb-port X in the battleship's secondary-camera space (ROM: $2E). */
-    private final int sourceSecondaryX;
+    /**
+     * Bomb-port X in the battleship's secondary-camera space (ROM: $2E).
+     * Non-final so the rewind field capturer reapplies it after the codec
+     * recreates the bomb (the codec passes a placeholder).
+     */
+    private int sourceSecondaryX;
     /** Ship object that owns the live secondary-camera translation. */
     private final AizBattleshipInstance sourceShip;
     /** Initial world Y used as a fallback when the source ship is unavailable. */
@@ -288,4 +292,18 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
 
     @Override
     public int getPriorityBucket() { return 2; }
+
+    // --- Test/rewind inspection ---
+
+    /** ROM drop state ($00 ready-drop, $01 delay, $02 drop). Exposed for rewind tests. */
+    public int stateForTest() { return state; }
+
+    /** Bomb-port Y offset within the ship (ROM $30). Exposed for rewind tests. */
+    public int portYOffsetForTest() { return portYOffset; }
+
+    /** Bomb-port X in the ship's secondary-camera space (ROM $2E). Exposed for rewind tests. */
+    public int sourceSecondaryXForTest() { return sourceSecondaryX; }
+
+    /** The live battleship driving the secondary-camera translation. Exposed for rewind tests. */
+    public AizBattleshipInstance sourceShipForTest() { return sourceShip; }
 }

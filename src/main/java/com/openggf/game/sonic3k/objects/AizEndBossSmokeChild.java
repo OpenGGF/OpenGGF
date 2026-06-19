@@ -22,9 +22,12 @@ public class AizEndBossSmokeChild extends AbstractObjectInstance {
 
     private static final int SMOKE_DURATION = 14; // Approximate duration from animation
     private final AizEndBossInstance boss;
-    private final int posX;
-    private final int posY;
-    private final boolean moving;
+    // posX/posY/moving are non-final so the rewind field capturer reapplies them
+    // after the codec recreates the smoke (this object has a null spawn, so its
+    // position cannot be derived from the spawn; the codec passes placeholders).
+    private int posX;
+    private int posY;
+    private boolean moving;
     private int animTimer;
     private int mappingFrame;
 

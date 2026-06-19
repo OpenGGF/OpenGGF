@@ -8,6 +8,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -155,7 +156,8 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
         if (broken || player == null) {
             return;
         }
-        tryBreak(player, contact.touchSide(), player.getAir(), player.getRolling(), player.getXSpeed());
+        tryBreak(player, contact.touchSide(), player.getAir(),
+                player.getAnimationId() == Sonic1AnimationIds.ROLL.id(), player.getXSpeed());
     }
 
     @Override
@@ -170,7 +172,7 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
         tryBreak(player,
                 result.kind() == ContactKind.SIDE,
                 player.getAir(),
-                result.preContact().rolling(),
+                result.preContact().animationId() == Sonic1AnimationIds.ROLL.id(),
                 result.preContact().xSpeed());
     }
 

@@ -73,7 +73,9 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
     };
     private final AizEndBossInstance boss;
     private final AizEndBossArmChild arm;
-    private final int subtype;
+    // Non-final so the rewind field capturer reapplies it after the codec
+    // recreates the propeller (the codec passes a placeholder subtype).
+    private int subtype;
     private int routine;
     private int mappingFrame;
     /**
