@@ -2,7 +2,6 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainer;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor;
-import com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart;
 import com.openggf.game.sonic2.objects.bosses.CPZBossFlame;
 import com.openggf.game.sonic2.objects.bosses.CPZBossGunk;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPipe;
@@ -26,8 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * was previously dropped on a held-rewind restore.
  *
  * <p>The CPZ boss-component chain (container/floor/falling-part/flame/gunk/pipe/
- * pump/robotnik) and the OOZ burner flame retain recreate codecs (parent-relink,
- * sibling-relink, or exact-spawn). The ARZ rising bubble now uses generic recreate.
+ * pump/robotnik) and the OOZ burner flame retain recreate codecs (parent-relink
+ * or sibling-relink). The falling part and ARZ rising bubble now use generic recreate.
  * {@link
  * com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff} is intentionally
  * accept-drop (cosmetic + dead code) and the scalar-only lava/MCZ falling hazards
@@ -58,7 +57,6 @@ class TestRewindFixS2Batch4Codecs {
         List<String> required = List.of(
                 CPZBossContainer.class.getName(),
                 CPZBossContainerFloor.class.getName(),
-                CPZBossFallingPart.class.getName(),
                 CPZBossFlame.class.getName(),
                 CPZBossGunk.class.getName(),
                 CPZBossPipe.class.getName(),
@@ -74,6 +72,9 @@ class TestRewindFixS2Batch4Codecs {
 
         assertFalse(names.contains(BubbleObjectInstance.class.getName()),
                 "BubbleObjectInstance must restore through RewindRecreatable generic recreate, "
+                        + "not a batch-4 codec");
+        assertFalse(names.contains("com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart"),
+                "CPZBossFallingPart must restore through RewindRecreatable generic recreate, "
                         + "not a batch-4 codec");
     }
 }

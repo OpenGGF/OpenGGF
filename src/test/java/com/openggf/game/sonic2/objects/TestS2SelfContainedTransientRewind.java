@@ -5,6 +5,7 @@ import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance;
+import com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart;
 import com.openggf.game.sonic2.objects.bosses.LavaBubbleObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.MCZFallingDebrisInstance;
 import com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance;
@@ -60,6 +61,7 @@ class TestS2SelfContainedTransientRewind {
         assertNoRegisteredS2DynamicCodec(DestroyedEggPrisonObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(BossExplosionObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(BadnikProjectileInstance.class);
+        assertNoRegisteredS2DynamicCodec(CPZBossFallingPart.class);
     }
 
     @Test
@@ -133,6 +135,12 @@ class TestS2SelfContainedTransientRewind {
                         true,
                         4,
                         3));
+        CPZBossFallingPart cpzBossFallingPart = objectManager.createDynamicObject(
+                () -> new CPZBossFallingPart(
+                        new ObjectSpawn(baseX + 0x210, baseY - 0x30, 0x5D, 0, 1, false, 0),
+                        0x22,
+                        0x140,
+                        0x50));
 
         List<AbstractObjectInstance> tracked = List.of(
                 htzFireProjectile,
@@ -147,7 +155,8 @@ class TestS2SelfContainedTransientRewind {
                 bubble,
                 destroyedEggPrison,
                 bossExplosion,
-                badnikProjectile);
+                badnikProjectile,
+                cpzBossFallingPart);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
@@ -188,6 +197,8 @@ class TestS2SelfContainedTransientRewind {
                 "precondition: exactly one boss explosion fixture is live");
         assertEquals(1, countLive(objectManager, BadnikProjectileInstance.class),
                 "precondition: exactly one badnik projectile fixture is live");
+        assertEquals(1, countLive(objectManager, CPZBossFallingPart.class),
+                "precondition: exactly one CPZ boss falling-part fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -226,6 +237,8 @@ class TestS2SelfContainedTransientRewind {
                 "diverge step must remove the boss explosion");
         assertEquals(0, countLive(objectManager, BadnikProjectileInstance.class),
                 "diverge step must remove the badnik projectile");
+        assertEquals(0, countLive(objectManager, CPZBossFallingPart.class),
+                "diverge step must remove the CPZ boss falling part");
 
         registry.restore(snapshot);
 
@@ -242,6 +255,7 @@ class TestS2SelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, DestroyedEggPrisonObjectInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, BossExplosionObjectInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, BadnikProjectileInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, CPZBossFallingPart.class, capturedState);
     }
 
     private static void assertNoRegisteredS2DynamicCodec(Class<?> type) {

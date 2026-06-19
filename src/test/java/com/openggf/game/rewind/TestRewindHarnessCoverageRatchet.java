@@ -112,12 +112,14 @@ public class TestRewindHarnessCoverageRatchet {
  *       BossExplosionObjectInstance dynamic codec.</li>
  *   <li>2026-06-19: raised to 92 after deleting the S2
  *       BadnikProjectileInstance dynamic codec.</li>
+ *   <li>2026-06-19: raised to 93 after deleting the S2
+ *       CPZBossFallingPart dynamic codec.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 92;
+    static final int RATCHET_FLOOR = 93;
 
     @BeforeEach
     void initHeadless() {

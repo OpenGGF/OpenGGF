@@ -69,7 +69,6 @@ import com.openggf.game.sonic2.objects.bosses.CPZBossContainer;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor;
 import com.openggf.game.sonic2.objects.bosses.CPZBossDripper;
-import com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart;
 import com.openggf.game.sonic2.objects.bosses.CPZBossFlame;
 import com.openggf.game.sonic2.objects.bosses.CPZBossGunk;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPipe;
@@ -174,9 +173,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // BubbleObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             cpzBossContainerCodec(),
             cpzContainerFloorCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    CPZBossFallingPart.class,
-                    spawn -> new CPZBossFallingPart(spawn, 0, 0, 0)),
+            // CPZBossFallingPart now implements RewindRecreatable -> genericRecreate Path 1.
             cpzBossFlameCodec(),
             cpzBossGunkCodec(),
             cpzBossPipeCodec(),
