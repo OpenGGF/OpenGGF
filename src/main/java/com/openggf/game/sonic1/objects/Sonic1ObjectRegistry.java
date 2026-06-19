@@ -104,10 +104,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1ExplosionItemObjectInstance.class,
                     spawn -> new Sonic1ExplosionItemObjectInstance(spawn.x(), spawn.y(), null, 0)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1FloatingBlockObjectInstance.class,
-                    (spawn, os) -> new Sonic1FloatingBlockObjectInstance(
-                            spawn, os != null ? os.romZoneId() : -1)),
+            // Sonic1FloatingBlockObjectInstance now implements RewindRecreatable
+            // -> genericRecreate Path 1.
             grassFireChildCodec(),
             lamppostTwirlCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(

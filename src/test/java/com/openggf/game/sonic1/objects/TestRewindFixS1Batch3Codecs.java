@@ -53,7 +53,6 @@ class TestRewindFixS1Batch3Codecs {
                 Sonic1CollapsingFloorObjectInstance.class.getName(),
                 Sonic1EggPrisonObjectInstance.class.getName(),
                 Sonic1ExplosionItemObjectInstance.class.getName(),
-                Sonic1FloatingBlockObjectInstance.class.getName(),
                 Sonic1GrassFireObjectInstance.class.getName(),
                 Sonic1LamppostTwirlInstance.class.getName(),
                 Sonic1MonitorPowerUpObjectInstance.class.getName(),

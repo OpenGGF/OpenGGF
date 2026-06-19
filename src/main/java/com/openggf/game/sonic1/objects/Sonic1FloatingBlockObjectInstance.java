@@ -10,6 +10,9 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -64,7 +67,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/56 Floating Blocks and Doors.asm
  */
 public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // ---- FBlock_Var table: {halfWidth, halfHeight} indexed by (subtype >> 4) & 7 ----
     // From disassembly: dc.b $10,$10 / $20,$20 / $10,$20 / $20,$1A / $10,$27 / $10,$10 / 8,$20 / $40,$10
@@ -236,6 +239,13 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
         this.artKey = isLZ ? ObjectArtKeys.LZ_FLOATING_BLOCK : ObjectArtKeys.SYZ_FLOATING_BLOCK;
 
         updateDynamicSpawn(x, y);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectServices objectServices = ctx.objectServices();
+        int rewindZoneIndex = objectServices != null ? objectServices.romZoneId() : -1;
+        return new Sonic1FloatingBlockObjectInstance(ctx.spawn(), rewindZoneIndex);
     }
 
     @Override
