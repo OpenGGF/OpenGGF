@@ -3,21 +3,30 @@ package com.openggf.game.rewind;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameId;
+import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
+import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic2.objects.PointsObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Pattern;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -104,8 +113,15 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> BATCH8_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1PointsObjectInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(PointsObjectInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(Sonic3kPointsObjectInstance.class.getName(), GameId.S3K));
+
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
+    private static final ObjectRenderManager INERT_RENDER_MANAGER =
+            new ObjectRenderManager(new InertObjectArtProvider());
 
     @BeforeEach
     void initHeadless() { GraphicsManager.getInstance().initHeadless(); }
@@ -444,6 +460,51 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    // =====================================================================
+    // Batch 8: points popups - codec deleted
+    // =====================================================================
+
+    @Test
+    void batch8ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH8_DELETED_CODECS) {
+            Class<?> cls;
+            try { cls = Class.forName(candidate.fqn()); }
+            catch (ClassNotFoundException e) { throw new AssertionError(e); }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 8)");
+        }
+    }
+
+    @Test
+    void batch8ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH8_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-8 deletion; "
+                            + "it should round-trip purely via genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch8ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH8_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void batch8ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : BATCH8_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
     /**
      * Returns true if the given FQN has a registered dynamic rewind codec in the
      * shared codecs or in any of the three per-game registries. Distinct from
@@ -475,6 +536,7 @@ public class TestScalarOnlyCodecDeletion {
             @Override public ObjectManager objectManager() { return holder[0]; }
             @Override public Camera camera() { return camera; }
             @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
         };
         ObjectRegistry registry = switch (gameId) {
             case S1 -> new Sonic1ObjectRegistry();
@@ -509,5 +571,22 @@ public class TestScalarOnlyCodecDeletion {
                 java.nio.file.Path.of("target", "rewind-scalar-codec-deletion-config"));
         config.resetToDefaults();
         return config;
+    }
+
+    private static final class InertObjectArtProvider implements ObjectArtProvider {
+        @Override public void loadArtForZone(int zoneIndex) {}
+        @Override public PatternSpriteRenderer getRenderer(String key) { return null; }
+        @Override public ObjectSpriteSheet getSheet(String key) { return null; }
+        @Override public SpriteAnimationSet getAnimations(String key) { return null; }
+        @Override public int getZoneData(String key, int zoneIndex) { return -1; }
+        @Override public Pattern[] getHudDigitPatterns() { return new Pattern[0]; }
+        @Override public Pattern[] getHudTextPatterns() { return new Pattern[0]; }
+        @Override public Pattern[] getHudLivesPatterns() { return new Pattern[0]; }
+        @Override public Pattern[] getHudLivesNumbers() { return new Pattern[0]; }
+        @Override public List<String> getRendererKeys() { return List.of(); }
+        @Override public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) {
+            return baseIndex;
+        }
+        @Override public boolean isReady() { return true; }
     }
 }

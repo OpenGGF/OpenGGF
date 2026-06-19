@@ -98,7 +98,6 @@ import java.util.function.Function;
  */
 public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
-            ObjectRewindDynamicCodecs.pointsCodec(Sonic3kPointsObjectInstance.class),
             ObjectRewindDynamicCodecs.deferredPlayerBoundCodec(
                     FireShieldObjectInstance.class, com.openggf.level.objects.ShieldObjectInstance.class),
             ObjectRewindDynamicCodecs.deferredPlayerBoundCodec(

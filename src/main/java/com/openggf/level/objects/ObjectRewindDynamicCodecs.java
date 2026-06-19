@@ -105,11 +105,13 @@ public final class ObjectRewindDynamicCodecs {
      * {@link RewindRecreatable#recreateForRewind} can be called on it.
      *
      * <p>Tries constructors in order:
-     * <ol>
-     *   <li>{@code (ObjectSpawn)} — single-arg spawn constructor</li>
-     *   <li>{@code (ObjectSpawn, boolean)} — spawn plus default false option</li>
-     *   <li>zero-arg — no-argument default constructor</li>
-     * </ol>
+ * <ol>
+ *   <li>{@code (ObjectSpawn)} — single-arg spawn constructor</li>
+ *   <li>{@code (ObjectSpawn, boolean)} — spawn plus default false option</li>
+ *   <li>{@code (ObjectSpawn, ObjectServices, int)} — points-style constructor
+ *       with default score/frame placeholder</li>
+ *   <li>zero-arg — no-argument default constructor</li>
+ * </ol>
      *
      * <p><strong>Failure handling:</strong> a missing constructor signature
      * ({@link NoSuchMethodException}) is benign — the next strategy is tried, and if none
@@ -136,6 +138,12 @@ public final class ObjectRewindDynamicCodecs {
                 findCtor(cls, ObjectSpawn.class, boolean.class);
         if (spawnBooleanCtor != null) {
             return invokeProbeCtor(cls, spawnBooleanCtor, ctx, spawn, false);
+        }
+
+        Constructor<? extends AbstractObjectInstance> spawnServicesIntCtor =
+                findCtor(cls, ObjectSpawn.class, ObjectServices.class, int.class);
+        if (spawnServicesIntCtor != null) {
+            return invokeProbeCtor(cls, spawnServicesIntCtor, ctx, spawn, ctx.objectServices(), 0);
         }
 
         Constructor<? extends AbstractObjectInstance> noArgCtor = findCtor(cls);
@@ -225,33 +233,6 @@ public final class ObjectRewindDynamicCodecs {
                     ObjectManagerSnapshot.DynamicObjectEntry entry) {
                 context.objectManager().enqueuePendingPlayerBoundEntry(baseTypeKey, entry);
                 return null;
-            }
-        };
-    }
-
-    public static DynamicObjectRewindCodec pointsCodec(Class<? extends AbstractPointsObjectInstance> type) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    Constructor<? extends AbstractPointsObjectInstance> ctor =
-                            type.getDeclaredConstructor(ObjectSpawn.class, ObjectServices.class, int.class);
-                    return ctor.newInstance(entry.spawn(), context.objectServices(), 0);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + type.getName(), e);
-                }
             }
         };
     }

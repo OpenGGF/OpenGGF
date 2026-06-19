@@ -74,15 +74,18 @@ public class TestRewindHarnessCoverageRatchet {
      *   <li>2026-06-19: raised to 39 after Phase-2 codec-deletion batch 7 moved
      *       HczEndBossInstance onto RewindRecreatable generic recreate and supplied
      *       deterministic harness configuration for its character-dependent constructor.</li>
-     *   <li>2026-06-19: raised to 40 after exact-spawn codecs began recreating
-     *       inside the restore-time ObjectConstructionContext, allowing AizEndBossInstance
-     *       to use constructor-time ObjectServices under the harness.</li>
-     * </ul>
+ *   <li>2026-06-19: raised to 40 after exact-spawn codecs began recreating
+ *       inside the restore-time ObjectConstructionContext, allowing AizEndBossInstance
+ *       to use constructor-time ObjectServices under the harness.</li>
+ *   <li>2026-06-19: raised to 43 after adding (ObjectSpawn,ObjectServices,int)
+ *       harness construction with inert render services, then deleting the S1/S2/S3K
+ *       points popup dynamic codecs.</li>
+ * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 40;
+    static final int RATCHET_FLOOR = 43;
 
     @BeforeEach
     void initHeadless() {

@@ -10,9 +10,9 @@ import com.openggf.level.rings.LostRingObjectInstance;
  * ring through this codec — without it the rings would be diagnostic-only and would
  * vanish across a seek.
  * <p>
- * Mirrors the {@code pointsCodec} pattern (ObjectManager.java): {@link #recreate}
- * constructs a bare ring from the captured {@link ObjectSpawn}; the per-ring fixed-point
- * fields (xSubpixel / ySubpixel / xVel / yVel / lifetime / phaseOffset / collected /
+ * Mirrors the generic spawn-recreate pattern: {@link #recreate} constructs a bare ring
+ * from the captured {@link ObjectSpawn}; the per-ring fixed-point fields
+ * (xSubpixel / ySubpixel / xVel / yVel / lifetime / phaseOffset / collected /
  * sparkleStartFrame) round-trip via the generic field capture and are reapplied by the
  * object manager's {@code restoreObjectRewindState} immediately after recreate. The
  * shared {@link com.openggf.level.rings.SpillAnimationState} spin owner is

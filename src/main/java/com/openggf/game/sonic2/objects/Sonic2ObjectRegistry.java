@@ -115,7 +115,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             badnikProjectileCodec(),
             buzzerFlameCodec(),
             conveyorCodec(),
-            ObjectRewindDynamicCodecs.pointsCodec(PointsObjectInstance.class),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     MonitorContentsObjectInstance.class,
                     spawn -> new MonitorContentsObjectInstance(spawn, null)),

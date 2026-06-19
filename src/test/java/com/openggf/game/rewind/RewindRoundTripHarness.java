@@ -3,22 +3,28 @@ package com.openggf.game.rewind;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameId;
+import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.boss.AbstractBossChild;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -69,6 +75,8 @@ public final class RewindRoundTripHarness {
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
+    private static final ObjectRenderManager INERT_RENDER_MANAGER =
+            new ObjectRenderManager(new InertObjectArtProvider());
 
     /** Binary class name of the inner ArticulatedChild (not ForearmChild). */
     private static final String ARTICULATED_CHILD_CLASS =
@@ -266,6 +274,11 @@ public final class RewindRoundTripHarness {
             public SonicConfigurationService configuration() {
                 return DEFAULT_CONFIGURATION;
             }
+
+            @Override
+            public ObjectRenderManager renderManager() {
+                return INERT_RENDER_MANAGER;
+            }
         };
         AbstractObjectInstance inst = ObjectConstructionContext.construct(stub, () -> new MinimalStubObject(spawn));
         om.addDynamicObject(inst);
@@ -407,6 +420,11 @@ public final class RewindRoundTripHarness {
             public SonicConfigurationService configuration() {
                 return DEFAULT_CONFIGURATION;
             }
+
+            @Override
+            public ObjectRenderManager renderManager() {
+                return INERT_RENDER_MANAGER;
+            }
         };
 
         GameId gameId = inferGameIdFromFqn(fqn);
@@ -539,6 +557,11 @@ public final class RewindRoundTripHarness {
             @Override
             public SonicConfigurationService configuration() {
                 return DEFAULT_CONFIGURATION;
+            }
+
+            @Override
+            public ObjectRenderManager renderManager() {
+                return INERT_RENDER_MANAGER;
             }
         };
     }
@@ -690,7 +713,19 @@ public final class RewindRoundTripHarness {
             }
         }
 
-        // Strategy 6: (ObjectSpawn, AbstractObjectInstance-subtype) — parent-child pattern.
+        // Strategy 6: (ObjectSpawn, ObjectServices, int) — points popups and similar
+        // dynamic display objects whose score/frame value is restored from scalar state.
+        Constructor<? extends AbstractObjectInstance> ctor5 =
+                findCtor(cls, ObjectSpawn.class, ObjectServices.class, int.class);
+        if (ctor5 != null) {
+            try {
+                return ObjectConstructionContext.construct(stub,
+                        () -> invokeWith(ctor5, PROBE_SPAWN, stub, 100));
+            } catch (Throwable ignored) {
+            }
+        }
+
+        // Strategy 7: (ObjectSpawn, AbstractObjectInstance-subtype) — parent-child pattern.
         // Scan for a 2-parameter constructor whose second parameter is a concrete
         // AbstractObjectInstance subclass (a live parent reference). Build a stub parent of
         // that type headlessly (using strategies 1-2 only to avoid recursion), then
@@ -704,6 +739,7 @@ public final class RewindRoundTripHarness {
                 "No probe-compatible constructor found for " + cls.getName()
                         + " (tried zero-arg, (ObjectSpawn), (ObjectSpawn,String),"
                         + " (ObjectSpawn,ObjectServices), (ObjectSpawn,boolean),"
+                        + " (ObjectSpawn,ObjectServices,int),"
                         + " (ObjectSpawn,ParentType))");
     }
 
@@ -840,6 +876,7 @@ public final class RewindRoundTripHarness {
             @Override public ObjectManager objectManager() { return holder[0]; }
             @Override public Camera camera() { return camera; }
             @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
         };
         ObjectRegistry registry = registryFor(gameId);
 
@@ -1164,6 +1201,68 @@ public final class RewindRoundTripHarness {
         @Override
         public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) {
             // no-op
+        }
+    }
+
+    private static final class InertObjectArtProvider implements ObjectArtProvider {
+        @Override
+        public void loadArtForZone(int zoneIndex) {
+            // no-op
+        }
+
+        @Override
+        public PatternSpriteRenderer getRenderer(String key) {
+            return null;
+        }
+
+        @Override
+        public ObjectSpriteSheet getSheet(String key) {
+            return null;
+        }
+
+        @Override
+        public SpriteAnimationSet getAnimations(String key) {
+            return null;
+        }
+
+        @Override
+        public int getZoneData(String key, int zoneIndex) {
+            return -1;
+        }
+
+        @Override
+        public Pattern[] getHudDigitPatterns() {
+            return new Pattern[0];
+        }
+
+        @Override
+        public Pattern[] getHudTextPatterns() {
+            return new Pattern[0];
+        }
+
+        @Override
+        public Pattern[] getHudLivesPatterns() {
+            return new Pattern[0];
+        }
+
+        @Override
+        public Pattern[] getHudLivesNumbers() {
+            return new Pattern[0];
+        }
+
+        @Override
+        public List<String> getRendererKeys() {
+            return List.of();
+        }
+
+        @Override
+        public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) {
+            return baseIndex;
+        }
+
+        @Override
+        public boolean isReady() {
+            return true;
         }
     }
 }

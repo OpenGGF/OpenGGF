@@ -64,7 +64,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
     private Map<ObjectSpawn, List<RingSpawn>> ringSpawnMapping = Map.of();
 
     private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
-            ObjectRewindDynamicCodecs.pointsCodec(Sonic1PointsObjectInstance.class),
             bombFuseChildCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1BombShrapnelInstance.class,
