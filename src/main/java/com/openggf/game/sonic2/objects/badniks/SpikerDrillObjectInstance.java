@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -17,7 +19,8 @@ import java.util.List;
  * Spiker Drill (0x93) - drill projectile thrown by Spiker in HTZ.
  * Moves vertically at a constant speed and flips horizontally each frame.
  */
-public class SpikerDrillObjectInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public class SpikerDrillObjectInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, RewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x12; // From Obj92_SubObjData
     private static final int Y_VELOCITY = 0x200; // 2 pixels/frame in 8.8 fixed
 
@@ -28,6 +31,10 @@ public class SpikerDrillObjectInstance extends AbstractObjectInstance implements
     private boolean hFlip;
     private final boolean vFlip;
 
+    private SpikerDrillObjectInstance() {
+        this(new ObjectSpawn(0, 0, 0x93, 0, 0, false, 0), 0, 0, false, false);
+    }
+
     public SpikerDrillObjectInstance(ObjectSpawn spawn, int x, int y, boolean xFlip, boolean yFlip) {
         super(spawn, "SpikerDrill");
         this.currentX = x;
@@ -37,6 +44,15 @@ public class SpikerDrillObjectInstance extends AbstractObjectInstance implements
         // ROM: if y_flip set, velocity stays +2 (down). Otherwise it's negated.
         this.yVelocity = yFlip ? Y_VELOCITY : -Y_VELOCITY;
         this.motionState = new SubpixelMotion.State(x, y, 0, 0, 0, this.yVelocity);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn s = ctx.spawn();
+        return new SpikerDrillObjectInstance(
+                s, s.x(), s.y(),
+                (s.renderFlags() & 0x01) != 0,
+                (s.renderFlags() & 0x02) != 0);
     }
 
     @Override

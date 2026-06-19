@@ -144,21 +144,12 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     SlicerPincerInstance.class,
                     spawn -> new SlicerPincerInstance(
                             spawn, null, spawn.x(), spawn.y(), 0, false, 0)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    SpikerDrillObjectInstance.class,
-                    spawn -> new SpikerDrillObjectInstance(
-                            spawn, spawn.x(), spawn.y(),
-                            (spawn.renderFlags() & 0x01) != 0,
-                            (spawn.renderFlags() & 0x02) != 0)),
+            // SpikerDrillObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             turtloidJetCodec(),
             turtloidRiderCodec(),
             solFireballCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    WallTurretShotInstance.class,
-                    s -> new WallTurretShotInstance(s, s.x(), s.y(), 0, 0)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    VerticalLaserObjectInstance.class,
-                    s -> new VerticalLaserObjectInstance(s, s.x(), s.y())),
+            // WallTurretShotInstance and VerticalLaserObjectInstance now implement
+            // RewindRecreatable -> genericRecreate Path 1.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     SpikyBlockSpikeInstance.class,
                     spawn -> new SpikyBlockSpikeInstance(spawn, "SpikyBlock-Spike", 0, 0)),

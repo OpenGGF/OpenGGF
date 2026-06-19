@@ -12,6 +12,7 @@ import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
 import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -22,14 +23,37 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic2ObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-3 S2 object that
+ * now exposes a dynamic rewind recreate path for every batch-3 S2 object that
  * was previously dropped on a held-rewind restore.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
- * session. Full session round-trip is handled by the rewind coverage guard.
+ * {@code dynamicRewindCodecs()} and checks {@link RewindRecreatable} opt-ins
+ * without a ROM, OpenGL, or an active gameplay session. Full session round-trip
+ * is handled by the rewind coverage guard.
  */
 class TestRewindFixS2Batch3Codecs {
+
+    private static final List<String> EXPLICIT_CODEC_CLASSES = List.of(
+            ShellcrackerClawInstance.class.getName(),
+            SlicerPincerInstance.class.getName(),
+            TurtloidJetInstance.class.getName(),
+            TurtloidRiderInstance.class.getName(),
+            SolFireballObjectInstance.class.getName(),
+            SpikyBlockSpikeInstance.class.getName(),
+            BombPrizeObjectInstance.class.getName(),
+            // EHZBossGroundVehicle / EHZBossPropeller / EHZBossVehicleTop codecs
+            // intentionally REMOVED: construction-spawned children re-established by
+            // boss reconstruction (see TestBossChildNoDoubleSpawnParity /
+            // KNOWN_DISCREPANCIES).
+            HTZBossFlamethrower.class.getName(),
+            HTZBossLavaBall.class.getName(),
+            CNZBossElectricBall.class.getName());
+
+    private static final List<String> GENERIC_RECREATE_CLASSES = List.of(
+            GrounderBadnikInstance.class.getName(),
+            SpikerDrillObjectInstance.class.getName(),
+            WallTurretShotInstance.class.getName(),
+            VerticalLaserObjectInstance.class.getName());
 
     private static Set<String> codecClassNames() {
         Set<String> names = new HashSet<>();
@@ -44,32 +68,24 @@ class TestRewindFixS2Batch3Codecs {
     }
 
     @Test
-    void registersCodecsForBatch3S2Objects() {
+    void registersRestorePathsForBatch3S2Objects() {
         Set<String> names = codecClassNames();
 
-        List<String> required = List.of(
-                GrounderBadnikInstance.class.getName(),
-                ShellcrackerClawInstance.class.getName(),
-                SlicerPincerInstance.class.getName(),
-                SpikerDrillObjectInstance.class.getName(),
-                TurtloidJetInstance.class.getName(),
-                TurtloidRiderInstance.class.getName(),
-                SolFireballObjectInstance.class.getName(),
-                WallTurretShotInstance.class.getName(),
-                VerticalLaserObjectInstance.class.getName(),
-                SpikyBlockSpikeInstance.class.getName(),
-                BombPrizeObjectInstance.class.getName(),
-                // EHZBossGroundVehicle / EHZBossPropeller / EHZBossVehicleTop codecs
-                // intentionally REMOVED: construction-spawned children re-established by
-                // boss reconstruction (see TestBossChildNoDoubleSpawnParity /
-                // KNOWN_DISCREPANCIES).
-                HTZBossFlamethrower.class.getName(),
-                HTZBossLavaBall.class.getName(),
-                CNZBossElectricBall.class.getName());
-
-        for (String name : required) {
+        for (String name : EXPLICIT_CODEC_CLASSES) {
             assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+                    "missing explicit rewind recreate codec for " + name);
+        }
+        for (String name : GENERIC_RECREATE_CLASSES) {
+            assertTrue(implementsRewindRecreatable(name),
+                    "missing RewindRecreatable generic recreate path for " + name);
+        }
+    }
+
+    private static boolean implementsRewindRecreatable(String className) {
+        try {
+            return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
         }
     }
 }

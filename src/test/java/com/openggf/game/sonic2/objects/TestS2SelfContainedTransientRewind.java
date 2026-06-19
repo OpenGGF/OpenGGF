@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -45,6 +46,9 @@ class TestS2SelfContainedTransientRewind {
         assertNoRegisteredS2DynamicCodec(ArrowProjectileInstance.class);
         assertNoRegisteredS2DynamicCodec(SteamPuffObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(LeafParticleObjectInstance.class);
+        assertNoRegisteredS2DynamicCodec(SpikerDrillObjectInstance.class);
+        assertNoRegisteredS2DynamicCodec(WallTurretShotInstance.class);
+        assertNoRegisteredS2DynamicCodec(VerticalLaserObjectInstance.class);
     }
 
     @Test
@@ -78,12 +82,35 @@ class TestS2SelfContainedTransientRewind {
                 () -> new SteamPuffObjectInstance(baseX + 0x30, baseY, true));
         LeafParticleObjectInstance leafParticle = objectManager.createDynamicObject(
                 () -> new LeafParticleObjectInstance(baseX + 0x60, baseY + 0x10, 0x80, -0x100, 1, 0x30));
+        SpikerDrillObjectInstance spikerDrill = objectManager.createDynamicObject(
+                () -> new SpikerDrillObjectInstance(
+                        new ObjectSpawn(baseX + 0x90, baseY + 0x18, 0x93, 0, 0x02, false, 0),
+                        baseX + 0x90, baseY + 0x18, false, true));
+        WallTurretShotInstance wallTurretShot = objectManager.createDynamicObject(
+                () -> new WallTurretShotInstance(
+                        new ObjectSpawn(baseX + 0xC0, baseY + 0x20, 0xB8, 0, 0, false, 0),
+                        baseX + 0xC0, baseY + 0x20, -0x180, 0x80));
+        VerticalLaserObjectInstance verticalLaser = objectManager.createDynamicObject(
+                () -> new VerticalLaserObjectInstance(
+                        new ObjectSpawn(baseX + 0xE0, baseY, 0xB6, 0x72, 0, false, 0),
+                        baseX + 0xE0, baseY));
 
         List<AbstractObjectInstance> tracked = List.of(
                 htzFireProjectile,
                 arrowProjectile,
                 steamPuff,
-                leafParticle);
+                leafParticle,
+                spikerDrill,
+                wallTurretShot,
+                verticalLaser);
+
+        for (int frame = 0; frame < 3; frame++) {
+            for (AbstractObjectInstance instance : tracked) {
+                instance.update(frame, fixture.sprite());
+                assertFalse(instance.isDestroyed(),
+                        instance.getClass().getSimpleName() + " should survive setup frame " + frame);
+            }
+        }
 
         for (AbstractObjectInstance instance : tracked) {
             assertFalse(instance.isDestroyed(),
@@ -98,6 +125,12 @@ class TestS2SelfContainedTransientRewind {
                 "precondition: exactly one steam puff fixture is live");
         assertEquals(1, countLive(objectManager, LeafParticleObjectInstance.class),
                 "precondition: exactly one leaf particle fixture is live");
+        assertEquals(1, countLive(objectManager, SpikerDrillObjectInstance.class),
+                "precondition: exactly one Spiker drill fixture is live");
+        assertEquals(1, countLive(objectManager, WallTurretShotInstance.class),
+                "precondition: exactly one wall-turret shot fixture is live");
+        assertEquals(1, countLive(objectManager, VerticalLaserObjectInstance.class),
+                "precondition: exactly one vertical laser fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -118,6 +151,12 @@ class TestS2SelfContainedTransientRewind {
                 "diverge step must remove the steam puff");
         assertEquals(0, countLive(objectManager, LeafParticleObjectInstance.class),
                 "diverge step must remove the leaf particle");
+        assertEquals(0, countLive(objectManager, SpikerDrillObjectInstance.class),
+                "diverge step must remove the Spiker drill");
+        assertEquals(0, countLive(objectManager, WallTurretShotInstance.class),
+                "diverge step must remove the wall-turret shot");
+        assertEquals(0, countLive(objectManager, VerticalLaserObjectInstance.class),
+                "diverge step must remove the vertical laser");
 
         registry.restore(snapshot);
 
@@ -125,6 +164,9 @@ class TestS2SelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, ArrowProjectileInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, SteamPuffObjectInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, LeafParticleObjectInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, SpikerDrillObjectInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, WallTurretShotInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, VerticalLaserObjectInstance.class, capturedState);
     }
 
     private static void assertNoRegisteredS2DynamicCodec(Class<?> type) {
