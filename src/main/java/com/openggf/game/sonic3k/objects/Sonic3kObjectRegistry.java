@@ -45,7 +45,6 @@ import com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
-import com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikHeadChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance;
@@ -296,7 +295,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     boss -> new MhzEndBossVisualChild(boss, 0, 0, false)),
             bossChildCodec(MhzEndBossWeatherMachineChild.class, MhzEndBossInstance.class,
                     boss -> new MhzEndBossWeatherMachineChild(boss)),
-            mhzEndBossHitProxyCodec(),
+            // MhzEndBossHitProxyChild codec deleted: relinks to the restored
+            // live boss through RewindRecreatable genericRecreate.
             // MhzEndBossDefeatFragmentChild codec deleted (Phase-2 batch 42):
             // compact restore reapplies parent-derived subtype/xVel after generic recreate.
 
@@ -1371,39 +1371,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);
                 }
-            }
-        };
-    }
-
-    /**
-     * Codec for {@link MhzEndBossHitProxyChild}. The proxy's only non-spawn-derivable
-     * field is its final {@link MhzEndBossInstance} parent, which is relinked from the
-     * live boss in {@code getActiveObjects()} (the boss is recreated earlier in spawn
-     * order). The proxy's package-private constructor rebuilds its spawn and position
-     * from the live parent via {@code refreshFromParent()}, so the captured spawn is
-     * intentionally unused. If the boss is absent the proxy is dropped.
-     */
-    private static DynamicObjectRewindCodec mhzEndBossHitProxyCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == MhzEndBossHitProxyChild.class;
-            }
-
-            @Override
-            public String className() {
-                return MhzEndBossHitProxyChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                MhzEndBossInstance parent =
-                        findLiveBossForRewind(context, MhzEndBossInstance.class);
-                if (parent == null) {
-                    return null;
-                }
-                return MhzEndBossHitProxyChild.forRewindRecreate(parent);
             }
         };
     }

@@ -5,7 +5,10 @@ import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -21,7 +24,7 @@ import java.util.List;
  * boss state the same way {@code sub_76782} walks through {@code parent3}.
  */
 public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable {
     private static final int X_OFFSET = 0x21;
     private static final int Y_OFFSET = -0x10;
     private static final int ACTIVE_COLLISION_FLAGS = 0x25;
@@ -34,9 +37,8 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
     private int x;
     private int y;
 
-    /** Rewind-restore entry: relinks to the live parent boss (cross-package codec access). */
-    public static MhzEndBossHitProxyChild forRewindRecreate(MhzEndBossInstance parent) {
-        return new MhzEndBossHitProxyChild(parent);
+    private MhzEndBossHitProxyChild() {
+        this(placeholderParentForRewindProbe());
     }
 
     MhzEndBossHitProxyChild(MhzEndBossInstance parent) {
@@ -51,6 +53,37 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
                 "MHZEndBossHitProxy");
         this.parent = parent;
         refreshFromParent();
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        MhzEndBossInstance liveParent = findLiveParentForRewind(ctx);
+        return liveParent != null ? new MhzEndBossHitProxyChild(liveParent) : null;
+    }
+
+    private static MhzEndBossInstance findLiveParentForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (instance.getClass() == MhzEndBossInstance.class
+                    && instance instanceof MhzEndBossInstance boss
+                    && !boss.isDestroyed()) {
+                return boss;
+            }
+        }
+        return null;
+    }
+
+    private static MhzEndBossInstance placeholderParentForRewindProbe() {
+        return new MhzEndBossInstance(new ObjectSpawn(
+                -0xC0,
+                0,
+                Sonic3kObjectIds.MHZ_END_BOSS,
+                0,
+                0,
+                false,
+                0));
     }
 
     @Override
