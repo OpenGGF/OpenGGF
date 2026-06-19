@@ -7,11 +7,14 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -338,7 +341,7 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
      * <p>
      * ROM: routine 8 = waiting, routine 0xA = falling fragment.
      */
-    public static class FalseFloorBlock extends AbstractObjectInstance {
+    public static class FalseFloorBlock extends AbstractObjectInstance implements RewindRecreatable {
 
         private static final int BLOCK_HALF_WIDTH = 0x10;  // 16 pixels
         private static final int BLOCK_HALF_HEIGHT = 0x10; // 16 pixels
@@ -358,13 +361,17 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
         private static final int[] FRAGMENT_FRAMES = {1, 2, 3, 4};
 
         // Non-final so the generic rewind field capturer can reapply the captured
-        // values after the parent-relink codec recreates the block with placeholder
-        // (0, 0, 0) ctor args. See Sonic1ObjectRegistry.falseFloorBlockCodec().
+        // values after RewindRecreatable recreates the block with placeholder
+        // (0, 0, 0) ctor args.
         private int blockIndex;
         private int currentX;
         private int currentY;
         private boolean broken = false;
         private boolean goSignal = false;
+
+        FalseFloorBlock() {
+            this(0, 0, 0);
+        }
 
         public FalseFloorBlock(int x, int y, int blockIndex) {
             super(new ObjectSpawn(x, y, 0x83, 0, 0, false, 0), "FalseFloorBlock");
@@ -375,6 +382,27 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
 
         void signalBreak() {
             this.goSignal = true;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.objectServices() == null
+                    || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            Sonic1FalseFloorInstance master = null;
+            for (ObjectInstance inst : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (inst instanceof Sonic1FalseFloorInstance falseFloor) {
+                    master = falseFloor;
+                    break;
+                }
+            }
+            if (master == null) {
+                return null;
+            }
+            FalseFloorBlock block = new FalseFloorBlock(0, 0, 0);
+            master.reattachChildBlock(block);
+            return block;
         }
 
         @Override

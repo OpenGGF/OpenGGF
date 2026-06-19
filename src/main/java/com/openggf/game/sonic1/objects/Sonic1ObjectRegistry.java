@@ -77,7 +77,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             fzPlasmaLauncherCodec(),
             fzPlasmaBallCodec(),
             bossBlockCodec(),
-            falseFloorBlockCodec(),
+            // Sonic1FalseFloorInstance.FalseFloorBlock now relinks to the live
+            // master through RewindRecreatable genericRecreate.
             orbSpikeCodec(),
             // NOTE: scrapEggmanButtonCodec intentionally REMOVED.
             // ScrapEggmanButton is construction-spawned: Sonic1ScrapEggmanInstance
@@ -478,56 +479,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     }
                 }
                 return block;
-            }
-        };
-    }
-
-    private static final String FALSE_FLOOR_BLOCK_CLASS =
-            "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorBlock";
-
-    private static DynamicObjectRewindCodec falseFloorBlockCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(FALSE_FLOOR_BLOCK_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return FALSE_FLOOR_BLOCK_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // Relink the live restored master FalseFloor (persistent/layout-spawned,
-                // isPersistent()==true, so live in getActiveObjects() at restore time).
-                // currentX/currentY/blockIndex were un-finaled and passed as placeholders
-                // (0,0,0); the generic field capturer reapplies their captured values,
-                // and broken/goSignal are already non-final captured scalars.
-                Sonic1FalseFloorInstance master = null;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof Sonic1FalseFloorInstance ff) {
-                        master = ff;
-                        break;
-                    }
-                }
-                if (master == null) {
-                    return null;
-                }
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(int.class, int.class, int.class);
-                    ctor.setAccessible(true);
-                    ObjectInstance block = (ObjectInstance) ctor.newInstance(0, 0, 0);
-                    // Re-register into the master's childBlocks so the disintegration
-                    // sequence (childBlocks.get(currentFrame).signalBreak()) still resolves.
-                    master.reattachChildBlock((Sonic1FalseFloorInstance.FalseFloorBlock) block);
-                    return block;
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
             }
         };
     }

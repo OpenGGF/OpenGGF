@@ -2,34 +2,34 @@ package com.openggf.game.sonic1.objects;
 
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic1ObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-inner1 S1
+ * now exposes a dynamic rewind recreate path for every batch-inner1 S1
  * inner-class hazard/solid/cutscene child that was previously dropped on a
  * held-rewind restore (no codec matched their JVM binary name).
  *
  * <p>These are static nested children keyed by their JVM binary name
- * ({@code Outer$Inner}). Each codec relinks the live parent recreated earlier
- * in the restore loop, then either re-runs the child's constructor from the
- * captured spawn or reflection-constructs the private nested type; non-spawn
- * differentiator scalars were un-finaled so the generic field capturer reapplies
- * them after recreate:
+ * ({@code Outer$Inner}). Parent-owned children either keep an explicit codec or
+ * implement {@link RewindRecreatable} and use the generic recreate path; non-spawn
+ * differentiator scalars are then reapplied by the generic field capturer:
  * <ul>
- *   <li>{@code Sonic1FalseFloorInstance$FalseFloorBlock} — SBZ2 boss collapsing-floor
- *       tile. Parent-relink codec re-registers the block into the master's
- *       {@code childBlocks}; {@code currentX}/{@code currentY}/{@code blockIndex}
- *       were un-finaled.</li>
  *   <li>{@code Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance} — Orbinaut HURT
  *       satellite/projectile. Parent-relink codec (reflection ctor); all live state
  *       is non-final and reapplied after recreate.</li>
+ *   <li>{@code Sonic1FalseFloorInstance$FalseFloorBlock} — SBZ2 boss collapsing-floor
+ *       tile. Uses {@link RewindRecreatable} generic recreate to re-register with the
+ *       restored master; {@code currentX}/{@code currentY}/{@code blockIndex} are
+ *       restored afterward.</li>
  * </ul>
  *
  * <p><b>Intentionally absent:</b> {@code ScrapEggmanButton} is construction-spawned
@@ -63,13 +63,11 @@ class TestRewindFixS1InnerBatch1Codecs {
     }
 
     @Test
-    void registersCodecsForBatchInner1S1Children() {
+    void registersCodecsForBatchInner1S1ChildrenThatStillNeedExplicitCodecs() {
         Set<String> names = codecClassNames();
 
         // ScrapEggmanButton intentionally absent: construction-spawned.
         List<String> required = List.of(
-                "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance"
-                        + "$FalseFloorBlock",
                 "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance"
                         + "$OrbSpikeObjectInstance");
 
@@ -77,5 +75,20 @@ class TestRewindFixS1InnerBatch1Codecs {
             assertTrue(names.contains(name),
                     "missing rewind recreate codec for " + name);
         }
+    }
+
+    @Test
+    void falseFloorBlockUsesRewindRecreatableInsteadOfExplicitCodec() {
+        String falseFloorBlock =
+                "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance"
+                        + "$FalseFloorBlock";
+
+        assertFalse(codecClassNames().contains(falseFloorBlock),
+                "FalseFloorBlock should restore via RewindRecreatable genericRecreate, "
+                        + "not a Sonic1ObjectRegistry explicit codec");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(
+                        com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance
+                                .FalseFloorBlock.class),
+                "FalseFloorBlock must opt into the generic RewindRecreatable path");
     }
 }
