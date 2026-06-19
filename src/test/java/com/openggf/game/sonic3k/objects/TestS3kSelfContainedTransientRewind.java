@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rewind.CompositeSnapshot;
@@ -87,6 +88,7 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(S3kSignpostInstance.class);
         assertNoRegisteredS3kDynamicCodec(HczEndBossGeyserCutscene.class);
         assertNoRegisteredS3kDynamicCodec(Mgz2CapsuleAnimalInstance.class);
+        assertNoRegisteredS3kDynamicCodec(Mgz2ResultsScreenObjectInstance.class);
         assertNoRegisteredS3kDynamicCodec(AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class);
         assertNoRegisteredS3kDynamicCodec(classForName(MGZ_HEAD_TRIGGER_STONE_CHIP_CLASS));
         assertNoRegisteredS3kDynamicCodec(classForName(MGZ_CEILING_SPIRE_CLASS));
@@ -386,6 +388,8 @@ class TestS3kSelfContainedTransientRewind {
                 () -> new Mgz2CapsuleAnimalInstance(
                         new ObjectSpawn(baseX + 0x1E0, baseY + 0xA8, 0, 0, 0, false, 0),
                         6, 1, 0x18));
+        Mgz2ResultsScreenObjectInstance mgz2Results = objectManager.createDynamicObject(
+                () -> new Mgz2ResultsScreenObjectInstance(PlayerCharacter.KNUCKLES, 1));
         AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance aizTreeRevealControl =
                 objectManager.createDynamicObject(
                         () -> new AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance(
@@ -450,6 +454,7 @@ class TestS3kSelfContainedTransientRewind {
                 signpost,
                 hczGeyserCutscene,
                 mgz2CapsuleAnimal,
+                mgz2Results,
                 aizTreeRevealControl,
                 mgzHeadTriggerStoneChip,
                 mgzCeilingSpire,
@@ -464,7 +469,8 @@ class TestS3kSelfContainedTransientRewind {
                         && instance != signpostFlow
                         && instance != signpost
                         && instance != hczGeyserCutscene
-                        && instance != mgz2CapsuleAnimal) {
+                        && instance != mgz2CapsuleAnimal
+                        && instance != mgz2Results) {
                     instance.update(frame, fixture.sprite());
                 }
                 assertFalse(instance.isDestroyed(),
@@ -524,6 +530,8 @@ class TestS3kSelfContainedTransientRewind {
                 "precondition: exactly one HCZ geyser cutscene fixture is live");
         assertEquals(1, countLive(objectManager, Mgz2CapsuleAnimalInstance.class),
                 "precondition: exactly one MGZ2 capsule animal fixture is live");
+        assertEquals(1, countLive(objectManager, Mgz2ResultsScreenObjectInstance.class),
+                "precondition: exactly one MGZ2 results screen fixture is live");
         assertEquals(1, countLive(
                         objectManager, AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class),
                 "precondition: exactly one AIZ tree-reveal control fixture is live");
@@ -601,6 +609,8 @@ class TestS3kSelfContainedTransientRewind {
                 "diverge step must remove the HCZ geyser cutscene");
         assertEquals(0, countLive(objectManager, Mgz2CapsuleAnimalInstance.class),
                 "diverge step must remove the MGZ2 capsule animal");
+        assertEquals(0, countLive(objectManager, Mgz2ResultsScreenObjectInstance.class),
+                "diverge step must remove the MGZ2 results screen");
         assertEquals(0, countLive(
                         objectManager, AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class),
                 "diverge step must remove the AIZ tree-reveal control");
@@ -643,6 +653,7 @@ class TestS3kSelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, S3kSignpostInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, HczEndBossGeyserCutscene.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, Mgz2CapsuleAnimalInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, Mgz2ResultsScreenObjectInstance.class, capturedState);
         assertSimpleStateRoundTrip(
                 objectManager, AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, classForName(MGZ_HEAD_TRIGGER_STONE_CHIP_CLASS), capturedState);

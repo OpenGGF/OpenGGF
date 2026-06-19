@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic3k.events.Sonic3kMGZEvents;
 import com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance;
@@ -347,9 +346,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // captured scalar state is restored after generic recreate.
             // S3kResultsScreenObjectInstance codec deleted (Phase-2 batch 44):
             // character/act/player-ref state is restored after generic recreate.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Mgz2ResultsScreenObjectInstance.class,
-                    s -> new Mgz2ResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0)),
+            // Mgz2ResultsScreenObjectInstance codec deleted (Phase-2 MGZ2 results):
+            // subclass identity and scalar state are restored after generic recreate.
             mgz2CollapseSolidCodec(),
             // MgzDrillingRobotnikInstance codec deleted (Phase-2 batch 6):
             // now implements RewindRecreatable -> genericRecreate Path 1.

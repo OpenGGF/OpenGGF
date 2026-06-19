@@ -156,12 +156,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       MhzEndBossRobotnikShipFlameInstance codec and extending the harness
  *       parent-seed retry path to cover capture-time required object refs and
  *       single-argument parent constructors.</li>
+ *   <li>2026-06-19: raised to 118 after deleting the S3K
+ *       Mgz2ResultsScreenObjectInstance codec; generic recreate now preserves
+ *       the concrete MGZ2 results subclass.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 117;
+    static final int RATCHET_FLOOR = 118;
 
     @BeforeEach
     void initHeadless() {

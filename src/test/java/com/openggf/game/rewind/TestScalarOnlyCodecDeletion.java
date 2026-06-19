@@ -22,6 +22,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance;
+import com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
@@ -444,7 +445,8 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S3K));
 
     private static final List<CodecDeletionCandidate> BATCH44_DELETED_CODECS = List.of(
-            new CodecDeletionCandidate(S3kResultsScreenObjectInstance.class.getName(), GameId.S3K));
+            new CodecDeletionCandidate(S3kResultsScreenObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(Mgz2ResultsScreenObjectInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> BATCH45_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(MhzEndBossRobotnikShipFlameInstance.class.getName(), GameId.S3K));
