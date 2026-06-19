@@ -92,8 +92,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectRegistry.class.getName());
     private static final String BUZZER_FLAME_CHILD_CLASS =
             "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild";
-    private static final String DEZ_BARRIER_WALL_CLASS =
-            "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall";
     // Batch-inner2 inner-class hazard/solid child binary names.
     private static final String DEZ_ROBOT_ARTICULATED_CHILD_CLASS =
             "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild";
@@ -180,10 +178,9 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // LeafParticleObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // ResultsScreenObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // BossExplosionObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // DEZ Eggman barrier wall keeps an explicit relink codec for its
-            // structural parent back-reference. MTZ boss laser now implements
-            // RewindRecreatable -> genericRecreate Path 1.
-            dezBarrierWallCodec(),
+            // DEZ Eggman BarrierWall codec deleted: RewindRecreatable generic
+            // recreate relinks the parent barrierWall back-reference.
+            // MTZ boss laser now implements RewindRecreatable -> genericRecreate Path 1.
             // Batch-inner2 S2 rewind codecs (DEZ Death Egg Robot bomb child +
             // WFZ floating-platform/laser-wall/platform-hurt children).
             //
@@ -403,49 +400,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return null;
-    }
-
-    // ---- Batch-inner1 inner-class hazard/solid child relink codecs ----
-
-    private static DynamicObjectRewindCodec dezBarrierWallCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(DEZ_BARRIER_WALL_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return DEZ_BARRIER_WALL_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    // Find the live (restored) parent Eggman so its barrierWall back-reference
-                    // can be relinked; spawn-order restore guarantees the parent is already live.
-                    Sonic2DEZEggmanInstance parent = findLiveInstance(
-                            context, Sonic2DEZEggmanInstance.class);
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(int.class, int.class);
-                    ctor.setAccessible(true);
-                    ObjectInstance child = (ObjectInstance) ctor.newInstance(
-                            entry.spawn().x(), entry.spawn().y());
-                    if (parent != null) {
-                        // Relink the parent's back-reference so signalEggmanRunning() targets
-                        // the restored child (mirrors buzzerFlameCodec parent relink).
-                        var f = Sonic2DEZEggmanInstance.class.getDeclaredField("barrierWall");
-                        f.setAccessible(true);
-                        f.set(parent, child);
-                    }
-                    return child;
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
     }
 
     // ---- Batch-inner2 inner-class hazard/solid child relink codecs ----

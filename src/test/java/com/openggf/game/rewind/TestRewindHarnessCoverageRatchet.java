@@ -159,12 +159,15 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-19: raised to 118 after deleting the S3K
  *       Mgz2ResultsScreenObjectInstance codec; generic recreate now preserves
  *       the concrete MGZ2 results subclass.</li>
+ *   <li>2026-06-19: raised to 119 after deleting the S2 DEZ
+ *       BarrierWall codec; generic recreate now relinks Eggman's structural
+ *       barrierWall back-reference.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 118;
+    static final int RATCHET_FLOOR = 119;
 
     @BeforeEach
     void initHeadless() {

@@ -9,13 +9,11 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic2ObjectRegistry} (unioned with the shared codecs)
- * exposes the remaining structural parent-relink codec and no longer exposes
- * explicit dynamic rewind recreate codecs for batch-inner1 S2 children that now
- * restore through generic recreate.
+ * no longer exposes explicit dynamic rewind recreate codecs for batch-inner1 S2
+ * children that now restore through generic recreate.
  *
  * <p>These are static nested children keyed by their JVM binary name
  * ({@code Outer$Inner}):
@@ -25,9 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *       Restores through generic recreate; {@code xFlipped = (renderFlags & 0x01) != 0}
  *       is fully spawn-derivable, so no parent relink is required.</li>
  *   <li>{@code Sonic2DEZEggmanInstance$BarrierWall} — the DEZ Eggman solid barrier wall
- *       ({@code SolidObjectProvider}). Keeps its explicit relink codec because
- *       Eggman's structural {@code barrierWall} back-reference is not captured by
- *       the compact field blob.</li>
+ *       ({@code SolidObjectProvider}). Restores through generic recreate; Eggman's
+ *       structural {@code barrierWall} back-reference is relinked by the
+ *       {@code RewindRecreatable} hook.</li>
  *   <li>{@code Sonic2MTZBossInstance$MTZBossLaser} — the MTZ boss fired laser
  *       ({@code TouchResponseProvider} HURT hazard). Now restored through generic
  *       recreate; {@code xVel} (firing direction, not spawn-derivable) is reapplied
@@ -62,10 +60,10 @@ class TestRewindFixS2InnerBatch1Codecs {
                                 + "$SmallMetalPformChildInstance"),
                 "SmallMetalPform child must restore through RewindRecreatable generic recreate, "
                         + "not a batch-inner1 codec");
-        assertTrue(names.contains(
+        assertFalse(names.contains(
                         "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall"),
-                "DEZ barrier wall must keep its explicit parent-relink codec until "
-                        + "structural parent references move to a verified generic path");
+                "DEZ barrier wall must restore through RewindRecreatable generic recreate, "
+                        + "not a batch-inner1 codec");
         assertFalse(names.contains(
                         "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossLaser"),
                 "MTZ boss laser must restore through RewindRecreatable generic recreate, "
