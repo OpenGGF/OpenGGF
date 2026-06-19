@@ -1194,32 +1194,61 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         }
                         shield = false;
                         shieldType = null;
-                        return;
-                }
-
-                PowerUpObject liveShield = resolveLiveShieldObjectAfterRewindRestore();
-                if (liveShield != null) {
-                        shieldObject = liveShield;
-                        if (invincibleFrames > 0) {
-                                shieldObject.setVisible(false);
-                        }
-                        shieldObject.refreshArtAfterRewindRestore();
-                        return;
-                }
-
-                if (shieldObject != null && !shieldObject.isDestroyed()) {
-                        shieldObject.destroy();
-                }
-                shieldObject = null;
-                if (powerUpSpawner != null) {
-                        shieldObject = powerUpSpawner.spawnShield(this, shieldType);
-                        if (shieldObject != null && invincibleFrames > 0) {
-                                shieldObject.setVisible(false);
-                        }
-                        if (shieldObject != null) {
+                } else {
+                        PowerUpObject liveShield = resolveLiveShieldObjectAfterRewindRestore();
+                        if (liveShield != null) {
+                                shieldObject = liveShield;
+                                if (invincibleFrames > 0) {
+                                        shieldObject.setVisible(false);
+                                }
                                 shieldObject.refreshArtAfterRewindRestore();
+                        } else {
+                                if (shieldObject != null && !shieldObject.isDestroyed()) {
+                                        shieldObject.destroy();
+                                }
+                                shieldObject = null;
+                                if (powerUpSpawner != null) {
+                                        shieldObject = powerUpSpawner.spawnShield(this, shieldType);
+                                        if (shieldObject != null && invincibleFrames > 0) {
+                                                shieldObject.setVisible(false);
+                                        }
+                                        if (shieldObject != null) {
+                                                shieldObject.refreshArtAfterRewindRestore();
+                                        }
+                                }
                         }
                 }
+
+                refreshPersistentInstaShieldAfterRewindRestore();
+        }
+
+        private void refreshPersistentInstaShieldAfterRewindRestore() {
+                if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null) {
+                        return;
+                }
+                if (instaShieldObject == null || instaShieldObject.isDestroyed()) {
+                        instaShieldObject = powerUpSpawner.createInstaShield(this);
+                }
+                if (instaShieldObject == null) {
+                        return;
+                }
+
+                ObjectManager objectManager = currentObjectManagerIfAvailable();
+                if (objectManager != null && isObjectManagerLivePowerUp(objectManager, instaShieldObject)) {
+                        instaShieldRegistered = true;
+                        instaShieldObject.invalidateDplcCache();
+                        return;
+                }
+
+                powerUpSpawner.registerObject(instaShieldObject);
+                instaShieldRegistered = true;
+                instaShieldObject.invalidateDplcCache();
+        }
+
+        private boolean hasPersistentInstaShieldAbility() {
+                return physicsFeatureSet != null
+                                && physicsFeatureSet.instaShieldEnabled()
+                                && getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD;
         }
 
         private PowerUpObject resolveLiveShieldObjectAfterRewindRestore() {

@@ -97,6 +97,7 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(FireShieldObjectInstance.class);
         assertNoRegisteredS3kDynamicCodec(LightningShieldObjectInstance.class);
         assertNoRegisteredS3kDynamicCodec(BubbleShieldObjectInstance.class);
+        assertNoRegisteredS3kDynamicCodec(InstaShieldObjectInstance.class);
     }
 
     @Test
@@ -115,6 +116,81 @@ class TestS3kSelfContainedTransientRewind {
     void playerBoundBubbleShieldRestoresThroughSessionSnapshot() throws Exception {
         assertElementalShieldRestoresThroughSessionSnapshot(
                 ShieldType.BUBBLE, BubbleShieldObjectInstance.class, false);
+    }
+
+    @Test
+    void persistentInstaShieldRestoresThroughSessionSnapshot() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_AIZ, ACT_2)
+                .build();
+
+        RewindRegistry registry = fixture.gameplayMode().getRewindRegistry();
+        assertNotNull(registry, "RewindRegistry must be available after S3K boot");
+
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        assertNotNull(objectManager, "ObjectManager must be available for S3K");
+
+        AbstractPlayableSprite player = fixture.sprite();
+        assertNotNull(player.getPowerUpSpawner(),
+                "S3K player must have a production power-up spawner");
+        player.tickStatus();
+
+        InstaShieldObjectInstance capturedShield = assertInstanceOf(
+                InstaShieldObjectInstance.class,
+                player.getInstaShieldObject(),
+                "precondition: S3K Sonic should own a persistent insta-shield object");
+        assertEquals(1, countLive(objectManager, InstaShieldObjectInstance.class),
+                "precondition: exactly one persistent insta-shield object is live before capture");
+
+        capturedShield.triggerAttack();
+        for (int frame = 0; frame < 3; frame++) {
+            capturedShield.update(frame, player);
+        }
+
+        int capturedSlot = capturedShield.getSlotIndex();
+        int capturedAnim = intField(capturedShield, "currentAnimId");
+        int capturedFrame = intField(capturedShield, "frameIndex");
+        int capturedDelay = intField(capturedShield, "delayCounter");
+        int capturedMapping = intField(capturedShield, "currentMappingFrame");
+
+        CompositeSnapshot snapshot = registry.capture();
+        assertNotNull(snapshot, "capture() must return a snapshot");
+
+        objectManager.removeDynamicObject(capturedShield);
+        InstaShieldObjectInstance replacement = assertInstanceOf(
+                InstaShieldObjectInstance.class,
+                player.getPowerUpSpawner().createInstaShield(player),
+                "diverge step should create a replacement through the production spawner");
+        player.setInstaShieldObject(replacement);
+        setIntField(replacement, "currentAnimId", 0);
+        setIntField(replacement, "frameIndex", 99);
+        setIntField(replacement, "delayCounter", 98);
+        setIntField(replacement, "currentMappingFrame", 97);
+        assertEquals(0, countLive(objectManager, InstaShieldObjectInstance.class),
+                "diverge step must remove the captured insta-shield from ObjectManager");
+
+        registry.restore(snapshot);
+
+        List<InstaShieldObjectInstance> restored = liveObjects(
+                objectManager, InstaShieldObjectInstance.class);
+        assertEquals(1, restored.size(),
+                "post-restore player refresh must register exactly one persistent insta-shield");
+        InstaShieldObjectInstance restoredShield = restored.get(0);
+        assertSame(restoredShield, player.getInstaShieldObject(),
+                "restored player insta-shield link must point at the live ObjectManager object");
+        assertEquals(capturedSlot, restoredShield.getSlotIndex(),
+                "restored insta-shield must consume the captured dynamic slot");
+        assertEquals(capturedAnim, intField(restoredShield, "currentAnimId"),
+                "restored insta-shield must keep captured animation id");
+        assertEquals(capturedFrame, intField(restoredShield, "frameIndex"),
+                "restored insta-shield must keep captured animation frame index");
+        assertEquals(capturedDelay, intField(restoredShield, "delayCounter"),
+                "restored insta-shield must keep captured animation delay counter");
+        assertEquals(capturedMapping, intField(restoredShield, "currentMappingFrame"),
+                "restored insta-shield must keep captured mapping frame");
+        assertFalse(restoredShield.isDestroyed(), "restored insta-shield must remain live");
+        assertSame(player, shieldPlayer(restoredShield),
+                "restored insta-shield must remain bound to the same live player");
     }
 
     private static <T extends ShieldObjectInstance> void assertElementalShieldRestoresThroughSessionSnapshot(
@@ -663,5 +739,17 @@ class TestS3kSelfContainedTransientRewind {
         Field field = instance.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(instance);
+    }
+
+    private static void setIntField(Object instance, String fieldName, int value) throws Exception {
+        Field field = instance.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(instance, value);
+    }
+
+    private static Object shieldPlayer(ShieldObjectInstance shield) throws Exception {
+        var method = ShieldObjectInstance.class.getDeclaredMethod("getPlayer");
+        method.setAccessible(true);
+        return method.invoke(shield);
     }
 }

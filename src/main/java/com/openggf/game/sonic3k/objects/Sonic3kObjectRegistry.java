@@ -332,11 +332,10 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // CNZ2 Knuckles cutscene blocking wall: relink to the placed parent.
             cutsceneKnuxCnz2WallCodec(),
 
-            // S3K InstaShield (player-bound; rebinds the live player like its
-            // fire/lightning/bubble shield siblings).
-            ObjectRewindDynamicCodecs.deferredPlayerBoundCodec(
-                    InstaShieldObjectInstance.class,
-                    com.openggf.level.objects.ShieldObjectInstance.class),
+            // S3K InstaShield codec deleted (Phase-2 player-bound batch):
+            // it inherits ShieldObjectInstance's RewindRecreatable pending-entry
+            // hook, and the persistent insta-shield post-restore refresh re-registers
+            // the player-bound handle with the captured slot/state.
 
             // LightningShield spark particle codec deleted (Phase-2 batch 12):
             // self-contained; re-fetches art via RewindRecreatable.
