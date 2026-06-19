@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -22,7 +24,7 @@ import static com.openggf.physics.TrigLookupTable.sinHex;
  *
  * <p>ROM reference: {@code sub_4C014} / {@code loc_4BF62}, lines 99308-99557.
  */
-public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance {
+public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int CAPTURE_RADIUS = 0x18;
     private static final int MAX_ACTIVE_REWARDS = 0x10;
@@ -52,6 +54,17 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
     public S3kSlotBonusCageObjectInstance(ObjectSpawn spawn, S3kSlotStageController controller) {
         super(spawn, "S3kSlotBonusCage");
         this.controller = controller;
+    }
+
+    private S3kSlotBonusCageObjectInstance(ObjectSpawn spawn) {
+        this(spawn, null);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        S3kSlotStageController controller =
+                S3kSlotRewindSupport.resolveSlotStageController(ctx.objectServices());
+        return controller != null ? new S3kSlotBonusCageObjectInstance(ctx.spawn(), controller) : null;
     }
 
     @Override

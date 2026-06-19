@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -19,7 +21,7 @@ import java.util.List;
  * center each frame (1/16th of remaining distance), and when its timer expires it drains one
  * bonus-stage ring if any remain, then deletes itself.
  */
-public final class S3kSlotSpikeRewardObjectInstance extends AbstractObjectInstance {
+public final class S3kSlotSpikeRewardObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int EXPIRY_FRAMES = 0x1E;
     private final S3kSlotStageController controller;
@@ -37,6 +39,17 @@ public final class S3kSlotSpikeRewardObjectInstance extends AbstractObjectInstan
     public S3kSlotSpikeRewardObjectInstance(ObjectSpawn spawn, S3kSlotStageController controller) {
         super(spawn, "S3kSlotSpikeReward");
         this.controller = controller;
+    }
+
+    private S3kSlotSpikeRewardObjectInstance(ObjectSpawn spawn) {
+        this(spawn, null);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        S3kSlotStageController controller =
+                S3kSlotRewindSupport.resolveSlotStageController(ctx.objectServices());
+        return controller != null ? new S3kSlotSpikeRewardObjectInstance(ctx.spawn(), controller) : null;
     }
 
     /** Activates without position tracking (backward-compatible; position stays at spawn). */
