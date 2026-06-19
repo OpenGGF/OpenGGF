@@ -104,12 +104,14 @@ public class TestRewindHarnessCoverageRatchet {
  *       S2 self-contained projectile/effect dynamic codecs.</li>
  *   <li>2026-06-19: raised to 86 after deleting three S2 scalar-only
  *       child projectile/hazard dynamic codecs.</li>
+ *   <li>2026-06-19: raised to 88 after deleting two S2 scalar-only
+ *       boss hazard dynamic codecs.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 86;
+    static final int RATCHET_FLOOR = 88;
 
     @BeforeEach
     void initHeadless() {

@@ -9,8 +9,6 @@ import com.openggf.game.sonic2.objects.bosses.CPZBossPipe;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPipePump;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPump;
 import com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik;
-import com.openggf.game.sonic2.objects.bosses.LavaBubbleObjectInstance;
-import com.openggf.game.sonic2.objects.bosses.MCZFallingDebrisInstance;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import org.junit.jupiter.api.Test;
@@ -27,11 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * was previously dropped on a held-rewind restore.
  *
  * <p>The CPZ boss-component chain (container/floor/falling-part/flame/gunk/pipe/
- * pump/robotnik), the ARZ rising bubble, the OOZ burner flame, and the lava/MCZ
- * falling hazards each gained a recreate codec (parent-relink, sibling-relink, or
- * exact-spawn). {@link com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff} is
- * intentionally accept-drop (cosmetic + dead code) and is therefore NOT required
- * here.
+ * pump/robotnik), the ARZ rising bubble, and the OOZ burner flame retain recreate
+ * codecs (parent-relink, sibling-relink, or exact-spawn). {@link
+ * com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff} is intentionally
+ * accept-drop (cosmetic + dead code) and the scalar-only lava/MCZ falling hazards
+ * now use generic recreate, so they are therefore NOT required here.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
  * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
@@ -65,8 +63,6 @@ class TestRewindFixS2Batch4Codecs {
                 CPZBossPipePump.class.getName(),
                 CPZBossPump.class.getName(),
                 CPZBossRobotnik.class.getName(),
-                LavaBubbleObjectInstance.class.getName(),
-                MCZFallingDebrisInstance.class.getName(),
                 BubbleObjectInstance.class.getName(),
                 OOZBurnerFlameObjectInstance.class.getName());
 

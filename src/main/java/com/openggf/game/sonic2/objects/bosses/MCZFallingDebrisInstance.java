@@ -5,6 +5,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -20,7 +22,8 @@ import java.util.List;
  *
  * Uses ObjectMoveAndFall for gravity. Deleted when Y >= 0x6F0.
  */
-public class MCZFallingDebrisInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public class MCZFallingDebrisInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, RewindRecreatable {
 
     // ROM: ObjectMoveAndFall adds $38 to y_vel, then subi.w #$28,y_vel(a0)
     // sub2_y_pos at SST offset $12 aliases y_vel. Net gravity = $38 - $28 = $10
@@ -48,6 +51,15 @@ public class MCZFallingDebrisInstance extends AbstractObjectInstance implements 
         this.yFixed = y << 16;
         this.yVel = 0;
         updateDynamicSpawn(posX, posY);
+    }
+
+    MCZFallingDebrisInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), false);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MCZFallingDebrisInstance(ctx.spawn().x(), ctx.spawn().y(), false);
     }
 
     @Override

@@ -169,7 +169,9 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             htzFlamethrowerCodec(),
             htzBossLavaBallCodec(),
             cnzBossElectricBallCodec(),
-            // Batch-4 S2 rewind codecs (CPZ boss component chain + ARZ bubble + OOZ flame + lava/MCZ hazards).
+            // Batch-4 S2 rewind codecs (CPZ boss component chain + ARZ bubble + OOZ flame).
+            // LavaBubbleObjectInstance and MCZFallingDebrisInstance now implement
+            // RewindRecreatable -> genericRecreate Path 1.
             cpzBossContainerCodec(),
             cpzContainerFloorCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
@@ -181,12 +183,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             cpzBossPipePumpCodec(),
             cpzBossPumpCodec(),
             cpzBossRobotnikCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    LavaBubbleObjectInstance.class,
-                    s -> new LavaBubbleObjectInstance(s.x(), s.y())),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    MCZFallingDebrisInstance.class,
-                    spawn -> new MCZFallingDebrisInstance(spawn.x(), spawn.y(), false)),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     BubbleObjectInstance.class,
                     spawn -> new BubbleObjectInstance(spawn.x(), spawn.y(), 0, 0)),

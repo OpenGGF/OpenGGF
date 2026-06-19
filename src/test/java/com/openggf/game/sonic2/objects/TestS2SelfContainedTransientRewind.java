@@ -3,6 +3,8 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.sonic2.objects.bosses.LavaBubbleObjectInstance;
+import com.openggf.game.sonic2.objects.bosses.MCZFallingDebrisInstance;
 import com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -49,6 +51,8 @@ class TestS2SelfContainedTransientRewind {
         assertNoRegisteredS2DynamicCodec(SpikerDrillObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(WallTurretShotInstance.class);
         assertNoRegisteredS2DynamicCodec(VerticalLaserObjectInstance.class);
+        assertNoRegisteredS2DynamicCodec(LavaBubbleObjectInstance.class);
+        assertNoRegisteredS2DynamicCodec(MCZFallingDebrisInstance.class);
     }
 
     @Test
@@ -94,6 +98,10 @@ class TestS2SelfContainedTransientRewind {
                 () -> new VerticalLaserObjectInstance(
                         new ObjectSpawn(baseX + 0xE0, baseY, 0xB6, 0x72, 0, false, 0),
                         baseX + 0xE0, baseY));
+        LavaBubbleObjectInstance lavaBubble = objectManager.createDynamicObject(
+                () -> new LavaBubbleObjectInstance(baseX + 0x110, baseY + 0x08));
+        MCZFallingDebrisInstance mczFallingDebris = objectManager.createDynamicObject(
+                () -> new MCZFallingDebrisInstance(baseX + 0x130, baseY - 0x40, true));
 
         List<AbstractObjectInstance> tracked = List.of(
                 htzFireProjectile,
@@ -102,7 +110,9 @@ class TestS2SelfContainedTransientRewind {
                 leafParticle,
                 spikerDrill,
                 wallTurretShot,
-                verticalLaser);
+                verticalLaser,
+                lavaBubble,
+                mczFallingDebris);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
@@ -131,6 +141,10 @@ class TestS2SelfContainedTransientRewind {
                 "precondition: exactly one wall-turret shot fixture is live");
         assertEquals(1, countLive(objectManager, VerticalLaserObjectInstance.class),
                 "precondition: exactly one vertical laser fixture is live");
+        assertEquals(1, countLive(objectManager, LavaBubbleObjectInstance.class),
+                "precondition: exactly one lava bubble fixture is live");
+        assertEquals(1, countLive(objectManager, MCZFallingDebrisInstance.class),
+                "precondition: exactly one MCZ falling debris fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -157,6 +171,10 @@ class TestS2SelfContainedTransientRewind {
                 "diverge step must remove the wall-turret shot");
         assertEquals(0, countLive(objectManager, VerticalLaserObjectInstance.class),
                 "diverge step must remove the vertical laser");
+        assertEquals(0, countLive(objectManager, LavaBubbleObjectInstance.class),
+                "diverge step must remove the lava bubble");
+        assertEquals(0, countLive(objectManager, MCZFallingDebrisInstance.class),
+                "diverge step must remove the MCZ falling debris");
 
         registry.restore(snapshot);
 
@@ -167,6 +185,8 @@ class TestS2SelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, SpikerDrillObjectInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, WallTurretShotInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, VerticalLaserObjectInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, LavaBubbleObjectInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, MCZFallingDebrisInstance.class, capturedState);
     }
 
     private static void assertNoRegisteredS2DynamicCodec(Class<?> type) {
