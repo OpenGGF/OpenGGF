@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -40,6 +41,17 @@ class TestRewindFixS3KBatch2Codecs {
         return names;
     }
 
+    private static boolean hasDynamicRecreatePath(String className, Set<String> codecNames) {
+        if (codecNames.contains(className)) {
+            return true;
+        }
+        try {
+            return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
+        }
+    }
+
     @Test
     void registersCodecsForReleaseSliceBatch2Objects() {
         Set<String> names = codecClassNames();
@@ -59,8 +71,8 @@ class TestRewindFixS3KBatch2Codecs {
                 BuggernautBabyInstance.class.getName());
 
         for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+            assertTrue(hasDynamicRecreatePath(name, names),
+                    "missing rewind recreate path for " + name);
         }
     }
 }

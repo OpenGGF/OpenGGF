@@ -2,8 +2,11 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -16,7 +19,7 @@ import java.util.List;
  * The pieces use {@code byte_6E022} offsets, {@code CNZMinibossDebris_Frames},
  * {@code Set_IndexedVelocity(d0=0)}, then {@code Obj_FlickerMove}.
  */
-public final class CnzMinibossDebrisChild extends GravityDebrisChild {
+public final class CnzMinibossDebrisChild extends GravityDebrisChild implements RewindRecreatable {
     private static final int[][] OFFSETS = {
             {-0x10, 0x00},
             {0x10, 0x00},
@@ -58,6 +61,12 @@ public final class CnzMinibossDebrisChild extends GravityDebrisChild {
                 VELOCITIES[index][1],
                 0x38);
         this.mappingFrame = FRAMES[index];
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn();
+        return new CnzMinibossDebrisChild(spawn.x(), spawn.y(), (spawn.subtype() & 0xFF) / 2);
     }
 
     @Override

@@ -1,8 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -22,7 +25,7 @@ import java.util.List;
  * ROM also sets high_priority on fragment art tiles (ori.w #high_priority),
  * so fragments render in front of high-priority FG tiles.
  */
-public class AizRockFragmentChild extends GravityDebrisChild {
+public class AizRockFragmentChild extends GravityDebrisChild implements RewindRecreatable {
 
     /**
      * Fragment-specific gravity: 0x18 subpixels/frame.
@@ -49,10 +52,19 @@ public class AizRockFragmentChild extends GravityDebrisChild {
     private int mappingFrame;
     private int pieceIndex;
 
+    AizRockFragmentChild() {
+        this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), 0, 0, 0, 0);
+    }
+
     public AizRockFragmentChild(ObjectSpawn spawn, int xVel, int yVel, int mappingFrame, int pieceIndex) {
         super(spawn, "RockFragment", xVel, yVel, GRAVITY);
         this.mappingFrame = mappingFrame;
         this.pieceIndex = pieceIndex;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizRockFragmentChild(ctx.spawn(), 0, 0, 0, 0);
     }
 
     @Override

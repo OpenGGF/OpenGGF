@@ -16,6 +16,8 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.sprites.art.SpriteArtSet;
 
 import java.util.List;
@@ -30,7 +32,7 @@ import java.util.List;
  * than through PlayerSpriteRenderer/DPLC, matching the ROM where spark art is
  * DMA-loaded once at init (not managed by PLCLoad_Shields).
  */
-public class LightningSparkObjectInstance extends AbstractObjectInstance {
+public class LightningSparkObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     /** Gravity per frame in subpixels (sonic3k.asm:34849: addi.w #$18,y_vel(a0)) */
     private static final int GRAVITY = 0x18;
@@ -65,9 +67,13 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance {
 
     private final SubpixelMotion.State motionState = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
 
+    LightningSparkObjectInstance() {
+        this(0, 0, 0, 0, null, null);
+    }
+
     public LightningSparkObjectInstance(int x, int y, int xVel, int yVel,
             SpriteAnimationSet animSet, Pattern[] sparkTiles) {
-        super(null, "LightningSpark");
+        super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "LightningSpark");
         this.currentX = x;
         this.currentY = y;
         this.xSub = 0;
@@ -105,6 +111,11 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance {
             }
         }
         return new LightningSparkObjectInstance(spawn.x(), spawn.y(), 0, 0, animSet, sparkTiles);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return forRewindRecreate(ctx.spawn(), ctx.objectServices());
     }
 
     @Override

@@ -210,23 +210,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // capturer); parent/sibling-linked objects use relink codecs.
 
             // Self-contained cosmetic / gameplay debris and effects.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizRockFragmentChild.class,
-                    s -> new AizRockFragmentChild(s, 0, 0, 0, 0)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    CnzMinibossDebrisChild.class,
-                    spawn -> new CnzMinibossDebrisChild(spawn.x(), spawn.y(), (spawn.subtype() & 0xFF) / 2)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    S3kBossExplosionChild.class,
-                    spawn -> new S3kBossExplosionChild(spawn.x(), spawn.y())),
+            // AizRockFragmentChild / CnzMinibossDebrisChild / S3kBossExplosionChild
+            // codecs deleted (Phase-2 batch 12): all three now implement
+            // RewindRecreatable -> genericRecreate Path 1.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     S3kSignpostSparkleChild.class,
                     s -> new S3kSignpostSparkleChild(s.x(), s.y())),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    MhzPollenParticleInstance.class,
-                    s -> new MhzPollenParticleInstance(
-                            s.x(), s.y(), 0, 0, 0, 0,
-                            MhzPollenParticleInstance.ArtMode.POLLEN)),
+            // MhzPollenParticleInstance codec deleted (Phase-2 batch 12):
+            // now implements RewindRecreatable -> genericRecreate Path 1.
 
             // Self-contained gameplay-critical ICZ post-boss egg capsule.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
@@ -370,10 +361,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     InstaShieldObjectInstance.class,
                     com.openggf.level.objects.ShieldObjectInstance.class),
 
-            // LightningShield spark particle (self-contained; re-fetches art).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    LightningSparkObjectInstance.class,
-                    LightningSparkObjectInstance::forRewindRecreate),
+            // LightningShield spark particle codec deleted (Phase-2 batch 12):
+            // self-contained; re-fetches art via RewindRecreatable.
 
             // MGZ end-of-act capsule / animals / results / collapse floor / boss.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
@@ -415,12 +404,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // (Phase-2 batch 2): both now implement RewindRecreatable ->
             // genericRecreate Path 1 (fully spawn-constructible, no parent link).
 
-            // AIZ/LRZ breakable-rock gravity debris (cosmetic). mappingFrame /
-            // artKey un-finaled and reapplied; codec passes placeholder
-            // velocities/frame. Mirrors AizRockFragmentChild (batch 2).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    RockDebrisChild.class,
-                    s -> new RockDebrisChild(s, 0, 0, 0, null)),
+            // AIZ/LRZ breakable-rock gravity debris codec deleted (Phase-2
+            // batch 12): mappingFrame/artKey are reapplied after generic recreate.
 
             // Boss-defeat -> signpost -> results -> act-transition orchestrator
             // (gameplay-critical, invisible, persistent). signpostX is spawn-
