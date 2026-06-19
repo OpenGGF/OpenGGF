@@ -96,6 +96,11 @@ class TestRespawnStrategies {
         public boolean beginApproach(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
             return true;
         }
+
+        @Override
+        public boolean requiresPhysics() {
+            return true;
+        }
     }
 
     @Test
