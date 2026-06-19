@@ -16,9 +16,12 @@ import com.openggf.game.sonic3k.events.S3kMgzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
@@ -72,7 +75,7 @@ import java.util.logging.Logger;
  *       2 (hurt face) / 3 (defeated), at offset (0, -$1C) from the pod.</li>
  * </ol>
  */
-public class MgzDrillingRobotnikInstance extends AbstractBossInstance {
+public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(MgzDrillingRobotnikInstance.class.getName());
 
     /** ROM: Obj_MGZ2DrillingRobotnik $2E(a0) = 2*60 — initial wait frames. */
@@ -366,6 +369,11 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance {
     public MgzDrillingRobotnikInstance(ObjectSpawn spawn, boolean flipX) {
         super(spawn, "MGZ2DrillingRobotnik");
         this.flipX = flipX;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MgzDrillingRobotnikInstance(ctx.spawn(), false);
     }
 
     @Override

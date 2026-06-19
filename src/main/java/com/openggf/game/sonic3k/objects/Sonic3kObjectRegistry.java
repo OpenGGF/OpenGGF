@@ -403,9 +403,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     Mgz2ResultsScreenObjectInstance.class,
                     s -> new Mgz2ResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0)),
             mgz2CollapseSolidCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    MgzDrillingRobotnikInstance.class,
-                    s -> new MgzDrillingRobotnikInstance(s, false)),
+            // MgzDrillingRobotnikInstance codec deleted (Phase-2 batch 6):
+            // now implements RewindRecreatable -> genericRecreate Path 1.
             // MgzEndBossInstance codec deleted (Phase-2 batch 5):
             // now implements RewindRecreatable -> genericRecreate Path 1.
 
