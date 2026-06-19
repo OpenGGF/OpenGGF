@@ -10,6 +10,8 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -301,9 +303,8 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
-    // Public so the cross-package Sonic3kObjectRegistry rewind codec can name the
-    // shot type and call its (ObjectSpawn,int,int,int[]) ctor + scriptForSpawn().
-    public static final class CorkeyShotChild extends AbstractObjectInstance implements TouchResponseProvider {
+    public static final class CorkeyShotChild extends AbstractObjectInstance
+            implements TouchResponseProvider, RewindRecreatable {
         private static final int COLLISION_FLAGS = 0xA0; // word_8C906 collision_flags.
         private static final int PRIORITY_BUCKET = 5;    // word_8C906 priority $280.
         private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
@@ -329,8 +330,8 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
         };
 
         // Un-final so the generic field capturer can reapply the captured value
-        // after a rewind recreate (object-array fields are not spawn-derivable;
-        // the codec reconstructs the right variant via scriptForSpawn()).
+        // after a rewind recreate. Generic recreate starts with the center script
+        // placeholder and restore overwrites it with the exact captured int[].
         private int[] script;
         private int currentX;
         private int currentY;
@@ -344,6 +345,15 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
             this.currentX = x;
             this.currentY = y;
             this.script = script;
+        }
+
+        public CorkeyShotChild(ObjectSpawn spawn) {
+            this(spawn, spawn.x(), spawn.y(), scriptForSpawn(spawn, null));
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new CorkeyShotChild(ctx.spawn());
         }
 
         /**

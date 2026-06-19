@@ -140,12 +140,15 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-19: raised to 112 after deleting the S1 BossExplosionObjectInstance
  *       codec and S3K MhzEndBossPaletteFadeController codec; palette fade is now
  *       headlessly probeable through RewindRecreatable.</li>
+ *   <li>2026-06-19: raised to 113 after deleting the S3K CorkeyShotChild
+ *       codec; generic recreate uses a placeholder script and compact restore
+ *       reapplies the captured int[] script.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 112;
+    static final int RATCHET_FLOOR = 113;
 
     @BeforeEach
     void initHeadless() {

@@ -45,7 +45,6 @@ class TestRewindFixS3KInnerBatch1Codecs {
         List<String> required = List.of(
                 "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild",
                 "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild",
-                "com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyShotChild",
                 "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild",
                 "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild",
                 "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild",

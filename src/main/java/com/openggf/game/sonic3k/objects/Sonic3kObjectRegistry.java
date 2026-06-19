@@ -417,8 +417,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // Blastoid/SnaleBlaster/Spiker in-flight projectile codecs deleted in
             // Phase-2 batch 19: self-contained private nested classes now use
             // genericRecreate Path 1.
-            // Corkey laser shot (relink to nearest live nozzle for the script).
-            corkeyShotCodec(),
+            // CorkeyShotChild now implements RewindRecreatable -> genericRecreate Path 1;
+            // compact restore reapplies the captured shot script after recreate.
             // Dragonfly swinging body segment (relink to live parent / prior sibling).
             dragonflyLinkedBodyChildCodec(),
             // Ribot leg/swing appendage (relink to nearest live Ribot body).
@@ -979,31 +979,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 }
                 return new AizSpikedLogObjectInstance.SpikedLogCollisionChild(
                         entry.spawn(), parent);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec corkeyShotCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == CorkeyBadnikInstance.CorkeyShotChild.class;
-            }
-
-            @Override
-            public String className() {
-                return CorkeyBadnikInstance.CorkeyShotChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                ObjectSpawn spawn = entry.spawn();
-                CorkeyBadnikInstance.CorkeyNozzleChild nozzle = findNearestLiveInstance(
-                        context, CorkeyBadnikInstance.CorkeyNozzleChild.class, spawn);
-                int[] script = CorkeyBadnikInstance.CorkeyShotChild.scriptForSpawn(spawn, nozzle);
-                return new CorkeyBadnikInstance.CorkeyShotChild(
-                        spawn, spawn.x(), spawn.y(), script);
             }
         };
     }

@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -408,6 +409,11 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> BATCH40_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.bosses.MhzEndBossPaletteFadeController",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> BATCH41_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyShotChild",
                     GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
@@ -2405,6 +2411,71 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    // =====================================================================
+    // Batch 41: S3K Corkey shot child, no live-nozzle dependency
+    // =====================================================================
+
+    @Test
+    void batch41ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH41_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 41)");
+        }
+    }
+
+    @Test
+    void batch41ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH41_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-41 deletion; "
+                            + "session restore must use genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch41ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH41_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x220, 0x1B4, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void corkeyShotGenericRecreateRestoresCapturedScriptWithoutLiveNozzle() {
+        String fqn = BATCH41_DELETED_CODECS.getFirst().fqn();
+        ObjectSpawn spawn = new ObjectSpawn(0x220, 0x1B4, 0, 0, 0, false, 0);
+        int[] capturedScript = {9, 1, 8, 2, 7, 3, -0x0C};
+        ObjectInstance source = new com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance.CorkeyShotChild(
+                spawn, spawn.x(), spawn.y(), capturedScript);
+        PerObjectRewindSnapshot state = ((AbstractObjectInstance) source).captureRewindState();
+
+        ObjectInstance recreated = invokeGenericRecreateWithState(fqn, spawn, state, GameId.S3K);
+        assertNotNull(recreated, "genericRecreate must not depend on a live Corkey nozzle");
+        ((AbstractObjectInstance) recreated).restoreRewindState(state);
+
+        assertArrayEquals(capturedScript, readIntArrayField(recreated, "script"),
+                "standard scalar restore must reapply the exact captured Corkey shot script");
+    }
+
+    @Test
+    void batch41ClassesRoundTripPassedThroughObjectManagerSessionPath() {
+        for (CodecDeletionCandidate candidate : BATCH41_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed through the ObjectManager session path; got: "
+                            + result);
+        }
+    }
+
     /**
      * Returns true if the given FQN has a registered dynamic rewind codec in the
      * shared codecs or in any of the three per-game registries. Distinct from
@@ -2483,6 +2554,16 @@ public class TestScalarOnlyCodecDeletion {
             return (Integer) method.invoke(record);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to read " + componentName + " from " + record.getClass(), e);
+        }
+    }
+
+    private static int[] readIntArrayField(Object target, String fieldName) {
+        try {
+            var field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return (int[]) field.get(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
         }
     }
 
