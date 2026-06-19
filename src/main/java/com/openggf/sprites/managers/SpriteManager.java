@@ -1613,11 +1613,13 @@ public class SpriteManager {
 
 			@Override
 			public com.openggf.game.rewind.snapshot.SpriteManagerSnapshot capture() {
-				boolean includeFollowHistory = true;
+				Set<AbstractPlayableSprite> leadersWithFollowers = currentDirectSidekickLeaders();
 				java.util.List<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry> snap =
 						new java.util.ArrayList<>();
 				for (Sprite sprite : sprites.values()) {
 					if (sprite instanceof AbstractPlayableSprite aps) {
+						boolean includeFollowHistory =
+								!aps.isCpuControlled() || leadersWithFollowers.contains(aps);
 						snap.add(new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry(
 								aps.getCode(), aps.captureRewindState(includeFollowHistory)));
 					}
@@ -1670,6 +1672,17 @@ public class SpriteManager {
 				}
 			}
 		};
+	}
+
+	private Set<AbstractPlayableSprite> currentDirectSidekickLeaders() {
+		Set<AbstractPlayableSprite> leaders = Collections.newSetFromMap(new IdentityHashMap<>());
+		for (AbstractPlayableSprite sidekick : sidekicks) {
+			SidekickCpuController controller = sidekick.getCpuController();
+			if (controller != null && controller.getLeader() != null) {
+				leaders.add(controller.getLeader());
+			}
+		}
+		return leaders;
 	}
 
 }
