@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -20,7 +22,7 @@ import java.util.List;
  * <p>ROM attributes: word_47B68 — priority $180 (bucket 3), size $10x$10.
  * Inherits art_tile from parent (ArtTile_AIZEndBoss, priority=1).
  */
-public class AizEndBossDebrisChild extends AbstractObjectInstance {
+public class AizEndBossDebrisChild extends AbstractObjectInstance implements RewindRecreatable {
 
     // ROM: Obj_VelocityIndex entries 0-5, used with Set_IndexedVelocity d0=0
     // Each child's subtype (0,2,4,6,8,$A) indexes as subtype*2 bytes
@@ -70,6 +72,11 @@ public class AizEndBossDebrisChild extends AbstractObjectInstance {
         this.xSub = 0;
         this.ySub = 0;
         this.flickerCounter = 0;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizEndBossDebrisChild(ctx.spawn().x(), ctx.spawn().y(), 0);
     }
 
     @Override

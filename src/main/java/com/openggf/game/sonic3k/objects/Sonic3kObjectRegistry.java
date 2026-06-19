@@ -156,19 +156,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // fields are reapplied afterward by the generic field capturer, so
             // placeholders are passed where a value is captured.
 
-            // Self-contained (real spawn carries position; differentiators captured).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizBombExplosionInstance.class,
-                    s -> new AizBombExplosionInstance(s.x(), s.y(), 0, 0)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizEndBossDebrisChild.class,
-                    s -> new AizEndBossDebrisChild(s.x(), s.y(), 0)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizMinibossImpactFlameChild.class,
-                    s -> new AizMinibossImpactFlameChild(s.x(), s.y(), s.subtype(), false)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizMinibossDebrisChild.class,
-                    s -> new AizMinibossDebrisChild(s.x(), s.y(), 0, 0)),
+            // Self-contained primitive-only transients now implement RewindRecreatable
+            // and use genericRecreate Path 1; no handwritten codecs are needed here.
 
             // Relink to the live battleship recreated earlier in the restore.
             aizBattleshipChildCodec(AizShipBombInstance.class,

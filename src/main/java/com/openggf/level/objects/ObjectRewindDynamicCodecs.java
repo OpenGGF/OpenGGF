@@ -112,6 +112,9 @@ public final class ObjectRewindDynamicCodecs {
      *   <li>{@code (ObjectSpawn, boolean)} — spawn plus default false option</li>
      *   <li>{@code (ObjectSpawn, ObjectServices, int)} — points-style constructor
      *       with default score/frame placeholder</li>
+     *   <li>{@code (int, int, int)} — primitive-only constructor with zero placeholders</li>
+     *   <li>{@code (int, int, int, int)} — primitive-only constructor with zero placeholders</li>
+     *   <li>{@code (int, int, int, boolean)} — primitive-only constructor with zero/false placeholders</li>
      *   <li>zero-arg — no-argument default constructor</li>
      * </ol>
      *
@@ -158,6 +161,24 @@ public final class ObjectRewindDynamicCodecs {
                 findCtor(cls, ObjectSpawn.class, ObjectServices.class, int.class);
         if (spawnServicesIntCtor != null) {
             return invokeProbeCtor(cls, spawnServicesIntCtor, ctx, spawn, ctx.objectServices(), 0);
+        }
+
+        Constructor<? extends AbstractObjectInstance> intIntIntCtor =
+                findCtor(cls, int.class, int.class, int.class);
+        if (intIntIntCtor != null) {
+            return invokeProbeCtor(cls, intIntIntCtor, ctx, 0, 0, 0);
+        }
+
+        Constructor<? extends AbstractObjectInstance> intIntIntIntCtor =
+                findCtor(cls, int.class, int.class, int.class, int.class);
+        if (intIntIntIntCtor != null) {
+            return invokeProbeCtor(cls, intIntIntIntCtor, ctx, 0, 0, 0, 0);
+        }
+
+        Constructor<? extends AbstractObjectInstance> intIntIntBooleanCtor =
+                findCtor(cls, int.class, int.class, int.class, boolean.class);
+        if (intIntIntBooleanCtor != null) {
+            return invokeProbeCtor(cls, intIntIntBooleanCtor, ctx, 0, 0, 0, false);
         }
 
         Constructor<? extends AbstractObjectInstance> noArgCtor = findCtor(cls);

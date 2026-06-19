@@ -21,6 +21,7 @@ import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -366,9 +367,8 @@ public final class RewindRoundTripHarness {
      * codebase. Placed-object recreation (which does not require a codec) is tested by
      * the keystone boss-child test in {@code TestEveryObjectRewindRoundTrip}.
      *
-     * <p>Construction is attempted using the same four strategies as
-     * {@code RewindRoundTripProbe}: zero-arg, {@code (ObjectSpawn)},
-     * {@code (ObjectSpawn, String)}, and {@code (ObjectSpawn, ObjectServices)}.
+     * <p>Construction is attempted through the supported headless probe strategies
+     * exposed by {@link #constructHeadless(Class, StubObjectServices)}.
      * Classes requiring ROM access during construction are returned as
      * {@code Unprobed}.
      *
@@ -633,9 +633,8 @@ public final class RewindRoundTripHarness {
     }
 
     /**
-     * Attempts to construct an {@code AbstractObjectInstance} headlessly using the
-     * four probe-compatible constructor signatures (zero-arg, {@code (ObjectSpawn)},
-     * {@code (ObjectSpawn, String)}, {@code (ObjectSpawn, ObjectServices)}).
+     * Attempts to construct an {@code AbstractObjectInstance} headlessly using
+     * the supported probe-compatible constructor signatures.
      *
      * <p>This is the shared construction entry point. {@link RewindRoundTripProbe}
      * in the coverage package delegates here to avoid duplicating the strategy logic.
@@ -653,7 +652,7 @@ public final class RewindRoundTripHarness {
     }
 
     /**
-     * Tries to construct an {@code AbstractObjectInstance} headlessly using four
+     * Tries to construct an {@code AbstractObjectInstance} headlessly using
      * progressively-complex constructor signatures.
      */
     private static AbstractObjectInstance tryConstruct(
@@ -725,10 +724,46 @@ public final class RewindRoundTripHarness {
             }
         }
 
-        // Strategy 7: (ObjectSpawn, AbstractObjectInstance-subtype) — parent-child pattern.
+        if (RewindRecreatable.class.isAssignableFrom(cls)) {
+            // Strategy 7: (int, int, int) — primitive-only generic-recreate object.
+            Constructor<? extends AbstractObjectInstance> ctor6 =
+                    findCtor(cls, int.class, int.class, int.class);
+            if (ctor6 != null) {
+                try {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor6, PROBE_SPAWN.x(), PROBE_SPAWN.y(), 0));
+                } catch (Throwable ignored) {
+                }
+            }
+
+            // Strategy 8: (int, int, int, int) — primitive-only generic-recreate object.
+            Constructor<? extends AbstractObjectInstance> ctor7 =
+                    findCtor(cls, int.class, int.class, int.class, int.class);
+            if (ctor7 != null) {
+                try {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor7, PROBE_SPAWN.x(), PROBE_SPAWN.y(), 0, 0));
+                } catch (Throwable ignored) {
+                }
+            }
+
+            // Strategy 9: (int, int, int, boolean) — primitive-only generic-recreate object.
+            Constructor<? extends AbstractObjectInstance> ctor8 =
+                    findCtor(cls, int.class, int.class, int.class, boolean.class);
+            if (ctor8 != null) {
+                try {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor8, PROBE_SPAWN.x(), PROBE_SPAWN.y(),
+                                    PROBE_SPAWN.subtype(), false));
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+
+        // Strategy 10: (ObjectSpawn, AbstractObjectInstance-subtype) — parent-child pattern.
         // Scan for a 2-parameter constructor whose second parameter is a concrete
         // AbstractObjectInstance subclass (a live parent reference). Build a stub parent of
-        // that type headlessly (using strategies 1-2 only to avoid recursion), then
+        // that type headlessly (using simple strategies only to avoid recursion), then
         // construct the child with (PROBE_SPAWN, stubParent).
         AbstractObjectInstance constructedWithParent = tryConstructWithInferredParent(cls, stub);
         if (constructedWithParent != null) {
@@ -740,6 +775,7 @@ public final class RewindRoundTripHarness {
                         + " (tried zero-arg, (ObjectSpawn), (ObjectSpawn,String),"
                         + " (ObjectSpawn,ObjectServices), (ObjectSpawn,boolean),"
                         + " (ObjectSpawn,ObjectServices,int),"
+                        + " (int,int,int), (int,int,int,int), (int,int,int,boolean),"
                         + " (ObjectSpawn,ParentType))");
     }
 

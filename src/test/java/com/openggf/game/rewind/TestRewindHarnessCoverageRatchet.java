@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *       {@code Unprobed("no dynamic recreate path")}. These objects are correctly
  *       dropped on restore; testing them would produce a spurious count-mismatch.</li>
  *   <li>{@code no-probe-ctor} – has a codec but the harness could not construct the
- *       object headlessly (all 4 constructor strategies failed with
+     *       object headlessly (all supported constructor strategies failed with
  *       {@code NoSuchMethodError} or a thrown exception). Common: child objects
  *       whose only constructors take a parent instance or non-ObjectSpawn arguments.</li>
  *   <li>{@code parent-dependent} – has a codec, constructed successfully, but
@@ -80,12 +80,15 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-19: raised to 43 after adding (ObjectSpawn,ObjectServices,int)
  *       harness construction with inert render services, then deleting the S1/S2/S3K
  *       points popup dynamic codecs.</li>
+ *   <li>2026-06-19: raised to 47 after adding RewindRecreatable-only primitive
+ *       constructor probes and deleting four AIZ2 self-contained transient child
+ *       codecs.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 43;
+    static final int RATCHET_FLOOR = 47;
 
     @BeforeEach
     void initHeadless() {

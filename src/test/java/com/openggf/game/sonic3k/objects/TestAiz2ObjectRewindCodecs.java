@@ -82,26 +82,40 @@ class TestAiz2ObjectRewindCodecs {
     }
 
     @Test
-    void registersCodecsForFormerlyDroppedTransientChildren() {
+    void hasRecreatePathsForFormerlyDroppedTransientChildren() {
         Set<String> names = codecClassNames();
         // Previously Tier-4 (dropped). Now captured + recreated so held rewind
         // reverses them cleanly instead of re-emitting them forward.
-        List<String> nowCovered = List.of(
+        List<String> codecBacked = List.of(
                 AizShipBombInstance.class.getName(),
-                AizBombExplosionInstance.class.getName(),
                 AizMinibossBarrelShotChild.class.getName(),
                 AizMinibossBarrelShotFlareChild.class.getName(),
-                AizMinibossImpactFlameChild.class.getName(),
                 AizMinibossFlameChild.class.getName(),
-                AizMinibossDebrisChild.class.getName(),
                 AizEndBossPropellerChild.class.getName(),
                 AizEndBossFlameChild.class.getName(),
                 AizEndBossBombChild.class.getName(),
-                AizEndBossSmokeChild.class.getName(),
-                AizEndBossDebrisChild.class.getName());
-        for (String name : nowCovered) {
+                AizEndBossSmokeChild.class.getName());
+        for (String name : codecBacked) {
             assertTrue(names.contains(name),
                     "AIZ2 transient child must now have a rewind codec: " + name);
+        }
+    }
+
+    @Test
+    void selfContainedTransientChildrenUseGenericRecreateWithoutHandwrittenCodecs() {
+        Set<String> names = codecClassNames();
+        List<Class<?>> genericBacked = List.of(
+                AizBombExplosionInstance.class,
+                AizEndBossDebrisChild.class,
+                AizMinibossImpactFlameChild.class,
+                AizMinibossDebrisChild.class);
+        for (Class<?> type : genericBacked) {
+            assertFalse(names.contains(type.getName()),
+                    type.getSimpleName() + " codec should be deleted via Phase-2 generic recreate");
+            assertTrue(RewindRecreatable.class.isAssignableFrom(type),
+                    type.getSimpleName() + " must implement RewindRecreatable after codec deletion");
+            assertTrue(hasDynamicRecreatePath(type, names),
+                    "missing dynamic recreate path for " + type.getSimpleName());
         }
     }
 }
