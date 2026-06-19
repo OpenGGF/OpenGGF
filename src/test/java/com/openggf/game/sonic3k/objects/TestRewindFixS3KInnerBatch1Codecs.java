@@ -45,7 +45,6 @@ class TestRewindFixS3KInnerBatch1Codecs {
         List<String> required = List.of(
                 "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild",
                 "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild",
-                "com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance$AizTreeRevealControlObjectInstance",
                 "com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyShotChild",
                 "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild",
                 "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild",
@@ -53,8 +52,7 @@ class TestRewindFixS3KInnerBatch1Codecs {
                 "com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance$OrbitingPointInstance",
                 "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance$OrbinautOrbInstance",
                 "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",
-                "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild",
-                "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossRobotnikEscapeShip");
+                "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild");
 
         for (String name : required) {
             assertTrue(names.contains(name),

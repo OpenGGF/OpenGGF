@@ -130,12 +130,14 @@ public class TestRewindHarnessCoverageRatchet {
  *       and CrabmeatProjectile.</li>
  *   <li>2026-06-19: raised to 106 after deleting the S1
  *       ResultsScreen dynamic codec.</li>
+ *   <li>2026-06-19: raised to 107 after deleting the S3K ICZ end-boss
+ *       escape-ship dynamic codec.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 106;
+    static final int RATCHET_FLOOR = 107;
 
     @BeforeEach
     void initHeadless() {

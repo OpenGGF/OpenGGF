@@ -449,8 +449,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // Madmole side-drill captured/launch hazard (self-contained, facingLeft
             // recovered from the spawn render flag).
             madmoleSideDrillCodec(),
-            // ICZ end-boss fleeing-Robotnik escape ship (self-contained cutscene).
-            iczEndBossEscapeShipCodec(),
+            // ICZ end-boss fleeing-Robotnik escape ship codec deleted (Phase-2
+            // batch 37): self-contained cutscene ship now uses genericRecreate
+            // Path 1.
 
             // --- Batch-inner2: nested-class hazard/solid/cutscene child codecs -----
             // More static/non-static nested children dropped on held rewind because
@@ -955,8 +956,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild";
     private static final String MADMOLE_SIDE_DRILL_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild";
-    private static final String ICZ_ESCAPE_SHIP_CLASS =
-            "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossRobotnikEscapeShip";
 
     // Batch-inner2 binary-name keys (private/nested children -> no Class literal).
     private static final String MGZ_DRILL_ARM_CHILD_CLASS =
@@ -1274,35 +1273,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     var ctor = cls.getDeclaredConstructor(int.class, int.class, boolean.class);
                     ctor.setAccessible(true);
                     return (ObjectInstance) ctor.newInstance(spawn.x(), spawn.y(), facingLeft);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec iczEndBossEscapeShipCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(ICZ_ESCAPE_SHIP_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return ICZ_ESCAPE_SHIP_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    ObjectSpawn spawn = entry.spawn();
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(int.class, int.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(spawn.x(), spawn.y());
                 } catch (ReflectiveOperationException e) {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);

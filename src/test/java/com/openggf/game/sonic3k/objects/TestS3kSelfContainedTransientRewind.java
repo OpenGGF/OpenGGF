@@ -53,6 +53,8 @@ class TestS3kSelfContainedTransientRewind {
             "com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance$HeadTriggerStoneChipChild";
     private static final String MGZ_CEILING_SPIRE_CLASS =
             "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild";
+    private static final String ICZ_END_BOSS_ESCAPE_SHIP_CLASS =
+            "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossRobotnikEscapeShip";
 
     @AfterEach
     void cleanup() {
@@ -84,6 +86,59 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(classForName(BLASTOID_PROJECTILE_CLASS));
         assertNoRegisteredS3kDynamicCodec(classForName(SNALE_BLASTER_PROJECTILE_CLASS));
         assertNoRegisteredS3kDynamicCodec(classForName(SPIKER_SPIKE_PROJECTILE_CLASS));
+        assertNoRegisteredS3kDynamicCodec(classForName(ICZ_END_BOSS_ESCAPE_SHIP_CLASS));
+    }
+
+    @Test
+    void iczEndBossEscapeShipRestoresThroughSessionSnapshot() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_AIZ, ACT_2)
+                .build();
+
+        RewindRegistry registry = fixture.gameplayMode().getRewindRegistry();
+        assertNotNull(registry, "RewindRegistry must be available after S3K boot");
+
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        assertNotNull(objectManager, "ObjectManager must be available for S3K");
+
+        int baseX = fixture.camera().getX() + 0x120;
+        int baseY = fixture.camera().getY() + 0x20;
+        AbstractObjectInstance.updateCameraBounds(
+                fixture.camera().getX(),
+                fixture.camera().getY(),
+                fixture.camera().getX() + fixture.camera().getWidth(),
+                fixture.camera().getY() + fixture.camera().getHeight(),
+                0);
+
+        Class<? extends AbstractObjectInstance> escapeShipType =
+                classForName(ICZ_END_BOSS_ESCAPE_SHIP_CLASS);
+        AbstractObjectInstance escapeShip = objectManager.createDynamicObject(
+                () -> instantiatePrivateDynamic(
+                        ICZ_END_BOSS_ESCAPE_SHIP_CLASS,
+                        new Class<?>[]{int.class, int.class},
+                        baseX, baseY));
+
+        for (int frame = 0; frame < 3; frame++) {
+            escapeShip.update(frame, fixture.sprite());
+            assertFalse(escapeShip.isDestroyed(),
+                    "ICZ end-boss escape ship should survive setup frame " + frame);
+        }
+        assertEquals(1, countLive(objectManager, escapeShipType),
+                "precondition: exactly one ICZ end-boss escape ship fixture is live");
+
+        Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
+        capturedState.put(escapeShip.getClass(), simpleRewindFieldValues(escapeShip));
+
+        CompositeSnapshot snapshot = registry.capture();
+        assertNotNull(snapshot, "capture() must return a snapshot");
+
+        objectManager.removeDynamicObject(escapeShip);
+        assertEquals(0, countLive(objectManager, escapeShipType),
+                "diverge step must remove the ICZ end-boss escape ship");
+
+        registry.restore(snapshot);
+
+        assertSimpleStateRoundTrip(objectManager, escapeShipType, capturedState);
     }
 
     @Test

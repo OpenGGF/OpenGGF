@@ -20,6 +20,8 @@ import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider.TouchRegion;
@@ -1300,7 +1302,8 @@ public final class IczEndBossInstance extends AbstractBossInstance implements Mu
         }
     }
 
-    private static final class IczEndBossRobotnikEscapeShip extends AbstractObjectInstance {
+    private static final class IczEndBossRobotnikEscapeShip extends AbstractObjectInstance
+            implements RewindRecreatable {
         private static final int ESCAPE_FRAME = 0x0A;
         private static final int HEAD_FRAME_ANGRY = 3;
         private static final int HEAD_Y_OFFSET = -0x1C;
@@ -1315,12 +1318,22 @@ public final class IczEndBossInstance extends AbstractBossInstance implements Mu
         private int timer = ESCAPE_TIME;
         private boolean flyingRight;
 
+        private IczEndBossRobotnikEscapeShip() {
+            this(0, 0);
+        }
+
         private IczEndBossRobotnikEscapeShip(int x, int y) {
             super(new ObjectSpawn(x, y, Sonic3kObjectIds.ICZ_END_BOSS, 0, 0, false, y),
                     "ICZEndBossRobotnikEscapeShip");
             this.x = x;
             this.xFixed = x << 8;
             this.y = y;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            return new IczEndBossRobotnikEscapeShip(spawn.x(), spawn.y());
         }
 
         @Override
