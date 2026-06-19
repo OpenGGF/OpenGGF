@@ -148,6 +148,35 @@ public class TestMultiSidekickSpawn {
         // sidekick[0] is settled, so it should be the effective leader
         assertSame(sidekicks[0], effectiveLeader, "sidekick[2]'s effective leader should be sidekick[0] (first settled in chain)");
     }
-}
 
+    @Test
+    public void testTailsFlyInDoesNotLandWhenCrossingRootSonicBeforeChainLeader() {
+        Sonic sonicLeader = new Sonic("sonic_p3", (short) 220, (short) 655);
+        sonicLeader.setCpuControlled(true);
+        SidekickCpuController sonicController = new SidekickCpuController(sonicLeader, mainPlayer);
+        sonicController.setSidekickCount(2);
+        sonicController.setInitialState(SidekickCpuController.State.NORMAL);
+        sonicLeader.setCpuController(sonicController);
+        sonicLeader.setAir(false);
+        sonicLeader.prefillPositionHistoryWithCentre((short) 220, (short) 655);
+
+        Tails trailingTails = new Tails("tails_p4", (short) 96, (short) 655);
+        trailingTails.setCpuControlled(true);
+        SidekickCpuController tailsController = new SidekickCpuController(trailingTails, sonicLeader);
+        tailsController.setSidekickCount(2);
+        tailsController.setInitialState(SidekickCpuController.State.APPROACHING);
+        trailingTails.setCpuController(tailsController);
+        trailingTails.setAir(true);
+
+        mainPlayer.setCentreX((short) 100);
+        mainPlayer.setCentreY((short) 655);
+        mainPlayer.setAir(false);
+
+        tailsController.update(1);
+
+        assertEquals(SidekickCpuController.State.APPROACHING, tailsController.getState(),
+                "Tails fly-in should keep targeting its settled chain leader; "
+                        + "only physics-driven Sonic approach should complete on root-Sonic crossing");
+    }
+}
 

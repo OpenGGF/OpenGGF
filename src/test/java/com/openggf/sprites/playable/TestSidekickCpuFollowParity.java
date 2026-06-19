@@ -577,6 +577,7 @@ class TestSidekickCpuFollowParity {
     void releasedAizIntroMarkerSuppressesFirstNormalMovementPulse() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x138A);
         tails.setCentreY((short) 0x041F);
@@ -623,6 +624,7 @@ class TestSidekickCpuFollowParity {
     void releasedAizIntroMarkerConsumesSuppressionOnFlightToNormalTransition() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
         tails.setCpuControlled(true);
         sonic.setCentreX((short) 0x138A);
         sonic.setCentreY((short) 0x041F);
