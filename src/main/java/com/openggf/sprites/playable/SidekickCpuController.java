@@ -1701,11 +1701,15 @@ public class SidekickCpuController {
     private AbstractPlayableSprite resolveActiveFollowLeader() {
         if (sidekickCount > 1 && leader != null && leader.isCpuControlled()) {
             SidekickCpuController leaderController = leader.getCpuController();
-            if (leaderController == null || leaderController.state == State.NORMAL) {
+            if (leaderController == null || leaderController.hasWarmNormalFollowHistory()) {
                 return leader;
             }
         }
         return getEffectiveLeader();
+    }
+
+    private boolean hasWarmNormalFollowHistory() {
+        return state == State.NORMAL && normalFrameCount >= ROM_FOLLOW_DELAY_FRAMES;
     }
 
     private AbstractPlayableSprite resolveApproachLeader() {
@@ -4662,7 +4666,7 @@ public class SidekickCpuController {
         levelEventDormantMarkerReleasePending = false;
         skipPhysicsThisFrame = false;
         lastNormalAutoJumpPressFrameCounter = -1;
-        normalFrameCount = state == State.NORMAL ? SETTLED_FRAME_THRESHOLD : 0;
+        normalFrameCount = state == State.NORMAL ? ROM_FOLLOW_DELAY_FRAMES : 0;
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
         releasedUnderwaterPushConsumed = false;
@@ -4695,7 +4699,7 @@ public class SidekickCpuController {
         this.diagnosticS3kInteractWord = usesS3kPointerInteract() ? interactId & 0xFFFF : 0;
         sidekick.setLatchedSolidObjectId(interactId);
         this.jumpingFlag = jumping;
-        this.normalFrameCount = state == State.NORMAL ? SETTLED_FRAME_THRESHOLD : 0;
+        this.normalFrameCount = state == State.NORMAL ? ROM_FOLLOW_DELAY_FRAMES : 0;
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
         releasedUnderwaterPushConsumed = false;
