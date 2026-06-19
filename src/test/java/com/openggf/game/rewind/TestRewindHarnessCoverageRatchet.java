@@ -146,12 +146,15 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-19: raised to 114 after deleting the S3K
  *       MhzEndBossDefeatFragmentChild codec; compact restore now reapplies the
  *       parent-derived subtype/xVel state.</li>
+ *   <li>2026-06-19: raised to 115 after deleting the S3K Madmole
+ *       SideDrillChild codec; generic recreate derives facingLeft from the
+ *       captured spawn render flag.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 114;
+    static final int RATCHET_FLOOR = 115;
 
     @BeforeEach
     void initHeadless() {

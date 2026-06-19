@@ -5,6 +5,9 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameId;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
@@ -34,6 +37,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationSet;
+import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +49,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** RED-GREEN test for Phase-2 codec-deletion batch. */
@@ -422,6 +428,11 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> BATCH42_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     MhzEndBossDefeatFragmentChild.class.getName(),
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> BATCH43_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild",
                     GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
@@ -2565,6 +2576,118 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    // =====================================================================
+    // Batch 43: S3K Madmole side-drill child, no live-parent dependency
+    // =====================================================================
+
+    @Test
+    void batch43ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH43_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 43)");
+        }
+    }
+
+    @Test
+    void batch43ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH43_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-43 deletion; "
+                            + "session restore must use genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch43ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH43_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x180, 0x140, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void madmoleSideDrillGenericRecreateRestoresCapturedMotionWithoutLiveParent() {
+        String fqn = BATCH43_DELETED_CODECS.getFirst().fqn();
+        ObjectInstance source = instantiateMadmoleSideDrill(0x180, 0x140, false);
+        setBooleanField(source, "initialized", true);
+        setBooleanField(source, "arcing", true);
+        setBooleanField(source, "postCaptureDrift", true);
+        setIntField(source, "currentX", 0x188);
+        setIntField(source, "currentY", 0x14A);
+        setIntField(source, "xVelocity", 0x380);
+        setIntField(source, "yVelocity", -0x200);
+        setIntField(source, "xSubpixel", 0x40);
+        setIntField(source, "ySubpixel", 0x80);
+        setIntField(source, "mappingFrame", 9);
+        TestablePlayableSprite capturedPlayer =
+                new TestablePlayableSprite("sonic", (short) 0x190, (short) 0x150);
+        setObjectField(source, "capturedPlayer", capturedPlayer);
+        RewindIdentityTable captureTable = new RewindIdentityTable();
+        captureTable.registerPlayer(capturedPlayer, PlayerRefId.mainPlayer());
+        RewindCaptureContext rewindContext =
+                RewindCaptureContext.withIdentityTable(captureTable);
+        PerObjectRewindSnapshot state = ((AbstractObjectInstance) source).captureRewindState(rewindContext);
+        ObjectSpawn capturedSpawn = source.getSpawn();
+
+        ObjectInstance unresolved = invokeGenericRecreateWithState(fqn, capturedSpawn, state, GameId.S3K);
+        RewindCaptureContext missingPlayerContext =
+                RewindCaptureContext.withIdentityTable(new RewindIdentityTable());
+        assertThrows(IllegalStateException.class,
+                () -> ((AbstractObjectInstance) unresolved).restoreRewindState(state, missingPlayerContext),
+                "non-null capturedPlayer must use required player-ref resolve during compact restore");
+
+        ObjectInstance recreated = invokeGenericRecreateWithState(fqn, capturedSpawn, state, GameId.S3K);
+        TestablePlayableSprite restoredPlayer =
+                new TestablePlayableSprite("sonic", (short) 0x190, (short) 0x150);
+        RewindIdentityTable restoreTable = new RewindIdentityTable();
+        restoreTable.registerPlayer(restoredPlayer, PlayerRefId.mainPlayer());
+        RewindCaptureContext restoreContext = RewindCaptureContext.withIdentityTable(restoreTable);
+        assertNotNull(recreated, "genericRecreate must not depend on a live Madmole parent");
+        assertEquals(fqn, recreated.getClass().getName(),
+                "genericRecreate must return the same concrete side-drill class before restore");
+        ((AbstractObjectInstance) recreated).restoreRewindState(state, restoreContext);
+
+        assertFalse(readBooleanField(recreated, "facingLeft"),
+                "generic recreate must recover facingLeft from the captured spawn render flag");
+        assertTrue(readBooleanField(recreated, "initialized"),
+                "standard scalar restore must reapply initialized");
+        assertTrue(readBooleanField(recreated, "arcing"),
+                "standard scalar restore must reapply arcing");
+        assertTrue(readBooleanField(recreated, "postCaptureDrift"),
+                "standard scalar restore must reapply postCaptureDrift");
+        assertEquals(readIntField(source, "currentX"), readIntField(recreated, "currentX"),
+                "standard scalar restore must reapply exact X");
+        assertEquals(readIntField(source, "currentY"), readIntField(recreated, "currentY"),
+                "standard scalar restore must reapply exact Y");
+        assertEquals(readIntField(source, "xVelocity"), readIntField(recreated, "xVelocity"),
+                "standard scalar restore must reapply xVelocity");
+        assertEquals(readIntField(source, "yVelocity"), readIntField(recreated, "yVelocity"),
+                "standard scalar restore must reapply yVelocity");
+        assertEquals(readIntField(source, "mappingFrame"), readIntField(recreated, "mappingFrame"),
+                "standard scalar restore must reapply mappingFrame");
+        assertSame(restoredPlayer, readObjectField(recreated, "capturedPlayer"),
+                "compact restore must resolve capturedPlayer through the restore identity table");
+    }
+
+    @Test
+    void batch43ClassesRoundTripPassedThroughObjectManagerSessionPath() {
+        for (CodecDeletionCandidate candidate : BATCH43_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed through the ObjectManager session path; got: "
+                            + result);
+        }
+    }
+
     /**
      * Returns true if the given FQN has a registered dynamic rewind codec in the
      * shared codecs or in any of the three per-game registries. Distinct from
@@ -2662,6 +2785,62 @@ public class TestScalarOnlyCodecDeletion {
             return field.getInt(target);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
+        }
+    }
+
+    private static boolean readBooleanField(Object target, String fieldName) {
+        try {
+            var field = findField(target.getClass(), fieldName);
+            return field.getBoolean(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
+        }
+    }
+
+    private static Object readObjectField(Object target, String fieldName) {
+        try {
+            var field = findField(target.getClass(), fieldName);
+            return field.get(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
+        }
+    }
+
+    private static void setIntField(Object target, String fieldName, int value) {
+        try {
+            var field = findField(target.getClass(), fieldName);
+            field.setInt(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static void setObjectField(Object target, String fieldName, Object value) {
+        try {
+            var field = findField(target.getClass(), fieldName);
+            field.set(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static void setBooleanField(Object target, String fieldName, boolean value) {
+        try {
+            var field = findField(target.getClass(), fieldName);
+            field.setBoolean(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static ObjectInstance instantiateMadmoleSideDrill(int x, int y, boolean facingLeft) {
+        try {
+            Class<?> cls = Class.forName(BATCH43_DELETED_CODECS.getFirst().fqn());
+            var ctor = cls.getDeclaredConstructor(int.class, int.class, boolean.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(x, y, facingLeft);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct Madmole side-drill child", e);
         }
     }
 

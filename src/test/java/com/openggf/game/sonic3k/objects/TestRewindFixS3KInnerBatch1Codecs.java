@@ -50,8 +50,7 @@ class TestRewindFixS3KInnerBatch1Codecs {
                 "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild",
                 "com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance$OrbitingPointInstance",
                 "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance$OrbinautOrbInstance",
-                "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",
-                "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild");
+                "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild");
 
         for (String name : required) {
             assertTrue(names.contains(name),

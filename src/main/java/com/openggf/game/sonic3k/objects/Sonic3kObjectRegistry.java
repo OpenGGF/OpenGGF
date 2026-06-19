@@ -431,9 +431,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             orbinautOrbCodec(),
             // Turbo Spiker launched shell (relink to nearest live parent).
             turboSpikerShellChildCodec(),
-            // Madmole side-drill captured/launch hazard (self-contained, facingLeft
-            // recovered from the spawn render flag).
-            madmoleSideDrillCodec(),
+            // Madmole side-drill codec deleted (Phase-2 batch 43): self-contained;
+            // facingLeft is recovered from the spawn render flag during generic recreate.
             // ICZ end-boss fleeing-Robotnik escape ship codec deleted (Phase-2
             // batch 37): self-contained cutscene ship now uses genericRecreate
             // Path 1.
@@ -939,8 +938,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance$OrbinautOrbInstance";
     private static final String TURBO_SPIKER_SHELL_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild";
-    private static final String MADMOLE_SIDE_DRILL_CHILD_CLASS =
-            "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild";
 
     // Batch-inner2 binary-name keys (private/nested children -> no Class literal).
     private static final String MGZ_DRILL_ARM_CHILD_CLASS =
@@ -1202,37 +1199,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     var ctor = cls.getDeclaredConstructor(TurboSpikerBadnikInstance.class);
                     ctor.setAccessible(true);
                     return (ObjectInstance) ctor.newInstance(parent);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec madmoleSideDrillCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(MADMOLE_SIDE_DRILL_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return MADMOLE_SIDE_DRILL_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    ObjectSpawn spawn = entry.spawn();
-                    // Ctor encodes facingLeft into the spawn render flag (0 = left).
-                    boolean facingLeft = spawn.renderFlags() == 0;
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(int.class, int.class, boolean.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(spawn.x(), spawn.y(), facingLeft);
                 } catch (ReflectiveOperationException e) {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);
