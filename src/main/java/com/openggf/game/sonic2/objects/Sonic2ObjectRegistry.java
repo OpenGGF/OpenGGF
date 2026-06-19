@@ -197,10 +197,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     ResultsScreenObjectInstance.class,
                     spawn -> new ResultsScreenObjectInstance(0, 0, 0, false)),
-            // Batch-7 S2 rewind codec (shared boss-defeat explosion).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    BossExplosionObjectInstance.class,
-                    s -> new BossExplosionObjectInstance(s.x(), s.y(), Sonic2Sfx.BOSS_EXPLOSION.id)),
+            // BossExplosionObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // Batch-inner1 S2 rewind codecs (inner-class hazard/solid children:
             // DEZ Eggman barrier wall, MTZ boss laser). WFZ small-metal-platform
             // child codec deleted in Phase-2 batch 3: it now implements

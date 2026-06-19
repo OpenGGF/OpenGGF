@@ -3,7 +3,6 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
-import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -19,10 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Batch-7 adds:
  * <ul>
- *   <li>{@link BossExplosionObjectInstance} — shared boss-defeat explosion, registered
- *       per-game (this entry uses {@code Sonic2Sfx.BOSS_EXPLOSION}); a ~49-frame animated
- *       one-shot. Recreated via {@code exactSpawnCodec}; {@code sfxId} stays final because
- *       the codec passes the game's own constant and {@code initialized} is restored true.</li>
  *   <li>{@link SignpostSparkleObjectInstance} — shared S1+S2 signpost ring sparkle, recreated
  *       via the shared {@code exactSpawnCodec}. Its position lives in non-final
  *       {@code worldX}/{@code worldY} (base {@code spawn} is null), reapplied after recreate.</li>
@@ -56,7 +51,6 @@ class TestRewindFixS2Batch7Codecs {
         Set<String> names = codecClassNames();
 
         List<String> required = List.of(
-                BossExplosionObjectInstance.class.getName(),
                 SignpostSparkleObjectInstance.class.getName());
 
         for (String name : required) {

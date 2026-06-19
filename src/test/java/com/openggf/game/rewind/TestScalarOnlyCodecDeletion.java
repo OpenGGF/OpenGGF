@@ -300,6 +300,11 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance",
                     GameId.S2));
 
+    private static final List<CodecDeletionCandidate> BATCH26_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.level.objects.boss.BossExplosionObjectInstance",
+                    GameId.S2));
+
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
     private static final ObjectRenderManager INERT_RENDER_MANAGER =
@@ -1528,6 +1533,54 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    // =====================================================================
+    // Batch 26: shared S2 boss explosion dynamic
+    // =====================================================================
+
+    @Test
+    void batch26ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH26_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 26)");
+        }
+    }
+
+    @Test
+    void batch26ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH26_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-26 deletion; "
+                            + "it should round-trip purely via genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch26ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH26_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void batch26ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : BATCH26_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
     /**
      * Returns true if the given FQN has a registered dynamic rewind codec in the
      * shared codecs or in any of the three per-game registries. Distinct from
@@ -1546,6 +1599,21 @@ public class TestScalarOnlyCodecDeletion {
             for (var c : reg.dynamicRewindCodecs()) {
                 if (fqn.equals(c.className())) return true;
             }
+        }
+        return false;
+    }
+
+    private static boolean hasRegisteredDynamicCodec(String fqn, GameId gameId) {
+        for (var c : com.openggf.level.objects.ObjectRewindDynamicCodecs.sharedCodecs()) {
+            if (fqn.equals(c.className())) return true;
+        }
+        ObjectRegistry reg = switch (gameId) {
+            case S1 -> new Sonic1ObjectRegistry();
+            case S2 -> new Sonic2ObjectRegistry();
+            case S3K -> new Sonic3kObjectRegistry();
+        };
+        for (var c : reg.dynamicRewindCodecs()) {
+            if (fqn.equals(c.className())) return true;
         }
         return false;
     }

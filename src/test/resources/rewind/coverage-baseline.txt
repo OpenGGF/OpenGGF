@@ -1731,4 +1731,3 @@ com.openggf.level.objects.PlaceholderObjectInstance#recreate
 com.openggf.level.objects.SkidDustObjectInstance#finalScalar#facingLeft
 com.openggf.level.objects.SplashObjectInstance#finalScalar#facingLeft
 com.openggf.level.objects.SplashObjectInstance#recreate
-com.openggf.level.objects.boss.BossExplosionObjectInstance#finalScalar#sfxId
