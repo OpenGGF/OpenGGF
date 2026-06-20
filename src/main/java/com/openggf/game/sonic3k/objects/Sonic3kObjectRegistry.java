@@ -379,16 +379,17 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // genericRecreate Path 1.
             // CorkeyShotChild now implements RewindRecreatable -> genericRecreate Path 1;
             // compact restore reapplies the captured shot script after recreate.
-            // Dragonfly swinging body segment (relink to live parent / prior sibling).
-            dragonflyLinkedBodyChildCodec(),
+            // Dragonfly swinging body segment codec deleted (Phase-2 graph batch):
+            // generic recreate uses a live shell; compact restore relinks parent
+            // and followAnchor by ObjectRefId.
             // Ribot leg/swing appendage codec deleted (Phase-2 batch 50):
             // transient parent is relinked by RewindRecreatable generic recreate.
-            // Spiker spring-loaded top spike (relink to nearest live Spiker).
-            spikerTopSpikeCodec(),
+            // Spiker spring-loaded top spike codec deleted (Phase-2 graph batch):
+            // compact restore relinks the parent by ObjectRefId.
             // Star Pointer point / Orbinaut orb codecs deleted (Phase-2 batch 50):
             // transient parents are relinked by RewindRecreatable generic recreate.
-            // Turbo Spiker launched shell (relink to nearest live parent).
-            turboSpikerShellChildCodec(),
+            // Turbo Spiker shell codec deleted (Phase-2 graph batch):
+            // compact restore relinks the parent by ObjectRefId.
             // Madmole side-drill codec deleted (Phase-2 batch 43): self-contained;
             // facingLeft is recovered from the spawn render flag during generic recreate.
             // ICZ end-boss fleeing-Robotnik escape ship codec deleted (Phase-2
@@ -651,13 +652,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     // Batch-inner1: inner-class hazard/solid/cosmetic child rewind codecs
     // ===================================================================
 
-    private static final String SPIKER_TOP_SPIKE_CHILD_CLASS =
-            "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild";
-    private static final String DRAGONFLY_LINKED_BODY_CHILD_CLASS =
-            "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild";
-    private static final String TURBO_SPIKER_SHELL_CHILD_CLASS =
-            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild";
-
     // Batch-inner2 binary-name keys (private/nested children -> no Class literal).
     private static final String MGZ_DRILL_ARM_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild";
@@ -693,122 +687,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 }
                 return new AizSpikedLogObjectInstance.SpikedLogCollisionChild(
                         entry.spawn(), parent);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec dragonflyLinkedBodyChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(DRAGONFLY_LINKED_BODY_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return DRAGONFLY_LINKED_BODY_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                DragonflyBadnikInstance parent = findNearestLiveInstance(
-                        context, DragonflyBadnikInstance.class, entry.spawn());
-                if (parent == null) {
-                    return null;
-                }
-                // segmentIndex = subtype >> 1 (subtype = i << 1). Segment 0 anchors
-                // to the parent; later segments chain off the previously-recreated
-                // sibling (restore is spawn-order, so the earlier sibling is live).
-                ObjectSpawn spawn = entry.spawn();
-                int subtype = spawn != null ? spawn.subtype() : 0;
-                int segmentIndex = subtype >> 1;
-                AbstractObjectInstance followAnchor = parent;
-                if (segmentIndex > 0) {
-                    AbstractObjectInstance sibling = findNearestLiveInstance(
-                            context, DragonflyBadnikInstance.LinkedBodyChild.class, spawn);
-                    if (sibling != null) {
-                        followAnchor = sibling;
-                    }
-                }
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(
-                            DragonflyBadnikInstance.class, AbstractObjectInstance.class,
-                            int.class, int.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(
-                            parent, followAnchor, subtype, segmentIndex);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec spikerTopSpikeCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(SPIKER_TOP_SPIKE_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return SPIKER_TOP_SPIKE_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                SpikerBadnikInstance parent = findNearestLiveInstance(
-                        context, SpikerBadnikInstance.class, entry.spawn());
-                if (parent == null) {
-                    return null;
-                }
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(SpikerBadnikInstance.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(parent);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec turboSpikerShellChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(TURBO_SPIKER_SHELL_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return TURBO_SPIKER_SHELL_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    TurboSpikerBadnikInstance parent = findNearestLiveInstance(
-                            context, TurboSpikerBadnikInstance.class, entry.spawn());
-                    if (parent == null) {
-                        return null;
-                    }
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(TurboSpikerBadnikInstance.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(parent);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
             }
         };
     }

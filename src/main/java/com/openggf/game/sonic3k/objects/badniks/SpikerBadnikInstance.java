@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -429,15 +430,21 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private static final class SpikerTopSpikeChild extends AbstractObjectInstance
-            implements TouchResponseProvider, TouchResponseListener {
+            implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
         private static final int COLLISION_FLAGS = 0x40 | COLLISION_SIZE_INDEX;
-        private final SpikerBadnikInstance parent;
+        private SpikerBadnikInstance parent;
         private int cooldown;
 
         private SpikerTopSpikeChild(SpikerBadnikInstance parent) {
             super(parent.getSpawn(), "SpikerTopSpike");
             this.parent = parent;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            SpikerBadnikInstance liveParent = findLiveSpikerParent(ctx);
+            return liveParent != null ? new SpikerTopSpikeChild(liveParent) : null;
         }
 
         @Override
@@ -511,6 +518,18 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
         public void appendRenderCommands(List<GLCommand> commands) {
             // ROM parity: ObjDat child uses mapping frame 7, which is an empty frame.
             // This child only provides the spring/touch region above the body art.
+        }
+
+        private static SpikerBadnikInstance findLiveSpikerParent(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (instance instanceof SpikerBadnikInstance spiker && !spiker.isDestroyed()) {
+                    return spiker;
+                }
+            }
+            return null;
         }
     }
 

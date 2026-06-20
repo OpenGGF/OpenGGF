@@ -5,11 +5,14 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -370,8 +373,8 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private static final class TurboSpikerShellChild extends AbstractObjectInstance
-            implements TouchResponseProvider {
-        private final TurboSpikerBadnikInstance parent;
+            implements TouchResponseProvider, RewindRecreatable {
+        private TurboSpikerBadnikInstance parent;
 
         private int currentX;
         private int currentY;
@@ -389,6 +392,12 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
             this.facingLeft = parent.badnikFacingLeft();
             this.currentX = parent.getX() + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
             this.currentY = parent.getY();
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            TurboSpikerBadnikInstance liveParent = findLiveTurboSpikerParent(ctx);
+            return liveParent != null ? new TurboSpikerShellChild(liveParent) : null;
         }
 
         void launch() {
@@ -483,6 +492,18 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
                 return;
             }
             renderer.drawFrameIndex(SHELL_FRAME, currentX, currentY, !facingLeft, false);
+        }
+
+        private static TurboSpikerBadnikInstance findLiveTurboSpikerParent(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (instance instanceof TurboSpikerBadnikInstance turboSpiker && !turboSpiker.isDestroyed()) {
+                    return turboSpiker;
+                }
+            }
+            return null;
         }
     }
 

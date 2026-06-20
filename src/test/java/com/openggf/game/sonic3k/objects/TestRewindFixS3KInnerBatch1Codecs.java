@@ -12,8 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic3kObjectRegistry} (unioned with the shared codecs)
- * still exposes a dynamic rewind recreate codec for batch-inner1 inner-class
- * children that have not moved to the Phase-2 generic recreate path.
+ * still exposes a dynamic rewind recreate codec for remaining batch-inner1
+ * inner-class children that have not moved to the Phase-2 generic recreate path.
  *
  * <p>These are static nested children (hazards, ridable platforms, projectiles,
  * a logic shim, and a defeat-cutscene ship) keyed by their JVM binary name
@@ -44,13 +44,7 @@ class TestRewindFixS3KInnerBatch1Codecs {
 
         List<String> required = List.of(
                 "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild",
-                "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild",
-                "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild",
-                "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild",
-                "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild",
-                "com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance$OrbitingPointInstance",
-                "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance$OrbinautOrbInstance",
-                "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild");
+                "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild");
 
         for (String name : required) {
             assertTrue(names.contains(name),
