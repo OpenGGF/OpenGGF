@@ -17064,3 +17064,29 @@ Result (full `*TraceReplay` resweep, vs the cluster-4 baseline):
   the rewind-refactor commits, not touched by this branch.)
 - CPZ1's new frontier f3365 is a tails_x -1 sub-pixel (family 4) onesie.
 
+
+### 2026-06-21 -- Cluster 5 exhaustion: CPZ1 fixed; remaining members are deep
+
+Investigated every remaining cluster-5 (Tails-movement) frontier with the proven
+instrument->root-cause method. Findings:
+- CPZ1 f1157: FIXED (Spiny spike one-frame realignment, see above) -> f3365.
+- CPZ2 f2888 (tails_x -8): Tails RIDING a moving CNZ-style platform (onObj=0x22);
+  carried position off by 8px. Family 1 (solid-object carry), object-specific.
+- CNZ complete-run f1846 (tails_x_speed -0x1000): engine Tails LAUNCHED ~-0x1000 by a
+  CNZ object (slot 20 @14B8,0770) while ROM Tails CPU-follows calmly (gv 0x24, status
+  0x20). A CNZ-bumper/object-vs-CPU-sidekick interaction; object-specific.
+- OOZ f1782 / MTZ3 f1973 / CNZ2 f4418 / MCZ2 f4485 (tails_x/y +/-1): CPU-follow MICRO-
+  OSCILLATION phase drift -- the engine's Tails follow-speed runs ~0x20 off (tolerated
+  as a warning for many frames) and accumulates to a 1px position error at the frontier.
+  P9 sub-pixel-carry class; needs frame-by-frame sub= tracing of the follow-speed
+  oscillation, no clean object-scoped fix.
+
+Conclusion: cluster 5's one cleanly-fixable trace (CPZ1) is done. The rest, and all of
+cluster 6 (onesies), are deep object-carry / bumper / CPU-follow-sub-pixel / terrain
+issues. Each needs its own multi-step instrument->root-cause->object-scoped-fix->resweep
+loop (the method that landed cluster 4 and CPZ1), and several touch shared sidekick/
+solid code with real regression risk. No further clean wins remain that are safe to land
+without per-issue deep work. Verified deliverables this run: cluster-4 Tails_control_counter
+split (c80dd4dda) and CPZ Spiny spike realignment (da2f0c528); 6 traces improved, zero
+regressions.
+
