@@ -16827,3 +16827,30 @@ Next recommended target: delegate the cluster-5 CPZ Spiny projectile / object-st
 divergence (CPZ1 f1157) as an object-implementation investigation, or take the isolated
 LZ3 f466 vertical-wrap as a standalone structural fix.
 
+
+### 2026-06-20 -- Cluster 5 CPZ1 f1157 investigation (no fix landed)
+
+Delegated read-only investigation of the CPZ1 f1157 standing/hurt divergence.
+Findings:
+- S2 object **0x98** = generic Projectile (HURT category, 4x4 / Touch size 0x18,
+  s2.asm:74625, 85078); it is the Spiny's fired shot. **0xA5** = Spiny badnik
+  (ENEMY category 0x0B, 8x8, s2.asm:76400-76587).
+- The engine's `SpinyBadnikInstance.fireSpike()` spawns its `BadnikProjectileInstance`
+  with the PARENT Spiny's `ObjectSpawn`, so the projectile reports objectId 0xA5 in
+  traces instead of 0x98. Its `getCollisionFlags()` is still correct (HURT|4x4), so this
+  is a trace-identity cleanup, NOT the gameplay cause -- applying it would not move f1157.
+- ROOT CAUSE STILL OPEN: ROM Tails is standing on object slot 0x10 (`status`=00, not
+  hurt) at f1157; the engine Tails is not on that object and is hit by the projectile.
+  The trace does not expose WHICH object ROM slot 0x10 is (it is not in the recorded
+  near-list), and the engine's slot-0x10 mapping points at a far LayerSwitcher. Resolving
+  this needs a recorder extension to dump the `onObj` target object id/pos for the player
+  and sidekick (sanctioned per the skill's recorder-extension recipe), then a disasm-
+  backed fix of whatever solid/standing object the engine is missing or mis-allocating.
+  This is object-implementation/slot-identity scope, not a shared-physics one-liner.
+
+Suggested follow-ups (either is a clean standalone next task):
+- Extend the S2 recorder to record `onObj` target object id+pos, regenerate CPZ1, then
+  fix the missing/mis-slotted solid object behind ROM slot 0x10.
+- Or take the isolated S1 LZ3 f466 vertical-wrap (engine Y wraps at 0x800 crossing the
+  boundary while ROM lets Y exceed 0x800) as a standalone structural fix.
+
