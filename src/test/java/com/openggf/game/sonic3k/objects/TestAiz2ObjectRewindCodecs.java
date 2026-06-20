@@ -41,6 +41,15 @@ class TestAiz2ObjectRewindCodecs {
         return codecNames.contains(type.getName()) || RewindRecreatable.class.isAssignableFrom(type);
     }
 
+    private static void assertGenericBacked(Class<?> type, Set<String> codecNames) {
+        assertFalse(codecNames.contains(type.getName()),
+                type.getSimpleName() + " codec should be deleted via Phase-2 generic recreate");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(type),
+                type.getSimpleName() + " must implement RewindRecreatable after codec deletion");
+        assertTrue(hasDynamicRecreatePath(type, codecNames),
+                "missing dynamic recreate path for " + type.getSimpleName());
+    }
+
     @Test
     void hasDynamicRecreatePathsForAiz2RecreatableObjects() {
         Set<String> names = codecClassNames();
@@ -59,26 +68,17 @@ class TestAiz2ObjectRewindCodecs {
                 "AizBattleshipInstance must implement RewindRecreatable after codec deletion");
         assertTrue(hasDynamicRecreatePath(AizBattleshipInstance.class, names),
                 "missing dynamic recreate path for AizBattleshipInstance");
-        assertTrue(names.contains(AizBgTreeInstance.class.getName()),
-                "missing codec for AizBgTreeInstance");
-        assertTrue(names.contains(Aiz2BossEndSequenceController.class.getName()),
-                "missing codec for Aiz2BossEndSequenceController");
+        assertGenericBacked(AizBgTreeInstance.class, names);
+        assertGenericBacked(Aiz2BossEndSequenceController.class, names);
 
         // Tier 3: boss-relinked children.
-        assertTrue(names.contains(AizMinibossBodyChild.class.getName()),
-                "missing codec for AizMinibossBodyChild");
-        assertTrue(names.contains(AizMinibossArmChild.class.getName()),
-                "missing codec for AizMinibossArmChild");
-        assertTrue(names.contains(AizMinibossNapalmController.class.getName()),
-                "missing codec for AizMinibossNapalmController");
-        assertTrue(names.contains(AizMinibossFlameBarrelChild.class.getName()),
-                "missing codec for AizMinibossFlameBarrelChild");
-        assertTrue(names.contains(AizEndBossShipChild.class.getName()),
-                "missing codec for AizEndBossShipChild");
-        assertTrue(names.contains(AizEndBossFlameColumnChild.class.getName()),
-                "missing codec for AizEndBossFlameColumnChild");
-        assertTrue(names.contains(AizEndBossArmChild.class.getName()),
-                "missing codec for AizEndBossArmChild");
+        assertGenericBacked(AizMinibossBodyChild.class, names);
+        assertGenericBacked(AizMinibossArmChild.class, names);
+        assertGenericBacked(AizMinibossNapalmController.class, names);
+        assertGenericBacked(AizMinibossFlameBarrelChild.class, names);
+        assertGenericBacked(AizEndBossShipChild.class, names);
+        assertGenericBacked(AizEndBossFlameColumnChild.class, names);
+        assertGenericBacked(AizEndBossArmChild.class, names);
     }
 
     @Test
@@ -86,18 +86,21 @@ class TestAiz2ObjectRewindCodecs {
         Set<String> names = codecClassNames();
         // Previously Tier-4 (dropped). Now captured + recreated so held rewind
         // reverses them cleanly instead of re-emitting them forward.
-        List<String> codecBacked = List.of(
-                AizShipBombInstance.class.getName(),
-                AizMinibossBarrelShotChild.class.getName(),
-                AizMinibossBarrelShotFlareChild.class.getName(),
-                AizMinibossFlameChild.class.getName(),
-                AizEndBossPropellerChild.class.getName(),
-                AizEndBossFlameChild.class.getName(),
-                AizEndBossBombChild.class.getName(),
-                AizEndBossSmokeChild.class.getName());
+        List<String> codecBacked = List.of(AizShipBombInstance.class.getName());
         for (String name : codecBacked) {
             assertTrue(names.contains(name),
                     "AIZ2 transient child must now have a rewind codec: " + name);
+        }
+        List<Class<?>> genericBacked = List.of(
+                AizMinibossBarrelShotChild.class,
+                AizMinibossBarrelShotFlareChild.class,
+                AizMinibossFlameChild.class,
+                AizEndBossPropellerChild.class,
+                AizEndBossFlameChild.class,
+                AizEndBossBombChild.class,
+                AizEndBossSmokeChild.class);
+        for (Class<?> type : genericBacked) {
+            assertGenericBacked(type, names);
         }
     }
 
@@ -110,12 +113,7 @@ class TestAiz2ObjectRewindCodecs {
                 AizMinibossImpactFlameChild.class,
                 AizMinibossDebrisChild.class);
         for (Class<?> type : genericBacked) {
-            assertFalse(names.contains(type.getName()),
-                    type.getSimpleName() + " codec should be deleted via Phase-2 generic recreate");
-            assertTrue(RewindRecreatable.class.isAssignableFrom(type),
-                    type.getSimpleName() + " must implement RewindRecreatable after codec deletion");
-            assertTrue(hasDynamicRecreatePath(type, names),
-                    "missing dynamic recreate path for " + type.getSimpleName());
+            assertGenericBacked(type, names);
         }
     }
 }

@@ -3,7 +3,10 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -26,7 +29,7 @@ import java.util.List;
  *   <li>After $7F frames → ship deletes itself</li>
  * </ol>
  */
-public class AizEndBossShipChild extends AbstractBossChild {
+public class AizEndBossShipChild extends AbstractBossChild implements RewindRecreatable {
     private static final int SHIP_Y_OFFSET = -0x14;
     private static final int HEAD_Y_OFFSET = -0x1C;
 
@@ -63,6 +66,17 @@ public class AizEndBossShipChild extends AbstractBossChild {
         this.headAnimTimer = 0;
         this.headFrame = 0;
         this.shipFrame = SHIP_FRAME_COMBAT;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        AizEndBossInstance restoredBoss = AizEndBossRewindLinks.nearestBoss(ctx);
+        if (restoredBoss == null) {
+            return null;
+        }
+        AizEndBossShipChild restored = new AizEndBossShipChild(restoredBoss);
+        restoredBoss.rewindAttachShipChild(restored);
+        return restored;
     }
 
     @Override

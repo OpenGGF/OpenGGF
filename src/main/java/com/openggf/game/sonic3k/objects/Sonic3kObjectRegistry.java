@@ -111,10 +111,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // AIZ miniboss child codecs deleted (graph batch): generic recreate
             // relinks the live boss/sibling graph and the graph harness covers
             // multi-barrel restore ordering.
-            aizEndBossChildCodec(AizEndBossShipChild.class, AizEndBossShipChild::new),
-            aizEndBossChildCodec(AizEndBossFlameColumnChild.class, AizEndBossFlameColumnChild::new),
-            aizEndBossChildCodec(AizEndBossArmChild.class,
-                    boss -> new AizEndBossArmChild(boss, 0, 0, 0)),
+            // AIZ end-boss graph codecs deleted: generic recreate relinks the
+            // live boss/arm/propeller graph and TestS3kAizEndBossGraphRewind
+            // covers multi-arm restore ordering.
 
             // --- AIZ2 transient combat/cosmetic children (now captured+restored) ---
             // These were previously dropped (Tier-4). Held rewind restores the
@@ -135,13 +134,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
 
             // AIZ miniboss flame/shot/flare codecs deleted with the graph batch.
 
-            // Relink to the live end boss; sibling arm/propeller where needed.
-            aizEndBossPropellerCodec(),
-            aizEndBossFlameCodec(),
-            aizEndBossChildCodec(AizEndBossBombChild.class,
-                    boss -> new AizEndBossBombChild(boss, 0, 0, 0)),
-            aizEndBossChildCodec(AizEndBossSmokeChild.class,
-                    boss -> new AizEndBossSmokeChild(boss, 0, 0, false)),
+            // AIZ end-boss propeller/flame/bomb/smoke codecs deleted with the
+            // graph batch.
 
             // --- Release-slice batch 1: HCZ/MHZ/MGZ/ICZ rewind recreate codecs ---
             // Without these, recreateDynamicObject() returns null for the listed
@@ -211,8 +205,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // field capturer reapplies them after recreate.
 
             // Self-contained gameplay-critical bosses / cutscenes / capsules.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizEndBossInstance.class, s -> new AizEndBossInstance(s)),
+            // AizEndBossInstance codec deleted with the AIZ end-boss graph
+            // batch; exact spawn coordinates are supplied by RewindRecreatable.
             // Aiz2EndEggCapsuleInstance / HczEndBossEggCapsuleInstance codecs
             // deleted (Phase-2 batch 17): exact spawn coordinates are supplied
             // by RewindRecreatable.
@@ -485,18 +479,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     }
 
     /**
-     * Codec for an AIZ end-boss child. As with the miniboss children, the live
-     * {@link AizEndBossInstance} is recreated before the dynamic-object restore
-     * loop, so it is found in {@code getActiveObjects()} and passed into the
-     * child constructor.
-     */
-    private static DynamicObjectRewindCodec aizEndBossChildCodec(
-            Class<? extends AbstractObjectInstance> type,
-            Function<AizEndBossInstance, ? extends AbstractObjectInstance> factory) {
-        return bossChildCodec(type, AizEndBossInstance.class, factory);
-    }
-
-    /**
      * Codec for the AIZ1 intro biplane child. The live
      * {@link AizPlaneIntroInstance} orchestrator is resolved via its static
      * accessor (set in its constructor, cleared on destroy), which is more robust
@@ -624,70 +606,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return factory.apply(ship, entry.spawn());
-            }
-        };
-    }
-
-    /**
-     * Codec for the AIZ end-boss propeller, which needs both the live boss and
-     * the live {@link AizEndBossArmChild} it is mounted on. The arm is spawned
-     * before the propeller, so it is already present in
-     * {@code getActiveObjects()} during the propeller's recreate. If either the
-     * boss or the arm is absent the propeller is dropped.
-     */
-    private static DynamicObjectRewindCodec aizEndBossPropellerCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == AizEndBossPropellerChild.class;
-            }
-
-            @Override
-            public String className() {
-                return AizEndBossPropellerChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                AizEndBossInstance boss = findLiveBossForRewind(context, AizEndBossInstance.class);
-                AizEndBossArmChild arm = findLiveInstance(context, AizEndBossArmChild.class);
-                if (boss == null || arm == null) {
-                    return null;
-                }
-                return new AizEndBossPropellerChild(boss, arm, 0);
-            }
-        };
-    }
-
-    /**
-     * Codec for the AIZ end-boss flame, which needs both the live boss and the
-     * live {@link AizEndBossPropellerChild} that emitted it. The propeller is
-     * spawned before its flames, so it is present during the flame's recreate.
-     * If either is absent the flame is dropped.
-     */
-    private static DynamicObjectRewindCodec aizEndBossFlameCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == AizEndBossFlameChild.class;
-            }
-
-            @Override
-            public String className() {
-                return AizEndBossFlameChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                AizEndBossInstance boss = findLiveBossForRewind(context, AizEndBossInstance.class);
-                AizEndBossPropellerChild propeller =
-                        findLiveInstance(context, AizEndBossPropellerChild.class);
-                if (boss == null || propeller == null) {
-                    return null;
-                }
-                return new AizEndBossFlameChild(boss, propeller, 0);
             }
         };
     }

@@ -11,10 +11,14 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -49,7 +53,7 @@ import java.util.logging.Logger;
  *   <li>Knuckles: camera lock at $4100, target $4160, Y offset $5DA</li>
  * </ul>
  */
-public class AizEndBossInstance extends AbstractBossInstance {
+public class AizEndBossInstance extends AbstractBossInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizEndBossInstance.class.getName());
 
     // ===== Routine constants (ROM: AIZ_EndBossIndex, stride 2) =====
@@ -176,6 +180,13 @@ public class AizEndBossInstance extends AbstractBossInstance {
     public AizEndBossInstance(ObjectSpawn spawn) {
         super(spawn, "AIZEndBoss");
         Aiz2BossEndSequenceState.reset();
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.construct(
+                ctx.objectServices(),
+                () -> new AizEndBossInstance(ctx.spawn()));
     }
 
     // ===== Lifecycle =====
@@ -922,6 +933,27 @@ public class AizEndBossInstance extends AbstractBossInstance {
 
     private void spawnFlameColumnChild() {
         spawnChild(() -> new AizEndBossFlameColumnChild(this));
+    }
+
+    void rewindAttachShipChild(AizEndBossShipChild shipChild) {
+        this.shipChild = shipChild;
+        if (shipChild != null && !childComponents.contains(shipChild)) {
+            childComponents.add(shipChild);
+        }
+    }
+
+    void rewindAttachArmChild(AizEndBossArmChild armChild) {
+        if (armChild == null) {
+            return;
+        }
+        if (armChild.rewindSubtype() == 0) {
+            leftArm = armChild;
+        } else {
+            rightArm = armChild;
+        }
+        if (!childComponents.contains(armChild)) {
+            childComponents.add(armChild);
+        }
     }
 
     private void spawnPendingExplosions() {

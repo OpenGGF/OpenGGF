@@ -7,6 +7,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -17,7 +19,7 @@ import java.util.List;
  * <p>ROM: {@code ChildObjDat_69D36 -> loc_69996 -> loc_699B0}, using frames
  * {@code 0x21, 0x21, 0x22, 0x23} at offset {@code (0, -$30)}.
  */
-public class AizEndBossFlameColumnChild extends AbstractObjectInstance {
+public class AizEndBossFlameColumnChild extends AbstractObjectInstance implements RewindRecreatable {
     private static final int Y_OFFSET = -0x30;
     private static final int[] FRAMES = {0x21, 0x21, 0x22, 0x23};
     private static final int[] FRAME_DURATIONS = {1, 4, 5, 6};
@@ -31,6 +33,12 @@ public class AizEndBossFlameColumnChild extends AbstractObjectInstance {
         this.boss = boss;
         this.sequenceIndex = 0;
         this.frameTimer = FRAME_DURATIONS[0];
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        AizEndBossInstance restoredBoss = AizEndBossRewindLinks.nearestBoss(ctx);
+        return restoredBoss == null ? null : new AizEndBossFlameColumnChild(restoredBoss);
     }
 
     @Override

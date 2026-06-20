@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -36,7 +38,8 @@ import java.util.logging.Logger;
  * - Angle 8: xVel=0, yVel=$400
  * - Angle $C: xVel=-$300, yVel=$300
  */
-public class AizEndBossBombChild extends AbstractObjectInstance implements TouchResponseProvider {
+public class AizEndBossBombChild extends AbstractObjectInstance
+        implements TouchResponseProvider, RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizEndBossBombChild.class.getName());
     private static final int SHIELD_REACTION_FIRE = 1 << 4;
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
@@ -100,6 +103,17 @@ public class AizEndBossBombChild extends AbstractObjectInstance implements Touch
         // Select animation by angle
         boolean vertical = (angleIndex == 1 || angleIndex == 2);
         this.mappingFrame = vertical ? 0x16 : 0x26;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        AizEndBossInstance restoredBoss = AizEndBossRewindLinks.nearestBoss(ctx);
+        if (restoredBoss == null) {
+            return null;
+        }
+        AizEndBossBombChild restored = new AizEndBossBombChild(restoredBoss, 0, 0, 0);
+        AizEndBossRewindLinks.seedCapturedScalars(restored, ctx);
+        return restored;
     }
 
     @Override

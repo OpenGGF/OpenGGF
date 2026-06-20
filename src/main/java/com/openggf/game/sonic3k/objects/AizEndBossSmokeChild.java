@@ -5,6 +5,8 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -18,7 +20,7 @@ import java.util.List;
  * - Moving (xVel != 0): frames $12, $13, $14 (ROM: byte_69E2F)
  * - Stationary (xVel == 0): frames $18, $19, $1A (ROM: byte_69E38)
  */
-public class AizEndBossSmokeChild extends AbstractObjectInstance {
+public class AizEndBossSmokeChild extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int SMOKE_DURATION = 14; // Approximate duration from animation
     private final AizEndBossInstance boss;
@@ -39,6 +41,17 @@ public class AizEndBossSmokeChild extends AbstractObjectInstance {
         this.moving = moving;
         this.animTimer = 0;
         this.mappingFrame = moving ? 0x12 : 0x18;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        AizEndBossInstance restoredBoss = AizEndBossRewindLinks.nearestBoss(ctx);
+        if (restoredBoss == null) {
+            return null;
+        }
+        AizEndBossSmokeChild restored = new AizEndBossSmokeChild(restoredBoss, 0, 0, false);
+        AizEndBossRewindLinks.seedCapturedScalars(restored, ctx);
+        return restored;
     }
 
     @Override

@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -31,7 +33,8 @@ import java.util.logging.Logger;
  * - Angles 0/$C: byte_69DC9 (frames 7,8,9,$A)
  * - Angles 4/8: byte_69DF3 (frames $B,$C,$D,$E)
  */
-public class AizEndBossFlameChild extends AbstractObjectInstance implements TouchResponseProvider {
+public class AizEndBossFlameChild extends AbstractObjectInstance
+        implements TouchResponseProvider, RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizEndBossFlameChild.class.getName());
     private static final int SHIELD_REACTION_FIRE = 1 << 4;
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
@@ -83,6 +86,18 @@ public class AizEndBossFlameChild extends AbstractObjectInstance implements Touc
         // Select initial frame based on angle
         boolean vertical = (angle == 4 || angle == 8);
         this.mappingFrame = vertical ? 0x0B : 0x07;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        AizEndBossInstance restoredBoss = AizEndBossRewindLinks.nearestBoss(ctx);
+        AizEndBossPropellerChild restoredPropeller = AizEndBossRewindLinks.nearestPropeller(ctx);
+        if (restoredBoss == null || restoredPropeller == null) {
+            return null;
+        }
+        AizEndBossFlameChild restored = new AizEndBossFlameChild(restoredBoss, restoredPropeller, 0);
+        AizEndBossRewindLinks.seedCapturedScalars(restored, ctx);
+        return restored;
     }
 
     @Override

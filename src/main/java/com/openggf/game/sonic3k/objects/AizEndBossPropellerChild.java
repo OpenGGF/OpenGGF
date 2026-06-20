@@ -3,7 +3,10 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -28,7 +31,7 @@ import java.util.logging.Logger;
  * ROM XORs angle with $C to select one of two tables:
  * angles 0/$C share the diagonal table, angles 4/8 share the vertical table.
  */
-public class AizEndBossPropellerChild extends AbstractBossChild {
+public class AizEndBossPropellerChild extends AbstractBossChild implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizEndBossPropellerChild.class.getName());
 
     private static final int ROUTINE_INIT = 0;
@@ -124,6 +127,26 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
         this.fireWindowConsumed = false;
         this.knuxFireCounter = 0;
         this.animCallback = AnimCallback.NONE;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        AizEndBossInstance restoredBoss = AizEndBossRewindLinks.nearestBoss(ctx);
+        AizEndBossArmChild nearestArm = AizEndBossRewindLinks.nearestArm(ctx);
+        int capturedSubtype = AizEndBossRewindLinks.capturedPropellerSubtype(ctx, restoredBoss, nearestArm);
+        AizEndBossArmChild restoredArm = AizEndBossRewindLinks.nearestArm(ctx, capturedSubtype);
+        if (restoredBoss == null || restoredArm == null) {
+            return null;
+        }
+        AizEndBossPropellerChild restored =
+                new AizEndBossPropellerChild(restoredBoss, restoredArm, capturedSubtype);
+        if (ctx.spawn() != null) {
+            restored.setPosition(ctx.spawn().x(), ctx.spawn().y());
+            restored.updateDynamicSpawn();
+        }
+        AizEndBossRewindLinks.seedCapturedScalars(restored, ctx);
+        restoredArm.rewindAttachPropeller(restored);
+        return restored;
     }
 
     @Override
@@ -321,5 +344,9 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
     @Override
     public boolean isHighPriority() {
         return boss.isHighPriority();
+    }
+
+    int rewindSubtype() {
+        return subtype;
     }
 }
