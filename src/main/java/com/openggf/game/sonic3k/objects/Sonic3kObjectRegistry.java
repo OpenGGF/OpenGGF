@@ -359,8 +359,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // scalars were un-finaled so the generic field capturer reapplies them
             // after recreate, so placeholder ctor args are safe.
 
-            // AIZ spiked-log spike hitbox (relink to nearest live spiked log).
-            aizSpikedLogSpikeCodec(),
+            // AIZ spiked-log spike hitbox codec deleted (Phase-2 graph batch):
+            // generic recreate relinks the nearest live log; compact restore
+            // resolves the exact captured parent by ObjectRefId.
             // AIZ falling-log ridable platform (self-contained; act-derived artKey
             // reapplied by the capturer).
             ObjectRewindDynamicCodecs.exactSpawnCodec(
@@ -563,35 +564,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild";
     private static final String ICZ_ICE_SPIKES_HURT_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild";
-
-    private static DynamicObjectRewindCodec aizSpikedLogSpikeCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass()
-                        == AizSpikedLogObjectInstance.SpikedLogCollisionChild.class;
-            }
-
-            @Override
-            public String className() {
-                return AizSpikedLogObjectInstance.SpikedLogCollisionChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // The child spawns at the parent log's spawn (x,y); relink the
-                // correct one of several live spiked logs by nearest captured spawn.
-                AizSpikedLogObjectInstance parent = findNearestLiveInstance(
-                        context, AizSpikedLogObjectInstance.class, entry.spawn());
-                if (parent == null) {
-                    return null;
-                }
-                return new AizSpikedLogObjectInstance.SpikedLogCollisionChild(
-                        entry.spawn(), parent);
-            }
-        };
-    }
 
     // ===================================================================
     // Batch-inner2: nested-class hazard/solid/cutscene child rewind codecs

@@ -43,7 +43,6 @@ class TestRewindFixS3KInnerBatch1Codecs {
         Set<String> names = codecClassNames();
 
         List<String> required = List.of(
-                "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild",
                 "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild");
 
         for (String name : required) {

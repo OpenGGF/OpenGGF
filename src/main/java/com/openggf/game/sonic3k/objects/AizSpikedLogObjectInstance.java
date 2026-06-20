@@ -7,7 +7,10 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -319,11 +322,11 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
      * ROM references: loc_2B8EE (sonic3k.asm:60178-60196), byte_2B918 Y-offset table.
      */
     static class SpikedLogCollisionChild extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, RewindRecreatable {
 
         // collision_flags = 0x9C: HURT type (bit 7), size index 0x1C (sonic3k.asm:60051)
         private static final int COLLISION_FLAGS_ACTIVE = 0x9C;
-        private final AizSpikedLogObjectInstance parent;
+        private AizSpikedLogObjectInstance parent;
         private int currentX;
         private int currentY;
 
@@ -332,6 +335,34 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
             this.parent = parent;
             this.currentX = spawn.x();
             this.currentY = spawn.y();
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            AizSpikedLogObjectInstance parent = findNearestLiveParentForRewind(ctx);
+            return parent == null ? null : new SpikedLogCollisionChild(ctx.spawn(), parent);
+        }
+
+        private static AizSpikedLogObjectInstance findNearestLiveParentForRewind(
+                RewindRecreateContext ctx) {
+            if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
+                    || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            AizSpikedLogObjectInstance best = null;
+            long bestDistance = Long.MAX_VALUE;
+            int childX = ctx.spawn().x();
+            for (ObjectInstance inst : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (inst instanceof AizSpikedLogObjectInstance candidate && !candidate.isDestroyed()) {
+                    long dx = (long) candidate.getX() - childX;
+                    long distance = dx * dx;
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        best = candidate;
+                    }
+                }
+            }
+            return best;
         }
 
         @Override
