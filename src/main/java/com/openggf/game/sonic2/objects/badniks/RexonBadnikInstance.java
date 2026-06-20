@@ -17,6 +17,7 @@ import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -59,7 +60,7 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
     private int patrolTimer;
     private final SubpixelMotion.State motionState;
     private boolean xFlipFlag;
-    private final List<RexonHeadObjectInstance> heads = new ArrayList<>();
+    private final List<RexonHeadObjectInstance> heads = new RewindRelinkingHeadList();
     private int lastTargetX;
     private int lastTargetDistance;
 
@@ -242,6 +243,44 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
             if (head != destroyedHead && !head.isDestroyed()) {
                 head.triggerDeathDrop();
             }
+        }
+    }
+
+    void attachHeadForRewind(RexonHeadObjectInstance head) {
+        if (head != null && !heads.contains(head)) {
+            heads.add(head);
+        }
+    }
+
+    void relinkHeadsForRewind() {
+        heads.removeIf(head -> head == null || head.isDestroyed());
+        heads.sort(Comparator.comparingInt(RexonHeadObjectInstance::rewindHeadIndex));
+        relinkHeadsInListOrder(heads);
+    }
+
+    private static void relinkHeadsInListOrder(List<RexonHeadObjectInstance> heads) {
+        for (int i = 0; i < heads.size(); i++) {
+            RexonHeadObjectInstance current = heads.get(i);
+            if (current == null) {
+                continue;
+            }
+            RexonHeadObjectInstance next = i + 1 < heads.size() ? heads.get(i + 1) : null;
+            current.setLinkedHead(next);
+        }
+    }
+
+    private static final class RewindRelinkingHeadList extends ArrayList<RexonHeadObjectInstance> {
+        @Override
+        public boolean add(RexonHeadObjectInstance head) {
+            boolean added = super.add(head);
+            relinkHeadsInListOrder(this);
+            return added;
+        }
+
+        @Override
+        public void add(int index, RexonHeadObjectInstance element) {
+            super.add(index, element);
+            relinkHeadsInListOrder(this);
         }
     }
 

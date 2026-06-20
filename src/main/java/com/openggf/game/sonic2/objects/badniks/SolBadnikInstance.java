@@ -137,6 +137,12 @@ public class SolBadnikInstance extends AbstractBadnikInstance {
         }
     }
 
+    void attachFireballForRewind(SolFireballObjectInstance fireball) {
+        if (fireball != null && !fireballs.contains(fireball)) {
+            fireballs.add(fireball);
+        }
+    }
+
     int getOrbitDirection() {
         return orbitDirection;
     }

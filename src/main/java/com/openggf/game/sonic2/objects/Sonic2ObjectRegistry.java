@@ -33,13 +33,11 @@ import com.openggf.game.sonic2.objects.badniks.SpikerBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.SolBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance;
-import com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.ShellcrackerBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.NebulaBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance;
-import com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.CluckerBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.WFZStickBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.WFZUnknownBadnikInstance;
@@ -55,9 +53,6 @@ import com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance;
-import com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance;
-import com.openggf.game.sonic2.objects.badniks.SlicerPincerInstance;
-import com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
 import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainer;
@@ -108,10 +103,8 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             checkpointStarCodec(),
             arzBossArrowCodec(),
             // ARZBossPillar now implements RewindRecreatable -> genericRecreate Path 1.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    GrounderRockProjectile.class,
-                    spawn -> new GrounderRockProjectile(spawn.x(), spawn.y(), 0, null)),
-            grounderWallCodec(),
+            // GrounderRockProjectile and GrounderWallInstance now implement
+            // RewindRecreatable -> genericRecreate Path 1.
             // HtzFireProjectileObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // NOTE: EHZ boss child codecs (Spike, Wheel, GroundVehicle, Propeller,
             // VehicleTop) intentionally REMOVED. All five are construction-spawned
@@ -124,16 +117,13 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // re-establishes the construction instance. MTZBossLaser (fired) and the
             // routine-fired children keep their codecs.
             // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
-            balkiryJetCodec(),
+            // BalkiryJetObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // ArrowProjectileInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            shellcrackerClawCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    SlicerPincerInstance.class,
-                    spawn -> new SlicerPincerInstance(
-                            spawn, null, spawn.x(), spawn.y(), 0, false, 0)),
+            // ShellcrackerClawInstance and SlicerPincerInstance now implement
+            // RewindRecreatable -> genericRecreate Path 1.
             // SpikerDrillObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // TurtloidJetInstance and TurtloidRiderInstance now implement RewindRecreatable -> genericRecreate Path 1.
-            solFireballCodec(),
+            // SolFireballObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // WallTurretShotInstance and VerticalLaserObjectInstance now implement
             // RewindRecreatable -> genericRecreate Path 1.
             // SpikyBlockSpikeInstance now implements RewindRecreatable -> genericRecreate Path 1.
@@ -157,7 +147,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // Batch-5 S2 rewind codecs (Rexon head, egg-prison button, results screen).
             // DestroyedEggPrisonObjectInstance now implements
             // RewindRecreatable -> genericRecreate Path 1.
-            rexonHeadCodec(),
+            // RexonHeadObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             eggPrisonButtonCodec(),
             // LeafParticleObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // ResultsScreenObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
@@ -692,179 +682,11 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         };
     }
 
-    private static DynamicObjectRewindCodec grounderWallCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof GrounderWallInstance;
-            }
-
-            @Override
-            public String className() {
-                return GrounderWallInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // Relink to a live Grounder parent so the pre-activation gate still
-                // works. Parent is only consulted while !activated; once activated
-                // (a restored non-final scalar) it is irrelevant. wallIndex 0 is a
-                // placeholder: the velocities it derives are overwritten by
-                // restoreObjectRewindState (xVelocity/yVelocity are non-final).
-                GrounderBadnikInstance parent = findGrounderParentForRewind(context);
-                ObjectSpawn s = entry.spawn();
-                return new GrounderWallInstance(s.x(), s.y(), 0, parent);
-            }
-        };
-    }
-
-    private static GrounderBadnikInstance findGrounderParentForRewind(
-            DynamicObjectRecreateContext context) {
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (inst instanceof GrounderBadnikInstance parent) {
-                return parent;
-            }
-        }
-        return null;
-    }
-
     // EHZ boss child codecs (Spike, Wheel, GroundVehicle, Propeller, VehicleTop)
     // and the shared findEhzBossParentForRewind() helper were removed: those
     // children are construction-spawned and re-established by boss reconstruction
     // during the activeObjects restore loop, so a codec would double them. See the
     // DYNAMIC_REWIND_CODECS list comment and TestBossChildNoDoubleSpawnParity.
-
-    private static DynamicObjectRewindCodec balkiryJetCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == BalkiryJetObjectInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return BalkiryJetObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                BalkiryBadnikInstance best = null;
-                long bestDistance = Long.MAX_VALUE;
-                ObjectSpawn spawn = entry.spawn();
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (!(inst instanceof BalkiryBadnikInstance balkiry)) {
-                        continue;
-                    }
-                    if (spawn == null) {
-                        best = balkiry;
-                        break;
-                    }
-                    long dx = balkiry.getX() - spawn.x();
-                    long dy = balkiry.getY() - spawn.y();
-                    long distance = dx * dx + dy * dy;
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        best = balkiry;
-                    }
-                }
-                if (best == null) {
-                    return null;
-                }
-                return new BalkiryJetObjectInstance(entry.spawn(), best);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec shellcrackerClawCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == ShellcrackerClawInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return ShellcrackerClawInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                ObjectSpawn spawn = entry.spawn();
-                ShellcrackerBadnikInstance best = null;
-                long bestDistance = Long.MAX_VALUE;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (!(inst instanceof ShellcrackerBadnikInstance body)) {
-                        continue;
-                    }
-                    if (spawn == null) {
-                        best = body;
-                        break;
-                    }
-                    long dx = body.getX() - spawn.x();
-                    long dy = body.getY() - spawn.y();
-                    long distance = dx * dx + dy * dy;
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        best = body;
-                    }
-                }
-                if (best == null) {
-                    return null;
-                }
-                // pieceIndex / facingRight are un-finaled non-spawn scalars; restoreObjectRewindState
-                // reapplies the captured values after construction, so placeholders are safe here.
-                return new ShellcrackerClawInstance(spawn, best, spawn.x(), spawn.y(), 0, false);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec solFireballCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == SolFireballObjectInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return SolFireballObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // All four fireballs are spawned with the parent's own ObjectSpawn, so the
-                // live Sol's position matches entry.spawn(); fall back to first live Sol.
-                SolBadnikInstance best = null;
-                long bestDistance = Long.MAX_VALUE;
-                ObjectSpawn spawn = entry.spawn();
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (!(inst instanceof SolBadnikInstance sol)) {
-                        continue;
-                    }
-                    if (spawn == null) {
-                        best = sol;
-                        break;
-                    }
-                    long dx = sol.getX() - spawn.x();
-                    long dy = sol.getY() - spawn.y();
-                    long distance = dx * dx + dy * dy;
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        best = sol;
-                    }
-                }
-                if (best == null) {
-                    return null;
-                }
-                // angle is a non-final captured scalar reapplied by restoreObjectRewindState.
-                return new SolFireballObjectInstance(entry.spawn(), best, 0);
-            }
-        };
-    }
 
     // ehzBossGroundVehicleCodec / ehzBossPropellerCodec / ehzBossVehicleTopCodec
     // removed (construction-spawned EHZ boss children — see DYNAMIC_REWIND_CODECS
@@ -1016,39 +838,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return null;
-    }
-
-    private static DynamicObjectRewindCodec rexonHeadCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == RexonHeadObjectInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return RexonHeadObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                RexonBadnikInstance parent = findLiveInstance(context, RexonBadnikInstance.class);
-                if (parent == null) {
-                    return null;
-                }
-                // parent relinked via ctor. x/y, headIndex, headNumber, xFlip (un-finaled),
-                // state, velocities, oscillation phase/dir/counter, baseX/Y, sub-pixels,
-                // timers, projectileTimer, destroyed are reapplied by restoreObjectRewindState.
-                // linkedHead (sibling) is an object-ref field relinked generically by identity
-                // id. Placeholders below are overwritten on restore.
-                return new RexonHeadObjectInstance(
-                        entry.spawn(), parent,
-                        entry.spawn().x(), entry.spawn().y(),
-                        0,      // headIndex placeholder (un-finaled, reapplied)
-                        false); // xFlip placeholder (un-finaled, reapplied)
-            }
-        };
     }
 
     private static DynamicObjectRewindCodec eggPrisonButtonCodec() {

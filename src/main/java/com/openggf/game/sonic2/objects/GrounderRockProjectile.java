@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -33,7 +35,7 @@ import java.util.List;
  * Index 8: X=-3, Y=-3
  * </pre>
  */
-public class GrounderRockProjectile extends AbstractObjectInstance {
+public class GrounderRockProjectile extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int GRAVITY = 0x38; // 0.21875 pixels/frame (from ObjectMoveAndFall)
 
@@ -83,6 +85,17 @@ public class GrounderRockProjectile extends AbstractObjectInstance {
         this.xVelocity = vel[0];
         this.yVelocity = vel[1];
         this.mappingFrame = ROCK_FRAMES[this.rockIndex];
+    }
+
+    private GrounderRockProjectile() {
+        this(0, 0, 0, null);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn();
+        GrounderBadnikInstance parent = Sonic2GrounderChildRewindLinks.nearestGrounder(ctx);
+        return new GrounderRockProjectile(spawn.x(), spawn.y(), 0, parent);
     }
 
     private static ObjectSpawn createRockSpawn(int x, int y) {

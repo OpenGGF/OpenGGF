@@ -34,6 +34,13 @@ import com.openggf.game.sonic2.objects.bosses.CPZBossPump;
 import com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
+import com.openggf.game.sonic2.objects.GrounderRockProjectile;
+import com.openggf.game.sonic2.objects.GrounderWallInstance;
+import com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance;
+import com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance;
+import com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance;
+import com.openggf.game.sonic2.objects.badniks.SlicerPincerInstance;
+import com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance;
 import com.openggf.game.sonic3k.objects.AizEndBossArmChild;
 import com.openggf.game.sonic3k.objects.AizEndBossBombChild;
 import com.openggf.game.sonic3k.objects.AizEndBossFlameChild;
@@ -573,6 +580,15 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(HczEndBossBladeWaterChute.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(HczEndBossBladeSplash.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(HczEndBossWaterColumn.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S2_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(GrounderRockProjectile.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(GrounderWallInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(BalkiryJetObjectInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(RexonHeadObjectInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(ShellcrackerClawInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(SlicerPincerInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(SolFireballObjectInstance.class.getName(), GameId.S2));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -4029,6 +4045,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through HCZ end-boss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S2 badnik child graph batch: parent/sibling-linked dynamics, graph harness covers restore
+    // =====================================================================
+
+    @Test
+    void s2BadnikChildGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_BADNIK_CHILD_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 badnik child graph batch");
+        }
+    }
+
+    @Test
+    void s2BadnikChildGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_BADNIK_CHILD_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 badnik child graph generic recreate, not a dynamic codec");
         }
     }
 

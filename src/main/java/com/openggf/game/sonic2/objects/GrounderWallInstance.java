@@ -8,6 +8,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.SpritePieceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -47,7 +49,7 @@ import java.util.List;
  * Index 6: X=-1, Y=-1
  * </pre>
  */
-public class GrounderWallInstance extends AbstractObjectInstance {
+public class GrounderWallInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int GRAVITY = 0x38; // 0.21875 pixels/frame (from ObjectMoveAndFall)
     private static final int PALETTE_INDEX = 1;  // Level art palette (matches FallingPillar)
@@ -105,6 +107,17 @@ public class GrounderWallInstance extends AbstractObjectInstance {
         int[] vel = WALL_VELOCITIES[idx];
         this.xVelocity = vel[0];
         this.yVelocity = vel[1];
+    }
+
+    private GrounderWallInstance() {
+        this(0, 0, 0, null);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn();
+        GrounderBadnikInstance parent = Sonic2GrounderChildRewindLinks.nearestGrounder(ctx);
+        return new GrounderWallInstance(spawn.x(), spawn.y(), 0, parent);
     }
 
     private static ObjectSpawn createWallSpawn(int x, int y) {
@@ -196,4 +209,3 @@ public class GrounderWallInstance extends AbstractObjectInstance {
         }
     }
 }
-

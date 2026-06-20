@@ -9,6 +9,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -31,7 +33,7 @@ import java.util.List;
  * - DEATH_DROP: Fall off screen if parent body destroyed
  */
 public class RexonHeadObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable {
 
     // Collision size from disassembly (first 4 heads: 0x0B, last head: 0x8B with HURT flag)
     private static final int COLLISION_SIZE_NORMAL = 0x0B;
@@ -185,6 +187,23 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         this.linkedHead = null;
     }
 
+    private RexonHeadObjectInstance() {
+        this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), null, 0, 0, 0, false);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        RexonBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestRexon(ctx);
+        ObjectSpawn spawn = ctx.spawn();
+        if (parent == null) {
+            return null;
+        }
+        RexonHeadObjectInstance head =
+                new RexonHeadObjectInstance(spawn, parent, spawn.x(), spawn.y(), 0, false);
+        parent.attachHeadForRewind(head);
+        return head;
+    }
+
     /**
      * Set the linked head (the next head toward the tip that this head controls).
      * In the original game, objoff_30 stores the address of the next head toward the tip.
@@ -195,6 +214,10 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
      */
     public void setLinkedHead(RexonHeadObjectInstance head) {
         this.linkedHead = head;
+    }
+
+    int rewindHeadIndex() {
+        return headIndex;
     }
 
     @Override
