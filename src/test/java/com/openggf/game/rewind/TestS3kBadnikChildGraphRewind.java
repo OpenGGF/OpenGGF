@@ -29,7 +29,6 @@ import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -59,28 +58,45 @@ class TestS3kBadnikChildGraphRewind {
 
     @Test
     void dragonflyLinkedBodyGraphRestoresExactParentAndPreviousSegmentByIdentity() {
-        Harness harness = Harness.create(new MhzTestRegistry(), List.of(new ObjectSpawn(
-                0x120, 0x100, Sonic3kObjectIds.DRAGONFLY, 0, 0, false, 10)));
+        Harness harness = Harness.create(new MhzTestRegistry(), List.of(
+                new ObjectSpawn(0x120, 0x100, Sonic3kObjectIds.DRAGONFLY, 0, 0, false, 10),
+                new ObjectSpawn(0x260, 0x140, Sonic3kObjectIds.DRAGONFLY, 0, 0, false, 11)));
         ObjectManager objectManager = harness.objectManager();
         TestablePlayableSprite player = player();
-        DragonflyBadnikInstance sourceParent = only(objectManager, DragonflyBadnikInstance.class);
-        sourceParent.update(0, player);
-        sourceParent.update(1, player);
+        List<DragonflyBadnikInstance> sourceParents = liveByType(objectManager, DragonflyBadnikInstance.class);
+        assertEquals(2, sourceParents.size(), "precondition: two Dragonfly parents must be captured");
+        DragonflyBadnikInstance sourceParentA = sourceParents.get(0);
+        DragonflyBadnikInstance sourceParentB = sourceParents.get(1);
+        sourceParentA.update(0, player);
+        sourceParentA.update(1, player);
+        sourceParentB.update(0, player);
+        sourceParentB.update(1, player);
         List<ObjectInstance> sourceSegments = liveByClassName(objectManager, DRAGONFLY_LINKED_BODY_CHILD);
-        assertEquals(7, sourceSegments.size(), "precondition: Dragonfly setup must create seven body links");
+        assertEquals(14, sourceSegments.size(), "precondition: Dragonfly setup must create seven body links per parent");
 
-        ObjectInstance sourceSegment0 = segmentByIndex(sourceSegments, 0);
-        ObjectInstance sourceSegment1 = segmentByIndex(sourceSegments, 1);
-        setIntField(sourceSegment0, "childX", 0x1A0);
-        setIntField(sourceSegment0, "childY", 0x120);
-        setIntField(sourceSegment0, "countdown", 7);
-        setIntField(sourceSegment1, "childX", 0x1B0);
-        setIntField(sourceSegment1, "childY", 0x118);
-        setIntField(sourceSegment1, "countdown", 5);
+        ObjectInstance sourceSegmentA0 = segmentByParentAndIndex(sourceSegments, sourceParentA, 0);
+        ObjectInstance sourceSegmentA1 = segmentByParentAndIndex(sourceSegments, sourceParentA, 1);
+        ObjectInstance sourceSegmentB0 = segmentByParentAndIndex(sourceSegments, sourceParentB, 0);
+        ObjectInstance sourceSegmentB1 = segmentByParentAndIndex(sourceSegments, sourceParentB, 1);
+        setIntField(sourceSegmentA0, "childX", 0x1A0);
+        setIntField(sourceSegmentA0, "childY", 0x120);
+        setIntField(sourceSegmentA0, "countdown", 7);
+        setIntField(sourceSegmentA1, "childX", 0x1B0);
+        setIntField(sourceSegmentA1, "childY", 0x118);
+        setIntField(sourceSegmentA1, "countdown", 5);
+        setIntField(sourceSegmentB0, "childX", 0x268);
+        setIntField(sourceSegmentB0, "childY", 0x150);
+        setIntField(sourceSegmentB0, "countdown", 3);
+        setIntField(sourceSegmentB1, "childX", 0x278);
+        setIntField(sourceSegmentB1, "childY", 0x158);
+        setIntField(sourceSegmentB1, "countdown", 2);
 
-        ObjectRefId parentId = objectId(objectManager, sourceParent);
-        ObjectRefId segment0Id = objectId(objectManager, sourceSegment0);
-        ObjectRefId segment1Id = objectId(objectManager, sourceSegment1);
+        ObjectRefId parentAId = objectId(objectManager, sourceParentA);
+        ObjectRefId parentBId = objectId(objectManager, sourceParentB);
+        ObjectRefId segmentA0Id = objectId(objectManager, sourceSegmentA0);
+        ObjectRefId segmentA1Id = objectId(objectManager, sourceSegmentA1);
+        ObjectRefId segmentB0Id = objectId(objectManager, sourceSegmentB0);
+        ObjectRefId segmentB1Id = objectId(objectManager, sourceSegmentB1);
         RewindRegistry rewindRegistry = registryFor(objectManager);
         CompositeSnapshot snapshot = rewindRegistry.capture();
 
@@ -89,50 +105,74 @@ class TestS3kBadnikChildGraphRewind {
 
         rewindRegistry.restore(snapshot);
 
-        DragonflyBadnikInstance restoredParent = only(objectManager, DragonflyBadnikInstance.class);
+        DragonflyBadnikInstance restoredParentA = objectById(objectManager, DragonflyBadnikInstance.class, parentAId);
+        DragonflyBadnikInstance restoredParentB = objectById(objectManager, DragonflyBadnikInstance.class, parentBId);
         List<ObjectInstance> restoredSegments = liveByClassName(objectManager, DRAGONFLY_LINKED_BODY_CHILD);
-        assertEquals(7, restoredSegments.size(), "restore must keep exactly the captured seven body links");
-        ObjectInstance restoredSegment0 = segmentByIndex(restoredSegments, 0);
-        ObjectInstance restoredSegment1 = segmentByIndex(restoredSegments, 1);
+        assertEquals(14, restoredSegments.size(), "restore must keep exactly the captured fourteen body links");
+        ObjectInstance restoredSegmentA0 = objectById(objectManager, ObjectInstance.class, segmentA0Id);
+        ObjectInstance restoredSegmentA1 = objectById(objectManager, ObjectInstance.class, segmentA1Id);
+        ObjectInstance restoredSegmentB0 = objectById(objectManager, ObjectInstance.class, segmentB0Id);
+        ObjectInstance restoredSegmentB1 = objectById(objectManager, ObjectInstance.class, segmentB1Id);
 
-        assertNotSame(sourceParent, restoredParent, "restore must recreate the removed Dragonfly parent");
-        assertNotSame(sourceSegment0, restoredSegment0, "restore must recreate removed body segment 0");
-        assertNotSame(sourceSegment1, restoredSegment1, "restore must recreate removed body segment 1");
-        assertEquals(parentId, objectId(objectManager, restoredParent),
-                "Dragonfly parent rewind identity must be preserved");
-        assertEquals(segment0Id, objectId(objectManager, restoredSegment0),
-                "Dragonfly segment 0 rewind identity must be preserved");
-        assertEquals(segment1Id, objectId(objectManager, restoredSegment1),
-                "Dragonfly segment 1 rewind identity must be preserved");
-        assertSame(restoredParent, readObjectField(restoredSegment0, "parent"),
-                "segment 0 parent must resolve to the restored Dragonfly instance");
-        assertSame(restoredParent, readObjectField(restoredSegment0, "followAnchor"),
-                "segment 0 followAnchor must resolve to the restored Dragonfly instance");
-        assertSame(restoredParent, readObjectField(restoredSegment1, "parent"),
-                "segment 1 parent must resolve to the restored Dragonfly instance");
-        assertSame(restoredSegment0, readObjectField(restoredSegment1, "followAnchor"),
-                "segment 1 followAnchor must resolve to restored segment 0, not a stale pre-restore link");
-        assertEquals(0x1A0, readIntField(restoredSegment0, "childX"));
-        assertEquals(0x120, readIntField(restoredSegment0, "childY"));
-        assertEquals(7, readIntField(restoredSegment0, "countdown"));
-        assertEquals(0x1B0, readIntField(restoredSegment1, "childX"));
-        assertEquals(0x118, readIntField(restoredSegment1, "childY"));
-        assertEquals(5, readIntField(restoredSegment1, "countdown"));
+        assertNotSame(sourceSegmentA0, restoredSegmentA0, "restore must recreate removed graph A body segment 0");
+        assertNotSame(sourceSegmentA1, restoredSegmentA1, "restore must recreate removed graph A body segment 1");
+        assertNotSame(sourceSegmentB0, restoredSegmentB0, "restore must recreate removed graph B body segment 0");
+        assertNotSame(sourceSegmentB1, restoredSegmentB1, "restore must recreate removed graph B body segment 1");
+        assertSame(restoredParentA, readObjectField(restoredSegmentA0, "parent"),
+                "graph A segment 0 parent must resolve to restored Dragonfly A");
+        assertSame(restoredParentA, readObjectField(restoredSegmentA0, "followAnchor"),
+                "graph A segment 0 followAnchor must resolve to restored Dragonfly A");
+        assertSame(restoredParentA, readObjectField(restoredSegmentA1, "parent"),
+                "graph A segment 1 parent must resolve to restored Dragonfly A");
+        assertSame(restoredSegmentA0, readObjectField(restoredSegmentA1, "followAnchor"),
+                "graph A segment 1 followAnchor must resolve to restored graph A segment 0");
+        assertSame(restoredParentB, readObjectField(restoredSegmentB0, "parent"),
+                "graph B segment 0 parent must resolve to restored Dragonfly B");
+        assertSame(restoredParentB, readObjectField(restoredSegmentB0, "followAnchor"),
+                "graph B segment 0 followAnchor must resolve to restored Dragonfly B");
+        assertSame(restoredParentB, readObjectField(restoredSegmentB1, "parent"),
+                "graph B segment 1 parent must resolve to restored Dragonfly B");
+        assertSame(restoredSegmentB0, readObjectField(restoredSegmentB1, "followAnchor"),
+                "graph B segment 1 followAnchor must resolve to restored graph B segment 0");
+        assertEquals(0x1A0, readIntField(restoredSegmentA0, "childX"));
+        assertEquals(0x120, readIntField(restoredSegmentA0, "childY"));
+        assertEquals(7, readIntField(restoredSegmentA0, "countdown"));
+        assertEquals(0x1B0, readIntField(restoredSegmentA1, "childX"));
+        assertEquals(0x118, readIntField(restoredSegmentA1, "childY"));
+        assertEquals(5, readIntField(restoredSegmentA1, "countdown"));
+        assertEquals(0x268, readIntField(restoredSegmentB0, "childX"));
+        assertEquals(0x150, readIntField(restoredSegmentB0, "childY"));
+        assertEquals(3, readIntField(restoredSegmentB0, "countdown"));
+        assertEquals(0x278, readIntField(restoredSegmentB1, "childX"));
+        assertEquals(0x158, readIntField(restoredSegmentB1, "childY"));
+        assertEquals(2, readIntField(restoredSegmentB1, "countdown"));
     }
 
     @Test
     void spikerTopSpikeRestoresExactParentAndCooldownState() {
-        Harness harness = Harness.create(new S3klTestRegistry(), List.of(new ObjectSpawn(
-                0x160, 0x120, Sonic3kObjectIds.SPIKER, 0, 0, false, 20)));
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of(
+                new ObjectSpawn(0x160, 0x120, Sonic3kObjectIds.SPIKER, 0, 0, false, 20),
+                new ObjectSpawn(0x260, 0x120, Sonic3kObjectIds.SPIKER, 0, 0, false, 21)));
         ObjectManager objectManager = harness.objectManager();
-        SpikerBadnikInstance sourceParent = only(objectManager, SpikerBadnikInstance.class);
-        sourceParent.update(0, player());
-        sourceParent.update(1, player());
-        ObjectInstance sourceTopSpike = onlyByClassName(objectManager, SPIKER_TOP_SPIKE_CHILD);
-        setIntField(sourceTopSpike, "cooldown", 9);
+        List<SpikerBadnikInstance> sourceParents = liveByType(objectManager, SpikerBadnikInstance.class);
+        assertEquals(2, sourceParents.size(), "precondition: two Spiker parents must be captured");
+        SpikerBadnikInstance sourceParentA = sourceParents.get(0);
+        SpikerBadnikInstance sourceParentB = sourceParents.get(1);
+        sourceParentA.update(0, player());
+        sourceParentA.update(1, player());
+        sourceParentB.update(0, player());
+        sourceParentB.update(1, player());
+        List<ObjectInstance> sourceTopSpikes = liveByClassName(objectManager, SPIKER_TOP_SPIKE_CHILD);
+        assertEquals(2, sourceTopSpikes.size(), "precondition: each Spiker must create one top spike");
+        ObjectInstance sourceTopSpikeA = childWithParent(sourceTopSpikes, sourceParentA);
+        ObjectInstance sourceTopSpikeB = childWithParent(sourceTopSpikes, sourceParentB);
+        setIntField(sourceTopSpikeA, "cooldown", 9);
+        setIntField(sourceTopSpikeB, "cooldown", 4);
 
-        ObjectRefId parentId = objectId(objectManager, sourceParent);
-        ObjectRefId topSpikeId = objectId(objectManager, sourceTopSpike);
+        ObjectRefId parentAId = objectId(objectManager, sourceParentA);
+        ObjectRefId parentBId = objectId(objectManager, sourceParentB);
+        ObjectRefId topSpikeAId = objectId(objectManager, sourceTopSpikeA);
+        ObjectRefId topSpikeBId = objectId(objectManager, sourceTopSpikeB);
         RewindRegistry rewindRegistry = registryFor(objectManager);
         CompositeSnapshot snapshot = rewindRegistry.capture();
 
@@ -141,36 +181,52 @@ class TestS3kBadnikChildGraphRewind {
 
         rewindRegistry.restore(snapshot);
 
-        SpikerBadnikInstance restoredParent = only(objectManager, SpikerBadnikInstance.class);
-        ObjectInstance restoredTopSpike = onlyByClassName(objectManager, SPIKER_TOP_SPIKE_CHILD);
-        assertNotSame(sourceParent, restoredParent, "restore must recreate the removed Spiker parent");
-        assertNotSame(sourceTopSpike, restoredTopSpike, "restore must recreate the removed top spike");
-        assertEquals(parentId, objectId(objectManager, restoredParent),
-                "Spiker parent rewind identity must be preserved");
-        assertEquals(topSpikeId, objectId(objectManager, restoredTopSpike),
-                "Spiker top spike rewind identity must be preserved");
-        assertSame(restoredParent, readObjectField(restoredTopSpike, "parent"),
-                "top spike parent must resolve to the restored Spiker instance");
-        assertEquals(9, readIntField(restoredTopSpike, "cooldown"),
-                "top spike cooldown must be restored from compact state");
+        SpikerBadnikInstance restoredParentA = objectById(objectManager, SpikerBadnikInstance.class, parentAId);
+        SpikerBadnikInstance restoredParentB = objectById(objectManager, SpikerBadnikInstance.class, parentBId);
+        ObjectInstance restoredTopSpikeA = objectById(objectManager, ObjectInstance.class, topSpikeAId);
+        ObjectInstance restoredTopSpikeB = objectById(objectManager, ObjectInstance.class, topSpikeBId);
+        assertNotSame(sourceTopSpikeA, restoredTopSpikeA, "restore must recreate removed top spike A");
+        assertNotSame(sourceTopSpikeB, restoredTopSpikeB, "restore must recreate removed top spike B");
+        assertSame(restoredParentA, readObjectField(restoredTopSpikeA, "parent"),
+                "top spike A parent must resolve to restored Spiker A");
+        assertSame(restoredParentB, readObjectField(restoredTopSpikeB, "parent"),
+                "top spike B parent must resolve to restored Spiker B");
+        assertEquals(9, readIntField(restoredTopSpikeA, "cooldown"),
+                "top spike A cooldown must be restored from compact state");
+        assertEquals(4, readIntField(restoredTopSpikeB, "cooldown"),
+                "top spike B cooldown must be restored from compact state");
     }
 
     @Test
     void turboSpikerShellRestoresExactParentAndAttachedShellStateWithoutTrailEmitter() {
-        Harness harness = Harness.create(new S3klTestRegistry(), List.of(new ObjectSpawn(
-                0x1C0, 0x140, Sonic3kObjectIds.TURBO_SPIKER, 4, 0, false, 30)));
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of(
+                new ObjectSpawn(0x1C0, 0x140, Sonic3kObjectIds.TURBO_SPIKER, 4, 0, false, 30),
+                new ObjectSpawn(0x2A0, 0x140, Sonic3kObjectIds.TURBO_SPIKER, 4, 0, false, 31)));
         ObjectManager objectManager = harness.objectManager();
         TestablePlayableSprite player = player();
-        TurboSpikerBadnikInstance sourceParent = only(objectManager, TurboSpikerBadnikInstance.class);
-        sourceParent.update(0, player);
-        ObjectInstance sourceShell = onlyByClassName(objectManager, TURBO_SPIKER_SHELL_CHILD);
-        setIntField(sourceShell, "currentX", 0x1D8);
-        setIntField(sourceShell, "currentY", 0x148);
-        setIntField(sourceShell, "xVelocity", 0x33);
-        setIntField(sourceShell, "yVelocity", -0x44);
+        List<TurboSpikerBadnikInstance> sourceParents = liveByType(objectManager, TurboSpikerBadnikInstance.class);
+        assertEquals(2, sourceParents.size(), "precondition: two Turbo Spiker parents must be captured");
+        TurboSpikerBadnikInstance sourceParentA = sourceParents.get(0);
+        TurboSpikerBadnikInstance sourceParentB = sourceParents.get(1);
+        sourceParentA.update(0, player);
+        sourceParentB.update(0, player);
+        List<ObjectInstance> sourceShells = liveByClassName(objectManager, TURBO_SPIKER_SHELL_CHILD);
+        assertEquals(2, sourceShells.size(), "precondition: each Turbo Spiker must create one shell");
+        ObjectInstance sourceShellA = childWithParent(sourceShells, sourceParentA);
+        ObjectInstance sourceShellB = childWithParent(sourceShells, sourceParentB);
+        setIntField(sourceShellA, "currentX", 0x1D8);
+        setIntField(sourceShellA, "currentY", 0x148);
+        setIntField(sourceShellA, "xVelocity", 0x33);
+        setIntField(sourceShellA, "yVelocity", -0x44);
+        setIntField(sourceShellB, "currentX", 0x2B8);
+        setIntField(sourceShellB, "currentY", 0x158);
+        setIntField(sourceShellB, "xVelocity", 0x55);
+        setIntField(sourceShellB, "yVelocity", -0x66);
 
-        ObjectRefId parentId = objectId(objectManager, sourceParent);
-        ObjectRefId shellId = objectId(objectManager, sourceShell);
+        ObjectRefId parentAId = objectId(objectManager, sourceParentA);
+        ObjectRefId parentBId = objectId(objectManager, sourceParentB);
+        ObjectRefId shellAId = objectId(objectManager, sourceShellA);
+        ObjectRefId shellBId = objectId(objectManager, sourceShellB);
         RewindRegistry rewindRegistry = registryFor(objectManager);
         CompositeSnapshot snapshot = rewindRegistry.capture();
 
@@ -179,34 +235,44 @@ class TestS3kBadnikChildGraphRewind {
 
         rewindRegistry.restore(snapshot);
 
-        TurboSpikerBadnikInstance restoredParent = only(objectManager, TurboSpikerBadnikInstance.class);
-        ObjectInstance restoredShell = onlyByClassName(objectManager, TURBO_SPIKER_SHELL_CHILD);
-        assertNotSame(sourceParent, restoredParent, "restore must recreate the removed Turbo Spiker parent");
-        assertNotSame(sourceShell, restoredShell, "restore must recreate the removed shell child");
-        assertEquals(parentId, objectId(objectManager, restoredParent),
-                "Turbo Spiker parent rewind identity must be preserved");
-        assertEquals(shellId, objectId(objectManager, restoredShell),
-                "Turbo Spiker shell rewind identity must be preserved");
-        assertSame(restoredParent, readObjectField(restoredShell, "parent"),
-                "shell parent must resolve to the restored Turbo Spiker instance");
-        assertTrue((Boolean) readObjectField(restoredShell, "attached"),
-                "attached shell state must restore as attached");
-        assertNull(readObjectField(restoredShell, "trailEmitter"),
-                "attached shell restore must not synthesize a launched-shell trail emitter");
-        assertEquals(0x1D8, readIntField(restoredShell, "currentX"));
-        assertEquals(0x148, readIntField(restoredShell, "currentY"));
-        assertEquals(0x33, readIntField(restoredShell, "xVelocity"));
-        assertEquals(-0x44, readIntField(restoredShell, "yVelocity"));
+        TurboSpikerBadnikInstance restoredParentA =
+                objectById(objectManager, TurboSpikerBadnikInstance.class, parentAId);
+        TurboSpikerBadnikInstance restoredParentB =
+                objectById(objectManager, TurboSpikerBadnikInstance.class, parentBId);
+        ObjectInstance restoredShellA = objectById(objectManager, ObjectInstance.class, shellAId);
+        ObjectInstance restoredShellB = objectById(objectManager, ObjectInstance.class, shellBId);
+        assertNotSame(sourceShellA, restoredShellA, "restore must recreate removed shell child A");
+        assertNotSame(sourceShellB, restoredShellB, "restore must recreate removed shell child B");
+        assertSame(restoredParentA, readObjectField(restoredShellA, "parent"),
+                "shell A parent must resolve to restored Turbo Spiker A");
+        assertSame(restoredParentB, readObjectField(restoredShellB, "parent"),
+                "shell B parent must resolve to restored Turbo Spiker B");
+        assertTrue((Boolean) readObjectField(restoredShellA, "attached"),
+                "attached shell A state must restore as attached");
+        assertTrue((Boolean) readObjectField(restoredShellB, "attached"),
+                "attached shell B state must restore as attached");
+        assertNull(readObjectField(restoredShellA, "trailEmitter"),
+                "attached shell A restore must not synthesize a launched-shell trail emitter");
+        assertNull(readObjectField(restoredShellB, "trailEmitter"),
+                "attached shell B restore must not synthesize a launched-shell trail emitter");
+        assertEquals(0x1D8, readIntField(restoredShellA, "currentX"));
+        assertEquals(0x148, readIntField(restoredShellA, "currentY"));
+        assertEquals(0x33, readIntField(restoredShellA, "xVelocity"));
+        assertEquals(-0x44, readIntField(restoredShellA, "yVelocity"));
+        assertEquals(0x2B8, readIntField(restoredShellB, "currentX"));
+        assertEquals(0x158, readIntField(restoredShellB, "currentY"));
+        assertEquals(0x55, readIntField(restoredShellB, "xVelocity"));
+        assertEquals(-0x66, readIntField(restoredShellB, "yVelocity"));
     }
 
     @Test
     void captureFailsForNonNullObjectReferenceWithoutRegisteredRewindIdentity() {
-        Harness harness = Harness.create(new MhzTestRegistry(), List.of());
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of());
         ObjectManager objectManager = harness.objectManager();
-        DragonflyBadnikInstance externalParent = new DragonflyBadnikInstance(new ObjectSpawn(
-                0x120, 0x100, Sonic3kObjectIds.DRAGONFLY, 0, 0, false, 40));
+        SpikerBadnikInstance externalParent = new SpikerBadnikInstance(new ObjectSpawn(
+                0x120, 0x100, Sonic3kObjectIds.SPIKER, 0, 0, false, 40));
         ObjectInstance child = objectManager.createDynamicObject(
-                () -> instantiateDragonflyLinkedBodyChild(externalParent));
+                () -> instantiateSpikerTopSpikeChild(externalParent));
         assertSame(externalParent, readObjectField(child, "parent"),
                 "precondition: child holds a non-null parent outside ObjectManager identity registration");
 
@@ -216,23 +282,32 @@ class TestS3kBadnikChildGraphRewind {
                 "missing required object targets must fail loudly");
     }
 
-    private static ObjectInstance instantiateDragonflyLinkedBodyChild(DragonflyBadnikInstance parent) {
+    private static ObjectInstance instantiateSpikerTopSpikeChild(SpikerBadnikInstance parent) {
         try {
-            Class<?> cls = Class.forName(DRAGONFLY_LINKED_BODY_CHILD);
-            Constructor<?> ctor = cls.getDeclaredConstructor(
-                    DragonflyBadnikInstance.class, AbstractObjectInstance.class, int.class, int.class);
+            Class<?> cls = Class.forName(SPIKER_TOP_SPIKE_CHILD);
+            Constructor<?> ctor = cls.getDeclaredConstructor(SpikerBadnikInstance.class);
             ctor.setAccessible(true);
-            return (ObjectInstance) ctor.newInstance(parent, parent, 0, 0);
+            return (ObjectInstance) ctor.newInstance(parent);
         } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Unable to construct Dragonfly linked body child", e);
+            throw new AssertionError("Unable to construct Spiker top spike child", e);
         }
     }
 
-    private static ObjectInstance segmentByIndex(List<ObjectInstance> segments, int segmentIndex) {
+    private static ObjectInstance segmentByParentAndIndex(List<ObjectInstance> segments,
+                                                          DragonflyBadnikInstance parent,
+                                                          int segmentIndex) {
         return segments.stream()
+                .filter(segment -> readObjectField(segment, "parent") == parent)
                 .filter(segment -> readIntField(segment, "segmentIndex") == segmentIndex)
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("missing Dragonfly segment " + segmentIndex));
+    }
+
+    private static ObjectInstance childWithParent(List<ObjectInstance> children, ObjectInstance parent) {
+        return children.stream()
+                .filter(child -> readObjectField(child, "parent") == parent)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("missing child for " + parent.getClass()));
     }
 
     private static RewindRegistry registryFor(ObjectManager objectManager) {
@@ -248,19 +323,19 @@ class TestS3kBadnikChildGraphRewind {
         return id;
     }
 
-    private static <T extends ObjectInstance> T only(ObjectManager objectManager, Class<T> type) {
-        List<T> matches = objectManager.getActiveObjects().stream()
-                .filter(object -> object.getClass() == type && !object.isDestroyed())
-                .map(type::cast)
-                .toList();
-        assertEquals(1, matches.size(), "expected exactly one live " + type.getSimpleName());
-        return matches.getFirst();
+    private static <T extends ObjectInstance> T objectById(ObjectManager objectManager, Class<T> type, ObjectRefId id) {
+        return liveByType(objectManager, type).stream()
+                .filter(object -> objectId(objectManager, object).equals(id))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("missing restored object " + id));
     }
 
-    private static ObjectInstance onlyByClassName(ObjectManager objectManager, String className) {
-        List<ObjectInstance> matches = liveByClassName(objectManager, className);
-        assertEquals(1, matches.size(), "expected exactly one live " + className);
-        return matches.getFirst();
+    private static <T extends ObjectInstance> List<T> liveByType(ObjectManager objectManager, Class<T> type) {
+        return objectManager.getActiveObjects().stream()
+                .filter(object -> type.isAssignableFrom(object.getClass()) && !object.isDestroyed())
+                .map(type::cast)
+                .sorted(Comparator.comparingInt(TestS3kBadnikChildGraphRewind::slotIndex))
+                .toList();
     }
 
     private static List<ObjectInstance> liveByClassName(ObjectManager objectManager, String className) {
