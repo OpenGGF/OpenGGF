@@ -52,6 +52,12 @@ import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance;
@@ -541,6 +547,14 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(AizMinibossFlameChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizMinibossBarrelShotChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizMinibossBarrelShotFlareChild.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(HczEndBossRobotnikShip.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HczEndBossTurbine.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HczEndBossBlade.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HczEndBossBladeWaterChute.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HczEndBossBladeSplash.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HczEndBossWaterColumn.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -3953,6 +3967,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through AIZ miniboss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // HCZ end-boss graph batch: parent/sibling-linked children, graph harness covers restore
+    // =====================================================================
+
+    @Test
+    void hczEndBossGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : HCZ_END_BOSS_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after HCZ end-boss graph batch");
+        }
+    }
+
+    @Test
+    void hczEndBossGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : HCZ_END_BOSS_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through HCZ end-boss graph generic recreate, not a dynamic codec");
         }
     }
 

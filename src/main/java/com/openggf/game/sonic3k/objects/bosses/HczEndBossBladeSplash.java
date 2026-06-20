@@ -4,6 +4,9 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -32,7 +35,7 @@ import java.util.logging.Logger;
  * <p>The splash sits at the blade's X position and at water_level - 4.
  * It plays through a short animation and deletes itself.
  */
-public class HczEndBossBladeSplash extends AbstractBossChild {
+public class HczEndBossBladeSplash extends AbstractBossChild implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(HczEndBossBladeSplash.class.getName());
 
     // =========================================================================
@@ -74,6 +77,19 @@ public class HczEndBossBladeSplash extends AbstractBossChild {
         this.animComplete = false;
 
         updateDynamicSpawn();
+    }
+
+    private HczEndBossBladeSplash(ObjectSpawn spawn, HczEndBossInstance boss) {
+        this(boss, spawn.x());
+    }
+
+    @Override
+    public HczEndBossBladeSplash recreateForRewind(RewindRecreateContext ctx) {
+        HczEndBossInstance restoredBoss = HczEndBossRewindLinks.nearestBoss(ctx);
+        if (restoredBoss == null || ctx.spawn() == null) {
+            return null;
+        }
+        return new HczEndBossBladeSplash(restoredBoss, ctx.spawn().x());
     }
 
     // =========================================================================

@@ -3,6 +3,9 @@ package com.openggf.game.sonic3k.objects.bosses;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -31,7 +34,7 @@ import java.util.logging.Logger;
  * offset (0, -0x1C) from the ship position. It animates frames 0–1 at delay 5,
  * shows frame 2 when the boss is hurt, and frame 3 when defeated.
  */
-public class HczEndBossRobotnikShip extends AbstractBossChild {
+public class HczEndBossRobotnikShip extends AbstractBossChild implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(HczEndBossRobotnikShip.class.getName());
 
     // =========================================================================
@@ -115,6 +118,16 @@ public class HczEndBossRobotnikShip extends AbstractBossChild {
         this.headIdleFrame = HEAD_FRAME_IDLE_A;
         this.shipFrame = SHIP_FRAME_IDLE;
         this.shipFacingRight = false;
+    }
+
+    private HczEndBossRobotnikShip(ObjectSpawn spawn, HczEndBossInstance boss) {
+        this(boss);
+    }
+
+    @Override
+    public HczEndBossRobotnikShip recreateForRewind(RewindRecreateContext ctx) {
+        HczEndBossInstance restoredBoss = HczEndBossRewindLinks.nearestBoss(ctx);
+        return restoredBoss == null ? null : new HczEndBossRobotnikShip(restoredBoss);
     }
 
     // =========================================================================

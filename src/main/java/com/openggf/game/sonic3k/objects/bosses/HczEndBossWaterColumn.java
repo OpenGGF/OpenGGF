@@ -5,8 +5,11 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -80,7 +83,7 @@ import java.util.logging.Logger;
  * <p>Grab (sub_6B9E2): player within Y-zone table (word_6BAC2) and 32px H —
  * lock object_control, forced float animation.
  */
-public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObjectProvider {
+public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObjectProvider, RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(HczEndBossWaterColumn.class.getName());
 
@@ -250,6 +253,22 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         this.solidActive = false;
         this.player1Grabbed = false;
         this.player2Grabbed = false;
+    }
+
+    private HczEndBossWaterColumn(ObjectSpawn spawn, HczEndBossInstance boss) {
+        this(boss, null);
+    }
+
+    @Override
+    public HczEndBossWaterColumn recreateForRewind(RewindRecreateContext ctx) {
+        HczEndBossInstance restoredBoss = HczEndBossRewindLinks.nearestBoss(ctx);
+        HczEndBossTurbine restoredTurbine = HczEndBossRewindLinks.nearestTurbine(ctx);
+        if (restoredBoss == null || restoredTurbine == null) {
+            return null;
+        }
+        HczEndBossWaterColumn restored = new HczEndBossWaterColumn(restoredBoss, restoredTurbine);
+        restoredTurbine.attachWaterColumnForRewind(restored);
+        return restored;
     }
 
     // =========================================================================
