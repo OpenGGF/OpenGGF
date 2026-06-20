@@ -22,9 +22,14 @@ import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
 import com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainer;
+import com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend;
+import com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor;
+import com.openggf.game.sonic2.objects.bosses.CPZBossDripper;
 import com.openggf.game.sonic2.objects.bosses.CPZBossFlame;
 import com.openggf.game.sonic2.objects.bosses.CPZBossGunk;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPipe;
+import com.openggf.game.sonic2.objects.bosses.CPZBossPipePump;
+import com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPump;
 import com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
@@ -513,6 +518,13 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(CPZBossPipe.class.getName(), GameId.S2),
             new CodecDeletionCandidate(CPZBossPump.class.getName(), GameId.S2),
             new CodecDeletionCandidate(CPZBossRobotnik.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> CPZ_GRAPH_BATCH_B_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(CPZBossContainerExtend.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(CPZBossContainerFloor.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(CPZBossDripper.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(CPZBossPipePump.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(CPZBossPipeSegment.class.getName(), GameId.S2));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -3882,6 +3894,24 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void cpzGraphBatchAClassesHaveNoRegisteredCodec() {
         for (CodecDeletionCandidate candidate : CPZ_GRAPH_BATCH_A_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through CPZ graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void cpzGraphBatchBClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : CPZ_GRAPH_BATCH_B_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after CPZ graph batch B");
+        }
+    }
+
+    @Test
+    void cpzGraphBatchBClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : CPZ_GRAPH_BATCH_B_DELETED_CODECS) {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through CPZ graph generic recreate, not a dynamic codec");
