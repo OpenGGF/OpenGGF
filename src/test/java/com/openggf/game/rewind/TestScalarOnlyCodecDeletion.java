@@ -602,6 +602,17 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(Sonic3kStarPostStarChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(Sonic3kStarPostBonusStarChild.class.getName(), GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S2_WFZ_BOSS_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZFloatingPlatform",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserWall",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt",
+                    GameId.S2));
+
     private static final List<CodecDeletionCandidate> S3K_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild",
@@ -4112,6 +4123,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through checkpoint/starpost graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S2 WFZ boss graph batch: boss/platform/hurt-linked dynamics
+    // =====================================================================
+
+    @Test
+    void s2WfzBossGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_WFZ_BOSS_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 WFZ boss graph batch");
+        }
+    }
+
+    @Test
+    void s2WfzBossGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_WFZ_BOSS_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 WFZ boss graph generic recreate, not a dynamic codec");
         }
     }
 

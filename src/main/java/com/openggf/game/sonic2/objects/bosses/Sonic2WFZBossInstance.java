@@ -8,8 +8,12 @@ import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -779,13 +783,98 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
     // Child Objects
     // ========================================================================
 
+    private static Sonic2WFZBossInstance findNearestLiveBossForRewind(RewindRecreateContext ctx) {
+        ObjectManager objectManager = objectManagerForRewind(ctx);
+        if (objectManager == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        Sonic2WFZBossInstance best = null;
+        int bestDistance = Integer.MAX_VALUE;
+        for (ObjectInstance inst : objectManager.getActiveObjects()) {
+            if (inst instanceof Sonic2WFZBossInstance boss && !boss.isDestroyed()) {
+                int distance = spawn == null ? 0 : Math.abs(boss.getSpawnX() - spawn.x());
+                if (best == null || distance < bestDistance) {
+                    best = boss;
+                    bestDistance = distance;
+                }
+            }
+        }
+        return best;
+    }
+
+    private static WFZFloatingPlatform findRestoredPlatformForHurt(RewindRecreateContext ctx) {
+        ObjectManager objectManager = objectManagerForRewind(ctx);
+        ObjectSpawn spawn = ctx.spawn();
+        if (objectManager == null || spawn == null) {
+            return null;
+        }
+        for (ObjectInstance inst : objectManager.getActiveObjects()) {
+            if (inst instanceof WFZFloatingPlatform platform
+                    && !platform.isDestroyed()
+                    && platform.getX() == spawn.x()
+                    && platform.getY() == spawn.y() - WFZPlatformHurt.Y_OFFSET) {
+                return platform;
+            }
+        }
+        return null;
+    }
+
+    private static ObjectManager objectManagerForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null) {
+            return null;
+        }
+        return ctx.objectServices().objectManager();
+    }
+
+    private static void relinkWallForRewind(Sonic2WFZBossInstance boss, WFZLaserWall wall) {
+        if (boss == null || wall == null) {
+            return;
+        }
+        boolean leftSide = wall.getX() < boss.getSpawnX();
+        boss.childComponents.removeIf(component ->
+                component instanceof WFZLaserWall existing
+                        && existing != wall
+                        && (existing.getX() < boss.getSpawnX()) == leftSide);
+        if (leftSide) {
+            boss.leftWall = wall;
+        } else {
+            boss.rightWall = wall;
+        }
+        addChildComponentForRewind(boss, wall);
+    }
+
+    private static void relinkPlatformForRewind(Sonic2WFZBossInstance boss, WFZFloatingPlatform platform) {
+        if (boss == null || platform == null) {
+            return;
+        }
+        addChildComponentForRewind(boss, platform);
+    }
+
+    private static void relinkHurtForRewind(
+            Sonic2WFZBossInstance boss,
+            WFZFloatingPlatform platform,
+            WFZPlatformHurt hurt) {
+        if (boss == null || platform == null || hurt == null) {
+            return;
+        }
+        platform.hurtChild = hurt;
+        addChildComponentForRewind(boss, hurt);
+    }
+
+    private static void addChildComponentForRewind(Sonic2WFZBossInstance boss, AbstractBossChild child) {
+        if (!boss.childComponents.contains(child)) {
+            boss.childComponents.add(child);
+        }
+    }
+
     /**
      * Laser Wall child (subtype $94, routine $04).
      * Solid wall at x +/- $88 from spawn. mapping_frame=$0C.
      * Width $13, Y radius $40, height $80.
      * On defeat: flash then fade-delete in 4 cycles.
      */
-    static class WFZLaserWall extends AbstractBossChild implements SolidObjectProvider {
+    static class WFZLaserWall extends AbstractBossChild implements SolidObjectProvider, RewindRecreatable {
         private boolean defeatSignaled;
         private int wallAnimFrame; // ROM anim_frame byte
         private int wallAnimFrameDuration; // ROM anim_frame_duration byte
@@ -799,6 +888,19 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
             this.wallAnimFrame = 0;
             this.wallAnimFrameDuration = 0;
             this.wallDeleteCounter = 0;
+            updateDynamicSpawn();
+        }
+
+        @Override
+        public WFZLaserWall recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2WFZBossInstance boss = findNearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            WFZLaserWall wall = new WFZLaserWall(boss, spawn.x(), spawn.y());
+            relinkWallForRewind(boss, wall);
+            return wall;
         }
 
         void signalDefeat() {
@@ -1033,7 +1135,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
      * Spawns PlatformHurt child below it.
      * On defeat: explode, delete hurt child.
      */
-    static class WFZFloatingPlatform extends AbstractBossChild implements SolidObjectProvider {
+    static class WFZFloatingPlatform extends AbstractBossChild implements SolidObjectProvider, RewindRecreatable {
         private static final int DESCEND_SPEED = 0x100;
         private static final int DESCEND_DURATION = 0x60;
         private static final int HORIZONTAL_SPEED = 0x100;
@@ -1063,7 +1165,19 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
             this.xVel = 0;
             this.yVel = DESCEND_SPEED;
             this.baseY = 0;
+            updateDynamicSpawn();
+        }
 
+        @Override
+        public WFZFloatingPlatform recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2WFZBossInstance boss = findNearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            WFZFloatingPlatform platform = new WFZFloatingPlatform(boss, spawn.x(), spawn.y());
+            relinkPlatformForRewind(boss, platform);
+            return platform;
         }
 
         private void spawnHurtChild(Sonic2WFZBossInstance wfzParent) {
@@ -1191,7 +1305,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
      * Follows parent platform, offset Y+$0C.
      * Delete when parent signals defeat.
      */
-    static class WFZPlatformHurt extends AbstractBossChild implements TouchResponseProvider {
+    static class WFZPlatformHurt extends AbstractBossChild implements TouchResponseProvider, RewindRecreatable {
         private static final int Y_OFFSET = 0x0C;
         private static final int COLLISION_FLAGS = 0x98;
         private final WFZFloatingPlatform platformParent;
@@ -1200,6 +1314,19 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
             super(bossParent, "Platform Hurt", 4, Sonic2ObjectIds.WFZ_BOSS);
             this.platformParent = platformParent;
             syncToParentPlatform(platformParent.getCurrentX(), platformParent.getCurrentY());
+            updateDynamicSpawn();
+        }
+
+        @Override
+        public WFZPlatformHurt recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2WFZBossInstance boss = findNearestLiveBossForRewind(ctx);
+            WFZFloatingPlatform platform = findRestoredPlatformForHurt(ctx);
+            if (boss == null || platform == null) {
+                return null;
+            }
+            WFZPlatformHurt hurt = new WFZPlatformHurt(boss, platform);
+            relinkHurtForRewind(boss, platform, hurt);
+            return hurt;
         }
 
         void syncToParentPlatform(int platformX, int platformY) {
