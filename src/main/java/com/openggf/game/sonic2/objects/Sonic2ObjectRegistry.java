@@ -14,7 +14,6 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.game.sonic2.objects.badniks.AsteronBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.OctusBadnikInstance;
@@ -59,8 +58,6 @@ import com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance;
 import com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance;
 import com.openggf.game.sonic2.objects.badniks.SlicerPincerInstance;
-import com.openggf.game.sonic2.objects.badniks.TurtloidJetInstance;
-import com.openggf.game.sonic2.objects.badniks.TurtloidRiderInstance;
 import com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
 import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
@@ -90,8 +87,6 @@ import java.util.logging.Logger;
 
 public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectRegistry.class.getName());
-    private static final String BUZZER_FLAME_CHILD_CLASS =
-            "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild";
     // Batch-inner2 inner-class hazard/solid child binary names.
     private static final String DEZ_ROBOT_ARTICULATED_CHILD_CLASS =
             "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild";
@@ -109,7 +104,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt";
     private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
             // BadnikProjectileInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            buzzerFlameCodec(),
+            // BuzzerFlameChild now implements RewindRecreatable -> genericRecreate Path 1.
             // MonitorContentsObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             checkpointDongleCodec(),
             checkpointStarCodec(),
@@ -139,8 +134,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     spawn -> new SlicerPincerInstance(
                             spawn, null, spawn.x(), spawn.y(), 0, false, 0)),
             // SpikerDrillObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            turtloidJetCodec(),
-            turtloidRiderCodec(),
+            // TurtloidJetInstance and TurtloidRiderInstance now implement RewindRecreatable -> genericRecreate Path 1.
             solFireballCodec(),
             // WallTurretShotInstance and VerticalLaserObjectInstance now implement
             // RewindRecreatable -> genericRecreate Path 1.
@@ -291,40 +285,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         }
     }
 
-    private static DynamicObjectRewindCodec buzzerFlameCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(BUZZER_FLAME_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return BUZZER_FLAME_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    var extra = (PerObjectRewindSnapshot.BuzzerFlameRewindExtra)
-                            entry.state().objectSubclassExtra();
-                    BuzzerBadnikInstance parent = findBuzzerParentForRewind(context, extra.parentSlotIndex());
-                    if (parent == null) {
-                        return null;
-                    }
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(ObjectSpawn.class, BuzzerBadnikInstance.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(entry.spawn(), parent);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
     private static DynamicObjectRewindCodec checkpointDongleCodec() {
         return new DynamicObjectRewindCodec() {
             @Override
@@ -365,17 +325,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                 return parent == null ? null : new CheckpointStarInstance(parent, 0);
             }
         };
-    }
-
-    private static BuzzerBadnikInstance findBuzzerParentForRewind(
-            DynamicObjectRecreateContext context, int parentSlotIndex) {
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (inst instanceof BuzzerBadnikInstance buzzer
-                    && buzzer.getSlotIndex() == parentSlotIndex) {
-                return buzzer;
-            }
-        }
-        return null;
     }
 
     private static CheckpointObjectInstance findCheckpointParentForRewind(
@@ -909,92 +858,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                 // pieceIndex / facingRight are un-finaled non-spawn scalars; restoreObjectRewindState
                 // reapplies the captured values after construction, so placeholders are safe here.
                 return new ShellcrackerClawInstance(spawn, best, spawn.x(), spawn.y(), 0, false);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec turtloidJetCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == TurtloidJetInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return TurtloidJetInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                TurtloidBadnikInstance best = null;
-                long bestDistance = Long.MAX_VALUE;
-                ObjectSpawn spawn = entry.spawn();
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (!(inst instanceof TurtloidBadnikInstance turtloid)) {
-                        continue;
-                    }
-                    if (spawn == null) {
-                        best = turtloid;
-                        break;
-                    }
-                    long dx = turtloid.getX() - spawn.x();
-                    long dy = turtloid.getY() - spawn.y();
-                    long distance = dx * dx + dy * dy;
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        best = turtloid;
-                    }
-                }
-                if (best == null) {
-                    return null;
-                }
-                return new TurtloidJetInstance(entry.spawn(), best);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec turtloidRiderCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == TurtloidRiderInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return TurtloidRiderInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // The rider is spawned at parentBodyPos + (+4, -0x18); find the live
-                // placed Turtloid body whose position best matches that derivation.
-                TurtloidBadnikInstance best = null;
-                long bestDistance = Long.MAX_VALUE;
-                ObjectSpawn spawn = entry.spawn();
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (!(inst instanceof TurtloidBadnikInstance turtloid)) {
-                        continue;
-                    }
-                    if (spawn == null) {
-                        best = turtloid;
-                        break;
-                    }
-                    long dx = turtloid.getX() - spawn.x();
-                    long dy = turtloid.getY() - spawn.y();
-                    long distance = dx * dx + dy * dy;
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        best = turtloid;
-                    }
-                }
-                if (best == null) {
-                    return null;
-                }
-                return new TurtloidRiderInstance(entry.spawn(), best);
             }
         };
     }

@@ -6,7 +6,11 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -29,7 +33,7 @@ import java.util.List;
  * Based on disassembly Obj9B (s2.asm:74420-74477).
  */
 public class TurtloidRiderInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable {
 
     // Offset from parent: word_37A2C = dc.w 4, dc.w -$18
     private static final int X_OFFSET = 4;
@@ -61,6 +65,39 @@ public class TurtloidRiderInstance extends AbstractObjectInstance
         this.currentY = spawn.y();
         this.mappingFrame = 2; // Initial mapping_frame from disassembly
         this.destroyed = false;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+            return null;
+        }
+        TurtloidBadnikInstance liveParent =
+                findNearestLiveParentForRewind(ctx.objectServices().objectManager(), ctx.spawn());
+        return liveParent == null ? null : new TurtloidRiderInstance(ctx.spawn(), liveParent);
+    }
+
+    private static TurtloidBadnikInstance findNearestLiveParentForRewind(
+            ObjectManager objectManager,
+            ObjectSpawn spawn) {
+        if (objectManager == null || spawn == null) {
+            return null;
+        }
+        TurtloidBadnikInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (!(instance instanceof TurtloidBadnikInstance turtloid) || turtloid.isDestroyed()) {
+                continue;
+            }
+            long dx = turtloid.getX() - spawn.x();
+            long dy = turtloid.getY() - spawn.y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = turtloid;
+            }
+        }
+        return best;
     }
 
     @Override
