@@ -16894,3 +16894,21 @@ Side finding (NOT a current frontier; not changed): `Obj98_NebulaBombFall`
 whereas the engine's NEBULA_BOMB path applies gravity THEN moves -- a one-frame
 ordering mismatch to fix when a Nebula-bomb (WFZ) frontier pins it.
 
+
+### 2026-06-20 -- Verified ROM facts (CPZ1 touch gate; LZ3 wrap) 
+
+- S2 runs `TouchResponse` for CPU Tails only when `obj_control(a0)` bit 7 is clear
+  (`tst.b obj_control(a0) / bmi.s +`, s2.asm:38997-38999). At CPZ1 f1157 Tails
+  obj_control=0x00, so the gate is OPEN -> not the reason ROM Tails is unhurt; the
+  ~4px Spiny-shot position offset (fire timing/spawn pos) remains the lead.
+- S2 wraps the character `y_pos` with `andi.w #$7FF` ONLY when vertical wrap is on
+  (`cmpi.w #-$100,(Camera_Min_Y_pos)`, s2.asm:38981-38984; same in Sonic's code).
+  LZ3 f466 ROM y=0x0807 is NOT wrapped -> vertical wrap is OFF there. The engine's
+  vertical-wrap support is render-only (`SpriteManager.enableVerticalWrapIfNeeded` ->
+  GraphicsManager); it does NOT mask the playable `y_pos`. So the engine's LZ3 y=0x0007
+  (= 0x0807 mod 0x800) is most likely a vertical-LOOP-ITERATION divergence (same
+  physical spot, different 0x800 copy) introduced earlier, NOT a per-frame mask. Needs
+  a non-frontierOnly run logging player y_pos across the frames where the 0x800 step
+  first appears (just before f466) to find where the engine and ROM enter different
+  loop copies.
+
