@@ -88,7 +88,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // S3K invincibility-stars codec deleted (Phase-2 player-bound batch):
             // its RewindRecreatable hook mirrors the old deferred codec and queues
             // the captured entry for post-restore player refresh.
-            cnzMinibossChildCodec(CnzMinibossTopInstance.class, CnzMinibossTopInstance::new),
+            // CnzMinibossTopInstance codec deleted (Phase-2 batch 48):
+            // RewindRecreatable generic recreate relinks the live CNZ miniboss parent.
             // CnzMinibossCoilInstance codec deleted (Phase-2 batch 46):
             // compact restore resolves the parent object reference after generic recreate.
             // CnzMinibossSparkInstance codec deleted (Phase-2 batch 47):

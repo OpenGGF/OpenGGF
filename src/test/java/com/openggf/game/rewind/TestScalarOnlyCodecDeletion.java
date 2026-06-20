@@ -23,6 +23,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance;
+import com.openggf.game.sonic3k.objects.CnzMinibossTopInstance;
 import com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
@@ -460,6 +461,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> BATCH47_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(CnzMinibossSparkInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> BATCH48_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(CnzMinibossTopInstance.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -3402,6 +3406,85 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void batch47ClassRoundTripPassedThroughHarnessParentSeedPath() {
         CodecDeletionCandidate candidate = BATCH47_DELETED_CODECS.getFirst();
+        RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+        assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                candidate.fqn()
+                        + " must round-trip as Passed through the harness parent-seed path; got: "
+                        + result);
+    }
+
+    // =====================================================================
+    // Batch 48: S3K CNZ miniboss top, parent relink during generic recreate
+    // =====================================================================
+
+    @Test
+    void batch48ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH48_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 48)");
+        }
+    }
+
+    @Test
+    void batch48ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH48_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-48 deletion; "
+                            + "session restore must use genericRecreate Path 1 with restore-time parent relink");
+        }
+    }
+
+    @Test
+    void batch48ClassesGenericRecreateProducesInstanceAndRelinksParent() {
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        StubObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+        };
+        ObjectSpawn parentSpawn =
+                new ObjectSpawn(160, 240, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 48);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(parentSpawn),
+                cnzMinibossParentTestRegistry(),
+                0,
+                null,
+                null,
+                GraphicsManager.getInstance(),
+                camera,
+                services);
+        holder[0] = objectManager;
+        objectManager.reset(0);
+
+        CnzMinibossInstance liveParent = singleLiveObject(objectManager, CnzMinibossInstance.class);
+        ObjectSpawn topSpawn = new ObjectSpawn(168, 224, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 49);
+        PerObjectRewindSnapshot state = new PerObjectRewindSnapshot(
+                false, false, false, 0, 0, 0, 0, false, 0, false, false, 0, -1, null, null, null);
+        ObjectManagerSnapshot.DynamicObjectEntry entry =
+                new ObjectManagerSnapshot.DynamicObjectEntry(
+                        CnzMinibossTopInstance.class.getName(), topSpawn, 0, state);
+
+        ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(
+                entry, new DynamicObjectRecreateContext(objectManager));
+
+        assertNotNull(result, "genericRecreate must return a CNZ miniboss top child");
+        assertEquals(CnzMinibossTopInstance.class, result.getClass(),
+                "genericRecreate must return the same concrete top class");
+        assertSame(liveParent, readObjectField(result, "boss"),
+                "genericRecreate must relink the top to the restore-time CNZ miniboss parent");
+    }
+
+    @Test
+    void batch48ClassRoundTripPassedThroughHarnessParentSeedPath() {
+        CodecDeletionCandidate candidate = BATCH48_DELETED_CODECS.getFirst();
         RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
         assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                 candidate.fqn()
