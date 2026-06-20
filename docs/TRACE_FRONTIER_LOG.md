@@ -17035,3 +17035,32 @@ instrumentation + BizHawk where ROM-side ordering is needed) and carry shared-co
 regression risk -- best done with review, not landed speculatively. Verified deliverable
 this session: the cluster-4 Tails_control_counter fix (commit c80dd4dda).
 
+
+## 2026-06-21 -- Cluster 5 (CPZ1): Spiny spike one-frame-early fix
+
+Root cause (instrumented): the engine's object-execution phase places a freshly spawned
+projectile one frame ahead of ROM at CPU-sidekick touch time. The CMP diagnostic showed
+that during the inline sidekick touch every object has getX()==getPreUpdateX() (objects
+move AFTER touch in LevelFrameStep), so the touch position semantics are correct; the
+Spiny shot itself was one frame ahead (engine end-of-1156 = ROM end-of-1157), hurting the
+co-located CPU Tails at f1157 while ROM hurts at f1158. f855 (a slow ENEMY) matched only
+because a slow object's frame-ahead position still overlaps.
+
+Fix: `SpinyBadnikInstance.fireSpike` spawns the Obj98 spike with one extra init-phase
+stationary frame (initialDelay=1, alongside the existing LoadSubObject defer) so its
+trajectory aligns with ROM `Obj98_SpinyShotFall` (s2.asm:74742) frame-for-frame in the
+engine's object phase. Object-scoped (Spiny only).
+
+Commands:
+`mvn -Dmse=off -Dtrace.frontierOnly=true -Dtest='*TraceReplay' ... test`
+`mvn -Dmse=off -Dtest=TestArchUnitRules,TestRewindCoverageGuard,TestGameplayModeContextRewindRegistry,TestObjectServicesMigrationGuard ... test`
+
+Result (full `*TraceReplay` resweep, vs the cluster-4 baseline):
+- **TestS2CpzLevelSelect: f1157 -> f3365** (tails_x_speed -> tails_x; +2208 frames).
+- REGRESSED: none. The cluster-4 advances (ARZ1 green; MTZ1/HTZ1/MTZ3/CNZ1) all hold.
+- Guards: ArchUnit, RewindCoverageGuard, GameplayModeContextRewindRegistry,
+  ObjectServicesMigrationGuard all pass. (Note: `TestNoServicesInObjectConstructors`
+  fails on HczEndBossBladeSplash/WaterChute -- a PRE-EXISTING develop guard failure from
+  the rewind-refactor commits, not touched by this branch.)
+- CPZ1's new frontier f3365 is a tails_x -1 sub-pixel (family 4) onesie.
+
