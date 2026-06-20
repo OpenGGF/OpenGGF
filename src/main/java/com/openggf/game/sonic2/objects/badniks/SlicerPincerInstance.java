@@ -103,9 +103,7 @@ public class SlicerPincerInstance extends AbstractObjectInstance
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         ObjectSpawn spawn = ctx.spawn();
         SlicerBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestSlicer(ctx);
-        return parent != null
-                ? new SlicerPincerInstance(spawn, parent, spawn.x(), spawn.y(), 0, false, 0)
-                : null;
+        return new SlicerPincerInstance(spawn, parent, spawn.x(), spawn.y(), 0, false, 0);
     }
 
     @Override

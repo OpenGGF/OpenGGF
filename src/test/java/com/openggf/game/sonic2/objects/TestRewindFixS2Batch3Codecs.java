@@ -34,26 +34,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestRewindFixS2Batch3Codecs {
 
     private static final List<String> EXPLICIT_CODEC_CLASSES = List.of(
-            ShellcrackerClawInstance.class.getName(),
-            SlicerPincerInstance.class.getName(),
-            TurtloidJetInstance.class.getName(),
-            TurtloidRiderInstance.class.getName(),
-            SolFireballObjectInstance.class.getName(),
             // EHZBossGroundVehicle / EHZBossPropeller / EHZBossVehicleTop codecs
             // intentionally REMOVED: construction-spawned children re-established by
             // boss reconstruction (see TestBossChildNoDoubleSpawnParity /
             // KNOWN_DISCREPANCIES).
             HTZBossFlamethrower.class.getName(),
-            HTZBossLavaBall.class.getName(),
-            CNZBossElectricBall.class.getName());
+            HTZBossLavaBall.class.getName());
 
     private static final List<String> GENERIC_RECREATE_CLASSES = List.of(
             GrounderBadnikInstance.class.getName(),
+            ShellcrackerClawInstance.class.getName(),
+            SlicerPincerInstance.class.getName(),
+            TurtloidJetInstance.class.getName(),
+            TurtloidRiderInstance.class.getName(),
+            SolFireballObjectInstance.class.getName(),
             SpikerDrillObjectInstance.class.getName(),
             WallTurretShotInstance.class.getName(),
             VerticalLaserObjectInstance.class.getName(),
             SpikyBlockSpikeInstance.class.getName(),
-            BombPrizeObjectInstance.class.getName());
+            BombPrizeObjectInstance.class.getName(),
+            CNZBossElectricBall.class.getName());
 
     private static Set<String> codecClassNames() {
         Set<String> names = new HashSet<>();

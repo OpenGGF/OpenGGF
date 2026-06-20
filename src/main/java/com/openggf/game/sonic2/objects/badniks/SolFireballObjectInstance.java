@@ -52,14 +52,17 @@ public class SolFireballObjectInstance extends AbstractObjectInstance
         this.animationState = new ObjectAnimationState(SolBadnikInstance.getFireballAnimations(), 0, 3);
     }
 
+    private SolFireballObjectInstance() {
+        this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), null, 0);
+    }
+
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         SolBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestSol(ctx);
-        if (parent == null) {
-            return null;
-        }
         SolFireballObjectInstance fireball = new SolFireballObjectInstance(ctx.spawn(), parent, 0);
-        parent.attachFireballForRewind(fireball);
+        if (parent != null) {
+            parent.attachFireballForRewind(fireball);
+        }
         return fireball;
     }
 

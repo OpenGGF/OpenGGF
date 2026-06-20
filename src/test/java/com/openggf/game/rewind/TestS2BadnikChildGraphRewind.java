@@ -116,6 +116,61 @@ class TestS2BadnikChildGraphRewind {
                 "non-null required object references must still require registered rewind identities");
     }
 
+    @Test
+    void detachedFallingSlicerPincerRestoresWithoutLiveParent() throws Exception {
+        Harness harness = Harness.createWithoutParents();
+        ObjectManager objectManager = harness.objectManager();
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x0300, 0x0180, Sonic2ObjectIds.SLICER_PINCERS, 0, 0, false, 80);
+        SlicerPincerInstance before = objectManager.createDynamicObject(
+                () -> new SlicerPincerInstance(spawn, null, 0x0320, 0x0190, 0x140, true, 0));
+        invokePrivate(before, "startFalling");
+        setIntField(before, "timer", 0x42);
+        setIntField(before, "xVelocity", -0x1A0);
+        setIntField(before, "yVelocity", 0x120);
+
+        RewindRegistry rewindRegistry = new RewindRegistry();
+        rewindRegistry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+        objectManager.removeDynamicObject(before);
+
+        rewindRegistry.restore(snapshot);
+
+        SlicerPincerInstance restored = only(objectManager, SlicerPincerInstance.class);
+        assertNotSame(before, restored, "restore must recreate the detached pincer");
+        assertEquals(null, readObjectField(restored, "parent"),
+                "detached falling pincer must restore with no live parent");
+        assertScalarFieldsEqual(before, restored,
+                "phase", "currentX", "currentY", "xVelocity", "yVelocity", "timer", "hFlip");
+    }
+
+    @Test
+    void detachedFlyingSolFireballRestoresWithoutLiveParent() throws Exception {
+        Harness harness = Harness.createWithoutParents();
+        ObjectManager objectManager = harness.objectManager();
+        ObjectSpawn spawn = new ObjectSpawn(0x0340, 0x01A0, Sonic2ObjectIds.SOL, 0, 0, false, 90);
+        SolFireballObjectInstance before = objectManager.createDynamicObject(
+                () -> new SolFireballObjectInstance(spawn, null, 0));
+        setObjectField(before, "state", enumValue(before, "State", "FLYING"));
+        setIntField(before, "currentX", 0x0360);
+        setIntField(before, "currentY", 0x01B0);
+        setIntField(before, "xVelocity", -0x200);
+        setIntField(before, "angle", 0x40);
+
+        RewindRegistry rewindRegistry = new RewindRegistry();
+        rewindRegistry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+        objectManager.removeDynamicObject(before);
+
+        rewindRegistry.restore(snapshot);
+
+        SolFireballObjectInstance restored = only(objectManager, SolFireballObjectInstance.class);
+        assertNotSame(before, restored, "restore must recreate the detached fireball");
+        assertEquals(null, readObjectField(restored, "parent"),
+                "detached flying Sol fireball must restore with no live parent");
+        assertScalarFieldsEqual(before, restored, "state", "angle", "currentX", "currentY", "xVelocity");
+    }
+
     private static void assertAllReferencesPointAtRestoredGraph(BadnikChildGraph graph) throws Exception {
         assertSame(graph.grounder(), readObjectField(graph.grounderWall0(), "parent"));
         assertSame(graph.grounder(), readObjectField(graph.grounderRock0(), "parent"));
@@ -176,6 +231,15 @@ class TestS2BadnikChildGraphRewind {
 
     private record Harness(ObjectManager objectManager) {
         static Harness createWithParents() {
+            return create(List.of(GROUNDER_SPAWN, REXON_SPAWN, SHELLCRACKER_SPAWN,
+                    SLICER_SPAWN, SOL_SPAWN, BALKIRY_SPAWN));
+        }
+
+        static Harness createWithoutParents() {
+            return create(List.of());
+        }
+
+        private static Harness create(List<ObjectSpawn> spawns) {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCameraAtOrigin();
             ObjectServices services = new StubObjectServices() {
@@ -183,8 +247,7 @@ class TestS2BadnikChildGraphRewind {
                 @Override public Camera camera() { return camera; }
             };
             ObjectManager objectManager = new ObjectManager(
-                    List.of(GROUNDER_SPAWN, REXON_SPAWN, SHELLCRACKER_SPAWN,
-                            SLICER_SPAWN, SOL_SPAWN, BALKIRY_SPAWN),
+                    spawns,
                     new Sonic2ObjectRegistry(),
                     0,
                     null,
@@ -482,6 +545,25 @@ class TestS2BadnikChildGraphRewind {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
         }
+    }
+
+    private static void setObjectField(Object target, String fieldName, Object value) {
+        try {
+            findField(target.getClass(), fieldName).set(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Object enumValue(Object enclosingInstance, String enumSimpleName, String constantName) {
+        for (Class<?> nested : enclosingInstance.getClass().getDeclaredClasses()) {
+            if (nested.getSimpleName().equals(enumSimpleName) && nested.isEnum()) {
+                return Enum.valueOf((Class<? extends Enum>) nested, constantName);
+            }
+        }
+        throw new AssertionError("Unable to find enum " + enumSimpleName
+                + " in " + enclosingInstance.getClass());
     }
 
     private static Field findField(Class<?> type, String fieldName) throws NoSuchFieldException {
