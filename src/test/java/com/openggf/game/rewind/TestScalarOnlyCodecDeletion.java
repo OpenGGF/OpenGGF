@@ -19,6 +19,10 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.ConveyorObjectInstance;
 import com.openggf.game.sonic2.objects.PointsObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
+import com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall;
+import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
@@ -491,6 +495,10 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.badniks.TurtloidJetInstance",
                     GameId.S2));
+
+    private static final List<CodecDeletionCandidate> BATCH52_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(ARZBossPillar.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(CNZBossElectricBall.class.getName(), GameId.S2));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -3760,6 +3768,90 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    // =====================================================================
+    // Batch 52: S2 boss children, generic recreate relinks live parent
+    // =====================================================================
+
+    @Test
+    void batch52ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH52_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 52)");
+        }
+    }
+
+    @Test
+    void batch52ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH52_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-52 deletion; "
+                            + "session restore must use genericRecreate Path 1 with live parent relink");
+        }
+    }
+
+    @Test
+    void batch52ClassesGenericRecreateProducesInstanceAndRelinksClosestLiveParent() {
+        for (CodecDeletionCandidate candidate : BATCH52_DELETED_CODECS) {
+            ObjectManager[] holder = new ObjectManager[1];
+            Camera camera = mockCamera();
+            StubObjectServices services = new StubObjectServices() {
+                @Override public ObjectManager objectManager() { return holder[0]; }
+                @Override public Camera camera() { return camera; }
+                @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+                @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+            };
+            ObjectManager objectManager = new ObjectManager(
+                    List.of(),
+                    new Sonic2ObjectRegistry(),
+                    0,
+                    null,
+                    null,
+                    GraphicsManager.getInstance(),
+                    camera,
+                    services);
+            holder[0] = objectManager;
+            objectManager.reset(0);
+
+            Batch52ParentSpec parentSpec = batch52ParentSpec(candidate.fqn());
+            AbstractObjectInstance farParent = objectManager.createDynamicObject(
+                    () -> parentSpec.createParent(
+                            new ObjectSpawn(0x100, 0x100, parentSpec.objectId(), 0, 0, false, 52)));
+            AbstractObjectInstance nearParent = objectManager.createDynamicObject(
+                    () -> parentSpec.createParent(
+                            new ObjectSpawn(0x220, 0x220, parentSpec.objectId(), 0, 0, false, 53)));
+            setBossPosition(farParent, 0x100, 0x100);
+            setBossPosition(nearParent, 0x220, 0x220);
+            ObjectSpawn childSpawn = new ObjectSpawn(0x224, 0x224, parentSpec.objectId(), 4, 0, false, 54);
+            PerObjectRewindSnapshot state = new PerObjectRewindSnapshot(
+                    false, false, false, 0, 0, 0, 0, false, 0, false, false, 0, -1, null, null, null);
+            ObjectManagerSnapshot.DynamicObjectEntry entry =
+                    new ObjectManagerSnapshot.DynamicObjectEntry(candidate.fqn(), childSpawn, 0, state);
+
+            ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(
+                    entry, new DynamicObjectRecreateContext(objectManager));
+
+            assertNotNull(result, "genericRecreate must return a parent-linked S2 boss child for "
+                    + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete child class");
+            assertSame(nearParent, readObjectField(result, "mainBoss"),
+                    "genericRecreate must relink the child to the closest restore-time live parent for "
+                            + candidate.fqn());
+        }
+    }
+
+    @Test
+    void batch52ClassesRoundTripPassedThroughHarnessParentSeedPath() {
+        for (CodecDeletionCandidate candidate : BATCH52_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed through parent-seeded harness coverage; got: "
+                            + result);
+        }
+    }
+
     /**
      * Returns true if the given FQN has a registered dynamic rewind codec in the
      * shared codecs or in any of the three per-game registries. Distinct from
@@ -3982,6 +4074,34 @@ public class TestScalarOnlyCodecDeletion {
                     parentSlotIndex, 176, 176, false, 3));
         }
         return base;
+    }
+
+    private interface Batch52ParentFactory {
+        AbstractObjectInstance create(ObjectSpawn spawn);
+    }
+
+    private record Batch52ParentSpec(int objectId, Batch52ParentFactory factory) {
+        AbstractObjectInstance createParent(ObjectSpawn spawn) {
+            return factory.create(spawn);
+        }
+    }
+
+    private static Batch52ParentSpec batch52ParentSpec(String childFqn) {
+        if (ARZBossPillar.class.getName().equals(childFqn)) {
+            return new Batch52ParentSpec(Sonic2ObjectIds.ARZ_BOSS, Sonic2ARZBossInstance::new);
+        }
+        if (CNZBossElectricBall.class.getName().equals(childFqn)) {
+            return new Batch52ParentSpec(Sonic2ObjectIds.CNZ_BOSS, Sonic2CNZBossInstance::new);
+        }
+        throw new AssertionError("Unexpected batch-52 child: " + childFqn);
+    }
+
+    private static void setBossPosition(AbstractObjectInstance boss, int x, int y) {
+        Object state = readObjectField(boss, "state");
+        setIntField(state, "x", x);
+        setIntField(state, "y", y);
+        setIntField(state, "xFixed", x << 16);
+        setIntField(state, "yFixed", y << 16);
     }
 
     private static Class<?> loadClass(String fqn) {

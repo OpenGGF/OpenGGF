@@ -47,7 +47,6 @@ import com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
 import com.openggf.game.sonic2.objects.bosses.ARZBossEyes;
-import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
@@ -61,7 +60,6 @@ import com.openggf.game.sonic2.objects.badniks.SlicerPincerInstance;
 import com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
 import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
-import com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainer;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor;
@@ -109,7 +107,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             checkpointDongleCodec(),
             checkpointStarCodec(),
             arzBossArrowCodec(),
-            arzBossPillarCodec(),
+            // ARZBossPillar now implements RewindRecreatable -> genericRecreate Path 1.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     GrounderRockProjectile.class,
                     spawn -> new GrounderRockProjectile(spawn.x(), spawn.y(), 0, null)),
@@ -146,7 +144,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             cpzBossContainerExtendCodec(),
             htzFlamethrowerCodec(),
             htzBossLavaBallCodec(),
-            cnzBossElectricBallCodec(),
+            // CNZBossElectricBall now implements RewindRecreatable -> genericRecreate Path 1.
             // Batch-4 S2 rewind codecs (CPZ boss component chain + OOZ flame).
             // LavaBubbleObjectInstance and MCZFallingDebrisInstance now implement
             // RewindRecreatable -> genericRecreate Path 1.
@@ -702,37 +700,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         };
     }
 
-    private static DynamicObjectRewindCodec arzBossPillarCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof ARZBossPillar;
-            }
-
-            @Override
-            public String className() {
-                return ARZBossPillar.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2ARZBossInstance parent = findArzBossParentForRewind(context);
-                return parent == null ? null : new ARZBossPillar(entry.spawn(), parent);
-            }
-        };
-    }
-
-    private static Sonic2ARZBossInstance findArzBossParentForRewind(
-            DynamicObjectRecreateContext context) {
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (inst instanceof Sonic2ARZBossInstance boss) {
-                return boss;
-            }
-        }
-        return null;
-    }
-
     private static DynamicObjectRewindCodec grounderWallCodec() {
         return new DynamicObjectRewindCodec() {
             @Override
@@ -973,30 +940,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return null;
-    }
-
-    private static DynamicObjectRewindCodec cnzBossElectricBallCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == CNZBossElectricBall.class;
-            }
-
-            @Override
-            public String className() {
-                return CNZBossElectricBall.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2CNZBossInstance boss = findLiveInstance(context, Sonic2CNZBossInstance.class);
-                if (boss == null) {
-                    return null;
-                }
-                return new CNZBossElectricBall(entry.spawn(), boss);
-            }
-        };
     }
 
     // ---- Batch-4 CPZ boss-component relink codecs ----
