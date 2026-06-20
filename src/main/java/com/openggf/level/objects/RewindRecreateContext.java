@@ -8,9 +8,11 @@ import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
  * restore-time object services, and the captured dynamic entry when the object was
  * restored from the dynamic-object surface.
  *
- * <p>Object-reference fields are <em>not</em> available here — they are resolved from the
- * compact blob (Task 3/5) after recreate returns. Implementations must not attempt
- * to look up sibling objects via this context.
+ * <p>Object-reference fields from the compact blob are <em>not</em> available here;
+ * they are resolved after recreate returns. Implementations may inspect the
+ * restore-time {@link ObjectManager} through {@link #objectServices()} for
+ * structural relinks that are constructor-required, but must not attempt to decode
+ * compact object-reference fields from this context.
  */
 public record RewindRecreateContext(
         ObjectSpawn spawn,
