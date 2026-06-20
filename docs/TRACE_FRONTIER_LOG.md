@@ -16959,3 +16959,25 @@ the co-located sidekick boundary case (the main player's f1154 hit was not bound
 ROM). Fix is in SHARED touch/snapshot ordering -> requires a full *TraceReplay resweep to gate regressions.
 No engine change landed (no safe, confidently-correct one-line fix isolated yet).
 
+
+### 2026-06-20 -- CPZ1 fix attempt (prevPreUpdate for sidekick) -- DISPROVEN, reverted
+
+Attempted fix: store the previous frame-start touch snapshot (prevPreUpdate) and have
+the S2/S1 CPU-sidekick touch use it (so the early-slot sidekick sees later-slot objects
+at their not-yet-moved position, per ROM slot ordering). Added prevPreUpdateX/Y to
+AbstractObjectInstance + a gated branch in ObjectTouchResponseController.processCollisionLoop
+(isSidekick && usePreUpdateState && !useCurrentTouchState && !usePreviousCollisionResponseList).
+
+Result: REGRESSED CPZ1 from f1157 to **f855** (tails_x_speed exp -0200 act 0x00A8) -- a
+DIFFERENT sidekick interaction where the CURRENT frame-start snapshot was already correct
+and the previous-frame snapshot misses the hit. Reverted (per the attempt+resweep+revert
+plan; the focused regression made a full sweep unnecessary).
+
+Conclusion: the CPZ1 1-frame-early sidekick hurt is NOT a universal object-move phase
+offset -- getPreUpdate is correct at f855 but one frame too new at f1157. The cause is
+interaction/object-specific (likely tied to the falling Spiny shot crossing Tails's box
+from above at a 1px boundary, or that specific dynamic object's snapshot timing), so a
+blanket sidekick-snapshot change is wrong. A correct fix needs per-object slot-order
+analysis (which exact object slots move before vs after the sidekick at f855 vs f1157),
+best obtained via a BizHawk side-by-side of ROM Touch_Loop slot iteration vs the engine.
+
