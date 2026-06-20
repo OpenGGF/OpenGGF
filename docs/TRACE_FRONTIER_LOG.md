@@ -16869,3 +16869,28 @@ undetermined and needs frame-by-frame engine y_pos tracing across f463-466 (a
 non-frontierOnly run with player y_pos + the bottom-boundary/wrap/death path logged).
 Not a confirmed one-line fix; superseded the earlier LZ3 guess.
 
+
+### 2026-06-20 -- CPZ1 f1157 deeper bisection (findings, no fix landed)
+
+From cpz aux data: ROM slot 0x10 (16) = object type 0x03 (slot_dump f1154). The
+`routine_change` shows ROM **Sonic** ALSO got hurt at f1154 (routine 0x02->0x04,
+x_vel -0x200, y_vel -0x400, stand_on_obj=16); the 0x98 Spiny shot persists across
+f1154-1157. ROM **Tails** stays routine 0x02 (unhurt) though co-located with Sonic
+(~0x0BA8,0x01B0). Engine Tails gets hurt at f1157. The engine 0x98 shot is at
+@0BAC,01A2 vs ROM @0BAE,019E (engine ~4px lower/left) -> engine overlaps Tails, ROM
+clears it.
+
+Disproven hypothesis: projectile gravity ORDERING. ROM `Obj98_SpinyShotFall`
+(s2.asm:74742) does `addi.w #$20,y_vel` THEN `ObjectMove` (gravity-then-move),
+which MATCHES the engine `BadnikProjectileInstance` SPINY_SPIKE path. So the spiny
+shot trajectory ordering is correct; the ~4px offset originates elsewhere (spawn
+x_pos/y_pos at fire time, fire-frame timing, or the co-located-sidekick touch
+processing). Still object-implementation/parity scope -- needs the projectile spawn
+position/age traced against ROM, or the S2 sidekick hazard-touch path checked for why
+ROM's persisting shot does not hurt the co-located CPU Tails.
+
+Side finding (NOT a current frontier; not changed): `Obj98_NebulaBombFall`
+(s2.asm:74712) uses `ObjectMoveAndFall` (OLD-velocity move THEN gravity, s2.asm:30164)
+whereas the engine's NEBULA_BOMB path applies gravity THEN moves -- a one-frame
+ordering mismatch to fix when a Nebula-bomb (WFZ) frontier pins it.
+
