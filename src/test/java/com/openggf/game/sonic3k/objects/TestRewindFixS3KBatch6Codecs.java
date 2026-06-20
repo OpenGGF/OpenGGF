@@ -75,8 +75,7 @@ class TestRewindFixS3KBatch6Codecs {
                 Mgz2LevelCollapseSolidInstance.class.getName(),
                 MgzDrillingRobotnikInstance.class.getName(),
                 MgzEndBossInstance.class.getName(),
-                // MHZ cutscene door + ship-sequence controller.
-                Mhz1CutsceneDoorInstance.class.getName(),
+                // MHZ ship-sequence controller.
                 MhzShipSequenceControllerInstance.class.getName());
 
         for (String name : required) {

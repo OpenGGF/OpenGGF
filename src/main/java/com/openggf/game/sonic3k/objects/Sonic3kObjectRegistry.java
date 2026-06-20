@@ -315,8 +315,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // MgzEndBossInstance codec deleted (Phase-2 batch 5):
             // now implements RewindRecreatable -> genericRecreate Path 1.
 
-            // MHZ1 Knuckles cutscene door (relink to the placed button parent).
-            mhz1CutsceneDoorCodec(),
+            // MHZ1 Knuckles cutscene door codec deleted (Phase-2 graph batch):
+            // generic recreate relinks a live button; compact restore resolves
+            // the exact captured parent by ObjectRefId.
 
             // MHZ Act 2 ship-sequence controller codec deleted (Phase-2 batch 16):
             // ROM-fixed seeds are supplied by RewindRecreatable generic recreate.
@@ -410,10 +411,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // now implements RewindRecreatable -> genericRecreate Path 1.
             // MGZ head-trigger stone chip codec deleted (Phase-2 batch 21):
             // self-contained nested class now uses genericRecreate Path 1.
-            // MHZ1 cutscene Player-2 stopper (sidekick lock; relink cutscene owner).
-            mhz1CutscenePlayerTwoStopperCodec(),
-            // MHZ2 cutscene route-switch carrier (cosmetic; relink cutscene parent).
-            mhz2KnucklesRouteSwitchChildCodec(),
+            // MHZ1 Player-2 stopper and MHZ2 route-switch child codecs deleted
+            // (Phase-2 MHZ cutscene graph batch): generic recreate relinks live
+            // constructor owners; compact restore resolves exact refs by ObjectRefId.
             // HCZ miniboss rocket touch hitbox codec deleted (Phase-2 batch):
             // non-static inner generic recreate resolves the live boss and relinks the slot.
             // ICZ ice-spikes hurt child (hurt hazard; relink nearest live spike base).
@@ -558,10 +558,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     // Batch-inner2 binary-name keys (private/nested children -> no Class literal).
     private static final String MGZ_DRILL_ARM_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild";
-    private static final String MHZ1_CUTSCENE_P2_STOPPER_CLASS =
-            "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper";
-    private static final String MHZ2_KNUX_ROUTE_SWITCH_CHILD_CLASS =
-            "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild";
     private static final String ICZ_ICE_SPIKES_HURT_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild";
 
@@ -607,91 +603,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 } catch (ReflectiveOperationException e) {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + MGZ_DRILL_ARM_CHILD_CLASS, e);
-                }
-            }
-        };
-    }
-
-    /**
-     * Codec for the MHZ1 rival-Knuckles cutscene Player-2 stopper (an invisible
-     * helper that locks/ducks native Player 2 during the cutscene). The owner
-     * spawns it exactly once behind a captured {@code playerTwoStopperSpawned}
-     * latch that survives rewind, so it is NOT re-emitted (parentReEmits=false)
-     * and dropping it would lose the sidekick lock. Relinks the live
-     * {@link Mhz1CutsceneKnucklesInstance} owner and reconstructs via the private
-     * 1-arg ctor; the only mutable scalar ({@code locked}) is captured generically.
-     */
-    private static DynamicObjectRewindCodec mhz1CutscenePlayerTwoStopperCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(MHZ1_CUTSCENE_P2_STOPPER_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return MHZ1_CUTSCENE_P2_STOPPER_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Mhz1CutsceneKnucklesInstance parent =
-                        findLiveInstance(context, Mhz1CutsceneKnucklesInstance.class);
-                if (parent == null) {
-                    return null;
-                }
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(Mhz1CutsceneKnucklesInstance.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(parent);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
-    /**
-     * Codec for the MHZ2 Knuckles leaf-blower cutscene route-switch carrier
-     * (cosmetic: only draws the route-switch sprite; the hazard/camera/launch
-     * logic lives on the parent). The parent spawns it once behind a non-rewound
-     * {@code switchChildSpawned} latch and never re-emits it (parentReEmits=false),
-     * so it must be restored for visual parity. Relinks the unique live
-     * {@link CutsceneKnucklesMhz2Instance} parent and reconstructs via the private
-     * 1-arg ctor; {@code knucklesRoute} was un-finaled so the capturer reapplies
-     * the captured value after recreate.
-     */
-    private static DynamicObjectRewindCodec mhz2KnucklesRouteSwitchChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(MHZ2_KNUX_ROUTE_SWITCH_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return MHZ2_KNUX_ROUTE_SWITCH_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                CutsceneKnucklesMhz2Instance parent =
-                        findLiveInstance(context, CutsceneKnucklesMhz2Instance.class);
-                if (parent == null) {
-                    return null;
-                }
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(CutsceneKnucklesMhz2Instance.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(parent);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
                 }
             }
         };
@@ -803,39 +714,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return new CutsceneKnuxCnz2WallInstance(entry.spawn(), parent);
-            }
-        };
-    }
-
-    /**
-     * Codec for the MHZ1 Knuckles-cutscene door. Relinks the single live
-     * {@link Mhz1CutsceneButtonInstance} parent (a placed object recreated before
-     * the dynamic-restore loop, present in getActiveObjects()). The door's
-     * {@code parent} field is final and passed into the constructor; the door's
-     * slide position/state are reapplied by the field capturer. Dropped if the
-     * button parent is absent.
-     */
-    private static DynamicObjectRewindCodec mhz1CutsceneDoorCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Mhz1CutsceneDoorInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return Mhz1CutsceneDoorInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Mhz1CutsceneButtonInstance parent =
-                        findLiveInstance(context, Mhz1CutsceneButtonInstance.class);
-                if (parent == null) {
-                    return null;
-                }
-                return new Mhz1CutsceneDoorInstance(parent);
             }
         };
     }

@@ -49,8 +49,6 @@ class TestRewindFixS3KInnerBatch2Codecs {
 
         List<String> required = List.of(
                 "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
-                "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper",
-                "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
                 "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild");
 
         for (String name : required) {
@@ -67,6 +65,8 @@ class TestRewindFixS3KInnerBatch2Codecs {
                 "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild",
                 "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ExitTriggerChild",
                 "com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance$HeadTriggerStoneChipChild",
+                "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper",
+                "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
                 "com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild");
 
         for (String className : genericRecreateClasses) {

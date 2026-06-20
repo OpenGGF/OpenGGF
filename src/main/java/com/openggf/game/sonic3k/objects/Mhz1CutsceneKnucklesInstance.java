@@ -16,8 +16,11 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -301,14 +304,21 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
         // ROM Obj_MHZ1CutsceneKnuckles is an invisible controller; visible Knuckles sprites are child objects.
     }
 
-    private static final class Mhz1CutscenePlayerTwoStopper extends AbstractObjectInstance {
-        private final Mhz1CutsceneKnucklesInstance owner;
+    private static final class Mhz1CutscenePlayerTwoStopper extends AbstractObjectInstance
+            implements RewindRecreatable {
+        private Mhz1CutsceneKnucklesInstance owner;
         private boolean locked;
 
         private Mhz1CutscenePlayerTwoStopper(Mhz1CutsceneKnucklesInstance owner) {
             super(new ObjectSpawn(0, 0, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0),
                     "MHZ1CutsceneP2Stopper");
             this.owner = owner;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            Mhz1CutsceneKnucklesInstance liveOwner = findNearestLiveOwner(ctx);
+            return liveOwner == null ? null : new Mhz1CutscenePlayerTwoStopper(liveOwner);
         }
 
         @Override
@@ -383,6 +393,31 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
             sidekick.setXSpeed((short) 0);
             sidekick.setYSpeed((short) 0);
             sidekick.setGSpeed((short) 0);
+        }
+
+        private static Mhz1CutsceneKnucklesInstance findNearestLiveOwner(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            Mhz1CutsceneKnucklesInstance best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (!(object instanceof Mhz1CutsceneKnucklesInstance candidate) || candidate.isDestroyed()) {
+                    continue;
+                }
+                if (spawn == null) {
+                    return candidate;
+                }
+                long dx = candidate.getX() - spawn.x();
+                long dy = candidate.getY() - spawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = candidate;
+                }
+            }
+            return best;
         }
     }
 }
