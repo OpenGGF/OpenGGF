@@ -11,6 +11,7 @@ import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
 import com.openggf.game.sonic2.objects.BombPrizeObjectInstance;
@@ -106,6 +107,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance$WaterDropChild",
                     GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AUDITED_LIVE_REFERENCE_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1EggPrisonObjectInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> BATCH4_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
@@ -575,7 +579,7 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     // =====================================================================
-    // Batch 3: three scalar-only dynamic children — codec deleted, generic recreate
+    // Batch 3: deleted-codec candidates covered by generic recreate
     // =====================================================================
 
     @Test
@@ -615,6 +619,51 @@ public class TestScalarOnlyCodecDeletion {
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // Audited live-reference deletions: object refs are policy-covered
+    // =====================================================================
+
+    @Test
+    void auditedLiveReferenceClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AUDITED_LIVE_REFERENCE_DELETED_CODECS) {
+            Class<?> cls;
+            try { cls = Class.forName(candidate.fqn()); }
+            catch (ClassNotFoundException e) { throw new AssertionError(e); }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (audited live-reference deletion)");
+        }
+    }
+
+    @Test
+    void auditedLiveReferenceClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AUDITED_LIVE_REFERENCE_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after deletion; "
+                            + "it should round-trip via genericRecreate Path 1 plus compact field restore");
+        }
+    }
+
+    @Test
+    void auditedLiveReferenceClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : AUDITED_LIVE_REFERENCE_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void auditedLiveReferenceClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : AUDITED_LIVE_REFERENCE_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via generic recreate and compact restore; got: "
                             + result);
         }
     }

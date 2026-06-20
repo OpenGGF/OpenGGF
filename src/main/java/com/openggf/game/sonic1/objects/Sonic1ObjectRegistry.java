@@ -86,9 +86,7 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // double it on rewind restore (1 → 2). The restore adopts the reconstructed
             // child in place at its exact captured state (ObjectManager step-4 reconciliation).
             // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1EggPrisonObjectInstance.class,
-                    spawn -> new Sonic1EggPrisonObjectInstance(spawn)),
+            // Sonic1EggPrisonObjectInstance now uses RewindRecreatable generic recreate.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1EndingSonicObjectInstance.class,
                     spawn -> new Sonic1EndingSonicObjectInstance(spawn.x(), spawn.y())),

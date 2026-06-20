@@ -1,27 +1,33 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.game.rewind.RewindRoundTripHarness;
+import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
 import com.openggf.game.sonic1.objects.bosses.FZCylinder;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaBall;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher;
 import com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic1ObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-3 S1 object that
+ * now exposes a dynamic rewind recreate path for every batch-3 S1 object that
  * was previously dropped on a held-rewind restore.
  *
- * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
- * session. Full session round-trip is handled by the rewind coverage guard.
+ * <p>Most assertions are registry-content checks that construct a registry and
+ * read {@code dynamicRewindCodecs()} without a ROM or active gameplay session.
+ * Codec deletions that now rely on generic recreate also run the headless
+ * ObjectManager round-trip harness here.
  *
  * <p>{@code Sonic1SplashObjectInstance} is intentionally excluded: it is an
  * accept-drop transient cosmetic (LZ water splash re-emitted on water
@@ -42,7 +48,7 @@ class TestRewindFixS1Batch3Codecs {
     }
 
     @Test
-    void registersCodecsForBatch3S1Objects() {
+    void hasRecreatePathForBatch3S1Objects() {
         Set<String> names = codecClassNames();
 
         List<String> required = List.of(
@@ -51,7 +57,6 @@ class TestRewindFixS1Batch3Codecs {
                 FZPlasmaBall.class.getName(),
                 Sonic1BossBlockInstance.class.getName(),
                 Sonic1CollapsingFloorObjectInstance.class.getName(),
-                Sonic1EggPrisonObjectInstance.class.getName(),
                 Sonic1ExplosionItemObjectInstance.class.getName(),
                 Sonic1GrassFireObjectInstance.class.getName(),
                 Sonic1LamppostTwirlInstance.class.getName(),
@@ -62,8 +67,33 @@ class TestRewindFixS1Batch3Codecs {
                 Sonic1SpikedBallChainObjectInstance.class.getName());
 
         for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+            assertTrue(names.contains(name) || implementsRewindRecreatable(name),
+                    "missing rewind recreate path for " + name);
+        }
+    }
+
+    @Test
+    void eggPrisonBodyUsesGenericRecreateInsteadOfRegisteredCodec() {
+        Set<String> names = codecClassNames();
+
+        assertFalse(names.contains(Sonic1EggPrisonObjectInstance.class.getName()),
+                "Sonic1EggPrisonObjectInstance must restore through RewindRecreatable generic recreate, "
+                        + "not an explicit S1 dynamic codec");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1EggPrisonObjectInstance.class),
+                "Sonic1EggPrisonObjectInstance must opt into the generic RewindRecreatable path");
+
+        RoundTripSweepResult result =
+                RewindRoundTripHarness.probeClass(Sonic1EggPrisonObjectInstance.class.getName());
+        assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                "Sonic1EggPrisonObjectInstance must round-trip through the generic recreate path; got: "
+                        + result);
+    }
+
+    private static boolean implementsRewindRecreatable(String className) {
+        try {
+            return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
         }
     }
 }
