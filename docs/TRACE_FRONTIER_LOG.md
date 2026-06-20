@@ -16757,3 +16757,38 @@ S2 `Ehz1`, `Scz`, `Wfz`, `Mcz` (act1); 35 green total.
 | TestS1Lz1CompleteRun | f5745 | camera_y | 0x028E | 0x028C | -0x2 |
 | TestS3kAiz | f19089 | g_speed | -00B0 | 0x00B0 | 0x160 |
 
+
+## 2026-06-20 -- Cluster 4 (Tails CPU): split Tails_control_counter from approach counter
+
+Worktree `.worktrees/trace-cluster-fixes`, branch `bugfix/ai-trace-cluster-fixes`,
+off develop `e9e3d4236`. Clean branch.
+
+Root cause: `SidekickCpuController` overloaded a single `controlCounter` field for
+two distinct concepts -- ROM `Tails_control_counter` ($F702), the manual-control
+timer set to 600 only on Player-2 input and counted down (s2.asm:39069-39075,
+39389-39398), AND an engine-internal multi-sidekick approach/spawn frame counter
+(incremented every APPROACHING frame). During CPU fly-in the engine incremented
+the field while ROM holds `Tails_control_counter`=0, so `tails_cpu_control_counter`
+diverged (exp 0x0000, act 0x0001, 0x0002, ...).
+
+Fix: added a dedicated engine-internal `approachFrameCount` for the multi-sidekick
+approach/spawn cadence (the two `++` sites and the FALLBACK/ANCHOR thresholds).
+`controlCounter` now strictly models ROM `Tails_control_counter` (set on P2 input,
+`!=0` manual-control gates, per-frame `--` countdown). Captured `approachFrameCount`
+in the `SidekickCpuRewindExtra` rewind record alongside `normalFrameCount`.
+
+Commands:
+`mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dtrace.frontierOnly=true -Dtrace.context.radius=8 -Dtest='*TraceReplay' ... test`
+`mvn -Dmse=off -Dtest=TestSidekickCpuFollowParity,TestArchUnitRules,TestGameplayModeContextRewindRegistry ... test`
+
+Result (full `*TraceReplay` resweep, vs the 2026-06-20 true-frontier snapshot above):
+- **90 tests, 53 failures, 1 error** (was 54 failures, 1 error).
+- CLEARED: `TestS2ArzLevelSelect` (f2434 `tails_cpu_control_counter`) -> **green**.
+- ADVANCED: `TestS2MtzLevelSelect` f448 -> **f1267** (`y`); `TestS2HtzLevelSelect`
+  f640 -> **f6114** (`air`); `TestS2Mtz3LevelSelect` f640 -> **f1973** (`tails_x`);
+  `TestS2CnzLevelSelect` f1024 -> **f1691** (`y_speed`).
+- REGRESSED: none (38 other frontiers byte-identical).
+- Guards: `TestArchUnitRules` pass, `TestGameplayModeContextRewindRegistry` pass.
+  `TestSidekickCpuFollowParity` unchanged (the 2 `*BeforeSettledThreshold` failures
+  are pre-existing on clean develop `e9e3d4236`, confirmed by baseline run).
+
