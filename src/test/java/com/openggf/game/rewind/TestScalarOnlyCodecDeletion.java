@@ -35,6 +35,13 @@ import com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.AizMinibossArmChild;
+import com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild;
+import com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild;
+import com.openggf.game.sonic3k.objects.AizMinibossBodyChild;
+import com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild;
+import com.openggf.game.sonic3k.objects.AizMinibossFlameChild;
+import com.openggf.game.sonic3k.objects.AizMinibossNapalmController;
 import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance;
@@ -525,6 +532,15 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(CPZBossDripper.class.getName(), GameId.S2),
             new CodecDeletionCandidate(CPZBossPipePump.class.getName(), GameId.S2),
             new CodecDeletionCandidate(CPZBossPipeSegment.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> AIZ_MINIBOSS_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizMinibossBodyChild.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AizMinibossArmChild.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AizMinibossNapalmController.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AizMinibossFlameBarrelChild.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AizMinibossFlameChild.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AizMinibossBarrelShotChild.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AizMinibossBarrelShotFlareChild.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -3915,6 +3931,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through CPZ graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ miniboss graph batch: parent/sibling-linked children, graph harness covers restore
+    // =====================================================================
+
+    @Test
+    void aizMinibossGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_MINIBOSS_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ miniboss graph batch");
+        }
+    }
+
+    @Test
+    void aizMinibossGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_MINIBOSS_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ miniboss graph generic recreate, not a dynamic codec");
         }
     }
 

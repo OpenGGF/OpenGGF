@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -27,7 +29,7 @@ import java.util.List;
  * - shield_reaction bit 4
  * - wait delay based on subtype, then flame anim, then explosion anim
  */
-public class AizMinibossFlameChild extends AbstractObjectInstance implements TouchResponseProvider {
+public class AizMinibossFlameChild extends AbstractObjectInstance implements TouchResponseProvider, RewindRecreatable {
     private static final int COLLISION_FLAGS = 0x8B;
     private static final int SHIELD_REACTION = 1 << 4;
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
@@ -90,6 +92,21 @@ public class AizMinibossFlameChild extends AbstractObjectInstance implements Tou
         this.frame = 0;
         this.animTimer = 0;
         this.explodeIndex = 0;
+    }
+
+    private AizMinibossFlameChild(
+            ObjectSpawn spawn,
+            AizMinibossInstance parent,
+            int xOffset,
+            int yOffset,
+            int subtype) {
+        this(parent, xOffset, yOffset, subtype);
+    }
+
+    @Override
+    public AizMinibossFlameChild recreateForRewind(RewindRecreateContext ctx) {
+        AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
+        return boss == null ? null : new AizMinibossFlameChild(boss, 0, 0, 0);
     }
 
     @Override

@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -30,7 +32,8 @@ import java.util.List;
  * - loc_68C96 / loc_68D5E / loc_68D70 (hazardous variant + floor explode)
  * - sub_68EE4 (camera-relative top spawn X selection)
  */
-public class AizMinibossBarrelShotChild extends AbstractObjectInstance implements TouchResponseProvider {
+public class AizMinibossBarrelShotChild extends AbstractObjectInstance
+        implements TouchResponseProvider, RewindRecreatable {
     private static final int COLLISION_FLAGS_HAZARD = 0x98;
     private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
     private static final int SHIELD_REACTION_FLAGS = SHIELD_REACTION_BOUNCE | (1 << 4);
@@ -120,6 +123,41 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance implement
         this.state = State.PRELAUNCH;
         this.vFlip = false;
         this.needsInitSfx = true;
+    }
+
+    private AizMinibossBarrelShotChild(ObjectSpawn spawn) {
+        super(spawn, "AIZMinibossBarrelShot");
+        this.parent = null;
+        this.barrel = null;
+        this.barrelSubtype = spawn.subtype() & 0xFF;
+        this.mode = Mode.SIMPLE;
+        this.currentX = spawn.x();
+        this.currentY = spawn.y();
+        this.xFixed = currentX << 16;
+        this.yFixed = currentY << 16;
+        this.xVel = 0;
+        this.yVel = -0x400;
+        this.frame = FRAME_RISE_A;
+        this.animTimer = 2;
+        this.timer = 0x60;
+        this.state = State.PRELAUNCH;
+        this.vFlip = false;
+        this.needsInitSfx = true;
+    }
+
+    @Override
+    public AizMinibossBarrelShotChild recreateForRewind(RewindRecreateContext ctx) {
+        AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
+        AizMinibossFlameBarrelChild restoredBarrel = AizMinibossRewindLinks.nearestBarrel(ctx);
+        if (boss == null || restoredBarrel == null || ctx.spawn() == null) {
+            return null;
+        }
+        return new AizMinibossBarrelShotChild(
+                boss,
+                restoredBarrel,
+                ctx.spawn().x(),
+                ctx.spawn().y(),
+                Mode.SIMPLE);
     }
 
     @Override

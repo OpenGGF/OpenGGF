@@ -4,6 +4,9 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -26,7 +29,7 @@ import java.util.List;
  * - collision_flags=$9C (hurt)
  * - animated body frames while active
  */
-public class AizMinibossBodyChild extends AbstractBossChild implements TouchResponseProvider {
+public class AizMinibossBodyChild extends AbstractBossChild implements TouchResponseProvider, RewindRecreatable {
     private static final int Y_OFFSET = 0x20;
     private static final int COLLISION_FLAGS = 0x9C;
     private static final int SHIELD_REACTION = 1 << 4;
@@ -57,6 +60,16 @@ public class AizMinibossBodyChild extends AbstractBossChild implements TouchResp
 
     public AizMinibossBodyChild(AbstractBossInstance parent) {
         super(parent, "AIZMinibossBody", 3, 0x90);
+    }
+
+    private AizMinibossBodyChild(ObjectSpawn spawn, AizMinibossInstance parent) {
+        this(parent);
+    }
+
+    @Override
+    public AizMinibossBodyChild recreateForRewind(RewindRecreateContext ctx) {
+        AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
+        return boss == null ? null : new AizMinibossBodyChild(boss);
     }
 
     @Override

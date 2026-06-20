@@ -4,6 +4,9 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -18,7 +21,7 @@ import java.util.List;
  * - Cutscene barrel: loc_6872C (ChildObjDat_69072)
  * - Miniboss barrel: loc_68C12 (ChildObjDat_69086)
  */
-public class AizMinibossFlameBarrelChild extends AbstractBossChild {
+public class AizMinibossFlameBarrelChild extends AbstractBossChild implements RewindRecreatable {
     private static final int FLAG_PARENT_BITS = 0x38;
     private static final int PARENT_BIT_BARREL_ACTIVATE = 1 << 1;
 
@@ -67,6 +70,22 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild {
         super(parent, "AIZMinibossBarrel" + barrelIndex, 4, 0x90);
         this.barrelIndex = Math.max(0, Math.min(2, barrelIndex));
         this.cutsceneVariant = cutsceneVariant;
+        syncPositionWithParent();
+        updateDynamicSpawn();
+    }
+
+    private AizMinibossFlameBarrelChild(ObjectSpawn spawn, AizMinibossInstance parent) {
+        this(parent, 0, false);
+    }
+
+    @Override
+    public AizMinibossFlameBarrelChild recreateForRewind(RewindRecreateContext ctx) {
+        AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
+        if (boss == null) {
+            return null;
+        }
+        int restoredIndex = AizMinibossRewindLinks.nearestBarrelIndex(ctx, boss);
+        return new AizMinibossFlameBarrelChild(boss, restoredIndex, false);
     }
 
     @Override

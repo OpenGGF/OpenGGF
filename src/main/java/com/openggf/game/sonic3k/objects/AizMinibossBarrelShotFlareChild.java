@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -19,7 +21,7 @@ import java.util.List;
  * - Palette line 0 (word_69022 make_art_tile(...,0,0))
  * - Lifetime is one short raw-animation sequence, then delete
  */
-public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance {
+public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance implements RewindRecreatable {
     private static final int PALETTE_OVERRIDE = 0;
     private static final int Y_OFFSET = 4;
 
@@ -48,6 +50,21 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance {
         this.sequenceIndex = 0;
         this.frameTimer = DURATIONS[0];
         syncToAnchor();
+    }
+
+    private AizMinibossBarrelShotFlareChild(ObjectSpawn spawn) {
+        super(spawn, "AIZMinibossBarrelShotFlare");
+        this.anchor = null;
+        this.currentX = spawn.x();
+        this.currentY = spawn.y();
+        this.sequenceIndex = 0;
+        this.frameTimer = DURATIONS[0];
+    }
+
+    @Override
+    public AizMinibossBarrelShotFlareChild recreateForRewind(RewindRecreateContext ctx) {
+        AizMinibossBarrelShotChild anchor = AizMinibossRewindLinks.nearestBarrelShot(ctx);
+        return anchor == null ? null : new AizMinibossBarrelShotFlareChild(anchor);
     }
 
     @Override

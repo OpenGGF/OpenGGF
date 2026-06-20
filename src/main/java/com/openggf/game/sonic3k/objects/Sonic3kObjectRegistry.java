@@ -114,13 +114,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // AizBgTreeInstance / Aiz2BossEndSequenceController codecs deleted
             // (Phase-2 batch 15): both use RewindRecreatable generic recreate.
 
-            // Tier 3: relink to the live boss recreated earlier in the restore.
-            aizMinibossChildCodec(AizMinibossBodyChild.class, AizMinibossBodyChild::new),
-            aizMinibossChildCodec(AizMinibossArmChild.class, AizMinibossArmChild::new),
-            aizMinibossChildCodec(AizMinibossNapalmController.class,
-                    boss -> new AizMinibossNapalmController(boss, 0)),
-            aizMinibossChildCodec(AizMinibossFlameBarrelChild.class,
-                    boss -> new AizMinibossFlameBarrelChild(boss, 0, false)),
+            // AIZ miniboss child codecs deleted (graph batch): generic recreate
+            // relinks the live boss/sibling graph and the graph harness covers
+            // multi-barrel restore ordering.
             aizEndBossChildCodec(AizEndBossShipChild.class, AizEndBossShipChild::new),
             aizEndBossChildCodec(AizEndBossFlameColumnChild.class, AizEndBossFlameColumnChild::new),
             aizEndBossChildCodec(AizEndBossArmChild.class,
@@ -143,12 +139,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             aizBattleshipChildCodec(AizShipBombInstance.class,
                     (ship, s) -> new AizShipBombInstance(s, ship, 0, s.y())),
 
-            // Relink to the live miniboss; sibling barrel/anchor where needed.
-            aizMinibossChildCodec(AizMinibossFlameChild.class,
-                    boss -> new AizMinibossFlameChild(boss, 0, 0, 0)),
-            aizMinibossBarrelShotCodec(),
-            aizSiblingAnchoredCodec(AizMinibossBarrelShotFlareChild.class,
-                    AizMinibossBarrelShotChild.class, AizMinibossBarrelShotFlareChild::new),
+            // AIZ miniboss flame/shot/flare codecs deleted with the graph batch.
 
             // Relink to the live end boss; sibling arm/propeller where needed.
             aizEndBossPropellerCodec(),
@@ -510,20 +501,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     }
 
     /**
-     * Codec for an AIZ miniboss child. The live {@link AizMinibossInstance} is
-     * layout-spawned and recreated before the dynamic-object restore loop, so it
-     * is already present in {@code getActiveObjects()}. The child's
-     * {@code parent} is final and passed into the constructor. If the live
-     * miniboss is absent the child is dropped (codec returns null) rather than
-     * throwing.
-     */
-    private static DynamicObjectRewindCodec aizMinibossChildCodec(
-            Class<? extends AbstractObjectInstance> type,
-            Function<AbstractBossInstance, ? extends AbstractObjectInstance> factory) {
-        return bossChildCodec(type, AizMinibossInstance.class, factory);
-    }
-
-    /**
      * Codec for an AIZ end-boss child. As with the miniboss children, the live
      * {@link AizEndBossInstance} is recreated before the dynamic-object restore
      * loop, so it is found in {@code getActiveObjects()} and passed into the
@@ -802,74 +779,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return new AizEndBossFlameChild(boss, propeller, 0);
-            }
-        };
-    }
-
-    /**
-     * Codec for the AIZ miniboss barrel shot, which needs both the live miniboss
-     * and the live {@link AizMinibossFlameBarrelChild} that fired it. The barrel
-     * is spawned before its shots, so it is present during the shot's recreate.
-     * When several barrels are live the shot is relinked to the barrel nearest
-     * its captured spawn position; if none is live the shot is dropped.
-     */
-    private static DynamicObjectRewindCodec aizMinibossBarrelShotCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == AizMinibossBarrelShotChild.class;
-            }
-
-            @Override
-            public String className() {
-                return AizMinibossBarrelShotChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                AizMinibossInstance boss = findLiveBossForRewind(context, AizMinibossInstance.class);
-                AizMinibossFlameBarrelChild barrel = findNearestLiveInstance(
-                        context, AizMinibossFlameBarrelChild.class, entry.spawn());
-                if (boss == null || barrel == null) {
-                    return null;
-                }
-                return new AizMinibossBarrelShotChild(
-                        boss, barrel, 0, 0, AizMinibossBarrelShotChild.Mode.SIMPLE);
-            }
-        };
-    }
-
-    /**
-     * Codec for a cosmetic child anchored to a live sibling (e.g. the barrel-shot
-     * muzzle flare anchored to its barrel shot). The anchor is recreated earlier
-     * in spawn order; when several anchors of the type are live the child is
-     * relinked to the one nearest its captured spawn position. If no anchor is
-     * live the child is dropped rather than recreated with a null anchor.
-     */
-    private static <A extends AbstractObjectInstance> DynamicObjectRewindCodec aizSiblingAnchoredCodec(
-            Class<? extends AbstractObjectInstance> type,
-            Class<A> anchorType,
-            Function<? super A, ? extends AbstractObjectInstance> factory) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                A anchor = findNearestLiveInstance(context, anchorType, entry.spawn());
-                if (anchor == null) {
-                    return null;
-                }
-                return factory.apply(anchor);
             }
         };
     }
