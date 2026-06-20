@@ -16981,3 +16981,37 @@ blanket sidekick-snapshot change is wrong. A correct fix needs per-object slot-o
 analysis (which exact object slots move before vs after the sidekick at f855 vs f1157),
 best obtained via a BizHawk side-by-side of ROM Touch_Loop slot iteration vs the engine.
 
+
+### 2026-06-20 -- Frontier survey: remaining frontiers classified by root-cause family
+
+After the cluster-4 fix, surveyed the remaining true-frontier divergences (worktree
+bugfix/ai-trace-cluster-fixes). None is a clean cluster-4-style conceptual win; they
+group into four deep families:
+
+1. SOLID-OBJECT RIDING / LANDING (engine vs ROM disagree on standing/air/land-pos while
+   the player is on an object). Object-specific, moving-platform-timing class.
+   - s1_ghz1 f2573: ROM air=1 falling (y_speed 0x07F0) on onObj=0x22; engine air=0 landed
+     (g_speed 0x0438). Engine sticks to the object a frame ROM is airborne.
+   - s1_sbz1 f1925: ROM rolling on onObj=0x3C (g_speed 0x0556); engine rolling=0 airborne.
+   - s3k_lbz1 f1694: ROM grounded on onObj=0x04 (status 0x0C); engine airborne (0x06).
+   - s3k_hcz1 f1489: 1px Y on the air->on_object landing frame (onObj=0x12).
+   - s3k_icz1 f3116: status_byte 0x08 vs 0x09 (engine has the facing bit set while on object).
+2. TOUCH-PHASE TIMING (1-frame, shared touch code). Proven interaction-specific (CPZ1).
+   - s2_cpz1 f1157 (sidekick hurt 1 frame early); s3k_mgz1 f539 + completerun f738
+     (a ring collected 1 frame early -> rings off by one). Same family as CPZ1.
+3. JUMP ANGLE ON OBJECTS (roll-jump y_speed sin-sign flip; x/cos matches). Object-angle
+   convention when jumping off a sloped/ridden object.
+   - s2_htz2 f1078 and s1_mz2 f2578: identical y_speed -0568 -> +0568 (rolling+jump,
+     onObj=0x1A and 0x34 respectively). Engine jump angle is the negation of ROM's.
+4. SUB-PIXEL / 1px (P9 class). Needs frame-by-frame sub= tracing.
+   - s1_ghz3 f1246 y+1, s1_mz3 f1702 y-1, s1_syz3 f3468 x-1, s1_lz1 f5745 camera_y-2,
+     s2_ooz1 f1782 tails_x-1, s2_cnz1 f3906 tails_y+1, s2_cnz2 f4418 tails_y+1,
+     s2_mcz2 f4485 tails_x+1, s3k_mhz1 f966 y-3.
+   Plus structural one-offs: s1_lz3 f466 (vertical-loop-iteration), s2_dez1 f4007 (x_speed
+   sign flip in the DEZ ending), s2_arz2 f523 (object-slot allocation parity).
+
+Recommended targeting order for a future session (each needs a controlled side-by-side):
+family 1 (most traces; pick one object e.g. S1 Obj22/Obj3C and align its solid-contact
+land/air timing), then family 3 (find the on-object jump-angle negation -> likely one fix
+clears htz2+mz2), then family 2 (BizHawk Touch_Loop slot-order trace), then family 4.
+
