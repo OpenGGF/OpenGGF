@@ -55,7 +55,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 
 import java.util.List;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -180,8 +179,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // CaterkillerJrBodyInstance codec deleted (Phase-2 batch 14):
             // constructor-only segment scalars are restored after generic recreate.
 
-            // MHZ miniboss children (relink to the live boss recreated earlier).
-            mhzMinibossChildCodec(MhzMinibossFlameInstance.class, MhzMinibossFlameInstance::new),
+            // MHZ miniboss flame codec deleted (graph batch):
+            // generic recreate bootstraps a live boss and compact restore resolves
+            // the exact captured parent by ObjectRefId.
             mhzMinibossEscapeShardCodec(),
 
             // Parent/sibling relink codecs.
@@ -750,39 +750,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 }
                 ObjectSpawn spawn = entry.spawn();
                 return new Sonic3kSSEntryFlashObjectInstance(ring, spawn.x(), spawn.y());
-            }
-        };
-    }
-
-    /**
-     * Codec for an MHZ miniboss child relinked to the single live
-     * {@link MhzMinibossInstance} (an {@link AbstractBossInstance} recreated before
-     * the dynamic-object restore loop). The child's captured scalar state is
-     * reapplied by the generic field capturer; a placeholder child index is passed
-     * to the constructor. If the live boss is absent the child is dropped.
-     */
-    private static DynamicObjectRewindCodec mhzMinibossChildCodec(
-            Class<? extends AbstractObjectInstance> type,
-            BiFunction<MhzMinibossInstance, Integer, ? extends AbstractObjectInstance> factory) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                MhzMinibossInstance boss = findLiveBossForRewind(context, MhzMinibossInstance.class);
-                if (boss == null) {
-                    return null;
-                }
-                return factory.apply(boss, 0);
             }
         };
     }

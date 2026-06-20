@@ -64,7 +64,6 @@ class TestRewindFixS3KBatch2Codecs {
                 MhzPollenParticleInstance.class.getName(),
                 IczEndBossEggCapsuleInstance.class.getName(),
                 CaterkillerJrBodyInstance.class.getName(),
-                MhzMinibossFlameInstance.class.getName(),
                 MhzMinibossEscapeShardInstance.class.getName(),
                 Sonic3kStarPostBonusStarChild.class.getName(),
                 Sonic3kSSEntryFlashObjectInstance.class.getName(),
