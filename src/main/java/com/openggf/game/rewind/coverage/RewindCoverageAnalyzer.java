@@ -321,10 +321,9 @@ public final class RewindCoverageAnalyzer {
      *       {@link AbstractPlayableSprite} — live object graph references that
      *       cannot be reconstructed from scalar data alone.</li>
      *   <li>{@link RewindPolicyRegistry#policyForAudit} does not mark it
-     *       {@code TRANSIENT} or {@code DEFERRED} (i.e., not excluded by any
-     *       registered policy rule).</li>
-     *   <li>No object-ref codec/id exists for it (Phase 1: no id-capture yet,
-     *       so this condition is always met).</li>
+     *       {@code TRANSIENT} or {@code DEFERRED} (excluded from rewind) or
+     *       {@code CAPTURED} (restored through object-ref id capture).</li>
+     *   <li>No object-ref id capture exists for it.</li>
      * </ul>
      *
      * <p>If the class cannot be loaded the method returns an empty list.
@@ -354,7 +353,7 @@ public final class RewindCoverageAnalyzer {
     /**
      * Returns {@code true} when the field is a live object-reference gap:
      * its type is an {@link ObjectInstance} or {@link AbstractPlayableSprite} subtype,
-     * it is not excluded by annotation or policy, and no id-capture exists for it.
+     * it is not excluded by annotation or policy, and it has no captured object-ref id.
      *
      * <p>This is an audit-only predicate; it has no effect on runtime rewind behaviour.
      */
@@ -379,16 +378,19 @@ public final class RewindCoverageAnalyzer {
             return false;
         }
         // A registered policy that marks the field TRANSIENT or DEFERRED means
-        // the system has already decided to exclude it; not a gap.
+        // the system has already decided to exclude it. CAPTURED means the
+        // object-reference codec restores it by ObjectRefId. None are gaps.
+        // UNSUPPORTED remains reportable.
         Optional<RewindFieldPolicy> policy = RewindPolicyRegistry.policyForAudit(field);
         if (policy.isPresent()) {
             RewindFieldPolicy p = policy.get();
-            if (p == RewindFieldPolicy.TRANSIENT || p == RewindFieldPolicy.DEFERRED) {
+            if (p == RewindFieldPolicy.TRANSIENT
+                    || p == RewindFieldPolicy.DEFERRED
+                    || p == RewindFieldPolicy.CAPTURED) {
                 return false;
             }
         }
-        // Phase 1: no id-capture mechanisms exist yet; every remaining object-ref
-        // field is an un-id'd gap. Phase 2 will add codec/id checks here.
+        // Remaining object-ref fields are neither excluded nor explicitly id-captured.
         return true;
     }
 

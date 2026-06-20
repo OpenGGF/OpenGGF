@@ -131,6 +131,18 @@ class TestRewindCoverageAnalyzer {
     }
 
     @Test
+    void exactCapturedObjectRefFieldIsNotFlagged() {
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
+        // SpikerTopSpikeChild.parent is an exact CAPTURED field policy. The object-ref
+        // codec captures/restores it by ObjectRefId, so it must not be reported as an un-id'd gap.
+        ObjectCoverage cov = report.objects().stream()
+                .filter(o -> o.className().endsWith("SpikerBadnikInstance$SpikerTopSpikeChild"))
+                .findFirst().orElseThrow();
+        assertFalse(cov.unIdObjectRefFields().contains("parent"),
+                "ObjectInstance ref classified CAPTURED by exact policy must NOT be reported as un-id'd gap");
+    }
+
+    @Test
     void enumerationIncludesRuntimeChildSpawnedClasses() {
         RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
         assertTrue(report.objects().stream()
@@ -169,4 +181,3 @@ class TestRewindCoverageAnalyzer {
                 "inner-class concrete child TurboSpikerBadnikInstance$TurboSpikerShellChild must be enumerated");
     }
 }
-
