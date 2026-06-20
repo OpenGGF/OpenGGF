@@ -217,10 +217,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // HCZ end-boss child codecs deleted: the graph family now restores
             // through RewindRecreatable and relinks the live boss/turbine.
 
-            // AIZ1 intro biplane cutscene children (parent-relink to the live
-            // AizPlaneIntroInstance orchestrator).
-            aizPlaneIntroChildCodec(),
-            aizPlaneIntroWaveChildCodec(),
+            // AIZ1 intro biplane children now restore through RewindRecreatable
+            // with TestS3kAizIntroGraphRewind coverage for live-parent relink.
 
             // --- Release-slice batch 5: MHZ end-boss family + CNZ traversal codecs ---
             // Without these, recreateDynamicObject() returns null for the listed
@@ -478,68 +476,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return null;
-    }
-
-    /**
-     * Codec for the AIZ1 intro biplane child. The live
-     * {@link AizPlaneIntroInstance} orchestrator is resolved via its static
-     * accessor (set in its constructor, cleared on destroy), which is more robust
-     * than scanning active objects and avoids spawn-order assumptions. The plane
-     * child's {@code parent} is final and passed into the constructor. If the
-     * intro is over (no live orchestrator) the child is dropped.
-     */
-    private static DynamicObjectRewindCodec aizPlaneIntroChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == AizIntroPlaneChild.class;
-            }
-
-            @Override
-            public String className() {
-                return AizIntroPlaneChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                AizPlaneIntroInstance parent = AizPlaneIntroInstance.getActiveIntroInstance();
-                if (parent == null) {
-                    return null;
-                }
-                return new AizIntroPlaneChild(entry.spawn(), parent);
-            }
-        };
-    }
-
-    /**
-     * Codec for the AIZ1 intro wave-splash child. Relinks the single live
-     * {@link AizPlaneIntroInstance} orchestrator (passed into the constructor and
-     * used live each frame via its scroll speed). If the intro is over the wave is
-     * dropped.
-     */
-    private static DynamicObjectRewindCodec aizPlaneIntroWaveChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == AizIntroWaveChild.class;
-            }
-
-            @Override
-            public String className() {
-                return AizIntroWaveChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                AizPlaneIntroInstance parent = AizPlaneIntroInstance.getActiveIntroInstance();
-                if (parent == null) {
-                    return null;
-                }
-                return new AizIntroWaveChild(entry.spawn(), parent);
-            }
-        };
     }
 
     private static <B extends AbstractBossInstance> DynamicObjectRewindCodec bossChildCodec(

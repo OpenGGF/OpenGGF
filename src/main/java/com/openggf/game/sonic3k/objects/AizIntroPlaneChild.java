@@ -5,6 +5,8 @@ import com.openggf.camera.Camera;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -24,7 +26,7 @@ import java.util.logging.Logger;
  *
  * Spawns 2 AizIntroBoosterChild sub-objects for the booster flame animation.
  */
-public class AizIntroPlaneChild extends AbstractObjectInstance {
+public class AizIntroPlaneChild extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizIntroPlaneChild.class.getName());
 
     // Swing parameters from ROM (Swing_UpAndDown acceleration / max)
@@ -64,6 +66,12 @@ public class AizIntroPlaneChild extends AbstractObjectInstance {
 
         // Spawn booster flame children
         spawnBoosters();
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        AizPlaneIntroInstance liveParent = AizIntroRewindLinks.liveIntroParent(ctx);
+        return liveParent == null ? null : new AizIntroPlaneChild(ctx.spawn(), liveParent);
     }
 
     @Override

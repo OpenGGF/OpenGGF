@@ -5,6 +5,8 @@ import com.openggf.camera.Camera;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -21,7 +23,7 @@ import java.util.logging.Logger;
  * Each frame scrolls left by the parent's scroll speed and animates.
  * Self-deletes when X < 0x60.
  */
-public class AizIntroWaveChild extends AbstractObjectInstance {
+public class AizIntroWaveChild extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizIntroWaveChild.class.getName());
 
     /** X threshold below which the wave self-deletes. */
@@ -61,6 +63,12 @@ public class AizIntroWaveChild extends AbstractObjectInstance {
         this.parent = parent;
         this.currentX = spawn.x();
         this.currentY = spawn.y();
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        AizPlaneIntroInstance liveParent = AizIntroRewindLinks.liveIntroParent(ctx);
+        return liveParent == null ? null : new AizIntroWaveChild(ctx.spawn(), liveParent);
     }
 
     @Override

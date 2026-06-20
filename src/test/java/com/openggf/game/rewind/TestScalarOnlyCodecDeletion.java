@@ -55,6 +55,8 @@ import com.openggf.game.sonic3k.objects.AizEndBossInstance;
 import com.openggf.game.sonic3k.objects.AizEndBossPropellerChild;
 import com.openggf.game.sonic3k.objects.AizEndBossShipChild;
 import com.openggf.game.sonic3k.objects.AizEndBossSmokeChild;
+import com.openggf.game.sonic3k.objects.AizIntroPlaneChild;
+import com.openggf.game.sonic3k.objects.AizIntroWaveChild;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.AizMinibossArmChild;
 import com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild;
@@ -589,6 +591,10 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(HczEndBossBladeWaterChute.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(HczEndBossBladeSplash.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(HczEndBossWaterColumn.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_INTRO_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizIntroPlaneChild.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AizIntroWaveChild.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> S2_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(GrounderRockProjectile.class.getName(), GameId.S2),
@@ -4101,6 +4107,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through HCZ end-boss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ intro graph batch: biplane parent-linked dynamic children
+    // =====================================================================
+
+    @Test
+    void aizIntroGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_INTRO_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ intro graph batch");
+        }
+    }
+
+    @Test
+    void aizIntroGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_INTRO_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ intro graph generic recreate, not a dynamic codec");
         }
     }
 
