@@ -100,6 +100,8 @@ class TestRewindFixS3KBatch5Codecs {
                 "MhzEndBossSpikeChild must use the RewindRecreatable generic path, not an explicit codec");
         assertFalse(names.contains(MhzEndBossVisualChild.class.getName()),
                 "MhzEndBossVisualChild must use the RewindRecreatable generic path, not an explicit codec");
+        assertFalse(names.contains(MhzEndBossWeatherMachineChild.class.getName()),
+                "MhzEndBossWeatherMachineChild must use the RewindRecreatable generic path, not an explicit codec");
         assertFalse(names.contains(MhzEndBossHitProxyChild.class.getName()),
                 "MhzEndBossHitProxyChild must use the RewindRecreatable generic path, not an explicit codec");
     }

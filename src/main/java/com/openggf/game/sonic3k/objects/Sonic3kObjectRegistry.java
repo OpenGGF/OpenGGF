@@ -291,15 +291,15 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // live boss through RewindRecreatable genericRecreate.
             // MhzEndBossVisualChild codec deleted: relinks to the restored
             // live boss through RewindRecreatable genericRecreate.
-            bossChildCodec(MhzEndBossWeatherMachineChild.class, MhzEndBossInstance.class,
-                    boss -> new MhzEndBossWeatherMachineChild(boss)),
+            // MhzEndBossWeatherMachineChild codec deleted: relinks to the
+            // restored live boss through RewindRecreatable genericRecreate.
             // MhzEndBossHitProxyChild codec deleted: relinks to the restored
             // live boss through RewindRecreatable genericRecreate.
             // MhzEndBossDefeatFragmentChild codec deleted (Phase-2 batch 42):
             // compact restore reapplies parent-derived subtype/xVel after generic recreate.
 
             // MHZ weather-machine visual children — relink to the live
-            // weather-machine child recreated just above (in spawn order).
+            // weather-machine child restored earlier in spawn order.
             mhzEndBossWeatherVisualChildCodec(),
 
             // --- Release-slice batch 6: LBZ/CNZ/AIZ1 cutscene + MGZ end-act +
