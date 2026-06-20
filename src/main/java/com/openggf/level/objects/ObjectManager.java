@@ -3440,6 +3440,7 @@ public class ObjectManager {
                             assignRewindObjectId(aoi, aoi.getSpawn());
                         }
                         dynamicObjects.add(aoi);
+                        activeObjectsCacheDirty = true;
                         int execIdx = execIndexForSlot(aoi.getSlotIndex());
                         if (execIdx >= 0 && execIdx < execOrder.length) {
                             execOrder[execIdx] = aoi;

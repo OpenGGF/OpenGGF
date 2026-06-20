@@ -48,8 +48,6 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild;
-import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild;
-import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -298,9 +296,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // MhzEndBossDefeatFragmentChild codec deleted (Phase-2 batch 42):
             // compact restore reapplies parent-derived subtype/xVel after generic recreate.
 
-            // MHZ weather-machine visual children — relink to the live
-            // weather-machine child restored earlier in spawn order.
-            mhzEndBossWeatherVisualChildCodec(),
+            // MhzEndBossWeatherVisualChild codec deleted: relinks to the
+            // restored live weather-machine child through RewindRecreatable
+            // genericRecreate; subtype/spark are re-derived from the captured spawn.
 
             // --- Release-slice batch 6: LBZ/CNZ/AIZ1 cutscene + MGZ end-act +
             // MHZ ship/door + shield/spark rewind recreate codecs ---------------
@@ -1369,40 +1367,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);
                 }
-            }
-        };
-    }
-
-    /**
-     * Codec for {@link MhzEndBossWeatherVisualChild}. The visual child relinks its live
-     * {@link MhzEndBossWeatherMachineChild} parent (recreated just before it in spawn
-     * order, found by nearest captured spawn position when several are live) and
-     * re-derives its {@code subtype} and {@code spark} discriminator from the captured
-     * spawn (the spark bit is encoded into the spawn's {@code rawYWord} at construction).
-     * The remaining animation scalars are reapplied by the generic field capturer; x/y
-     * are re-derived from the parent each frame. If no parent is live the child is dropped.
-     */
-    private static DynamicObjectRewindCodec mhzEndBossWeatherVisualChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == MhzEndBossWeatherVisualChild.class;
-            }
-
-            @Override
-            public String className() {
-                return MhzEndBossWeatherVisualChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                MhzEndBossWeatherMachineChild parent = findNearestLiveInstance(
-                        context, MhzEndBossWeatherMachineChild.class, entry.spawn());
-                if (parent == null) {
-                    return null;
-                }
-                return MhzEndBossWeatherVisualChild.forRewindRecreate(parent, entry.spawn());
             }
         };
     }
