@@ -127,10 +127,8 @@ public final class ObjectRewindDynamicCodecs {
      *   <li>{@code (ObjectSpawn, int, int, ParentType)} — spawn, coordinate
      *       placeholders, and a live or null parent placeholder</li>
      *   <li>{@code (ParentType)} — live parent constructor for structural children</li>
-     *   <li>{@code (ParentType, int, int)} — live parent plus harmless coordinate placeholders</li>
      *   <li>{@code (ParentType, int, int, int)} — live parent plus harmless scalar placeholders</li>
      *   <li>{@code (ParentType, int, int, boolean)} — live parent plus harmless scalar placeholders</li>
-     *   <li>{@code (ParentType, SiblingType)} — live parent/sibling constructor for structural children</li>
      *   <li>{@code (ParentType, SiblingType, int)} — live parent/sibling plus harmless scalar placeholder</li>
      *   <li>{@code (int, int, int)} — primitive-only constructor with zero placeholders</li>
      *   <li>{@code (int, int, int, int)} — primitive-only constructor with zero placeholders</li>
@@ -256,12 +254,6 @@ public final class ObjectRewindDynamicCodecs {
             return parentProbe;
         }
 
-        AbstractObjectInstance parentIntIntProbe =
-                constructParentIntIntProbe(cls, ctx);
-        if (parentIntIntProbe != null) {
-            return parentIntIntProbe;
-        }
-
         AbstractObjectInstance parentIntIntIntProbe =
                 constructParentIntIntIntProbe(cls, ctx);
         if (parentIntIntIntProbe != null) {
@@ -272,12 +264,6 @@ public final class ObjectRewindDynamicCodecs {
                 constructParentIntIntBooleanProbe(cls, ctx);
         if (parentIntIntBooleanProbe != null) {
             return parentIntIntBooleanProbe;
-        }
-
-        AbstractObjectInstance parentSiblingProbe =
-                constructParentSiblingProbe(cls, ctx);
-        if (parentSiblingProbe != null) {
-            return parentSiblingProbe;
         }
 
         AbstractObjectInstance parentSiblingIntProbe =
@@ -449,31 +435,6 @@ public final class ObjectRewindDynamicCodecs {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
-    private static AbstractObjectInstance constructParentIntIntProbe(
-            Class<? extends AbstractObjectInstance> cls,
-            DynamicObjectRecreateContext ctx) {
-        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
-            Class<?>[] params = rawCtor.getParameterTypes();
-            if (params.length != 3
-                    || !ObjectInstance.class.isAssignableFrom(params[0])
-                    || params[1] != int.class
-                    || params[2] != int.class) {
-                continue;
-            }
-            ObjectInstance parent = findLiveAssignableParentForProbe(params[0], ctx);
-            if (parent == null) {
-                return null;
-            }
-            Constructor<? extends AbstractObjectInstance> ctor =
-                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
-            ctor.setAccessible(true);
-            return invokeProbeCtor(cls, ctor, ctx, parent, 0, 0);
-        }
-        return null;
-    }
-
-    @SuppressWarnings("unchecked")
     private static AbstractObjectInstance constructParentIntIntIntProbe(
             Class<? extends AbstractObjectInstance> cls,
             DynamicObjectRecreateContext ctx) {
@@ -523,31 +484,6 @@ public final class ObjectRewindDynamicCodecs {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
-    private static AbstractObjectInstance constructParentSiblingProbe(
-            Class<? extends AbstractObjectInstance> cls,
-            DynamicObjectRecreateContext ctx) {
-        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
-            Class<?>[] params = rawCtor.getParameterTypes();
-            if (params.length != 2
-                    || !ObjectInstance.class.isAssignableFrom(params[0])
-                    || !ObjectInstance.class.isAssignableFrom(params[1])) {
-                continue;
-            }
-            ObjectInstance parent = findLiveAssignableParentForProbe(params[0], ctx);
-            ObjectInstance sibling = findLiveAssignableParentForProbe(params[1], ctx);
-            if (parent == null || sibling == null) {
-                return null;
-            }
-            Constructor<? extends AbstractObjectInstance> ctor =
-                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
-            ctor.setAccessible(true);
-            return invokeProbeCtor(cls, ctor, ctx, parent, sibling);
-        }
-        return null;
-    }
-
-    @SuppressWarnings("unchecked")
     private static AbstractObjectInstance constructParentSiblingIntProbe(
             Class<? extends AbstractObjectInstance> cls,
             DynamicObjectRecreateContext ctx) {

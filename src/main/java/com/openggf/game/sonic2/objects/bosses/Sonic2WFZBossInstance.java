@@ -891,6 +891,10 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
             updateDynamicSpawn();
         }
 
+        private WFZLaserWall(Sonic2WFZBossInstance parent) {
+            this(parent, parent.getX(), parent.getY());
+        }
+
         @Override
         public WFZLaserWall recreateForRewind(RewindRecreateContext ctx) {
             Sonic2WFZBossInstance boss = findNearestLiveBossForRewind(ctx);
@@ -1168,6 +1172,10 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
             updateDynamicSpawn();
         }
 
+        private WFZFloatingPlatform(Sonic2WFZBossInstance parent) {
+            this(parent, parent.getX(), parent.getY());
+        }
+
         @Override
         public WFZFloatingPlatform recreateForRewind(RewindRecreateContext ctx) {
             Sonic2WFZBossInstance boss = findNearestLiveBossForRewind(ctx);
@@ -1315,6 +1323,13 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
             this.platformParent = platformParent;
             syncToParentPlatform(platformParent.getCurrentX(), platformParent.getCurrentY());
             updateDynamicSpawn();
+        }
+
+        private WFZPlatformHurt(
+                Sonic2WFZBossInstance bossParent,
+                WFZFloatingPlatform platformParent,
+                int ignored) {
+            this(bossParent, platformParent);
         }
 
         @Override
