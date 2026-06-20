@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -20,7 +22,7 @@ import java.util.List;
  * ROM Reference: s2.asm Obj5D (ROUTINE_PIPE, ROUTINE_PIPE_PUMP, ROUTINE_PIPE_RETRACT)
  * Extends down from the boss, pumps, then retracts.
  */
-public class CPZBossPipe extends AbstractObjectInstance {
+public class CPZBossPipe extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int SUB_WAIT = 0;
     private static final int SUB_EXTEND = 2;
@@ -71,6 +73,12 @@ public class CPZBossPipe extends AbstractObjectInstance {
         this.segments = new ArrayList<>();
         this.animationState = new ObjectAnimationState(CPZBossAnimations.getDripperAnimations(), anim, mappingFrame);
         animate();  // Initialize mappingFrame to correct first frame for this anim
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2CPZBossInstance boss = CpzBossRewindLinks.nearestBoss(ctx);
+        return boss == null ? null : new CPZBossPipe(ctx.spawn(), boss);
     }
 
     @Override

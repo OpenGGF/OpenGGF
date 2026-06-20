@@ -149,15 +149,11 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // LavaBubbleObjectInstance and MCZFallingDebrisInstance now implement
             // RewindRecreatable -> genericRecreate Path 1.
             // BubbleObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            cpzBossContainerCodec(),
+            // CPZ boss main-linked children now implement RewindRecreatable
+            // and are covered by TestS2CpzBossGraphRewind.
             cpzContainerFloorCodec(),
             // CPZBossFallingPart now implements RewindRecreatable -> genericRecreate Path 1.
-            cpzBossFlameCodec(),
-            cpzBossGunkCodec(),
-            cpzBossPipeCodec(),
             cpzBossPipePumpCodec(),
-            cpzBossPumpCodec(),
-            cpzBossRobotnikCodec(),
             oozBurnerFlameCodec(),
             // Batch-5 S2 rewind codecs (CPZ-boss Dripper/PipeSegment, Rexon head,
             // Egg-prison button, results screen).
@@ -944,33 +940,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
 
     // ---- Batch-4 CPZ boss-component relink codecs ----
 
-    private static DynamicObjectRewindCodec cpzBossContainerCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == CPZBossContainer.class;
-            }
-
-            @Override
-            public String className() {
-                return CPZBossContainer.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2CPZBossInstance boss = findLiveInstance(context, Sonic2CPZBossInstance.class);
-                if (boss == null) {
-                    return null;
-                }
-                // mainBoss relinked via ctor; all scalar state (routineSecondary, xVel, timer2,
-                // floorSpawned/extendSpawned latches, anim, mappingFrame, ...) is non-final and
-                // reapplied by restoreObjectRewindState; animationState is rebuilt in the ctor.
-                return new CPZBossContainer(entry.spawn(), boss);
-            }
-        };
-    }
-
     private static DynamicObjectRewindCodec cpzContainerFloorCodec() {
         return new DynamicObjectRewindCodec() {
             @Override
@@ -1073,77 +1042,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         return null;
     }
 
-    private static DynamicObjectRewindCodec cpzBossFlameCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == CPZBossFlame.class;
-            }
-
-            @Override
-            public String className() {
-                return CPZBossFlame.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2CPZBossInstance boss = findLiveInstance(context, Sonic2CPZBossInstance.class);
-                return boss == null ? null : new CPZBossFlame(entry.spawn(), boss);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec cpzBossGunkCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == CPZBossGunk.class;
-            }
-
-            @Override
-            public String className() {
-                return CPZBossGunk.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2CPZBossInstance boss = findLiveInstance(context, Sonic2CPZBossInstance.class);
-                if (boss == null) {
-                    return null;
-                }
-                // gunkReady=false is a placeholder; routineSecondary/timer2 (non-final) are
-                // overwritten on restore. Droplets share this class and are covered too.
-                return new CPZBossGunk(entry.spawn(), boss, false);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec cpzBossPipeCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == CPZBossPipe.class;
-            }
-
-            @Override
-            public String className() {
-                return CPZBossPipe.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2CPZBossInstance boss = findLiveInstance(context, Sonic2CPZBossInstance.class);
-                if (boss == null) {
-                    return null;
-                }
-                return new CPZBossPipe(entry.spawn(), boss);
-            }
-        };
-    }
-
     private static DynamicObjectRewindCodec cpzBossPipePumpCodec() {
         return new DynamicObjectRewindCodec() {
             @Override
@@ -1162,48 +1060,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                 Sonic2CPZBossInstance boss = findLiveInstance(context, Sonic2CPZBossInstance.class);
                 CPZBossPipe pipe = findLiveInstance(context, CPZBossPipe.class);
                 return pipe == null ? null : new CPZBossPipePump(entry.spawn(), boss, pipe);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec cpzBossPumpCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == CPZBossPump.class;
-            }
-
-            @Override
-            public String className() {
-                return CPZBossPump.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2CPZBossInstance boss = findLiveInstance(context, Sonic2CPZBossInstance.class);
-                return boss == null ? null : new CPZBossPump(entry.spawn(), boss);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec cpzBossRobotnikCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == CPZBossRobotnik.class;
-            }
-
-            @Override
-            public String className() {
-                return CPZBossRobotnik.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2CPZBossInstance boss = findLiveInstance(context, Sonic2CPZBossInstance.class);
-                return boss == null ? null : new CPZBossRobotnik(entry.spawn(), boss);
             }
         };
     }

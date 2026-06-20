@@ -21,6 +21,12 @@ import com.openggf.game.sonic2.objects.PointsObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
 import com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall;
+import com.openggf.game.sonic2.objects.bosses.CPZBossContainer;
+import com.openggf.game.sonic2.objects.bosses.CPZBossFlame;
+import com.openggf.game.sonic2.objects.bosses.CPZBossGunk;
+import com.openggf.game.sonic2.objects.bosses.CPZBossPipe;
+import com.openggf.game.sonic2.objects.bosses.CPZBossPump;
+import com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -499,6 +505,14 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> BATCH52_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(ARZBossPillar.class.getName(), GameId.S2),
             new CodecDeletionCandidate(CNZBossElectricBall.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> CPZ_GRAPH_BATCH_A_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(CPZBossContainer.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(CPZBossFlame.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(CPZBossGunk.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(CPZBossPipe.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(CPZBossPump.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(CPZBossRobotnik.class.getName(), GameId.S2));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -3849,6 +3863,28 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed through parent-seeded harness coverage; got: "
                             + result);
+        }
+    }
+
+    // =====================================================================
+    // CPZ graph batch A: main-boss-linked children, graph harness covers restore
+    // =====================================================================
+
+    @Test
+    void cpzGraphBatchAClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : CPZ_GRAPH_BATCH_A_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after CPZ graph batch A");
+        }
+    }
+
+    @Test
+    void cpzGraphBatchAClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : CPZ_GRAPH_BATCH_A_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through CPZ graph generic recreate, not a dynamic codec");
         }
     }
 
