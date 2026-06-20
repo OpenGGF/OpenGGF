@@ -17140,3 +17140,27 @@ post-move wall-sensor push that sets Status_Push WITHOUT zeroing g_speed on the 
 frames (or align its sub-pixel x_pos phase so the predicted scan naturally penetrates),
 verified against a full resweep. Deep cumulative-phase work; not a safe autonomous band-aid.
 
+
+### 2026-06-21 -- Cluster-5 wall-push: THREE override variants disproven; needs sub-pixel phase alignment
+
+Tried three resolveGroundWallCollision variants for the S2 CPU sidekick (all fail-fast-
+verified on OOZ/MTZ3/MCZ2, all reverted):
+1. distance==0 -> applyGroundWallVelocityResponse (push + zero g_speed): OVER-PUSHED
+   (ROM keeps g_speed ~0x000C creeping); OOZ regressed f1782->f1644.
+2. distance==0 -> setPushing only (no g_speed change): FALSE PUSH at flush seams
+   (ROM status 0x0001/no-push there); OOZ regressed f1782->f1654.
+3. current-position (dx=dy=0) scan -> setPushing on real penetration: NO-OP. The current-
+   position scan returns distance>=0 -- the engine's CPU Tails is FLUSH, not penetrating,
+   even though its pixel tails_x matches ROM. So ROM penetrates by a SUB-PIXEL amount the
+   engine never reaches.
+
+DEFINITIVE CONCLUSION: this is the cumulative CPU-sidekick sub-pixel x_pos PHASE lag
+(same class as the documented S3K AIZ HCZ analysis). The engine's CPU Tails trails ROM by
+a fraction of a pixel, so it sits flush while ROM is 1px penetrating and pushing. No wall-
+scan override can distinguish push-vs-no-push frames because the engine is flush in BOTH.
+The only correct fix is to align the CPU sidekick's sub-pixel x_pos phase with ROM (so its
+wall scan naturally penetrates exactly when ROM does), which needs frame-by-frame x_pos/
+x_sub diffing of the CPU-follow movement chain vs ROM (BizHawk-assisted) and is shared
+sidekick-physics work with cross-trace regression risk -- a supervised, multi-hour effort,
+NOT an autonomously-landable override. This forecloses the override approach entirely.
+
