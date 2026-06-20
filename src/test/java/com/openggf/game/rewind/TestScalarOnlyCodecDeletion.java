@@ -12,6 +12,7 @@ import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance;
 import com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
@@ -603,6 +604,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(CheckpointStarInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(Sonic3kStarPostStarChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(Sonic3kStarPostBonusStarChild.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S1_MZ_GLASS_REFLECTION_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1GlassReflectionInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> S2_WFZ_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
@@ -4129,6 +4133,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through checkpoint/starpost graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 MZ glass reflection graph batch: layout-parent-linked dynamic shine
+    // =====================================================================
+
+    @Test
+    void s1MzGlassReflectionGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_MZ_GLASS_REFLECTION_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 MZ glass graph batch");
+        }
+    }
+
+    @Test
+    void s1MzGlassReflectionGraphClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_MZ_GLASS_REFLECTION_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 MZ glass graph generic recreate, not a dynamic codec");
         }
     }
 
