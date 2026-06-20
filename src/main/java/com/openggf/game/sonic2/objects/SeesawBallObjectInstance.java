@@ -163,8 +163,6 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
             return null;
         }
         ObjectManager objectManager = ctx.objectServices().objectManager();
-        SeesawObjectInstance fallback = null;
-        long bestDistance = Long.MAX_VALUE;
         for (ObjectInstance object : objectManager.getActiveObjects()) {
             if (!(object instanceof SeesawObjectInstance seesaw) || seesaw.isDestroyed()) {
                 continue;
@@ -177,18 +175,8 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
             if (centerX == capturedCenterX && bottomY == capturedBottomY) {
                 return seesaw;
             }
-            ObjectSpawn spawn = ctx.spawn();
-            if (spawn != null && seesaw.ballSpawnedForRewind()) {
-                long dx = (long) centerX - spawn.x();
-                long dy = (long) bottomY - spawn.y();
-                long distance = dx * dx + dy * dy;
-                if (distance < bestDistance) {
-                    bestDistance = distance;
-                    fallback = seesaw;
-                }
-            }
         }
-        return fallback;
+        return null;
     }
 
     /**

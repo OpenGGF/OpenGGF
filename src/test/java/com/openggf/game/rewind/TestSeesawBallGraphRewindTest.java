@@ -199,6 +199,41 @@ abstract class AbstractSeesawBallGraphRewindTest {
     }
 
     @Test
+    void directGenericRecreateWithOnlyUnrelatedEligibleSeesawStillDropsSeesawBalls() {
+        Harness s1Harness = Harness.create(new Sonic1ObjectRegistry(), List.of(S1_WRONG_SEESAW));
+        Sonic1SeesawObjectInstance unrelatedS1 = liveS1ParentAt(s1Harness.objectManager(), S1_WRONG_SEESAW.x());
+        writeBoolean(unrelatedS1, "ballSpawned", true);
+
+        assertNull(genericRecreate(
+                        s1Harness.objectManager(),
+                        Sonic1SeesawBallObjectInstance.class,
+                        new ObjectSpawn(
+                                S1_WRONG_SEESAW.x() + 0x20,
+                                S1_WRONG_SEESAW.y() - 0x18,
+                                Sonic1ObjectIds.SEESAW,
+                                0, 0, false, 10)),
+                "S1 generic recreate must drop when only an unrelated eligible-looking seesaw exists");
+        assertNull(readObject(unrelatedS1, "ball"),
+                "S1 unrelated seesaw must not adopt a missing-parent ball");
+
+        Harness s2Harness = Harness.create(new Sonic2ObjectRegistry(), List.of(S2_WRONG_SEESAW));
+        SeesawObjectInstance unrelatedS2 = liveS2ParentAt(s2Harness.objectManager(), S2_WRONG_SEESAW.x());
+        writeBoolean(unrelatedS2, "ballSpawned", true);
+
+        assertNull(genericRecreate(
+                        s2Harness.objectManager(),
+                        SeesawBallObjectInstance.class,
+                        new ObjectSpawn(
+                                S2_WRONG_SEESAW.x() + 0x20,
+                                S2_WRONG_SEESAW.y() - 0x18,
+                                Sonic2ObjectIds.SEESAW,
+                                0, 0, false, 20)),
+                "S2 generic recreate must drop when only an unrelated eligible-looking seesaw exists");
+        assertNull(readObject(unrelatedS2, "ball"),
+                "S2 unrelated seesaw must not adopt a missing-parent ball");
+    }
+
+    @Test
     void seesawBallsUseRewindRecreatableWithoutExplicitDynamicCodecs() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1SeesawBallObjectInstance.class),
                 "S1 seesaw ball must restore through RewindRecreatable");

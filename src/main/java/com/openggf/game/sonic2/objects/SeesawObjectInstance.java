@@ -393,10 +393,6 @@ public class SeesawObjectInstance extends BoxObjectInstance
         return ball != null && !ball.isDestroyed();
     }
 
-    boolean ballSpawnedForRewind() {
-        return ballSpawned;
-    }
-
     void adoptBallForRewind(SeesawBallObjectInstance restoredBall) {
         ball = restoredBall;
         ballSpawned = true;
