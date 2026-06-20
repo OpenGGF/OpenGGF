@@ -86,12 +86,8 @@ class TestAiz2ObjectRewindCodecs {
         Set<String> names = codecClassNames();
         // Previously Tier-4 (dropped). Now captured + recreated so held rewind
         // reverses them cleanly instead of re-emitting them forward.
-        List<String> codecBacked = List.of(AizShipBombInstance.class.getName());
-        for (String name : codecBacked) {
-            assertTrue(names.contains(name),
-                    "AIZ2 transient child must now have a rewind codec: " + name);
-        }
         List<Class<?>> genericBacked = List.of(
+                AizShipBombInstance.class,
                 AizMinibossBarrelShotChild.class,
                 AizMinibossBarrelShotFlareChild.class,
                 AizMinibossFlameChild.class,

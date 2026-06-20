@@ -6,8 +6,11 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -33,7 +36,7 @@ import java.util.List;
  * it is actually released, matching the ROM's {@code Translate_Camera2ObjPosition}
  * and {@code Translate_Camera2ObjX} calls.
  */
-public class AizShipBombInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public class AizShipBombInstance extends AbstractObjectInstance implements TouchResponseProvider, RewindRecreatable {
     private static final int GRAVITY = 0x20;       // 8:8 fixed-point
     private static final int Y_RADIUS = 0x10;
     private static final int IMPACT_DISTANCE_THRESHOLD = -8;
@@ -56,8 +59,7 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
 
     /**
      * Bomb-port X in the battleship's secondary-camera space (ROM: $2E).
-     * Non-final so the rewind field capturer reapplies it after the codec
-     * recreates the bomb (the codec passes a placeholder).
+     * Non-final so the rewind field capturer reapplies it after generic recreate.
      */
     private int sourceSecondaryX;
     /** Ship object that owns the live secondary-camera translation. */
@@ -99,6 +101,24 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
         this.state = STATE_READY_DROP;
         this.portYOffset = READY_DROP_START;  // ROM: $30(a0) = $A60
         this.delayCounter = DROP_DELAY_FRAMES;
+    }
+
+    AizShipBombInstance(ObjectSpawn spawn, AizBattleshipInstance sourceShip) {
+        this(spawn, sourceShip, 0, spawn != null ? spawn.y() : 0);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
+                || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (instance instanceof AizBattleshipInstance ship && !ship.isDestroyed()) {
+                return new AizShipBombInstance(ctx.spawn(), ship, 0, ctx.spawn().y());
+            }
+        }
+        return null;
     }
 
     @Override

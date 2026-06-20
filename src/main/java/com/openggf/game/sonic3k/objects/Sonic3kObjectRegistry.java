@@ -128,9 +128,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // Self-contained primitive-only transients now implement RewindRecreatable
             // and use genericRecreate Path 1; no handwritten codecs are needed here.
 
-            // Relink to the live battleship recreated earlier in the restore.
-            aizBattleshipChildCodec(AizShipBombInstance.class,
-                    (ship, s) -> new AizShipBombInstance(s, ship, 0, s.y())),
+            // AizShipBombInstance now restores via graph-tested
+            // RewindRecreatable generic recreate and relinks the live battleship.
 
             // AIZ miniboss flame/shot/flare codecs deleted with the graph batch.
 
@@ -512,39 +511,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return null;
-    }
-
-    /**
-     * Codec for the AIZ2 battleship's dropped bombs. The live
-     * {@link AizBattleshipInstance} is recreated earlier in the restore loop
-     * (entries are processed in spawn order, and the ship spawns before its
-     * bombs), so it is found in {@code getActiveObjects()} and passed into the
-     * bomb constructor. If no live ship is present the bomb is dropped.
-     */
-    private static DynamicObjectRewindCodec aizBattleshipChildCodec(
-            Class<? extends AbstractObjectInstance> type,
-            BiFunction<AizBattleshipInstance, ObjectSpawn, ? extends AbstractObjectInstance> factory) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                AizBattleshipInstance ship = findLiveInstance(context, AizBattleshipInstance.class);
-                if (ship == null) {
-                    return null;
-                }
-                return factory.apply(ship, entry.spawn());
-            }
-        };
     }
 
     private static <T> T findLiveInstance(DynamicObjectRecreateContext context, Class<T> type) {
