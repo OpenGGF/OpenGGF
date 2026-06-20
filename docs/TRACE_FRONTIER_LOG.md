@@ -16690,3 +16690,248 @@ Result:
 - Next target in the ordered Tails CPU cluster is MTZ3 f1775
   `tails_cpu_interact`, which now follows the cleared stale-`Status_Push`
   release.
+
+## 2026-06-20 -- True-frontier reconciliation (clean full sweep on develop e9e3d4236)
+
+Authoritative full `*TraceReplay` sweep run from the main working tree at
+develop HEAD `e9e3d4236` (sweep itself executed at `f8b9874a9`; the two
+intervening commits are rewind-only refactors that do not touch physics).
+Clean branch, no uncommitted investigation edits.
+
+Command:
+`mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dtrace.frontierOnly=true -Dtrace.context.radius=8 -Dtest='*TraceReplay' -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Dsonic1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen -Dsonic3k.rom.path=s3k.gen test`
+
+Result: **90 tests, 54 failures, 1 error, 0 skipped** (BUILD FAILURE).
+The lone error is `TestS3kCnzTraceReplay.traceReplayCnzMinibossParentSecondMovePassUsesRomPhase`
+(a bespoke regression method throwing, not the `replayMatchesTrace` frontier).
+
+Note: `*_report.json` filenames key on `game_zone+act`, so a zone's CompleteRun
+and short/level-select variants overwrite one report. The table below is keyed by
+test CLASS (from surefire `First error:` lines), which de-conflates them. Passing
+tests write no report. GREEN (not listed): all S1 single-act `Test*TraceReplay`,
+S2 `Ehz1`, `Scz`, `Wfz`, `Mcz` (act1); 35 green total.
+
+| Class | Frontier | Field | Exp | Act | Delta |
+|---|---:|---|---:|---:|---:|
+| TestS3kMhzCompleteRun | f72 | y_speed | 0x00E0 | 0x0000 | -0xE0 |
+| TestS3kCnz | f291 | x_speed | 0x0600 | -02D1 | -0x8D1 |
+| TestS2MtzLevelSelect | f448 | tails_cpu_control_counter | 0x0000 | 0x0001 | 0x1 |
+| TestS1Lz3CompleteRun | f466 | y | 0x0807 | 0x0007 | -0x800 |
+| TestS1Syz1CompleteRun | f502 | camera_y | 0x034A | 0x0340 | -0xA |
+| TestS2Arz2LevelSelect | f523 | obj_extra_s24_x | absent | 0x067F |  |
+| TestS3kMgz | f539 | rings | 10 | 11 | 0x1 |
+| TestS2HtzLevelSelect | f640 | tails_cpu_control_counter | 0x0000 | 0x0001 | 0x1 |
+| TestS2Mtz3LevelSelect | f640 | tails_cpu_control_counter | 0x0000 | 0x0001 | 0x1 |
+| TestS1Slz2CompleteRun | f651 | g_speed | 0x1000 | 0x10AE | 0xAE |
+| TestS1FzCompleteRun | f713 | y_speed | 0x0000 | -0700 | -0x700 |
+| TestS1Slz3CompleteRun | f718 | y_speed | 0x0000 | 0x0610 | 0x610 |
+| TestS1Slz1CompleteRun | f723 | x_speed | 0x0000 | -0200 | -0x200 |
+| TestS3kMgzCompleteRun | f738 | rings | 17 | 18 | 0x1 |
+| TestS2CnzLevelSelect | f1024 | tails_cpu_control_counter | 0x0000 | 0x0001 | 0x1 |
+| TestS1Lz2CompleteRun | f1068 | obj_s20_slot | 0x20 | 0x25 | 0x5 |
+| TestS2Ooz2LevelSelect | f1070 | camera_y | 0x0475 | 0x046F | -0x6 |
+| TestS2Htz2LevelSelect | f1078 | y_speed | -0568 | 0x0568 | 0xAD0 |
+| TestS1Syz2CompleteRun | f1088 | x_speed | 0x02E8 | 0x02F4 | 0xC |
+| TestS3kAizCompleteRun | f1095 | x_sub | 0x0000 | 0x0C00 | 0xC00 |
+| TestS2CpzLevelSelect | f1157 | tails_x_speed | 0x0000 | -0200 | -0x200 |
+| TestS1Ghz3CompleteRun | f1246 | y | 0x0219 | 0x021A | 0x1 |
+| TestS2Mtz2LevelSelect | f1265 | g_speed | 0x014B | 0x047A | 0x32F |
+| TestS1Sbz2CompleteRun | f1395 | obj_s48_slot | 0x48 | 0x3B | -0xD |
+| TestS3kHczCompleteRun | f1489 | y | 0x0776 | 0x0775 | -0x1 |
+| TestS3kLbzCompleteRun | f1694 | air | 0 | 1 | 0x1 |
+| TestS1Mz3CompleteRun | f1702 | y | 0x048C | 0x048B | -0x1 |
+| TestS2OozLevelSelect | f1782 | tails_x | 0x0CE4 | 0x0CE3 | -0x1 |
+| TestS3kCnzCompleteRun | f1846 | tails_x_speed | 0x0024 | -1000 | -0x1024 |
+| TestS1Sbz1CompleteRun | f1925 | g_speed | 0x0556 | 0x0000 | -0x556 |
+| TestS1Mz1CompleteRun | f2089 | camera_y | 0x02BE | 0x02C4 | 0x6 |
+| TestS1Ghz2CompleteRun | f2369 | y_speed | 0x0668 | 0x0000 | -0x668 |
+| TestS2ArzLevelSelect | f2434 | tails_cpu_control_counter | 0x0000 | 0x0001 | 0x1 |
+| TestS1Ghz1CompleteRun | f2573 | y_speed | 0x07F0 | 0x0000 | -0x7F0 |
+| TestS1Mz2CompleteRun | f2578 | y_speed | -0568 | 0x0568 | 0xAD0 |
+| TestS2Cpz2LevelSelect | f2888 | tails_x | 0x10F8 | 0x10F0 | -0x8 |
+| TestS3kIczCompleteRun | f3116 | status_byte | 0x0008 | 0x0009 | 0x1 |
+| TestS1Syz3CompleteRun | f3468 | x | 0x0CC5 | 0x0CC4 | -0x1 |
+| TestS2DezEndingLevelSelect | f4007 | x_speed | -01F3 | 0x01F3 | 0x3E6 |
+| TestS2Cnz2LevelSelect | f4418 | tails_y | 0x02F0 | 0x02F1 | 0x1 |
+| TestS2Mcz2LevelSelect | f4485 | tails_x | 0x0EAB | 0x0EAC | 0x1 |
+| TestS1Lz1CompleteRun | f5745 | camera_y | 0x028E | 0x028C | -0x2 |
+| TestS3kAiz | f19089 | g_speed | -00B0 | 0x00B0 | 0x160 |
+
+
+## 2026-06-20 -- Cluster 4 (Tails CPU): split Tails_control_counter from approach counter
+
+Worktree `.worktrees/trace-cluster-fixes`, branch `bugfix/ai-trace-cluster-fixes`,
+off develop `e9e3d4236`. Clean branch.
+
+Root cause: `SidekickCpuController` overloaded a single `controlCounter` field for
+two distinct concepts -- ROM `Tails_control_counter` ($F702), the manual-control
+timer set to 600 only on Player-2 input and counted down (s2.asm:39069-39075,
+39389-39398), AND an engine-internal multi-sidekick approach/spawn frame counter
+(incremented every APPROACHING frame). During CPU fly-in the engine incremented
+the field while ROM holds `Tails_control_counter`=0, so `tails_cpu_control_counter`
+diverged (exp 0x0000, act 0x0001, 0x0002, ...).
+
+Fix: added a dedicated engine-internal `approachFrameCount` for the multi-sidekick
+approach/spawn cadence (the two `++` sites and the FALLBACK/ANCHOR thresholds).
+`controlCounter` now strictly models ROM `Tails_control_counter` (set on P2 input,
+`!=0` manual-control gates, per-frame `--` countdown). Captured `approachFrameCount`
+in the `SidekickCpuRewindExtra` rewind record alongside `normalFrameCount`.
+
+Commands:
+`mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dtrace.frontierOnly=true -Dtrace.context.radius=8 -Dtest='*TraceReplay' ... test`
+`mvn -Dmse=off -Dtest=TestSidekickCpuFollowParity,TestArchUnitRules,TestGameplayModeContextRewindRegistry ... test`
+
+Result (full `*TraceReplay` resweep, vs the 2026-06-20 true-frontier snapshot above):
+- **90 tests, 53 failures, 1 error** (was 54 failures, 1 error).
+- CLEARED: `TestS2ArzLevelSelect` (f2434 `tails_cpu_control_counter`) -> **green**.
+- ADVANCED: `TestS2MtzLevelSelect` f448 -> **f1267** (`y`); `TestS2HtzLevelSelect`
+  f640 -> **f6114** (`air`); `TestS2Mtz3LevelSelect` f640 -> **f1973** (`tails_x`);
+  `TestS2CnzLevelSelect` f1024 -> **f1691** (`y_speed`).
+- REGRESSED: none (38 other frontiers byte-identical).
+- Guards: `TestArchUnitRules` pass, `TestGameplayModeContextRewindRegistry` pass.
+  `TestSidekickCpuFollowParity` unchanged (the 2 `*BeforeSettledThreshold` failures
+  are pre-existing on clean develop `e9e3d4236`, confirmed by baseline run).
+
+
+### 2026-06-20 -- Cluster landscape after the cluster-4 fix (next-target brief)
+
+Re-clustering the post-fix true frontier against the goal's 6 priority buckets:
+
+- **Cluster 1 (frame-0 setup): empty.** No bootstrap/frame-0 divergences exist
+  (`bootstrap_error_count`=0 everywhere; earliest divergence is f72 physics).
+  The object-slot parity items (ARZ2 f523 `obj_extra_s24`, LZ2 f1068, SBZ2 f1395)
+  are mid-level object-slot-allocation ordering, not frame-0 setup.
+- **Cluster 2 (radius/rolling): empty.** The earliest x_speed-cap candidates
+  (SLZ1 f723, CPZ1 f1157) are NOT the documented rolling-into-wall cycle; they are
+  hurt/standing divergences (below). No trace shows the x_radius wall-probe signature.
+- **Cluster 3 (exact 0x100 speed deltas): empty.** No frontier has |exp-act|==0x100.
+- **Cluster 4 (Tails CPU): FIXED** (this session, commit `c80dd4dda`).
+- **Cluster 5 (movement downstream of Tails CPU): object-implementation scope.**
+  The two earliest members are the same class in two games:
+    - CPZ1 f1157: ROM Tails is on object slot 0x10 (`status`=00, not hurt); the engine
+      Tails is NOT on that object and is knocked back by a projectile. ROM has Obj `0x98`
+      at @0BAD,01A0 where the engine has a `0xA5` "Projectile" (CPZ Spiny shot) plus a
+      slot-identity mismatch -> engine takes a hurt ROM never applies.
+    - SLZ1 f723: ROM lands on a solid (onObj=0x30) for one frame; the engine is knocked
+      airborne by SLZ Bomb shrapnel (Obj 0x5F) and loses its rings (ROM rings=4, engine=0).
+  Both are touch-response/object-standing divergences in busy multi-object scenes ->
+  per trace-replay mission rule 3 (objects not correctly implemented), plan/delegate;
+  not a shared physics one-liner. The remaining cluster-5 members are sub-pixel tails
+  drifts (OOZ f1782, CNZ2 f4418, MCZ2 f4485; ~1px) of the P9 sub-pixel-carry class.
+- **Cluster 6 (onesies):** isolated structural/sub-pixel bugs. Most tractable-looking is
+  LZ3 f466 `y` (constant -0x800 offset tracking in parallel = a vertical-wrap/level-height
+  bug); the rest are +/-1 y/x/rings/status/camera and large y_speed sign flips (GHZ1/GHZ2,
+  HTZ2/MZ2 -0568<->0568).
+
+Next recommended target: delegate the cluster-5 CPZ Spiny projectile / object-standing
+divergence (CPZ1 f1157) as an object-implementation investigation, or take the isolated
+LZ3 f466 vertical-wrap as a standalone structural fix.
+
+
+### 2026-06-20 -- Cluster 5 CPZ1 f1157 investigation (no fix landed)
+
+Delegated read-only investigation of the CPZ1 f1157 standing/hurt divergence.
+Findings:
+- S2 object **0x98** = generic Projectile (HURT category, 4x4 / Touch size 0x18,
+  s2.asm:74625, 85078); it is the Spiny's fired shot. **0xA5** = Spiny badnik
+  (ENEMY category 0x0B, 8x8, s2.asm:76400-76587).
+- The engine's `SpinyBadnikInstance.fireSpike()` spawns its `BadnikProjectileInstance`
+  with the PARENT Spiny's `ObjectSpawn`, so the projectile reports objectId 0xA5 in
+  traces instead of 0x98. Its `getCollisionFlags()` is still correct (HURT|4x4), so this
+  is a trace-identity cleanup, NOT the gameplay cause -- applying it would not move f1157.
+- ROOT CAUSE STILL OPEN: ROM Tails is standing on object slot 0x10 (`status`=00, not
+  hurt) at f1157; the engine Tails is not on that object and is hit by the projectile.
+  The trace does not expose WHICH object ROM slot 0x10 is (it is not in the recorded
+  near-list), and the engine's slot-0x10 mapping points at a far LayerSwitcher. Resolving
+  this needs a recorder extension to dump the `onObj` target object id/pos for the player
+  and sidekick (sanctioned per the skill's recorder-extension recipe), then a disasm-
+  backed fix of whatever solid/standing object the engine is missing or mis-allocating.
+  This is object-implementation/slot-identity scope, not a shared-physics one-liner.
+
+Suggested follow-ups (either is a clean standalone next task):
+- Extend the S2 recorder to record `onObj` target object id+pos, regenerate CPZ1, then
+  fix the missing/mis-slotted solid object behind ROM slot 0x10.
+- Or take the isolated S1 LZ3 f466 vertical-wrap (engine Y wraps at 0x800 crossing the
+  boundary while ROM lets Y exceed 0x800) as a standalone structural fix.
+
+
+### 2026-06-20 -- LZ3 f466 correction: vertical-wrap hypothesis disproven
+
+Earlier briefs guessed the engine masks the player y_pos at 0x800 in the LZ3
+wrap level. DISPROVEN: the engine's vertical-wrap system
+(`SpriteManager.enableVerticalWrapIfNeeded` -> `GraphicsManager.enableVerticalWrapAdjust`,
+`Camera.verticalWrapRange`=0x800/mask 0x7FF) is render/camera-only and does NOT
+mask the playable sprite's `y_pos`. At f466 the engine `sub` and camera match ROM
+exactly, but engine player y=0x0007 vs ROM y=0x0807 (= 0x0807 mod 0x800), with the
+engine render touchbox Y at 0xFFF7 (negative). So some OTHER path drives the engine
+player y_pos to the wrapped value while leaving sub/camera intact. Root cause is
+undetermined and needs frame-by-frame engine y_pos tracing across f463-466 (a
+non-frontierOnly run with player y_pos + the bottom-boundary/wrap/death path logged).
+Not a confirmed one-line fix; superseded the earlier LZ3 guess.
+
+
+### 2026-06-20 -- CPZ1 f1157 deeper bisection (findings, no fix landed)
+
+From cpz aux data: ROM slot 0x10 (16) = object type 0x03 (slot_dump f1154). The
+`routine_change` shows ROM **Sonic** ALSO got hurt at f1154 (routine 0x02->0x04,
+x_vel -0x200, y_vel -0x400, stand_on_obj=16); the 0x98 Spiny shot persists across
+f1154-1157. ROM **Tails** stays routine 0x02 (unhurt) though co-located with Sonic
+(~0x0BA8,0x01B0). Engine Tails gets hurt at f1157. The engine 0x98 shot is at
+@0BAC,01A2 vs ROM @0BAE,019E (engine ~4px lower/left) -> engine overlaps Tails, ROM
+clears it.
+
+Disproven hypothesis: projectile gravity ORDERING. ROM `Obj98_SpinyShotFall`
+(s2.asm:74742) does `addi.w #$20,y_vel` THEN `ObjectMove` (gravity-then-move),
+which MATCHES the engine `BadnikProjectileInstance` SPINY_SPIKE path. So the spiny
+shot trajectory ordering is correct; the ~4px offset originates elsewhere (spawn
+x_pos/y_pos at fire time, fire-frame timing, or the co-located-sidekick touch
+processing). Still object-implementation/parity scope -- needs the projectile spawn
+position/age traced against ROM, or the S2 sidekick hazard-touch path checked for why
+ROM's persisting shot does not hurt the co-located CPU Tails.
+
+Side finding (NOT a current frontier; not changed): `Obj98_NebulaBombFall`
+(s2.asm:74712) uses `ObjectMoveAndFall` (OLD-velocity move THEN gravity, s2.asm:30164)
+whereas the engine's NEBULA_BOMB path applies gravity THEN moves -- a one-frame
+ordering mismatch to fix when a Nebula-bomb (WFZ) frontier pins it.
+
+
+### 2026-06-20 -- Verified ROM facts (CPZ1 touch gate; LZ3 wrap)
+
+- S2 runs `TouchResponse` for CPU Tails only when `obj_control(a0)` bit 7 is clear
+  (`tst.b obj_control(a0) / bmi.s +`, s2.asm:38997-38999). At CPZ1 f1157 Tails
+  obj_control=0x00, so the gate is OPEN -> not the reason ROM Tails is unhurt; the
+  ~4px Spiny-shot position offset (fire timing/spawn pos) remains the lead.
+- S2 wraps the character `y_pos` with `andi.w #$7FF` ONLY when vertical wrap is on
+  (`cmpi.w #-$100,(Camera_Min_Y_pos)`, s2.asm:38981-38984; same in Sonic's code).
+  LZ3 f466 ROM y=0x0807 is NOT wrapped -> vertical wrap is OFF there. The engine's
+  vertical-wrap support is render-only (`SpriteManager.enableVerticalWrapIfNeeded` ->
+  GraphicsManager); it does NOT mask the playable `y_pos`. So the engine's LZ3 y=0x0007
+  (= 0x0807 mod 0x800) is most likely a vertical-LOOP-ITERATION divergence (same
+  physical spot, different 0x800 copy) introduced earlier, NOT a per-frame mask. Needs
+  a non-frontierOnly run logging player y_pos across the frames where the 0x800 step
+  first appears (just before f466) to find where the engine and ROM enter different
+  loop copies.
+
+
+### 2026-06-20 -- CPZ1 f1157: projectile ruled out by instrumentation
+
+Added a temporary per-frame Spiny-shot position log to BadnikProjectileInstance
+(reverted after use) and ran CPZ1. Aligning engine frameCounter to trace frame
+(engine fc=790 == trace f1130, fc=817 == trace f1157, both byte-exact), the engine
+Spiny-shot trajectory MATCHES the recorded ROM 0x98 trajectory at EVERY frame
+(engine f1157 = 0x0BAD,0x01A0 = ROM f1157). So the projectile position/timing is
+correct; the earlier 'engine shot 1 frame ahead' read was a context-line artifact
+(an eng-near `pre=` value), not the live position.
+
+=> CPZ1 is a TOUCH/HURT parity issue, NOT a projectile bug: with identical projectile
+and Tails positions, ROM Tails (routine 2, obj_control 0, co-located with the hurt
+Sonic) is NOT hurt while the engine's Tails IS. ROM touch box (TouchResponse,
+s2.asm:85013): char box width param 0x10, height 2*(y_radius-3), top at
+y-(y_radius-3), x-8; Spiny shot Touch_Sizes[0x18]=(4,4) (s2.asm:85134). By geometry
+alone this overlap would ALSO register for Tails, so the factor sparing ROM Tails is
+state/ordering (invulnerability, once-per-frame single-object touch consumption after
+Sonic's hit at f1154, or a sidekick hurt gate), not box size. Next step: runtime-trace
+the engine sidekick touch+HurtCharacter path at f1154-1157 vs ROM (Touch_Loop only
+collides ONE object per character per frame, s2.asm:85040-85045; HurtCharacter invuln
+checks) to find why the engine hurts the co-located CPU Tails. Shared touch-response
+code -> any fix needs a full *TraceReplay resweep for regressions.

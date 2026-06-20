@@ -161,6 +161,11 @@ public class SidekickCpuController {
     private int despawnCounter;
     private int frameCounter;
     private int controlCounter;
+    // Engine-internal approach/spawn frame counter for the multi-sidekick respawn
+    // cadence. Kept SEPARATE from controlCounter, which models ROM
+    // Tails_control_counter ($F702) — the manual-control timer set to 600 on P2
+    // input and counted down, never incremented per frame (s2.asm:39069-39075).
+    private int approachFrameCount;
     private int controller2Held;
     private int controller2Logical;
     private boolean inputUp;
@@ -1126,6 +1131,8 @@ public class SidekickCpuController {
         sidekick.setCentreYPreserveSubpixel((short) (anchorY + LEVEL_START_Y_OFFSET));
 
         controlCounter = 0;
+
+        approachFrameCount = 0;
         despawnCounter = 0;
         normalFrameCount = 0;
         jumpingFlag = false;
@@ -1187,6 +1194,8 @@ public class SidekickCpuController {
         sidekick.setCentreYPreserveSubpixel((short) (leader.getCentreY() + LEVEL_START_Y_OFFSET));
 
         controlCounter = 0;
+
+        approachFrameCount = 0;
         despawnCounter = 0;
         normalFrameCount = 0;
         jumpingFlag = false;
@@ -1313,6 +1322,7 @@ public class SidekickCpuController {
         sidekick.setCentreXPreserveSubpixel((short) (anchorX + LEVEL_START_X_OFFSET));
         sidekick.setCentreYPreserveSubpixel((short) (anchorY + LEVEL_START_Y_OFFSET));
         controlCounter = 0;
+        approachFrameCount = 0;
         despawnCounter = 0;
         normalFrameCount = 0;
         jumpingFlag = false;
@@ -1363,6 +1373,7 @@ public class SidekickCpuController {
         state = State.DORMANT_MARKER;
         despawnCounter = 0;
         controlCounter = 0;
+        approachFrameCount = 0;
         flightTimer = 0;
         normalFrameCount = 0;
         jumpingFlag = false;
@@ -1549,7 +1560,7 @@ public class SidekickCpuController {
         AbstractPlayableSprite target = resolveRespawnStartTarget();
         if (target == null || target.getDead()) {
             if (target == null) {
-                controlCounter++;
+                approachFrameCount++;
             }
             return;
         }
@@ -1594,7 +1605,7 @@ public class SidekickCpuController {
         if (leaderController.state == State.APPROACHING) {
             return null;
         }
-        if (controlCounter >= MULTI_SIDEKICK_RESPAWN_FALLBACK_FRAMES) {
+        if (approachFrameCount >= MULTI_SIDEKICK_RESPAWN_FALLBACK_FRAMES) {
             return getEffectiveLeader();
         }
         return null;
@@ -1603,7 +1614,7 @@ public class SidekickCpuController {
     private static boolean isUsableRespawnAnchor(SidekickCpuController leaderController) {
         return leaderController.isSettled()
                 || (leaderController.state == State.APPROACHING
-                && leaderController.controlCounter >= MULTI_SIDEKICK_RESPAWN_APPROACH_ANCHOR_FRAMES);
+                && leaderController.approachFrameCount >= MULTI_SIDEKICK_RESPAWN_APPROACH_ANCHOR_FRAMES);
     }
 
     private void respawnToApproaching(AbstractPlayableSprite target) {
@@ -1614,6 +1625,7 @@ public class SidekickCpuController {
         clearRespawnAnimationState();
         state = State.APPROACHING;
         controlCounter = 0;
+        approachFrameCount = 0;
         despawnCounter = 0;
         normalFrameCount = 0;
         // S2 TailsCPU_Respawn writes routine/target words without clearing Tails_CPU_jumping.
@@ -1630,6 +1642,7 @@ public class SidekickCpuController {
     void returnApproachToSpawningAfterFlyingTimeout() {
         state = State.SPAWNING;
         controlCounter = 0;
+        approachFrameCount = 0;
         despawnCounter = 0;
         normalFrameCount = 0;
         suppressNextAirbornePushFollowSteering = false;
@@ -1637,7 +1650,7 @@ public class SidekickCpuController {
     }
 
     private void updateApproaching() {
-        controlCounter++;
+        approachFrameCount++;
 
         if (!respawnStrategy.handlesApproachDespawn() && checkDespawn()) {
             normalPushingGraceFrames = 0;
@@ -1676,6 +1689,7 @@ public class SidekickCpuController {
             sidekick.setAir(true);
             state = State.NORMAL;
             controlCounter = 0;
+            approachFrameCount = 0;
             normalFrameCount = 0;
             despawnCounter = Math.max(0, respawnStrategy.consumeApproachDespawnCarryFrames());
         }
@@ -1795,6 +1809,7 @@ public class SidekickCpuController {
                 tailsStrategy.beginDeadLeaderFlight(sidekick, leader);
                 state = State.APPROACHING;
                 controlCounter = 0;
+                approachFrameCount = 0;
                 despawnCounter = 0;
                 normalFrameCount = 0;
                 // Preserve Tails_CPU_jumping; S2's dead-leader flight branch does not clear it.
@@ -3701,6 +3716,7 @@ public class SidekickCpuController {
         transientFlyoffDespawned = false;
         flightTimer = 0;
         controlCounter = 0;
+        approachFrameCount = 0;
         despawnCounter = 0;
         normalFrameCount = 0;
         jumpingFlag = false;
@@ -3798,6 +3814,7 @@ public class SidekickCpuController {
         state = State.APPROACHING;
         despawnCounter = 0;
         controlCounter = 0;
+        approachFrameCount = 0;
         normalFrameCount = 0;
     }
 
@@ -4443,6 +4460,7 @@ public class SidekickCpuController {
                 : State.SPAWNING;
         despawnCounter = 0;
         controlCounter = 0;
+        approachFrameCount = 0;
         if (s3kCatchUpMarker) {
             flightTimer = 0;
             sidekick.setDoubleJumpFlag(0);
@@ -4543,6 +4561,7 @@ public class SidekickCpuController {
         state = State.CATCH_UP_FLIGHT;
         despawnCounter = 0;
         controlCounter = 0;
+        approachFrameCount = 0;
         normalFrameCount = 0;
         jumpingFlag = false;
         suppressNextLevelEventNormalMovement = true;
@@ -4568,6 +4587,7 @@ public class SidekickCpuController {
         }
         despawnCounter = 0;
         controlCounter = 0;
+        approachFrameCount = 0;
         normalFrameCount = 0;
         jumpingFlag = false;
         suppressNextLevelEventNormalMovement = false;
@@ -4967,6 +4987,7 @@ public class SidekickCpuController {
                 lastInteractObjectId,
                 diagnosticS3kInteractWord,
                 normalFrameCount,
+                approachFrameCount,
                 sidekickCount,
                 normalPushingGraceFrames,
                 suppressNextAirbornePushFollowSteering,
@@ -5024,6 +5045,7 @@ public class SidekickCpuController {
         lastInteractObjectId = snapshot.lastInteractObjectId();
         diagnosticS3kInteractWord = snapshot.diagnosticS3kInteractWord();
         normalFrameCount = snapshot.normalFrameCount();
+        approachFrameCount = snapshot.approachFrameCount();
         sidekickCount = snapshot.sidekickCount();
         normalPushingGraceFrames = snapshot.normalPushingGraceFrames();
         suppressNextAirbornePushFollowSteering = snapshot.suppressNextAirbornePushFollowSteering();
@@ -5116,6 +5138,7 @@ public class SidekickCpuController {
         state = State.INIT;
         despawnCounter = 0;
         controlCounter = 0;
+        approachFrameCount = 0;
         controller2Held = 0;
         controller2Logical = 0;
         normalFrameCount = 0;
