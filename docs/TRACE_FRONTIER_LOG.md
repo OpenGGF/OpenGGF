@@ -16854,3 +16854,18 @@ Suggested follow-ups (either is a clean standalone next task):
 - Or take the isolated S1 LZ3 f466 vertical-wrap (engine Y wraps at 0x800 crossing the
   boundary while ROM lets Y exceed 0x800) as a standalone structural fix.
 
+
+### 2026-06-20 -- LZ3 f466 correction: vertical-wrap hypothesis disproven
+
+Earlier briefs guessed the engine masks the player y_pos at 0x800 in the LZ3
+wrap level. DISPROVEN: the engine's vertical-wrap system
+(`SpriteManager.enableVerticalWrapIfNeeded` -> `GraphicsManager.enableVerticalWrapAdjust`,
+`Camera.verticalWrapRange`=0x800/mask 0x7FF) is render/camera-only and does NOT
+mask the playable sprite's `y_pos`. At f466 the engine `sub` and camera match ROM
+exactly, but engine player y=0x0007 vs ROM y=0x0807 (= 0x0807 mod 0x800), with the
+engine render touchbox Y at 0xFFF7 (negative). So some OTHER path drives the engine
+player y_pos to the wrapped value while leaving sub/camera intact. Root cause is
+undetermined and needs frame-by-frame engine y_pos tracing across f463-466 (a
+non-frontierOnly run with player y_pos + the bottom-boundary/wrap/death path logged).
+Not a confirmed one-line fix; superseded the earlier LZ3 guess.
+
