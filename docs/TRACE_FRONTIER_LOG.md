@@ -17090,3 +17090,28 @@ without per-issue deep work. Verified deliverables this run: cluster-4 Tails_con
 split (c80dd4dda) and CPZ Spiny spike realignment (da2f0c528); 6 traces improved, zero
 regressions.
 
+
+### 2026-06-21 -- Cluster 5 shared cause found: S2 CPU sidekick missing Status_Push on terrain walls
+
+Three cluster-5 frontiers share ONE root cause (confirmed via context status_byte):
+- OOZ f1782, MTZ3 f1973, MCZ2 f4482/f4485: ROM's CPU Tails has Status_Push (0x20) set
+  while pushing against a terrain wall (stopped, g_speed pinned), but the engine's CPU
+  Tails is MISSING 0x20 and keeps moving past the wall -> tails_x/g_speed drift (+/-1px
+  and small speed deltas). (CNZ2 f4418 is DIFFERENT: engine Tails wrongly rolling, 0x04.)
+
+Location: `CollisionSystem.applyGroundWallVelocityResponse` (lines 338-375) sets
+Status_Push + zeroes g_speed when the predicted-position wall scan returns a NEGATIVE
+distance. The S3K CPU sidekick reaches the penetrating pixel via its per-frame follow
+nudge (loc_13E34 addq.w #1,x_pos; comment CollisionSystem:317-319), so it gets the
+negative distance and the push. The S2 CPU sidekick's follow nudge does NOT drive it to
+the penetrating pixel, so its wall scan returns distance>=0 (no push). Fix direction:
+give the S2 CPU sidekick an equivalent into-wall nudge / penetrating-pixel scan so
+applyGroundWallVelocityResponse fires, matching ROM Tails wall-push.
+
+RISK: this is shared sidekick/collision code. A wrong nudge would regress the sidekick
+traces advanced this run (MTZ1/HTZ1/MTZ3/CNZ1 from the cluster-4 fix, CPZ1 from the spike
+fix). MUST be developed against a full *TraceReplay resweep (keep/revert on the sweep
+result). High leverage (3 traces, one cause) but needs supervised design of the nudge to
+avoid over-pushing; left for a session that can weigh the regression trade-off. This is
+the recommended #1 next cluster-5 target.
+
