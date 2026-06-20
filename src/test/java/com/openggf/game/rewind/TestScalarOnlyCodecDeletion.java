@@ -470,6 +470,17 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> BATCH49_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(BuggernautBabyInstance.class.getName(), GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> BATCH50_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance$OrbinautOrbInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance$OrbitingPointInstance",
+                    GameId.S3K));
+
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
     private static final ObjectRenderManager INERT_RENDER_MANAGER =
@@ -3578,6 +3589,89 @@ public class TestScalarOnlyCodecDeletion {
                         + result);
     }
 
+    // =====================================================================
+    // Batch 50: S3K transient-parent badnik children, generic recreate relinks live parent
+    // =====================================================================
+
+    @Test
+    void batch50ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH50_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 50)");
+        }
+    }
+
+    @Test
+    void batch50ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH50_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-50 deletion; "
+                            + "session restore must use genericRecreate Path 1 with live parent relink");
+        }
+    }
+
+    @Test
+    void batch50ClassesGenericRecreateProducesInstanceAndRelinksParent() {
+        for (CodecDeletionCandidate candidate : BATCH50_DELETED_CODECS) {
+            ObjectManager[] holder = new ObjectManager[1];
+            Camera camera = mockCamera();
+            StubObjectServices services = new StubObjectServices() {
+                @Override public ObjectManager objectManager() { return holder[0]; }
+                @Override public Camera camera() { return camera; }
+                @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+                @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+            };
+            Batch50ParentSpec parentSpec = batch50ParentSpec(candidate.fqn());
+            ObjectSpawn parentSpawn =
+                    new ObjectSpawn(160, 160, parentSpec.objectId(), 0, 0, false, 50);
+            ObjectManager objectManager = new ObjectManager(
+                    List.of(parentSpawn),
+                    new Sonic3kObjectRegistry(),
+                    0,
+                    null,
+                    null,
+                    GraphicsManager.getInstance(),
+                    camera,
+                    services);
+            holder[0] = objectManager;
+            objectManager.reset(0);
+
+            Object liveParent = singleLiveObject(objectManager, parentSpec.parentClass());
+            ObjectSpawn childSpawn = new ObjectSpawn(176, 176, parentSpec.objectId(), 0, 0, false, 51);
+            PerObjectRewindSnapshot state = new PerObjectRewindSnapshot(
+                    false, false, false, 0, 0, 0, 0, false, 0, false, false, 0, -1, null, null, null);
+            ObjectManagerSnapshot.DynamicObjectEntry entry =
+                    new ObjectManagerSnapshot.DynamicObjectEntry(candidate.fqn(), childSpawn, 0, state);
+
+            ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(
+                    entry, new DynamicObjectRecreateContext(objectManager));
+
+            assertNotNull(result, "genericRecreate must return a transient-parent child for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete child class");
+            assertSame(liveParent, readObjectField(result, "parent"),
+                    "genericRecreate must relink the child to the restore-time parent for "
+                            + candidate.fqn());
+        }
+    }
+
+    @Test
+    void batch50ClassesRoundTripPassedThroughHarnessParentSeedPath() {
+        for (CodecDeletionCandidate candidate : BATCH50_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed through the harness parent-seed path; got: "
+                            + result);
+        }
+    }
+
     /**
      * Returns true if the given FQN has a registered dynamic rewind codec in the
      * shared codecs or in any of the three per-game registries. Distinct from
@@ -3750,6 +3844,34 @@ public class TestScalarOnlyCodecDeletion {
                 .filter(object -> object.getClass() == type && !object.isDestroyed())
                 .map(type::cast)
                 .toList();
+    }
+
+    private record Batch50ParentSpec(Class<?> parentClass, int objectId) {}
+
+    private static Batch50ParentSpec batch50ParentSpec(String childFqn) {
+        return switch (childFqn) {
+            case "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance$OrbinautOrbInstance" ->
+                    new Batch50ParentSpec(
+                            loadClass("com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance"),
+                            Sonic3kObjectIds.ORBINAUT);
+            case "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild" ->
+                    new Batch50ParentSpec(
+                            loadClass("com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance"),
+                            Sonic3kObjectIds.RIBOT);
+            case "com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance$OrbitingPointInstance" ->
+                    new Batch50ParentSpec(
+                            loadClass("com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance"),
+                            Sonic3kObjectIds.STAR_POINTER);
+            default -> throw new AssertionError("Unexpected batch-50 child: " + childFqn);
+        };
+    }
+
+    private static Class<?> loadClass(String fqn) {
+        try {
+            return Class.forName(fqn);
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private static void setIntField(Object target, String fieldName, int value) {

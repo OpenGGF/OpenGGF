@@ -119,6 +119,10 @@ public final class ObjectRewindDynamicCodecs {
      *   <li>{@code (ObjectSpawn, boolean)} — spawn plus default false option</li>
      *   <li>{@code (ObjectSpawn, ObjectServices, int)} — points-style constructor
      *       with default score/frame placeholder</li>
+     *   <li>{@code (ObjectSpawn, ParentType, int)} — spawn, a live parent, and a
+     *       harmless zero placeholder</li>
+     *   <li>{@code (ObjectSpawn, ParentType, int, int, int)} — spawn, a live parent,
+     *       and harmless zero coordinate/index placeholders</li>
      *   <li>{@code (ObjectSpawn, int, int, ParentType)} — spawn, coordinate
      *       placeholders, and a live or null parent placeholder</li>
      *   <li>{@code (int, int, int)} — primitive-only constructor with zero placeholders</li>
@@ -215,6 +219,18 @@ public final class ObjectRewindDynamicCodecs {
             return invokeProbeCtor(cls, spawnServicesIntCtor, ctx, spawn, ctx.objectServices(), 0);
         }
 
+        AbstractObjectInstance spawnParentIntProbe =
+                constructSpawnParentIntProbe(cls, spawn, ctx);
+        if (spawnParentIntProbe != null) {
+            return spawnParentIntProbe;
+        }
+
+        AbstractObjectInstance spawnParentIntIntIntProbe =
+                constructSpawnParentIntIntIntProbe(cls, spawn, ctx);
+        if (spawnParentIntIntIntProbe != null) {
+            return spawnParentIntIntIntProbe;
+        }
+
         AbstractObjectInstance spawnIntIntParentProbe =
                 constructSpawnIntIntParentProbe(cls, spawn, ctx);
         if (spawnIntIntParentProbe != null) {
@@ -245,6 +261,58 @@ public final class ObjectRewindDynamicCodecs {
         }
 
         // No supported probe constructor — cannot build a probe for this class.
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructSpawnParentIntProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            ObjectSpawn spawn,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 3
+                    || params[0] != ObjectSpawn.class
+                    || !ObjectInstance.class.isAssignableFrom(params[1])
+                    || params[2] != int.class) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[1], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, spawn, parent, 0);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructSpawnParentIntIntIntProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            ObjectSpawn spawn,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 5
+                    || params[0] != ObjectSpawn.class
+                    || !ObjectInstance.class.isAssignableFrom(params[1])
+                    || params[2] != int.class
+                    || params[3] != int.class
+                    || params[4] != int.class) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[1], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, spawn, parent, 0, 0, 0);
+        }
         return null;
     }
 

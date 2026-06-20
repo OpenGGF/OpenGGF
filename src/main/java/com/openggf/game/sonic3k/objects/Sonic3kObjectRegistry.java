@@ -412,14 +412,12 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // compact restore reapplies the captured shot script after recreate.
             // Dragonfly swinging body segment (relink to live parent / prior sibling).
             dragonflyLinkedBodyChildCodec(),
-            // Ribot leg/swing appendage (relink to nearest live Ribot body).
-            ribotActiveChildCodec(),
+            // Ribot leg/swing appendage codec deleted (Phase-2 batch 50):
+            // transient parent is relinked by RewindRecreatable generic recreate.
             // Spiker spring-loaded top spike (relink to nearest live Spiker).
             spikerTopSpikeCodec(),
-            // Star Pointer orbiting/launched point (relink to nearest live parent).
-            starPointerPointCodec(),
-            // Orbinaut orbiting orb (relink to nearest live parent).
-            orbinautOrbCodec(),
+            // Star Pointer point / Orbinaut orb codecs deleted (Phase-2 batch 50):
+            // transient parents are relinked by RewindRecreatable generic recreate.
             // Turbo Spiker launched shell (relink to nearest live parent).
             turboSpikerShellChildCodec(),
             // Madmole side-drill codec deleted (Phase-2 batch 43): self-contained;
@@ -919,14 +917,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
 
     private static final String SPIKER_TOP_SPIKE_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild";
-    private static final String RIBOT_ACTIVE_CHILD_CLASS =
-            "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild";
     private static final String DRAGONFLY_LINKED_BODY_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild";
-    private static final String STAR_POINTER_POINT_CLASS =
-            "com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance$OrbitingPointInstance";
-    private static final String ORBINAUT_ORB_CLASS =
-            "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance$OrbinautOrbInstance";
     private static final String TURBO_SPIKER_SHELL_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild";
 
@@ -1019,45 +1011,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         };
     }
 
-    private static DynamicObjectRewindCodec ribotActiveChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(RIBOT_ACTIVE_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return RIBOT_ACTIVE_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    // Children spawn within +/-0x18 px of the parent body; relink
-                    // the nearest live Ribot to the captured child spawn.
-                    RibotBadnikInstance parent = findNearestLiveInstance(
-                            context, RibotBadnikInstance.class, entry.spawn());
-                    if (parent == null) {
-                        return null;
-                    }
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(
-                            ObjectSpawn.class, RibotBadnikInstance.class,
-                            int.class, int.class, int.class);
-                    ctor.setAccessible(true);
-                    // childIndex/originX/originY (now un-final) reapplied by the capturer.
-                    return (ObjectInstance) ctor.newInstance(
-                            entry.spawn(), parent, 0, entry.spawn().x(), entry.spawn().y());
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
     private static DynamicObjectRewindCodec spikerTopSpikeCodec() {
         return new DynamicObjectRewindCodec() {
             @Override
@@ -1083,78 +1036,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     var ctor = cls.getDeclaredConstructor(SpikerBadnikInstance.class);
                     ctor.setAccessible(true);
                     return (ObjectInstance) ctor.newInstance(parent);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec starPointerPointCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(STAR_POINTER_POINT_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return STAR_POINTER_POINT_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                StarPointerBadnikInstance parent = findNearestLiveInstance(
-                        context, StarPointerBadnikInstance.class, entry.spawn());
-                if (parent == null) {
-                    return null;
-                }
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(
-                            ObjectSpawn.class, StarPointerBadnikInstance.class, int.class);
-                    ctor.setAccessible(true);
-                    // index seeds the initial angle only; the captured angle/launched/
-                    // xVelocity/break* scalars are reapplied by the capturer.
-                    return (ObjectInstance) ctor.newInstance(entry.spawn(), parent, 0);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec orbinautOrbCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(ORBINAUT_ORB_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return ORBINAUT_ORB_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                OrbinautBadnikInstance parent = findNearestLiveInstance(
-                        context, OrbinautBadnikInstance.class, entry.spawn());
-                if (parent == null) {
-                    return null;
-                }
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(
-                            ObjectSpawn.class, OrbinautBadnikInstance.class, int.class);
-                    ctor.setAccessible(true);
-                    // index seeds the initial angle only; the captured angle scalar
-                    // is reapplied by the capturer after recreate.
-                    return (ObjectInstance) ctor.newInstance(entry.spawn(), parent, 0);
                 } catch (ReflectiveOperationException e) {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);

@@ -4,8 +4,12 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -137,7 +141,8 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance {
         childTrigger = true;
     }
 
-    private static final class RibotActiveChild extends AbstractObjectInstance implements TouchResponseProvider {
+    private static final class RibotActiveChild extends AbstractObjectInstance
+            implements TouchResponseProvider, RewindRecreatable {
         private static final int COLLISION_FLAGS = 0x97; // word_8C5D6 collision_flags.
         private static final int PRIORITY_BUCKET = 4;    // word_8C5D6 priority $200.
         private static final int BODY_FRAME = 7;
@@ -191,6 +196,44 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance {
             this.originY = originY;
             this.currentX = originX;
             this.currentY = originY;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+                return null;
+            }
+            RibotBadnikInstance liveParent =
+                    findNearestLiveParentForRewind(ctx.objectServices().objectManager(), ctx.spawn());
+            if (liveParent == null) {
+                return null;
+            }
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            return new RibotActiveChild(
+                    capturedSpawn, liveParent, 0, capturedSpawn.x(), capturedSpawn.y());
+        }
+
+        private static RibotBadnikInstance findNearestLiveParentForRewind(
+                ObjectManager objectManager,
+                ObjectSpawn spawn) {
+            if (objectManager == null || spawn == null) {
+                return null;
+            }
+            RibotBadnikInstance best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance instance : objectManager.getActiveObjects()) {
+                if (!(instance instanceof RibotBadnikInstance parent) || parent.isDestroyed()) {
+                    continue;
+                }
+                long dx = parent.getX() - spawn.x();
+                long dy = parent.getY() - spawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = parent;
+                }
+            }
+            return best;
         }
 
         @Override

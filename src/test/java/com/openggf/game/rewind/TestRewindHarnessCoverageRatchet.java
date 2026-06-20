@@ -165,12 +165,15 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-20: raised to 120 after deleting the S3K Buggernaut
  *       baby codec; generic recreate now relinks the transient live
  *       Buggernaut parent.</li>
+ *   <li>2026-06-20: raised to 123 after deleting the S3K Orbinaut orb,
+ *       Ribot active child, and Star Pointer orbiting point codecs; generic
+ *       recreate now relinks their transient live badnik parents.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 120;
+    static final int RATCHET_FLOOR = 123;
 
     @BeforeEach
     void initHeadless() {

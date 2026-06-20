@@ -5,9 +5,13 @@ import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -144,7 +148,8 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance {
      * collision ($8B), shield bounce reaction, circular parent-relative motion
      * with d2=4, and a three-frame break animation after collision is disabled.
      */
-    static final class OrbitingPointInstance extends AbstractObjectInstance implements TouchResponseProvider {
+    static final class OrbitingPointInstance extends AbstractObjectInstance
+            implements TouchResponseProvider, RewindRecreatable {
         private static final int COLLISION_FLAGS = 0x8B;
         private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
         private static final int PRIORITY_BUCKET = 5;
@@ -183,6 +188,42 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance {
             this.parent = parent;
             this.angle = (index * 0x40) & 0xFF; // byte_8BEE2: 0, $40, $80, $C0.
             updateOrbitPosition();
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+                return null;
+            }
+            StarPointerBadnikInstance liveParent =
+                    findNearestLiveParentForRewind(ctx.objectServices().objectManager(), ctx.spawn());
+            if (liveParent == null) {
+                return null;
+            }
+            return new OrbitingPointInstance(ctx.spawn(), liveParent, 0);
+        }
+
+        private static StarPointerBadnikInstance findNearestLiveParentForRewind(
+                ObjectManager objectManager,
+                ObjectSpawn spawn) {
+            if (objectManager == null || spawn == null) {
+                return null;
+            }
+            StarPointerBadnikInstance best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance instance : objectManager.getActiveObjects()) {
+                if (!(instance instanceof StarPointerBadnikInstance parent) || parent.isDestroyed()) {
+                    continue;
+                }
+                long dx = parent.getX() - spawn.x();
+                long dy = parent.getY() - spawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = parent;
+                }
+            }
+            return best;
         }
 
         @Override

@@ -4,8 +4,12 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -94,7 +98,8 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance {
         return !facingLeft;
     }
 
-    static final class OrbinautOrbInstance extends AbstractObjectInstance implements TouchResponseProvider {
+    static final class OrbinautOrbInstance extends AbstractObjectInstance
+            implements TouchResponseProvider, RewindRecreatable {
         private static final int COLLISION_FLAGS = 0x8B; // word_8C6FE collision_flags.
         private static final int PRIORITY_BUCKET = 5;
         private static final int ORBIT_RADIUS = 16;      // MoveSprite_CircularSimple with d2 = 4.
@@ -121,6 +126,42 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance {
             this.parent = parent;
             this.angle = (index * 0x40) & 0xFF; // ChildObjDat_8C704 cardinal offsets.
             updateOrbitPosition();
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+                return null;
+            }
+            OrbinautBadnikInstance liveParent =
+                    findNearestLiveParentForRewind(ctx.objectServices().objectManager(), ctx.spawn());
+            if (liveParent == null) {
+                return null;
+            }
+            return new OrbinautOrbInstance(ctx.spawn(), liveParent, 0);
+        }
+
+        private static OrbinautBadnikInstance findNearestLiveParentForRewind(
+                ObjectManager objectManager,
+                ObjectSpawn spawn) {
+            if (objectManager == null || spawn == null) {
+                return null;
+            }
+            OrbinautBadnikInstance best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance instance : objectManager.getActiveObjects()) {
+                if (!(instance instanceof OrbinautBadnikInstance parent) || parent.isDestroyed()) {
+                    continue;
+                }
+                long dx = parent.getX() - spawn.x();
+                long dy = parent.getY() - spawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = parent;
+                }
+            }
+            return best;
         }
 
         @Override
