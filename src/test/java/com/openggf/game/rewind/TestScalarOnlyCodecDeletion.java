@@ -652,6 +652,14 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(S3kSignpostStubChild.class.getName(), GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_LBZ1_CUTSCENE_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1CollapseChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper",
+                    GameId.S3K));
+
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
     private static final ObjectRenderManager INERT_RENDER_MANAGER =
@@ -4305,6 +4313,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K signpost stub graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K LBZ1 cutscene graph batch: cutscene-parent-linked helpers
+    // =====================================================================
+
+    @Test
+    void s3kLbz1CutsceneGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ1_CUTSCENE_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K LBZ1 cutscene graph batch");
+        }
+    }
+
+    @Test
+    void s3kLbz1CutsceneGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ1_CUTSCENE_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K LBZ1 cutscene graph generic recreate, not a dynamic codec");
         }
     }
 

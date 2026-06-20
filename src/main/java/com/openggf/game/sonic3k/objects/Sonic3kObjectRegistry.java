@@ -279,9 +279,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // codecs that resolve the live parent (placed/layout cutscene or event
             // manager) recreated earlier in the restore order.
 
-            // LBZ1 Knuckles cutscene family.
-            cutsceneKnucklesLbz1CollapseChildCodec(),
-            cutsceneKnucklesLbz1RangeHelperCodec(),
+            // LBZ1 Knuckles cutscene collapse/range helpers now restore through
+            // graph-tested RewindRecreatable generic recreate and relink the live parent.
             // CutsceneKnucklesLbz1ThrownBomb codec deleted (Phase-2 batch 15):
             // motion state is restored after generic recreate.
 
@@ -805,71 +804,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     }
 
     // ---- Batch-6 relink codecs --------------------------------------------
-
-    /**
-     * Codec for the LBZ1 Knuckles-cutscene collapse child. Relinks the single live
-     * {@link CutsceneKnucklesLbz1Instance} parent (a placed/persistent cutscene
-     * singleton re-spawned via the placement path on restore, hence present in
-     * getActiveObjects()). subtype is spawn-derivable and passed into the
-     * constructor; motion/timer scalars are reapplied by the field capturer.
-     */
-    private static DynamicObjectRewindCodec cutsceneKnucklesLbz1CollapseChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == CutsceneKnucklesLbz1CollapseChild.class;
-            }
-
-            @Override
-            public String className() {
-                return CutsceneKnucklesLbz1CollapseChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                CutsceneKnucklesLbz1Instance parent =
-                        findLiveInstance(context, CutsceneKnucklesLbz1Instance.class);
-                if (parent == null) {
-                    return null;
-                }
-                return new CutsceneKnucklesLbz1CollapseChild(parent, entry.spawn().subtype());
-            }
-        };
-    }
-
-    /**
-     * Codec for the LBZ1 Knuckles-cutscene range helper. Relinks the single live
-     * {@link CutsceneKnucklesLbz1Instance} parent (a placed object re-spawned via
-     * the placement path on restore, present in getActiveObjects()). Position is
-     * spawn-derivable; the parent is passed into the constructor. Dropped if the
-     * cutscene parent is no longer live.
-     */
-    private static DynamicObjectRewindCodec cutsceneKnucklesLbz1RangeHelperCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == CutsceneKnucklesLbz1RangeHelper.class;
-            }
-
-            @Override
-            public String className() {
-                return CutsceneKnucklesLbz1RangeHelper.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                CutsceneKnucklesLbz1Instance parent =
-                        findLiveInstance(context, CutsceneKnucklesLbz1Instance.class);
-                if (parent == null) {
-                    return null;
-                }
-                return new CutsceneKnucklesLbz1RangeHelper(
-                        parent, entry.spawn().x(), entry.spawn().y());
-            }
-        };
-    }
 
     /**
      * Codec for the AIZ1 intro Knuckles rock child. Relinks the live
