@@ -61,7 +61,6 @@ com.openggf.game.sonic1.objects.Sonic1EdgeWallObjectInstance#finalScalar#solid
 com.openggf.game.sonic1.objects.Sonic1EdgeWallObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance#finalScalar#baseY
 com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance#objectRef#lastPlayer
 com.openggf.game.sonic1.objects.Sonic1ElectrocuterObjectInstance#finalScalar#frequencyMask
 com.openggf.game.sonic1.objects.Sonic1ElectrocuterObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance#finalScalar#halfWidth
@@ -245,7 +244,6 @@ com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar
 com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#chainCount
 com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance#finalScalar#subtype
-com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance#objectRef#controlledPlayer
 com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance#finalScalar#phaseMask
@@ -651,7 +649,6 @@ com.openggf.game.sonic2.objects.SpringboardObjectInstance#finalScalar#halfHeight
 com.openggf.game.sonic2.objects.SpringboardObjectInstance#finalScalar#halfWidth
 com.openggf.game.sonic2.objects.SpringboardObjectInstance#finalScalar#highPriority
 com.openggf.game.sonic2.objects.SpringboardObjectInstance#finalScalar#r
-com.openggf.game.sonic2.objects.SpringboardObjectInstance#objectRef#launchPlayer
 com.openggf.game.sonic2.objects.SpringboardObjectInstance#recreate
 com.openggf.game.sonic2.objects.SteamPuffObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.SteamSpringObjectInstance#finalScalar#baseY
@@ -715,7 +712,6 @@ com.openggf.game.sonic2.objects.badniks.CoconutsBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.CrawlBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.CrawltonBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.FlasherBadnikInstance#recreate
-com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#objectRef#grabbedPlayer
 com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#objectRef#pendingGrabPlayer
 com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.MasherBadnikInstance#recreate
@@ -786,7 +782,6 @@ com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnik#recreat
 com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnikPlatform#recreate
 com.openggf.game.sonic3k.objects.Aiz1TreeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Aiz1ZiplinePegObjectInstance#recreate
-com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$Aiz2ResultsScreenObjectInstance#objectRef#playerRef
 com.openggf.game.sonic3k.objects.AizBombExplosionInstance#finalScalar#posY
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance#finalScalar#halfWidth
@@ -920,9 +915,6 @@ com.openggf.game.sonic3k.objects.CnzBumperObjectInstance#finalScalar#initialAngl
 com.openggf.game.sonic3k.objects.CnzBumperObjectInstance#finalScalar#originX
 com.openggf.game.sonic3k.objects.CnzBumperObjectInstance#finalScalar#originY
 com.openggf.game.sonic3k.objects.CnzBumperObjectInstance#finalScalar#reverseOrbit
-com.openggf.game.sonic3k.objects.CnzBumperObjectInstance#objectRef#pendingPrimaryTouch
-com.openggf.game.sonic3k.objects.CnzBumperObjectInstance#objectRef#pendingSidekickTouch
-com.openggf.game.sonic3k.objects.CnzCannonInstance#objectRef#capturedPlayer
 com.openggf.game.sonic3k.objects.CnzCannonInstance#objectRef#releasedPlayer
 com.openggf.game.sonic3k.objects.CnzCannonInstance$CannonLaunchPuff#finalScalar#xVelocity
 com.openggf.game.sonic3k.objects.CnzCannonInstance$CannonLaunchPuff#finalScalar#yVelocity
@@ -952,8 +944,6 @@ com.openggf.game.sonic3k.objects.CnzHoverFanInstance#finalScalar#xWindowMax
 com.openggf.game.sonic3k.objects.CnzHoverFanInstance#finalScalar#xWindowMin
 com.openggf.game.sonic3k.objects.CnzHoverFanInstance#recreate
 com.openggf.game.sonic3k.objects.CnzLightBulbInstance#recreate
-com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance#objectRef#boss
-com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance#objectRef#boss
 com.openggf.game.sonic3k.objects.CnzMinibossDebrisChild#finalScalar#gravity
 com.openggf.game.sonic3k.objects.CnzMinibossDebrisChild#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.CnzMinibossInstance#recreate
@@ -1001,7 +991,6 @@ com.openggf.game.sonic3k.objects.CorkFloorObjectInstance#finalScalar#mode
 com.openggf.game.sonic3k.objects.CorkFloorObjectInstance#finalScalar#subtype
 com.openggf.game.sonic3k.objects.CorkFloorObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.CorkFloorObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.CorkFloorObjectInstance#objectRef#rollingBreakPlayer
 com.openggf.game.sonic3k.objects.CorkFloorObjectInstance#recreate
 com.openggf.game.sonic3k.objects.CorkFloorObjectInstance$CorkFloorFragment#finalScalar#fragmentFrameIndex
 com.openggf.game.sonic3k.objects.CorkFloorObjectInstance$CorkFloorFragment#finalScalar#hFlip
@@ -1373,7 +1362,6 @@ com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance#finalScalar#anch
 com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.Mgz2PostBossPaletteFadeController#recreate
 com.openggf.game.sonic3k.objects.Mgz2PostBossSequenceController#recreate
-com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance#objectRef#playerRef
 com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#finalScalar#flipX
 com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#finalScalar#index
 com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#finalScalar#xVel
@@ -1431,10 +1419,8 @@ com.openggf.game.sonic3k.objects.MhzSwingBarVerticalObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance#finalScalar#upperVariant
 com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.PachinkoBumperObjectInstance#recreate
-com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance#objectRef#capturedPlayer
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild#recreate
-com.openggf.game.sonic3k.objects.PachinkoFlipperObjectInstance#objectRef#lockedPlayer
 com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance#recreate
 com.openggf.game.sonic3k.objects.PachinkoMagnetOrbObjectInstance#recreate
 com.openggf.game.sonic3k.objects.PachinkoPlatformObjectInstance#recreate
@@ -1449,7 +1435,6 @@ com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorSub
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorX
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorY
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#recreate
-com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance#objectRef#playerRef
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#finalScalar#halfWidth
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance#finalScalar#adjustedY
@@ -1582,9 +1567,6 @@ com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance$MantisChild#recrea
 com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance#finalScalar#priorityBucket
-com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance#objectRef#capturedPlayer
-com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance#objectRef#pendingMainPlayer
-com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance#objectRef#pendingSidekickPlayer
 com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.MonkeyDudeBadnikInstance#finalScalar#activeStepCount
 com.openggf.game.sonic3k.objects.badniks.MonkeyDudeBadnikInstance#finalScalar#collisionSizeIndex
@@ -1647,7 +1629,6 @@ com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance$SparkleProjectile
 com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance#finalScalar#priorityBucket
-com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance#objectRef#pendingLaunchPlayer
 com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild#finalScalar#leftSide
 com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild#recreate
@@ -1709,7 +1690,6 @@ com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance#finalScalar
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossPlayerTwoCarryChild#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossSidekickLockChild#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild#recreate
-com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance#objectRef#parent
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild#finalScalar#spark
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild#finalScalar#subtype
 com.openggf.level.objects.BoxObjectInstance#finalScalar#b
