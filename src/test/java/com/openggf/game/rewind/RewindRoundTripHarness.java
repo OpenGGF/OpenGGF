@@ -817,11 +817,12 @@ public final class RewindRoundTripHarness {
             }
         }
 
-        // Strategy 10: (ObjectSpawn, AbstractObjectInstance-subtype) — parent-child pattern.
-        // Scan for a 2-parameter constructor whose second parameter is a concrete
-        // AbstractObjectInstance subclass (a live parent reference). Build a stub parent of
-        // that type headlessly (using simple strategies only to avoid recursion), then
-        // construct the child with (PROBE_SPAWN, stubParent).
+        // Strategy 10: parent-child patterns. Scan for constructors with a
+        // concrete AbstractObjectInstance parent parameter, including
+        // (ObjectSpawn, ParentType), (ParentType), and
+        // (ObjectSpawn, int, int, ParentType). Build a stub parent of that type
+        // headlessly (using simple strategies only to avoid recursion), then
+        // construct the child with the matching placeholder arguments.
         AbstractObjectInstance constructedWithParent = tryConstructWithInferredParent(cls, stub);
         if (constructedWithParent != null) {
             return constructedWithParent;
@@ -833,7 +834,8 @@ public final class RewindRoundTripHarness {
                         + " (ObjectSpawn,ObjectServices), (ObjectSpawn,boolean),"
                         + " (ObjectSpawn,ObjectServices,int),"
                         + " (int,int,int), (int,int,int,int), (int,int,int,boolean),"
-                        + " (ObjectSpawn,ParentType))");
+                        + " (ObjectSpawn,ParentType), (ParentType),"
+                        + " (ObjectSpawn,int,int,ParentType))");
     }
 
     /**
@@ -855,6 +857,11 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.CnzMinibossInstance");
         m.put("com.openggf.game.sonic3k.objects.CnzMinibossTopInstance",
                 "com.openggf.game.sonic3k.objects.CnzMinibossInstance");
+        // S3K Buggernaut baby — parent: BuggernautBadnikInstance (placed, objectId 0x95).
+        // BuggernautBadnikInstance spawns its baby lazily from update(), so a placed
+        // parent does not pollute the ObjectManager at reset time.
+        m.put("com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance",
+                "com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance");
         // S3K GumballMachine exit trigger — parent: GumballMachineObjectInstance (placed, objectId 0x86)
         m.put("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ExitTriggerChild",
                 "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance");
@@ -910,6 +917,8 @@ public final class RewindRoundTripHarness {
     private static final Map<String, Integer> PARENT_SPAWN_OBJECT_IDS = Map.of(
             // CnzMinibossInstance: Sonic3kObjectIds.CNZ_MINIBOSS = 0xA6
             "com.openggf.game.sonic3k.objects.CnzMinibossInstance", 0xA6,
+            // BuggernautBadnikInstance: Sonic3kObjectIds.BUGGERNAUT = 0x95 (lazy child spawn)
+            "com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance", 0x95,
             // GumballMachineObjectInstance: Sonic3kObjectIds.GUMBALL_MACHINE = 0x86
             "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", 0x86,
             // AizSpikedLogObjectInstance: Sonic3kObjectIds.AIZ_SPIKED_LOG = 0x2E
@@ -1094,7 +1103,12 @@ public final class RewindRoundTripHarness {
                     && params[1].isAssignableFrom(liveParent.getClass());
             boolean parentOnly = params.length == 1
                     && params[0].isAssignableFrom(liveParent.getClass());
-            if (!spawnAndParent && !parentOnly) continue;
+            boolean spawnIntIntParent = params.length == 4
+                    && params[0] == ObjectSpawn.class
+                    && params[1] == int.class
+                    && params[2] == int.class
+                    && params[3].isAssignableFrom(liveParent.getClass());
+            if (!spawnAndParent && !parentOnly && !spawnIntIntParent) continue;
             Constructor<? extends AbstractObjectInstance> ctor =
                     (Constructor<? extends AbstractObjectInstance>) rawCtor;
             ctor.setAccessible(true);
@@ -1103,6 +1117,10 @@ public final class RewindRoundTripHarness {
                 if (spawnAndParent) {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, PROBE_SPAWN, parent));
+                }
+                if (spawnIntIntParent) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, PROBE_SPAWN.x(), PROBE_SPAWN.y(), parent));
                 }
                 return ObjectConstructionContext.construct(stub,
                         () -> invokeWith(ctor, parent));
@@ -1138,8 +1156,12 @@ public final class RewindRoundTripHarness {
             Class<?>[] params = rawCtor.getParameterTypes();
             boolean spawnAndParent = params.length == 2 && params[0] == ObjectSpawn.class;
             boolean parentOnly = params.length == 1;
-            if (!spawnAndParent && !parentOnly) continue;
-            Class<?> parentType = spawnAndParent ? params[1] : params[0];
+            boolean spawnIntIntParent = params.length == 4
+                    && params[0] == ObjectSpawn.class
+                    && params[1] == int.class
+                    && params[2] == int.class;
+            if (!spawnAndParent && !parentOnly && !spawnIntIntParent) continue;
+            Class<?> parentType = spawnIntIntParent ? params[3] : (spawnAndParent ? params[1] : params[0]);
             if (!AbstractObjectInstance.class.isAssignableFrom(parentType)) continue;
             if (Modifier.isAbstract(parentType.getModifiers())) continue;
             // Found parent-bearing constructor. Try to build a stub parent.
@@ -1157,6 +1179,10 @@ public final class RewindRoundTripHarness {
                 if (spawnAndParent) {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, PROBE_SPAWN, finalParent));
+                }
+                if (spawnIntIntParent) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, PROBE_SPAWN.x(), PROBE_SPAWN.y(), finalParent));
                 }
                 return ObjectConstructionContext.construct(stub,
                         () -> invokeWith(ctor, finalParent));

@@ -3,7 +3,6 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance;
-import com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance;
 import com.openggf.game.sonic3k.objects.badniks.ButterdroidBadnikInstance;
@@ -214,7 +213,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             starPostStarChildCodec(),
             starPostBonusStarChildCodec(),
             ssEntryFlashCodec(),
-            buggernautBabyCodec(),
+            // BuggernautBabyInstance codec deleted (Phase-2 batch 49):
+            // RewindRecreatable generic recreate relinks the live Buggernaut parent.
 
             // --- Release-slice batch 4: HCZ end-boss scene + AIZ boss/intro codecs ---
             // Without these, recreateDynamicObject() returns null for the listed
@@ -1739,41 +1739,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 }
                 return new MhzMinibossEscapeShardInstance(
                         entry.spawn().x(), entry.spawn().y(), parent);
-            }
-        };
-    }
-
-    /**
-     * Codec for {@link BuggernautBabyInstance}. The baby is relinked to the nearest
-     * live {@link BuggernautBadnikInstance} parent by captured spawn position
-     * (several buggernauts may be live). The parent is a layout-spawned badnik
-     * recreated before the dynamic-object restore loop. The baby's
-     * {@code @RewindTransient} parent link is re-supplied here; all other state is
-     * reapplied by the generic field capturer. If no live Buggernaut exists the baby
-     * is dropped (matching the codebase-wide drop-child-when-parent-absent rule).
-     */
-    private static DynamicObjectRewindCodec buggernautBabyCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == BuggernautBabyInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return BuggernautBabyInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                BuggernautBadnikInstance parent = findNearestLiveInstance(
-                        context, BuggernautBadnikInstance.class, entry.spawn());
-                if (parent == null) {
-                    return null;
-                }
-                return BuggernautBadnikInstance.recreateBabyForRewind(
-                        entry.spawn(), entry.spawn().x(), entry.spawn().y(), parent);
             }
         };
     }

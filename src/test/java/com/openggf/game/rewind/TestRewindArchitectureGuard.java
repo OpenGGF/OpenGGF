@@ -78,10 +78,6 @@ class TestRewindArchitectureGuard {
             // to the nearest live parent on recreate, not rewindable scalar state.
             // Same structural-parent triage precedent as the entries above.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/BuggernautBabyInstance.java#@RewindTransient", 1),
-            // Sonic3kObjectRegistry's single occurrence is a javadoc {@code @RewindTransient}
-            // reference in a codec doc-comment, not a field annotation; counted because the
-            // annotation scan does not strip comments.
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossArenaHelperInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossHitProxyChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossRobotnikHeadChild.java#@RewindTransient", 1),

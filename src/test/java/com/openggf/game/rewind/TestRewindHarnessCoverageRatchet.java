@@ -162,12 +162,15 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-19: raised to 119 after deleting the S2 DEZ
  *       BarrierWall codec; generic recreate now relinks Eggman's structural
  *       barrierWall back-reference.</li>
+ *   <li>2026-06-20: raised to 120 after deleting the S3K Buggernaut
+ *       baby codec; generic recreate now relinks the transient live
+ *       Buggernaut parent.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 119;
+    static final int RATCHET_FLOOR = 120;
 
     @BeforeEach
     void initHeadless() {

@@ -28,6 +28,8 @@ import com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
+import com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance;
+import com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance;
@@ -464,6 +466,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> BATCH48_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(CnzMinibossTopInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> BATCH49_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(BuggernautBabyInstance.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -3485,6 +3490,87 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void batch48ClassRoundTripPassedThroughHarnessParentSeedPath() {
         CodecDeletionCandidate candidate = BATCH48_DELETED_CODECS.getFirst();
+        RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+        assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                candidate.fqn()
+                        + " must round-trip as Passed through the harness parent-seed path; got: "
+                        + result);
+    }
+
+    // =====================================================================
+    // Batch 49: S3K Buggernaut baby, transient parent relink during generic recreate
+    // =====================================================================
+
+    @Test
+    void batch49ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH49_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 49)");
+        }
+    }
+
+    @Test
+    void batch49ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH49_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-49 deletion; "
+                            + "session restore must use genericRecreate Path 1 with live Buggernaut relink");
+        }
+    }
+
+    @Test
+    void batch49ClassesGenericRecreateProducesInstanceAndRelinksParent() {
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        StubObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+        };
+        ObjectSpawn parentSpawn =
+                new ObjectSpawn(160, 160, Sonic3kObjectIds.BUGGERNAUT, 0, 0, false, 49);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(parentSpawn),
+                new Sonic3kObjectRegistry(),
+                0,
+                null,
+                null,
+                GraphicsManager.getInstance(),
+                camera,
+                services);
+        holder[0] = objectManager;
+        objectManager.reset(0);
+
+        BuggernautBadnikInstance liveParent = singleLiveObject(objectManager, BuggernautBadnikInstance.class);
+        setIntField(liveParent, "childCount", 4);
+        ObjectSpawn babySpawn = new ObjectSpawn(192, 160, Sonic3kObjectIds.BUGGERNAUT, 0, 0, false, 50);
+        PerObjectRewindSnapshot state = new PerObjectRewindSnapshot(
+                false, false, false, 0, 0, 0, 0, false, 0, false, false, 0, -1, null, null, null);
+        ObjectManagerSnapshot.DynamicObjectEntry entry =
+                new ObjectManagerSnapshot.DynamicObjectEntry(
+                        BuggernautBabyInstance.class.getName(), babySpawn, 0, state);
+
+        ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(
+                entry, new DynamicObjectRecreateContext(objectManager));
+
+        assertNotNull(result, "genericRecreate must return a Buggernaut baby child");
+        assertEquals(BuggernautBabyInstance.class, result.getClass(),
+                "genericRecreate must return the same concrete baby class");
+        assertSame(liveParent, readObjectField(result, "parent"),
+                "genericRecreate must relink the baby to the restore-time Buggernaut parent "
+                        + "even when the captured parent child-count state is full");
+    }
+
+    @Test
+    void batch49ClassRoundTripPassedThroughHarnessParentSeedPath() {
+        CodecDeletionCandidate candidate = BATCH49_DELETED_CODECS.getFirst();
         RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
         assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                 candidate.fqn()
