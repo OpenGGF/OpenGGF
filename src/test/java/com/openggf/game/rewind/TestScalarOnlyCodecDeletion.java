@@ -68,6 +68,7 @@ import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossTopInstance;
 import com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance;
+import com.openggf.game.sonic3k.objects.S3kSignpostStubChild;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
@@ -633,6 +634,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",
                     GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(S3kSignpostStubChild.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -4221,6 +4225,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K badnik child graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K signpost stub graph batch: signpost-linked dynamic child
+    // =====================================================================
+
+    @Test
+    void s3kSignpostStubGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K signpost stub graph batch");
+        }
+    }
+
+    @Test
+    void s3kSignpostStubGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K signpost stub graph generic recreate, not a dynamic codec");
         }
     }
 

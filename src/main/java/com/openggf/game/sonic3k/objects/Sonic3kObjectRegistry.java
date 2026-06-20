@@ -188,7 +188,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // Parent/sibling relink codecs.
             // IczBigSnowPileInstance codec deleted (Phase-2 ICZ snow-pile batch):
             // live Sonic3kICZEvents owner is resolved by RewindRecreatable.
-            signpostStubCodec(),
+            // S3kSignpostStubChild restores via RewindRecreatable with graph
+            // harness coverage for the signpost parent relink.
             // StarPost star and bonus-star children now implement RewindRecreatable
             // -> genericRecreate Path 1 with live starpost relink.
             ssEntryFlashCodec(),
@@ -1027,38 +1028,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return new Mhz1CutsceneDoorInstance(parent);
-            }
-        };
-    }
-
-    /**
-     * Codec for {@link S3kSignpostStubChild}. The stub's only non-derivable
-     * field is its live {@link S3kSignpostInstance} parent. The signpost is
-     * spawned (and recreated) before the stub in spawn order, so it is present
-     * in {@code getActiveObjects()} during the stub's recreate. The signpost is
-     * effectively a singleton, so a plain type scan is unambiguous; if absent
-     * the stub is dropped.
-     */
-    private static DynamicObjectRewindCodec signpostStubCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == S3kSignpostStubChild.class;
-            }
-
-            @Override
-            public String className() {
-                return S3kSignpostStubChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                S3kSignpostInstance parent = findLiveInstance(context, S3kSignpostInstance.class);
-                if (parent == null) {
-                    return null;
-                }
-                return new S3kSignpostStubChild(parent);
             }
         };
     }
