@@ -19,6 +19,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **Player-facing systems:** added or improved S3K data select/save support, cross-game donation paths, ROM-derived master-title previews, legal-disclaimer startup flow, display shader support, pause/HUD presentation fixes, multi-sidekick behavior, level-editor plumbing, and user-facing configuration/docs.
 - **S1/S2 parity uplift:** closed selected Sonic 1 and Sonic 2 trace/object/boss gaps where fixes reduced active release risk or shared-code duplication, including sidekick CPU behavior, object-slot lifetime, solid/contact parity, boss/end-sequence behavior, and level-specific traversal objects.
 - **S2 SCZ/WFZ visual parity:** restored Sky Chase Tornado rider art, moved stage rings into their ROM sprite-priority bucket, applied Wing Fortress object priority bits, and corrected WFZ underside flame flicker cadence.
+- **S2 CPZ spin tube control:** CPZ spin tubes now use player-local `obj_control` without asserting global `Control_Locked`, keeping logical input refresh aligned with the ROM while the tube owns movement.
 - **S2 Crawl contact parity:** walking into an attacking Crawl now routes through the ROM hurt collision flags instead of silently ignoring non-rolling contact.
 - **S2 Casino Night slot machine:** restored the ROM packed-target reel order so the stopped slot faces line up with the reward paid out by linked Point Pokey cages.
 

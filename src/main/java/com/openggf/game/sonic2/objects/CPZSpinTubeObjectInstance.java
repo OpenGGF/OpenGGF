@@ -441,11 +441,11 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         int nextX = cs.path[2] + objX;
         int nextY = cs.path[3] + objY;
 
-        // Set player state for tube traversal
-        // ROM: move.b #$81,obj_control(a1) - locks player to object control
-        // This disables normal physics - the tube controls the player completely
+        // Set player state for tube traversal.
+        // ROM: move.b #$81,obj_control(a1) - player-local object control.
+        // This suppresses normal physics while leaving global Control_Locked
+        // untouched so Ctrl_1_Logical keeps refreshing during traversal.
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
         player.setRolling(true);
         // ROM: move.b #AniIDSonAni_Roll,anim(a1) - force roll animation.
         // Must be set explicitly because resolveAnimationId() returns null while
@@ -717,10 +717,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         int y = player.getCentreY() & 0x7FF;
         player.setCentreY((short) y);
 
-        // Restore player control with cooldown to prevent immediate re-capture
+        // Restore player-local object control with cooldown to prevent immediate re-capture.
         // ROM: clr.b obj_control(a1)
         player.releaseFromObjectControl(frameCounter);
-        player.setControlLocked(false);
 
         // ROM (loc_227A6) does NOT set spindash_flag/pinball_mode on exit; it only
         // clears obj_control and plays the spindash-release sound. The player leaves
