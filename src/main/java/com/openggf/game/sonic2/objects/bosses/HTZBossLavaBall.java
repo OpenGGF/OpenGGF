@@ -6,8 +6,13 @@ import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.HtzGroundFireObjectInstance;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -24,7 +29,8 @@ import java.util.List;
  * They arc upward then fall, transforming into lava bubbles on ground contact.
  * They damage the player on contact.
  */
-public class HTZBossLavaBall extends AbstractBossChild implements TouchResponseProvider {
+public class HTZBossLavaBall extends AbstractBossChild
+        implements TouchResponseProvider, RewindRecreatable {
 
     // Physics constants (ROM: s2.asm:63987-64006)
     /** Left ball X velocity (ROM: move.w #$1C00,d0 / neg.w d0) */
@@ -59,6 +65,10 @@ public class HTZBossLavaBall extends AbstractBossChild implements TouchResponseP
     private int animTimer;
     private static final int Y_RADIUS = 8;  // ROM: move.b #8,y_radius(a1)
 
+    HTZBossLavaBall(ObjectSpawn spawn) {
+        this(new Sonic2HTZBossInstance(spawn), spawn.x(), spawn.y(), false, false);
+    }
+
     public HTZBossLavaBall(Sonic2HTZBossInstance parent, int spawnX, int spawnY,
                            boolean leftBall, boolean fromLeftSide) {
         super(parent, "HTZ Lava Ball", 3, Sonic2ObjectIds.HTZ_BOSS);
@@ -86,6 +96,24 @@ public class HTZBossLavaBall extends AbstractBossChild implements TouchResponseP
         // Animation state
         this.animFrame = 0;
         this.animTimer = 3;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2HTZBossInstance parent = requireLiveHtzBossForRewind(ctx);
+        return new HTZBossLavaBall(parent, ctx.spawn().x(), ctx.spawn().y(), false, false);
+    }
+
+    private static Sonic2HTZBossInstance requireLiveHtzBossForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            throw new IllegalStateException("Cannot recreate HTZ boss lava ball without ObjectManager services");
+        }
+        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (object instanceof Sonic2HTZBossInstance boss && !boss.isDestroyed()) {
+                return boss;
+            }
+        }
+        throw new IllegalStateException("Cannot recreate HTZ boss lava ball: no live HTZ boss exists");
     }
 
     @Override

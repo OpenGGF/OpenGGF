@@ -35,6 +35,8 @@ import com.openggf.game.sonic2.objects.bosses.CPZBossPipePump;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPump;
 import com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik;
+import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
+import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
 import com.openggf.game.sonic2.objects.GrounderRockProjectile;
@@ -612,6 +614,10 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt",
                     GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_HTZ_BOSS_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(HTZBossFlamethrower.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(HTZBossLavaBall.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> S3K_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
@@ -4145,6 +4151,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S2 WFZ boss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S2 HTZ boss graph batch: boss-linked hazard children
+    // =====================================================================
+
+    @Test
+    void s2HtzBossGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_HTZ_BOSS_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 HTZ boss graph batch");
+        }
+    }
+
+    @Test
+    void s2HtzBossGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_HTZ_BOSS_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 HTZ boss graph generic recreate, not a dynamic codec");
         }
     }
 

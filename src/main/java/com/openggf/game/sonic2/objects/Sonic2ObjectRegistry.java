@@ -53,8 +53,6 @@ import com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance;
-import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
-import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainer;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor;
@@ -125,8 +123,8 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // RingPrizeObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // SteamPuffObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             seesawBallCodec(),
-            htzFlamethrowerCodec(),
-            htzBossLavaBallCodec(),
+            // HTZ boss flamethrower/lava-ball hazards now restore through
+            // RewindRecreatable and are covered by TestS2HtzBossGraphRewind.
             // CNZBossElectricBall now implements RewindRecreatable -> genericRecreate Path 1.
             // Batch-4 S2 rewind codecs (CPZ boss component chain + OOZ flame).
             // LavaBubbleObjectInstance and MCZFallingDebrisInstance now implement
@@ -474,70 +472,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     // ehzBossGroundVehicleCodec / ehzBossPropellerCodec / ehzBossVehicleTopCodec
     // removed (construction-spawned EHZ boss children — see DYNAMIC_REWIND_CODECS
     // list comment).
-
-    private static DynamicObjectRewindCodec htzFlamethrowerCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof HTZBossFlamethrower;
-            }
-
-            @Override
-            public String className() {
-                return HTZBossFlamethrower.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2HTZBossInstance parent = findHtzBossParentForRewind(context);
-                if (parent == null) {
-                    return null;
-                }
-                // currentX/currentY/xVel/flipped/animFrame/animTimer are non-final scalars
-                // reapplied by restoreObjectRewindState, so the spawn-time offset math in
-                // the ctor is overwritten and placeholder ctor args are safe.
-                return new HTZBossFlamethrower(parent, entry.spawn().x(), entry.spawn().y(), false);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec htzBossLavaBallCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == HTZBossLavaBall.class;
-            }
-
-            @Override
-            public String className() {
-                return HTZBossLavaBall.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2HTZBossInstance parent = findHtzBossParentForRewind(context);
-                if (parent == null) {
-                    return null;
-                }
-                // spawnX/spawnY/leftBall/fromLeftSide are placeholders: currentX/currentY come
-                // from the per-object snapshot, and leftBall/fromLeftSide/xFixed/yFixed/xVel/
-                // yVel/animFrame/animTimer are non-final captured scalars reapplied on restore.
-                return new HTZBossLavaBall(parent, 0, 0, false, false);
-            }
-        };
-    }
-
-    private static Sonic2HTZBossInstance findHtzBossParentForRewind(
-            DynamicObjectRecreateContext context) {
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (inst instanceof Sonic2HTZBossInstance boss) {
-                return boss;
-            }
-        }
-        return null;
-    }
 
     private static DynamicObjectRewindCodec seesawBallCodec() {
         return new DynamicObjectRewindCodec() {

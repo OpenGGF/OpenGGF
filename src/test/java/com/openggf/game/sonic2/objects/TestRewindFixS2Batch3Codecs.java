@@ -33,13 +33,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TestRewindFixS2Batch3Codecs {
 
-    private static final List<String> EXPLICIT_CODEC_CLASSES = List.of(
-            // EHZBossGroundVehicle / EHZBossPropeller / EHZBossVehicleTop codecs
-            // intentionally REMOVED: construction-spawned children re-established by
-            // boss reconstruction (see TestBossChildNoDoubleSpawnParity /
-            // KNOWN_DISCREPANCIES).
-            HTZBossFlamethrower.class.getName(),
-            HTZBossLavaBall.class.getName());
+    // EHZ boss construction-spawned children and HTZ boss hazards no longer need
+    // explicit dynamic codecs; graph/generic recreate coverage owns them.
+    private static final List<String> EXPLICIT_CODEC_CLASSES = List.of();
 
     private static final List<String> GENERIC_RECREATE_CLASSES = List.of(
             GrounderBadnikInstance.class.getName(),
@@ -53,7 +49,9 @@ class TestRewindFixS2Batch3Codecs {
             VerticalLaserObjectInstance.class.getName(),
             SpikyBlockSpikeInstance.class.getName(),
             BombPrizeObjectInstance.class.getName(),
-            CNZBossElectricBall.class.getName());
+            CNZBossElectricBall.class.getName(),
+            HTZBossFlamethrower.class.getName(),
+            HTZBossLavaBall.class.getName());
 
     private static Set<String> codecClassNames() {
         Set<String> names = new HashSet<>();
