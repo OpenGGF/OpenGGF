@@ -17115,3 +17115,28 @@ result). High leverage (3 traces, one cause) but needs supervised design of the 
 avoid over-pushing; left for a session that can weigh the regression trade-off. This is
 the recommended #1 next cluster-5 target.
 
+
+### 2026-06-21 -- Cluster-5 wall-push: flush-push override ATTEMPTED, regressed, reverted
+
+Attempted the S2 CPU-sidekick flush-wall-push fix: in resolveGroundWallCollision, when
+distance==0 and the sprite is a CPU sidekick (gated via !groundWallPushRequiresFacingIntoWall
+= S1/S2; S1 has no sidekick) on a wall mode (0x40/0xC0), fall through to
+applyGroundWallVelocityResponse (sets Status_Push + zeroes g_speed). Fail-fast on the 3
+target traces:
+- OOZ f1782 -> **REGRESSED to f1644** (tails_g_speed exp 0x000C act 0x0000).
+- MCZ2 f4482 -> **REGRESSED to f1806** (tails_g_speed exp -000C act 0x0000).
+- MTZ3 f1973 -> unchanged (override didn't help).
+Reverted (attempt+verify+revert).
+
+KEY empirical finding: ROM keeps a small g_speed (0x000C) on these frames -- the CPU
+sidekick is CREEPING into the wall while Status_Push is set; it does NOT zero g_speed.
+So the band-aid (force push + g_speed=0 on flush) over-pushes and pins g_speed to 0 a
+frame early. The correct model is the cumulative creep-and-pushback cycle: Tails advances
+its sub-pixel x each frame (g_speed ~0x000C), penetrates the wall by 1px every few frames,
+gets pushed back 1px with Status_Push set, and KEEPS its small g_speed. The engine's
+predicted-position CalcRoomInFront scan can't reproduce this for a sub-pixel follower
+(predicted ~= current at follow speed). Real fix = give the S2 CPU sidekick a ROM-accurate
+post-move wall-sensor push that sets Status_Push WITHOUT zeroing g_speed on the creep
+frames (or align its sub-pixel x_pos phase so the predicted scan naturally penetrates),
+verified against a full resweep. Deep cumulative-phase work; not a safe autonomous band-aid.
+
