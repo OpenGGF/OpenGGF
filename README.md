@@ -248,6 +248,7 @@ Highlights:
 - Player-facing work includes S3K data select/save support, cross-game donation paths, ROM-derived master-title previews, the legal-disclaimer startup flow, display shader support, pause/HUD fixes, multi-sidekick behavior, and level-editor plumbing.
 - Playable sprite slope rendering now keeps steep-slope walk frames synchronized with facing-dependent flip flags during slow turnarounds.
 - Sonic 2 multi-sidekick follow-up fixed Tails pausing after fly-in by clearing the approach timer before NORMAL follow, preventing a false Player 2 manual-control stall; chained sidekicks also use the root leader while a direct Sonic sidekick's delayed follow history warms.
+- Sonic 2 sidekick CPU parity now keeps ROM `Tails_control_counter` separate from the engine's multi-sidekick approach cadence, clearing the ARZ1 trace frontier and advancing the MTZ/HTZ/CNZ sidekick-counter cluster.
 
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
