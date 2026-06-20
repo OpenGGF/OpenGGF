@@ -17015,3 +17015,23 @@ family 1 (most traces; pick one object e.g. S1 Obj22/Obj3C and align its solid-c
 land/air timing), then family 3 (find the on-object jump-angle negation -> likely one fix
 clears htz2+mz2), then family 2 (BizHawk Touch_Loop slot-order trace), then family 4.
 
+
+### 2026-06-20 -- Survey correction: family 3 (htz2/mz2) is a post-jump collision, not a jump-sign bug
+
+Instrumented doJump for htz2: every jump produces correct UPWARD velocity
+(yJumpChange=-1632, jump=0x680, e.g. hexAngle 0xF8/0x08/0x00). So htz2 f1078's
+engine y_speed=+0568 does NOT come from doJump. After the jump (both ROM and engine
+go up ~-0x680), the engine's y_speed flips up->down by ~5 frames in (gravity would
+leave it at -0568, where ROM stays) -- the engine REFLECTS the velocity, i.e. it hits
+a ceiling/object (the HTZ Obj96/97/98 cluster near 0x99x,0x6xx) that ROM does not.
+So family 3 is a post-jump CEILING/OBJECT-collision divergence, object-specific, NOT a
+shared jump-angle sign bug. Reclassify htz2/mz2 under family 1 (object/collision).
+
+Net survey conclusion: every remaining true-frontier divergence is a deep, object- or
+collision-specific parity issue (riding/landing/ceiling timing, touch-phase timing,
+sub-pixel). No clean cluster-4-style shared-cause win remains; cluster 4 was the
+low-hanging fruit. Further advances need per-object controlled side-by-sides (engine
+instrumentation + BizHawk where ROM-side ordering is needed) and carry shared-code
+regression risk -- best done with review, not landed speculatively. Verified deliverable
+this session: the cluster-4 Tails_control_counter fix (commit c80dd4dda).
+
