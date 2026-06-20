@@ -16936,3 +16936,26 @@ collides ONE object per character per frame, s2.asm:85040-85045; HurtCharacter i
 checks) to find why the engine hurts the co-located CPU Tails. Shared touch-response
 code -> any fix needs a full *TraceReplay resweep for regressions.
 
+
+### 2026-06-20 -- CPZ1 f1157: instrumented to a 1-frame-early SIDEKICK hurt (engine-side touch phase)
+
+Compile-verified engine instrumentation of ObjectTouchResponseController.processCollisionLoop:
+- The sidekick (CPU Tails) touch loop DOES run, with isSidekick=true, cpu=true, usePreUpdateState=true.
+- The engine first registers a HURT overlap of the Spiny shot vs Tails at LevelManager.frameCounter=1157
+  (currentFrameCounter=1158 = frameCounter+1), using objX/Y = getPreUpdateX/Y = 0x0BAD,0x01A0 with
+  objPre==objCur (the pre-update snapshot equals the live position). Tails box sk=0x0BA0,0x01A4 h=24,
+  shot 4x4 -> overlap -> hurt at trace f1157.
+- ROM hurts Tails at trace f1158 (aux routine_change 0x02->0x04, knockback -0x200/-0x400). ROM's Tails
+  (low slot) runs TouchResponse before the Spiny shot (slot 36) moves, so at f1157 it sees the shot's
+  end-of-1156 position 0x0BAE,0x019E (dy=18 -> no overlap), only overlapping at f1158 (shot 0x0BAD,0x01A0).
+- Net: the engine's sidekick touch sees the shot one object-step too advanced (0x0BAD,0x01A0 at f1157
+  instead of 0x0BAE,0x019E). The projectile trajectory itself is correct vs ROM (verified separately).
+
+Open question (needs a controlled side-by-side): the engine snapshots object touch state at frame start
+(LevelFrameStep step 2, before physics) and moves objects after physics (step 3), which should give the
+sidekick the end-of-(F-1) shot position -- yet getPreUpdateX returns the end-of-F position. This is a
+1-frame engine-vs-recorder phase offset in the snapshot/object-move/comparator bookkeeping, specific to
+the co-located sidekick boundary case (the main player's f1154 hit was not boundary-sensitive and matched
+ROM). Fix is in SHARED touch/snapshot ordering -> requires a full *TraceReplay resweep to gate regressions.
+No engine change landed (no safe, confidently-correct one-line fix isolated yet).
+
