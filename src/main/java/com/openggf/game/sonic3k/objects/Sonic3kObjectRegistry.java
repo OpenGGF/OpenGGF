@@ -189,8 +189,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // IczBigSnowPileInstance codec deleted (Phase-2 ICZ snow-pile batch):
             // live Sonic3kICZEvents owner is resolved by RewindRecreatable.
             signpostStubCodec(),
-            starPostStarChildCodec(),
-            starPostBonusStarChildCodec(),
+            // StarPost star and bonus-star children now implement RewindRecreatable
+            // -> genericRecreate Path 1 with live starpost relink.
             ssEntryFlashCodec(),
             // BuggernautBabyInstance codec deleted (Phase-2 batch 49):
             // RewindRecreatable generic recreate relinks the live Buggernaut parent.
@@ -1181,81 +1181,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return new S3kSignpostStubChild(parent);
-            }
-        };
-    }
-
-    /**
-     * Codec for {@link Sonic3kStarPostStarChild}. The orbiting star's only
-     * non-derivable field is its live {@link Sonic3kStarPostObjectInstance}
-     * parent; the star re-derives its orbit center from that parent in the
-     * constructor. Several StarPosts may be live, so the parent is relinked by
-     * nearest captured spawn position (the dummy spawn stores the parent's
-     * center). StarPosts are layout objects recreated before the dynamic-object
-     * restore loop, so the parent is present; if absent the star is dropped.
-     */
-    private static DynamicObjectRewindCodec starPostStarChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic3kStarPostStarChild.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic3kStarPostStarChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic3kStarPostObjectInstance parent = findNearestLiveInstance(
-                        context, Sonic3kStarPostObjectInstance.class, entry.spawn());
-                if (parent == null) {
-                    return null;
-                }
-                return new Sonic3kStarPostStarChild(parent);
-            }
-        };
-    }
-
-    /**
-     * Codec for {@link Sonic3kStarPostBonusStarChild}. The orbiting bonus star
-     * re-derives its orbit center from its live
-     * {@link Sonic3kStarPostObjectInstance} parent in the constructor, so the only
-     * non-derivable state is (a) that parent link and (b) the enum {@code variant}
-     * (the bonus-stage type chosen from the ring count at spawn). Several StarPosts
-     * may be live, so the parent is relinked by nearest captured spawn position.
-     * {@code variant} is no longer final, so the generic field capturer reapplies it
-     * after recreate; a placeholder is passed to the constructor here. StarPosts are
-     * layout objects recreated before the dynamic-object restore loop, so the parent
-     * is present; if absent the star is dropped.
-     */
-    private static DynamicObjectRewindCodec starPostBonusStarChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic3kStarPostBonusStarChild.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic3kStarPostBonusStarChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic3kStarPostObjectInstance parent = findNearestLiveInstance(
-                        context, Sonic3kStarPostObjectInstance.class, entry.spawn());
-                if (parent == null) {
-                    return null;
-                }
-                // angleOffset (0) and variant (placeholder) are reapplied by the
-                // generic field capturer after recreate; centerX/centerY are
-                // re-derived from the relinked parent in the constructor.
-                return new Sonic3kStarPostBonusStarChild(parent, 0,
-                        Sonic3kStarPostObjectInstance.BonusStarVariant.YELLOW);
             }
         };
     }

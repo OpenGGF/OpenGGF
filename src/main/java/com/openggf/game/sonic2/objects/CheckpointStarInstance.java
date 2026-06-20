@@ -2,11 +2,14 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.CheckpointState;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -26,7 +29,7 @@ import java.util.logging.Logger;
  * - Animation: frames 0, 1, 2, 1 based on (frame & 6) >> 1, with 3 -> 1 mapping
  * </p>
  */
-public class CheckpointStarInstance extends AbstractObjectInstance {
+public class CheckpointStarInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(CheckpointStarInstance.class.getName());
 
     // ROM constants (from disassembly)
@@ -34,6 +37,9 @@ public class CheckpointStarInstance extends AbstractObjectInstance {
     private static final int SHRINK_START = 0x180; // Start shrinking
     private static final int DELETE_AT = 0x200; // Delete when lifetime reaches this
     private static final int ANGLE_INCREMENT = 0xA; // Add to angle each frame
+    @RewindTransient(reason = "Structural parent link; relinked to the live S2 checkpoint "
+            + "with matching captured center on rewind recreate. Scalar star state is "
+            + "reapplied by the generic field capturer.")
     private final CheckpointObjectInstance parentCheckpoint; // Reference to parent for marking as used
     private final int centerX; // objoff_30
     private final int centerY; // objoff_32
@@ -61,8 +67,22 @@ public class CheckpointStarInstance extends AbstractObjectInstance {
         this.currentY = centerY;
     }
 
+    CheckpointStarInstance(CheckpointObjectInstance parent) {
+        this(parent, 0);
+    }
+
     private static ObjectSpawn createDummySpawn(CheckpointObjectInstance parent) {
         return new ObjectSpawn(parent.getCenterX(), parent.getCenterY(), 0x79, 0, 0, false, 0);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+            return null;
+        }
+        CheckpointObjectInstance liveParent =
+                CheckpointDongleInstance.findLiveParentForRewind(ctx.objectServices().objectManager(), ctx.spawn());
+        return liveParent == null ? null : new CheckpointStarInstance(liveParent, 0);
     }
 
     @Override

@@ -12,9 +12,12 @@ import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
 import com.openggf.game.sonic2.objects.BombPrizeObjectInstance;
+import com.openggf.game.sonic2.objects.CheckpointDongleInstance;
+import com.openggf.game.sonic2.objects.CheckpointStarInstance;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.ConveyorObjectInstance;
 import com.openggf.game.sonic2.objects.PointsObjectInstance;
@@ -65,6 +68,8 @@ import com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild;
+import com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
@@ -589,6 +594,13 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(ShellcrackerClawInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(SlicerPincerInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(SolFireballObjectInstance.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> CHECKPOINT_STARPOST_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1LamppostTwirlInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(CheckpointDongleInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(CheckpointStarInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(Sonic3kStarPostStarChild.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(Sonic3kStarPostBonusStarChild.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -4067,6 +4079,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S2 badnik child graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // Checkpoint/starpost graph batch: parent-required orbit children
+    // =====================================================================
+
+    @Test
+    void checkpointStarpostGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : CHECKPOINT_STARPOST_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after checkpoint/starpost graph batch");
+        }
+    }
+
+    @Test
+    void checkpointStarpostGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : CHECKPOINT_STARPOST_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through checkpoint/starpost graph generic recreate, not a dynamic codec");
         }
     }
 

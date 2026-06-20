@@ -78,6 +78,14 @@ class TestRewindArchitectureGuard {
             // to the nearest live parent on recreate, not rewindable scalar state.
             // Same structural-parent triage precedent as the entries above.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/BuggernautBabyInstance.java#@RewindTransient", 1),
+            // Checkpoint/starpost orbit children keep ROM parent pointers as
+            // structural live links. Rewind recreates them only when a matching
+            // live parent exists, then reapplies captured scalar orbit state.
+            Map.entry("src/main/java/com/openggf/game/sonic1/objects/Sonic1LamppostTwirlInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/CheckpointDongleInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/CheckpointStarInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Sonic3kStarPostBonusStarChild.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Sonic3kStarPostStarChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossArenaHelperInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossHitProxyChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossRobotnikHeadChild.java#@RewindTransient", 1),

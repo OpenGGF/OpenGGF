@@ -99,8 +99,8 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // BadnikProjectileInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // BuzzerFlameChild now implements RewindRecreatable -> genericRecreate Path 1.
             // MonitorContentsObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            checkpointDongleCodec(),
-            checkpointStarCodec(),
+            // CheckpointDongleInstance and CheckpointStarInstance now implement
+            // RewindRecreatable -> genericRecreate Path 1 with live checkpoint relink.
             arzBossArrowCodec(),
             // ARZBossPillar now implements RewindRecreatable -> genericRecreate Path 1.
             // GrounderRockProjectile and GrounderWallInstance now implement
@@ -263,63 +263,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         if (!missingEntries.isEmpty()) {
             LOGGER.info("Missing object ids: " + String.join(", ", missingEntries));
         }
-    }
-
-    private static DynamicObjectRewindCodec checkpointDongleCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof CheckpointDongleInstance;
-            }
-
-            @Override
-            public String className() {
-                return CheckpointDongleInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                CheckpointObjectInstance parent = findCheckpointParentForRewind(context, entry.spawn());
-                return parent == null ? null : new CheckpointDongleInstance(parent);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec checkpointStarCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof CheckpointStarInstance;
-            }
-
-            @Override
-            public String className() {
-                return CheckpointStarInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                CheckpointObjectInstance parent = findCheckpointParentForRewind(context, entry.spawn());
-                return parent == null ? null : new CheckpointStarInstance(parent, 0);
-            }
-        };
-    }
-
-    private static CheckpointObjectInstance findCheckpointParentForRewind(
-            DynamicObjectRecreateContext context, ObjectSpawn childSpawn) {
-        if (childSpawn == null) {
-            return null;
-        }
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (inst instanceof CheckpointObjectInstance checkpoint
-                    && checkpoint.getCenterX() == childSpawn.x()
-                    && checkpoint.getCenterY() == childSpawn.y()) {
-                return checkpoint;
-            }
-        }
-        return null;
     }
 
     private static <T> T findLiveInstance(DynamicObjectRecreateContext context, Class<T> type) {

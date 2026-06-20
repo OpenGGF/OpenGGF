@@ -96,7 +96,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // Sonic1FloatingBlockObjectInstance now implements RewindRecreatable
             // -> genericRecreate Path 1.
             grassFireChildCodec(),
-            lamppostTwirlCodec(),
+            // Sonic1LamppostTwirlInstance now implements RewindRecreatable
+            // -> genericRecreate Path 1 with live lamppost relink.
             ringFlashCodec(),
             seesawBallCodec());
 
@@ -609,45 +610,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                 // captured values; pass placeholder sinkOffset 0.
                 return new Sonic1GrassFireObjectInstance(
                         spawn.x(), spawn.y(), 0, parent.getSlopeData(), parent, isWalker);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec lamppostTwirlCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic1LamppostTwirlInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic1LamppostTwirlInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // The lamppost is a placed/layout-spawned object, recreated earlier in
-                // the restore loop. Pick the nearest one to the twirl's spawn position.
-                ObjectSpawn spawn = entry.spawn();
-                Sonic1LamppostObjectInstance parent = null;
-                long bestDist = Long.MAX_VALUE;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof Sonic1LamppostObjectInstance lamp) {
-                        long dx = lamp.getCenterX() - spawn.x();
-                        long dy = lamp.getCenterY() - spawn.y();
-                        long dist = dx * dx + dy * dy;
-                        if (dist < bestDist) {
-                            bestDist = dist;
-                            parent = lamp;
-                        }
-                    }
-                }
-                if (parent == null) {
-                    return null;
-                }
-                return new Sonic1LamppostTwirlInstance(parent);
             }
         };
     }
