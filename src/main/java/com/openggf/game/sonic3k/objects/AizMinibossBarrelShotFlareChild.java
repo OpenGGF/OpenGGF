@@ -63,7 +63,7 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
 
     @Override
     public AizMinibossBarrelShotFlareChild recreateForRewind(RewindRecreateContext ctx) {
-        AizMinibossBarrelShotChild anchor = AizMinibossRewindLinks.nearestBarrelShot(ctx);
+        AizMinibossFlameBarrelChild anchor = AizMinibossRewindLinks.nearestBarrel(ctx);
         return anchor == null ? null : new AizMinibossBarrelShotFlareChild(anchor);
     }
 

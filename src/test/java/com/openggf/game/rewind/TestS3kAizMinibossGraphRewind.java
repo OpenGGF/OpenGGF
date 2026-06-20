@@ -108,7 +108,10 @@ class TestS3kAizMinibossGraphRewind {
         assertSame(graph.boss(), readObjectField(graph.shot(), "parent"));
         assertSame(graph.barrel2(), readObjectField(graph.shot(), "barrel"),
                 "barrel shot must relink to the selected nearest flame barrel");
-        assertSame(graph.shot(), readObjectField(graph.flare(), "anchor"));
+        assertSame(graph.barrel2(), readObjectField(graph.flare(), "anchor"),
+                "barrel shot flare must follow production topology and relink to the flame barrel");
+        assertNotSame(graph.shot(), readObjectField(graph.flare(), "anchor"),
+                "barrel shot flare must not relink to the shot object");
     }
 
     private static void assertRestoredObjectsAreFresh(AizGraph before, AizGraph restored) {
@@ -185,7 +188,7 @@ class TestS3kAizMinibossGraphRewind {
             AizMinibossBarrelShotChild shot = objectManager.createDynamicObject(
                     () -> newBarrelShot(boss, barrel2, barrel2.getX(), barrel2.getY() + 4));
             AizMinibossBarrelShotFlareChild flare = objectManager.createDynamicObject(
-                    () -> new AizMinibossBarrelShotFlareChild(shot));
+                    () -> new AizMinibossBarrelShotFlareChild(barrel2));
             return new AizGraph(boss, body, arm, napalm, barrel0, barrel1, barrel2, flame, shot, flare);
         }
 
