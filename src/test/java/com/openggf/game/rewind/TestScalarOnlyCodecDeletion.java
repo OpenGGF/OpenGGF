@@ -624,6 +624,14 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(HTZBossFlamethrower.class.getName(), GameId.S2),
             new CodecDeletionCandidate(HTZBossLavaBall.class.getName(), GameId.S2));
 
+    private static final List<CodecDeletionCandidate> SEESAW_BALL_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SeesawBallObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SeesawBallObjectInstance",
+                    GameId.S2));
+
     private static final List<CodecDeletionCandidate> S3K_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild",
@@ -4203,6 +4211,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S2 HTZ boss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1/S2 seesaw ball graph batch: parent-linked child dynamics
+    // =====================================================================
+
+    @Test
+    void seesawBallGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : SEESAW_BALL_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after seesaw ball graph batch");
+        }
+    }
+
+    @Test
+    void seesawBallGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : SEESAW_BALL_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through seesaw ball graph generic recreate, not a dynamic codec");
         }
     }
 

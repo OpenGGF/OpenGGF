@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -51,14 +52,14 @@ class TestRewindFixS2Batch6Codecs {
     void registersCodecsForBatch6S2Objects() {
         Set<String> names = codecClassNames();
 
-        List<String> required = List.of(
-                SeesawBallObjectInstance.class.getName(),
-                CPZBossContainerExtend.class.getName());
+        assertTrue(names.contains(CPZBossContainerExtend.class.getName())
+                        || RewindRecreatable.class.isAssignableFrom(CPZBossContainerExtend.class),
+                "missing rewind recreate path for " + CPZBossContainerExtend.class.getName());
 
-        for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
-        }
+        assertTrue(RewindRecreatable.class.isAssignableFrom(SeesawBallObjectInstance.class),
+                "SeesawBallObjectInstance must restore through RewindRecreatable graph recreate");
+        assertFalse(names.contains(SeesawBallObjectInstance.class.getName()),
+                "SeesawBallObjectInstance must not keep an explicit batch-6 codec");
 
         assertFalse(names.contains(SteamPuffObjectInstance.class.getName()),
                 "SteamPuffObjectInstance must restore through RewindRecreatable generic recreate, "

@@ -122,7 +122,8 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // BombPrizeObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // RingPrizeObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // SteamPuffObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            seesawBallCodec(),
+            // SeesawBallObjectInstance now restores through RewindRecreatable graph
+            // relink/adoption and is covered by TestSeesawBallGraphRewindTest.
             // HTZ boss flamethrower/lava-ball hazards now restore through
             // RewindRecreatable and are covered by TestS2HtzBossGraphRewind.
             // CNZBossElectricBall now implements RewindRecreatable -> genericRecreate Path 1.
@@ -472,50 +473,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     // ehzBossGroundVehicleCodec / ehzBossPropellerCodec / ehzBossVehicleTopCodec
     // removed (construction-spawned EHZ boss children — see DYNAMIC_REWIND_CODECS
     // list comment).
-
-    private static DynamicObjectRewindCodec seesawBallCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof SeesawBallObjectInstance;
-            }
-
-            @Override
-            public String className() {
-                return SeesawBallObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                SeesawObjectInstance parent = findSeesawParentForRewind(context);
-                if (parent == null) {
-                    return null; // no live parent -> stay dropped this frame
-                }
-                // Derive ctor args from the live parent exactly as SeesawObjectInstance
-                // .spawnBall() does. initialX/initialY are placeholders; xPos/yPos
-                // (non-final) are reapplied by restoreObjectRewindState afterwards, as is
-                // storedAngle, so 'flipped' only needs to seed a valid initial value.
-                int centerX = parent.getSpawn().x();
-                int bottomY = parent.getSpawn().y() + 0x10;
-                boolean flipped = parent.isFlippedHorizontal();
-                return new SeesawBallObjectInstance(centerX, bottomY, centerX, bottomY, parent, flipped);
-            }
-        };
-    }
-
-    private static SeesawObjectInstance findSeesawParentForRewind(DynamicObjectRecreateContext context) {
-        // One Seesaw (subtype 0) spawns exactly one ball; match the live seesaw that is
-        // still missing its ball so the restore re-links 1:1.
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (inst instanceof SeesawObjectInstance seesaw
-                    && seesaw.getSpawn().subtype() == 0
-                    && !seesaw.hasLiveBall()) {
-                return seesaw;
-            }
-        }
-        return null;
-    }
 
     private static DynamicObjectRewindCodec oozBurnerFlameCodec() {
         return new DynamicObjectRewindCodec() {

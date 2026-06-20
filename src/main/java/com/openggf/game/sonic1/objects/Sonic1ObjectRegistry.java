@@ -99,8 +99,7 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             grassFireChildCodec(),
             // Sonic1LamppostTwirlInstance now implements RewindRecreatable
             // -> genericRecreate Path 1 with live lamppost relink.
-            ringFlashCodec(),
-            seesawBallCodec());
+            ringFlashCodec());
 
     // Sonic1SplashObjectInstance (LZ water splash, object 0x08) is accept-drop:
     // a sub-1-second purely-cosmetic splash re-emitted naturally on water
@@ -112,6 +111,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
     // now implements RewindRecreatable -> genericRecreate Path 1.
     // BossExplosionObjectInstance codec deleted (Phase-2 batch 39):
     // shared class already implements RewindRecreatable -> genericRecreate Path 1.
+    // Sonic1SeesawBallObjectInstance restores through RewindRecreatable graph
+    // relink/adoption and is covered by TestSeesawBallGraphRewindTest.
 
     private static DynamicObjectRewindCodec bombFuseChildCodec() {
         return new DynamicObjectRewindCodec() {
@@ -584,47 +585,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                 // ring was already deleted at frame 3 (ctor only dereferences it once,
                 // gated by !triggerFired).
                 return new Sonic1RingFlashObjectInstance(parent, spawn.x(), spawn.y(), false);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec seesawBallCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic1SeesawBallObjectInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic1SeesawBallObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // The seesaw (object 0x5E) is a layout-spawned active object recreated
-                // earlier in the restore loop. Find the nearest one to the ball's
-                // captured position. origX/origY are un-finaled and reapplied by the
-                // generic field capturer; flipped passed here is a placeholder.
-                ObjectSpawn spawn = entry.spawn();
-                Sonic1SeesawObjectInstance parent = null;
-                long bestDist = Long.MAX_VALUE;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof Sonic1SeesawObjectInstance s) {
-                        long dx = (long) s.getX() - spawn.x();
-                        long dy = (long) s.getY() - spawn.y();
-                        long dist = dx * dx + dy * dy;
-                        if (dist < bestDist) {
-                            bestDist = dist;
-                            parent = s;
-                        }
-                    }
-                }
-                if (parent == null) {
-                    return null;
-                }
-                return new Sonic1SeesawBallObjectInstance(parent, spawn.x(), spawn.y(), false);
             }
         };
     }
