@@ -16792,3 +16792,38 @@ Result (full `*TraceReplay` resweep, vs the 2026-06-20 true-frontier snapshot ab
   `TestSidekickCpuFollowParity` unchanged (the 2 `*BeforeSettledThreshold` failures
   are pre-existing on clean develop `e9e3d4236`, confirmed by baseline run).
 
+
+### 2026-06-20 -- Cluster landscape after the cluster-4 fix (next-target brief)
+
+Re-clustering the post-fix true frontier against the goal's 6 priority buckets:
+
+- **Cluster 1 (frame-0 setup): empty.** No bootstrap/frame-0 divergences exist
+  (`bootstrap_error_count`=0 everywhere; earliest divergence is f72 physics).
+  The object-slot parity items (ARZ2 f523 `obj_extra_s24`, LZ2 f1068, SBZ2 f1395)
+  are mid-level object-slot-allocation ordering, not frame-0 setup.
+- **Cluster 2 (radius/rolling): empty.** The earliest x_speed-cap candidates
+  (SLZ1 f723, CPZ1 f1157) are NOT the documented rolling-into-wall cycle; they are
+  hurt/standing divergences (below). No trace shows the x_radius wall-probe signature.
+- **Cluster 3 (exact 0x100 speed deltas): empty.** No frontier has |exp-act|==0x100.
+- **Cluster 4 (Tails CPU): FIXED** (this session, commit `c80dd4dda`).
+- **Cluster 5 (movement downstream of Tails CPU): object-implementation scope.**
+  The two earliest members are the same class in two games:
+    - CPZ1 f1157: ROM Tails is on object slot 0x10 (`status`=00, not hurt); the engine
+      Tails is NOT on that object and is knocked back by a projectile. ROM has Obj `0x98`
+      at @0BAD,01A0 where the engine has a `0xA5` "Projectile" (CPZ Spiny shot) plus a
+      slot-identity mismatch -> engine takes a hurt ROM never applies.
+    - SLZ1 f723: ROM lands on a solid (onObj=0x30) for one frame; the engine is knocked
+      airborne by SLZ Bomb shrapnel (Obj 0x5F) and loses its rings (ROM rings=4, engine=0).
+  Both are touch-response/object-standing divergences in busy multi-object scenes ->
+  per trace-replay mission rule 3 (objects not correctly implemented), plan/delegate;
+  not a shared physics one-liner. The remaining cluster-5 members are sub-pixel tails
+  drifts (OOZ f1782, CNZ2 f4418, MCZ2 f4485; ~1px) of the P9 sub-pixel-carry class.
+- **Cluster 6 (onesies):** isolated structural/sub-pixel bugs. Most tractable-looking is
+  LZ3 f466 `y` (constant -0x800 offset tracking in parallel = a vertical-wrap/level-height
+  bug); the rest are +/-1 y/x/rings/status/camera and large y_speed sign flips (GHZ1/GHZ2,
+  HTZ2/MZ2 -0568<->0568).
+
+Next recommended target: delegate the cluster-5 CPZ Spiny projectile / object-standing
+divergence (CPZ1 f1157) as an object-implementation investigation, or take the isolated
+LZ3 f466 vertical-wrap as a standalone structural fix.
+
