@@ -16912,3 +16912,27 @@ ordering mismatch to fix when a Nebula-bomb (WFZ) frontier pins it.
   first appears (just before f466) to find where the engine and ROM enter different
   loop copies.
 
+
+### 2026-06-20 -- CPZ1 f1157: projectile ruled out by instrumentation
+
+Added a temporary per-frame Spiny-shot position log to BadnikProjectileInstance
+(reverted after use) and ran CPZ1. Aligning engine frameCounter to trace frame
+(engine fc=790 == trace f1130, fc=817 == trace f1157, both byte-exact), the engine
+Spiny-shot trajectory MATCHES the recorded ROM 0x98 trajectory at EVERY frame
+(engine f1157 = 0x0BAD,0x01A0 = ROM f1157). So the projectile position/timing is
+correct; the earlier 'engine shot 1 frame ahead' read was a context-line artifact
+(an eng-near `pre=` value), not the live position.
+
+=> CPZ1 is a TOUCH/HURT parity issue, NOT a projectile bug: with identical projectile
+and Tails positions, ROM Tails (routine 2, obj_control 0, co-located with the hurt
+Sonic) is NOT hurt while the engine's Tails IS. ROM touch box (TouchResponse,
+s2.asm:85013): char box width param 0x10, height 2*(y_radius-3), top at
+y-(y_radius-3), x-8; Spiny shot Touch_Sizes[0x18]=(4,4) (s2.asm:85134). By geometry
+alone this overlap would ALSO register for Tails, so the factor sparing ROM Tails is
+state/ordering (invulnerability, once-per-frame single-object touch consumption after
+Sonic's hit at f1154, or a sidekick hurt gate), not box size. Next step: runtime-trace
+the engine sidekick touch+HurtCharacter path at f1154-1157 vs ROM (Touch_Loop only
+collides ONE object per character per frame, s2.asm:85040-85045; HurtCharacter invuln
+checks) to find why the engine hurts the co-located CPU Tails. Shared touch-response
+code -> any fix needs a full *TraceReplay resweep for regressions.
+
