@@ -16690,3 +16690,70 @@ Result:
 - Next target in the ordered Tails CPU cluster is MTZ3 f1775
   `tails_cpu_interact`, which now follows the cleared stale-`Status_Push`
   release.
+
+## 2026-06-20 -- True-frontier reconciliation (clean full sweep on develop e9e3d4236)
+
+Authoritative full `*TraceReplay` sweep run from the main working tree at
+develop HEAD `e9e3d4236` (sweep itself executed at `f8b9874a9`; the two
+intervening commits are rewind-only refactors that do not touch physics).
+Clean branch, no uncommitted investigation edits.
+
+Command:
+`mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dtrace.frontierOnly=true -Dtrace.context.radius=8 -Dtest='*TraceReplay' -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Dsonic1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen -Dsonic3k.rom.path=s3k.gen test`
+
+Result: **90 tests, 54 failures, 1 error, 0 skipped** (BUILD FAILURE).
+The lone error is `TestS3kCnzTraceReplay.traceReplayCnzMinibossParentSecondMovePassUsesRomPhase`
+(a bespoke regression method throwing, not the `replayMatchesTrace` frontier).
+
+Note: `*_report.json` filenames key on `game_zone+act`, so a zone's CompleteRun
+and short/level-select variants overwrite one report. The table below is keyed by
+test CLASS (from surefire `First error:` lines), which de-conflates them. Passing
+tests write no report. GREEN (not listed): all S1 single-act `Test*TraceReplay`,
+S2 `Ehz1`, `Scz`, `Wfz`, `Mcz` (act1); 35 green total.
+
+| Class | Frontier | Field | Exp | Act | Delta |
+|---|---:|---|---:|---:|---:|
+| TestS3kMhzCompleteRun | f72 | y_speed | 0x00E0 | 0x0000 | -0xE0 |
+| TestS3kCnz | f291 | x_speed | 0x0600 | -02D1 | -0x8D1 |
+| TestS2MtzLevelSelect | f448 | tails_cpu_control_counter | 0x0000 | 0x0001 | 0x1 |
+| TestS1Lz3CompleteRun | f466 | y | 0x0807 | 0x0007 | -0x800 |
+| TestS1Syz1CompleteRun | f502 | camera_y | 0x034A | 0x0340 | -0xA |
+| TestS2Arz2LevelSelect | f523 | obj_extra_s24_x | absent | 0x067F |  |
+| TestS3kMgz | f539 | rings | 10 | 11 | 0x1 |
+| TestS2HtzLevelSelect | f640 | tails_cpu_control_counter | 0x0000 | 0x0001 | 0x1 |
+| TestS2Mtz3LevelSelect | f640 | tails_cpu_control_counter | 0x0000 | 0x0001 | 0x1 |
+| TestS1Slz2CompleteRun | f651 | g_speed | 0x1000 | 0x10AE | 0xAE |
+| TestS1FzCompleteRun | f713 | y_speed | 0x0000 | -0700 | -0x700 |
+| TestS1Slz3CompleteRun | f718 | y_speed | 0x0000 | 0x0610 | 0x610 |
+| TestS1Slz1CompleteRun | f723 | x_speed | 0x0000 | -0200 | -0x200 |
+| TestS3kMgzCompleteRun | f738 | rings | 17 | 18 | 0x1 |
+| TestS2CnzLevelSelect | f1024 | tails_cpu_control_counter | 0x0000 | 0x0001 | 0x1 |
+| TestS1Lz2CompleteRun | f1068 | obj_s20_slot | 0x20 | 0x25 | 0x5 |
+| TestS2Ooz2LevelSelect | f1070 | camera_y | 0x0475 | 0x046F | -0x6 |
+| TestS2Htz2LevelSelect | f1078 | y_speed | -0568 | 0x0568 | 0xAD0 |
+| TestS1Syz2CompleteRun | f1088 | x_speed | 0x02E8 | 0x02F4 | 0xC |
+| TestS3kAizCompleteRun | f1095 | x_sub | 0x0000 | 0x0C00 | 0xC00 |
+| TestS2CpzLevelSelect | f1157 | tails_x_speed | 0x0000 | -0200 | -0x200 |
+| TestS1Ghz3CompleteRun | f1246 | y | 0x0219 | 0x021A | 0x1 |
+| TestS2Mtz2LevelSelect | f1265 | g_speed | 0x014B | 0x047A | 0x32F |
+| TestS1Sbz2CompleteRun | f1395 | obj_s48_slot | 0x48 | 0x3B | -0xD |
+| TestS3kHczCompleteRun | f1489 | y | 0x0776 | 0x0775 | -0x1 |
+| TestS3kLbzCompleteRun | f1694 | air | 0 | 1 | 0x1 |
+| TestS1Mz3CompleteRun | f1702 | y | 0x048C | 0x048B | -0x1 |
+| TestS2OozLevelSelect | f1782 | tails_x | 0x0CE4 | 0x0CE3 | -0x1 |
+| TestS3kCnzCompleteRun | f1846 | tails_x_speed | 0x0024 | -1000 | -0x1024 |
+| TestS1Sbz1CompleteRun | f1925 | g_speed | 0x0556 | 0x0000 | -0x556 |
+| TestS1Mz1CompleteRun | f2089 | camera_y | 0x02BE | 0x02C4 | 0x6 |
+| TestS1Ghz2CompleteRun | f2369 | y_speed | 0x0668 | 0x0000 | -0x668 |
+| TestS2ArzLevelSelect | f2434 | tails_cpu_control_counter | 0x0000 | 0x0001 | 0x1 |
+| TestS1Ghz1CompleteRun | f2573 | y_speed | 0x07F0 | 0x0000 | -0x7F0 |
+| TestS1Mz2CompleteRun | f2578 | y_speed | -0568 | 0x0568 | 0xAD0 |
+| TestS2Cpz2LevelSelect | f2888 | tails_x | 0x10F8 | 0x10F0 | -0x8 |
+| TestS3kIczCompleteRun | f3116 | status_byte | 0x0008 | 0x0009 | 0x1 |
+| TestS1Syz3CompleteRun | f3468 | x | 0x0CC5 | 0x0CC4 | -0x1 |
+| TestS2DezEndingLevelSelect | f4007 | x_speed | -01F3 | 0x01F3 | 0x3E6 |
+| TestS2Cnz2LevelSelect | f4418 | tails_y | 0x02F0 | 0x02F1 | 0x1 |
+| TestS2Mcz2LevelSelect | f4485 | tails_x | 0x0EAB | 0x0EAC | 0x1 |
+| TestS1Lz1CompleteRun | f5745 | camera_y | 0x028E | 0x028C | -0x2 |
+| TestS3kAiz | f19089 | g_speed | -00B0 | 0x00B0 | 0x160 |
+
