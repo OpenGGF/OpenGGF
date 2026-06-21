@@ -5,11 +5,9 @@ import com.openggf.game.sonic1.Sonic1Level;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BallHogBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BombBadnikInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BurrobotBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1ChopperBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1JawsBadnikInstance;
@@ -53,12 +51,14 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
     private Map<ObjectSpawn, List<RingSpawn>> ringSpawnMapping = Map.of();
 
     private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
-            bombFuseChildCodec(),
+            // Sonic1BombFuseInstance restores through RewindRecreatable graph
+            // relink/adoption. See TestS1BadnikChildGraphRewind.
             // Sonic1BuzzBomberMissileInstance and
             // Sonic1BuzzBomberMissileDissolveInstance restore through
             // RewindRecreatable generic recreate; scalar state is reapplied
             // after construction.
-            caterkillerBodyCodec(),
+            // Sonic1CaterkillerBodyInstance restores through RewindRecreatable
+            // graph relink/adoption. See TestS1BadnikChildGraphRewind.
             // Sonic1CrabmeatProjectileInstance restores through
             // RewindRecreatable generic recreate; scalar state is reapplied
             // after construction.
@@ -75,7 +75,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             bossBlockCodec(),
             // Sonic1FalseFloorInstance.FalseFloorBlock now relinks to the live
             // master through RewindRecreatable genericRecreate.
-            orbSpikeCodec(),
+            // Sonic1OrbinautBadnikInstance.OrbSpikeObjectInstance restores through
+            // RewindRecreatable graph relink/adoption. See TestS1BadnikChildGraphRewind.
             // NOTE: scrapEggmanButtonCodec intentionally REMOVED.
             // ScrapEggmanButton is construction-spawned: Sonic1ScrapEggmanInstance
             // constructor calls spawnDynamicObject(button). Re-adding a codec would
@@ -109,95 +110,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
     // shared class already implements RewindRecreatable -> genericRecreate Path 1.
     // Sonic1SeesawBallObjectInstance restores through RewindRecreatable graph
     // relink/adoption and is covered by TestSeesawBallGraphRewindTest.
-
-    private static DynamicObjectRewindCodec bombFuseChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic1BombFuseInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic1BombFuseInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                ObjectSpawn spawn = entry.spawn();
-                Sonic1BombBadnikInstance parent =
-                        findLiveBombParentForRewind(context, spawn.x(), spawn.y());
-                if (parent == null) {
-                    return null;
-                }
-                // Non-final scalars (facingLeft, ceilingBomb, fuseTime/timer, fuseYSpeed)
-                // are reapplied by restoreObjectRewindState; pass placeholders here.
-                // origY is final but equals spawn.y() (its ctor-time value).
-                return new Sonic1BombFuseInstance(
-                        spawn.x(), spawn.y(), false, false, 0, 0, parent);
-            }
-        };
-    }
-
-    private static Sonic1BombBadnikInstance findLiveBombParentForRewind(
-            DynamicObjectRecreateContext context, int x, int y) {
-        Sonic1BombBadnikInstance best = null;
-        long bestDist = Long.MAX_VALUE;
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (inst instanceof Sonic1BombBadnikInstance bomb) {
-                long dx = bomb.getX() - x;
-                long dy = bomb.getY() - y;
-                long dist = dx * dx + dy * dy;
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    best = bomb;
-                }
-            }
-        }
-        return best;
-    }
-
-    private static DynamicObjectRewindCodec caterkillerBodyCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic1CaterkillerBodyInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic1CaterkillerBodyInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // The head is a layout-spawned badnik recreated earlier in the
-                // restore loop, so it is live in getActiveObjects(). It serves as
-                // both the parent-chain root (head) and the immediate parentState
-                // (the head implements CaterkillerParentState). The per-segment
-                // movement/animation scalars are non-final and reapplied by the
-                // generic field capturer after recreate. isAnimatedSegment and
-                // fragSpeedIndex are passed as placeholders; they were un-finaled so
-                // the generic capturer reapplies their captured values.
-                Sonic1CaterkillerBadnikInstance head = null;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof Sonic1CaterkillerBadnikInstance h) {
-                        head = h;
-                        break;
-                    }
-                }
-                if (head == null) {
-                    return null;
-                }
-                ObjectSpawn spawn = entry.spawn();
-                return new Sonic1CaterkillerBodyInstance(
-                        head, head, spawn.x(), spawn.y(),
-                        false, false, 0, 0);
-            }
-        };
-    }
 
     private static DynamicObjectRewindCodec ghzBossWreckingBallCodec() {
         return new DynamicObjectRewindCodec() {
@@ -321,56 +233,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     }
                 }
                 return block;
-            }
-        };
-    }
-
-    private static final String ORB_SPIKE_CLASS =
-            "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance"
-                    + "$OrbSpikeObjectInstance";
-
-    private static DynamicObjectRewindCodec orbSpikeCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(ORB_SPIKE_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return ORB_SPIKE_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // Relink the live Orbinaut parent (a layout/active badnik recreated
-                // earlier in the restore loop). The OrbSpikeObjectInstance is a private
-                // static nested class, so it is constructed by reflection on the
-                // (Sonic1OrbinautBadnikInstance, int) ctor with a placeholder startAngle.
-                // All live state (x, y, angle, launched, xVelocity) is non-final and
-                // reapplied by restoreObjectRewindState; the parent ref stays final
-                // (relinked here); motion is reset from x/xVel each step.
-                Sonic1OrbinautBadnikInstance parent = null;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof Sonic1OrbinautBadnikInstance o) {
-                        parent = o;
-                        break;
-                    }
-                }
-                if (parent == null) {
-                    return null;
-                }
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(
-                            Sonic1OrbinautBadnikInstance.class, int.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(parent, 0);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
             }
         };
     }

@@ -16,6 +16,8 @@ import com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance;
 import com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
+import com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance;
+import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance;
 import com.openggf.game.sonic1.objects.bosses.FZCylinder;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaBall;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher;
@@ -633,6 +635,14 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(FZCylinder.class.getName(), GameId.S1),
             new CodecDeletionCandidate(FZPlasmaLauncher.class.getName(), GameId.S1),
             new CodecDeletionCandidate(FZPlasmaBall.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1BombFuseInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1CaterkillerBodyInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance"
+                            + "$OrbSpikeObjectInstance",
+                    GameId.S1));
 
     private static final List<CodecDeletionCandidate> S2_WFZ_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
@@ -4326,6 +4336,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 FZ boss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 badnik child graph batch: live-parent-linked dynamic children
+    // =====================================================================
+
+    @Test
+    void s1BadnikChildGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_BADNIK_CHILD_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 badnik child graph batch");
+        }
+    }
+
+    @Test
+    void s1BadnikChildGraphClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_BADNIK_CHILD_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 badnik child graph generic recreate, not a dynamic codec");
         }
     }
 

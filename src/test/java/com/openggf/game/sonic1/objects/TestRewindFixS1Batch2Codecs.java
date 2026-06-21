@@ -6,6 +6,7 @@ import com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall;
 import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -17,9 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic1ObjectRegistry} (unioned with the shared codecs)
- * still exposes explicit dynamic rewind recreate codecs for the batch-2 S1
- * objects that need one. The self-contained projectile children from that batch
- * now restore through generic recreate and are asserted absent below.
+ * still exposes explicit dynamic rewind recreate codecs for the remaining
+ * batch-2 S1 objects that need one. The self-contained projectile children and
+ * graph-restored badnik children now restore through generic recreate and are
+ * asserted absent below.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
  * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
@@ -53,8 +55,6 @@ class TestRewindFixS1Batch2Codecs {
         Set<String> names = codecClassNames();
 
         List<String> required = List.of(
-                Sonic1BombFuseInstance.class.getName(),
-                Sonic1CaterkillerBodyInstance.class.getName(),
                 GHZBossWreckingBall.class.getName(),
                 // SYZBossSpike intentionally absent: construction-spawned child.
                 // Adding a codec would double it on restore. See TestBossChildNoDoubleSpawnParity.
@@ -75,6 +75,17 @@ class TestRewindFixS1Batch2Codecs {
         for (String name : genericRecreate) {
             assertFalse(names.contains(name),
                     name + " must restore through RewindRecreatable generic recreate, not a batch-2 codec");
+        }
+
+        List<Class<?>> graphRecreate = List.of(
+                Sonic1BombFuseInstance.class,
+                Sonic1CaterkillerBodyInstance.class);
+        for (Class<?> type : graphRecreate) {
+            assertFalse(names.contains(type.getName()),
+                    type.getName() + " must restore through graph-tested RewindRecreatable, "
+                            + "not a batch-2 codec");
+            assertTrue(RewindRecreatable.class.isAssignableFrom(type),
+                    type.getName() + " must opt into RewindRecreatable graph restore");
         }
     }
 }

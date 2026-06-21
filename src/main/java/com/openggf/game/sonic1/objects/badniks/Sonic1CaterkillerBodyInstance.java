@@ -3,10 +3,14 @@ package com.openggf.game.sonic1.objects.badniks;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
-import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -50,7 +54,7 @@ interface CaterkillerParentState {
  * Based on docs/s1disasm/_incObj/78 Caterkiller.asm (Cat_BodySeg1, Cat_BodySeg2).
  */
 public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, CaterkillerParentState {
+        implements TouchResponseProvider, TouchResponseListener, CaterkillerParentState, RewindRecreatable {
 
     // Collision size index from disassembly (obColType low bits = $0B).
     private static final int COLLISION_SIZE_INDEX = 0x0B;
@@ -95,9 +99,9 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
     private int ringBufferIndex;
 
     // Root head reference used for lifecycle/despawn checks.
-    private final Sonic1CaterkillerBadnikInstance head;
+    private Sonic1CaterkillerBadnikInstance head;
     // Immediate parent in the segment chain (head for seg1, seg1 for seg2, etc.).
-    private final CaterkillerParentState parentState;
+    private CaterkillerParentState parentState;
 
     // Velocity state
     private int xVelocity;
@@ -113,6 +117,9 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
     // Per-segment ring buffer (objoff_2C+0..15). Child segments read from this.
     private final byte[] ringBuffer = new byte[16];
 
+    Sonic1CaterkillerBodyInstance() {
+        this(null, null, 0, 0, false, false, 0, 0);
+    }
 
     /**
      * Creates a Caterkiller body segment.
@@ -153,6 +160,59 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
 
         // Body routines are 4/6/8, which map to Cat_FragSpeed entries 1/2/3.
         this.fragSpeedIndex = segmentIndex + 1;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn capturedSpawn = ctx.spawn();
+        Sonic1CaterkillerBadnikInstance restoredHead = nearestLiveCaterkillerHeadForRewind(ctx);
+        if (capturedSpawn == null || restoredHead == null) {
+            return null;
+        }
+        Sonic1CaterkillerBodyInstance restored = new Sonic1CaterkillerBodyInstance(
+                restoredHead, restoredHead, capturedSpawn.x(), capturedSpawn.y(),
+                false, false, 0, 0);
+        restoredHead.adoptBodySegmentForRewind(restored);
+        return restored;
+    }
+
+    void relinkForRewind(
+            Sonic1CaterkillerBadnikInstance restoredHead,
+            CaterkillerParentState restoredParentState) {
+        this.head = restoredHead;
+        this.parentState = restoredParentState;
+    }
+
+    boolean isLinkedToHead(Sonic1CaterkillerBadnikInstance candidateHead) {
+        return head == candidateHead;
+    }
+
+    private static Sonic1CaterkillerBadnikInstance nearestLiveCaterkillerHeadForRewind(
+            RewindRecreateContext ctx) {
+        ObjectServices services = ctx.objectServices();
+        ObjectManager objectManager = services != null ? services.objectManager() : null;
+        ObjectSpawn capturedSpawn = ctx.spawn();
+        if (objectManager == null) {
+            return null;
+        }
+        Sonic1CaterkillerBadnikInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (!(object instanceof Sonic1CaterkillerBadnikInstance head) || head.isDestroyed()) {
+                continue;
+            }
+            if (capturedSpawn == null) {
+                return head;
+            }
+            long dx = head.getX() - capturedSpawn.x();
+            long dy = head.getY() - capturedSpawn.y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = head;
+            }
+        }
+        return best;
     }
 
     @Override
