@@ -18040,3 +18040,19 @@ Four measured fix cycles this session, all reverted per net-positive:
 OOZ inclusive-edge (net-neg 1782->1251), MHZ sticky (neutral), MHZ rolling-landing
 (= GHZ-regression-prone root), GHZ ledge heightmap (net-neg GHZ3 1246->564).
 Baseline: 53.
+
+## 2026-06-21 -- Cluster-4 dramatic trace root: CNZ-CR f1846 = hover fan not solid
+
+CNZ-CR f1846 (tails_x_speed exp0024 act-1000): ROM Tails is ON the CNZ Hover Fan
+(onObj=04, status 0x20 Push, x_speed 0x24 -- riding it). Engine: the fan
+(CnzHoverFanInstance id 0x46, subtype 0x00 -> activeVariant=false) does NOT implement
+SolidObjectProvider, so Tails has no standable surface, falls off, and ends at
+x_speed=-1000. Root = CNZ hover fan missing solidity for the sidekick to stand on
+(needs verifying ROM Obj $46 calls SolidObject and porting its solid shape + the
+sidekick riding path). Non-trivial object change; another coupled multi-part fix.
+
+Eighth deep root confirmed this session (OOZ ring box, OOZ push phase, GHZ ledge
+heightmap+index, MHZ mushroom landing-phase, sign-flip angle, ARZ2 slot-alloc, CNZ
+hover-fan solidity). Every cluster-4/5/6 representative is a coupled multi-part bug
+in shared or object code; four full fix->sweep->revert cycles all net-negative/neutral.
+Baseline: 53.
