@@ -17799,3 +17799,79 @@ engine already uses fixed push=10 (AbstractPlayableSprite.updatePushSensors /
 updatePushSensorYOffset) and CalcRoomInFront uses fixed +-10
 (CollisionSystem.describeCalcRoomInFrontProbe), matching ROM CheckRightWallDist
 addi.w #$A,d3. So the rolling x_radius shrink does NOT widen/narrow the push probe.
+
+## 2026-06-21 -- FULL SWEEP: true frontier table (frontierOnly) + MGZ f539 REINSTATED
+
+Command: mvn -q -Dmse=off -Dtrace.frontierOnly=true "-Dtest=*TraceReplay"
+"-Ds3k.rom.path=..." test  (worktree trace-cluster-fixes @ e4431099a). Result:
+Tests run 90, Failures 53, Errors 1 (S3K HCZ error). This is the TRUE current
+frontier (supersedes stale per-trace reports).
+
+CORRECTION to the prior entry: MGZ f539 rings (exp10/act11) is REAL and IS the
+frontier under frontierOnly. My earlier "stale/retracted" claim was wrong: I had
+run WITHOUT frontierOnly, so the loop ran past f539 (the ring divergence is an
+accumulated release-blocking divergence, not a hard stop) and hit the hard
+fail() input-alignment check at f33271 (AbstractTraceReplayTest:513), which MASKED
+f539. Both are real: f539 = ring divergence (true frontier); f33271 = a separate
+BK2-vs-physics.csv input desync only reached in full-run mode (trace-regen
+candidate). The ROM characterisation stands: ring collection is post-physics and
+the engine box matches Test_Ring_Collisions, so f539 is a ring-position/ring-set
+divergence, NOT an object-exec phase bug.
+
+True frontier table (first-error frame | trace | field):
+  72   MHZ-CR        y_speed exp00E0 act0000
+  291  CNZ(s3k)      x_speed exp0600 act-02D1
+  502  SYZ1-CR       x      exp0223 act022B
+  523  ARZ2-LS       obj_extra_s24_x absent/067F
+  539  MGZ(s3k)      rings  exp10 act11
+  651  SLZ2-CR       g_speed exp1000 act10AE
+  713  FZ-CR         y_speed exp0000 act-0700
+  718  SLZ3-CR       y_speed exp0000 act0610
+  723  SLZ1-CR       x_speed exp0000 act-0200
+  738  MGZ-CR        rings  exp17 act18
+  1068 LZ2-CR        obj_s20_slot 20/25
+  1070 OOZ2-LS       camera_y exp0475 act046F
+  1078 HTZ2-LS       y_speed exp-0568 act0568 (sign flip)
+  1088 SYZ2-CR       x_speed exp02E8 act02F4
+  1095 AIZ-CR        x_sub  exp0000 act0C00
+  1246 GHZ3-CR       y      exp0219 act021A
+  1265 MTZ2-LS       y      exp0464 act0462
+  1267 MTZ-LS        y      exp00AC act00A4
+  1395 SBZ2-CR       obj_s48_slot 48/3B
+  1415 LZ3-CR        angle  exp00C0 act00D0
+  1489 HCZ-CR        y      exp0776 act0775
+  1691 CNZ-LS(s2)    y_speed exp0400 act0000
+  1694 LBZ-CR        air    exp0 act1
+  1702 MZ3-CR        y      exp048C act048B
+  1782 OOZ-LS        tails_x exp0CE4 act0CE3   <- earliest cluster-4 (Tails)
+  1846 CNZ-CR(s3k)   tails_x_speed exp0024 act-1000  <- severe Tails-CPU
+  1925 SBZ1-CR       g_speed exp0556 act0000
+  1973 MTZ3-LS       tails_x exp07C9 act07CA
+  2089 MZ1-CR        camera_y exp02BE act02C4
+  2369 GHZ2-CR       y_speed exp0668 act0000
+  2573 GHZ1-CR       y_speed exp07F0 act0000
+  2578 MZ2-CR        y_speed exp-0568 act0568 (sign flip)
+  2889 CPZ2-LS       tails_x exp10E8 act10F0
+  3116 ICZ-CR        status_byte exp0008 act0009
+  3365 CPZ-LS        tails_x exp24AB act24AA
+  3468 SYZ3-CR       x      exp0CC5 act0CC4
+  4007 DEZ-LS        x_speed exp-01F3 act01F3 (sign flip)
+  4418 CNZ2-LS       tails_y exp02F0 act02F1
+  4485 MCZ2-LS       tails_x exp0EAB act0EAC
+  5745 LZ1-CR        camera_y exp028E act028C
+  6114 HTZ-LS        air    exp1 act0
+  19089 AIZ(s3k)     g_speed exp-00B0 act00B0 (sign flip)
+(plus a few not listed by the grep; 53 total.)
+
+Cluster mapping vs the goal's signatures:
+  1 frame-0 setup:        empty (earliest is f72, not frame-0).
+  2 radius/rolling:       no engine deviation in push/wall path (push=10 / +-10
+                          already match ROM CheckRightWallDist); hypothesis does
+                          not map to a fixable bug.
+  3 exact 0x100 deltas:   none (no first-error speed diff is exactly 0x100).
+  4 Tails CPU:            tails_* set; earliest OOZ-LS f1782 (1px), severe
+                          CNZ-CR(s3k) f1846 tails_x_speed -1000.
+  5 downstream of Tails:  velocity sign-flips HTZ2/MZ2 -0568->+0568, DEZ, AIZ.
+  6 onesies:              the single-error 1px/slot traces.
+Next actionable target (clusters 1-3 have no fixable deviation): cluster 4,
+earliest trace OOZ-LS f1782 tails_x.
