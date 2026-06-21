@@ -18238,3 +18238,24 @@ cleared by Family-B mechanics alone; it needs the upstream sub-pixel position ro
 fixed first. Nine fix attempts this session, zero net-positive landings -- the frontier
 set is dominated by sub-pixel-hypersensitive / multi-root-coupled cases; landing
 survivors is genuine multi-session BizHawk-per-trace work.
+
+## 2026-06-21 -- PLAN M1 OOZ f1782 v5 (exact-edge top bias) NEUTRAL; DEFINITIVE sub-pixel-irreducible proof
+
+v5: inclusive accept boundary + a top-landing bias at the exact edge (classifyAbsDistX==0
+&& absDistY<=maxTop && yspeed>=0 -> treat as top). Result: the f1251/f1235 regressions
+are GONE (OOZ-LS back at the original f1782), but f1782 is UNCHANGED (Tails still 0CE3).
+Reason: the top-bias also catches f1781 -- the f1782-producing side contact -- because
+at the engine's PIXEL resolution f1781 (ROM side/Status_Push) and f1251 (ROM top/land)
+are GEOMETRICALLY IDENTICAL (both exact-edge, top-band, yspeed>=0). ROM resolves them
+oppositely purely on the player's SUB-PIXEL x. No pixel-level rule (edge boundary, clamp,
+rider gate, or top-bias) can separate them.
+
+DEFINITIVE: OOZ f1782 is sub-pixel-irreducible. The two cases that any side-contact fix
+must separate (f1781 push vs f1251 land) are pixel-identical; only the player/Tails exact
+sub-pixel x at the platform right edge distinguishes them, and that sub-pixel position is
+a downstream-of-physics / downstream-of-Tails-CPU root. Five variants (v1-v5) exhausted;
+all net-negative or neutral; reverted. The queue head cannot be cleared by Family-B
+mechanics -- it requires the upstream sub-pixel position to match ROM first (Family-D /
+physics, the plan's heaviest-gated last work). Ten fix attempts this session, zero
+surviving landings: the frontier set is dominated by exactly this sub-pixel-irreducible
+class, so plan completion is genuine multi-session work on the upstream sub-pixel roots.
