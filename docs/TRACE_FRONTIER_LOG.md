@@ -17186,3 +17186,20 @@ sidekick-physics work -- supervised, not an autonomous override. Override approa
 foreclosed (4 variants now: push+stop, push-only, current-scan, and this phase-shift
 diagnosis).
 
+
+### 2026-06-21 -- CPZ2 f2888 root cause: carry is correct; follow-steer x_speed is wrong
+
+CPZ2 Tails drifts -8px on a moving platform (engine moves Tails -16/frame where ROM
+moves -8; tails_x_speed=-0800). Traced it: the platform CARRY is correct --
+ObjectSolidContactController:1527-1529 does player.shiftX(currentX - ridingX) (additive
+platform delta), matching ROM MvSonicOnPF (rider.x += platformDelta). The bug is that
+the engine's CPU Tails carries a follow-steer x_speed of -0800 WHILE standing on the
+moving platform, so its own-move (-8) plus the carry (-8) = -16; ROM's Tails has x_speed
+~0 there (carried, not self-propelling) -> net -8. So the fix is in the follow-steer:
+the CPU sidekick must not self-propel at the platform's speed while it is being carried
+by that platform (zero/▼ its follow x_speed when ridingObject is a horizontally-moving
+solid and the leader is co-riding). That lives in the deep SidekickCpuController follow
+logic (regression-prone, TestSidekickCpuFollowParity), so it needs the full-suite +
+parity verification -- not an autonomous quick edit. NOTE for next session: do NOT touch
+the carry (it is ROM-correct); fix the sidekick's self-propel-while-carried x_speed.
+
