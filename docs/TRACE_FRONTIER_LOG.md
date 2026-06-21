@@ -17164,3 +17164,25 @@ x_sub diffing of the CPU-follow movement chain vs ROM (BizHawk-assisted) and is 
 sidekick-physics work with cross-trace regression risk -- a supervised, multi-hour effort,
 NOT an autonomously-landable override. This forecloses the override approach entirely.
 
+
+### 2026-06-21 -- OOZ wall-push CORRECTED: push is PHASE-SHIFTED, not missing
+
+Full ROM dump at OOZ resolves the earlier mis-framing. The CPU sidekick's Status_Push
+is NOT simply missing -- it is OUT OF PHASE with ROM by a few frames:
+- f1776: ROM tails status=0x28 (push set), engine 0x08 (no push). Engine LAGS.
+- f1782: ROM tails status=0x09 (push CLEAR), engine 0x29 (push set). Engine LEADS.
+So the engine DOES set/clear the sidekick push (it has it at f1782), but a few frames
+off from ROM. Both characters are standing on OOZ objects here (Tails onObj=0x1D, Sonic
+onObj=0x22), among green platforms (0x33), spikes (0x36), etc.
+
+This DEFINITIVELY explains why all three 'set push on flush wall' override variants
+regressed: the engine already (wrongly) has push at f1782, so forcing more push makes
+it worse, and forcing it at flush seams (f1654) adds false push where ROM has none. The
+bit is not missing; its TIMING is wrong. The fix is sub-pixel / object-interaction phase
+alignment of the CPU sidekick (so its push set/clear lands on ROM's frames), NOT any
+push-setting override. Same cumulative-phase class as the documented S3K AIZ analysis.
+Needs frame-by-frame CPU-sidekick state diffing vs ROM (BizHawk-assisted) and is shared
+sidekick-physics work -- supervised, not an autonomous override. Override approach fully
+foreclosed (4 variants now: push+stop, push-only, current-scan, and this phase-shift
+diagnosis).
+
