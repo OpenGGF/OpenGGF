@@ -108,6 +108,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance", "controlledPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance", "spikes"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance", "grabbedPlayer"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.EggPrisonObjectInstance", "buttonObject"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.EggPrisonObjectInstance", "lastPlayer"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "lockedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.PointPokeyObjectInstance", "slotMachineManager"), RewindFieldPolicy.TRANSIENT),

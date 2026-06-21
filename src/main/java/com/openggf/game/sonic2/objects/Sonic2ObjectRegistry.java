@@ -141,7 +141,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // DestroyedEggPrisonObjectInstance now implements
             // RewindRecreatable -> genericRecreate Path 1.
             // RexonHeadObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            eggPrisonButtonCodec(),
+            // EggPrisonButtonObjectInstance now restores through RewindRecreatable graph relinks.
             // LeafParticleObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // ResultsScreenObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // BossExplosionObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
@@ -512,33 +512,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return null;
-    }
-
-    private static DynamicObjectRewindCodec eggPrisonButtonCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == EggPrisonButtonObjectInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return EggPrisonButtonObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                EggPrisonObjectInstance parent =
-                        findLiveInstance(context, EggPrisonObjectInstance.class);
-                if (parent == null) {
-                    return null;
-                }
-                // parent relinked via ctor; baseY recomputed from spawn (final, spawn-derivable);
-                // currentY/triggered are non-final scalars reapplied by restoreObjectRewindState.
-                return new EggPrisonButtonObjectInstance(entry.spawn(), parent);
-            }
-        };
     }
 
     @Override

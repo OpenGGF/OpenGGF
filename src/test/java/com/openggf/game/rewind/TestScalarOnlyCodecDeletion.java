@@ -21,6 +21,7 @@ import com.openggf.game.sonic2.objects.CheckpointDongleInstance;
 import com.openggf.game.sonic2.objects.CheckpointStarInstance;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.ConveyorObjectInstance;
+import com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance;
 import com.openggf.game.sonic2.objects.PointsObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
@@ -700,6 +701,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance",
                     GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S2_EGG_PRISON_BUTTON_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(EggPrisonButtonObjectInstance.class.getName(), GameId.S2));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -4508,6 +4512,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K cutscene Knuckles graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S2 Egg Prison button graph batch: parent/button linked capsule graph
+    // =====================================================================
+
+    @Test
+    void s2EggPrisonButtonGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_EGG_PRISON_BUTTON_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 Egg Prison button graph batch");
+        }
+    }
+
+    @Test
+    void s2EggPrisonButtonGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_EGG_PRISON_BUTTON_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 Egg Prison button graph generic recreate, not a dynamic codec");
         }
     }
 
