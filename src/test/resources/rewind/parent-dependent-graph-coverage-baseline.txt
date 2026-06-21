@@ -60,9 +60,9 @@ covered|com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChi
 session-tail|com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance|needs focused S3K MGZ2 collapse graph/session rewind harness
 covered|com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild|TestS3kNestedHurtboxGraphRewind
 covered|com.openggf.game.sonic3k.objects.S3kSignpostStubChild|TestS3kSignpostStubGraphRewind
-session-tail|com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance|needs focused S3K slot-bonus graph/session rewind harness
-session-tail|com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance|needs focused S3K slot-bonus graph/session rewind harness
-session-tail|com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance|needs focused S3K slot-bonus graph/session rewind harness
+covered|com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance|TestS3kSlotBonusGraphRewind
+covered|com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance|TestS3kSlotBonusGraphRewind
+covered|com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance|TestS3kSlotBonusGraphRewind
 session-tail|com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance|needs focused S3K invincibility-stars graph/session rewind harness
 covered|com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild|TestCheckpointStarpostGraphRewind
 covered|com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild|TestCheckpointStarpostGraphRewind
