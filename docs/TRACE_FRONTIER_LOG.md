@@ -17439,3 +17439,29 @@ head is ROM-positioned, the existing applyEnemyBounce should fire and the f2578
 sign-flip resolves. HTZ2 f1078 shows the same -0568 but with HTZ objects
 0x96/0x97/0x98 (no monitor/caterkiller) -- a sibling case in the same
 rolling-bounce class, to confirm after MZ2.
+
+## 2026-06-21 -- MZ2 f2578 refined: bounce Caterkiller absent (spawn-window/respawn), not movement
+
+Engine instrumentation (oggf.diag.cathead with gameplay frame counter) shows the
+engine's Caterkiller head walks to x~04B8,y03D8 and is DELETED at gameplay frame
+~29807 (trace ~728) when Sonic passes it moving right (px0627, head goes
+off-screen-left). Between trace 728 and the bounce at trace 2578 NO Caterkiller
+head exists in the bounce region (x 0x0380-0x0500, y 0x03C0-0x03F0). When Sonic
+loops back left to px040F at trace 2578, ROM has a Caterkiller at x0414 (persisted
++ walked, or re-spawned from the MZ2 layout on the leftward/return approach) but
+the engine has none -> no head to destroy -> no React_Enemy neg.w obVelY -> the
+y_speed sign-flip.
+
+So the chain is: bounce-code OK -> head mispositioned -> head ABSENT. Root is the
+object spawn-window / respawn lifecycle: the engine permanently deletes the
+Caterkiller on first pass and does not re-present it when Sonic re-approaches the
+layout slot. Likely related to the leftward/backward respawn margin
+(cameraX-128 coarse, cf. the BlueBalls MarkObjGone note) and/or the Caterkiller's
+usesCustomOutOfRangeCheck lifecycle. This is an MZ2-looping-layout
+spawn/persistence investigation, not a rolling-physics fix -- larger than a
+single-frame bisect and only fixes MZ2 (HTZ2 f1078 is a different object in the
+same rolling-bounce class).
+
+Session status: 1 engine fix landed (CPZ2 f2888->f2889, net-positive, 0
+regressions). Clusters remaining are each deep, distinct subsystem bugs (spawn
+windowing, sidekick object-phase, tube handoff). All-green is multi-session.
