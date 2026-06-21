@@ -31,8 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>These classes are expected to show up as {@code parent-dependent} in the
  * headless round-trip sweep: they can be constructed, but recreate needs a live
  * parent/sibling graph in {@code ObjectManager}. The baseline keeps that bucket
- * explicit and marks which families already have focused graph rewind tests
- * versus which still require real session/family harness work.
+ * explicit and marks focused graph rewind test evidence for each family. Any
+ * remaining unproven families stay visible as {@code session-tail} rows until
+ * focused session/family harnesses cover them.
  */
 class TestParentDependentGraphCoverageGuard {
     private static final String BASELINE_RESOURCE =
@@ -62,9 +63,12 @@ class TestParentDependentGraphCoverageGuard {
         long covered = baseline.values().stream()
                 .filter(entry -> entry.status() == Status.COVERED)
                 .count();
-        long sessionTail = baseline.size() - covered;
+        long sessionTail = baseline.values().stream()
+                .filter(entry -> entry.status() == Status.SESSION_TAIL)
+                .count();
         assertTrue(covered > 0, "baseline must record existing graph-tested families");
-        assertTrue(sessionTail > 0, "baseline must keep remaining session-tail work visible");
+        assertEquals(baseline.size(), covered + sessionTail,
+                "baseline rows must be accounted for as covered or session-tail");
 
         for (BaselineEntry entry : baseline.values()) {
             if (entry.status() == Status.COVERED) {

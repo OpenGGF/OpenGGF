@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -87,22 +89,71 @@ class TestRewindFixS3KIczBigSnowPileCodec {
                 "recreated snow pile must use the live ICZ events owner from Sonic3kLevelEventManager");
     }
 
+    @Test
+    void bigSnowPileRestoresThroughObjectManagerWithoutDropsDoublesOrStaleOwner() throws Exception {
+        assertFalse(hasExplicitCodec(IczBigSnowPileInstance.class),
+                "IczBigSnowPileInstance must not keep its hand-written dynamic codec");
+
+        IczBigSnowPileInstance captured = objectManager.createDynamicObject(
+                () -> new IczBigSnowPileInstance(snowPileSpawn(), iczEvents));
+        assertEquals(1, liveSnowPiles().size(),
+                "precondition: exactly one ICZ big snow pile is live before capture");
+        int capturedSlot = captured.getSlotIndex();
+
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objectManager.rewindSnapshottable());
+        var snapshot = registry.capture();
+
+        objectManager.removeDynamicObject(captured);
+        IczBigSnowPileInstance divergent = objectManager.createDynamicObject(
+                () -> new IczBigSnowPileInstance(snowPileSpawn(), iczEvents));
+        assertEquals(1, liveSnowPiles().size(),
+                "diverge step should leave one unrelated live ICZ big snow pile before restore");
+
+        registry.restore(snapshot);
+
+        List<IczBigSnowPileInstance> restoredPiles = liveSnowPiles();
+        assertEquals(1, restoredPiles.size(),
+                "restore must recreate the captured ICZ big snow pile exactly once, not drop or double it");
+        IczBigSnowPileInstance restored = restoredPiles.getFirst();
+        assertNotSame(captured, restored,
+                "restore should recreate a fresh pile instance instead of keeping the removed captured object");
+        assertNotSame(divergent, restored,
+                "restore should replace divergent live piles with the captured snapshot state");
+        assertEquals(capturedSlot, restored.getSlotIndex(),
+                "restored ICZ big snow pile must keep the captured dynamic slot");
+        assertSame(iczEvents, eventsField(restored),
+                "restored snow pile must point at the live ICZ events owner, not a stale pre-restore owner");
+        assertFalse(restored.isDestroyed(), "restored ICZ big snow pile must remain live");
+    }
+
     private static boolean hasExplicitCodec(Class<?> targetClass) {
         return new Sonic3kObjectRegistry().dynamicRewindCodecs().stream()
                 .map(DynamicObjectRewindCodec::className)
                 .anyMatch(targetClass.getName()::equals);
     }
 
+    private List<IczBigSnowPileInstance> liveSnowPiles() {
+        return objectManager.getActiveObjects().stream()
+                .filter(object -> object.getClass() == IczBigSnowPileInstance.class && !object.isDestroyed())
+                .map(IczBigSnowPileInstance.class::cast)
+                .toList();
+    }
+
     private static ObjectManagerSnapshot.DynamicObjectEntry dynamicEntry() {
-        ObjectSpawn spawn = new ObjectSpawn(
-                IczBigSnowPileInstance.X_POSITION,
-                IczBigSnowPileInstance.BASE_Y,
-                0, 0, 0, false,
-                IczBigSnowPileInstance.BASE_Y);
+        ObjectSpawn spawn = snowPileSpawn();
         PerObjectRewindSnapshot state = new PerObjectRewindSnapshot(
                 false, false, false, 0, 0, 0, 0, false, 0, false, false, 0, -1, null, null, null);
         return new ObjectManagerSnapshot.DynamicObjectEntry(
                 IczBigSnowPileInstance.class.getName(), spawn, 0, state);
+    }
+
+    private static ObjectSpawn snowPileSpawn() {
+        return new ObjectSpawn(
+                IczBigSnowPileInstance.X_POSITION,
+                IczBigSnowPileInstance.BASE_Y,
+                0, 0, 0, false,
+                IczBigSnowPileInstance.BASE_Y);
     }
 
     private static Object eventsField(IczBigSnowPileInstance pile) throws ReflectiveOperationException {

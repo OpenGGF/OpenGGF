@@ -55,15 +55,15 @@ covered|com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild|com
 covered|com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1CollapseChild|com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind
 covered|com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper|com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind
 covered|com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild|com.openggf.game.sonic3k.objects.TestHczMinibossRocketTouchRewind
-session-tail|com.openggf.game.sonic3k.objects.IczBigSnowPileInstance|needs focused S3K ICZ snow-pile graph/session rewind harness
+covered|com.openggf.game.sonic3k.objects.IczBigSnowPileInstance|com.openggf.game.sonic3k.objects.TestRewindFixS3KIczBigSnowPileCodec
 covered|com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild|TestS3kNestedHurtboxGraphRewind
-session-tail|com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance|needs focused S3K MGZ2 collapse graph/session rewind harness
+covered|com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance|com.openggf.game.sonic3k.events.TestSonic3kMgz2CollapseEvents
 covered|com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild|TestS3kNestedHurtboxGraphRewind
 covered|com.openggf.game.sonic3k.objects.S3kSignpostStubChild|TestS3kSignpostStubGraphRewind
 covered|com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance|TestS3kSlotBonusGraphRewind
 covered|com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance|TestS3kSlotBonusGraphRewind
 covered|com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance|TestS3kSlotBonusGraphRewind
-session-tail|com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance|needs focused S3K invincibility-stars graph/session rewind harness
+covered|com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance|com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind
 covered|com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild|TestCheckpointStarpostGraphRewind
 covered|com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild|TestCheckpointStarpostGraphRewind
-session-tail|com.openggf.level.objects.InvincibilityStarsObjectInstance|needs focused shared invincibility-stars graph/session rewind harness
+covered|com.openggf.level.objects.InvincibilityStarsObjectInstance|com.openggf.game.sonic2.objects.TestS2SelfContainedTransientRewind

@@ -171,8 +171,6 @@ com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#spawnY
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1PylonObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1RingFlashObjectInstance#finalScalar#posX
-com.openggf.game.sonic1.objects.Sonic1RingFlashObjectInstance#finalScalar#posY
 com.openggf.game.sonic1.objects.Sonic1RockObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#angularSpeed
 com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#detectionRadius
@@ -1376,7 +1374,6 @@ com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#recreate
 com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#recreate
-com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper#objectRef#owner
 com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMinibossInstance#recreate
