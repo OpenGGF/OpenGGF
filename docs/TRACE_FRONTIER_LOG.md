@@ -17702,3 +17702,29 @@ of 4/5. The two highest-leverage roots (object-landing-phase; sidekick
 push/solid-contact phase) are both object-execution-PHASE problems -- the genuine
 unifier -- and neither has a safe net-positive single-frame fix; both need a
 shared phase-alignment with full-sweep gating (high blast radius).
+
+## 2026-06-21 -- GHZ gate-hook: ROM exits Plat at bhi (d0>0) at the touch frame; lands only when penetrated
+
+diag_s1_plat_gate.lua hooks the Plat gates between the range check and the land
+write: PC 0x7B0E (tst f_playerctrl), 0x7B24 (move d2,obY = the land). Result:
+  f=3362 GATE0E sonicY=020E d0=-9 f_playerctrl=0x00 sonicRtn=0x02
+  f=3362 LAND-WRITE sonicY=020E
+-> 0x7B0E and the land write execute ONLY at f3362 (Sonic penetrated, d0=-9), NOT
+at f3361 (Sonic=0206). f_playerctrl=0 and sonicRtn=2 at f3362, so the post-range
+gates do NOT exit; therefore at f3361 ROM exited at the `bhi` (0x7B02) -> ROM's d0
+at f3361 was actually >0 (Sonic still ABOVE the surface), so ROM does not land at
+0206 and lands only once penetrated at 020E.
+
+But the engine computes d0=0 (relY=0) at the SAME Sonic position (0206) and lands
+one frame early. Every formula input matches ROM (Ledge_SlopeData[13]=0x23,
+half-width 0x30, obHeight/yRadius 0x13, +4); yet engine d0=0 vs ROM d0>0 at 0206
+-> a 1px surface/position difference that is GHZ-LEDGE-SPECIFIC (MZ1's sloped
+object has no such error -- the penetration band-aid broke it). So the faithful
+fix is the GHZ collapsing-ledge surface/position being ~1px low vs ROM, NOT a
+blanket touch-vs-penetration window change. The exact 1px source (sub-pixel
+sampling, slope index rounding, or object-exec phase) is below the resolution of
+static disasm + memory/PC/gate hooks; needs sub-pixel-level ROM state capture at
+the SlopeObject heightmap read (0x7AF2-0x7B00) for Sonic's exact x_sub/y_sub.
+
+Tooling now in place: sonic.lst, diag_s1_plat.lua, diag_s1_plat_gate.lua,
+diag_s1_ypos_writes.lua.
