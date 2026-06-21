@@ -44,72 +44,9 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
 
     private Map<ObjectSpawn, List<RingSpawn>> ringSpawnMapping = Map.of();
 
-    private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
-            // Sonic1BombFuseInstance restores through RewindRecreatable graph
-            // relink/adoption. See TestS1BadnikChildGraphRewind.
-            // Sonic1BuzzBomberMissileInstance and
-            // Sonic1BuzzBomberMissileDissolveInstance restore through
-            // RewindRecreatable generic recreate; scalar state is reapplied
-            // after construction.
-            // Sonic1CaterkillerBodyInstance restores through RewindRecreatable
-            // graph relink/adoption. See TestS1BadnikChildGraphRewind.
-            // Sonic1CrabmeatProjectileInstance restores through
-            // RewindRecreatable generic recreate; scalar state is reapplied
-            // after construction.
-            // GHZBossWreckingBall restores through RewindRecreatable graph
-            // relink/adoption. See TestS1GhzBossGraphRewind.
-            // Sonic1SLZBossSpikeball restores through RewindRecreatable graph
-            // recreate: fragments are self-contained, live balls relink to the
-            // restored SLZ boss and the origin-matched boss seesaw.
-            // NOTE: syzBossSpikeCodec intentionally REMOVED.
-            // SYZBossSpike is construction-spawned: Sonic1SYZBossInstance.initializeBossState()
-            // calls spawnSpikeChild() which calls spawnFreeChild(). Re-adding a codec would
-            // double it on rewind restore (1 → 2). The restore adopts the reconstructed child
-            // in place at its exact captured state (ObjectManager step-4 reconciliation).
-            // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
-            // FZCylinder/FZPlasmaLauncher/FZPlasmaBall now restore through
-            // local RewindRecreatable graph adoption. See TestS1FzBossGraphRewind.
-            // Sonic1BossBlockInstance now restores through RewindRecreatable
-            // graph relink. See TestS1SyzBossBlockGraphRewind.
-            // Sonic1FalseFloorInstance.FalseFloorBlock now relinks to the live
-            // master through RewindRecreatable genericRecreate.
-            // Sonic1OrbinautBadnikInstance.OrbSpikeObjectInstance restores through
-            // RewindRecreatable graph relink/adoption. See TestS1BadnikChildGraphRewind.
-            // NOTE: scrapEggmanButtonCodec intentionally REMOVED.
-            // ScrapEggmanButton is construction-spawned: Sonic1ScrapEggmanInstance
-            // constructor calls spawnDynamicObject(button). Re-adding a codec would
-            // double it on rewind restore (1 → 2). The restore adopts the reconstructed
-            // child in place at its exact captured state (ObjectManager step-4 reconciliation).
-            // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
-            // Sonic1EggPrisonObjectInstance now uses RewindRecreatable generic recreate.
-            // Sonic1EndingSonicObjectInstance now restores through
-            // RewindRecreatable generic recreate with captured emerald graph refs.
-            // Sonic1GlassReflectionInstance now relinks to the live MZ glass
-            // block through RewindRecreatable generic recreate.
-            // Sonic1ResultsScreenObjectInstance now implements RewindRecreatable
-            // -> genericRecreate Path 1.
-            // Sonic1FloatingBlockObjectInstance now implements RewindRecreatable
-            // -> genericRecreate Path 1.
-            // Sonic1LamppostTwirlInstance now implements RewindRecreatable
-            // -> genericRecreate Path 1 with live lamppost relink.
-            // Sonic1RingFlashObjectInstance now implements RewindRecreatable
-            // -> genericRecreate Path 1 while preserving null-parent recreate.
-            // Sonic1GrassFireObjectInstance restores through RewindRecreatable
-            // plus captured parent/list graph refs. See TestS1GrassFireGraphRewind.
-    );
-
-    // Sonic1SplashObjectInstance (LZ water splash, object 0x08) is accept-drop:
-    // a sub-1-second purely-cosmetic splash re-emitted naturally on water
-    // entry/exit. See docs/KNOWN_DISCREPANCIES.md "Batch-3 Rewind: Transient
-    // Cosmetic Children Not Rewound".
-    // Sonic1StomperDoorObjectInstance now implements RewindRecreatable
-    // -> genericRecreate Path 1.
-    // Sonic1TeleporterObjectInstance codec deleted (Phase-2 batch 5):
-    // now implements RewindRecreatable -> genericRecreate Path 1.
-    // BossExplosionObjectInstance codec deleted (Phase-2 batch 39):
-    // shared class already implements RewindRecreatable -> genericRecreate Path 1.
-    // Sonic1SeesawBallObjectInstance restores through RewindRecreatable graph
-    // relink/adoption and is covered by TestSeesawBallGraphRewindTest.
+    // Handwritten per-game dynamic rewind codecs were deleted in favor of
+    // RewindRecreatable generic recreate and focused graph harness coverage.
+    private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of();
 
     public void setRingSpawnMapping(Map<ObjectSpawn, List<RingSpawn>> mapping) {
         this.ringSpawnMapping = mapping != null ? mapping : Map.of();

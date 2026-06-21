@@ -1,5 +1,4 @@
 package com.openggf.game.sonic2.objects;
-import com.openggf.level.objects.ExplosionObjectInstance;
 
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -9,7 +8,6 @@ import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectFactory;
 import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.game.sonic2.objects.badniks.AsteronBadnikInstance;
@@ -49,19 +47,6 @@ import com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance;
-import com.openggf.game.sonic2.objects.bosses.CPZBossContainer;
-import com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend;
-import com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor;
-import com.openggf.game.sonic2.objects.bosses.CPZBossDripper;
-import com.openggf.game.sonic2.objects.bosses.CPZBossFlame;
-import com.openggf.game.sonic2.objects.bosses.CPZBossGunk;
-import com.openggf.game.sonic2.objects.bosses.CPZBossPipe;
-import com.openggf.game.sonic2.objects.bosses.CPZBossPipePump;
-import com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment;
-import com.openggf.game.sonic2.objects.bosses.CPZBossPump;
-import com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik;
-import com.openggf.game.sonic2.objects.bosses.LavaBubbleObjectInstance;
-import com.openggf.game.sonic2.objects.bosses.MCZFallingDebrisInstance;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,81 +59,9 @@ import java.util.logging.Logger;
 
 public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectRegistry.class.getName());
-    private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
-            // BadnikProjectileInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // BuzzerFlameChild now implements RewindRecreatable -> genericRecreate Path 1.
-            // MonitorContentsObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // CheckpointDongleInstance and CheckpointStarInstance now implement
-            // RewindRecreatable -> genericRecreate Path 1 with live checkpoint relink.
-            // ARZBossArrow now restores through RewindRecreatable graph relink;
-            // ARZBossEyes supplies generic recreate support for the graph.
-            // ARZBossPillar now implements RewindRecreatable -> genericRecreate Path 1.
-            // GrounderRockProjectile and GrounderWallInstance now implement
-            // RewindRecreatable -> genericRecreate Path 1.
-            // HtzFireProjectileObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // NOTE: EHZ boss child codecs (Spike, Wheel, GroundVehicle, Propeller,
-            // VehicleTop) intentionally REMOVED. All five are construction-spawned
-            // (inside initializeBossState() → spawnChildComponents()), so the
-            // activeObjects restore loop re-establishes them when the boss is
-            // reconstructed via registry.create(). A codec would add a second copy
-            // from the dynamic-objects restore loop, doubling the count (7 → 14).
-            // The Propeller is also reloaded from a routine (reloadPropeller during
-            // flying-off) but that is the same singleton child; reconstruction still
-            // re-establishes the construction instance. MTZBossLaser (fired) and the
-            // routine-fired children keep their codecs.
-            // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
-            // BalkiryJetObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // ArrowProjectileInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // ShellcrackerClawInstance and SlicerPincerInstance now implement
-            // RewindRecreatable -> genericRecreate Path 1.
-            // SpikerDrillObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // TurtloidJetInstance and TurtloidRiderInstance now implement RewindRecreatable -> genericRecreate Path 1.
-            // SolFireballObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // WallTurretShotInstance and VerticalLaserObjectInstance now implement
-            // RewindRecreatable -> genericRecreate Path 1.
-            // SpikyBlockSpikeInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // BombPrizeObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // RingPrizeObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // SteamPuffObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // SeesawBallObjectInstance now restores through RewindRecreatable graph
-            // relink/adoption and is covered by TestSeesawBallGraphRewindTest.
-            // HTZ boss flamethrower/lava-ball hazards now restore through
-            // RewindRecreatable and are covered by TestS2HtzBossGraphRewind.
-            // CNZBossElectricBall now implements RewindRecreatable -> genericRecreate Path 1.
-            // Batch-4 S2 rewind codecs (CPZ boss component chain + OOZ flame).
-            // LavaBubbleObjectInstance and MCZFallingDebrisInstance now implement
-            // RewindRecreatable -> genericRecreate Path 1.
-            // BubbleObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // CPZ boss main-linked children now implement RewindRecreatable
-            // and are covered by TestS2CpzBossGraphRewind.
-            // CPZ boss secondary-parent children now implement RewindRecreatable
-            // and are covered by TestS2CpzBossGraphRewind.
-            // CPZBossFallingPart now implements RewindRecreatable -> genericRecreate Path 1.
-            // OOZBurnerFlameObjectInstance now restores through RewindRecreatable
-            // graph relink and is covered by TestS2OozBurnerFlameGraphRewind.
-            // Batch-5 S2 rewind codecs (Rexon head, egg-prison button, results screen).
-            // DestroyedEggPrisonObjectInstance now implements
-            // RewindRecreatable -> genericRecreate Path 1.
-            // RexonHeadObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // EggPrisonButtonObjectInstance now restores through RewindRecreatable graph relinks.
-            // LeafParticleObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // ResultsScreenObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // BossExplosionObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // DEZ Eggman BarrierWall codec deleted: RewindRecreatable generic
-            // recreate relinks the parent barrierWall back-reference.
-            // MTZ boss laser now implements RewindRecreatable -> genericRecreate Path 1.
-            // NOTE: ArticulatedChild, HeadChild, JetChild codecs intentionally REMOVED.
-            // These three children are construction-spawned (inside initializeBossState() →
-            // spawnChildren()), so they are re-established by boss reconstruction during
-            // the activeObjects restore loop. Adding a codec would produce a second copy
-            // from the dynamic-objects restore loop, doubling the count (10 → 18).
-            // ForearmChild has no codec and is correct (also construction-spawned).
-            // BombChild is routine-fired, but now restores through RewindRecreatable graph
-            // relink to the nearest live Death Egg Robot boss; it must stay codec-less.
-            // WFZ floating-platform, laser-wall, and platform-hurt children now restore
-            // through RewindRecreatable graph relinks in Sonic2WFZBossInstance.
-            // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
-            );
+    // Handwritten per-game dynamic rewind codecs were deleted in favor of
+    // RewindRecreatable generic recreate and focused graph harness coverage.
+    private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of();
 
     private final Map<Integer, List<String>> namesById = new HashMap<>();
     private final Set<Integer> unknownIds = new HashSet<>();
@@ -243,16 +156,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             LOGGER.info("Missing object ids: " + String.join(", ", missingEntries));
         }
     }
-
-    // EHZ boss child codecs (Spike, Wheel, GroundVehicle, Propeller, VehicleTop)
-    // and the shared findEhzBossParentForRewind() helper were removed: those
-    // children are construction-spawned and re-established by boss reconstruction
-    // during the activeObjects restore loop, so a codec would double them. See the
-    // DYNAMIC_REWIND_CODECS list comment and TestBossChildNoDoubleSpawnParity.
-
-    // ehzBossGroundVehicleCodec / ehzBossPropellerCodec / ehzBossVehicleTopCodec
-    // removed (construction-spawned EHZ boss children — see DYNAMIC_REWIND_CODECS
-    // list comment).
 
     @Override
     protected void registerDefaultFactories() {
