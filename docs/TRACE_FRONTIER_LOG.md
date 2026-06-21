@@ -17203,3 +17203,31 @@ logic (regression-prone, TestSidekickCpuFollowParity), so it needs the full-suit
 parity verification -- not an autonomous quick edit. NOTE for next session: do NOT touch
 the carry (it is ROM-correct); fix the sidekick's self-propel-while-carried x_speed.
 
+
+## 2026-06-21 -- UNIFYING INSIGHT: remaining cluster-5 is ONE object-execution-phase issue
+
+After tracing every cluster-5 member to root cause, they converge on a SINGLE underlying
+cause: the engine's per-frame execution phase does not match ROM's ExecuteObjects slot
+order for the CPU sidekick. ROM runs Sonic (slot 0), then Tails (slot 1), then dynamic
+objects (high slots) in one pass; the engine runs a snapshot -> player/sidekick physics
+-> object-execution sequence (LevelFrameStep) whose phase boundaries land one step off
+ROM for sidekick<->object interactions. Manifestations:
+- CPZ1 (FIXED): freshly-spawned Spiny shot was one object-step ahead at sidekick touch.
+  Fixed object-locally with one init-phase frame -- the per-object instance of this.
+- CPZ2 f2888: the follow-steer computes dx vs the leader at a phase where the leader's
+  slot-order move/carry hasn't/has applied differently than ROM, so Tails self-propels
+  (walks) when ROM's Tails stands (carried) -> double-move. The carry itself is correct.
+- OOZ/MTZ3/MCZ2 wall-push: the sidekick's Status_Push is set/cleared a frame off ROM
+  (lags then leads) because the push-driving collision runs at a different phase.
+- MGZ rings: a ring collected one frame early (same touch-phase).
+
+=> The high-leverage fix is NOT 5 point patches (all proven to regress as overrides);
+it is aligning the CPU sidekick's frame-execution phase with ROM's slot order so its
+follow-steer dx, touch reads, push set/clear, and carry all observe the same
+leader/object state ROM does. That is one architectural change in the sidekick update
+ordering (LevelFrameStep / SpriteManager sidekick tick vs object execution), verified by
+a full *TraceReplay resweep -- it should advance most of cluster 5 at once, but it is
+shared, high-blast-radius work that needs the full-suite + TestSidekickCpuFollowParity
+gate and careful before/after frontier comparison. This is the recommended next-session
+target: fix the phase, not the symptoms.
+
