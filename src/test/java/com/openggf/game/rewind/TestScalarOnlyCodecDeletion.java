@@ -16,6 +16,7 @@ import com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance;
 import com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1RingFlashObjectInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance;
 import com.openggf.game.sonic1.objects.bosses.FZCylinder;
@@ -631,6 +632,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S1_MZ_GLASS_REFLECTION_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(Sonic1GlassReflectionInstance.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_RING_FLASH_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1RingFlashObjectInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> S1_FZ_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(FZCylinder.class.getName(), GameId.S1),
@@ -4318,6 +4322,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 MZ glass graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 ring flash graph batch: optional live-parent-linked special-stage flash
+    // =====================================================================
+
+    @Test
+    void s1RingFlashGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_RING_FLASH_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 ring flash graph batch");
+        }
+    }
+
+    @Test
+    void s1RingFlashGraphClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_RING_FLASH_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 ring flash graph generic recreate, not a dynamic codec");
         }
     }
 

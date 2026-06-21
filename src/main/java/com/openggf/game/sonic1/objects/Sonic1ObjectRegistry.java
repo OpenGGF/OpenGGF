@@ -93,10 +93,11 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // -> genericRecreate Path 1.
             // Sonic1FloatingBlockObjectInstance now implements RewindRecreatable
             // -> genericRecreate Path 1.
-            grassFireChildCodec(),
             // Sonic1LamppostTwirlInstance now implements RewindRecreatable
             // -> genericRecreate Path 1 with live lamppost relink.
-            ringFlashCodec());
+            // Sonic1RingFlashObjectInstance now implements RewindRecreatable
+            // -> genericRecreate Path 1 while preserving null-parent recreate.
+            grassFireChildCodec());
 
     // Sonic1SplashObjectInstance (LZ water splash, object 0x08) is accept-drop:
     // a sub-1-second purely-cosmetic splash re-emitted naturally on water
@@ -285,38 +286,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                 // captured values; pass placeholder sinkOffset 0.
                 return new Sonic1GrassFireObjectInstance(
                         spawn.x(), spawn.y(), 0, parent.getSlopeData(), parent, isWalker);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec ringFlashCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic1RingFlashObjectInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic1RingFlashObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                ObjectSpawn spawn = entry.spawn();
-                Sonic1GiantRingObjectInstance parent = null;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof Sonic1GiantRingObjectInstance ring) {
-                        parent = ring;
-                        break;
-                    }
-                }
-                // hFlip placeholder (false); the live capturer reapplies the real value
-                // after recreate since hFlip is un-finaled. Parent may be null if the
-                // ring was already deleted at frame 3 (ctor only dereferences it once,
-                // gated by !triggerFired).
-                return new Sonic1RingFlashObjectInstance(parent, spawn.x(), spawn.y(), false);
             }
         };
     }

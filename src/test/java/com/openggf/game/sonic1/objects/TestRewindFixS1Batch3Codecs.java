@@ -58,7 +58,6 @@ class TestRewindFixS1Batch3Codecs {
                 Sonic1GrassFireObjectInstance.class.getName(),
                 Sonic1LamppostTwirlInstance.class.getName(),
                 Sonic1MonitorPowerUpObjectInstance.class.getName(),
-                Sonic1RingFlashObjectInstance.class.getName(),
                 Sonic1RingInstance.class.getName(),
                 Sonic1SeesawBallObjectInstance.class.getName(),
                 Sonic1SpikedBallChainObjectInstance.class.getName());
@@ -97,6 +96,17 @@ class TestRewindFixS1Batch3Codecs {
         assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                 "Sonic1EggPrisonObjectInstance must round-trip through the generic recreate path; got: "
                         + result);
+    }
+
+    @Test
+    void ringFlashUsesGenericRecreateInsteadOfRegisteredCodec() {
+        Set<String> names = codecClassNames();
+
+        assertFalse(names.contains(Sonic1RingFlashObjectInstance.class.getName()),
+                "Sonic1RingFlashObjectInstance must restore through RewindRecreatable generic recreate, "
+                        + "not an explicit S1 dynamic codec");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1RingFlashObjectInstance.class),
+                "Sonic1RingFlashObjectInstance must opt into the generic RewindRecreatable path");
     }
 
     private static boolean implementsRewindRecreatable(String className) {

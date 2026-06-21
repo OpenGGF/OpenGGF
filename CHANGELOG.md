@@ -20,6 +20,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S1/S2 seesaw ball rewind graph restore:** Seesaw ball children now restore through graph-tested parent relinks while deleting their explicit dynamic codecs.
 - **S2 badnik child rewind graph restore:** Grounder, Balkiry, Rexon, Shellcracker, Slicer, and Sol dynamic child graphs now restore through generic recreate with parent/sibling relinks while deleting their explicit dynamic codecs.
 - **Checkpoint/starpost rewind graph restore:** Sonic 1 lamppost twirls, Sonic 2 checkpoint dongles/stars, and S3K starpost star children now restore through generic recreate with live parent relinks while deleting their explicit dynamic codecs.
+- **S1 ring flash rewind graph restore:** Giant-ring flash effects now restore through graph-tested generic recreate, preserving null-parent behavior while deleting the explicit dynamic codec.
 - **S1 MZ glass reflection rewind graph restore:** MZ glass-block reflection shines now restore through generic recreate with live parent relinks while deleting their explicit dynamic codec.
 - **S1 FZ boss rewind graph restore:** Final Zone cylinders, plasma launcher, and plasma balls now restore through graph-tested generic recreate with boss/launcher relinks while deleting their explicit dynamic codecs.
 - **S1 GHZ boss rewind graph restore:** GHZ boss wrecking balls now restore through graph-tested generic recreate with live boss relinks while deleting their explicit dynamic codec.
