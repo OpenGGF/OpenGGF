@@ -72,7 +72,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
             // FZCylinder/FZPlasmaLauncher/FZPlasmaBall now restore through
             // local RewindRecreatable graph adoption. See TestS1FzBossGraphRewind.
-            bossBlockCodec(),
+            // Sonic1BossBlockInstance now restores through RewindRecreatable
+            // graph relink. See TestS1SyzBossBlockGraphRewind.
             // Sonic1FalseFloorInstance.FalseFloorBlock now relinks to the live
             // master through RewindRecreatable genericRecreate.
             // Sonic1OrbinautBadnikInstance.OrbSpikeObjectInstance restores through
@@ -171,39 +172,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return new SYZBossSpike(boss);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec bossBlockCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic1BossBlockInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic1BossBlockInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                ObjectSpawn spawn = entry.spawn();
-                // Recreate via the public column ctor. blockColumn is un-finaled so the
-                // generic field capturer reapplies its captured value (-1 for fragments,
-                // 0-9 for blocks); spawn.subtype() is a placeholder for the block form.
-                Sonic1BossBlockInstance block =
-                        new Sonic1BossBlockInstance(spawn.subtype());
-                // Relink the grabbingBoss object reference to the live SYZ boss.
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof Sonic1SYZBossInstance boss) {
-                        block.relinkGrabbingBoss(boss);
-                        break;
-                    }
-                }
-                return block;
             }
         };
     }

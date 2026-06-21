@@ -82,6 +82,17 @@ class TestRewindFixS1Batch3Codecs {
     }
 
     @Test
+    void syzBossBlockUsesGenericRecreateInsteadOfRegisteredCodec() {
+        Set<String> names = codecClassNames();
+
+        assertFalse(names.contains(Sonic1BossBlockInstance.class.getName()),
+                "Sonic1BossBlockInstance must restore through RewindRecreatable generic recreate, "
+                        + "not an explicit S1 dynamic codec");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1BossBlockInstance.class),
+                "Sonic1BossBlockInstance must opt into the generic RewindRecreatable path");
+    }
+
+    @Test
     void eggPrisonBodyUsesGenericRecreateInsteadOfRegisteredCodec() {
         Set<String> names = codecClassNames();
 

@@ -23,6 +23,7 @@ import com.openggf.game.sonic1.objects.bosses.FZCylinder;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaBall;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher;
 import com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall;
+import com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance;
 import com.openggf.game.sonic2.objects.BombPrizeObjectInstance;
 import com.openggf.game.sonic2.objects.CheckpointDongleInstance;
 import com.openggf.game.sonic2.objects.CheckpointStarInstance;
@@ -179,7 +180,8 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S3K));
 
     private static final List<CodecDeletionCandidate> AUDITED_LIVE_REFERENCE_DELETED_CODECS = List.of(
-            new CodecDeletionCandidate(Sonic1EggPrisonObjectInstance.class.getName(), GameId.S1));
+            new CodecDeletionCandidate(Sonic1EggPrisonObjectInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1BossBlockInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> BATCH4_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
