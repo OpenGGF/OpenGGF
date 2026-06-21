@@ -759,9 +759,11 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
     private static final class DrillArmChild extends AbstractObjectInstance
             implements TouchResponseProvider, RewindRecreatable {
         private static final int PRIORITY_BUCKET = 5;
+        private static final int LEFT_ARM_SUBTYPE = 0x10;
+        private static final int RIGHT_ARM_SUBTYPE = 0x11;
         private MgzMinibossInstance parent;
         // Non-final so the generic rewind field capturer can reapply the captured
-        // left/right differentiator after the codec recreates this child.
+        // left/right differentiator after generic recreate constructs this child.
         private int xOffset;
         private int yOffset;
         private int currentX;
@@ -778,7 +780,8 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
 
         private DrillArmChild(MgzMinibossInstance parent, int xOffset, int yOffset) {
             super(new ObjectSpawn(parent.state.x + adjustedOffset(xOffset, parent.facingRight),
-                    parent.state.y + adjustedOffset(yOffset, parent.upsideDown), 0, 0, 0, false, 0),
+                    parent.state.y + adjustedOffset(yOffset, parent.upsideDown),
+                    0, semanticSubtype(xOffset), 0, false, 0),
                     "MGZMinibossArm");
             this.parent = parent;
             this.xOffset = xOffset;
@@ -795,7 +798,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
             }
             DrillArmChild restored = new DrillArmChild(
                     liveParent,
-                    deriveCapturedXOffset(ctx, liveParent),
+                    capturedXOffset(ctx, liveParent),
                     0);
             liveParent.rewindAttachArmChild(restored);
             return restored;
@@ -813,7 +816,21 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
             return null;
         }
 
-        private static int deriveCapturedXOffset(RewindRecreateContext ctx, MgzMinibossInstance parent) {
+        private static int capturedXOffset(RewindRecreateContext ctx, MgzMinibossInstance parent) {
+            ObjectSpawn spawn = ctx.spawn();
+            if (spawn != null) {
+                if (spawn.subtype() == LEFT_ARM_SUBTYPE) {
+                    return -0x1C;
+                }
+                if (spawn.subtype() == RIGHT_ARM_SUBTYPE) {
+                    return 0x1C;
+                }
+            }
+            return deriveCapturedXOffsetFromPhysicalSpawn(ctx, parent);
+        }
+
+        private static int deriveCapturedXOffsetFromPhysicalSpawn(
+                RewindRecreateContext ctx, MgzMinibossInstance parent) {
             ObjectSpawn spawn = ctx.spawn();
             if (spawn == null) {
                 return 0;
@@ -825,6 +842,10 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
                 return 0x1C;
             }
             return 0;
+        }
+
+        private static int semanticSubtype(int xOffset) {
+            return xOffset < 0 ? LEFT_ARM_SUBTYPE : RIGHT_ARM_SUBTYPE;
         }
 
         @Override

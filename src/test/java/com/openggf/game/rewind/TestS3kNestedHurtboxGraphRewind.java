@@ -124,6 +124,52 @@ class TestS3kNestedHurtboxGraphRewind {
     }
 
     @Test
+    void mgzFlippedDrillArmsRestoreSemanticParentSlotsAndDoNotDuplicate() {
+        Harness harness = Harness.create(List.of(MGZ_BOSS_SPAWN));
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        MgzMinibossInstance sourceBoss = only(objectManager, MgzMinibossInstance.class);
+        setBooleanField(sourceBoss, "facingRight", true);
+        invokeNoArg(sourceBoss, "spawnArmChildren");
+        List<ObjectInstance> sourceArms = liveObjectsByName(objectManager, MGZ_DRILL_ARM_CLASS);
+        assertEquals(2, sourceArms.size(), "precondition: flipped MGZ miniboss must have two drill arms");
+        ObjectInstance sourceLeft = armWithXOffset(sourceArms, -0x1C);
+        ObjectInstance sourceRight = armWithXOffset(sourceArms, 0x1C);
+        assertTrue(sourceLeft.getX() > sourceBoss.getX(),
+                "precondition: facingRight flips the semantic left arm to the physical right");
+        assertTrue(sourceRight.getX() < sourceBoss.getX(),
+                "precondition: facingRight flips the semantic right arm to the physical left");
+
+        ObjectRefId bossId = objectId(objectManager, sourceBoss);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.removeDynamicObject(sourceLeft);
+        objectManager.removeDynamicObject(sourceRight);
+        objectManager.createDynamicObject(() -> constructMgzArm(sourceBoss, 0x40, 0));
+
+        rewindRegistry.restore(snapshot);
+
+        MgzMinibossInstance restoredBoss = objectById(objectManager, MgzMinibossInstance.class, bossId);
+        List<ObjectInstance> restoredArms = liveObjectsByName(objectManager, MGZ_DRILL_ARM_CLASS);
+        assertEquals(2, restoredArms.size(), "restore must keep exactly the captured flipped MGZ drill arms");
+        ObjectInstance restoredLeft = armWithXOffset(restoredArms, -0x1C);
+        ObjectInstance restoredRight = armWithXOffset(restoredArms, 0x1C);
+        assertSame(restoredBoss, readObjectField(restoredLeft, "parent"),
+                "flipped left arm parent must resolve to the restored MGZ miniboss");
+        assertSame(restoredBoss, readObjectField(restoredRight, "parent"),
+                "flipped right arm parent must resolve to the restored MGZ miniboss");
+        assertSame(restoredLeft, readObjectField(restoredBoss, "leftArm"),
+                "flipped restore must relink semantic leftArm by captured xOffset, not physical side");
+        assertSame(restoredRight, readObjectField(restoredBoss, "rightArm"),
+                "flipped restore must relink semantic rightArm by captured xOffset, not physical side");
+
+        invokeNoArg(restoredBoss, "spawnArmChildren");
+        assertEquals(2, liveObjectsByName(objectManager, MGZ_DRILL_ARM_CLASS).size(),
+                "post-restore flipped arm spawn path must not duplicate restored arms");
+    }
+
+    @Test
     void iczSpikeHurtChildrenRestoreFreshRelinkNearestParentsAndDoNotDuplicate() {
         Harness harness = Harness.create(List.of(ICZ_SPIKE_A, ICZ_SPIKE_B));
         ObjectManager objectManager = harness.objectManager();
@@ -390,6 +436,14 @@ class TestS3kNestedHurtboxGraphRewind {
     private static void setIntField(Object target, String fieldName, int value) {
         try {
             findField(target.getClass(), fieldName).setInt(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static void setBooleanField(Object target, String fieldName, boolean value) {
+        try {
+            findField(target.getClass(), fieldName).setBoolean(target, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
         }
