@@ -18077,3 +18077,26 @@ Net for the session: 8 roots investigated, EVERY one deep/coupled (and two -- GH
 heightmap, CNZ fan -- had initial hypotheses disproved on deeper inspection); 4 full
 fix->sweep->revert cycles, all net-negative/neutral. No clean surviving single-turn
 fix exists. Baseline: 53.
+
+## 2026-06-21 -- CNZ-CR f1846 REAL root (instrumented): horizontal spring launches 1 frame early
+
+setGSpeed instrumentation (throwaway, reverted) on the CPU sidekick at cx~14AD:
+  [GSDBG] cx=14AD gSpeed 0 -> -4096 via Sonic3kSpringObjectInstance.applyHorizontalSpring
+          <- onSolidContact <- resolveCheckpointForPlayer <- ... <- executeObjectWithSolidContext
+So the -$1000 is a HORIZONTAL SPRING launch, NOT the hover fan (fan hypothesis fully
+retracted). The engine launches Tails off the spring at f1846 (first touchSide frame);
+the trace shows ROM launches at f1847 (both tails_x_speed=-1000 there), with ROM at
+f1846 still PUSHING the spring (Status_Push 0x20, g_speed 0x24). ROM Obj_Spring sets
+Status_Push on the side-contact frame and only launches the FOLLOWING frame once push
+is established (cf. the existing line-597 comment citing bset #Status_Push at
+sonic3k.asm:41488-41495). The engine's Sonic3kSpringObjectInstance.onSolidContact
+launches on the FIRST contact.touchSide() frame -> one frame early.
+
+This is the SAME object-contact-execution-phase root now confirmed on a FIFTH object
+type (spring), alongside OOZ push (side-contact), OOZ ring, MHZ landing, GHZ ledge:
+the engine registers/acts on object<->player contact one frame before ROM. The fix is
+to gate the horizontal-spring launch on an ESTABLISHED push (contact persisted one
+frame), modelling ROM's bset-Status_Push-then-launch. That is shared spring code
+(all horizontal springs) and needs per-frame contact-state tracking + full-sweep
+gating; not attempted as a blind edit (high regression risk like the prior four).
+Baseline: 53.
