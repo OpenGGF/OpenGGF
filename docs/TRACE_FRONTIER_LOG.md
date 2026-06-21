@@ -17492,3 +17492,25 @@ Verification (worktree bugfix/ai-trace-cluster-fixes):
   positive, ZERO regressions.
 - Guards green: TestArchUnitRules, TestRewindCoverageGuard, TestPhysicsProfile,
   TestCollisionModel.
+
+## 2026-06-21 -- Session summary + LZ3 next target
+
+Two engine fixes landed this session (both net-positive, zero regressions, guards
+green, full *TraceReplay sweep verified):
+1. 91dcf3173 CPZ spin-tube re-capture timing (CPZ2 f2888 -> f2889).
+2. cab6937ad S1 vertical-wrap player-Y mask gated to S3K (LZ3 f466 -> f1415, +949).
+
+Fail COUNT still 53 (both advanced frontiers, neither cleared a whole trace yet);
+the vertical-wrap fix also latently unblocks any other LZ/SBZ trace that hits the
+same wrap bug behind an earlier frontier.
+
+LZ3 next frontier f1415: angle exp 0x00C0 act 0x00D0 (delta 0x10), all other
+fields match, Sonic grounded (status=01, air=0) on object 0x2B. A specific LZ
+sloped-object surface-angle divergence -- next target there is object 0x2B's
+surface-angle reporting.
+
+Remaining clusters by depth (for ordering next sessions):
+- Tractable/landable next: LZ3 f1415 (obj 0x2B angle); the "engine speed=0 vs ROM
+  nonzero" S1 group (GHZ1 f2573, GHZ2 f2369, SBZ1 f1925) likely shares a root.
+- Deep/multi-session: MZ2 Caterkiller spawn-window; cluster-4/5 sidekick
+  object-phase (CPZ2 f2889 tube handoff, OOZ jitter, MTZ3/MCZ2/CNZ2 onesies).
