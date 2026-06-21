@@ -18297,3 +18297,28 @@ contacts register on ROM's frame (mechanism 2) -- which is the plan's core
 object-execution-phase alignment and must precede edge/landing tuning. Mechanism 2 is
 the prerequisite root for OOZ and the contact-driven frontiers. v6 reverted (not
 accurate). Baseline restored: 53 / 52+1.
+
+## 2026-06-22 - S1 GHZ1 complete-run f2573 -> f2790: collapsing-ledge exact-touch landing
+
+- Branch/worktree: `bugfix/ai-trace-cluster-fixes` (.worktrees/trace-cluster-fixes), HEAD 639748a8d + this fix.
+- Target: `TestS1Ghz1CompleteRunTraceReplay`. Baseline first error (clean,
+  this worktree, fix stashed): **f2573 `y_speed` exp=0x07F0 act=0x0000** (engine
+  landed; ROM still falling). After fix: **f2790 `camera_y` exp=0x021C act=0x021D**.
+- Root cause (BizHawk capture, `tools/bizhawk/diag_s1_plat.lua` +
+  `diag_s1_ledge_land.lua`, s1-complete-run.bk2, GHZ1-CR offset 788 so
+  trace f2573 = BK2 3361): the GHZ collapsing ledge (Obj 1A) lands via
+  `Plat_NoXCheck_AltY`. The ROM land band is `cmpi.w #-16,d0` / `blo`
+  (UNSIGNED) at sonic.lst 0x7B06-0x7B0A, which also rejects `d0=0`
+  (0x0000 <u 0xFFF0). Capture: BK2 3361 `d0=0` does NOT land (keeps
+  falling, y stays 0x0206); BK2 3362 `d0=-9` lands. The engine's S1
+  UNIFIED top-solid path (`ObjectSolidContactController` ~line 2879)
+  lands `distY in [0,0x0F]`, including the `distY==0` touch -> one frame early.
+- Fix: `Sonic1CollapsingLedgeObjectInstance.rejectsZeroDistanceTopSolidLanding()`
+  -> true (existing per-object hook; same flag S3K collapsing platforms use).
+  Not a zone/frame carve-out: models the shared S1 `Plat_NoXCheck_AltY`
+  unsigned land-band on the one object proven to need it.
+- Command: `mvn -Dmse=off -Dtrace.frontierOnly=true test -Dtest='TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,TestS1Ghz3CompleteRunTraceReplay,TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS1Mz1CompleteRunTraceReplay,TestS1Credits00Ghz1TraceReplay,TestS1Credits07Ghz1bTraceReplay' -DfailIfNoTests=false`
+- Regression check (clean before/after, same worktree): GHZ2-CR f2369 (unchanged),
+  GHZ3-CR f1246 (unchanged), MZ1-CR f2089 (unchanged); GHZ1 standalone, MZ1
+  standalone, Credits00Ghz1, Credits07Ghz1b all green both runs. Guards green:
+  TestArchUnitRules, TestRewindCoverageGuard, TestTraceReplayInvariantGuard.
