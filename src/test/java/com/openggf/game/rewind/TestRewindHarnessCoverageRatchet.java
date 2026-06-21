@@ -171,12 +171,16 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-21: raised to 133 after the dynamic codec inventory reached
  *       zero and the parent-dependent bucket was split into graph-covered
  *       families versus explicit session-tail work.</li>
+ *   <li>2026-06-21: raised to 144 after seeding the remaining parent-linked
+ *       other-failure tail in the round-trip harness, including S2 HTZ boss
+ *       children, S3K badnik/cutscene/miniboss children, and the SS-entry
+ *       flash child.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 133;
+    static final int RATCHET_FLOOR = 144;
 
     @BeforeEach
     void initHeadless() {
