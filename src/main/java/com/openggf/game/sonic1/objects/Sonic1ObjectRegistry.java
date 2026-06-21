@@ -97,7 +97,9 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // -> genericRecreate Path 1 with live lamppost relink.
             // Sonic1RingFlashObjectInstance now implements RewindRecreatable
             // -> genericRecreate Path 1 while preserving null-parent recreate.
-            grassFireChildCodec());
+            // Sonic1GrassFireObjectInstance restores through RewindRecreatable
+            // plus captured parent/list graph refs. See TestS1GrassFireGraphRewind.
+    );
 
     // Sonic1SplashObjectInstance (LZ water splash, object 0x08) is accept-drop:
     // a sub-1-second purely-cosmetic splash re-emitted naturally on water
@@ -182,44 +184,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);
                 }
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec grassFireChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic1GrassFireObjectInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic1GrassFireObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // Parent platform is a layout-spawned (active) object, recreated before
-                // its dynamic fire children, so it is live in getActiveObjects().
-                Sonic1LargeGrassyPlatformObjectInstance parent = null;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof Sonic1LargeGrassyPlatformObjectInstance p) {
-                        parent = p;
-                        break;
-                    }
-                }
-                if (parent == null) {
-                    return null;
-                }
-                ObjectSpawn spawn = entry.spawn();
-                // isWalker is spawn-derivable (subtype 0 = walker, 1 = stationary).
-                boolean isWalker = spawn.subtype() == 0;
-                // baseY/originX were un-finaled so the generic capturer reapplies the
-                // captured values; pass placeholder sinkOffset 0.
-                return new Sonic1GrassFireObjectInstance(
-                        spawn.x(), spawn.y(), 0, parent.getSlopeData(), parent, isWalker);
             }
         };
     }

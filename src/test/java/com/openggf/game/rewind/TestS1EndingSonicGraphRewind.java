@@ -8,7 +8,6 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.Sonic1EndingEmeraldsObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance;
-import com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -207,8 +206,6 @@ class TestS1EndingSonicGraphRewind {
                 "Ending Sonic must restore through RewindRecreatable generic recreate");
         assertFalse(hasRegisteredS1Codec(Sonic1EndingSonicObjectInstance.class.getName()),
                 "Ending Sonic must not keep an explicit S1 dynamic rewind codec");
-        assertTrue(hasRegisteredS1Codec(Sonic1GrassFireObjectInstance.class.getName()),
-                "Grass Fire codec is a separate parent/platform graph repair and must remain");
 
         ObjectInstance recreated = ObjectRewindDynamicCodecs.genericRecreate(
                 new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry(

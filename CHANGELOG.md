@@ -28,6 +28,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S1 GHZ boss rewind graph restore:** GHZ boss wrecking balls now restore through graph-tested generic recreate with live boss relinks while deleting their explicit dynamic codec.
 - **S1 SLZ boss spikeball rewind graph restore:** SLZ boss spikeballs and fragments now restore through graph-tested generic recreate while deleting their explicit dynamic codec.
 - **S1 ending Sonic rewind graph restore:** ending Sonic now restores through graph-tested generic recreate with captured emerald-family references while deleting its explicit dynamic codec.
+- **S1 Grass Fire rewind graph restore:** MZ grass fire walkers and stationary child flames now restore through captured platform/fire graph references while deleting the final S1 dynamic codec.
 - **S1 SYZ boss block rewind graph restore:** SYZ boss blocks now restore through graph-tested generic recreate with live boss relinks while deleting their explicit dynamic codec.
 - **S1 badnik child rewind graph restore:** Bomb fuses, Caterkiller body segments, and Orbinaut spike children now restore through graph-tested generic recreate with live parent relinks while deleting their explicit dynamic codecs.
 - **S2 detached badnik child rewind restore:** Slicer pincers and Sol fireballs now survive rewind restore after their parent unloads, preserving detached falling/flying behavior through generic recreate.

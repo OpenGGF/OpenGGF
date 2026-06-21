@@ -105,7 +105,6 @@ com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#moveT
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#isTall
 com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#reflectSubtype
-com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance#finalScalar#isWalker
 com.openggf.game.sonic1.objects.Sonic1HarpoonObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1HiddenBonusObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1InvisibleBarrierObjectInstance#finalScalar#halfWidth
