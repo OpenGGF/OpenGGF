@@ -26,6 +26,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S1 MZ glass reflection rewind graph restore:** MZ glass-block reflection shines now restore through generic recreate with live parent relinks while deleting their explicit dynamic codec.
 - **S1 FZ boss rewind graph restore:** Final Zone cylinders, plasma launcher, and plasma balls now restore through graph-tested generic recreate with boss/launcher relinks while deleting their explicit dynamic codecs.
 - **S1 GHZ boss rewind graph restore:** GHZ boss wrecking balls now restore through graph-tested generic recreate with live boss relinks while deleting their explicit dynamic codec.
+- **S1 SLZ boss spikeball rewind graph restore:** SLZ boss spikeballs and fragments now restore through graph-tested generic recreate while deleting their explicit dynamic codec.
 - **S1 SYZ boss block rewind graph restore:** SYZ boss blocks now restore through graph-tested generic recreate with live boss relinks while deleting their explicit dynamic codec.
 - **S1 badnik child rewind graph restore:** Bomb fuses, Caterkiller body segments, and Orbinaut spike children now restore through graph-tested generic recreate with live parent relinks while deleting their explicit dynamic codecs.
 - **S2 detached badnik child rewind restore:** Slicer pincers and Sol fireballs now survive rewind restore after their parent unloads, preserving detached falling/flying behavior through generic recreate.

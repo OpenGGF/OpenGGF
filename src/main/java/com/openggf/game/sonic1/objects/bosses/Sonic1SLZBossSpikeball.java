@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
@@ -10,8 +11,12 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -39,7 +44,7 @@ import java.util.List;
  *  10: FRAGMENT      — Fragment movement with rotation
  */
 public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     // Ball Y offsets per seesaw frame (word_19018 / See_Speeds table)
     // dc.w -8, -$1C, -$2F, -$1C, -8
@@ -125,8 +130,8 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
     private int yVel;
 
     // Original seesaw position (see_origX/see_origY)
-    private final int seesawX;
-    private final int seesawY;
+    private int seesawX;
+    private int seesawY;
 
     // Stored seesaw frame when landing (see_frame / objoff_3A)
     private int storedFrame;
@@ -199,6 +204,73 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
         this.currentState = State.FRAGMENT;
         this.displayFrame = 0;
         this.fragmentAnimCounter = 0;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        seedCapturedScalars(ctx);
+        if (currentState == State.FRAGMENT) {
+            return new Sonic1SLZBossSpikeball(xPos >> 16, yPos >> 16, xVel, yVel);
+        }
+
+        Sonic1SLZBossInstance restoredBoss = findLiveBossForRewind(ctx);
+        Sonic1SeesawObjectInstance restoredSeesaw =
+                findLiveSeesawForRewind(ctx, seesawX, seesawY);
+        if (restoredBoss == null || restoredSeesaw == null) {
+            return null;
+        }
+
+        ObjectSpawn spawn = ctx != null && ctx.spawn() != null
+                ? ctx.spawn()
+                : getSpawn();
+        return new Sonic1SLZBossSpikeball(restoredBoss, restoredSeesaw, spawn.x(), spawn.y());
+    }
+
+    private void seedCapturedScalars(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.state() == null || ctx.state().compactGenericState() == null) {
+            return;
+        }
+        GenericFieldCapturer.restoreObjectSubclassScalarsCompact(this, ctx.state().compactGenericState());
+    }
+
+    private static Sonic1SLZBossInstance findLiveBossForRewind(RewindRecreateContext ctx) {
+        ObjectManager objectManager = objectManagerFor(ctx);
+        if (objectManager == null) {
+            return null;
+        }
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof Sonic1SLZBossInstance boss && !boss.isDestroyed()) {
+                return boss;
+            }
+        }
+        return null;
+    }
+
+    private static Sonic1SeesawObjectInstance findLiveSeesawForRewind(
+            RewindRecreateContext ctx,
+            int capturedSeesawX,
+            int capturedSeesawY) {
+        ObjectManager objectManager = objectManagerFor(ctx);
+        if (objectManager == null) {
+            return null;
+        }
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (!(object instanceof Sonic1SeesawObjectInstance liveSeesaw) || liveSeesaw.isDestroyed()) {
+                continue;
+            }
+            ObjectSpawn spawn = liveSeesaw.getSpawn();
+            if (spawn.x() == capturedSeesawX && spawn.y() == capturedSeesawY) {
+                return liveSeesaw;
+            }
+        }
+        return null;
+    }
+
+    private static ObjectManager objectManagerFor(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null) {
+            return null;
+        }
+        return ctx.objectServices().objectManager();
     }
 
     @Override

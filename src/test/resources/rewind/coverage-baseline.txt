@@ -292,8 +292,6 @@ com.openggf.game.sonic1.objects.bosses.Sonic1GHZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1LZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1MZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossInstance#recreate
-com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball#finalScalar#seesawX
-com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball#finalScalar#seesawY
 com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.SYZBossSpike#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance#recreate

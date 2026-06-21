@@ -21,7 +21,6 @@ import com.openggf.game.sonic1.objects.bosses.SYZBossSpike;
 import com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1BossFireInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1GHZBossInstance;
-import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball;
 import com.openggf.game.sonic1.objects.bosses.Sonic1LZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1MZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossInstance;
@@ -63,7 +62,9 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // after construction.
             // GHZBossWreckingBall restores through RewindRecreatable graph
             // relink/adoption. See TestS1GhzBossGraphRewind.
-            slzBossSpikeballCodec(),
+            // Sonic1SLZBossSpikeball restores through RewindRecreatable graph
+            // recreate: fragments are self-contained, live balls relink to the
+            // restored SLZ boss and the origin-matched boss seesaw.
             // NOTE: syzBossSpikeCodec intentionally REMOVED.
             // SYZBossSpike is construction-spawned: Sonic1SYZBossInstance.initializeBossState()
             // calls spawnSpikeChild() which calls spawnFreeChild(). Re-adding a codec would
@@ -112,39 +113,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
     // shared class already implements RewindRecreatable -> genericRecreate Path 1.
     // Sonic1SeesawBallObjectInstance restores through RewindRecreatable graph
     // relink/adoption and is covered by TestSeesawBallGraphRewindTest.
-
-    private static DynamicObjectRewindCodec slzBossSpikeballCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic1SLZBossSpikeball.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic1SLZBossSpikeball.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic1SLZBossInstance boss = null;
-                Sonic1SeesawObjectInstance seesaw = null;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (boss == null && inst instanceof Sonic1SLZBossInstance b) {
-                        boss = b;
-                    } else if (seesaw == null && inst instanceof Sonic1SeesawObjectInstance s) {
-                        seesaw = s;
-                    }
-                }
-                if (boss == null || seesaw == null) {
-                    return null;
-                }
-                ObjectSpawn spawn = entry.spawn();
-                return new Sonic1SLZBossSpikeball(boss, seesaw, spawn.x(), spawn.y());
-            }
-        };
-    }
 
     private static DynamicObjectRewindCodec syzBossSpikeCodec() {
         return new DynamicObjectRewindCodec() {

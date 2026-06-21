@@ -51,18 +51,11 @@ class TestRewindFixS1Batch2Codecs {
     }
 
     @Test
-    void registersCodecsForBatch2S1Objects() {
+    void registersOnlyRemainingCodecsForBatch2S1Objects() {
         Set<String> names = codecClassNames();
 
-        List<String> required = List.of(
-                // SYZBossSpike intentionally absent: construction-spawned child.
-                // Adding a codec would double it on restore. See TestBossChildNoDoubleSpawnParity.
-                Sonic1SLZBossSpikeball.class.getName());
-
-        for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
-        }
+        // SYZBossSpike intentionally absent: construction-spawned child.
+        // Adding a codec would double it on restore. See TestBossChildNoDoubleSpawnParity.
 
         List<String> genericRecreate = List.of(
                 "com.openggf.game.sonic1.objects.badniks.Sonic1BombShrapnelInstance",
@@ -70,7 +63,8 @@ class TestRewindFixS1Batch2Codecs {
                 "com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance",
                 "com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileInstance",
                 "com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance",
-                "com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance");
+                "com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance",
+                Sonic1SLZBossSpikeball.class.getName());
         for (String name : genericRecreate) {
             assertFalse(names.contains(name),
                     name + " must restore through RewindRecreatable generic recreate, not a batch-2 codec");
@@ -79,7 +73,8 @@ class TestRewindFixS1Batch2Codecs {
         List<Class<?>> graphRecreate = List.of(
                 GHZBossWreckingBall.class,
                 Sonic1BombFuseInstance.class,
-                Sonic1CaterkillerBodyInstance.class);
+                Sonic1CaterkillerBodyInstance.class,
+                Sonic1SLZBossSpikeball.class);
         for (Class<?> type : graphRecreate) {
             assertFalse(names.contains(type.getName()),
                     type.getName() + " must restore through graph-tested RewindRecreatable, "
