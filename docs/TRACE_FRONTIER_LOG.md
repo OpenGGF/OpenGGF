@@ -18100,3 +18100,28 @@ frame), modelling ROM's bset-Status_Push-then-launch. That is shared spring code
 (all horizontal springs) and needs per-frame contact-state tracking + full-sweep
 gating; not attempted as a blind edit (high regression risk like the prior four).
 Baseline: 53.
+
+## 2026-06-21 -- Grind cycle 5 (horizontal spring defer-launch) NET-NEGATIVE, REVERTED + UNIFIER DISPROVEN
+
+Hypothesis: the object-contact-phase unifier (engine acts on contact one frame early)
+means horizontal springs should launch on the established-push frame (N+1), not first
+contact (N). Fix: Sonic3kSpringObjectInstance horizontal onSolidContact defers launch
+to the 2nd consecutive side-contact frame (tracked per player). Full sweep: Failures
+53 -> 57 (+4). Frontier diff:
+  AIZ(s3k)  19089 g_speed      -> 2919 tails_x_speed   (REGRESSED)
+  HCZ-CR    1489  y            -> 631  tails_x_speed    (REGRESSED)
+  ICZ-CR    3116  status_byte  -> 1646 camera_x         (REGRESSED)
+  CNZ-CR    1846  tails_x_speed-> 1846 tails_x          (same frame, field changed; NOT advanced)
+REVERTED.
+
+IMPORTANT -- this DISPROVES the "object-contact-phase unifier": horizontal springs in
+AIZ/HCZ/ICZ launch IMMEDIATELY (correctly) in the engine; deferring by one frame breaks
+them. So spring contact timing is NOT uniformly one-frame-early, and there is NO single
+architectural contact-phase fix that helps all contact traces -- each trace's contact
+timing is context-specific. Furthermore CNZ-CR f1846's spring launch is a DOWNSTREAM
+symptom: with the launch deferred, Tails is STILL 16px off ROM at f1846 (exp14B5
+act14A5), so the real CNZ-CR divergence is an upstream Tails POSITION error, not the
+spring trigger. The earlier "5 object types confirm one unifier" framing is RETRACTED:
+the contact-phase manifests differently per object/trace and is coupled to upstream
+position. Five measured fix cycles, all reverted; the architectural single-fix path is
+disproven. Baseline restored: 53.
