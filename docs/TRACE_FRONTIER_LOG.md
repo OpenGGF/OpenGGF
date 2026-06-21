@@ -18125,3 +18125,18 @@ spring trigger. The earlier "5 object types confirm one unifier" framing is RETR
 the contact-phase manifests differently per object/trace and is coupled to upstream
 position. Five measured fix cycles, all reverted; the architectural single-fix path is
 disproven. Baseline restored: 53.
+
+## 2026-06-21 -- Sign-flip cluster (MZ2/HTZ2 y_speed -0568/+0568) is a MISSED LAUNCH, not a sign error
+
+setYSpeed instrumentation (throwaway, reverted) on the main player at MZ2 f2578:
+  [YSDBG] angle=00 ySpeed 1328 -> 1384 via PlayableSpriteMovement.applyGravity
+          <- doObjectMoveAndFall <- modeAirborne <- handleMovement
+So the engine's +0568 (1384) is plain GRAVITY accumulation -- the player is falling.
+ROM has y_speed=-0568 (moving UP). exp-0568/act+0568 is therefore NOT a sign-flip of
+one event: ROM LAUNCHES the player upward at f2578 (spring/bounce/reflection) and the
+engine MISSES the launch, continuing to fall under gravity (the equal magnitude is
+coincidental). HTZ2 f1078 (identical -0568/+0568, rolling-airborne) is the same class:
+a missed upward object-launch. So the "exact sign-flip" cluster collapses into the
+object-contact / missed-launch family, NOT an isolated sign fix -- consistent with the
+other 8 roots. Ninth root investigated; all converge on coupled object-contact/landing/
+launch behaviour in shared code. No isolated single-turn fix. Baseline: 53.
