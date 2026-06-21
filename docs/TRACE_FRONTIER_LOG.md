@@ -17411,3 +17411,31 @@ the rolling reflection to that engine object's touch/solid response. Engine
 Sonic1MonitorObjectInstance already negates on break (line 199) with
 requiresContinuousTouchCallbacks=true, so for the monitor case the gap would be
 overlap/position, not the bounce code -- pointing at a different object.
+
+## 2026-06-21 -- MZ2 f2578 BizHawk-resolved: missed Caterkiller-head destroy-bounce (head mispositioned)
+
+BizHawk (diag_s1_bounce.lua on s1-complete-run.bk2, MZ2 offset 29079 -> emu
+~31657) shows the y_speed sign-flip at emu f31658 is Sonic destroying a
+CATERKILLER (id 0x78) head from above while rolling: at the flip frame the four
+id=0x78 segments (s37-s3A @0414+,03D8) transition (s37 -> id 0x27 explosion,
+s38-3A -> rtn 0x0A, animal 0x28 spawns) and ROM applies React_Enemy's clean
+`neg.w obVelY` (Sonic above badnik, moving down -> bounce up;
+docs/s1disasm/_incObj/Sonic ReactToItem.asm:299-306). +0530 +gravity 0x38 = 0x568,
+neg -> -0x568. Matches exactly.
+
+Engine bounce code is CORRECT (ObjectTouchResponseController.applyEnemyBounce
+mirrors React_Enemy; Sonic1CaterkillerBadnikInstance head colSize 0x0B = 16x16 =
+ROM). The bug is NOT the bounce: instrumentation (oggf.diag.catbounce /
+oggf.diag.catbounce head log) shows applyEnemyBounce is NEVER called near the
+bounce, and at the bounce frame NO Caterkiller head updates with Sonic at the
+bounce position -- the engine's head is at x~0x047C while ROM's bouncing head is
+at x=0x0414 (~104px / 0x68 to the right). So there is nothing for Sonic to bounce
+off: the engine's Caterkiller HEAD X-POSITION (spawn/walk-cadence) diverges from
+ROM, and the missed React_Enemy bounce is a downstream symptom.
+
+Next: diagnose the Caterkiller head walk/spawn cadence (WALK_VELOCITY -0xC0, MOVE
+16 frames / wait 7, Cat_Head loc_16B02) vs ROM to close the ~0x68 x gap; once the
+head is ROM-positioned, the existing applyEnemyBounce should fire and the f2578
+sign-flip resolves. HTZ2 f1078 shows the same -0568 but with HTZ objects
+0x96/0x97/0x98 (no monitor/caterkiller) -- a sibling case in the same
+rolling-bounce class, to confirm after MZ2.
