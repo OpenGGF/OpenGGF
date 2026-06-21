@@ -17728,3 +17728,33 @@ the SlopeObject heightmap read (0x7AF2-0x7B00) for Sonic's exact x_sub/y_sub.
 
 Tooling now in place: sonic.lst, diag_s1_plat.lua, diag_s1_plat_gate.lua,
 diag_s1_ypos_writes.lua.
+
+## 2026-06-21 -- MGZ rings confirm the unifying root: object-contact detected ONE FRAME EARLY
+
+TestS3kMgzTraceReplay f539 rings exp 10 act 11 (1 error). ROM ring trajectory
+(trace csv): rings stay 0x0A through f539 and become 0x0B at f540 (Sonic x=05B3).
+The engine reaches 0x0B at f539 (Sonic x=05B9). Sonic moves ~6px/frame, so the
+engine collects the SAME ring exactly ONE FRAME (one move) EARLY.
+
+This is NOT a spurious ring, slot, or sidekick-specific bug -- it is the SAME
+object-execution-phase signature already ground-truthed for the GHZ ledge landing
+(engine lands a frame early), CPZ2 spin-tube (re-capture a frame early, fixed via
+prePhysicsCentre), and the sidekick push/solid contact. The engine detects
+object<->player CONTACT one frame before ROM, across object types (ring pickup,
+slope landing, tube capture, side push). Confirmed unifier:
+  ENGINE: snapshot -> physics(player moves) -> objects(detect contact at the
+          POST-physics player position) => contact fires same frame.
+  ROM:    detects the contact effectively one frame later (frame-start / prior
+          position), so the recorded effect appears one frame after the engine's.
+CPZ2 was fixed by reading the player's pre-physics centre for the tube entry
+check; the general fix is to evaluate object<->player contact against the
+frame-start (pre-physics) player position -- BUT the GHZ landing snap then lands
+on the correct FRAME yet 1px off (0209 vs ROM 0208, which snaps from the
+post-physics penetrated y), so a blanket frame-start change is not uniformly
+faithful and the penetration variant regressed green MZ1. The faithful fix is an
+object-execution-phase alignment that matches ROM's contact-evaluation point per
+object family, gated on the full sweep -- architectural, high-leverage (advances
+rings + landings + tube + push at once), multi-session.
+
+Highest-leverage target, now confirmed across 4 object families. Tooling in place:
+sonic.lst, diag_s1_plat.lua, diag_s1_plat_gate.lua, diag_s1_ypos_writes.lua.
