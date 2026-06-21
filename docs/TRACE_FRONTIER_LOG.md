@@ -18346,3 +18346,18 @@ accurate). Baseline restored: 53 / 52+1.
   (sticky=true). Requires a sticky-aware top-half-height in
   ObjectSolidContactController.resolveContact (shared collision); verify with
   the full S1 sweep. Not landed this session.
+
+### 2026-06-22 follow-up - S1 GHZ2-CR f2369 -> f2591 LANDED (surgical detection/riding split)
+
+- The deferred fix above is now implemented and net-positive. Instead of changing
+  HALF_HEIGHT (which regressed GHZ3 via the riding surface), the new-landing
+  detection band in `ObjectSolidContactController` (S1 UNIFIED top-solid path)
+  now adds `getTopLandingSnapAdjustment(instance, player)` to `distY` for
+  sticky=false only, so the DETECTION surface matches the entry/snap surface
+  (obY-8) while continued riding (sticky=true) keeps obY-9. The platform also
+  sets `rejectsZeroDistanceTopSolidLanding()` (strict-penetration `blo #-16`).
+- Clean before/after (full S1 sweep, frontierOnly, this worktree): GHZ2-CR
+  **f2369 -> f2591** (+222, now `y` exp0259 act0257); GHZ3-CR f1246 UNCHANGED;
+  all 16 other S1 traces unchanged. Guards green: ArchUnit, RewindCoverage,
+  TraceReplayInvariant, CollisionModel. S1-UNIFIED-gated -> S2/S3K inert.
+- Command: `mvn -Dmse=off -Dtrace.frontierOnly=true test -Dtest='TestS1*TraceReplay' -DfailIfNoTests=false`

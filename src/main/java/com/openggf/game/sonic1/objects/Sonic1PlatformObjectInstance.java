@@ -255,11 +255,25 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM PlatformObject/Plat_NoXCheck_AltY (docs/s1disasm/sonic.lst
+        // 0x7B06-0x7B0A) gates the land band with an UNSIGNED cmpi.w #-16,d0 /
+        // blo, which rejects the exact-touch case d0 = 0 (0x0000 <u 0xFFF0):
+        // standable band is d0 in [-16,-1] (strict penetration). Combined with
+        // the obY-8 detection offset (getTopLandingSnapAdjustment) applied to the
+        // new-landing detection band, this makes the engine land on the same
+        // frame as ROM. Verified by BizHawk capture of GHZ2-CR (BK2 8991 d0=0
+        // keeps falling; BK2 8992 d0=-5 lands).
+        return true;
+    }
+
+    @Override
     public int getTopLandingSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
         // PlatformObject builds its entry surface from obY-8 and then snaps via
         // add.w d0,d2 / addq.w #3,d2 (docs/s1disasm/_incObj/sub PlatformObject.asm:17-42).
         // Continued riding still uses MvSonicOnPtfm2's obY-9 surface; this
-        // adjustment applies only to the first landing snap.
+        // adjustment applies only to the first landing snap (and, via the
+        // controller's detection-band offset, to the matching new-landing detect).
         return -1;
     }
 
