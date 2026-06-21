@@ -17312,3 +17312,42 @@ cleaner, deterministic target (a one-time extra tube step, engine-side) and is
 the better candidate for an actual landable fix; it needs no BizHawk grounding
 because the trace already carries the ROM truth (Tails moves exactly x_speed
 -8/frame with no extra step).
+
+## 2026-06-21 -- CPZ2 f2888 root: spin-tube-to-spin-tube handoff one frame early
+
+Instrumented the engine (property-gated logging in CPZSpinTubeObjectInstance +
+SidekickCpuController, all reverted) and BizHawk-grounded the ROM side
+(diag_s2_ooz_tails_push.lua extended to dump all id 0x1E tube objects; run on
+s2-lvl-select-CPZ.bk2). Frame map: trace f2888 = emu 11678 (offset ~8790).
+
+Findings:
+- objCtrl on Tails at f2888 is set by the SPIN TUBE (Obj1E,
+  ObjectControlState.nativeBit7FullControl()), not by SidekickCpuController --
+  the CPU controller sees objSup=true and moves Tails 0 px. So CPZ2 is a tube
+  bug, not a follow-steer bug (correcting the earlier eb86b8b5b hypothesis).
+- ROM has TWO spin tubes here: s10 (sub 0x3D, x=0x1000, collisionDistance 0x100,
+  entry range [0x1000,0x1100)) and s35 (far, dx=-912). ROM Tails is owned by
+  s10's main-path mode and moves -8/frame, with a -16/+8 jitter at f2889/f2890
+  that is the s10->second-tube handoff (first tube exits, second captures and
+  snaps to its entry waypoint -- sequential, one tube per character per ROM's
+  single obj_control/interact owner, s2.asm:48447-48457).
+- Engine bug: the first tube's main path and a SECOND tube's checkEntryCollision
+  act on Tails the SAME frame (the engine's first tube hands off one frame early
+  / both overlap), so the second tube re-snaps Tails to its entry waypoint while
+  the first still advances it -> -16 at f2888 vs ROM -8 (one frame early).
+
+Tried fix (REVERTED per net-positive policy): an "obj_control already set ->
+skip checkEntryCollision" guard (model ROM's one-tube-per-character invariant).
+It removed the f2888 double and advanced CPZ2 f2888->f2889 with NO regression to
+CPZ act1 (still f3365). BUT ROM's f2889 -16 is the LEGIT handoff, which the guard
+suppresses (engine then runs smooth -8 and misses it) -- so the +1 was an
+ARTIFICIAL frontier bump masking the true root (handoff one frame early), exactly
+the kind that must be reverted once the real root is patched. Reverted; not
+banked.
+
+True root for a focused follow-up: align the engine's spin-tube main-path
+completion / tube-to-tube handoff timing so the second tube captures one frame
+LATER (matching ROM's sequential exit-then-capture), instead of overlapping the
+first tube's last main-path frame. This is tube-path/handoff timing work in
+CPZSpinTubeObjectInstance (entry/main duration + exit sequencing), not a
+sidekick-physics change.

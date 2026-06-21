@@ -61,11 +61,13 @@ local function nearby_objects(tx, ty)
         if id ~= 0 and base ~= SONIC_BASE and base ~= TAILS_BASE then
             local ox = rd16(base + OFF_X_POS)
             local oy = rd16(base + OFF_Y_POS)
-            if math.abs(ox - tx) <= 0x50 and math.abs(oy - ty) <= 0x50 then
+            -- Always surface CPZ spin-tube objects (id 0x1E) regardless of range,
+            -- with their dx/dy to Tails, plus anything within 0x50 px.
+            if id == 0x1E or (math.abs(ox - tx) <= 0x50 and math.abs(oy - ty) <= 0x50) then
                 table.insert(parts, string.format(
-                    "s%02X:id=0x%02X sub=0x%02X rtn=0x%02X @0x%04X.%04X,0x%04X xv=%d",
+                    "s%02X:id=0x%02X sub=0x%02X rtn=0x%02X @0x%04X,0x%04X dx=%d dy=%d",
                     slot, id, rd8(base+OFF_SUBTYPE), rd8(base+OFF_ROUTINE),
-                    ox, rd16(base+OFF_X_SUB), oy, s16(rd16(base+OFF_X_VEL))))
+                    ox, oy, s16((ox - tx) % 0x10000), s16((oy - ty) % 0x10000)))
             end
         end
     end
