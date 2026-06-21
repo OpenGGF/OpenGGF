@@ -4,17 +4,22 @@
 **Author:** AI (trace-cluster-fixes worktree)
 **Date:** 2026-06-21
 **Branch base:** `develop`
-**Scope:** Close the dominant root behind the 53 `*TraceReplay` frontier failures.
+**Scope:** Close the dominant root behind the *TraceReplay frontier failures (live baseline: 52 failures + 1 error per Agent Quick State).
 
 ---
 
 ## 1. Problem statement
 
-A full `*TraceReplay` sweep (90 tests, `-Dtrace.frontierOnly=true`) shows **53 failing
-traces**. The true per-trace frontier table is in
-[`docs/TRACE_FRONTIER_LOG.md`](../../TRACE_FRONTIER_LOG.md) (2026-06-21 "FULL SWEEP"
-entry). Eleven roots were investigated this session; **every one converges on a single
-systemic cause:**
+**Authoritative baseline** is the "Agent Quick State" section at the top of
+[`docs/TRACE_FRONTIER_LOG.md`](../../TRACE_FRONTIER_LOG.md) (the routing table maintained
+across sessions on `bugfix/ai-trace-frontier-develop`), currently **90 `*TraceReplay`
+tests, 52 failures, 1 error**. The dated entries lower in that log (including this
+worktree's local "FULL SWEEP" measurement of 53 under different trace-context defaults)
+are the *evidence ledger* and may be superseded — always re-read Agent Quick State and
+re-run the sweep on the working branch before using a number as the diff baseline. The
+**1 error** (an S3K aux-schema/recorder issue, not a physics divergence) must be tracked
+separately from failures in the net-positive gate (see §3.3). Eleven roots were
+investigated this session; **every one converges on a single systemic cause:**
 
 > The engine's object-execution **order** and per-object **player-position-sampling
 > timing** diverge from ROM's `ExecuteObjects` by one frame / one sub-step. Object↔player
@@ -93,6 +98,21 @@ Each value is set from the object's ROM routine with a disasm citation, exactly 
 existing `PhysicsFeatureSet` / `SolidRoutineProfile` flags. Default = current engine
 behaviour (so unconverted objects are unchanged).
 
+**The profile system is two-layered — any new field MUST be threaded through ALL of it
+or it will be silently dropped in the adapter:**
+1. `com.openggf.game.profiles.solidroutine.SolidRoutineProfile` (canonical record) — add
+   the field + its `fromProvider(...)` default (reading a new `SolidObjectProvider`
+   default method, cf. `usesInclusiveRightEdge()`), the `fullSolid`/`topSolid`/
+   `monitorSolid` factory overloads, and any `range`/constructor sites.
+2. `com.openggf.level.objects.SolidRoutineProfile` (compatibility record) — add the
+   field **and** propagate it in BOTH `toCanonical()` and `fromCanonical()` (the
+   `fromCanonical` mapping at line ~76 is exactly where an un-threaded field is lost).
+3. `SolidObjectProvider` — add the default accessor (default = current behaviour) and
+   override it on the converted object families only.
+4. Tests — extend the profile round-trip / `TestConfigCatalog`-style coverage so a
+   missing thread-through fails fast; add a focused assertion that
+   `fromCanonical(toCanonical(p)) == p` for the new field.
+
 ### 3.2 Validation harness (build first — Phase 0)
 Per-family work needs the ROM phase measured, not guessed. Build a reusable diff harness:
 
@@ -111,33 +131,55 @@ Per-family work needs the ROM phase measured, not guessed. Build a reusable diff
 
 This is comparison-only diagnostics (honours the trace comparison-only invariant).
 
-### 3.3 Per-change protocol (every step)
-1. Pick the earliest frontier trace in the family.
-2. Harness-measure the engine-vs-ROM phase delta at that single frame (bisect).
+#### 3.3 Per-change protocol (every step)
+0. **Re-establish the live baseline on the working branch first** — read Agent Quick
+   State and run a clean full sweep; record both the failure count **and** the error
+   count, and snapshot the per-trace frontier table. Do not reuse a stale number.
+1. Take the **current Agent Quick State queue target** (not a self-chosen family — see
+   §4.0); bisect inside that single frame.
+2. Harness-measure the engine-vs-ROM phase delta at that frame (§3.2).
 3. Set the per-family phase value (ROM-cited) on that object family only.
-4. Run the **full** `*TraceReplay` sweep (`-Dtrace.frontierOnly=true`) + capture the
-   per-trace frontier table; diff vs baseline.
-5. Run `TestSidekickCpuFollowParity` and the must-keep-green S3K tests.
-6. **Keep iff net-positive** (≥1 frontier cleared/advanced, **0 regressions**).
-   Otherwise revert and record why in `docs/TRACE_FRONTIER_LOG.md`.
-7. Commit scoped, with trailers; update the frontier log (cleared/advanced/regressed).
+4. Run the **full** `*TraceReplay` sweep (`-Dtrace.frontierOnly=true`); diff the per-trace
+   frontier table vs the live baseline.
+5. Run `TestSidekickCpuFollowParity`, `TestTraceReplayInvariantGuard`, and the
+   must-keep-green S3K tests.
+6. **Keep iff net-positive:** ≥1 frontier cleared/advanced, **0 frontier regressions**,
+   **and the error count does not increase** (the standing 1 error must not grow, and
+   ideally is addressed via trace regeneration in Phase 5). Otherwise revert and record
+   why in `docs/TRACE_FRONTIER_LOG.md`.
+7. Commit scoped, with trailers; update the frontier log (cleared/advanced/regressed)
+   **including the Agent Quick State table if a frontier moved**.
 
-Baseline frontier table to diff against: the 2026-06-21 full-sweep entry (53 failures).
+Baseline to diff against: the **live Agent Quick State** figure re-measured in step 0
+(currently 52 failures + 1 error), never a stale dated entry.
 
 ---
 
-## 4. Phased implementation (family by family, by leverage)
+## 4. Implementation phases
 
-Order chosen so the most-shared, best-understood families come first and each phase's
-gating de-risks the next.
+### 4.0 Ordering authority — this plan does NOT supersede the live queue
+The **execution order is governed by the Agent Quick State "Active queue"** in
+`docs/TRACE_FRONTIER_LOG.md`, not by this document. This plan supplies the *mechanism*
+(the per-family contact-evaluation-phase model + protocol); the live queue supplies the
+*what/next*. The phases below are a **family toolbox**, not a fixed sequence — apply
+whichever family matches the current queued target.
+
+**Current queue head (as of this revision): `TestS2OozLevelSelectTraceReplay` f1782
+`tails_x`/`tails_x_speed` — "movement downstream of Tails CPU", after the S2 Obj36
+negative-inertia riding-push bridge.** This is a **side-contact + sidekick** target, so
+the first concrete work draws on Phase 2 (side-contact) and Phase 4 (sidekick CPU)
+mechanics — NOT the landing family (Phase 1). Later movement/downstream frontiers per
+the queue: CNZ-CR f1846, MTZ3 f1973, CNZ1 f3906, CNZ2 f4418, MCZ2 f4485, HTZ f6114.
+Re-read the queue at the start of every work session; it advances as other branches land.
 
 ### Phase 0 — Harness + baseline (no engine behaviour change)
 - Build the engine dump + ROM Lua hooks (§3.2).
-- Re-confirm the 53-failure baseline; snapshot the frontier table.
-- **Exit:** harness produces a clean engine-vs-ROM phase diff for one trace
-  (use OOZ2 f1070 or CNZ short f291 as the smoke test).
+- Re-measure the live baseline on the working branch (failures **and** error count);
+  snapshot the frontier table. Reconcile with Agent Quick State (currently 52+1).
+- **Exit:** harness produces a clean engine-vs-ROM phase diff for the current queue
+  target (OOZ f1782) as the smoke test.
 
-### Phase 1 — Solid-object **landing** phase (largest, best-characterised)
+### Family A — Solid-object **landing** phase mechanics
 - **Targets:** OOZ2-LS f1070 (`air 0/1` on popping platform), MHZ-CR f72 (rolls off
   mushroom vs engine lands/rides), GHZ1/GHZ2-CR f2573/f2369 (`y_speed` large→0),
   S3K LBZ-CR f1694 (`air`).
@@ -150,7 +192,7 @@ gating de-risks the next.
   ROM. Do **not** touch the heightmap alone (proven net-neg).
 - **Exit:** ≥1 of the landing frontiers cleared/advanced, 0 regressions.
 
-### Phase 2 — Side-contact / push phase
+### Family B — Side-contact / push phase mechanics
 - **Targets:** OOZ-LS f1782 (tails push, ROM-captured: push@f1781, engine 1 frame
   late), the slot/contact onesies that depend on side-contact (ARZ2 f523 slot via
   contact order).
@@ -161,7 +203,7 @@ gating de-risks the next.
 - **Approach:** model side-contact registration + corner resolution together as one
   per-family change; gate.
 
-### Phase 3 — Launch phase (springs, bumpers, fans)
+### Family C — Launch phase mechanics (springs, bumpers, fans)
 - **Targets:** CNZ short f291 (bumper orbit-vs-bounce timing, hypersensitive),
   CNZ-CR f1846 (horizontal spring launch timing + Tails interaction), the missed-launch
   sign-flips MZ2 f2578 / HTZ2 f1078 (ROM launches up, engine falls).
@@ -174,7 +216,7 @@ gating de-risks the next.
 - **Approach:** per-object trigger + object-position sample phase; gate hard (this phase
   has the highest regression risk — see the +4).
 
-### Phase 4 — Sidekick CPU follow/contact phase
+### Family D — Sidekick CPU follow/contact phase mechanics
 - **Targets:** tails_x onesies (CPZ f3365, CPZ2 f2889, MCZ2 f4485, CNZ2 f4418,
   MTZ3 f1973), CNZ-CR f1846 (CPU steering + spring).
 - **ROM refs:** `TailsCPU`/`loc_13DD0`-`loc_13E64` (sonic3k.asm:26690-26743),
@@ -184,7 +226,7 @@ gating de-risks the next.
   change, plus `TestArchUnitRules`.
 - **Approach:** most fragile; do last, smallest steps, heaviest gating.
 
-### Phase 5 — Residual onesies + trace hygiene
+### Family E — Residual onesies + trace hygiene
 - **Targets:** sub-pixel position onesies (Ghz3 f1246, Mz3 f1702, Syz3 f3468, Hcz f1489,
   Aiz x_sub f1095), camera_y residue (LZ1 f5745) once their upstream air/landing cause
   is fixed by Phases 1-4.
@@ -204,9 +246,12 @@ gating de-risks the next.
 - **Net-positive rule:** keep a change only if the full sweep shows it net-positive
   (cleared/advanced with zero regressions). An "artificial" frontier bump that breaks on
   a later root must be reverted, not shipped.
-- **Guards before any push:** `TestArchUnitRules`, `TestRewindCoverageGuard`,
+- **Guards before any push:** `TestTraceReplayInvariantGuard` (enforces the
+  comparison-only invariant — **mandatory** here because the harness §3.2 adds
+  diagnostics/recorder context), `TestArchUnitRules`, `TestRewindCoverageGuard`,
   `TestNoDirectMapMutationsInGameplay`, `TestNoServicesInObjectConstructors`,
-  `TestObjectServicesMigrationGuard`, and the must-keep-green S3K set
+  `TestObjectServicesMigrationGuard`, `TestSidekickCpuFollowParity` (sidekick changes),
+  the profile round-trip test (§3.1.4), and the must-keep-green S3K set
   (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
   `TestSonic3kDecodingUtils`).
 - **Frontier log:** update `docs/TRACE_FRONTIER_LOG.md` on every frontier move / full
@@ -225,13 +270,21 @@ gating de-risks the next.
 | Coupled multi-part roots (GHZ heightmap+index) | Model both halves in one change; never land one half |
 
 ## 7. Milestones / definition of done
-- **M0:** harness operational, baseline re-confirmed (53).
-- **M1:** landing family — ≥3 frontiers cleared/advanced, 0 regressions.
-- **M2:** side-contact family — OOZ-LS + ARZ2 advanced.
-- **M3:** launch family — ≥2 of {CNZ bumper, CNZ-CR spring, MZ2/HTZ2} advanced.
-- **M4:** sidekick family — ≥3 tails onesies cleared, parity suite green.
-- **M5:** residual onesies + trace-hygiene pass; final full sweep; fail count materially
-  below 53 with zero regressions and all guards green.
 
-Each milestone is independently shippable (scoped commits, frontier log updated) and
-must leave the suite no worse than it found it.
+Milestones are **queue-driven**, not family-ordered: each takes the current Agent Quick
+State queue head and applies the matching family mechanics (§4 toolbox). Targets below
+are illustrative of the *current* queue and will shift as it advances.
+- **M0:** harness operational; live baseline re-confirmed on the working branch
+  (failures **and** error count, currently 52 + 1).
+- **M1:** current queue head — **OOZ f1782** `tails_x`/`tails_x_speed` (side-contact +
+  sidekick mechanics, Families B+D) cleared/advanced, 0 regressions, error count flat.
+- **M2:** next queued movement/downstream frontiers (CNZ-CR f1846, MTZ3 f1973, …) —
+  ≥2 cleared/advanced.
+- **M3+:** continue down the live queue, applying the family toolbox per target; pick up
+  landing/launch families (A/C) when the queue reaches those frontiers.
+- **Mn (final):** trace-hygiene pass (regenerate recorder-desynced traces; resolve the
+  standing 1 error); final full sweep; failure count materially below the 52 baseline
+  with zero regressions, error count not increased, and all guards green.
+
+Each milestone is independently shippable (scoped commits, frontier log **and** Agent
+Quick State updated) and must leave the suite no worse than it found it.
