@@ -18322,3 +18322,27 @@ accurate). Baseline restored: 53 / 52+1.
   GHZ3-CR f1246 (unchanged), MZ1-CR f2089 (unchanged); GHZ1 standalone, MZ1
   standalone, Credits00Ghz1, Credits07Ghz1b all green both runs. Guards green:
   TestArchUnitRules, TestRewindCoverageGuard, TestTraceReplayInvariantGuard.
+
+### 2026-06-22 addendum - S1 GHZ2-CR f2369 root-caused (fix deferred: needs detection/riding height split)
+
+- GHZ2-CR f2369 (`y_speed` exp0x0668 act0x0000, `rolling` exp1 act0) is the SAME
+  exact-touch early-landing as GHZ1, on the generic platform (Obj 0x18,
+  `Sonic1PlatformObjectInstance`). BizHawk capture (`diag_s1_plat.lua`,
+  OGGF_DIAG_START/STOP env; GHZ2-CR offset 6622 -> trace f2369 = BK2 8991):
+  ROM `d0=0` at BK2 8991 does NOT land (0x7B02 fires again at BK2 8992 `d0=-5`
+  where it lands). Engine debug at the landing decision: rolling=true, yRad=14
+  (correct), pCenterY=0x268 (matches ROM), but **distY=1** not 0.
+- Root cause: the engine models the platform detection surface at obY-9
+  (`HALF_HEIGHT=9`, cited from MvSonicOnPtfm2's riding `subi #9`), but ROM's
+  landing DETECTION uses `Plat_NoXCheck` `subq #8` (obY-8). The existing
+  `getTopLandingSnapAdjustment()=-1` fixes the landing POSITION but not the
+  detection TIMING, so the engine lands one frame early (distY=1 vs ROM d0=0).
+- Net-negative naive fix (REVERTED): setting HALF_HEIGHT=8 + snap-adj=0 +
+  rejectsZeroDistanceTopSolidLanding advanced GHZ2-CR f2369->f2371 (+2) but
+  REGRESSED GHZ3-CR f1246->f1144 (1px `y`) because continued-riding then snaps
+  to obY-8 instead of ROM's obY-9. Net negative -> reverted per net-positive rule.
+- Correct fix (deferred): split detection vs riding surface — new-landing
+  detection at obY-8 (sticky=false) while continued riding keeps obY-9
+  (sticky=true). Requires a sticky-aware top-half-height in
+  ObjectSolidContactController.resolveContact (shared collision); verify with
+  the full S1 sweep. Not landed this session.
