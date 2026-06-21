@@ -17514,3 +17514,32 @@ Remaining clusters by depth (for ordering next sessions):
   nonzero" S1 group (GHZ1 f2573, GHZ2 f2369, SBZ1 f1925) likely shares a root.
 - Deep/multi-session: MZ2 Caterkiller spawn-window; cluster-4/5 sidekick
   object-phase (CPZ2 f2889 tube handoff, OOZ jitter, MTZ3/MCZ2/CNZ2 onesies).
+
+## 2026-06-21 -- Re-clustering correction + GHZ "lands one frame early" cluster
+
+Cluster taxonomy mapped to ACTUAL current frontiers (field counts from the
+post-Y-wrap-fix sweep):
+- Cluster 1 (frame-0): EMPTY (no BootstrapDivergence / frame-0 failures).
+- Cluster 2 (radius/rolling wall-probe): NO clean members. The rolling-state
+  divergences are object BOUNCES, not the x_radius wall-probe hypothesis:
+  * AIZ f19089: x/y/g_speed ALL sign-flipped near AIZEndBoss (0x92) = boss-hit
+    bounce (Touch_Enemy_Part2 neg x+y + bossHitNegatesGroundSpeed neg g) not
+    applied by the engine -- a boss bounce, not radius/rolling.
+  * MZ2 f2578 / HTZ2 f1078: rolling-into-badnik bounce (neg y_vel) -- already
+    root-caused (MZ2 = absent Caterkiller; HTZ2 = HTZ object).
+- Cluster 3 (exact 0x100 deltas): no exact-0x100 frontiers observed.
+- Largest real cluster = y_speed (16). A coherent sub-cluster is "engine
+  y_speed=0 / air=0 (landed) vs ROM y_speed>0 / air=1 (still falling)":
+  GHZ1 f2573, GHZ2 f2369 (and likely MHZ f72, CNZ f1691). ROM CSV (GHZ1) shows a
+  normal gravity fall f2567-2573 (y_speed 06A0->07F0) LANDING at f2574; the engine
+  lands ONE FRAME EARLY at f2573 (snaps to floor, air=0, y_speed=0). So the
+  engine's airborne floor sensor reaches the landing surface a frame before ROM.
+  Shared "lands one frame early" root across these falls -> high leverage, but a
+  terrain/object floor-landing-sensor timing investigation (which surface/object,
+  ROM ObjFloorDist/Sonic_DoLevelCollision landing threshold) -- next target.
+- Cluster 4/5 (sidekick tails_x, 10) and cluster 6 (onesies): as before.
+
+Session: 2 engine fixes landed (CPZ2 spin-tube, S1 vertical-wrap), both verified
+net-positive zero-regression. Fail count 53 (frontiers advanced, none cleared a
+whole trace). Remaining frontiers are each deep distinct subsystem bugs;
+all-green is multi-session.
