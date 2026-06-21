@@ -18056,3 +18056,24 @@ heightmap+index, MHZ mushroom landing-phase, sign-flip angle, ARZ2 slot-alloc, C
 hover-fan solidity). Every cluster-4/5/6 representative is a coupled multi-part bug
 in shared or object code; four full fix->sweep->revert cycles all net-negative/neutral.
 Baseline: 53.
+
+## 2026-06-21 -- CORRECTION: CNZ-CR f1846 fan root is NOT solidity (deeper)
+
+The prior entry's "make the hover fan solid" hypothesis is RETRACTED on inspection.
+Engine CnzHoverFanInstance.tryCapture does a VERTICAL lift and sets gSpeed=1
+(line 151), not a -$1000 blow, and does not implement solidity. ROM sub_31F62 (the
+fan core) sets ground_vel=$1000 -- a HORIZONTAL blow gated to a blow-zone ($A0 x $40).
+So: (a) the engine fan is not solid AND does not emit -$1000; (b) Tails' g_speed=-$1000
+in the engine comes from some OTHER source (not this fan); (c) the engine fan models a
+vertical hover/lift while ROM sub_31F62 models a horizontal $1000 blow -- the two fan
+behaviors themselves diverge. ROM Tails at f1846 is on the fan (onObj=04) with
+g_speed=0x24 (NOT blown -- outside the blow zone). The engine's Tails is not on the
+fan and has g_speed=-$1000 from elsewhere. Root is unresolved and multi-part; needs
+engine-side instrumentation of what sets Tails g_speed=-$1000, plus reconciling the
+engine lift-fan vs ROM blow-fan behaviors. Another coupled/uncertain root, not a clean
+solidity add.
+
+Net for the session: 8 roots investigated, EVERY one deep/coupled (and two -- GHZ
+heightmap, CNZ fan -- had initial hypotheses disproved on deeper inspection); 4 full
+fix->sweep->revert cycles, all net-negative/neutral. No clean surviving single-turn
+fix exists. Baseline: 53.
