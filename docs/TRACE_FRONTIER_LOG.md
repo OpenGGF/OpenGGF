@@ -17905,3 +17905,33 @@ the fragile SidekickCpuController + the non-must-keep-green TestSidekickCpuFollo
 suite); a blind edit risks regressing currently-green sidekick traces and must be
 gated on the full sweep + the parity suite. Baseline for that gating: 53 failures
 (this session's sweep).
+
+## 2026-06-21 -- CLUSTER 4 bisected to exact code paths (OOZ-LS f1782)
+
+Instrumented setPushing on the CPU sidekick (throwaway, reverted). In the f1781/f1782
+window the Tails push bit is driven by exactly two sites, every frame:
+  SET   : ObjectSolidContactController.processInlineObjectForPlayer  (step 4, object
+          exec, inline solid contact) -- fires at Tails centre (0CE3,0574).
+  CLEAR : PlayableSpriteMovement.updatePushingOnDirectionChange      (step 2,
+          handleMovement, on a grounded facing flip).
+Per-frame order (S2/S3K inline, LevelFrameStep:134-152): step2 physics (clear) then
+step4 objects (set). End-of-frame push = whether step4's contact fired.
+
+ROM sets push @f1781; engine's contact fires @f1782 -- one frame late -- although
+Tails is at the SAME position (0CE3) both frames. Findings:
+ - The player-position reference in processInlineObjectForPlayer is getCentreX/Y
+   (current/post-physics) = ROM-accurate (the contact already uses post-move pos).
+ - updatePushingOnDirectionChange is ROM-cited and correct (s2.asm MoveLeft/MoveRight
+   36569/39541 + animation prev_anim clear 38033/40879; sonic3k 27814/29359).
+ - Therefore the one-frame lateness is the CONTACTED OBJECT's sampled state at
+   contact-evaluation time being one frame behind ROM -- the object-execution-phase,
+   in SHARED collision/object-exec code (processInlineObjectForPlayer serves the
+   player too, and player traces pass). A blunt phase shift regresses green traces
+   (proven earlier: GHZ penetration variant regressed MZ1).
+
+Conclusion: cluster 4's earliest trace is bisected to a single mechanism (object
+side-contact fires one frame late -> push one frame late -> CPU follow-nudge
+inverted -> 1px tails_x). A correct fix needs the exact contacted object's f1781
+state captured from ROM (BizHawk) and a targeted phase alignment gated on the full
+sweep + TestSidekickCpuFollowParity; it is not a safe single-turn edit to shared
+collision code. Baseline for gating: 53 failures.
