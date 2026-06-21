@@ -17965,3 +17965,28 @@ side-contact registration phase or the dx boundary would shift every other side-
 this onesie at static/instrumentation resolution; it is gated behind the same
 object-contact-execution-phase alignment as the rest of cluster 4/5/6. Tooling added:
 tools/bizhawk/diag_s2_ooz_pform.lua.
+
+## 2026-06-21 -- CLUSTER 4 fix ATTEMPT + full sweep (net-negative, REVERTED)
+
+Hypothesis from the OOZ-LS f1782 ROM capture: the contact is at dx == solid
+half-width exactly; ROM Obj33 uses SolidObject (s2.asm:49222-49460 jsrto
+JmpTo3_SolidObject) whose SolidObject_cont rejects with bhi (strictly-greater) =
+INCLUSIVE right edge, while the engine default usesInclusiveRightEdge()=false uses
+relX >= 2*halfWidth (EXCLUSIVE), dropping the exact-edge side contact.
+
+Fix attempted: OOZPoppingPlatformObjectInstance.usesInclusiveRightEdge() -> true.
+Full sweep (frontierOnly, all *TraceReplay): Tests run 90, Failures 53 (unchanged).
+Frontier diff vs baseline -- exactly ONE change:
+  TestS2OozLevelSelectTraceReplay 1782 tails_x  ->  1251 tails_status_byte
+i.e. OOZ-LS REGRESSED (1782 -> 1251); nothing cleared or advanced. At f1251 the
+inclusive edge turns a CORNER ride contact (ROM status 0x0B = OnObj) into a
+side-push (engine 0x23 = Push). So the inclusive right edge is genuinely
+ROM-accurate for the pure side case (f1782) but exposes a separate corner
+ride-vs-push resolution bug at f1251 -- the change is net-negative on its own.
+REVERTED per the net-positive rule (an isolated edge fix that artificially shifts
+one boundary while breaking the corner is exactly the "artificial bump" to avoid).
+
+Lesson: the OOZ side-contact frontier needs BOTH the inclusive right edge AND
+corner ride-vs-push parity (prefer top/ride over side/push at relX==2*halfWidth,
+matching SolidObject_cont's d3/d2 ordering) landed together; neither half is
+net-positive alone. Two-part fix deferred. Baseline restored: 53 failures.
