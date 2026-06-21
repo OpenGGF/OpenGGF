@@ -17758,3 +17758,44 @@ rings + landings + tube + push at once), multi-session.
 
 Highest-leverage target, now confirmed across 4 object families. Tooling in place:
 sonic.lst, diag_s1_plat.lua, diag_s1_plat_gate.lua, diag_s1_ypos_writes.lua.
+
+## 2026-06-21 -- CORRECTION: MGZ f539 ring frontier was STALE; ROM ring collection matches the engine
+
+Re-ran TestS3kMgzTraceReplay (worktree trace-cluster-fixes, S&K ROM). It does NOT
+fail at f539. It simulates 33271 frames of MGZ physics with no reported
+divergence, then fails at trace frame 33271 with an INPUT ALIGNMENT error:
+  Input alignment error at trace frame 33271: BK2 input=0x0001, trace input=0x0009.
+This is a per-frame check (AbstractTraceReplayTest:513 binder.validateInput) of
+the BK2 movie input vs the recorded physics.csv input column -- a TRACE-DATA
+inconsistency (likely a lag-frame/offset slip), NOT an engine physics bug. So the
+real TestS3kMgzTraceReplay blocker is trace-data alignment at f33271 (regeneration
+or bk2_frame_offset candidate), and MGZ physics is effectively green through
+f33271 -- far past the f539 cited in the prior entry.
+
+The f539 ring report (target/trace-reports/s3k_mgz1_report.json) used in the
+2026-06-21 "MGZ rings confirm unifying root" entry was STALE (an old run), so that
+entry's conclusion is RETRACTED.
+
+ROM ground-truth (skdisasm/sonic3k.asm), ring collection is POST-physics, exactly
+as the engine models it:
+  Obj_Sonic: line 21985 jsr Sonic_Modes (movement: SpeedToPos + DoLevelCollision)
+             line 22022 jsr TouchResponse -> Test_Ring_Collisions (18444).
+Test_Ring_Collisions box (non-attraction, 18465-18476): playerLeft = x_pos-8,
+player width d4=$10; playerTop = y_pos-(y_radius-3), height 2*(y_radius-3); ring
+half d1=6, ring span d6=$C. The engine's RingManager.ringOverlapsPlayer +
+collectStageRings reproduce this exactly (centreX-8 / width 0x10 / yRadius-3 /
+ringWidth 6), and LevelManager.applyTouchResponses runs ring collection
+post-movement. So MGZ ring collection is NOT evidence of an "object contact one
+frame early" phase; at identical player sub-pixel state (both sub=(0700,7600) @
+f539 in the stale report) the boxes are identical. The unifier claim is therefore
+weakened: of the prior "4 families", MGZ is invalid (ROM-confirmed to match the
+engine); GHZ remains a real but DISTINCT ~1px collapsing-ledge surface delta
+(live gate-hook, this session); CPZ2 was a real prePhysicsCentre fix; the sidekick
+push case is unverified. Treat GHZ, CPZ2, and sidekick as independent roots, not
+one phase bug.
+
+Cluster 2 (radius/rolling) also does not map to the wall/push sensor path: the
+engine already uses fixed push=10 (AbstractPlayableSprite.updatePushSensors /
+updatePushSensorYOffset) and CalcRoomInFront uses fixed +-10
+(CollisionSystem.describeCalcRoomInFrontProbe), matching ROM CheckRightWallDist
+addi.w #$A,d3. So the rolling x_radius shrink does NOT widen/narrow the push probe.
