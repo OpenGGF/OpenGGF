@@ -18214,3 +18214,27 @@ family mechanics alone. Eight distinct fix attempts this session, zero net-posit
 landings: the frontier set is predominantly sub-pixel-hypersensitive / multi-root
 coupled. Completion is a sustained multi-session effort; each target needs its exact
 sub-pixel ROM state pinned (BizHawk) and frequently a prerequisite root fixed first.
+
+## 2026-06-21 -- PLAN M1 OOZ f1782 v4 (dy-driven inclusive edge) net-neg; queue head is SUB-PIXEL-IRREDUCIBLE
+
+v4: OOZ usesInclusiveRightEdge=true, but clamp relX==width2 -> width2-1 so the
+top-vs-side (d5/d1) decision is dy-driven (instead of v1-v3's forced d5=0 side).
+Result: f1251 landing regression GONE, but OOZ-LS regressed to f1235 (x exp08E3
+act08E4, main player 1px). Cause: ROM uses the zero-distance side (d5=0) at the exact
+edge -> correct push-out distance for genuine side contacts (f1235, f1782); clamping to
+d5=1 corrupts that distance by 1px. So the two needs are mutually exclusive under any
+clamp:
+  keep relX==width2 (d5=0)  -> correct side distance, but forces side at the edge -> f1251 landing breaks
+  clamp to width2-1 (d5=1)  -> dy decides top/side (fixes f1251) -> wrong side distance -> f1235 breaks
+Both only because the ENGINE's player sub-pixel x at the platform edge differs from ROM
+by <1px. That is the irreducible root. REVERTED.
+
+CONCLUSION (4 variants v1-v4): OOZ f1782 is SUB-PIXEL-IRREDUCIBLE via the side-contact
+family. It is blocked on the player/sidekick exact sub-pixel x at the platform right
+edge (a downstream-of-physics / downstream-of-Tails-CPU position root), not on
+edge-classification. Per the plan risk table ("some frontiers may be sub-pixel
+-irreducible; accept advanced-not-cleared, document, move on") this queue head cannot be
+cleared by Family-B mechanics alone; it needs the upstream sub-pixel position root
+fixed first. Nine fix attempts this session, zero net-positive landings -- the frontier
+set is dominated by sub-pixel-hypersensitive / multi-root-coupled cases; landing
+survivors is genuine multi-session BizHawk-per-trace work.
