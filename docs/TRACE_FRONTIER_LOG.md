@@ -17628,3 +17628,27 @@ object phase; a candidate engine fix is to have object-solid LANDING sample the
 player's frame-start (pre-physics) position (cf. the CPZ2 prePhysicsCentre fix),
 but that is high-blast-radius (every object landing) and must be ROM-confirmed +
 full-sweep gated before landing.
+
+## 2026-06-21 -- GHZ runtime hook: ROM lands PENETRATED (one frame later), multi-write
+
+Built tools/bizhawk/diag_s1_ypos_writes.lua (onmemorywrite hook on Sonic y_pos
+0xFFD00C). Around the GHZ collapsing-ledge landing:
+- airborne frames: ONE y_pos write/frame from PC 0x00DC6A (Sonic movement).
+- landing: an EXTRA write from PC 0x007B28 carries Sonic to y=020E (penetrated
+  ~8px below the ledge surface) BEFORE the snap to 0208 (PCs 0x00DC90, 0x008BE4).
+So ROM lands when Sonic has PENETRATED (y=020E), one frame later than the engine,
+which lands at first touch (resolveSlopedContact relY=0 at y=0206).
+
+This contradicts the static [0,16] / [-16,0] landing window (which includes the
+touch frame d0=0), so the true behavior depends on WHICH position the landing
+routine evaluates and the multi-routine sequence (0x007B28 -> 0x00DC90 ->
+0x008BE4). Reconciling it needs: (a) a ROM symbol/address map to identify those
+PCs, and (b) a PC-hook directly on SlopeObject to read d0/obY at the instant it
+runs. Without that, any engine change to the (shared, high-blast-radius)
+object-landing condition is a guess against the static window and likely
+net-regresses, so it is NOT landed.
+
+Net for the session: 2 verified engine fixes (CPZ2 spin-tube, S1 vertical-wrap);
+the highest-leverage root (object-landing/exec-phase position timing, unifying
+GHZ + CPZ2 + sidekick) is now characterized to runtime evidence but blocked on
+ROM symbol mapping for a safe fix.
