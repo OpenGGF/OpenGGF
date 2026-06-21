@@ -18190,3 +18190,27 @@ frame later / loses it near the edge). That OnObj-state-timing is itself a
 Family-B/landing-phase root and must be fixed first. M1 target is therefore blocked on
 a prerequisite root, not irreducible. Baseline restored: 53 (this worktree) / 52+1
 (Agent Quick State).
+
+## 2026-06-21 -- PLAN M1 (OOZ f1782) THREE variants all net-neg; blocked on sub-pixel Tails position at f1251
+
+Continued M1 on the queue head OOZ-LS f1782. Three paired inclusive-edge variants, all
+regress OOZ-LS 1782 -> 1251 (tails_status_byte exp0x0B OnObj act0x23 Push):
+  v1 plain inclusiveRightEdge=true                       -> f1251
+  v2 + rider-exclusion via isRidingCurrentPlayerObject   -> f1251 (riding map misses sidekick)
+  v3 + rider-exclusion via getOnObjectAtFrameStart       -> f1251 (Tails not OnObj at frame start either)
+Root of the f1251 regression: at f1251 Tails is LANDING this frame (new contact, not
+OnObj at frame start). ROM resolves the corner as a TOP landing (OnObj); the engine
+resolves it as a SIDE push because, with the inclusive edge, Tails sits at the EXACT
+right edge (relX==width2 -> d5=0 -> SolidObject_cont LeftRight) whereas ROM's Tails is
+1px INSIDE (d5>0 -> TopBottom/land). So the top-vs-side outcome hinges on a 1px Tails
+position difference at the corner -- sub-pixel hypersensitive, like the CNZ bumper. No
+edge-classification or rider-gate fixes it; it needs the sidekick's exact sub-pixel
+position at the platform corner to match ROM, which is a downstream-of-Tails-CPU
+sub-pixel root. REVERTED (net-negative).
+
+Plan status: M0 done (baseline 53/52+1). M1 (queue head OOZ f1782) is BLOCKED on a
+sub-pixel Tails-position hypersensitivity at f1251 -- not clearable by the side-contact
+family mechanics alone. Eight distinct fix attempts this session, zero net-positive
+landings: the frontier set is predominantly sub-pixel-hypersensitive / multi-root
+coupled. Completion is a sustained multi-session effort; each target needs its exact
+sub-pixel ROM state pinned (BizHawk) and frequently a prerequisite root fixed first.
