@@ -1014,7 +1014,6 @@ com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLeafPa
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild#objectRef#player
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild#recreate
 com.openggf.game.sonic3k.objects.CutsceneKnucklesSkIntroInstance#recreate
-com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance#objectRef#owner
 com.openggf.game.sonic3k.objects.DoorObjectInstance#finalScalar#baseX
 com.openggf.game.sonic3k.objects.DoorObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.DoorObjectInstance#finalScalar#halfHeight

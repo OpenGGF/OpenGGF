@@ -693,6 +693,14 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_CUTSCENE_KNUCKLES_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesRockChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance",
+                    GameId.S3K));
+
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
     private static final ObjectRenderManager INERT_RENDER_MANAGER =
@@ -4478,6 +4486,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K nested hurtbox graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K cutscene Knuckles graph batch: AIZ rock and CNZ blocking wall
+    // =====================================================================
+
+    @Test
+    void s3kCutsceneKnucklesGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CUTSCENE_KNUCKLES_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K cutscene Knuckles graph batch");
+        }
+    }
+
+    @Test
+    void s3kCutsceneKnucklesGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CUTSCENE_KNUCKLES_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K cutscene Knuckles graph generic recreate, not a dynamic codec");
         }
     }
 

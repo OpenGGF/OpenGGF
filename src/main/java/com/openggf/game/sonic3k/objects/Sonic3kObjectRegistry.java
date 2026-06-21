@@ -284,12 +284,12 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // motion state is restored after generic recreate.
 
             // AIZ1 intro Knuckles codec deleted (Phase-2 batch 4): parent is
-            // self-contained via RewindRecreatable; the rock child still relinks
-            // to the live parent in getActiveObjects().
-            cutsceneKnucklesAiz1RockChildCodec(),
+            // self-contained via RewindRecreatable.
+            // CutsceneKnucklesRockChild codec deleted with the S3K cutscene
+            // Knuckles graph batch; generic recreate relinks the live AIZ parent.
 
-            // CNZ2 Knuckles cutscene blocking wall: relink to the placed parent.
-            cutsceneKnuxCnz2WallCodec(),
+            // CutsceneKnuxCnz2WallInstance codec deleted with the S3K cutscene
+            // Knuckles graph batch; generic recreate relinks the live CNZ parent.
 
             // S3K InstaShield codec deleted (Phase-2 player-bound batch):
             // it inherits ShieldObjectInstance's RewindRecreatable pending-entry
@@ -531,72 +531,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     // ===================================================================
     // Batch-inner2: nested-class hazard/solid/cutscene child rewind codecs
     // ===================================================================
-
-    // ---- Batch-6 relink codecs --------------------------------------------
-
-    /**
-     * Codec for the AIZ1 intro Knuckles rock child. Relinks the live
-     * {@link CutsceneKnucklesAiz1Instance} parent (recreated earlier in the
-     * dynamic-object restore order via its exactSpawnCodec, so it is present in
-     * getActiveObjects()). The child's {@code parent} field is final and passed
-     * into the constructor; if no live parent exists the child is dropped.
-     */
-    private static DynamicObjectRewindCodec cutsceneKnucklesAiz1RockChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == CutsceneKnucklesRockChild.class;
-            }
-
-            @Override
-            public String className() {
-                return CutsceneKnucklesRockChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                CutsceneKnucklesAiz1Instance parent =
-                        findLiveInstance(context, CutsceneKnucklesAiz1Instance.class);
-                if (parent == null) {
-                    return null;
-                }
-                return new CutsceneKnucklesRockChild(entry.spawn(), parent);
-            }
-        };
-    }
-
-    /**
-     * Codec for {@link CutsceneKnuxCnz2WallInstance}. The wall's only non-spawn
-     * constructor argument is its live {@link CutsceneKnucklesCnz2AInstance}
-     * cutscene parent (a placed object re-spawned from placement on restore).
-     * Relinks to that live parent so the invisible blocking wall is rebuilt with
-     * the correct owner; dropped if the parent is absent.
-     */
-    private static DynamicObjectRewindCodec cutsceneKnuxCnz2WallCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == CutsceneKnuxCnz2WallInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return CutsceneKnuxCnz2WallInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                CutsceneKnucklesCnz2AInstance parent =
-                        findLiveInstance(context, CutsceneKnucklesCnz2AInstance.class);
-                if (parent == null) {
-                    return null;
-                }
-                return new CutsceneKnuxCnz2WallInstance(entry.spawn(), parent);
-            }
-        };
-    }
 
     /**
      * Codec for {@link Sonic3kSSEntryFlashObjectInstance}. The flash holds a final

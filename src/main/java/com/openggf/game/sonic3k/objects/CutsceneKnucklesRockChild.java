@@ -4,7 +4,10 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -21,7 +24,7 @@ import java.util.logging.Logger;
  * Phase 2 (Break): When the parent is triggered, increments mapping_frame,
  * calls BreakObjectToPieces to scatter fragment sprites, and deletes self.
  */
-public class CutsceneKnucklesRockChild extends AbstractObjectInstance {
+public class CutsceneKnucklesRockChild extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(CutsceneKnucklesRockChild.class.getName());
 
     /** Parent Knuckles object whose triggered flag we poll. */
@@ -53,6 +56,33 @@ public class CutsceneKnucklesRockChild extends AbstractObjectInstance {
     @Override
     public boolean isPersistent() {
         return true;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        CutsceneKnucklesAiz1Instance liveParent = findLiveParent(ctx);
+        if (liveParent == null) {
+            return null;
+        }
+        return new CutsceneKnucklesRockChild(ctx.spawn(), liveParent);
+    }
+
+    private static CutsceneKnucklesAiz1Instance findLiveParent(RewindRecreateContext ctx) {
+        ObjectSpawn childSpawn = ctx.spawn();
+        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (object instanceof CutsceneKnucklesAiz1Instance parent
+                    && !parent.isDestroyed()
+                    && parent.getSpawn().x() == childSpawn.x()
+                    && parent.getSpawn().y() + 0x20 == childSpawn.y()) {
+                return parent;
+            }
+        }
+        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (object instanceof CutsceneKnucklesAiz1Instance parent && !parent.isDestroyed()) {
+                return parent;
+            }
+        }
+        return null;
     }
 
     @Override

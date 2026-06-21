@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -82,5 +83,15 @@ class TestRewindFixS3KBatch6Codecs {
             assertTrue(hasDynamicRecreatePath(name, names),
                     "missing rewind recreate path for " + name);
         }
+
+        assertGenericOnly(names, CutsceneKnucklesRockChild.class);
+        assertGenericOnly(names, CutsceneKnuxCnz2WallInstance.class);
+    }
+
+    private static void assertGenericOnly(Set<String> codecNames, Class<?> type) {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(type),
+                type.getName() + " must use RewindRecreatable generic recreate");
+        assertFalse(codecNames.contains(type.getName()),
+                type.getName() + " must not keep an explicit dynamic rewind codec");
     }
 }
