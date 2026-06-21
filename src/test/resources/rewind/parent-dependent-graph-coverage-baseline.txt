@@ -25,8 +25,8 @@ covered|com.openggf.game.sonic2.objects.bosses.CPZBossPipePump|TestS2CpzBossGrap
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment|TestS2CpzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossPump|TestS2CpzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik|TestS2CpzBossGraphRewind
-session-tail|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZFloatingPlatform|needs focused S2 WFZ boss graph/session rewind harness
-session-tail|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserWall|needs focused S2 WFZ boss graph/session rewind harness
+covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZFloatingPlatform|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
+covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserWall|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.SeesawBallObjectInstance|TestSeesawBallGraphRewind
 covered|com.openggf.game.sonic3k.objects.AizEndBossFlameColumnChild|TestS3kAizEndBossGraphRewind
 covered|com.openggf.game.sonic3k.objects.AizEndBossShipChild|TestS3kAizEndBossGraphRewind

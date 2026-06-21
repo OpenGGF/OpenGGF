@@ -129,13 +129,16 @@ class TestParentDependentGraphCoverageGuard {
         return entries;
     }
 
-    private static void assertGraphTestClassExists(String simpleName, String coveredClassName) {
-        assertFalse(simpleName.isBlank(), coveredClassName + " covered row must name a test");
+    private static void assertGraphTestClassExists(String testName, String coveredClassName) {
+        assertFalse(testName.isBlank(), coveredClassName + " covered row must name a test");
+        String className = testName.contains(".")
+                ? testName
+                : TestParentDependentGraphCoverageGuard.class.getPackageName() + "." + testName;
         try {
-            Class.forName(TestParentDependentGraphCoverageGuard.class.getPackageName() + "." + simpleName);
+            Class.forName(className);
         } catch (ClassNotFoundException e) {
             throw new AssertionError(
-                    coveredClassName + " is marked covered by missing graph test " + simpleName, e);
+                    coveredClassName + " is marked covered by missing graph test " + testName, e);
         }
     }
 
