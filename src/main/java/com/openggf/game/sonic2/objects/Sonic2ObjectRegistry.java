@@ -79,8 +79,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     // Batch-inner2 inner-class hazard/solid child binary names.
     private static final String DEZ_ROBOT_ARTICULATED_CHILD_CLASS =
             "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild";
-    private static final String DEZ_ROBOT_BOMB_CHILD_CLASS =
-            "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$BombChild";
     private static final String DEZ_ROBOT_HEAD_CHILD_CLASS =
             "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$HeadChild";
     private static final String DEZ_ROBOT_JET_CHILD_CLASS =
@@ -148,19 +146,18 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // DEZ Eggman BarrierWall codec deleted: RewindRecreatable generic
             // recreate relinks the parent barrierWall back-reference.
             // MTZ boss laser now implements RewindRecreatable -> genericRecreate Path 1.
-            // Batch-inner2 S2 rewind codec (DEZ Death Egg Robot bomb child).
-            //
             // NOTE: ArticulatedChild, HeadChild, JetChild codecs intentionally REMOVED.
             // These three children are construction-spawned (inside initializeBossState() →
             // spawnChildren()), so they are re-established by boss reconstruction during
             // the activeObjects restore loop. Adding a codec would produce a second copy
             // from the dynamic-objects restore loop, doubling the count (10 → 18).
             // ForearmChild has no codec and is correct (also construction-spawned).
-            // BombChild is kept because it is fired from an attack routine, not construction.
+            // BombChild is routine-fired, but now restores through RewindRecreatable graph
+            // relink to the nearest live Death Egg Robot boss; it must stay codec-less.
             // WFZ floating-platform, laser-wall, and platform-hurt children now restore
             // through RewindRecreatable graph relinks in Sonic2WFZBossInstance.
             // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
-            deathEggRobotBombCodec());
+            );
 
     private final Map<Integer, List<String>> namesById = new HashMap<>();
     private final Set<Integer> unknownIds = new HashSet<>();
@@ -304,45 +301,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     // falling trajectory and is NOT re-emitted by the body, so it must be
                     // restored rather than dropped.
                     return (ObjectInstance) ctor.newInstance(parent, "ArticulatedChild", 0, 0);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec deathEggRobotBombCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(DEZ_ROBOT_BOMB_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return DEZ_ROBOT_BOMB_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // The Death Egg Robot is the placed/layout-spawned boss, recreated
-                // before the dynamic-object restore loop, so it is in getActiveObjects().
-                Sonic2DeathEggRobotInstance boss =
-                        findLiveInstance(context, Sonic2DeathEggRobotInstance.class);
-                if (boss == null) {
-                    return null; // boss gone -> drop the orphaned bomb
-                }
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    // Placeholder ctor args (0,0,0,0): currentX/currentY/xVel/yVel and
-                    // the other in-flight scalars are non-final and reapplied by the
-                    // generic field capturer after recreate.
-                    var ctor = cls.getDeclaredConstructor(
-                            Sonic2DeathEggRobotInstance.class, int.class, int.class, int.class, int.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(boss, 0, 0, 0, 0);
                 } catch (ReflectiveOperationException e) {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);

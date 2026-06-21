@@ -669,6 +669,11 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(HTZBossFlamethrower.class.getName(), GameId.S2),
             new CodecDeletionCandidate(HTZBossLavaBall.class.getName(), GameId.S2));
 
+    private static final List<CodecDeletionCandidate> S2_DEZ_BOMB_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$BombChild",
+                    GameId.S2));
+
     private static final List<CodecDeletionCandidate> SEESAW_BALL_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1SeesawBallObjectInstance",
@@ -4702,6 +4707,28 @@ public class TestScalarOnlyCodecDeletion {
                 "ARZBossArrow must restore through S2 ARZ graph generic recreate, not a dynamic codec");
         assertFalse(hasRegisteredDynamicCodec(ARZBossEyes.class.getName(), GameId.S2),
                 "ARZBossEyes graph support must not add a dynamic codec");
+    }
+
+    // =====================================================================
+    // S2 DEZ bomb graph support: parent-dependent Death Egg Robot bomb dynamic
+    // =====================================================================
+
+    @Test
+    void s2DezBombGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_DEZ_BOMB_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 DEZ bomb graph deletion");
+        }
+    }
+
+    @Test
+    void s2DezBombGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_DEZ_BOMB_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 DEZ bomb graph generic recreate, not a dynamic codec");
+        }
     }
 
     /**
