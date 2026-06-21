@@ -17990,3 +17990,28 @@ Lesson: the OOZ side-contact frontier needs BOTH the inclusive right edge AND
 corner ride-vs-push parity (prefer top/ride over side/push at relX==2*halfWidth,
 matching SolidObject_cont's d3/d2 ordering) landed together; neither half is
 net-positive alone. Two-part fix deferred. Baseline restored: 53 failures.
+
+## 2026-06-21 -- Grind cycle 2 (MHZ-CR f72) + object-contact-phase consolidation
+
+MHZ-CR f72: ROM player air=1 rolling=1 status=06 onObj=00 y_speed=+00E0 (rolled off
+the mushroom, airborne, falling); ENGINE air=0 rolling=0 status=08 riding the
+MHZMushroomCap (slot4 0x23) y_speed=0. Hypothesis: engine over-retains the rider via
+the default 16px sticky-contact buffer (mushroom carriesRiderOnHorizontalMove=false,
+ROM uses non-sticky SolidObjectTop). Fix attempted: MhzMushroomCap
+usesStickyContactBuffer()->false. Focused MHZ-CR run: NO CHANGE (still f72 y_speed
+exp00E0 act0000). Hypothesis disproved -> the riding is NOT sticky retention; the
+engine genuinely registers/keeps the mushroom contact at f72 where ROM has onObj=00.
+Reverted (neutral, unverified).
+
+Consolidation: MHZ-CR f72 is the SAME object-contact-execution-phase root already
+established for OOZ-LS f1782 (engine push one frame late) and OOZ ring f539 -- the
+engine's object<->player contact registration is one frame out of phase with ROM,
+which here keeps the player on the mushroom (blocking the roll-off ROM performs).
+That makes the shared object-contact-resolution / execution-phase the unifying root
+across the contact-driven cluster-4/5/6 traces; fixing it is the single
+highest-leverage move but it lives in shared collision code (resolveContact /
+processInlineObjectForPlayer / the step-2-vs-step-4 ordering) where blunt changes
+regress green traces (proven: OOZ inclusive-edge 1782->1251; GHZ penetration->MZ1).
+
+Two grind cycles executed this session (OOZ inclusive-edge: net-negative, reverted;
+MHZ sticky: neutral, reverted), both full-/focused-sweep measured. Baseline: 53.
