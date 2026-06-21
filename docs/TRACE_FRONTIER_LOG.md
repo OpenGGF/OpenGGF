@@ -17351,3 +17351,33 @@ LATER (matching ROM's sequential exit-then-capture), instead of overlapping the
 first tube's last main-path frame. This is tube-path/handoff timing work in
 CPZSpinTubeObjectInstance (entry/main duration + exit sequencing), not a
 sidekick-physics change.
+
+## 2026-06-21 -- LANDED: CPZ2 spin-tube re-capture timing fix (f2888 -> f2889)
+
+Fix: CPZSpinTubeObjectInstance.checkEntryCollision now reads the player's
+frame-start (pre-physics) centre via getPrePhysicsCentreX/Y when the player is
+already mid-traversal of another tube (isObjectControlled && objSup), instead of
+getCentreX/Y (which the owning tube already advanced this frame). Models ROM
+Obj1E_Main slot ordering (s2.asm:48447-48457): the lower-slot capturing tube runs
+before the owning tube and reads the player's pre-owner-move position, so it does
+not re-capture on the same frame the owner steps the player. Free (not-yet-
+controlled) players still use the current post-physics centre, matching ROM's
+post-player-routine read for an initial capture.
+
+Verification (worktree bugfix/ai-trace-cluster-fixes):
+- Focused: TestS2Cpz2LevelSelectTraceReplay f2888 -> f2889 (tails_x); CPZ act1
+  unchanged at f3365.
+- Full sweep (frontierOnly, forkCount=2, all 3 ROMs): 90 run / 53 fail / 1 err
+  (identical totals to baseline); per-test frontier diff vs baseline shows ONLY
+  CPZ2 moving 2888 -> 2889, every other frontier byte-identical -> net-positive,
+  ZERO regressions.
+- Guards green: TestArchUnitRules, TestRewindCoverageGuard,
+  TestGameplayModeContextRewindRegistry.
+
+This is a genuine deviation fix (the f2888 -16 double-step is eliminated; engine
+now matches ROM -8 at f2888), not an artificial bump: the earlier obj_control
+"skip-capture" guard produced the same +1 by SUPPRESSING the capture forever
+(masking ROM's legit f2889 re-capture) and was reverted; this fix instead DEFERS
+the capture to the ROM frame via slot-order-accurate position basis. Remaining
+CPZ2 frontier f2889 (ROM -16 = owner + second-tube re-capture) is the next link:
+the deferred second-tube capture still does not fire at f2889 -- next target.

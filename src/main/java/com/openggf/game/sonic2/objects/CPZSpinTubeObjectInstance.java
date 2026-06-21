@@ -318,9 +318,27 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
 
         int objX = spawn.x();
         int objY = spawn.y();
-        // ROM uses center-based coordinates (x_pos, y_pos)
-        int playerX = player.getCentreX();
-        int playerY = player.getCentreY();
+        // ROM uses center-based coordinates (x_pos, y_pos).
+        //
+        // Position basis matches ROM slot ordering of Obj1E_Main (s2.asm:48447-
+        // 48457). ROM reads x_pos(a1)/y_pos(a1) live when the tube object runs in
+        // slot order:
+        //   - A FREE player (not yet tube-controlled) is moved by its own player
+        //     routine (slot 0/1) earlier in the frame, so the capturing tube reads
+        //     its POST-move position -> use the current centre.
+        //   - A player already mid-traversal of another tube (obj_control=$81)
+        //     has its position written by the OWNING tube object. When the
+        //     capturing tube has the lower object slot, it runs BEFORE the owning
+        //     tube and therefore reads the player's position from BEFORE this
+        //     frame's owning-tube step -> use the frame-start (pre-physics) centre.
+        // Without this, the engine's capturing tube reads the owner's already-
+        // advanced position and captures one frame early, double-stepping the CPU
+        // sidekick (CPZ2 f2888 tails_x -16 vs ROM -8). Using the frame-start centre
+        // for an already-controlled player defers that capture to the ROM frame.
+        boolean midTraversal = player.isObjectControlled()
+                && player.isObjectControlSuppressesMovement();
+        int playerX = midTraversal ? player.getPrePhysicsCentreX() : player.getCentreX();
+        int playerY = midTraversal ? player.getPrePhysicsCentreY() : player.getCentreY();
 
         // Check X range: player must be within collisionDistance of object
         int dx = playerX - objX;
