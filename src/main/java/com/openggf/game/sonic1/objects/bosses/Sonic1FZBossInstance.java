@@ -182,6 +182,48 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         childComponentsSpawned = true;
     }
 
+    void adoptCylinderForRewind(FZCylinder cylinder) {
+        if (cylinder == null) {
+            return;
+        }
+        if (cylinders == null || cylinders.length != 4) {
+            cylinders = new FZCylinder[4];
+        }
+        int subtype = cylinder.subtypeForRewind();
+        int index = subtype >> 1;
+        if (index >= 0 && index < cylinders.length) {
+            FZCylinder previous = cylinders[index];
+            if (previous != null && previous != cylinder) {
+                childComponents.remove(previous);
+            }
+            cylinders[index] = cylinder;
+        }
+        childComponents.removeIf(child ->
+                child instanceof FZCylinder existing
+                        && existing != cylinder
+                        && existing.subtypeForRewind() == subtype);
+        if (!childComponents.contains(cylinder)) {
+            childComponents.add(cylinder);
+        }
+        childComponentsSpawned = true;
+    }
+
+    void adoptPlasmaLauncherForRewind(FZPlasmaLauncher launcher) {
+        if (launcher == null) {
+            return;
+        }
+        if (plasmaLauncher != null && plasmaLauncher != launcher) {
+            childComponents.remove(plasmaLauncher);
+        }
+        childComponents.removeIf(child ->
+                child instanceof FZPlasmaLauncher && child != launcher);
+        plasmaLauncher = launcher;
+        if (!childComponents.contains(launcher)) {
+            childComponents.add(launcher);
+        }
+        childComponentsSpawned = true;
+    }
+
     @Override
     protected int getInitialHitCount() {
         return 8; // ROM: move.b #8,obColProp(a0)

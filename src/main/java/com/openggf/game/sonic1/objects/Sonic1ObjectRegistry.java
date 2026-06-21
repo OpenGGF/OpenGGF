@@ -19,9 +19,6 @@ import com.openggf.game.sonic1.objects.badniks.Sonic1NewtronBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1RollerBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1YadrinBadnikInstance;
-import com.openggf.game.sonic1.objects.bosses.FZCylinder;
-import com.openggf.game.sonic1.objects.bosses.FZPlasmaBall;
-import com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher;
 import com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall;
 import com.openggf.game.sonic1.objects.bosses.SYZBossSpike;
 import com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance;
@@ -73,9 +70,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // double it on rewind restore (1 → 2). The restore adopts the reconstructed child
             // in place at its exact captured state (ObjectManager step-4 reconciliation).
             // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
-            fzCylinderCodec(),
-            fzPlasmaLauncherCodec(),
-            fzPlasmaBallCodec(),
+            // FZCylinder/FZPlasmaLauncher/FZPlasmaBall now restore through
+            // local RewindRecreatable graph adoption. See TestS1FzBossGraphRewind.
             bossBlockCodec(),
             // Sonic1FalseFloorInstance.FalseFloorBlock now relinks to the live
             // master through RewindRecreatable genericRecreate.
@@ -292,102 +288,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return new SYZBossSpike(boss);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec fzCylinderCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == FZCylinder.class;
-            }
-
-            @Override
-            public String className() {
-                return FZCylinder.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic1FZBossInstance boss = null;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof Sonic1FZBossInstance b) {
-                        boss = b;
-                        break;
-                    }
-                }
-                if (boss == null) {
-                    return null;
-                }
-                // subtype (and derived isBottom/baseX/baseY) un-finaled so the generic
-                // capturer reapplies the captured per-cylinder values; ctor gets a
-                // placeholder subtype.
-                return new FZCylinder(boss, 0);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec fzPlasmaLauncherCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == FZPlasmaLauncher.class;
-            }
-
-            @Override
-            public String className() {
-                return FZPlasmaLauncher.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic1FZBossInstance parent = null;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof Sonic1FZBossInstance fz) {
-                        parent = fz;
-                        break;
-                    }
-                }
-                if (parent == null) {
-                    return null; // parent not yet restored -> drop
-                }
-                return new FZPlasmaLauncher(parent);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec fzPlasmaBallCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == FZPlasmaBall.class;
-            }
-
-            @Override
-            public String className() {
-                return FZPlasmaBall.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                FZPlasmaLauncher launcher = null;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof FZPlasmaLauncher l) {
-                        launcher = l;
-                        break;
-                    }
-                }
-                if (launcher == null) {
-                    return null;
-                }
-                ObjectSpawn spawn = entry.spawn();
-                // startX/startY from spawn; targetX is a non-final scalar reapplied by
-                // restoreObjectRewindState, so a placeholder 0 is fine.
-                return new FZPlasmaBall(launcher, spawn.x(), spawn.y(), 0);
             }
         };
     }

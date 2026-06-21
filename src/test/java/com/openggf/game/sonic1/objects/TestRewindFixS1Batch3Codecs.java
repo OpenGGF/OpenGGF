@@ -52,9 +52,6 @@ class TestRewindFixS1Batch3Codecs {
         Set<String> names = codecClassNames();
 
         List<String> required = List.of(
-                FZCylinder.class.getName(),
-                FZPlasmaLauncher.class.getName(),
-                FZPlasmaBall.class.getName(),
                 Sonic1BossBlockInstance.class.getName(),
                 Sonic1CollapsingFloorObjectInstance.class.getName(),
                 Sonic1ExplosionItemObjectInstance.class.getName(),
@@ -69,6 +66,19 @@ class TestRewindFixS1Batch3Codecs {
         for (String name : required) {
             assertTrue(names.contains(name) || implementsRewindRecreatable(name),
                     "missing rewind recreate path for " + name);
+        }
+    }
+
+    @Test
+    void fzBossChildrenUseGenericRecreatablePathInsteadOfRegisteredCodecs() {
+        Set<String> names = codecClassNames();
+
+        for (Class<?> type : List.of(FZCylinder.class, FZPlasmaLauncher.class, FZPlasmaBall.class)) {
+            assertFalse(names.contains(type.getName()),
+                    type.getSimpleName() + " must restore through RewindRecreatable generic recreate, "
+                            + "not an explicit S1 dynamic codec");
+            assertTrue(RewindRecreatable.class.isAssignableFrom(type),
+                    type.getSimpleName() + " must opt into the generic RewindRecreatable path");
         }
     }
 

@@ -13,7 +13,12 @@ import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.boss.BossExplosionObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +35,7 @@ import java.util.List;
  *
  * SolidObject params: d1=$13, d2=8, d3=$11
  */
-public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectProvider {
+public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectProvider, RewindRecreatable {
 
     private static final int LAUNCHER_X = Sonic1Constants.BOSS_FZ_X + 0x138;
     private static final int LAUNCHER_Y = Sonic1Constants.BOSS_FZ_Y + 0x2C;
@@ -65,6 +70,44 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
         this.animFrame = 0;
         this.animTimer = 0;
         this.explodedOnDefeat = false;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic1FZBossInstance boss = firstLiveFzBoss(ctx);
+        if (boss == null) {
+            return null;
+        }
+        // FZ has one boss group; preserve the deleted explicit codec's first-live
+        // matching while rebuilding the parent-side graph link locally.
+        FZPlasmaLauncher restored = new FZPlasmaLauncher(boss);
+        boss.adoptPlasmaLauncherForRewind(restored);
+        return restored;
+    }
+
+    void adoptPlasmaBallForRewind(FZPlasmaBall ball) {
+        if (ball == null) {
+            return;
+        }
+        activeBalls.removeIf(FZPlasmaBall::isDestroyed);
+        if (!activeBalls.contains(ball)) {
+            activeBalls.add(ball);
+        }
+        activeBallCount = activeBalls.size();
+    }
+
+    private static Sonic1FZBossInstance firstLiveFzBoss(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null
+                || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectManager objectManager = ctx.objectServices().objectManager();
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof Sonic1FZBossInstance boss && !boss.isDestroyed()) {
+                return boss;
+            }
+        }
+        return null;
     }
 
     /**
