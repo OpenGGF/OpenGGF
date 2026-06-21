@@ -18140,3 +18140,27 @@ a missed upward object-launch. So the "exact sign-flip" cluster collapses into t
 object-contact / missed-launch family, NOT an isolated sign fix -- consistent with the
 other 8 roots. Ninth root investigated; all converge on coupled object-contact/landing/
 launch behaviour in shared code. No isolated single-turn fix. Baseline: 53.
+
+## 2026-06-21 -- CNZ short f291 root: bumper bounce is correct-formula but timing-hypersensitive
+
+Investigated (post-goal-clear) the s3k CNZ short f291 frontier (x_speed exp0600
+act-02D1, y_speed exp01F8 act-0666). The player bounces off an orbiting CNZ Bumper
+(Obj 0x4A, the s14 bumper, origin 03E8,0630, sub=2B). Findings (instrumented engine
+applyBounce, throwaway/reverted):
+  engine: bumper orbited to (03CE,066A); player (03C3,0653); dx=11 dy=23; angle=2F;
+          -> vel=(-721,-1638)=(-02D1,-0666)  [matches the trace's actual]
+ROM sub_32F56 and the orbit loc_32E7E were read from skdisasm: the engine's bounce
+formula (angle=GetArcTan(bumper-player), x_vel=cos*-0x700>>8, y_vel=sin*-0x700>>8,
++framePerturb from LFC high byte) and orbit (cos/sin of subtype+LFC_low, asr #2 =
+/4, 64px radius) BOTH match ROM exactly. So the divergence is NOT the formula.
+
+Root: at f291 the player contacts the bumper almost dead-center (dx=11, dy=23), so
+the bounce angle is HYPERSENSITIVE -- a few-px difference in the bumper's orbit
+position flips the bounce direction (engine left-up vs ROM right-down). The bumper
+orbits every frame, so the bounce depends on the bumper's orbit-position-vs-bounce
+TIMING (object-execution phase) being pixel-exact vs ROM. This is the same
+object-execution-phase/timing family as OOZ push, MHZ landing, the sign-flip
+launches, etc. -- NOT a clean isolated object fix. Pinning whether the orbit is
+off-by-N (fixable) vs sub-pixel-hypersensitive needs a ROM capture of the bumper's
+exact x_pos/y_pos at f291 (S3K object offsets + S&K-half address of sub_32F56).
+Tenth root; all converge on object-execution timing. Baseline: 53.
