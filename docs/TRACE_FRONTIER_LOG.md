@@ -17381,3 +17381,33 @@ now matches ROM -8 at f2888), not an artificial bump: the earlier obj_control
 the capture to the ROM frame via slot-order-accurate position basis. Remaining
 CPZ2 frontier f2889 (ROM -16 = owner + second-tube re-capture) is the next link:
 the deferred second-tube capture still does not fire at f2889 -- next target.
+
+## 2026-06-21 -- Cluster 2 (radius/rolling): airborne-rolling y_vel reflection (MZ2 f2578, HTZ2 f1078)
+
+Clustered the 53 failures by signature; highest-leverage non-CPZ cluster is an
+airborne+rolling y_speed SIGN-FLIP shared across games:
+  - TestS1Mz2CompleteRun f2578: y_speed exp -0568, act +0568 (1010 errs cascade)
+  - TestS2Htz2LevelSelect f1078: y_speed exp -0568, act +0568 (1118 errs)
+At both, every other field matches (y, x_speed, g_speed, camera, air=1, rolling=1,
+status=06). Decoded from the MZ2 CSV: ROM 2577 ysp=+0530 -> 2578 applies one
+gravity tick (+0530 -> +0568) then NEGATES (+0568 -> -0568 = 0xFA98). The engine
+applies gravity (->+0568) but does NOT negate -> falls instead of bouncing up.
+This is ROM `neg.w obVelY(a0)` -- the rolling bounce in S1 `React_Monitor`
+(.chkBreakMonitor, docs/s1disasm/_incObj/Sonic ReactToItem.asm:234-238: rolling +
+moving down -> neg y_vel + break) and the analogous S2/badnik reflection paths.
+
+Blocker to landing: the bouncing OBJECT is not identifiable from current data.
+- MZ2 (S1 completerun) has NO aux_state, and the engine's nearby objects at the
+  bounce frame (monitor @0490 is 129px away and only the stale stand_on_obj=0x34
+  reference; lava geysers at x=0380; animals) are NONE within touch range of Sonic
+  at x=040F. So the f2578 reflection is not an obvious nearby object touch.
+- HTZ2's near list has NO monitor (0x26); it has HTZ objects 0x96/0x97/0x98 -- so
+  MZ2 and HTZ2 are likely DIFFERENT objects producing the same value, i.e. a
+  shared CLASS of bug (rolling-airborne y_vel reflection not applied), not one
+  object.
+Next step: BizHawk S1 capture of MZ2 around f2578 (adapt diag lua with S1 RAM
+offsets) to identify which object/routine runs `neg.w obVelY` on Sonic, then port
+the rolling reflection to that engine object's touch/solid response. Engine
+Sonic1MonitorObjectInstance already negates on break (line 199) with
+requiresContinuousTouchCallbacks=true, so for the monitor case the gap would be
+overlap/position, not the bounce code -- pointing at a different object.
