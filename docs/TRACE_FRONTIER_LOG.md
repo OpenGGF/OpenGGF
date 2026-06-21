@@ -17568,3 +17568,34 @@ net-positive zero-regression, guards green. The remaining frontiers are each dee
 distinct subsystem bugs (boss bounce, Caterkiller spawn-window, object-landing
 integration timing, sidekick object-phase); none is a one-line threshold fix.
 all-green is multi-session.
+
+## 2026-06-21 -- MAJOR: GHZ landing-early == object SPAWN-WINDOW timing (unifies with MZ2)
+
+Instrumented resolveSlopedContact at the GHZ1 landing (oggf.diag.slopeland). The
+landing MATH matches ROM exactly: object 0x1A (GHZ collapsing ledge, a
+SlopedSolidProvider) -- at Sonic y=0206 the engine computes relY=0 -> LAND, and
+ROM Plat_NoXCheck_AltY computes d0=0 -> land too. So the landing window/offset is
+NOT the bug.
+
+The real reason ROM doesn't land at f2573: the collapsing-ledge OBJECT DOES NOT
+EXIST YET in ROM. BizHawk (diag_s1_bounce) shows slot s23 id=0x1A first appears
+at emu f3362 (= trace ~2574); the engine already has it (resolveSlopedContact runs
+on it at trace 2572). So the engine SPAWNS the ledge ~1-2 frames EARLY, and Sonic
+lands on it a frame before ROM.
+
+This UNIFIES with MZ2: both GHZ (ledge spawns early) and MZ2 (Caterkiller
+absent/mistimed) are OBJECT SPAWN-WINDOW timing divergences, not physics/landing
+bugs. Likely the same root behind several "object early/absent" frontiers.
+
+Fix location: the ObjPosLoad spawn-window / ObjectManager.Placement +
+postCameraPlacementUpdate (ROM cursor (screenposx-128)&0xFF80, 128px chunk
+boundaries). This code is ALREADY ROM-parity-aware and HIGH BLAST RADIUS -- most
+objects spawn correctly, so the discrepancy is a subtle per-object chunk-crossing
+timing case. A safe fix needs per-object ROM chunk-crossing comparison
+(instrument the engine's ledge spawn frame vs ROM emu 3362) + full-sweep gating;
+a blind margin change would net-regress the many correctly-spawning objects.
+
+Session: 2 engine fixes landed (CPZ2 spin-tube, S1 vertical-wrap), both verified
+net-positive zero-regression. Highest-leverage remaining root = object
+spawn-window timing (GHZ + MZ2), next step is its per-object ROM chunk-crossing
+diagnosis.
