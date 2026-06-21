@@ -18259,3 +18259,41 @@ mechanics -- it requires the upstream sub-pixel position to match ROM first (Fam
 physics, the plan's heaviest-gated last work). Ten fix attempts this session, zero
 surviving landings: the frontier set is dominated by exactly this sub-pixel-irreducible
 class, so plan completion is genuine multi-session work on the upstream sub-pixel roots.
+
+## 2026-06-21 -- WHY THE REGRESSIONS OCCUR (instrumented, per user directive)
+
+Investigated v6 (approach-aware exact-edge top-vs-side via previous-frame relX) and
+instrumented the trigger (OGGF_V6_DEBUG). Two distinct regression mechanisms, both
+confirmed by experiment:
+
+1. SHARED-CODE BLAST RADIUS. resolveContactInternal is the single SolidObject_cont port
+   for EVERY full-solid object. The exact-edge bias fired not only on the target OOZ
+   popping platform (obj=33) but on obj=36 (the OOZ object the Agent Quick State names),
+   cpu=false (main player), at its relX=0 left edge -- flipping that contact side->top
+   at f1780 and cascading into the sidekick's tails_x_sub. Gating the bias to
+   `instance.usesInclusiveRightEdge()` REMOVED the obj=36 bleed (verified). Lesson: any
+   resolveContactInternal change must be gated to the target object family or it
+   regresses unrelated objects.
+
+2. OBJECT-EXECUTION-PHASE / WRONG-FRAME PERTURBATION. Even gated to OOZ only, OOZ-LS
+   still regressed at f1780 (tails_x_sub exp0600 act9200). ROM Tails oscillates
+   0CE3<->0CE4 against the platform right edge; ROM's first Status_Push is at f1781
+   (Tails at 0CE3). The engine, once the inclusive edge ACCEPTS the exact-edge contact,
+   registers/perturbs it on an earlier oscillation-edge frame, shifting Tails' sub-pixel
+   x by f1780. The engine's object pass samples object<->player contact one frame ahead
+   of ROM's slot-ordered ExecuteObjects, so adding the (ROM-correct) inclusive edge
+   perturbs sub-pixel state at the wrong frame.
+
+3. These compound with SUB-PIXEL HYPERSENSITIVITY: the contacts sit at exact pixel/edge
+   boundaries where a one-frame or sub-pixel perturbation flips the outcome (f1781 push
+   vs f1251 land are pixel-identical; f1780 vs f1781 push timing).
+
+NET: a fix can be ROM-correct in isolation (inclusive bhi edge) yet regress because the
+shared port bleeds into other objects (mechanism 1) AND the engine's contact phase is
+one frame ahead of ROM (mechanism 2), at sub-pixel-hypersensitive boundaries (mechanism
+3). The durable fix path is therefore: (a) per-object-family gating of every contact
+change (mechanism 1), then (b) align the object-contact-evaluation phase to ROM so
+contacts register on ROM's frame (mechanism 2) -- which is the plan's core
+object-execution-phase alignment and must precede edge/landing tuning. Mechanism 2 is
+the prerequisite root for OOZ and the contact-driven frontiers. v6 reverted (not
+accurate). Baseline restored: 53 / 52+1.
