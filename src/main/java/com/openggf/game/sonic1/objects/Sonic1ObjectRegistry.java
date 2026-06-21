@@ -1,6 +1,5 @@
 package com.openggf.game.sonic1.objects;
 
-import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic1.Sonic1Level;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BallHogBadnikInstance;
@@ -17,7 +16,6 @@ import com.openggf.game.sonic1.objects.badniks.Sonic1NewtronBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1RollerBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1YadrinBadnikInstance;
-import com.openggf.game.sonic1.objects.bosses.SYZBossSpike;
 import com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1BossFireInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1GHZBossInstance;
@@ -29,7 +27,6 @@ import com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
-import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -113,80 +110,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
     // shared class already implements RewindRecreatable -> genericRecreate Path 1.
     // Sonic1SeesawBallObjectInstance restores through RewindRecreatable graph
     // relink/adoption and is covered by TestSeesawBallGraphRewindTest.
-
-    private static DynamicObjectRewindCodec syzBossSpikeCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == SYZBossSpike.class;
-            }
-
-            @Override
-            public String className() {
-                return SYZBossSpike.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic1SYZBossInstance boss = null;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof Sonic1SYZBossInstance b) {
-                        boss = b;
-                        break;
-                    }
-                }
-                if (boss == null) {
-                    return null;
-                }
-                return new SYZBossSpike(boss);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec scrapEggmanButtonCodec() {
-        final String CLASS_NAME =
-                "com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton";
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(CLASS_NAME);
-            }
-
-            @Override
-            public String className() {
-                return CLASS_NAME;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    // Relink the live parent by scanning active objects.
-                    Sonic1ScrapEggmanInstance parent = null;
-                    for (ObjectInstance obj : context.objectManager().getActiveObjects()) {
-                        if (obj instanceof Sonic1ScrapEggmanInstance segg) {
-                            parent = segg;
-                            break;
-                        }
-                    }
-                    if (parent == null) {
-                        return null;
-                    }
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(
-                            ObjectSpawn.class, Sonic1ScrapEggmanInstance.class);
-                    ctor.setAccessible(true);
-                    // buttonPhase/buttonFrame are restored by GenericFieldCapturer
-                    // after recreate; buttonX/buttonY are spawn-derived.
-                    return (ObjectInstance) ctor.newInstance(entry.spawn(), parent);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
 
     public void setRingSpawnMapping(Map<ObjectSpawn, List<RingSpawn>> mapping) {
         this.ringSpawnMapping = mapping != null ? mapping : Map.of();

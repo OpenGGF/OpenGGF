@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance;
@@ -42,9 +41,6 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild;
 import com.openggf.level.objects.AbstractObjectRegistry;
-import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.boss.AbstractBossInstance;
-import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -53,7 +49,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 
 import java.util.List;
-import java.util.function.Function;
 
 /**
  * Object registry for Sonic 3 &amp; Knuckles.
@@ -428,87 +423,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     @Override
     public List<DynamicObjectRewindCodec> dynamicRewindCodecs() {
         return DYNAMIC_REWIND_CODECS;
-    }
-
-    private static DynamicObjectRewindCodec cnzMinibossChildCodec(
-            Class<? extends AbstractObjectInstance> type,
-            Function<ObjectSpawn, ? extends AbstractObjectInstance> factory) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                CnzMinibossInstance parent = findCnzMinibossParentForRewind(context);
-                if (parent == null) {
-                    return null;
-                }
-                AbstractObjectInstance child = factory.apply(entry.spawn());
-                if (child instanceof CnzMinibossTopInstance top) {
-                    top.attachBossForTest(parent);
-                } else if (child instanceof CnzMinibossCoilInstance coil) {
-                    coil.attachBossForTest(parent);
-                } else if (child instanceof CnzMinibossSparkInstance spark) {
-                    spark.attachBossForTest(parent);
-                }
-                return child;
-            }
-        };
-    }
-
-    private static CnzMinibossInstance findCnzMinibossParentForRewind(
-            DynamicObjectRecreateContext context) {
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (inst instanceof CnzMinibossInstance parent) {
-                return parent;
-            }
-        }
-        return null;
-    }
-
-    private static <B extends AbstractBossInstance> DynamicObjectRewindCodec bossChildCodec(
-            Class<? extends AbstractObjectInstance> type,
-            Class<B> bossType,
-            Function<? super B, ? extends AbstractObjectInstance> factory) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                B boss = findLiveBossForRewind(context, bossType);
-                if (boss == null) {
-                    return null;
-                }
-                return factory.apply(boss);
-            }
-        };
-    }
-
-    private static <B extends AbstractBossInstance> B findLiveBossForRewind(
-            DynamicObjectRecreateContext context, Class<B> bossType) {
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (bossType.isInstance(inst)) {
-                return bossType.cast(inst);
-            }
-        }
-        return null;
     }
 
     // ===================================================================
