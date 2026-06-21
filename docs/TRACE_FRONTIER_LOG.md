@@ -17278,3 +17278,37 @@ This is the highest-leverage fix in the suite (one alignment advances ~5+
 traces) but is high-blast-radius: must gate on the full *TraceReplay sweep +
 TestSidekickCpuFollowParity, with before/after frontier comparison, because it
 touches shared sidekick code that many green traces depend on.
+
+## 2026-06-21 -- BizHawk grounding of OOZ f1782 (pushing-jitter limit cycle)
+
+Tool: tools/bizhawk/diag_s2_ooz_tails_push.lua (new; comparison-only per-frame
+ROM dump of Sonic/Tails + nearby objects), run on s2-lvl-select-OOZ.bk2 via
+EmuHawk --chromeless. Frame map: trace f1781 = emu 4554, f1782 = emu 4555
+(bk2_frame_offset 2772, +1).
+
+ROM ground truth around the divergence (Tails standing on slot 0x1D = id 0x36,
+a stationary OOZ solid; Sonic is to the left so the CPU sidekick keeps steering
+left into the solid):
+  emu  status  x_pos.sub     x_speed
+  4549 0x28    0CE3.D600     +36
+  4550 0x08    0CE4.0600     +48
+  4551 0x28    0CE3.8600     -128
+  4552 0x08    0CE4.0600     +128
+  4553 0x08    0CE4.0600       0
+  4554 0x29    0CE3.FA00     -12   (= trace f1781, pushing set)
+  4555 0x09    0CE4.7A00     +128  (= trace f1782, pushing clear + +0x80)
+  4556 0x29    0CE3.7A00       0
+The Status_Push bit (0x20) toggles every frame and x_speed oscillates +/-0x80:
+this is an UNSTABLE solid-contact limit cycle, not a clean one-shot push. The
+engine reproduces the same jitter but one frame out of phase (engine status
+0x09 at f1781, 0x29 at f1782), so the +/-1px / status onesie is a limit-cycle
+PHASE divergence.
+
+Implication: the OOZ/MTZ3/MCZ2/CNZ2 +/-1px sidekick onesies are fragile
+jitter-phase cases -- low cosmetic value, very sensitive to exact intra-frame
+solid-contact ordering, and risky to "fix" (a phase nudge that aligns OOZ can
+flip the phase of another jitter the other way). CPZ2's spin-tube case is the
+cleaner, deterministic target (a one-time extra tube step, engine-side) and is
+the better candidate for an actual landable fix; it needs no BizHawk grounding
+because the trace already carries the ROM truth (Tails moves exactly x_speed
+-8/frame with no extra step).
