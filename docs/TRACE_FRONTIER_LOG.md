@@ -18164,3 +18164,29 @@ launches, etc. -- NOT a clean isolated object fix. Pinning whether the orbit is
 off-by-N (fixable) vs sub-pixel-hypersensitive needs a ROM capture of the bumper's
 exact x_pos/y_pos at f291 (S3K object offsets + S&K-half address of sub_32F56).
 Tenth root; all converge on object-execution timing. Baseline: 53.
+
+## 2026-06-21 -- PLAN M1 attempt (OOZ f1782 queue head): paired inclusive-edge + rider-exclusion, NET-NEG, REVERTED
+
+Executing the object-execution-phase plan, M1 = queue head OOZ-LS f1782 (tails_x
+exp0CE4 act0CE3: Tails misses Status_Push at f1781 because the side-contact with the
+popping platform registers one frame late; the CPU follow-nudge then fails to advance
+Tails to 0CE4). Paired fix attempted per the plan (side-contact family):
+  (a) OOZPoppingPlatformObjectInstance.usesInclusiveRightEdge()=true (ROM Obj33
+      SolidObject_cont uses bhi = inclusive right edge);
+  (b) ObjectSolidContactController.resolveContact: apply the inclusive edge to NEW
+      contacts only (effectiveInclusiveRightEdge = inclusiveRightEdge && !ridingThisPiece),
+      so a rider is not spuriously side-pushed at the edge.
+Focused result: OOZ-LS STILL regressed 1782 -> 1251 (tails_status_byte exp0x0B OnObj
+act0x23 Push). The rider-exclusion did NOT fire: at f1251 the engine's
+isRidingCurrentPlayerObject is FALSE even though ROM has Status_OnObj set. So f1251 is
+a deeper OnObj/riding-STATE divergence -- the engine has not established the riding
+state that ROM has, so the inclusive edge classifies a should-be-rider as a fresh
+side-push. REVERTED (net-negative).
+
+Conclusion: OOZ f1782 is triple-coupled (push-timing -> inclusive-edge -> f1251
+OnObj/riding-state-vs-contact-timing). It cannot be cleared until the riding-state
+establishment timing at the platform edge matches ROM (the engine sets Status_OnObj a
+frame later / loses it near the edge). That OnObj-state-timing is itself a
+Family-B/landing-phase root and must be fixed first. M1 target is therefore blocked on
+a prerequisite root, not irreducible. Baseline restored: 53 (this worktree) / 52+1
+(Agent Quick State).
