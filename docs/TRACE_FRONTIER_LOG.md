@@ -17231,3 +17231,50 @@ shared, high-blast-radius work that needs the full-suite + TestSidekickCpuFollow
 gate and careful before/after frontier comparison. This is the recommended next-session
 target: fix the phase, not the symptoms.
 
+
+---
+
+## 2026-06-21 -- Full sweep snapshot + cluster-4/5 root confirmed (object<->sidekick one-frame lag)
+
+Worktree: .worktrees/trace-cluster-fixes @ HEAD (bugfix/ai-trace-cluster-fixes,
+12 commits ahead of develop; 2 engine fixes: c80dd4dda sidekick control-counter,
+da2f0c528 CPZ Spiny spike). Both fixes still hold post-sweep -- no regressions.
+
+Command (frontierOnly, forkCount=2, all three ROMs):
+  mvn -Dmse=off -Dtrace.frontierOnly=true -Dtest='*TraceReplay' \
+    -Ds1.rom.path=.. -Ds2.rom.path=.. -Ds3k.rom.path=.. test
+Result: Tests run 90, Failures 53, Errors 1.
+
+Cluster landscape this sweep (clusters 1-3 effectively absent):
+- No frame-0 / BootstrapDivergence failures -> cluster 1 (frame-0 setup) clean.
+- No exact 0x100 speed-delta frontiers -> cluster 3 not represented.
+- Active work is cluster 4 (Tails CPU) + cluster 5 (movement downstream).
+
+CPZ2 (TestS2Cpz2LevelSelect) f2888 tails_x -- DEFINITIVE root cause:
+- Tails is airborne+rolling in a CPZ spin tube (CPZSpinTubeObjectInstance,
+  obj_control=$81, objSup=true). ROM moves Tails exactly x_speed (-8) at f2888;
+  engine moves -16 (one extra -8 tube step), then tracks ROM's -16/+8 tube
+  oscillation in lockstep but 8px to the left. So: a one-time extra tube step
+  for the sidekick, NOT a carry-math bug and NOT a persistent phase slip.
+- Per-frame move/decrement order in updateEntryPath (`duration--; if>=0 move`)
+  matches ROM loc_2271A (`subq.b #1,2(a4); bpl Obj1E_MoveCharacter`) exactly.
+- Only tails_* fields diverge (Sonic clean through the same tube) -> sidekick-
+  specific, not a shared tube off-by-one.
+
+OOZ (TestS2OozLevelSelect) f1782 tails_x -1 -- same family, different object:
+- tails_status_byte transitions one frame off (ROM 0x29->0x09, ENG 0x09->0x29).
+- ROM object slot 0x1D gives Tails a +0x80 x_speed kick at f1782 (Tails moves
+  0CE3->0CE4); engine applies the kick one frame late (x_speed 0 at f1782).
+
+Unifying root (refined): object<->sidekick interactions are consistently one
+frame off for the CPU sidekick, while Sonic<->object interactions are correct.
+LevelFrameStep order is physics(both players) -> objects, matching ROM slot
+order, so the lag is in the sidekick's own state-transition timing within the
+physics phase (status byte / position the interacting object reads), not the
+top-level phase order. Same signature across the cluster-4/5 onesies:
+  tails_x/y off by exactly 1: OOZ f1782, MTZ3 f1973, MCZ2 f4485, CNZ2 f4418,
+  CPZ f3365 (post-spike-fix frontier).
+This is the highest-leverage fix in the suite (one alignment advances ~5+
+traces) but is high-blast-radius: must gate on the full *TraceReplay sweep +
+TestSidekickCpuFollowParity, with before/after frontier comparison, because it
+touches shared sidekick code that many green traces depend on.
