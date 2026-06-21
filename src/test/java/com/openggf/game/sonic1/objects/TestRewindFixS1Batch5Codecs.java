@@ -47,7 +47,7 @@ class TestRewindFixS1Batch5Codecs {
         Set<String> names = codecClassNames();
 
         List<String> required = List.of(
-                Sonic1EndingSonicObjectInstance.class.getName());
+                Sonic1GrassFireObjectInstance.class.getName());
 
         for (String name : required) {
             assertTrue(names.contains(name),
@@ -55,6 +55,7 @@ class TestRewindFixS1Batch5Codecs {
         }
 
         List<String> deleted = List.of(
+                Sonic1EndingSonicObjectInstance.class.getName(),
                 Sonic1EndingEmeraldsObjectInstance.class.getName(),
                 Sonic1GlassReflectionInstance.class.getName());
 

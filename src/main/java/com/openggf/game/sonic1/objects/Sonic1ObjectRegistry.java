@@ -32,7 +32,6 @@ import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
 
@@ -86,9 +85,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // child in place at its exact captured state (ObjectManager step-4 reconciliation).
             // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
             // Sonic1EggPrisonObjectInstance now uses RewindRecreatable generic recreate.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1EndingSonicObjectInstance.class,
-                    spawn -> new Sonic1EndingSonicObjectInstance(spawn.x(), spawn.y())),
+            // Sonic1EndingSonicObjectInstance now restores through
+            // RewindRecreatable generic recreate with captured emerald graph refs.
             // Sonic1GlassReflectionInstance now relinks to the live MZ glass
             // block through RewindRecreatable generic recreate.
             // Sonic1ResultsScreenObjectInstance now implements RewindRecreatable

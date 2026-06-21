@@ -12,6 +12,7 @@ import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance;
 import com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
@@ -660,6 +661,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S1_SLZ_BOSS_SPIKEBALL_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(Sonic1SLZBossSpikeball.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_ENDING_SONIC_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1EndingSonicObjectInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> S1_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(Sonic1BombFuseInstance.class.getName(), GameId.S1),
@@ -4466,6 +4470,29 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 SLZ boss spikeball graph generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 ending Sonic graph batch: ending Sonic plus emerald family refs
+    // =====================================================================
+
+    @Test
+    void s1EndingSonicGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_ENDING_SONIC_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 ending Sonic graph batch");
+        }
+    }
+
+    @Test
+    void s1EndingSonicGraphClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_ENDING_SONIC_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 ending Sonic graph generic recreate, "
                             + "not a dynamic codec");
         }
     }
