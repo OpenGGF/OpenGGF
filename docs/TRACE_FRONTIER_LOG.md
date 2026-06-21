@@ -17465,3 +17465,30 @@ same rolling-bounce class).
 Session status: 1 engine fix landed (CPZ2 f2888->f2889, net-positive, 0
 regressions). Clusters remaining are each deep, distinct subsystem bugs (spawn
 windowing, sidekick object-phase, tube handoff). All-green is multi-session.
+
+## 2026-06-21 -- LANDED: S1 vertical-wrap player-Y mask gated to S3K (LZ3 f466 -> f1415)
+
+Root: Camera.applyScreenYWrapValue masked the player's y_pos every frame with
+`& 0x7FF` whenever verticalWrapEnabled (minY<0, e.g. S1 LZ3/SBZ2). But ROM S1/S2
+have NO Screen_Y_wrap_value on the player; their vertical wrap masks Sonic's y_pos
+ONLY in the frame the camera crosses the wrap boundary (ScrollVertical
+SV_BottomBoundary `subi #$7FF+1` / SV_TopBoundary `cmpi #-$100`,
+docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:237-269), which
+Camera.updatePosition already mirrors via the coupled wrapFocusedSpriteYPositionWord
+(lines 264-283). The unconditional per-frame mask wrapped Sonic at y=0x800 long
+before the camera reached the boundary: LZ3 f466 y 0x0807 & 0x7FF = 0x0007.
+
+Fix: gate the per-frame applyScreenYWrapValue player mask on
+PhysicsFeatureSet.useScreenYWrapValueForVisibility (true only for S3K, which DOES
+mask y_pos every frame per sonic3k.asm:21989-21992,26233-26236). The boundary-
+coupled wrap (wrapFocusedSpriteYPositionWord) is untouched, so S1/S2 LZ3/SBZ2
+still wrap correctly at the camera boundary.
+
+Verification (worktree bugfix/ai-trace-cluster-fixes):
+- LZ3 f466 -> f1415 (+949 frames; new frontier is an unrelated angle mismatch).
+- Full *TraceReplay sweep (frontierOnly, forkCount=2, 3 ROMs): 90 run / 53 fail /
+  1 err (totals unchanged); per-test diff shows ONLY LZ3 advancing -- SBZ1/SBZ2/
+  LZ1/LZ2 and ALL S3K (which need the per-frame mask kept) byte-identical. Net-
+  positive, ZERO regressions.
+- Guards green: TestArchUnitRules, TestRewindCoverageGuard, TestPhysicsProfile,
+  TestCollisionModel.
