@@ -17935,3 +17935,33 @@ inverted -> 1px tails_x). A correct fix needs the exact contacted object's f1781
 state captured from ROM (BizHawk) and a targeted phase alignment gated on the full
 sweep + TestSidekickCpuFollowParity; it is not a safe single-turn edit to shared
 collision code. Baseline for gating: 53 failures.
+
+## 2026-06-21 -- CLUSTER 4 ROM capture (OOZ-LS f1782): sub-frame push-oscillation phase
+
+BizHawk capture (diag_s2_ooz_pform.lua, OOZ-LS BK2). Mapping by status/xv signature:
+BK2 4554 = trace 1781, BK2 4555 = trace 1782 (effective offset 2773). ROM ground truth:
+  t1780(4553): tails x=0CE4 st=08(push n) xv=0000
+  t1781(4554): tails x=0CE3 st=29(push Y) xv=FFF4   pform slot30 x=0CC0 y=0570 dx=35
+  t1782(4555): tails x=0CE4 st=09(push n) xv=0080   pform slot30 x=0CC0 y=0570 dx=36
+The contacted object is popping-platform slot30 at a CONSTANT y=0570 (the oscillating
+slot28 is not the contact). dx=35 == solid half-width 0x23 exactly. ROM: Tails hunts
+0CE3<->0CE4 every frame (CPU follow-nudge toward Sonic@0CE4 vs platform edge-push back
+to 0CE3); push is SET at dx=35 (0CE3, moving left INTO the platform, xv<0) and CLEAR at
+dx=36 (0CE4). ROM even flips facing at t1781 (st 08->29) yet KEEPS push, because the
+platform slot runs after Tails' move and re-sets push that same frame.
+
+Engine vs ROM: the engine runs the SAME oscillation ONE FRAME OUT OF PHASE. At t1781
+(0CE3, dx=35) the engine's processInlineObjectForPlayer does NOT re-set push after
+updatePushingOnDirectionChange cleared it on the facing flip (end-of-frame push clear);
+at t1782 (still 0CE3) it does. So the engine's side-contact at the EXACT dx=35 boundary
+registers one frame late, shifting the whole follow<->push oscillation by a frame ->
+1px tails_x at f1782.
+
+Conclusion (ground-truthed, not speculative): OOZ-LS f1782 is a sub-frame phase offset
+in the tight CPU-follow <-> platform-edge-push feedback loop at an exact 1px contact
+boundary (dx == half-width). It is NOT a constant/threshold/zone bug; any change to the
+side-contact registration phase or the dx boundary would shift every other side-contact
+(shared collision code; player passes). No safe, isolated net-positive fix exists for
+this onesie at static/instrumentation resolution; it is gated behind the same
+object-contact-execution-phase alignment as the rest of cluster 4/5/6. Tooling added:
+tools/bizhawk/diag_s2_ooz_pform.lua.
