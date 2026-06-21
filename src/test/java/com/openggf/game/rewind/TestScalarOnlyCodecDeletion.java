@@ -86,6 +86,7 @@ import com.openggf.game.sonic3k.objects.S3kSignpostStubChild;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild;
 import com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance;
@@ -745,6 +746,9 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> S2_ARZ_ARROW_GRAPH_SUPPORT = List.of(
             new CodecDeletionCandidate(ARZBossArrow.class.getName(), GameId.S2),
             new CodecDeletionCandidate(ARZBossEyes.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S3K_SS_ENTRY_FLASH_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic3kSSEntryFlashObjectInstance.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -4728,6 +4732,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S2 DEZ bomb graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K SS-entry flash graph support: layout-ring-linked special-stage flash
+    // =====================================================================
+
+    @Test
+    void s3kSsEntryFlashGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_SS_ENTRY_FLASH_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K SS-entry flash deletion");
+        }
+    }
+
+    @Test
+    void s3kSsEntryFlashGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_SS_ENTRY_FLASH_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K SS-entry flash graph generic recreate, not a dynamic codec");
         }
     }
 

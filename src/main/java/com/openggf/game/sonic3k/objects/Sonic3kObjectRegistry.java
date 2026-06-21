@@ -191,7 +191,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // harness coverage for the signpost parent relink.
             // StarPost star and bonus-star children now implement RewindRecreatable
             // -> genericRecreate Path 1 with live starpost relink.
-            ssEntryFlashCodec(),
+            // SS entry flash restores through graph-tested RewindRecreatable;
+            // compact restore resolves the exact captured parent by ObjectRefId
+            // and reapplies scalars.
             // BuggernautBabyInstance codec deleted (Phase-2 batch 49):
             // RewindRecreatable generic recreate relinks the live Buggernaut parent.
 
@@ -515,15 +517,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         return null;
     }
 
-    private static <T> T findLiveInstance(DynamicObjectRecreateContext context, Class<T> type) {
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (type.isInstance(inst)) {
-                return type.cast(inst);
-            }
-        }
-        return null;
-    }
-
     // ===================================================================
     // Batch-inner1: inner-class hazard/solid/cosmetic child rewind codecs
     // ===================================================================
@@ -531,42 +524,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     // ===================================================================
     // Batch-inner2: nested-class hazard/solid/cutscene child rewind codecs
     // ===================================================================
-
-    /**
-     * Codec for {@link Sonic3kSSEntryFlashObjectInstance}. The flash holds a final
-     * {@link Sonic3kSSEntryRingObjectInstance} parent ring; while a flash exists the
-     * ring is ENTERED with {@code isPersistent()/shouldStayActiveWhenRemembered()}
-     * true and is a layout object recreated earlier in the restore loop, so it is
-     * present in {@code getActiveObjects()}. Position is spawn-derivable; the scalar
-     * gameplay-control fields (state, animIndex, waitTimer, ringDeleteTriggered) are
-     * non-final and reapplied by the generic field capturer. If no live ring is
-     * present the flash is dropped.
-     */
-    private static DynamicObjectRewindCodec ssEntryFlashCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic3kSSEntryFlashObjectInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic3kSSEntryFlashObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic3kSSEntryRingObjectInstance ring =
-                        findLiveInstance(context, Sonic3kSSEntryRingObjectInstance.class);
-                if (ring == null) {
-                    return null;
-                }
-                ObjectSpawn spawn = entry.spawn();
-                return new Sonic3kSSEntryFlashObjectInstance(ring, spawn.x(), spawn.y());
-            }
-        };
-    }
 
     /**
      * Codec for {@link MhzMinibossEscapeShardInstance}. The shard's only non-spawn

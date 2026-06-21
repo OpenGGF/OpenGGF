@@ -173,6 +173,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance", "player"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p1SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p2SolidContact"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance", "parentRing"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance", "playerAtCollapse"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractBadnikInstance", "destructionConfig"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractMonitorObjectInstance", "effectTarget"), RewindFieldPolicy.CAPTURED),

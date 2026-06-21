@@ -39,6 +39,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S3K LBZ1 cutscene rewind graph restore:** Knuckles range and collapse helpers now restore through graph-tested generic recreate while deleting their dynamic codecs.
 - **S3K MHZ cutscene rewind graph restore:** MHZ1 door/P2 stopper and MHZ2 route-switch helpers now restore through graph-tested generic recreate with exact parent/owner relinks while deleting their dynamic codecs.
 - **S3K MHZ miniboss flame rewind graph restore:** MHZ miniboss flame children now restore through graph-tested generic recreate with exact parent relinks while deleting their dynamic codec.
+- **S3K SS-entry flash rewind graph restore:** special-stage entry flash effects now restore through graph-tested generic recreate with exact parent-ring relinks while deleting their dynamic codec.
 - **S3K nested hurtbox rewind graph restore:** MGZ miniboss drill arms and ICZ ice-spike hurt children now restore through graph-tested generic recreate with exact parent relinks while deleting their dynamic codecs.
 - **S3K cutscene Knuckles rewind graph restore:** AIZ rock children and CNZ2 blocking walls now restore through graph-tested generic recreate with exact parent/owner relinks while deleting their dynamic codecs.
 - **S2 Egg Prison button rewind graph restore:** Egg-prison buttons now restore through graph-tested generic recreate with exact parent/button relinks while deleting their dynamic codec.
