@@ -368,7 +368,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     AizFallingLogObjectInstance.FallingLogChild.class,
                     s -> new AizFallingLogObjectInstance.FallingLogChild(
-                            s.x(), s.y(), Sonic3kObjectArtKeys.AIZ1_FALLING_LOG)),
+                            s.x(), s.y(), Sonic3kObjectArtKeys.AIZ1_FALLING_LOG))
             // AIZ tree-reveal control shim codec deleted (Phase-2 batch 21):
             // self-contained nested class now uses genericRecreate Path 1.
             // HCZ water-drop cosmetic child codec deleted in Phase-2 batch 3:
@@ -405,8 +405,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
 
             // MGZ miniboss ceiling spire codec deleted (Phase-2 batch 21):
             // self-contained nested class now uses genericRecreate Path 1.
-            // MGZ miniboss drill arm (one-shot hurt hitbox; relink live boss).
-            mgzDrillArmCodec(),
+            // MGZ miniboss drill-arm hitboxes now restore through graph-tested
+            // RewindRecreatable generic recreate and relink the live boss slots.
             // Gumball ExitTriggerChild codec deleted (Phase-2 batch 5):
             // now implements RewindRecreatable -> genericRecreate Path 1.
             // MGZ head-trigger stone chip codec deleted (Phase-2 batch 21):
@@ -416,8 +416,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // constructor owners; compact restore resolves exact refs by ObjectRefId.
             // HCZ miniboss rocket touch hitbox codec deleted (Phase-2 batch):
             // non-static inner generic recreate resolves the live boss and relinks the slot.
-            // ICZ ice-spikes hurt child (hurt hazard; relink nearest live spike base).
-            iczIceSpikesHurtChildCodec());
+            // ICZ ice-spikes hurt child now restores through graph-tested
+            // RewindRecreatable generic recreate and relinks the live spike base.
+            );
 
     // AIZ2 dynamic objects still intentionally dropped on rewind restore (no codec):
     //   (none remaining) — all AIZ2 battleship/boss transient children are now
@@ -523,134 +524,13 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         return null;
     }
 
-    /**
-     * Finds the live instance of {@code type} whose current position is nearest
-     * the captured spawn. Used to relink a cosmetic/combat child to the correct
-     * one of several live siblings of the same concrete type. Falls back to the
-     * first live instance when the spawn is null.
-     */
-    private static <T> T findNearestLiveInstance(
-            DynamicObjectRecreateContext context, Class<T> type, ObjectSpawn spawn) {
-        T best = null;
-        long bestDistance = Long.MAX_VALUE;
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (!type.isInstance(inst)) {
-                continue;
-            }
-            if (spawn == null) {
-                return type.cast(inst);
-            }
-            long dx = inst.getX() - spawn.x();
-            long dy = inst.getY() - spawn.y();
-            long distance = dx * dx + dy * dy;
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = type.cast(inst);
-            }
-        }
-        return best;
-    }
-
     // ===================================================================
     // Batch-inner1: inner-class hazard/solid/cosmetic child rewind codecs
     // ===================================================================
 
-    // Batch-inner2 binary-name keys (private/nested children -> no Class literal).
-    private static final String MGZ_DRILL_ARM_CHILD_CLASS =
-            "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild";
-    private static final String ICZ_ICE_SPIKES_HURT_CHILD_CLASS =
-            "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild";
-
     // ===================================================================
     // Batch-inner2: nested-class hazard/solid/cutscene child rewind codecs
     // ===================================================================
-
-    /**
-     * Codec for the MGZ miniboss drill arm (a HURT hitbox, ARM_COLLISION_FLAGS
-     * 0x9E). The arms are spawned ONCE at the arena-engage transition, not per
-     * frame, so the restored boss never re-emits them (parentReEmits=false) and a
-     * dropped arm leaves the miniboss without its drill-arm hitboxes for the rest
-     * of the fight. Relinks the live {@link MgzMinibossInstance} (recreated before
-     * the dynamic-restore loop) and reconstructs via the private ctor; xOffset/
-     * yOffset were un-finaled so the capturer reapplies the left/right
-     * differentiator, and currentX/currentY are already non-final.
-     */
-    private static DynamicObjectRewindCodec mgzDrillArmCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(MGZ_DRILL_ARM_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return MGZ_DRILL_ARM_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                MgzMinibossInstance parent = findLiveInstance(context, MgzMinibossInstance.class);
-                if (parent == null) {
-                    return null;
-                }
-                try {
-                    Class<?> cls = Class.forName(MGZ_DRILL_ARM_CHILD_CLASS);
-                    var ctor = cls.getDeclaredConstructor(
-                            MgzMinibossInstance.class, int.class, int.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(parent, 0, 0);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + MGZ_DRILL_ARM_CHILD_CLASS, e);
-                }
-            }
-        };
-    }
-
-    /**
-     * Codec for the ICZ ice-spikes hurt child (a HURT hitbox, CHILD_COLLISION_FLAGS
-     * 0x98). The subtype-0 parent spawns it once behind a captured {@code
-     * childSpawned} latch restored to true on rewind, so the parent does not
-     * re-emit it (parentReEmits=false) and a dropped child permanently loses a hurt
-     * hitbox. Relinks the nearest live {@link IczIceSpikesObjectInstance} (multiple
-     * spike bases can coexist) and reconstructs via the private 3-arg ctor; x/y are
-     * spawn-derivable so nothing needs un-finaling.
-     */
-    private static DynamicObjectRewindCodec iczIceSpikesHurtChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(ICZ_ICE_SPIKES_HURT_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return ICZ_ICE_SPIKES_HURT_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                IczIceSpikesObjectInstance parent = findNearestLiveInstance(
-                        context, IczIceSpikesObjectInstance.class, entry.spawn());
-                if (parent == null) {
-                    return null;
-                }
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(
-                            IczIceSpikesObjectInstance.class, int.class, int.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(
-                            parent, entry.spawn().x(), entry.spawn().y());
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
 
     // ---- Batch-6 relink codecs --------------------------------------------
 

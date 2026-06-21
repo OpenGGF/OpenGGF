@@ -13,8 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic3kObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-inner2 nested-class
- * child that was previously dropped on a held-rewind restore.
+ * now exposes either a dynamic rewind recreate codec or the generic
+ * {@code RewindRecreatable} path for every batch-inner2 nested-class child that
+ * was previously dropped on a held-rewind restore.
  *
  * <p>These are static/non-static nested children (MGZ miniboss spire/arm, gumball
  * exit trigger, MGZ stone chip, MHZ1/MHZ2 cutscene helpers, HCZ miniboss rocket
@@ -47,9 +48,7 @@ class TestRewindFixS3KInnerBatch2Codecs {
     void registersCodecsForBatchInner2S3KChildren() {
         Set<String> names = codecClassNames();
 
-        List<String> required = List.of(
-                "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
-                "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild");
+        List<String> required = List.of();
 
         for (String name : required) {
             assertTrue(names.contains(name),
@@ -67,7 +66,9 @@ class TestRewindFixS3KInnerBatch2Codecs {
                 "com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance$HeadTriggerStoneChipChild",
                 "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper",
                 "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
-                "com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild");
+                "com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild",
+                "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
+                "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild");
 
         for (String className : genericRecreateClasses) {
             assertFalse(names.contains(className),

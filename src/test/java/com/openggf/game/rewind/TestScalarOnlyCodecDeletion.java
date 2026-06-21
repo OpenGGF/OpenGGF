@@ -685,6 +685,14 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.MhzMinibossFlameInstance",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_NESTED_HURTBOX_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild",
+                    GameId.S3K));
+
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
     private static final ObjectRenderManager INERT_RENDER_MANAGER =
@@ -4448,6 +4456,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K MHZ flame graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K nested hurtbox graph batch: parent-linked MGZ/ICZ hurt children
+    // =====================================================================
+
+    @Test
+    void s3kNestedHurtboxGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_NESTED_HURTBOX_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K nested hurtbox graph batch");
+        }
+    }
+
+    @Test
+    void s3kNestedHurtboxGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_NESTED_HURTBOX_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K nested hurtbox graph generic recreate, not a dynamic codec");
         }
     }
 

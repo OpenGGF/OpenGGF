@@ -15,6 +15,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -478,6 +479,18 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         }
     }
 
+    void rewindAttachArmChild(DrillArmChild armChild) {
+        if (armChild.xOffset < 0) {
+            leftArm = armChild;
+        } else if (armChild.xOffset > 0) {
+            rightArm = armChild;
+        } else if (leftArm == null || leftArm.isDestroyed()) {
+            leftArm = armChild;
+        } else {
+            rightArm = armChild;
+        }
+    }
+
     private void destroyArms() {
         if (leftArm != null) {
             leftArm.setDestroyed(true);
@@ -743,15 +756,25 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         return Sonic3kSfx.EXPLODE.id;
     }
 
-    private static final class DrillArmChild extends AbstractObjectInstance implements TouchResponseProvider {
+    private static final class DrillArmChild extends AbstractObjectInstance
+            implements TouchResponseProvider, RewindRecreatable {
         private static final int PRIORITY_BUCKET = 5;
-        private final MgzMinibossInstance parent;
+        private MgzMinibossInstance parent;
         // Non-final so the generic rewind field capturer can reapply the captured
         // left/right differentiator after the codec recreates this child.
         private int xOffset;
         private int yOffset;
         private int currentX;
         private int currentY;
+
+        private DrillArmChild(ObjectSpawn spawn) {
+            super(spawn, "MGZMinibossArm");
+            this.parent = null;
+            this.xOffset = 0;
+            this.yOffset = 0;
+            this.currentX = spawn.x();
+            this.currentY = spawn.y();
+        }
 
         private DrillArmChild(MgzMinibossInstance parent, int xOffset, int yOffset) {
             super(new ObjectSpawn(parent.state.x + adjustedOffset(xOffset, parent.facingRight),
@@ -762,6 +785,46 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
             this.yOffset = yOffset;
             this.currentX = parent.state.x + adjustedXOffset();
             this.currentY = parent.state.y + adjustedYOffset();
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            MgzMinibossInstance liveParent = findLiveParentForRewind(ctx);
+            if (liveParent == null) {
+                return null;
+            }
+            DrillArmChild restored = new DrillArmChild(
+                    liveParent,
+                    deriveCapturedXOffset(ctx, liveParent),
+                    0);
+            liveParent.rewindAttachArmChild(restored);
+            return restored;
+        }
+
+        private static MgzMinibossInstance findLiveParentForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (instance instanceof MgzMinibossInstance candidate && !candidate.isDestroyed()) {
+                    return candidate;
+                }
+            }
+            return null;
+        }
+
+        private static int deriveCapturedXOffset(RewindRecreateContext ctx, MgzMinibossInstance parent) {
+            ObjectSpawn spawn = ctx.spawn();
+            if (spawn == null) {
+                return 0;
+            }
+            if (spawn.x() < parent.state.x) {
+                return -0x1C;
+            }
+            if (spawn.x() > parent.state.x) {
+                return 0x1C;
+            }
+            return 0;
         }
 
         @Override
