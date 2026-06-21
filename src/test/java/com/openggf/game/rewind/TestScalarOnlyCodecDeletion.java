@@ -32,6 +32,8 @@ import com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance;
 import com.openggf.game.sonic2.objects.OOZBurnerFlameObjectInstance;
 import com.openggf.game.sonic2.objects.PointsObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
+import com.openggf.game.sonic2.objects.bosses.ARZBossEyes;
 import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
 import com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainer;
@@ -734,6 +736,10 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S2_OOZ_BURNER_FLAME_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(OOZBurnerFlameObjectInstance.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_ARZ_ARROW_GRAPH_SUPPORT = List.of(
+            new CodecDeletionCandidate(ARZBossArrow.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(ARZBossEyes.class.getName(), GameId.S2));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -4675,6 +4681,27 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must restore through S2 OOZ burner flame graph generic recreate, not a dynamic codec");
         }
+    }
+
+    // =====================================================================
+    // S2 ARZ arrow graph support: boss/eyes-linked arrow dynamic
+    // =====================================================================
+
+    @Test
+    void s2ArzArrowGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_ARZ_ARROW_GRAPH_SUPPORT) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable for ARZ arrow graph support");
+        }
+    }
+
+    @Test
+    void s2ArzArrowGraphClassesHaveNoRegisteredCodec() {
+        assertFalse(hasRegisteredDynamicCodec(ARZBossArrow.class.getName(), GameId.S2),
+                "ARZBossArrow must restore through S2 ARZ graph generic recreate, not a dynamic codec");
+        assertFalse(hasRegisteredDynamicCodec(ARZBossEyes.class.getName(), GameId.S2),
+                "ARZBossEyes graph support must not add a dynamic codec");
     }
 
     /**

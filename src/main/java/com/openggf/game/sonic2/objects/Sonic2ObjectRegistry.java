@@ -43,8 +43,6 @@ import com.openggf.game.sonic2.objects.badniks.WFZStickBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.WFZUnknownBadnikInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance;
-import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
-import com.openggf.game.sonic2.objects.bosses.ARZBossEyes;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
@@ -93,7 +91,8 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // MonitorContentsObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // CheckpointDongleInstance and CheckpointStarInstance now implement
             // RewindRecreatable -> genericRecreate Path 1 with live checkpoint relink.
-            arzBossArrowCodec(),
+            // ARZBossArrow now restores through RewindRecreatable graph relink;
+            // ARZBossEyes supplies generic recreate support for the graph.
             // ARZBossPillar now implements RewindRecreatable -> genericRecreate Path 1.
             // GrounderRockProjectile and GrounderWallInstance now implement
             // RewindRecreatable -> genericRecreate Path 1.
@@ -432,35 +431,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);
                 }
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec arzBossArrowCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == ARZBossArrow.class;
-            }
-
-            @Override
-            public String className() {
-                return ARZBossArrow.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2ARZBossInstance boss = findLiveInstance(context, Sonic2ARZBossInstance.class);
-                ARZBossEyes eyes = findLiveInstance(context, ARZBossEyes.class);
-                if (boss == null || eyes == null) {
-                    return null;
-                }
-                // RENDER_X_FLIP (0x01) is set on the spawn renderFlags exactly for the
-                // right-pillar arrow, and is the same bit initArrow() OR-sets, so this
-                // derivation is correct against both pre-init and post-init renderFlags.
-                boolean fromRightPillar = (entry.spawn().renderFlags() & 1) != 0;
-                return new ARZBossArrow(entry.spawn(), boss, eyes, fromRightPillar);
             }
         };
     }
