@@ -17652,3 +17652,31 @@ Net for the session: 2 verified engine fixes (CPZ2 spin-tube, S1 vertical-wrap);
 the highest-leverage root (object-landing/exec-phase position timing, unifying
 GHZ + CPZ2 + sidekick) is now characterized to runtime evidence but blocked on
 ROM symbol mapping for a safe fix.
+
+## 2026-06-21 -- GHZ landing CRACKED to ground truth (built disasm + PC hook); penetration fix attempted+REVERTED
+
+Built docs/s1disasm (build_tools Lua + AS) -> sonic.lst, mapping the y_pos write
+PCs: 0x7B24 move.w d2,obY(a1) / 0x7B28 addq #2,obRoutine(a0) == Plat_NoXCheck_AltY
+landing (snap + bump the ledge routine 2->4). Hooked PC 0x7B02 (after sub.w d1,d0)
+via diag_s1_plat.lua to read d0 each time the GHZ collapsing ledge (id 0x1A)
+evaluates Sonic:
+  f3360 sonicY=01FF d0=8   EXIT(above)
+  f3361 sonicY=0206 d0=0   (range-pass)
+  f3362 sonicY=020E d0=-9  LAND  -> snap 020E + d0 + 3 = 0208 (== ROM trace 2574)
+GROUND TRUTH: ROM lands the ledge when Sonic has PENETRATED (d0=-9, y=020E),
+snapping to 0208 -- NOT at the exact-touch frame (d0=0, y=0206). The engine lands
+at first touch (resolveSlopedContact relY=0 -> snap 0209), one fall-step early.
+
+Attempted fix: resolveSlopedContact minRelY for an AIRBORNE first-landing = 1
+(require penetration) instead of 0 (touch). Result: GHZ1 f2573 -> f2790 (+217),
+but FULL SWEEP went 53->54 failures: it REGRESSED TestS1Mz1TraceReplay (was
+GREEN). Reverted per the net-positive rule (breaking a green trace is a clear
+regression).
+
+Conclusion: "require penetration" is DISPROVEN as the faithful root -- GHZ needs
+land-on-penetration while MZ1 needs land-on-touch, so the real difference must
+DISTINGUISH the two (object type/routine, fall-speed alignment, or object-exec
+phase for the collapsing ledge specifically), not a blanket landing-window change.
+Next step: BizHawk-hook MZ1's landing (same PC 0x7B02 / the relevant object) and
+compare its d0 sequence to GHZ's to find what separates touch-land from
+penetration-land. Tooling is now in place (sonic.lst + diag_s1_plat.lua).
