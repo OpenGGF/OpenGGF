@@ -17680,3 +17680,25 @@ phase for the collapsing ledge specifically), not a blanket landing-window chang
 Next step: BizHawk-hook MZ1's landing (same PC 0x7B02 / the relevant object) and
 compare its d0 sequence to GHZ's to find what separates touch-land from
 penetration-land. Tooling is now in place (sonic.lst + diag_s1_plat.lua).
+
+## 2026-06-21 -- Cluster 4 (Tails CPU) characterized: MTZ3 f1973 = sidekick-missing-Status_Push
+
+MTZ3 f1973 tails_x (exp 0x07C9 act 0x07CA): ROM Tails is PUSHING (status 0x21 =
+Status_Push|facing) with x_speed=0, stopped against an MTZ cog (id 0x70, onObj=0x16);
+the engine has Tails NOT pushing (status 0x01) and still moving INTO the cog
+(x_speed 0x01C2). Same root as OOZ f1782 and the documented "S2 CPU sidekick
+missing wall Status_Push" cluster (commits fe1ea186a / 7f9ba2e9f), where 3 override
+variants were tried and reverted (they over-push / regress). So cluster 4 (Tails
+CPU) is NOT a fresh/clean cluster -- it reduces to the same deep object<->sidekick
+push/solid-contact PHASE issue as cluster 5: the CPU sidekick's solid-object side
+contact (Status_Push + velocity stop, ROM SolidObject_LeftRight/StopCharacter) is
+phase-shifted/missing vs ROM. Override-resistant; needs the shared sidekick
+object-execution-phase alignment, same as CPZ2 and the GHZ-landing family.
+
+Cluster summary against ACTUAL frontiers: 1 empty; 2 no clean members (object
+bounces); 3 none; 4 = sidekick-missing-Status_Push (deep, override-resistant);
+5 = object-landing-phase + sidekick (GHZ paradox, CPZ2); 6 = onesies are subsets
+of 4/5. The two highest-leverage roots (object-landing-phase; sidekick
+push/solid-contact phase) are both object-execution-PHASE problems -- the genuine
+unifier -- and neither has a safe net-positive single-frame fix; both need a
+shared phase-alignment with full-sweep gating (high blast radius).
