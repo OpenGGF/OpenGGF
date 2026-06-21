@@ -17543,3 +17543,28 @@ Session: 2 engine fixes landed (CPZ2 spin-tube, S1 vertical-wrap), both verified
 net-positive zero-regression. Fail count 53 (frontiers advanced, none cleared a
 whole trace). Remaining frontiers are each deep distinct subsystem bugs;
 all-green is multi-session.
+
+## 2026-06-21 -- GHZ lands-one-frame-early: object-landing-phase timing (threshold matches ROM)
+
+Ran it down: the engine's terrain air-landing threshold already matches ROM
+(CollisionSystem land when floor d1<0, "no threshold check", mirrors S1
+Sonic_FloorDown `tst.w d1 / bpl .return`). And GHZ1/GHZ2 land on OBJECTS
+(stand_on_obj 0x23 / 0x30), not terrain -> the early-land is the object solid-top
+path (ROM Solid_TopBottom: land when penetration d3 in [0,0x10) moving down,
+sub SolidObject.asm:272-318).
+
+Mechanism: at f2573 ROM Sonic y=0206 (still 2px above the object top, d3<0, no
+land) but the ENGINE's Sonic is at y=0209 when the object solid-check runs (3px
+lower) -> already penetrated -> lands a frame early (snaps, air=0, y_speed=0).
+Engine integrated ~10px this frame vs ROM ~7-8px (gravity/subpixel timing) and the
+object solid pass runs after the physics move, so a few px of integration
+difference flips the landing a frame early on a fast fall. Not a clean threshold
+bug -- it's airborne y integration + object-execution-phase timing, shared code,
+high blast radius.
+
+Status this session: 2 engine fixes landed (CPZ2 spin-tube f2888->f2889; S1
+vertical-wrap player-Y gate LZ3 f466->f1415), both full-sweep-verified
+net-positive zero-regression, guards green. The remaining frontiers are each deep
+distinct subsystem bugs (boss bounce, Caterkiller spawn-window, object-landing
+integration timing, sidekick object-phase); none is a one-line threshold fix.
+all-green is multi-session.
