@@ -168,12 +168,15 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-20: raised to 123 after deleting the S3K Orbinaut orb,
  *       Ribot active child, and Star Pointer orbiting point codecs; generic
  *       recreate now relinks their transient live badnik parents.</li>
+ *   <li>2026-06-21: raised to 133 after the dynamic codec inventory reached
+ *       zero and the parent-dependent bucket was split into graph-covered
+ *       families versus explicit session-tail work.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 123;
+    static final int RATCHET_FLOOR = 133;
 
     @BeforeEach
     void initHeadless() {
