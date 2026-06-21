@@ -18015,3 +18015,28 @@ regress green traces (proven: OOZ inclusive-edge 1782->1251; GHZ penetration->MZ
 
 Two grind cycles executed this session (OOZ inclusive-edge: net-negative, reverted;
 MHZ sticky: neutral, reverted), both full-/focused-sweep measured. Baseline: 53.
+
+## 2026-06-21 -- Grind cycle 4 (GHZ collapsing-ledge heightmap) net-negative, REVERTED
+
+Static ROM comparison: engine Sonic1CollapsingLedgeObjectInstance.SLOPE_DATA tops out
+at $30 (two $30 in row5 + eight $30 row6, 48 bytes); ROM Ledge_SlopeData (sonic.lst
+:33121 / label 0x8BEE) is dcb 4*2,$20 + range $21,$2F,+1,2 and STOPS at $2F,$2F (max
+$2F, 38 bytes). Surface = obY - slopeHeight (sonic.lst:33129-33130), so the engine's
+$30 places the ledge top 1px higher than ROM. Fix attempted: cap SLOPE_DATA at $2F
+(indices 38-47 -> $2F). Full sweep (90 tests): 53 failures unchanged; frontier diff =
+ONE change: TestS1Ghz3CompleteRunTraceReplay REGRESSED 1246 -> 564. Net-negative,
+REVERTED.
+
+Lesson: the $30 entries are load-bearing for GHZ3 f564 -- the engine's index calc
+(playerX-objX+$30)/2 reaches indices 38-47 where ROM's 38-byte table does not, so ROM
+must clamp the index or use a narrower ledge x-range. The engine padded with $30 to
+cover that range; capping to $2F drops the ledge surface 1px there and breaks GHZ3.
+So this is ANOTHER coupled multi-part issue (heightmap values + index-range/clamp
+geometry must match ROM together), not a one-line data fix. GHZ1-CR f2573 / GHZ2-CR
+f2369 are NOT the collapsing ledge (unchanged by this edit) -- they land on something
+else.
+
+Four measured fix cycles this session, all reverted per net-positive:
+OOZ inclusive-edge (net-neg 1782->1251), MHZ sticky (neutral), MHZ rolling-landing
+(= GHZ-regression-prone root), GHZ ledge heightmap (net-neg GHZ3 1246->564).
+Baseline: 53.
