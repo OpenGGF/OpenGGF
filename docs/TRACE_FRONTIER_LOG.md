@@ -17875,3 +17875,33 @@ Cluster mapping vs the goal's signatures:
   6 onesies:              the single-error 1px/slot traces.
 Next actionable target (clusters 1-3 have no fixable deviation): cluster 4,
 earliest trace OOZ-LS f1782 tails_x.
+
+## 2026-06-21 -- CLUSTER 4 root (instrumented): sidekick object-contact PUSH is one frame late
+
+Earliest cluster-4 trace OOZ-LS f1782 (tails_x exp0CE4 act0CE3). Instrumented
+SidekickCpuController.updateNormal (throwaway, reverted) logging Tails push state
+keyed by centreX around 0x0CE3:
+  ... cx=0CE4 push=false xspd=-192      (Tails moving left toward contact)
+      cx=0CE3 push=TRUE  xspd=0  gw=false   (contact: push set, xspd zeroed)
+      cx=0CE3 push=false xspd=+12 grace=16  (push cleared, rebounds right)
+Trace (end-of-frame): ROM push SET @f1781 (status 0x29) / CLEAR @f1782 (0x09);
+ENGINE CLEAR @f1781 (0x09) / SET @f1782 (0x29). The push bit -- and the whole
+wall/object rebound -- is exactly ONE FRAME LATE in the engine. gw=false means the
+push is NOT from terrain ground-wall collision; Tails is in solid-object contact
+(OOZ popping platform id 0x33, "near s24 0x33 OOZPoppingPform"). So this is the
+object<->sidekick SOLID-CONTACT execution phase: the engine sets the sidekick's
+Status_Push one frame after ROM. That one-frame lag inverts the CPU follow-steering
+skip decision (loc_13DD0 btst #Status_Push branch) on the contact and rebound
+frames, so Tails accelerates on the wrong frame (ROM rebound +0x80 vs engine +0x0C)
+and lands 1px behind.
+
+This is the SAME object-execution-phase family already seen for the player
+(CPZ2 tube, fixed via prePhysicsCentre); it now explains the cluster-4 onesies,
+which are predominantly 1px tails_x/tails_y (CPZ f3365, MCZ2 f4485, CNZ2 f4418,
+MTZ3 f1973) -- all consistent with a one-frame sidekick contact-phase lag. The fix
+is to align the sidekick's solid-object-contact (push/rebound) evaluation phase
+with ROM, the architectural object-exec-phase alignment (high blast radius across
+the fragile SidekickCpuController + the non-must-keep-green TestSidekickCpuFollowParity
+suite); a blind edit risks regressing currently-green sidekick traces and must be
+gated on the full sweep + the parity suite. Baseline for that gating: 53 failures
+(this session's sweep).
