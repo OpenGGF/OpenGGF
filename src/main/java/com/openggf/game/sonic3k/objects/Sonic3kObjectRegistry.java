@@ -179,10 +179,10 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // CaterkillerJrBodyInstance codec deleted (Phase-2 batch 14):
             // constructor-only segment scalars are restored after generic recreate.
 
-            // MHZ miniboss flame codec deleted (graph batch):
-            // generic recreate bootstraps a live boss and compact restore resolves
-            // the exact captured parent by ObjectRefId.
-            mhzMinibossEscapeShardCodec(),
+            // MHZ miniboss flame and escape shard codecs deleted (graph batch):
+            // graph-tested RewindRecreatable generic recreate bootstraps a live
+            // boss placeholder; compact restore resolves the exact captured
+            // parent by ObjectRefId and reapplies scalars.
 
             // Parent/sibling relink codecs.
             // IczBigSnowPileInstance codec deleted (Phase-2 ICZ snow-pile batch):
@@ -524,37 +524,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     // ===================================================================
     // Batch-inner2: nested-class hazard/solid/cutscene child rewind codecs
     // ===================================================================
-
-    /**
-     * Codec for {@link MhzMinibossEscapeShardInstance}. The shard's only non-spawn
-     * dependency is the live {@link MhzMinibossInstance} parent; position is taken
-     * straight from the captured spawn, and all stateful scalar fields are reapplied
-     * by the generic field capturer. If the live boss is absent the shard is dropped.
-     */
-    private static DynamicObjectRewindCodec mhzMinibossEscapeShardCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == MhzMinibossEscapeShardInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return MhzMinibossEscapeShardInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                MhzMinibossInstance parent = findLiveBossForRewind(context, MhzMinibossInstance.class);
-                if (parent == null) {
-                    return null;
-                }
-                return new MhzMinibossEscapeShardInstance(
-                        entry.spawn().x(), entry.spawn().y(), parent);
-            }
-        };
-    }
 
     @Override
     protected void registerDefaultFactories() {

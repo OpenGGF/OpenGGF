@@ -195,7 +195,6 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | MgzEndBossDefeatDebrisChild | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MgzEndBossDefeatDeb... |
 | MGZHeadTriggerProjectileInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MGZHeadTriggerProje... |
 | Mhz1CutsceneDoorInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.Mhz1CutsceneDoorIns... |
-| MhzMinibossEscapeShardInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MhzMinibossEscapeSh... |
 | MhzMinibossFlameInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MhzMinibossFlameIns... |
 | MhzPollenParticleInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MhzPollenParticleIn... |
 | MhzPulleyLiftObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |

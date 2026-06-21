@@ -721,6 +721,11 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.MhzMinibossFlameInstance",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_MHZ_MINIBOSS_ESCAPE_SHARD_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardInstance",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_NESTED_HURTBOX_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
@@ -4601,6 +4606,29 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K MHZ flame graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K MHZ miniboss escape-shard graph batch: boss-parent-linked shard children
+    // =====================================================================
+
+    @Test
+    void s3kMhzMinibossEscapeShardGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MINIBOSS_ESCAPE_SHARD_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K MHZ escape-shard graph batch");
+        }
+    }
+
+    @Test
+    void s3kMhzMinibossEscapeShardGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MINIBOSS_ESCAPE_SHARD_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MHZ escape-shard graph generic recreate, not a dynamic codec");
         }
     }
 
