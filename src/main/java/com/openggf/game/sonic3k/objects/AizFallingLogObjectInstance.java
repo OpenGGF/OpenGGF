@@ -7,7 +7,10 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -180,7 +183,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
      * ROM references: loc_2B6A0 (falling), loc_2B6BC (at water), loc_2B6D8 (solid+draw).
      */
     static class FallingLogChild extends AbstractObjectInstance
-            implements SolidObjectProvider, SolidObjectListener {
+            implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
         // ROM: move.b #$18,width_pixels(a1)
         private static final int HALF_WIDTH = 0x18;
@@ -209,6 +212,10 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
         private String artKey;
         private SplashChild linkedSplash;
 
+        FallingLogChild() {
+            this(0, 0, Sonic3kObjectArtKeys.AIZ1_FALLING_LOG);
+        }
+
         FallingLogChild(int x, int y, String artKey) {
             super(createDummySpawn(x, y), "FallingLogBody");
             this.x = x;
@@ -218,6 +225,15 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
 
         void setLinkedSplash(SplashChild splash) {
             this.linkedSplash = splash;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            if (spawn == null) {
+                return null;
+            }
+            return new FallingLogChild(spawn.x(), spawn.y(), Sonic3kObjectArtKeys.AIZ1_FALLING_LOG);
         }
 
         @Override
@@ -347,7 +363,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
      * <p>
      * ROM reference: loc_2B72C (sonic3k.asm line 60024).
      */
-    static class SplashChild extends AbstractObjectInstance {
+    static class SplashChild extends AbstractObjectInstance implements RewindRecreatable {
 
         // ROM: move.w #$200,priority(a1) → bucket 4
         private static final int PRIORITY = 4;
@@ -355,17 +371,54 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
         private static final int FRAME_DELAY = 3;
         // ROM: andi.b #3,mapping_frame(a0) → 4 frames total
         private static final int FRAME_COUNT = 4;
-        private final FallingLogChild linkedLog;
-        private final String artKey;
+        private FallingLogChild linkedLog;
+        private String artKey;
         private int mappingFrame;
         // ROM: AllocateObjectAfterCurrent zeroes object RAM, so anim_frame_timer starts at 0.
         // First decrement goes to -1 (bpl fails), immediately advancing to frame 1.
         private int animTimer = 0;
 
+        SplashChild() {
+            this(new FallingLogChild(), Sonic3kObjectArtKeys.AIZ1_FALLING_LOG_SPLASH);
+        }
+
         SplashChild(FallingLogChild linkedLog, String artKey) {
             super(createDummySpawn(linkedLog.getX(), linkedLog.getY()), "FallingLogSplash");
             this.linkedLog = linkedLog;
             this.artKey = artKey;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            FallingLogChild liveLog = findNearestLiveFallingLog(ctx);
+            if (liveLog == null) {
+                return null;
+            }
+            return new SplashChild(liveLog, Sonic3kObjectArtKeys.AIZ1_FALLING_LOG_SPLASH);
+        }
+
+        private static FallingLogChild findNearestLiveFallingLog(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.objectServices() == null
+                    || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            int targetX = spawn != null ? spawn.x() : 0;
+            int targetY = spawn != null ? spawn.y() : 0;
+            FallingLogChild best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (object instanceof FallingLogChild log && !log.isDestroyed()) {
+                    long dx = (long) log.getX() - targetX;
+                    long dy = (long) log.getY() - targetY;
+                    long distance = dx * dx + dy * dy;
+                    if (distance < bestDistance) {
+                        best = log;
+                        bestDistance = distance;
+                    }
+                }
+            }
+            return best;
         }
 
         @Override

@@ -41,7 +41,6 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild;
-import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -49,7 +48,6 @@ import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
@@ -365,12 +363,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // AIZ spiked-log spike hitbox codec deleted (Phase-2 graph batch):
             // generic recreate relinks the nearest live log; compact restore
             // resolves the exact captured parent by ObjectRefId.
-            // AIZ falling-log ridable platform (self-contained; act-derived artKey
-            // reapplied by the capturer).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizFallingLogObjectInstance.FallingLogChild.class,
-                    s -> new AizFallingLogObjectInstance.FallingLogChild(
-                            s.x(), s.y(), Sonic3kObjectArtKeys.AIZ1_FALLING_LOG))
+            // AIZ falling-log log/splash pair now restores through graph-tested
+            // RewindRecreatable generic recreate with compact exact bidirectional relinks.
             // AIZ tree-reveal control shim codec deleted (Phase-2 batch 21):
             // self-contained nested class now uses genericRecreate Path 1.
             // HCZ water-drop cosmetic child codec deleted in Phase-2 batch 3:

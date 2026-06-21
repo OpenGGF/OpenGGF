@@ -605,6 +605,14 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> AIZ_FALLING_LOG_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HczEndBossRobotnikShip.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(HczEndBossTurbine.class.getName(), GameId.S3K),
@@ -4232,6 +4240,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through AIZ spiked-log graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ falling-log graph batch: bidirectional log/splash pair
+    // =====================================================================
+
+    @Test
+    void aizFallingLogGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_FALLING_LOG_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ falling-log graph batch");
+        }
+    }
+
+    @Test
+    void aizFallingLogGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_FALLING_LOG_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ falling-log graph generic recreate, not a dynamic codec");
         }
     }
 

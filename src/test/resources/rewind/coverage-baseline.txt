@@ -815,7 +815,6 @@ com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance#finalScalar#spawnY
 com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance#finalScalar#timingMask
 com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance#recreate
-com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild#recreate
 com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance#finalScalar#animDirection
 com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance#finalScalar#animPeriod
 com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance#finalScalar#hFlip
