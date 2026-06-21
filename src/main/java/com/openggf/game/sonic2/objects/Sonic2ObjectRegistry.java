@@ -136,7 +136,8 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // CPZ boss secondary-parent children now implement RewindRecreatable
             // and are covered by TestS2CpzBossGraphRewind.
             // CPZBossFallingPart now implements RewindRecreatable -> genericRecreate Path 1.
-            oozBurnerFlameCodec(),
+            // OOZBurnerFlameObjectInstance now restores through RewindRecreatable
+            // graph relink and is covered by TestS2OozBurnerFlameGraphRewind.
             // Batch-5 S2 rewind codecs (Rexon head, egg-prison button, results screen).
             // DestroyedEggPrisonObjectInstance now implements
             // RewindRecreatable -> genericRecreate Path 1.
@@ -473,46 +474,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     // ehzBossGroundVehicleCodec / ehzBossPropellerCodec / ehzBossVehicleTopCodec
     // removed (construction-spawned EHZ boss children — see DYNAMIC_REWIND_CODECS
     // list comment).
-
-    private static DynamicObjectRewindCodec oozBurnerFlameCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof OOZBurnerFlameObjectInstance;
-            }
-
-            @Override
-            public String className() {
-                return OOZBurnerFlameObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                OOZPoppingPlatformObjectInstance parent =
-                        findOozFlameParentForRewind(context, entry.spawn());
-                return parent == null
-                        ? null
-                        : new OOZBurnerFlameObjectInstance(entry.spawn(), parent);
-            }
-        };
-    }
-
-    private static OOZPoppingPlatformObjectInstance findOozFlameParentForRewind(
-            DynamicObjectRecreateContext context, ObjectSpawn childSpawn) {
-        if (childSpawn == null) {
-            return null;
-        }
-        // The flame spawns at flameX = platform.getX(), flameY = platform.getHomeY() - 0x10.
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (inst instanceof OOZPoppingPlatformObjectInstance platform
-                    && platform.getX() == childSpawn.x()
-                    && platform.getHomeY() == childSpawn.y() + 0x10) {
-                return platform;
-            }
-        }
-        return null;
-    }
 
     @Override
     protected void registerDefaultFactories() {
