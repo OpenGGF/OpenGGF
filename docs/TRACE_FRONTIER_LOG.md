@@ -17599,3 +17599,32 @@ Session: 2 engine fixes landed (CPZ2 spin-tube, S1 vertical-wrap), both verified
 net-positive zero-regression. Highest-leverage remaining root = object
 spawn-window timing (GHZ + MZ2), next step is its per-object ROM chunk-crossing
 diagnosis.
+
+## 2026-06-21 -- CORRECTION: GHZ early-land is NOT spawn-window; it's object-exec-phase position timing
+
+My prior "spawn-window timing" conclusion (commits 002c7b3da/c10dbcd6d) was WRONG
+-- caused by a measurement error: diag_s1_bounce filtered objects to |dy|<=0x40,
+which hid the GHZ collapsing ledge (id 0x1A @0ED0,0240) while Sonic fell from
+y~01D5 (dy>0x40). Re-running with |dy|<=0xA0 shows the ledge EXISTS the entire
+window (rtn=0x02), so it does NOT spawn late. Same for re-examining MZ2's premise.
+
+Corrected GHZ f2573 root: every landing input matches ROM --
+  - ROM Ledge_SlopeData (8x$20, range $21..$2F x2, 10x$30) index 13 = $23 = 35,
+    identical to the engine SLOPE_DATA[13].
+  - half-width #96/2=$30 (engine PLATFORM_HALF_WIDTH=0x30); obHeight=$13=19
+    (engine yRadius=19); +4 offset and [-16,0]/[0,maxTop2) window both present.
+Yet ROM lands at f3363 (Sonic y=0208) and the engine at f3362 (Sonic y=0206).
+The only consistent explanation: ROM's ledge SlopeObject evaluates Sonic at his
+PRE-MOVEMENT y (f3362 pre-move y=01FF -> d0=+7 -> no land; f3363 pre-move y=0206
+-> d0=0 -> land), while the engine's object-solid pass uses the POST-physics y
+(0206 at f3362 -> d0=0 -> land one frame early). This is the object-execution-
+PHASE / player-position-sampling timing family (same theme as CPZ2 and the
+sidekick onesies), NOT spawn-window.
+
+Caveat: this contradicts the naive S1 order (player slot 0 moves, then objects in
+ExecuteObjects read post-move obY(a1)). Resolving the exact ROM ordering needs
+runtime instrumentation of ExecuteObjects vs the engine's snapshot->physics->
+object phase; a candidate engine fix is to have object-solid LANDING sample the
+player's frame-start (pre-physics) position (cf. the CPZ2 prePhysicsCentre fix),
+but that is high-blast-radius (every object landing) and must be ROM-confirmed +
+full-sweep gated before landing.
