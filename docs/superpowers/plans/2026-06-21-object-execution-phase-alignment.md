@@ -145,7 +145,7 @@ This is comparison-only diagnostics (honours the trace comparison-only invariant
    must-keep-green S3K tests.
 6. **Keep iff net-positive:** ≥1 frontier cleared/advanced, **0 frontier regressions**,
    **and the error count does not increase** (the standing 1 error must not grow, and
-   ideally is addressed via trace regeneration in Phase 5). Otherwise revert and record
+   ideally is addressed via trace regeneration in the final trace-hygiene milestone). Otherwise revert and record
    why in `docs/TRACE_FRONTIER_LOG.md`.
 7. Commit scoped, with trailers; update the frontier log (cleared/advanced/regressed)
    **including the Agent Quick State table if a frontier moved**.
@@ -167,8 +167,8 @@ whichever family matches the current queued target.
 **Current queue head (as of this revision): `TestS2OozLevelSelectTraceReplay` f1782
 `tails_x`/`tails_x_speed` — "movement downstream of Tails CPU", after the S2 Obj36
 negative-inertia riding-push bridge.** This is a **side-contact + sidekick** target, so
-the first concrete work draws on Phase 2 (side-contact) and Phase 4 (sidekick CPU)
-mechanics — NOT the landing family (Phase 1). Later movement/downstream frontiers per
+the first concrete work draws on Family B (side-contact) and Family D (sidekick CPU)
+mechanics — NOT the landing family (Family A). Later movement/downstream frontiers per
 the queue: CNZ-CR f1846, MTZ3 f1973, CNZ1 f3906, CNZ2 f4418, MCZ2 f4485, HTZ f6114.
 Re-read the queue at the start of every work session; it advances as other branches land.
 
@@ -229,7 +229,7 @@ Re-read the queue at the start of every work session; it advances as other branc
 ### Family E — Residual onesies + trace hygiene
 - **Targets:** sub-pixel position onesies (Ghz3 f1246, Mz3 f1702, Syz3 f3468, Hcz f1489,
   Aiz x_sub f1095), camera_y residue (LZ1 f5745) once their upstream air/landing cause
-  is fixed by Phases 1-4.
+  is fixed by Families A-D.
 - **Trace hygiene:** audit complete-run traces for recorder/input-alignment desyncs
   lurking past the physics frontier (e.g. MGZ-CR f33271 BK2-vs-physics.csv). Regenerate
   bad recordings via `tools/bizhawk/record_*` (a trace-data fix, not an engine fix).
@@ -251,7 +251,7 @@ Re-read the queue at the start of every work session; it advances as other branc
   diagnostics/recorder context), `TestArchUnitRules`, `TestRewindCoverageGuard`,
   `TestNoDirectMapMutationsInGameplay`, `TestNoServicesInObjectConstructors`,
   `TestObjectServicesMigrationGuard`, `TestSidekickCpuFollowParity` (sidekick changes),
-  the profile round-trip test (§3.1.4), and the must-keep-green S3K set
+  the profile round-trip test (§3.1 item 4), and the must-keep-green S3K set
   (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
   `TestSonic3kDecodingUtils`).
 - **Frontier log:** update `docs/TRACE_FRONTIER_LOG.md` on every frontier move / full
@@ -264,8 +264,8 @@ Re-read the queue at the start of every work session; it advances as other branc
 | Risk | Mitigation |
 |---|---|
 | Shared-code change regresses green traces | Per-family default-off phase flag; full-sweep gate every step; revert net-neg |
-| Spring/launch non-uniformity (the +4) | Per-object ROM-cited trigger, never blanket; Phase 3 gated hardest |
-| Sidekick controller fragility | Phase 4 last; `TestSidekickCpuFollowParity` + ArchUnit on every change |
+| Spring/launch non-uniformity (the +4) | Per-object ROM-cited trigger, never blanket; Family C (launch) gated hardest |
+| Sidekick controller fragility | Family D (sidekick) last; `TestSidekickCpuFollowParity` + ArchUnit on every change |
 | Hypersensitive contacts (bumper near-center) | Some frontiers may be sub-pixel-irreducible; accept "advanced" not "cleared", document, move on |
 | Coupled multi-part roots (GHZ heightmap+index) | Model both halves in one change; never land one half |
 
