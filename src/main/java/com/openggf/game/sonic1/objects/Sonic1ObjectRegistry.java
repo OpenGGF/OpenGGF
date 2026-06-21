@@ -17,7 +17,6 @@ import com.openggf.game.sonic1.objects.badniks.Sonic1NewtronBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1RollerBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1YadrinBadnikInstance;
-import com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall;
 import com.openggf.game.sonic1.objects.bosses.SYZBossSpike;
 import com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1BossFireInstance;
@@ -62,7 +61,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // Sonic1CrabmeatProjectileInstance restores through
             // RewindRecreatable generic recreate; scalar state is reapplied
             // after construction.
-            ghzBossWreckingBallCodec(),
+            // GHZBossWreckingBall restores through RewindRecreatable graph
+            // relink/adoption. See TestS1GhzBossGraphRewind.
             slzBossSpikeballCodec(),
             // NOTE: syzBossSpikeCodec intentionally REMOVED.
             // SYZBossSpike is construction-spawned: Sonic1SYZBossInstance.initializeBossState()
@@ -110,36 +110,6 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
     // shared class already implements RewindRecreatable -> genericRecreate Path 1.
     // Sonic1SeesawBallObjectInstance restores through RewindRecreatable graph
     // relink/adoption and is covered by TestSeesawBallGraphRewindTest.
-
-    private static DynamicObjectRewindCodec ghzBossWreckingBallCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == GHZBossWreckingBall.class;
-            }
-
-            @Override
-            public String className() {
-                return GHZBossWreckingBall.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic1GHZBossInstance parent = null;
-                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-                    if (inst instanceof Sonic1GHZBossInstance boss) {
-                        parent = boss;
-                        break;
-                    }
-                }
-                if (parent == null) {
-                    return null;
-                }
-                return new GHZBossWreckingBall(parent);
-            }
-        };
-    }
 
     private static DynamicObjectRewindCodec slzBossSpikeballCodec() {
         return new DynamicObjectRewindCodec() {

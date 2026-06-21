@@ -3,9 +3,13 @@ package com.openggf.game.sonic1.objects.bosses;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -34,7 +38,7 @@ import java.util.List;
  * The ball (last link) has collision type 0x81 (enemy, size index 1).
  */
 public class GHZBossWreckingBall extends AbstractBossChild
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     // Chain link Y-offset data (GBall_PosData)
     private static final int[] CHAIN_OFFSETS = {0x00, 0x10, 0x20, 0x30, 0x40, 0x60};
@@ -96,6 +100,29 @@ public class GHZBossWreckingBall extends AbstractBossChild
 
         this.ballFrame = 1; // Start on check1 frame (frame 1 in Map_GBall)
         this.parentDefeated = false;
+    }
+
+    @Override
+    public GHZBossWreckingBall recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
+        ObjectServices objectServices = ctx.objectServices();
+        if (objectServices == null) {
+            return null;
+        }
+        ObjectManager objectManager = objectServices.objectManager();
+        if (objectManager == null) {
+            return null;
+        }
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof Sonic1GHZBossInstance boss && !boss.isDestroyed()) {
+                GHZBossWreckingBall restored = new GHZBossWreckingBall(boss);
+                boss.adoptWreckingBallForRewind(restored);
+                return restored;
+            }
+        }
+        return null;
     }
 
     @Override

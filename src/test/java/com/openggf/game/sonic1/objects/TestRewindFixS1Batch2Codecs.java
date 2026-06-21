@@ -55,7 +55,6 @@ class TestRewindFixS1Batch2Codecs {
         Set<String> names = codecClassNames();
 
         List<String> required = List.of(
-                GHZBossWreckingBall.class.getName(),
                 // SYZBossSpike intentionally absent: construction-spawned child.
                 // Adding a codec would double it on restore. See TestBossChildNoDoubleSpawnParity.
                 Sonic1SLZBossSpikeball.class.getName());
@@ -78,6 +77,7 @@ class TestRewindFixS1Batch2Codecs {
         }
 
         List<Class<?>> graphRecreate = List.of(
+                GHZBossWreckingBall.class,
                 Sonic1BombFuseInstance.class,
                 Sonic1CaterkillerBodyInstance.class);
         for (Class<?> type : graphRecreate) {
