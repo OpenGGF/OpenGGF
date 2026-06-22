@@ -1,11 +1,12 @@
 package com.openggf.game.sonic2.objects;
 
-import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
+import com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic2ObjectRegistry} (unioned with the shared codecs)
@@ -23,22 +24,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  */
 class TestRewindFixS2Batch4Codecs {
 
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
-
     @Test
-    void batch4S2ObjectsNoLongerRegisterDeletedCodecs() {
-        Set<String> names = codecClassNames();
+    void batch4S2ObjectsKeepGenericRecreateCoverage() {
+        List<Class<?>> deleted = List.of(
+                OOZBurnerFlameObjectInstance.class,
+                BubbleObjectInstance.class,
+                CPZBossFallingPart.class);
 
-        assertFalse(names.contains(OOZBurnerFlameObjectInstance.class.getName()),
-                "OOZBurnerFlameObjectInstance must restore through RewindRecreatable graph relink, "
-                        + "not a batch-4 codec");
-        assertFalse(names.contains(BubbleObjectInstance.class.getName()),
-                "BubbleObjectInstance must restore through RewindRecreatable generic recreate, "
-                        + "not a batch-4 codec");
-        assertFalse(names.contains("com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart"),
-                "CPZBossFallingPart must restore through RewindRecreatable generic recreate, "
-                        + "not a batch-4 codec");
+        for (Class<?> type : deleted) {
+            assertTrue(RewindRecreatable.class.isAssignableFrom(type),
+                    type.getName() + " must restore through RewindRecreatable generic recreate");
+        }
     }
 }
