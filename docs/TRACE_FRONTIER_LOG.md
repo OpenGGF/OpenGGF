@@ -18542,3 +18542,36 @@ lag-frame bk2-consumption alignment issue (high blast radius: affects all trace
 replays' lag handling), and MGZ-LS may still have real divergences in its final
 ~2,641 frames past f33271. Path to greening the closest trace: align the harness's
 lag-frame bk2 advance to the recorder, then re-verify the tail. Deep, multi-session.
+
+## 2026-06-22 INFRA + forward plan: always-fresh reports, cascade root-count, MGZ = rings-only
+
+Two infra fixes landed to make the per-trace greening campaign tractable and
+trustworthy (user-directed "infra first"):
+
+1. **Always-fresh reports (commit f665a2f58):** `AbstractTraceReplayTest` now
+   rewrites `*_report.json` in a `finally` block, so a run that short-circuits via
+   `fail()` (input-alignment, input-validation) no longer leaves a STALE report
+   from an earlier run. This was the trap that cost ~15 turns of MGZ work.
+   ALWAYS judge trace results from the fresh report / live assertion.
+
+2. **Cascade root-count tool (`tools/trace/root_summary.py`, local/untracked):**
+   counts INDEPENDENT roots (`cascading=false`) vs downstream cascade, grouped by
+   field. Root count = real distance-to-green (cascade vanishes when its root is
+   fixed). Run a trace full, then `python tools/trace/root_summary.py <report.json>`.
+
+**Data-driven retargeting (full runs, fresh reports):**
+- **S3K MGZ-LS (mgz dir): 5276 errors -> 33 ROOTS, ALL `rings`.** Blocked by a
+  SINGLE subsystem: lightning-shield attracted-ring timing. The committed
+  give-reorder (7b8aa9701) fixed the f539 boundary but the broader attracted-ring
+  collection is still off (mixed: some 1 early, some 1 late, some rings missing
+  entirely e.g. f12468 `1 vs 0`). Fixing the attracted-ring subsystem fully would
+  resolve ~all 33 roots -> MGZ-LS green or near-green. **Highest-leverage target.**
+- **S1 GHZ1-CR: 537 errors -> 117 ROOTS, 113 `camera_y`** (1px vertical-tracking
+  oscillation from f2790). Camera-bound, many roots, lower leverage.
+
+**Forward plan (per-trace root-stack campaign):** concentrate on ONE trace; loop
+{full run -> read root from fresh report/assertion -> ROM-faithful fix -> full-
+sweep net-positive gate -> commit -> re-run, check root-count delta} until green.
+Use `root_summary.py` to see root-stack depth + dominant field, and `-Xmx6g
+-Xshare:off` for long runs. Next concrete target: the S3K attracted-ring timing
+subsystem (greens MGZ-LS, dominated by rings roots).
