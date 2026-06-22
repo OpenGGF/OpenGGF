@@ -1495,7 +1495,20 @@ final class ObjectSolidContactController {
         // current solid, not the narrower Solid_Landed top-landing width.
         int ridingHalfWidth = halfWidth;
 
-        int boundsX = currentX + params.offsetX();
+        // ROM ExitPlatform (S1 Obj18 routine 4, docs/s1disasm/_incObj/18 Platforms.asm:74-87)
+        // runs BEFORE Plat_Move, so its walk-off bounds check observes the
+        // platform's PRE-move x_pos (docs/s1disasm/_incObj/sub ExitPlatform.asm:20-27).
+        // The rider is then carried by the post-move delta via MvSonicOnPtfm2.
+        // Using the post-move currentX here drops a rider one frame early when the
+        // platform moves under him (s1_syz2 trace f6845: SonicX 0x211C, platform
+        // pre-move 0x20FD -> relX 0x3F stays; post-move 0x20FB -> relX 0x41 exits).
+        // Objects whose solid helper runs before their body move opt in via
+        // usesPreUpdatePositionForSolidContact(); the carry delta below is
+        // unchanged because it is still measured against the same pre-move ridingX.
+        int boundsRefX = provider.usesPreUpdatePositionForSolidContact(player)
+                ? ridingX
+                : currentX;
+        int boundsX = boundsRefX + params.offsetX();
         int relX = player.getCentreX() - boundsX + ridingHalfWidth;
         int stickyX = 0;
         int minRelX = -stickyX;
@@ -1567,6 +1580,22 @@ final class ObjectSolidContactController {
         }
 
         ridingStates.remove(player);
+        if (solidProfile.carriesAirborneRiderAfterExitPlatform()
+                && provider.carriesRiderOnHorizontalMove(player)) {
+            // ROM S1 Obj18 routine 4 (Plat_Action2) calls ExitPlatform first --
+            // which clears the on-object bit when the rider walks past the
+            // pre-move edge -- but STILL runs Plat_Move then unconditionally
+            // MvSonicOnPtfm2 (docs/s1disasm/_incObj/18 Platforms.asm:74-87;
+            // sub MvSonicOnPtfm.asm:18-41). MvSonicOnPtfm2 does not test the
+            // on-object bit, so the rider receives one final post-move carry on
+            // the exit frame. Without it the rider keeps the full self-movement
+            // for that frame and ends 1px right of ROM (s1_syz2 f6846: ROM x
+            // 0x211F vs un-carried 0x2120).
+            int exitDeltaX = currentX - ridingX;
+            if (exitDeltaX != 0) {
+                player.shiftX(exitDeltaX);
+            }
+        }
         if (provider.sampleSlopeOnRideExit(player) && instance instanceof SlopedSolidProvider sloped) {
             int slopeAnchorX = currentX + params.offsetX();
             int slopeY = sampleSlopeY(player, slopeAnchorX, params.halfWidth(), sloped);
