@@ -144,6 +144,50 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - S3K MGZ/LBZ Smashing Pillar inclusive right edge advances LBZ1 to f2270
+
+- Branch/worktree context: `bugfix/ai-lbz1-f1950-wallpush` (worktree off `develop`,
+  base `4eaf9fbed`, includes the prior LBZ1 rolling-drum-handoff fix at f1950).
+- Command: `mvn -q -Dmse=relaxed test "-Dtest=TestS3kLbzCompleteRunTraceReplay"
+  -DfailIfNoTests=false "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen"
+  "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- **`s3k_lbz1` / `TestS3kLbzCompleteRunTraceReplay` advanced f1950 -> f2270.**
+  - Root: at LBZ1 f1949 Sonic walks left into the LBZ Smashing-Spikes tube
+    (`Obj_MGZLBZSmashingPillar`, the engine `MGZLBZSmashingPillar`, a
+    `SolidObjectFull` body) and pins flush against its right edge at x=0x4DF.
+    ROM `status_byte` becomes 0x21 (Status_Facing + Status_Push) and STAYS 0x21
+    through f1950-1952 even after the player releases input (gv=0). The engine
+    set push on the wall-hit frame but the player's standing-still push-clear
+    (gSpeed==0 on flat ground) cleared it the next frame, giving 0x01.
+  - Why ROM keeps it: `SolidObjectFull_1P` -> `SolidObject_cont` rejects the X
+    bounding box with `bhi` (unsigned strictly-greater): `cmp.w d3,d0 / bhi.w
+    loc_1E0A2` (sonic3k.asm:41405; the same `bhi` is in S2 s2.asm:35353-35354
+    and the S1 equivalent). A player shoved flush has `d0 == width*2`, which
+    `bhi` keeps as a live SIDE contact, so the pillar's `SolidObject_cont`
+    side path re-sets `Status_Push` (loc_1E06E `bset #Status_Push,status(a1)`,
+    sonic3k.asm:41500) every frame the grounded player overlaps the edge. The
+    pillar runs after Sonic in slot order, so its push-set is the last word.
+  - Engine bug: the shared `ObjectSolidContactController` X gate defaults to an
+    exclusive (`relXRaw >= width*2 -> no contact`) bound and only flips to the
+    ROM-accurate inclusive `>` bound when a provider opts in via
+    `usesInclusiveRightEdge()`. The Smashing Pillar didn't opt in, so at the
+    flush edge the contact dropped, the pillar never re-set push, and the
+    player's standing-still clear won.
+  - Fix: `MGZLBZSmashingPillarObjectInstance.usesInclusiveRightEdge()` -> true,
+    citing sonic3k.asm:41405. This is the ROM `bhi` operator for this object's
+    own solid routine, not a zone/route/frame carve-out.
+  - Net-positive gate: LBZ1 advanced f1950 -> f2270 (next frontier is a separate
+    downstream sidekick delta, `tails_x` 0x04E1 vs 0x04E0 at f2270, Tails
+    following Sonic away from the pillar). MGZ (the only other zone that spawns
+    this object) held EXACTLY at its develop baseline: `s3k_mgz1` complete-run
+    f866 `tails_status_byte` and `s3k_mgz1` f523 `obj_extra_s24_x`, both
+    identical with and without the change (verified by stash). Keep-green
+    `TestS3kAiz1SkipHeadless` (8), `TestSonic3kLevelLoading` (30),
+    `TestSonic3kBootstrapResolver` (5), `TestSonic3kDecodingUtils` (3), and
+    `TestLbzRollingDrumInstance` (19) all pass. Other red traces (S2 level-select,
+    S3K AIZ, the two S2 `TestSidekickCpuFollowParity` cases) are pre-existing on
+    develop and cannot be reached by this MGZ/LBZ-only object change.
+
 ## 2026-06-22 - S2 Rexon head oscillation stagger advances HTZ2 to f1343
 
 - Branch/worktree context: `bugfix/ai-htz2-f1078-launch` (worktree off `develop`).
