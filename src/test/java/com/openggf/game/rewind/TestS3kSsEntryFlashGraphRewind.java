@@ -114,7 +114,8 @@ class TestS3kSsEntryFlashGraphRewind {
     void flashUsesRewindRecreatableWithoutExplicitS3kDynamicCodec() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic3kSSEntryFlashObjectInstance.class),
                 "S3K SS-entry flash must restore through RewindRecreatable generic recreate");
-        assertFalse(hasRegisteredS3kCodec(Sonic3kSSEntryFlashObjectInstance.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic3kSSEntryFlashObjectInstance.class.getName()),
                 "S3K SS-entry flash must not keep an explicit S3K dynamic codec");
     }
 
@@ -175,10 +176,6 @@ class TestS3kSsEntryFlashGraphRewind {
                 .filter(object -> objectId(objectManager, object).equals(id))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("missing restored object " + id));
-    }
-
-    private static boolean hasRegisteredS3kCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T extends ObjectInstance> List<T> liveObjects(ObjectManager objectManager, Class<T> type) {

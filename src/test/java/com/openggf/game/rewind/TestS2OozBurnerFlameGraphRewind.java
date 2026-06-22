@@ -148,7 +148,8 @@ class TestS2OozBurnerFlameGraphRewind {
     void oozBurnerFlameUsesRewindRecreatableWithoutExplicitDynamicCodec() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(OOZBurnerFlameObjectInstance.class),
                 "OOZBurnerFlameObjectInstance must restore through RewindRecreatable");
-        assertFalse(hasExplicitS2DynamicCodec(OOZBurnerFlameObjectInstance.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        OOZBurnerFlameObjectInstance.class.getName()),
                 "OOZBurnerFlameObjectInstance must not keep an explicit S2 dynamic codec");
     }
 
@@ -238,10 +239,6 @@ class TestS2OozBurnerFlameGraphRewind {
         return new PerObjectRewindSnapshot(
                 false, false, false, 0, 0, 0, 0, false, 0,
                 false, false, 0, -1, null, null, null);
-    }
-
-    private static boolean hasExplicitS2DynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static Object readObjectField(Object target, String fieldName) {

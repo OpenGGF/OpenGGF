@@ -147,7 +147,7 @@ class TestAizSpikedLogGraphRewind {
         assertTrue(RewindRecreatable.class.isAssignableFrom(
                         AizSpikedLogObjectInstance.SpikedLogCollisionChild.class),
                 "SpikedLogCollisionChild must restore through RewindRecreatable generic recreate");
-        assertFalse(hasExplicitS3kDynamicCodec(
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
                         AizSpikedLogObjectInstance.SpikedLogCollisionChild.class.getName()),
                 "SpikedLogCollisionChild must restore through graph-tested generic recreate, not a codec");
     }
@@ -226,10 +226,6 @@ class TestAizSpikedLogGraphRewind {
                 .filter(child -> readObjectField(child, "parent") == parent)
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("missing spiked-log child for parent"));
-    }
-
-    private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T extends ObjectInstance> List<T> liveObjects(ObjectManager objectManager, Class<T> type) {

@@ -196,7 +196,8 @@ class TestS2EggPrisonButtonGraphRewind {
     void eggPrisonButtonUsesRewindRecreatableWithoutExplicitDynamicCodec() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(EggPrisonButtonObjectInstance.class),
                 "EggPrisonButtonObjectInstance must restore through RewindRecreatable");
-        assertFalse(hasExplicitS2DynamicCodec(EggPrisonButtonObjectInstance.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        EggPrisonButtonObjectInstance.class.getName()),
                 "EggPrisonButtonObjectInstance must not keep an explicit S2 dynamic codec");
     }
 
@@ -282,10 +283,6 @@ class TestS2EggPrisonButtonGraphRewind {
 
     private static void pressButton(EggPrisonButtonObjectInstance button) {
         setBooleanField(button, "triggered", true);
-    }
-
-    private static boolean hasExplicitS2DynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static int readIntField(Object target, String fieldName) {

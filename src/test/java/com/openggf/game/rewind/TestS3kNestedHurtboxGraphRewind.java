@@ -244,9 +244,9 @@ class TestS3kNestedHurtboxGraphRewind {
                 "MGZ drill arm must restore through RewindRecreatable generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(ICZ_HURT_CHILD_CLASS)),
                 "ICZ ice-spike hurt child must restore through RewindRecreatable generic recreate");
-        assertFalse(hasExplicitS3kDynamicCodec(MGZ_DRILL_ARM_CLASS),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MGZ_DRILL_ARM_CLASS),
                 "MGZ drill arm must not keep an explicit S3K dynamic codec");
-        assertFalse(hasExplicitS3kDynamicCodec(ICZ_HURT_CHILD_CLASS),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ICZ_HURT_CHILD_CLASS),
                 "ICZ ice-spike hurt child must not keep an explicit S3K dynamic codec");
     }
 
@@ -362,10 +362,6 @@ class TestS3kNestedHurtboxGraphRewind {
                 .filter(child -> readObjectField(child, "parent") == parent)
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("missing child for parent " + parent));
-    }
-
-    private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static ObjectInstance constructMgzArm(MgzMinibossInstance parent, int xOffset, int yOffset) {

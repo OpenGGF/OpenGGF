@@ -167,9 +167,11 @@ class TestS3kCutsceneKnucklesGraphRewind {
                 "AIZ rock child must restore through RewindRecreatable generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(CutsceneKnuxCnz2WallInstance.class),
                 "CNZ wall must restore through RewindRecreatable generic recreate");
-        assertFalse(hasExplicitS3kDynamicCodec(CutsceneKnucklesRockChild.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        CutsceneKnucklesRockChild.class.getName()),
                 "AIZ rock child must not keep an explicit S3K dynamic codec");
-        assertFalse(hasExplicitS3kDynamicCodec(CutsceneKnuxCnz2WallInstance.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        CutsceneKnuxCnz2WallInstance.class.getName()),
                 "CNZ wall must not keep an explicit S3K dynamic codec");
     }
 
@@ -268,10 +270,6 @@ class TestS3kCutsceneKnucklesGraphRewind {
 
     private static int slotIndex(ObjectInstance object) {
         return object instanceof AbstractObjectInstance aoi ? aoi.getSlotIndex() : -1;
-    }
-
-    private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static int readIntField(Object target, String fieldName) {

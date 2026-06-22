@@ -128,7 +128,8 @@ class TestS3kMhzMinibossFlameGraphRewind {
     void flameUsesRewindRecreatableWithoutExplicitDynamicCodec() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(MhzMinibossFlameInstance.class),
                 "MHZ miniboss flame must restore through RewindRecreatable generic recreate");
-        assertFalse(hasRegisteredS3kCodec(MhzMinibossFlameInstance.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        MhzMinibossFlameInstance.class.getName()),
                 "MHZ miniboss flame must not keep an explicit S3K dynamic codec");
     }
 
@@ -197,10 +198,6 @@ class TestS3kMhzMinibossFlameGraphRewind {
                 .filter(object -> objectId(objectManager, object).equals(id))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("missing restored object " + id));
-    }
-
-    private static boolean hasRegisteredS3kCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T extends ObjectInstance> List<T> liveObjects(ObjectManager objectManager, Class<T> type) {

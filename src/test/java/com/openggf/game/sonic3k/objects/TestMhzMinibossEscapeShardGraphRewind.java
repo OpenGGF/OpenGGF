@@ -118,7 +118,8 @@ class TestMhzMinibossEscapeShardGraphRewind {
     void escapeShardUsesRewindRecreatableWithoutExplicitDynamicCodec() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(MhzMinibossEscapeShardInstance.class),
                 "MHZ miniboss escape shard must restore through RewindRecreatable generic recreate");
-        assertFalse(hasRegisteredS3kCodec(MhzMinibossEscapeShardInstance.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        MhzMinibossEscapeShardInstance.class.getName()),
                 "MHZ miniboss escape shard must not keep an explicit S3K dynamic codec");
     }
 
@@ -187,10 +188,6 @@ class TestMhzMinibossEscapeShardGraphRewind {
                 .filter(object -> objectId(objectManager, object).equals(id))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("missing restored object " + id));
-    }
-
-    private static boolean hasRegisteredS3kCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T extends ObjectInstance> List<T> liveObjects(ObjectManager objectManager, Class<T> type) {

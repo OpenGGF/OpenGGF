@@ -201,7 +201,8 @@ class TestS1EndingSonicGraphRewind {
     void endingSonicUsesRewindRecreatableWithoutExplicitS1DynamicCodec() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1EndingSonicObjectInstance.class),
                 "Ending Sonic must restore through RewindRecreatable generic recreate");
-        assertFalse(hasRegisteredS1Codec(Sonic1EndingSonicObjectInstance.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic1EndingSonicObjectInstance.class.getName()),
                 "Ending Sonic must not keep an explicit S1 dynamic rewind codec");
 
         ObjectInstance recreated = ObjectRewindDynamicCodecs.genericRecreate(
@@ -308,10 +309,6 @@ class TestS1EndingSonicGraphRewind {
                 .filter(object -> objectId(objectManager, object).equals(id))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("missing restored object " + id));
-    }
-
-    private static boolean hasRegisteredS1Codec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T extends ObjectInstance> List<T> liveObjects(ObjectManager objectManager, Class<T> type) {

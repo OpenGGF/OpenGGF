@@ -135,7 +135,8 @@ class TestAizFallingLogGraphRewind {
         assertTrue(RewindRecreatable.class.isAssignableFrom(
                         AizFallingLogObjectInstance.SplashChild.class),
                 "SplashChild must restore through RewindRecreatable generic recreate");
-        assertFalse(hasRegisteredS3kCodec(AizFallingLogObjectInstance.FallingLogChild.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        AizFallingLogObjectInstance.FallingLogChild.class.getName()),
                 "FallingLogChild must not keep an explicit S3K dynamic codec");
     }
 
@@ -230,10 +231,6 @@ class TestAizFallingLogGraphRewind {
                 .filter(object -> objectId(objectManager, object).equals(id))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("missing restored object " + id));
-    }
-
-    private static boolean hasRegisteredS3kCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T extends ObjectInstance> List<T> liveObjects(ObjectManager objectManager, Class<T> type) {

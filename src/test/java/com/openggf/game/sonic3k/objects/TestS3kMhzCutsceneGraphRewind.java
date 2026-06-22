@@ -192,11 +192,12 @@ class TestS3kMhzCutsceneGraphRewind {
                 "MHZ1 P2 stopper must restore through RewindRecreatable");
         assertTrue(RewindRecreatable.class.isAssignableFrom(childClass(ROUTE_SWITCH_CLASS)),
                 "MHZ2 route-switch child must restore through RewindRecreatable");
-        assertFalse(hasRegisteredS3kCodec(Mhz1CutsceneDoorInstance.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Mhz1CutsceneDoorInstance.class.getName()),
                 "MHZ1 cutscene door must not keep an explicit S3K dynamic codec");
-        assertFalse(hasRegisteredS3kCodec(P2_STOPPER_CLASS),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(P2_STOPPER_CLASS),
                 "MHZ1 P2 stopper must not keep an explicit S3K dynamic codec");
-        assertFalse(hasRegisteredS3kCodec(ROUTE_SWITCH_CLASS),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ROUTE_SWITCH_CLASS),
                 "MHZ2 route-switch child must not keep an explicit S3K dynamic codec");
     }
 
@@ -316,10 +317,6 @@ class TestS3kMhzCutsceneGraphRewind {
         } catch (ClassNotFoundException e) {
             throw new AssertionError(e);
         }
-    }
-
-    private static boolean hasRegisteredS3kCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static int countLive(ObjectManager objectManager, Class<?> type) {

@@ -114,7 +114,7 @@ class TestAizShipBombGraphRewind {
 
         assertTrue(RewindRecreatable.class.isAssignableFrom(AizShipBombInstance.class),
                 "AizShipBombInstance must restore through RewindRecreatable generic recreate");
-        assertFalse(hasExplicitS3kDynamicCodec(AizShipBombInstance.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(AizShipBombInstance.class.getName()),
                 "AizShipBombInstance must restore through graph-tested generic recreate, "
                         + "not a handwritten S3K dynamic codec");
     }
@@ -143,10 +143,6 @@ class TestAizShipBombGraphRewind {
 
     private static void removeAllActiveObjects(ObjectManager objectManager) {
         List.copyOf(objectManager.getActiveObjects()).forEach(objectManager::removeDynamicObject);
-    }
-
-    private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T> T singleLiveObject(ObjectManager objectManager, Class<T> type) {
