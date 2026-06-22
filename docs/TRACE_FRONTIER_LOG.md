@@ -144,6 +144,15 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - DEZ Silver Sonic does not clear Current_Boss_ID; DEZ1 f4933->f5261 (roots 13->5)
+
+- Branch/worktree context: `bugfix/ai-dez1-green` (worktree off `develop`, builds on the group-anim $C0 fix below).
+- Command: `mvn -q -Dmse=relaxed test "-Dtest=TestS2DezEndingLevelSelectTraceReplay" -DfailIfNoTests=false "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- **`s2_dez1` advanced f4933 -> f5261, non-cascading roots 13 -> 5** (errors held at 98; the f4933 boundary cluster cleared, remaining roots are the residual boss-bounce sensor-report drift at later jet-stomps). First error before: f4933 `x_speed` exp=0x0000 act=0x02DC. After: f5261 `y_speed` exp=-0178 act=0x0178.
+- Root: at f4933 BizHawk shows the boss body UP HIGH @077E,0024 (ascending — not touching the player); the player runs RIGHT post-bounce and ROM clamps x at 0x868 (xv->0, becomes pushing) while the engine kept x_speed=0x2DC and sailed past. 0x868 is the DEZ arena right player boundary = `Camera_Max_X`(0x740, set by Sonic2DEZEvents arena lock) + 0x128 (`screen_width-24`). ROM `Sonic_LevelBound` applies that STRICT boundary (no `+$40` lenient extension) iff `Current_Boss_ID != 0` (`s2.asm:37244-37251`). ROM Silver Sonic sets `Current_Boss_ID=9` at its arena lock (`s2.asm:77528`) and NO S2 boss ever clears it, so it stays 9 through the Death Egg Robot fight -> strict boundary throughout. The engine's `Sonic2MechaSonicInstance` defeat called `setCurrentBossId(0)`, reverting to the lenient `+$40` boundary (0x8A8) for the whole Death Egg Robot fight; the player wasn't clamped at the arena edge. Confirmed by instrumenting `doLevelBoundary`: at predX 0x855-0x868, maxX=0x740 (correct) but strict=false / boss=false -> rightBoundary 0x8A8.
+- Fix: remove the premature `setCurrentBossId(0)` from `Sonic2MechaSonicInstance.updateDefeat` so `Current_Boss_ID` stays 9 through the Death Egg Robot fight, matching ROM (which never clears it). The engine's existing boss-strict gating (`PlayableSpriteMovement.doLevelBoundary`, `RightBoundary.compute`) is already ROM-faithful — it just needed the flag held. DEZ-only object; the post-defeat ending walk (Camera_Max_X opens to 0x1000) stays unblocked (target 0xEC0 < 0x1000+0x128).
+- Regression: DEZ-only (MechaSonic spawns only in DEZ). No shared code changed. The remaining 5 roots (f5261/f5462/f5952/f6231) are all the residual ~1-frame sensor lock-on / descent-handoff drift at later jet-stomps; tracked for follow-up.
+
 ## 2026-06-22 - DEZ Death Egg Robot group-anim end-marker frame collapses DEZ1 127->98, advances f4007->f4933
 
 - Branch/worktree context: `bugfix/ai-dez1-green` (worktree off `develop`).

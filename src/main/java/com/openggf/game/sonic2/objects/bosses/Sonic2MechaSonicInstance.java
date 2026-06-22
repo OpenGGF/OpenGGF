@@ -878,7 +878,16 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
             camera.setMaxX((short) 0x1000);
             Sonic2LevelEventManager eventManager = (Sonic2LevelEventManager) services().levelEventProvider();
             eventManager.setEventRoutine(eventManager.getEventRoutine() + 2);
-            services().gameState().setCurrentBossId(0);
+            // ROM Silver Sonic (ObjAF) sets Current_Boss_ID=9 (s2.asm:77528) and
+            // NEVER clears it — no S2 boss writes move.b #0,(Current_Boss_ID).w.
+            // It stays 9 through the Death Egg Robot fight that follows in the
+            // SAME act, so Sonic_LevelBound keeps the boss-strict right boundary
+            // (Camera_Max_X + $128, no +$40 extension; s2.asm:37246-37248) for the
+            // DEZ arena. Clearing it here reverted the player's right boundary to
+            // the lenient +$40 (0x8A8 vs ROM 0x868), so the player ran past the
+            // DEZ arena edge during the Death Egg Robot fight (DEZ1 f4933:
+            // ROM clamps x at 0x868, engine kept x_speed). Leave it set; the
+            // ending walk (Camera_Max_X=0x1000) is well within 0x1000+$128.
             services().playMusic(Sonic2Music.DEATH_EGG.id);
             // Spawn Eggman transition object (ObjC6 State2) before self-destructing
             spawnEggmanTransition();
