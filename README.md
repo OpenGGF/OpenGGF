@@ -272,6 +272,8 @@ Highlights:
 
 - The S1 SBZ Electrocuter now reads the trace-seeded canonical `Level_frame_counter` (not `ObjectManager`'s free-running counter, which ran a frame ahead on trace replay) for its `v_framecount` zap gate, so it zaps the player on the ROM-correct frame instead of one early (SBZ1 trace frontier f1925 -> f2268, 997 -> 805 errors; SBZ-only object, GHZ2 stays green).
 
+- The S1 spring now uses the ROM-accurate inclusive right-edge solid bound (ROM `Solid_ChkCollision` rejects only when strictly greater), so a player landing flush against a horizontal spring's right face registers the side contact and gets bounced as ROM does, instead of falling through to a terrain stop (SYZ1 trace frontier f502 -> f816, 484 -> 351 errors; Obj41-only, GHZ2 stays green).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)

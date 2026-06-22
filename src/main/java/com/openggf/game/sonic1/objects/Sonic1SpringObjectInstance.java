@@ -291,7 +291,19 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.fullSolid(usesStickyContactBuffer());
+        // ROM Spring routines call SolidObject, whose x-range check
+        // (Solid_ChkCollision, docs/s1disasm/_incObj/sub SolidObject.asm:160-166)
+        // rejects only when `d0 > 2*halfWidth` (`cmp.w d3,d0; bhi.w
+        // Solid_NoCollision`), so the RIGHT edge (d0 == 2*halfWidth, i.e. Sonic's
+        // solid edge exactly flush against the object's right face) STILL collides.
+        // With the default exclusive right edge, a Sonic falling flush against the
+        // right side of an LR spring (S1 SYZ1 f502: spring @0218 right solid edge =
+        // 0218+19 = 022B, Sonic centre 022B) was rejected as out-of-range, so the
+        // spring's side contact never fired and Spring_LR could not set the pushing
+        // bit / bounce — Sonic fell to the terrain instead of launching at 0x1000.
+        // inclusiveRightEdge=true matches the ROM bhi boundary (same as Girder/
+        // Junction/PushBlock/InvisibleBarrier full-solid objects).
+        return SolidRoutineProfile.fullSolid(usesStickyContactBuffer(), true, false);
     }
 
     @Override
