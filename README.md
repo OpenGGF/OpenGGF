@@ -266,6 +266,8 @@ Highlights:
 
 - Moving-platform ride-off ordering: a rider walking off a horizontally-sliding Obj18 platform now uses the platform's pre-move x for the walk-off bounds and applies ROM `MvSonicOnPtfm2`'s unconditional final carry (matching ROM's ExitPlatform-before-Plat_Move order), so the engine no longer drops the rider one frame early. **This greens the Spring Yard `SYZ2` complete-run trace — the second fully passing S1 complete-run trace replay** (shared S1/S2/S3K solid-contact code; GHZ2 stays green, S3K CNZ/MGZ platform traces byte-identical).
 
+- The S1 GHZ collapsing ledge now accepts a landing across its full ROM `SlopeObject` width (ROM `Ledge_ChkTouch` passes the half-width directly with no `obActWid` narrowing), so a player falling onto the ledge near its left edge is no longer dropped airborne for a few frames (GHZ1 trace frontier f2790 -> f3246, 436 -> 255 errors; GHZ-only object, GHZ2 stays green).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)
