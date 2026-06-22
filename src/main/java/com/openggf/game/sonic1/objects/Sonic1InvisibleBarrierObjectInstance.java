@@ -4,6 +4,8 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
@@ -39,14 +41,14 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/71 Invisible Barriers.asm
  */
 public class Sonic1InvisibleBarrierObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider {
+        implements SolidObjectProvider, RewindRecreatable {
 
     // From disassembly: addi.w #$B,d1 (padding added to obActWid before SolidObject71 call)
     private static final int WIDTH_PADDING = 0x0B;
 
-    private final int subtype;
-    private final int halfWidth;
-    private final int height;
+    private int subtype;
+    private int halfWidth;
+    private int height;
 
     public Sonic1InvisibleBarrierObjectInstance(ObjectSpawn spawn) {
         super(spawn, "InvisibleBarrier");
@@ -70,6 +72,11 @@ public class Sonic1InvisibleBarrierObjectInstance extends AbstractObjectInstance
         // move.b d1,obHeight(a0)
         int lower = subtype & 0x0F;
         this.height = (lower + 1) << 3;
+    }
+
+    @Override
+    public Sonic1InvisibleBarrierObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1InvisibleBarrierObjectInstance(ctx.spawn());
     }
 
     @Override
