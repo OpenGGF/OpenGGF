@@ -1,15 +1,14 @@
 package com.openggf.game.sonic2.objects;
 
-import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.CPZBossDripper;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic2ObjectRegistry} (unioned with the shared codecs)
@@ -26,33 +25,20 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  */
 class TestRewindFixS2Batch5Codecs {
 
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
-
     @Test
-    void batch5S2ObjectsNoLongerRegisterDeletedCodecs() {
-        Set<String> names = codecClassNames();
+    void batch5S2ObjectsKeepGenericRecreateCoverage() {
+        List<Class<?>> deleted = List.of(
+                CPZBossDripper.class,
+                CPZBossPipeSegment.class,
+                RexonHeadObjectInstance.class,
+                EggPrisonButtonObjectInstance.class,
+                LeafParticleObjectInstance.class,
+                DestroyedEggPrisonObjectInstance.class,
+                ResultsScreenObjectInstance.class);
 
-        List<String> deleted = List.of(
-                CPZBossDripper.class.getName(),
-                CPZBossPipeSegment.class.getName(),
-                RexonHeadObjectInstance.class.getName(),
-                EggPrisonButtonObjectInstance.class.getName());
-
-        for (String name : deleted) {
-            assertFalse(names.contains(name),
-                    name + " must restore through RewindRecreatable generic recreate, not a batch-5 codec");
+        for (Class<?> type : deleted) {
+            assertTrue(RewindRecreatable.class.isAssignableFrom(type),
+                    type.getName() + " must restore through RewindRecreatable generic recreate");
         }
-
-        assertFalse(names.contains(LeafParticleObjectInstance.class.getName()),
-                "LeafParticleObjectInstance must restore through RewindRecreatable generic recreate, "
-                        + "not a batch-5 codec");
-        assertFalse(names.contains(DestroyedEggPrisonObjectInstance.class.getName()),
-                "DestroyedEggPrisonObjectInstance must restore through RewindRecreatable generic recreate, "
-                        + "not a batch-5 codec");
-        assertFalse(names.contains(ResultsScreenObjectInstance.class.getName()),
-                "ResultsScreenObjectInstance must restore through RewindRecreatable generic recreate, "
-                        + "not a batch-5 codec");
     }
 }
