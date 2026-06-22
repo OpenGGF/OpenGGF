@@ -104,9 +104,11 @@ class TestS3kLbz1CutsceneGraphRewind {
                 "range helper must restore through RewindRecreatable");
         assertTrue(RewindRecreatable.class.isAssignableFrom(CutsceneKnucklesLbz1CollapseChild.class),
                 "collapse child must restore through RewindRecreatable");
-        assertFalse(hasRegisteredS3kCodec(CutsceneKnucklesLbz1RangeHelper.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        CutsceneKnucklesLbz1RangeHelper.class.getName()),
                 "range helper must not keep an explicit S3K dynamic codec");
-        assertFalse(hasRegisteredS3kCodec(CutsceneKnucklesLbz1CollapseChild.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        CutsceneKnucklesLbz1CollapseChild.class.getName()),
                 "collapse child must not keep an explicit S3K dynamic codec");
     }
 
@@ -319,10 +321,6 @@ class TestS3kLbz1CutsceneGraphRewind {
             }
         }
         return counts;
-    }
-
-    private static boolean hasRegisteredS3kCodec(String fqn) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(fqn);
     }
 
     private static ObjectRefId objectId(ObjectManager objectManager, ObjectInstance object) {

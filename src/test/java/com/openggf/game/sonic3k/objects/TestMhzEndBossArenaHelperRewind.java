@@ -92,7 +92,8 @@ class TestMhzEndBossArenaHelperRewind {
         assertEquals(0, restored.getCollisionFlags(),
                 "restored spike helper must keep using the live MHZ events owner after restore");
 
-        assertFalse(hasExplicitS3kDynamicCodec(MhzEndBossArenaHelperInstance.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        MhzEndBossArenaHelperInstance.class.getName()),
                 "MhzEndBossArenaHelperInstance must restore through RewindRecreatable genericRecreate, "
                         + "not a handwritten S3K dynamic codec");
     }
@@ -154,10 +155,6 @@ class TestMhzEndBossArenaHelperRewind {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
-    }
-
-    private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static Camera mockCamera() {

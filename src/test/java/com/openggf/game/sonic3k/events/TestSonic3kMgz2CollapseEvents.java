@@ -233,7 +233,8 @@ class TestSonic3kMgz2CollapseEvents {
         RewindIdentityTable restoredTable = objectManager.captureIdentityContext().requireIdentityTable();
         assertTrue(restoredSolids.stream().anyMatch(solid -> firstCapturedId.equals(restoredTable.idFor(solid))),
                 "restored collapse solids should retain their captured dynamic rewind identities");
-        assertFalse(hasExplicitS3kDynamicCodec(Mgz2LevelCollapseSolidInstance.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Mgz2LevelCollapseSolidInstance.class.getName()),
                 "Mgz2LevelCollapseSolidInstance must restore through RewindRecreatable genericRecreate, "
                         + "not a handwritten S3K dynamic codec");
     }
@@ -364,10 +365,6 @@ class TestSonic3kMgz2CollapseEvents {
                 .filter(object -> object.getClass() == Mgz2LevelCollapseSolidInstance.class && !object.isDestroyed())
                 .map(Mgz2LevelCollapseSolidInstance.class::cast)
                 .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
-    }
-
-    private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static void assertCleared(Map map, int startX, int startY, int width, int height) {

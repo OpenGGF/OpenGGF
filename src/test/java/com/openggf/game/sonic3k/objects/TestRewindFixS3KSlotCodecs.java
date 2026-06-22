@@ -99,7 +99,7 @@ class TestRewindFixS3KSlotCodecs {
 
     private void assertUsesGenericRecreateWithLiveSlotController(
             Class<? extends AbstractObjectInstance> targetClass) throws Exception {
-        assertFalse(hasExplicitCodec(targetClass),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(targetClass.getName()),
                 targetClass.getSimpleName() + " must not keep its hand-written dynamic codec");
         assertTrue(RewindRecreatable.class.isAssignableFrom(targetClass),
                 targetClass.getSimpleName() + " must opt into generic recreate");
@@ -112,10 +112,6 @@ class TestRewindFixS3KSlotCodecs {
         assertEquals(targetClass, recreated.getClass());
         assertSame(controller, controllerField(recreated),
                 "recreated slot object must use the live controller from the active S3K slot runtime");
-    }
-
-    private static boolean hasExplicitCodec(Class<?> targetClass) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(targetClass.getName());
     }
 
     private static ObjectManagerSnapshot.DynamicObjectEntry dynamicEntry(Class<?> targetClass) {

@@ -72,7 +72,8 @@ class TestRewindFixS3KIczBigSnowPileCodec {
 
     @Test
     void bigSnowPileUsesGenericRecreateWithLiveIczEventsOwner() throws Exception {
-        assertFalse(hasExplicitCodec(IczBigSnowPileInstance.class),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        IczBigSnowPileInstance.class.getName()),
                 "IczBigSnowPileInstance must not keep its hand-written dynamic codec");
         assertTrue(RewindRecreatable.class.isAssignableFrom(IczBigSnowPileInstance.class),
                 "IczBigSnowPileInstance must opt into generic recreate");
@@ -91,7 +92,8 @@ class TestRewindFixS3KIczBigSnowPileCodec {
 
     @Test
     void bigSnowPileRestoresThroughObjectManagerWithoutDropsDoublesOrStaleOwner() throws Exception {
-        assertFalse(hasExplicitCodec(IczBigSnowPileInstance.class),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        IczBigSnowPileInstance.class.getName()),
                 "IczBigSnowPileInstance must not keep its hand-written dynamic codec");
 
         IczBigSnowPileInstance captured = objectManager.createDynamicObject(
@@ -125,10 +127,6 @@ class TestRewindFixS3KIczBigSnowPileCodec {
         assertSame(iczEvents, eventsField(restored),
                 "restored snow pile must point at the live ICZ events owner, not a stale pre-restore owner");
         assertFalse(restored.isDestroyed(), "restored ICZ big snow pile must remain live");
-    }
-
-    private static boolean hasExplicitCodec(Class<?> targetClass) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(targetClass.getName());
     }
 
     private List<IczBigSnowPileInstance> liveSnowPiles() {

@@ -112,7 +112,7 @@ class TestHczMinibossRocketTouchRewind {
                     "restore must recreate the removed child instance rather than retaining a stale reference");
         }
         assertParentSlots(restoredParent, restoredChildren);
-        assertFalse(hasExplicitRocketTouchCodec(),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ROCKET_TOUCH_CLASS),
                 "RocketTouchChild must be restored by generic recreate, not by an explicit S3K codec");
     }
 
@@ -198,7 +198,4 @@ class TestHczMinibossRocketTouchRewind {
         }
     }
 
-    private static boolean hasExplicitRocketTouchCodec() {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ROCKET_TOUCH_CLASS);
-    }
 }

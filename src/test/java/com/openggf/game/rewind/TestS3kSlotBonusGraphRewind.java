@@ -286,12 +286,8 @@ class TestS3kSlotBonusGraphRewind {
     private static void assertRewindRecreatableWithoutCodec(Class<? extends AbstractObjectInstance> type) {
         assertTrue(RewindRecreatable.class.isAssignableFrom(type),
                 type.getSimpleName() + " must use RewindRecreatable generic recreate");
-        assertFalse(hasExplicitCodec(type),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(type.getName()),
                 type.getSimpleName() + " must not keep an explicit S3K dynamic rewind codec");
-    }
-
-    private static boolean hasExplicitCodec(Class<?> targetClass) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(targetClass.getName());
     }
 
     private static ObjectInstance genericRecreate(
