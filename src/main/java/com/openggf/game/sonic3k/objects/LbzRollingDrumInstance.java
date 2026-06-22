@@ -158,7 +158,7 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
             setAngle(nativePlayerIndex, BOTTOM_ANGLE_SEED);
         }
         setRiding(nativePlayerIndex, true);
-        applyRideObjectSetRide(player);
+        applyRideObjectSetRide(player, nativePlayerIndex);
         player.setFlipType(FLIP_TYPE_ACTIVE);
         player.setAnimationId(ANIMATION_ROLLING_DRUM);
         player.forceAnimationRestart();
@@ -225,12 +225,18 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         player.setForcedAnimationId(-1);
     }
 
-    private void applyRideObjectSetRide(AbstractPlayableSprite player) {
+    private void applyRideObjectSetRide(AbstractPlayableSprite player, int nativePlayerIndex) {
         int savedDoubleJumpFlag = player.getDoubleJumpFlag();
         boolean sameFrameRideTransfer = player.getOnObjectAtFrameStart()
                 && !player.isJumping()
                 && !player.isHurt();
         boolean shouldTouchFloor = player.getAir() && !sameFrameRideTransfer;
+        // ROM RideObject_SetRide (sonic3k.asm:42027): if the player is already
+        // Status_OnObj, clear the PREVIOUS interact object's standing bit
+        // (bclr d6,status(a3)) before re-latching. For a drum-to-drum handoff
+        // this prevents the previous drum's release path from firing this frame
+        // and knocking the player airborne.
+        clearPreviousDrumStandingBit(player, nativePlayerIndex);
         player.setAngle((byte) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed(player.getXSpeed());
@@ -266,6 +272,23 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     private void refreshRideLatch(AbstractPlayableSprite player) {
         player.setOnObject(true);
         player.setLatchedSolidObject(Sonic3kObjectIds.LBZ_ROLLING_DRUM, this);
+    }
+
+    /**
+     * ROM {@code RideObject_SetRide} clears {@code d6,status(a3)} on the player's
+     * previous interact object before installing the new ride. When that previous
+     * object is a different rolling drum (a drum-to-drum handoff), clear its
+     * per-player standing flag so it does not run its release path this same
+     * frame and force the player airborne.
+     */
+    private void clearPreviousDrumStandingBit(AbstractPlayableSprite player, int nativePlayerIndex) {
+        if (!player.isOnObject()) {
+            return;
+        }
+        if (player.getLatchedSolidObjectInstance() instanceof LbzRollingDrumInstance previousDrum
+                && previousDrum != this) {
+            previousDrum.setRiding(nativePlayerIndex, false);
+        }
     }
 
     private void applyRideAnimationState(AbstractPlayableSprite player) {
