@@ -8,14 +8,12 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
-import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -65,7 +63,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/6B SBZ Stomper and Door.asm
  */
 public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRomZoneRewindRecreatable {
 
     // ---- v_obj6B: singleton slot for SBZ3 instances (lines 38-65 in disasm) ----
     // Only one SBZ3 StomperDoor may exist at a time. The first instance to run
@@ -237,13 +235,6 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
         int airHalfHeight = height;
         int groundHalfHeight = height + 1;
         this.solidParams = new SolidObjectParams(halfWidth, airHalfHeight, groundHalfHeight);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectServices services = ctx.objectServices();
-        int zoneIndex = services != null ? services.romZoneId() : -1;
-        return new Sonic1StomperDoorObjectInstance(ctx.spawn(), zoneIndex);
     }
 
     /**

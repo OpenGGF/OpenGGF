@@ -10,9 +10,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.ObjectServices;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -54,7 +52,7 @@ import java.util.List;
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/57 Spiked Ball and Chain.asm
  */
 public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, SpawnRomZoneRewindRecreatable {
 
     // Display priority: move.b #4,obPriority(a0)
     private static final int DISPLAY_PRIORITY = 4;
@@ -204,13 +202,6 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
 
         // Calculate initial positions
         updatePositions();
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectServices objectServices = ctx.objectServices();
-        int rewindZoneIndex = objectServices != null ? objectServices.romZoneId() : -1;
-        return new Sonic1SpikedBallChainObjectInstance(ctx.spawn(), rewindZoneIndex);
     }
 
     @Override

@@ -7,6 +7,7 @@ import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.SpawnNullableReferenceRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.objects.SpawnServicesRewindRecreatable;
 import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.ZeroArgRewindRecreatable;
@@ -114,6 +115,12 @@ class TestSpawnRewindRecreatableCleanup {
     private static final List<String> SPAWN_SERVICES_RECREATORS = List.of(
             "com.openggf.level.objects.ExplosionObjectInstance",
             "com.openggf.level.objects.SkidDustObjectInstance");
+
+    private static final List<String> SPAWN_ROM_ZONE_RECREATORS = List.of(
+            "com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance",
+            "com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance",
+            "com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance",
+            "com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance");
 
     private static final List<String> ZERO_ARG_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.Sonic1EndingSTHObjectInstance",
@@ -268,6 +275,24 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnServicesRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void spawnRomZoneRecreatorsUseMarkerInterface() {
+        for (String className : SPAWN_ROM_ZONE_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(SpawnRomZoneRewindRecreatable.class.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the spawn-ROM-zone recreate hook");
+        }
+    }
+
+    @Test
+    void spawnRomZoneRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_ROM_ZONE_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use SpawnRomZoneRewindRecreatable's default hook");
         }
     }
 
