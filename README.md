@@ -268,6 +268,8 @@ Highlights:
 
 - The S1 GHZ collapsing ledge now accepts a landing across its full ROM `SlopeObject` width (ROM `Ledge_ChkTouch` passes the half-width directly with no `obActWid` narrowing), so a player falling onto the ledge near its left edge is no longer dropped airborne for a few frames (GHZ1 trace frontier f2790 -> f3246, 436 -> 255 errors; GHZ-only object, GHZ2 stays green).
 
+- The S1 Walking Bomb fuse no longer counts down on its own spawn frame (ROM doesn't run a just-created object's routine until the next frame), so the bomb explodes and spawns shrapnel one frame later, matching ROM — fixing a one-frame-early hurt hit (SLZ1 trace frontier f723 -> f933, 661 -> 246 errors; also improves SBZ2; object-local, GHZ2 stays green).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)
