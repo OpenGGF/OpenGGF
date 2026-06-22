@@ -18575,3 +18575,25 @@ sweep net-positive gate -> commit -> re-run, check root-count delta} until green
 Use `root_summary.py` to see root-stack depth + dominant field, and `-Xmx6g
 -Xshare:off` for long runs. Next concrete target: the S3K attracted-ring timing
 subsystem (greens MGZ-LS, dominated by rings roots).
+
+### 2026-06-22 MGZ-LS attracted-ring deep-dive: cadence/set divergence, not give-timing
+
+Using the always-fresh reports + root_summary, drove into MGZ-LS (33 rings roots).
+ROM ring collections (trace physics.csv): f534->10, f540->11, f543->12, f617->13.
+Engine attracted-ring gives (OGGF instrument, trace=fc-3): f540, f590, f617.
+So the engine matches ROM at f540 and f617, but collects ring 12 at f590 instead
+of f543 (47 frames late), and the f590 ring is at a different world position
+(4b0,621) than the f540 ring (5bb,67d).
+
+Conclusion: the committed give-reorder (7b8aa9701) correctly fixed the f539/f540
+boundary ring, but the remaining 33 rings roots are NOT give-timing - they are an
+attracted-ring CADENCE/SET divergence (the engine attracts/collects a different
+order+timing of rings than ROM). Player position matches ROM throughout (no
+position roots), so the divergence is internal to the attraction system
+(which-ring-attracted-when / flight convergence / normal-vs-attracted choice).
+
+Next step: BizHawk capture of ROM Obj_Attracted_Ring lifecycle for MGZ around
+f534-620 (when each ring is created-as-attracted via Test_Ring_Collisions and when
+each is given via the collision-response list), compared to the engine's
+addAttractedRing / give frames, to find the systematic attraction cadence fix.
+This greens MGZ-LS (its only roots are rings).
