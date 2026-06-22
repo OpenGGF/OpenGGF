@@ -144,6 +144,15 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - S1 Bomb fuse decremented bom_time on its spawn frame; SLZ1 f723->f933, errors 661->246
+
+- Branch/worktree context: `bugfix/ai-slz1-advance` off `develop` a6fc977fc.
+- **`s1_slz1` advanced f723 -> f933, errors 661 -> 246.** First error before: f723 `x_speed` exp=0x0000 act=-0200 (player hurt-bounce). After: f933 `y` 1px (a separate downstream frontier).
+- Root (BizHawk-confirmed, tools/bizhawk/slz1_diag.lua): the S1 Walking Bomb FUSE (Obj5F sub4, `Sonic1BombFuseInstance`) decremented its `bom_time` on its OWN creation frame, so it expired and spawned the 4 shrapnel one frame early. The whole 38-frame shrapnel flight shifted back one frame, hurting the (ducking) player at trace f723 instead of ROM's f724. ROM holds `bom_time=143` at the end of the fuse's creation frame (bk2 f137203) — the FindNextFreeObj fuse slot is not executed by ExecuteObjects on the frame it is created — then counts down and expires when `0 -> -1` (`subq.w #1,bom_time; bmi`) at f137347. Verified by frame-stamped engine logs aligned to the player-hurt anchor: engine fuse expiry trace f685 vs ROM f686; both fuse-to-hurt spans 38 frames (trajectory identical, just shifted one frame).
+- Disproven en route: (a) deferring the secondary shrapnel pieces' first move — engaged but ZERO change (shrapnel trajectory was already correct relative to its early spawn); (b) the shared S1 inline player-touch pre-update snapshot — the capture showed the fuse itself fires early, not the touch phase.
+- Fix: `Sonic1BombFuseInstance.skipsSameFrameUpdateAfterSpawn()` -> `true`, ROM-cited (`docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm` Bom_CheckStartFuse / Bom_BurnFuseAndExplode). Routes the fuse through `addDynamicObjectNextFrame` so it does not update on its creation frame, reproducing the ROM creation-frame hold. Object-local (S1 Walking Bomb only).
+- Regression sweep (vs `develop` baseline, first-error frame + count): all other S1 complete-runs byte-identical (GHZ1 f2790/436, GHZ3 f2693/477, MZ1 f2089/205, MZ2 f2578/1010, MZ3 f2079/1048, LZ1 f5745/2185, LZ2 f1068/2150, LZ3 f6517/1726, SLZ2 f1016/221, SLZ3 f718/1073, SYZ1 f502/484, SYZ2 f6845/55, SYZ3 f3476/399, FZ f713/155, SBZ1 f1925/997). GHZ2 + SBZ3 GREEN. SBZ2 IMPROVED 1035 -> 1000 (same first-error frame f1395 — SBZ also uses the Walking Bomb). S2 EHZ1 green; S3K AIZ f1095/4309 identical. S1 bomb-child rewind tests pass (TestS1BadnikChildGraphRewind, TestS1BadnikGenericRecreate, TestRewindFixS1Batch2Codecs, TestSpawnRewindRecreatableCleanup). Pre-existing (not this change): `TestNoServicesInObjectConstructors` fails on `SkidDustObjectInstance` (S3K, another branch's WIP) — fails identically with this fix stashed.
+
 ## 2026-06-22 - DEZ jet-stomp reads targeting sensor 1 frame late; DEZ1 f5261->f5952, errors 98->46
 
 - Branch/worktree context: `bugfix/ai-dez1-green` (builds on the group-anim $C0 + boss-id boundary fixes below).

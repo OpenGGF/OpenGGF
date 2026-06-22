@@ -87,6 +87,23 @@ public class Sonic1BombFuseInstance extends AbstractObjectInstance implements Re
     }
 
     @Override
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        // ROM parity: Bom_CheckStartFuse (docs/s1disasm/_incObj/5F Badnik - Walking
+        // Bomb.asm) creates the fuse via FindNextFreeObj and sets bom_time = 143,
+        // but the fuse's Bom_Fuse routine (which runs Bom_BurnFuseAndExplode ->
+        // subq.w #1,bom_time) does NOT decrement on the creation frame — BizHawk
+        // shows the fuse holding bom_time=143 at the end of the frame it appears
+        // (SLZ1 bk2 f137203), then counting down 142,141,... on subsequent frames,
+        // expiring when 0 -> -1 at f137347. Letting the engine fuse decrement on
+        // its spawn frame expired it one frame early, which spawned the shrapnel
+        // one frame early and landed the shrapnel hurt at SLZ1 trace f723 instead
+        // of ROM's f724 (the whole 38-frame shrapnel flight was shifted back one
+        // frame). Deferring the fuse's first update reproduces the ROM creation-
+        // frame hold.
+        return true;
+    }
+
+    @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         ObjectSpawn capturedSpawn = ctx.spawn();
         Sonic1BombBadnikInstance restoredParent = nearestLiveBombParentForRewind(ctx);
