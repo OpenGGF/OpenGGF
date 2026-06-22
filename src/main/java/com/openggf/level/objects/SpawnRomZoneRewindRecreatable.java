@@ -1,7 +1,5 @@
 package com.openggf.level.objects;
 
-import java.lang.reflect.InvocationTargetException;
-
 /**
  * Marker for rewind-recreatable dynamic objects whose restore instance can be
  * rebuilt from the captured {@link ObjectSpawn} and the active ROM zone id.
@@ -16,22 +14,14 @@ public interface SpawnRomZoneRewindRecreatable extends RewindRecreatable {
 
     @Override
     default AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        Class<? extends AbstractObjectInstance> objectClass =
-                getClass().asSubclass(AbstractObjectInstance.class);
-        try {
-            var constructor = objectClass.getDeclaredConstructor(ObjectSpawn.class, int.class);
-            constructor.setAccessible(true);
-            return constructor.newInstance(ctx.spawn(), romZoneId(ctx));
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException(
-                    objectClass.getName() + " implements SpawnRomZoneRewindRecreatable "
-                            + "but has no (ObjectSpawn, int) constructor",
-                    e);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException(
-                    objectClass.getName() + " failed spawn-ROM-zone rewind recreate",
-                    e);
-        }
+        return RewindRecreateConstructors.instantiateExact(
+                this,
+                "SpawnRomZoneRewindRecreatable",
+                "(ObjectSpawn, int)",
+                "spawn-ROM-zone rewind recreate",
+                new Class<?>[] {ObjectSpawn.class, int.class},
+                ctx.spawn(),
+                romZoneId(ctx));
     }
 
     private static int romZoneId(RewindRecreateContext ctx) {

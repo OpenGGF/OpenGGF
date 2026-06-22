@@ -1,7 +1,6 @@
 package com.openggf.level.objects;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 
 /**
  * Marker for rewind-recreatable dynamic objects whose restore instance can be
@@ -19,7 +18,7 @@ public interface SpawnTrailingZeroIntsRewindRecreatable extends RewindRecreatabl
     @Override
     default AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         Class<? extends AbstractObjectInstance> objectClass =
-                getClass().asSubclass(AbstractObjectInstance.class);
+                RewindRecreateConstructors.objectClass(this);
         try {
             Constructor<?> constructor = findConstructor(objectClass);
             Object[] args = new Object[constructor.getParameterCount()];
@@ -27,44 +26,38 @@ public interface SpawnTrailingZeroIntsRewindRecreatable extends RewindRecreatabl
             for (int i = 1; i < args.length; i++) {
                 args[i] = 0;
             }
-            constructor.setAccessible(true);
-            return objectClass.cast(constructor.newInstance(args));
+            return RewindRecreateConstructors.instantiateSelected(
+                    this,
+                    "SpawnTrailingZeroIntsRewindRecreatable",
+                    "(ObjectSpawn, int...)",
+                    "spawn trailing-zero-ints rewind recreate",
+                    constructor,
+                    args);
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException(
                     objectClass.getName() + " implements SpawnTrailingZeroIntsRewindRecreatable "
                             + "but has no (ObjectSpawn, int...) constructor",
-                    e);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException(
-                    objectClass.getName() + " failed spawn trailing-zero-ints rewind recreate",
                     e);
         }
     }
 
     private static Constructor<?> findConstructor(Class<? extends AbstractObjectInstance> objectClass)
             throws NoSuchMethodException {
-        Constructor<?> best = null;
-        for (Constructor<?> constructor : objectClass.getDeclaredConstructors()) {
-            Class<?>[] parameterTypes = constructor.getParameterTypes();
-            if (parameterTypes.length < 2 || parameterTypes[0] != ObjectSpawn.class) {
-                continue;
-            }
-            boolean allTrailingInts = true;
-            for (int i = 1; i < parameterTypes.length; i++) {
-                if (parameterTypes[i] != int.class) {
-                    allTrailingInts = false;
-                    break;
-                }
-            }
-            if (allTrailingInts && (best == null
-                    || parameterTypes.length > best.getParameterCount())) {
-                best = constructor;
-            }
-        }
-        if (best == null) {
-            throw new NoSuchMethodException(
-                    objectClass.getName() + ".<init>(ObjectSpawn, int...)");
-        }
-        return best;
+        return RewindRecreateConstructors.findLongest(
+                objectClass,
+                "ObjectSpawn, int...",
+                constructor -> {
+                    Class<?>[] parameterTypes = constructor.getParameterTypes();
+                    if (parameterTypes.length < 2 || parameterTypes[0] != ObjectSpawn.class) {
+                        return false;
+                    }
+                    for (int i = 1; i < parameterTypes.length; i++) {
+                        if (parameterTypes[i] != int.class) {
+                            return false;
+                        }
+                    }
+                    return true;
+                },
+                false);
     }
 }

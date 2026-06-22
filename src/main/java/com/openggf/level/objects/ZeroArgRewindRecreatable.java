@@ -1,7 +1,5 @@
 package com.openggf.level.objects;
 
-import java.lang.reflect.InvocationTargetException;
-
 /**
  * Marker for rewind-recreatable dynamic objects whose restore instance can be
  * rebuilt with a no-arg constructor.
@@ -15,20 +13,11 @@ public interface ZeroArgRewindRecreatable extends RewindRecreatable {
 
     @Override
     default AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        Class<? extends AbstractObjectInstance> objectClass =
-                getClass().asSubclass(AbstractObjectInstance.class);
-        try {
-            var constructor = objectClass.getDeclaredConstructor();
-            constructor.setAccessible(true);
-            return constructor.newInstance();
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException(
-                    objectClass.getName() + " implements ZeroArgRewindRecreatable "
-                            + "but has no no-arg constructor",
-                    e);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException(
-                    objectClass.getName() + " failed zero-arg rewind recreate", e);
-        }
+        return RewindRecreateConstructors.instantiateExact(
+                this,
+                "ZeroArgRewindRecreatable",
+                "no-arg",
+                "zero-arg rewind recreate",
+                new Class<?>[] {});
     }
 }
