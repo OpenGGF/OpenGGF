@@ -260,6 +260,8 @@ Highlights:
 - The vertical camera now follows a moving bottom level boundary even on a sweet-spot frame that produces no normal scroll (ROM `SV_BottomBoundary` under `f_bgscrollvert`), fixing a one-frame boundary-follow lag on a fast roll-land. **This greens the GHZ2 complete-run trace — the first fully passing S1 complete-run trace replay** (no regressions across S1/S2/S3K camera traces).
 - The S1 collapsing floor (obj 0x53, MZ/SLZ/SBZ) now lands a rider against the ROM `PlatformObject` `obY-8` entry surface and re-seats to the `obY-9` ride surface next frame (matching the Obj18 platform override family), instead of landing one frame late (MZ3 trace frontier f1702 -> f2079; also advances SLZ2 f651 -> f1016).
 
+- Sonic 2 Death Egg Zone boss fight: the Death Egg Robot's attack clock now processes ROM's group-animation `$C0` end-marker frame, Silver Sonic keeps `Current_Boss_ID` so the player's right boundary stays boss-strict, and the jet-stomp reads its targeting sensor with ROM's one-frame slot-order latency — collapsing the DEZ1 complete-run trace from 127 to 46 errors (frontier f4007 -> f5952).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)

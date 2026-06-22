@@ -766,10 +766,22 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                 positionChildren();
             }
             case 6 -> { // Wait for sensor to report player X
+                // ROM ObjC7 loc_3D784 reads the body's objoff_28 (the sensor's
+                // reported X) at the START of the body's frame, but the targeting
+                // sensor (ChildObjC7_TargettingSensor) is a separate object in a
+                // HIGHER RAM slot, so it runs AFTER the body in ExecuteObjects and
+                // writes objoff_28 only on its lock-on-report frame (loc_3DE62).
+                // The body therefore observes the report ONE frame after the sensor
+                // produces it. Check targetedPlayerX BEFORE advancing the sensor so
+                // we read the prior frame's value, then advance the sensor for next
+                // frame -- otherwise the engine descends one frame early (the body
+                // reads the same-frame inline report), drifting every jet-stomp by a
+                // frame across the DEZ fight.
+                boolean sensorReported = targetedPlayerX != 0;
                 if (sensorChild != null) {
                     sensorChild.update(frameCounter, player);
                 }
-                if (targetedPlayerX != 0) {
+                if (sensorReported) {
                     attackPhase = 8;
                     state.x = targetedPlayerX;
                     bodyXFixed = (long) state.x << 16;
@@ -1198,10 +1210,20 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                 groupAnimFrameIdx++;
             }
 
-            if (groupAnimFrameIdx >= sequence.length) {
-                resetGroupAnim();
-                return true;
-            }
+            // ROM off_3Exxx scripts terminate with a $C0 end-marker "keyframe"
+            // (e.g. off_3E3D0 crouch = 0,1,2,$C0; off_3E30A walk = 0..8,$C0).
+            // ROM ObjC7_GroupAni (loc_3E1AA) reads anim_frame at the START of the
+            // frame: it plays the last real keyframe's final substep on frame N,
+            // then on frame N+1 reads the $C0 entry and returns "done" (loc_3E23E
+            // -> loc_3E27E -> loc_3E236 clr anim_frame / moveq #1,d1) WITHOUT
+            // applying deltas. So completion costs ONE extra frame after the last
+            // keyframe's substeps finish. The engine's sequences omit the $C0
+            // marker, so model that frame here: when idx now == sequence.length we
+            // deliberately FALL THROUGH without returning true (the last real
+            // keyframe's deltas were applied above this frame); the marker frame
+            // (N+1) returns true via the top-of-method end check. Omitting this
+            // 1-frame end cost made each crouch/walk advance one frame early,
+            // drifting the whole DEZ attack clock (jet-stomp sensor snap 7-8f early).
         }
 
         // Update body pixel position from fixed-point
