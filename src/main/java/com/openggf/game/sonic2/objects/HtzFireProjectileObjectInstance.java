@@ -8,8 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -30,7 +29,7 @@ import java.util.List;
  * Collision flags: 0x8B (enemy projectile).
  */
 public class HtzFireProjectileObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, SpawnCoordinateZeroScalarArgsRewindRecreatable {
 
     private static final int PRIORITY = 3;
     private static final int GRAVITY = 0x18;           // ROM: addi.w #$18,y_vel(a0)
@@ -70,12 +69,6 @@ public class HtzFireProjectileObjectInstance extends AbstractObjectInstance
         this.vFlip = false;
         this.animFrame = 0;
         this.animTimer = ANIM_DELAY;
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn s = ctx.spawn();
-        return new HtzFireProjectileObjectInstance(s.x(), s.y(), 0, 0, false);
     }
 
     @Override

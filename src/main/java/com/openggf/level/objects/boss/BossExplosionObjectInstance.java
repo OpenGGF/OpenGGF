@@ -3,8 +3,7 @@ package com.openggf.level.objects.boss;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
 
@@ -14,7 +13,8 @@ import java.util.List;
  * Boss Explosion (Obj58).
  * Uses ArtNem_FieryExplosion with mappings from Obj58_MapUnc_2D50A.
  */
-public class BossExplosionObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class BossExplosionObjectInstance extends AbstractObjectInstance
+        implements SpawnCoordinateZeroScalarArgsRewindRecreatable {
     private static final int FRAME_DELAY = 7;
     private static final int LAST_FRAME = 6;
 
@@ -28,12 +28,6 @@ public class BossExplosionObjectInstance extends AbstractObjectInstance implemen
         this.sfxId = sfxId;
         this.mappingFrame = 0;
         this.frameTimer = FRAME_DELAY;
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn s = ctx.spawn();
-        return new BossExplosionObjectInstance(s.x(), s.y(), 0);
     }
 
     @Override
