@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.objects.bosses;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -158,9 +159,7 @@ class TestDezBarrierWallRewind {
     }
 
     private static void assertNoRegisteredS2DynamicCodec(String className) {
-        boolean hasCodec = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
-                .map(codec -> codec.className())
-                .anyMatch(className::equals);
+        boolean hasCodec = DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
         assertFalse(hasCodec, className
                 + " must restore through RewindRecreatable generic recreate, not an explicit S2 codec");
     }
