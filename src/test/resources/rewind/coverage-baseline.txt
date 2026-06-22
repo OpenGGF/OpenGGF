@@ -245,9 +245,7 @@ com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance#finalScala
 com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1WaterfallObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1WaterfallSoundObjectInstance#recreate
-com.openggf.game.sonic1.objects.badniks.Sonic1BombBadnikInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance#finalScalar#origY
-com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberBadnikInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance#finalScalar#currentX
 com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance#finalScalar#currentY
 com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance#recreate
@@ -258,7 +256,6 @@ com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance#finalSc
 com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance#finalScalar#offScreenMargin
 com.openggf.game.sonic1.objects.badniks.Sonic1JawsBadnikInstance#finalScalar#turnTimeDelay
 com.openggf.game.sonic1.objects.badniks.Sonic1JawsBadnikInstance#recreate
-com.openggf.game.sonic1.objects.badniks.Sonic1MotobugBadnikInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1MotobugSmokeInstance#finalScalar#facingLeft
 com.openggf.game.sonic1.objects.badniks.Sonic1MotobugSmokeInstance#finalScalar#posX
 com.openggf.game.sonic1.objects.badniks.Sonic1MotobugSmokeInstance#finalScalar#posY
@@ -269,8 +266,6 @@ com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance#finalScalar
 com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance#finalScalar#gravity
 com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance#finalScalar#offScreenMargin
 com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance#recreate
-com.openggf.game.sonic1.objects.badniks.Sonic1RollerBadnikInstance#recreate
-com.openggf.game.sonic1.objects.badniks.Sonic1YadrinBadnikInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1BossFireInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance#recreate

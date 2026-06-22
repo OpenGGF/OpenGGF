@@ -8,6 +8,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -26,7 +28,7 @@ import java.util.List;
  *   <li>ob2ndRout=2 (.chknearsonic): Flying, checking proximity. Stop on timer expire or Sonic detect.</li>
  * </ul>
  */
-public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance {
+public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
 
     // From disassembly: obColType = 8 (enemy, collision size index 8)
     // Collision size 8: width=$18 (24px), height=$0C (12px)
@@ -79,6 +81,11 @@ public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance {
         this.buzzStatus = STATUS_NORMAL;
         this.wingTimer = 1; // Start with speed=1 (AnimateSprite initial obTimeFrame)
         this.renderedFrame = 0;
+    }
+
+    @Override
+    public Sonic1BuzzBomberBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1BuzzBomberBadnikInstance(ctx.spawn());
     }
 
     @Override
