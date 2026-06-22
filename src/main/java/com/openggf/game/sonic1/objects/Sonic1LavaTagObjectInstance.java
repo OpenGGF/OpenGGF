@@ -6,6 +6,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -44,7 +45,8 @@ import java.util.List;
  *
  * @see LavaMarkerObjectInstance S2 equivalent (Obj31)
  */
-public class Sonic1LavaTagObjectInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public class Sonic1LavaTagObjectInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, SpawnRewindRecreatable {
 
     // ========================================================================
     // ROM Constants - Collision Flags by Subtype

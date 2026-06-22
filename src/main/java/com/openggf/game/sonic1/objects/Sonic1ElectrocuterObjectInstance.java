@@ -8,8 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -31,7 +30,7 @@ import java.util.List;
  * ROM reference: docs/s1disasm/_incObj/6E Electrocuter.asm
  */
 public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable {
 
     // obColType value when the zap frame (frame 4) is displayed.
     // $A4 = HURT($80) | size index $24
@@ -78,11 +77,6 @@ public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
         this.animFrameIndex = 0;
         this.animTimer = 0;
         this.mappingFrame = IDLE_FRAME;
-    }
-
-    @Override
-    public Sonic1ElectrocuterObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1ElectrocuterObjectInstance(ctx.spawn());
     }
 
     @Override
