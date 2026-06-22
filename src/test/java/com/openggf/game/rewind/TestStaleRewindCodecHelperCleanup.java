@@ -46,6 +46,8 @@ class TestStaleRewindCodecHelperCleanup {
             "TestRewindFixS2Batch7Codecs.java";
     private static final String DELETED_S2_BATCH2_CLASSNAMES_CALL =
             "TestRewindFixS2Batch2Codecs.java";
+    private static final String DELETED_S2_BATCH3_CLASSNAMES_CALL =
+            "TestRewindFixS2Batch3Codecs.java";
     private static final String DELETED_DYNAMIC_CODECS_CLASSNAMES_CALL =
             "DeletedDynamicRewindCodecs." + "classNames()";
     private static final List<String> STALE_DYNAMIC_OBJECT_CODEC_PHRASES = List.of(
@@ -144,6 +146,14 @@ class TestStaleRewindCodecHelperCleanup {
         assertNoSourceReferences(
                 DELETED_DYNAMIC_CODECS_CLASSNAMES_CALL,
                 DELETED_S2_BATCH2_CLASSNAMES_CALL,
+                "Deleted test-only dynamic-codec classNames shim is still referenced in ");
+    }
+
+    @Test
+    void s2Batch3TestDoesNotUseDeletedCodecClassNamesShim() throws IOException {
+        assertNoSourceReferences(
+                DELETED_DYNAMIC_CODECS_CLASSNAMES_CALL,
+                DELETED_S2_BATCH3_CLASSNAMES_CALL,
                 "Deleted test-only dynamic-codec classNames shim is still referenced in ");
     }
 

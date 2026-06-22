@@ -1,6 +1,5 @@
 package com.openggf.game.sonic2.objects;
 
-import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.sonic2.objects.badniks.GrounderBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance;
 import com.openggf.game.sonic2.objects.badniks.SlicerPincerInstance;
@@ -15,7 +14,6 @@ import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -33,47 +31,27 @@ class TestRewindFixS2Batch3Codecs {
 
     // EHZ boss construction-spawned children and HTZ boss hazards no longer need
     // explicit dynamic codecs; graph/generic recreate coverage owns them.
-    private static final List<String> EXPLICIT_CODEC_CLASSES = List.of();
-
-    private static final List<String> GENERIC_RECREATE_CLASSES = List.of(
-            GrounderBadnikInstance.class.getName(),
-            ShellcrackerClawInstance.class.getName(),
-            SlicerPincerInstance.class.getName(),
-            TurtloidJetInstance.class.getName(),
-            TurtloidRiderInstance.class.getName(),
-            SolFireballObjectInstance.class.getName(),
-            SpikerDrillObjectInstance.class.getName(),
-            WallTurretShotInstance.class.getName(),
-            VerticalLaserObjectInstance.class.getName(),
-            SpikyBlockSpikeInstance.class.getName(),
-            BombPrizeObjectInstance.class.getName(),
-            CNZBossElectricBall.class.getName(),
-            HTZBossFlamethrower.class.getName(),
-            HTZBossLavaBall.class.getName());
-
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
+    private static final List<Class<?>> GENERIC_RECREATE_CLASSES = List.of(
+            GrounderBadnikInstance.class,
+            ShellcrackerClawInstance.class,
+            SlicerPincerInstance.class,
+            TurtloidJetInstance.class,
+            TurtloidRiderInstance.class,
+            SolFireballObjectInstance.class,
+            SpikerDrillObjectInstance.class,
+            WallTurretShotInstance.class,
+            VerticalLaserObjectInstance.class,
+            SpikyBlockSpikeInstance.class,
+            BombPrizeObjectInstance.class,
+            CNZBossElectricBall.class,
+            HTZBossFlamethrower.class,
+            HTZBossLavaBall.class);
 
     @Test
     void registersRestorePathsForBatch3S2Objects() {
-        Set<String> names = codecClassNames();
-
-        for (String name : EXPLICIT_CODEC_CLASSES) {
-            assertTrue(names.contains(name),
-                    "missing explicit rewind recreate codec for " + name);
-        }
-        for (String name : GENERIC_RECREATE_CLASSES) {
-            assertTrue(implementsRewindRecreatable(name),
-                    "missing RewindRecreatable generic recreate path for " + name);
-        }
-    }
-
-    private static boolean implementsRewindRecreatable(String className) {
-        try {
-            return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
-        } catch (ClassNotFoundException e) {
-            throw new AssertionError(e);
+        for (Class<?> type : GENERIC_RECREATE_CLASSES) {
+            assertTrue(RewindRecreatable.class.isAssignableFrom(type),
+                    "missing RewindRecreatable generic recreate path for " + type.getName());
         }
     }
 }
