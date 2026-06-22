@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.rewind.RewindRoundTripHarness;
+import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
@@ -9,28 +11,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 /**
- * Verifies that {@link Sonic2ObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-7 S2 object that
- * was previously dropped on a held-rewind restore.
+ * Verifies the S2 batch-7 signpost sparkle moved from its old shared codec onto
+ * generic recreate.
  *
- * <p>Batch-7 adds:
- * <ul>
- *   <li>{@link SignpostSparkleObjectInstance} — shared S1+S2 signpost ring sparkle, recreated
- *       via the shared {@code exactSpawnCodec}. Its position lives in non-final
- *       {@code worldX}/{@code worldY} (base {@code spawn} is null), reapplied after recreate.</li>
- * </ul>
- *
- * <p>{@code com.openggf.level.objects.BoxObjectInstance} — the debug-box base class — is
- * intentionally accept-drop (it is never registered as a factory and is never spawned as its
- * own concrete type in gameplay), documented in {@code docs/KNOWN_DISCREPANCIES.md}; it is
- * deliberately NOT required to have a codec here.
- *
- * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay session. Full
- * session round-trip is handled by the rewind coverage guard.
+ * <p>The sparkle has a null base spawn and stores its position in non-final
+ * {@code worldX}/{@code worldY}. Generic recreate constructs a zero-position
+ * placeholder through its {@code (int,int)} constructor and the compact scalar
+ * restore reapplies the captured position.
  */
 class TestRewindFixS2Batch7Codecs {
 
@@ -47,15 +38,19 @@ class TestRewindFixS2Batch7Codecs {
     }
 
     @Test
-    void registersCodecsForBatch7S2Objects() {
+    void signpostSparkleNoLongerHasRegisteredCodec() {
         Set<String> names = codecClassNames();
 
-        List<String> required = List.of(
-                SignpostSparkleObjectInstance.class.getName());
+        assertFalse(names.contains(SignpostSparkleObjectInstance.class.getName()),
+                "signpost sparkle should restore through generic recreate, not a dynamic codec");
+    }
 
-        for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
-        }
+    @Test
+    void signpostSparkleRoundTripsThroughGenericRecreate() {
+        RoundTripSweepResult result =
+                RewindRoundTripHarness.probeClass(SignpostSparkleObjectInstance.class.getName());
+
+        assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                "signpost sparkle should round-trip through generic recreate");
     }
 }

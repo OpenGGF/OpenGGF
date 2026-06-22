@@ -268,35 +268,6 @@ class TestGenericRecreate {
     }
 
     // =========================================================================
-    // Path 4 — Explicit exact-spawn codecs preserve construction services
-    // =========================================================================
-
-    /**
-     * Explicit exact-spawn codecs are still used by the object-ref/session tail. Their
-     * factories must run inside the restore-time construction context, matching the
-     * production ObjectManager creation path, so constructors can safely call services().
-     */
-    @Test
-    void exactSpawnCodecRecreatesInsideConstructionServicesContext() {
-        DynamicObjectRewindCodec codec = ObjectRewindDynamicCodecs.exactSpawnCodec(
-                ServiceHungryExactSpawnObject.class,
-                ServiceHungryExactSpawnObject::new);
-        ObjectSpawn spawn = new ObjectSpawn(0x160, 0x90, 0x7001, 0, 0, false, -1);
-        DynamicObjectEntry entry = new DynamicObjectEntry(
-                ServiceHungryExactSpawnObject.class.getName(),
-                spawn,
-                -1,
-                null);
-
-        ObjectInstance result = codec.recreate(ctx, entry);
-
-        assertInstanceOf(ServiceHungryExactSpawnObject.class, result,
-                "exact-spawn codec factory must recreate under ObjectConstructionContext");
-        assertTrue(((ServiceHungryExactSpawnObject) result).sawServicesDuringConstruction(),
-                "fixture constructor must be able to read restore-time ObjectServices");
-    }
-
-    // =========================================================================
     // RewindRecreatable interface contract
     // =========================================================================
 
@@ -372,24 +343,6 @@ class TestGenericRecreate {
     private static final class MinimalRegistryObject extends AbstractObjectInstance {
         MinimalRegistryObject(ObjectSpawn spawn) {
             super(spawn, "MinimalRegistryObject");
-        }
-
-        @Override
-        public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) {
-            // no-op
-        }
-    }
-
-    private static final class ServiceHungryExactSpawnObject extends AbstractObjectInstance {
-        private final boolean sawServicesDuringConstruction;
-
-        ServiceHungryExactSpawnObject(ObjectSpawn spawn) {
-            super(spawn, "ServiceHungryExactSpawnObject");
-            sawServicesDuringConstruction = services() != null;
-        }
-
-        boolean sawServicesDuringConstruction() {
-            return sawServicesDuringConstruction;
         }
 
         @Override

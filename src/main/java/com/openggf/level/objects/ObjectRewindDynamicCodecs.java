@@ -6,8 +6,6 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.util.List;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.logging.Logger;
 
 /**
@@ -135,6 +133,7 @@ public final class ObjectRewindDynamicCodecs {
      *   <li>{@code (ParentType, int, int, int, int)} — live parent plus harmless scalar placeholders</li>
      *   <li>{@code (ParentType, int, int, boolean)} — live parent plus harmless scalar placeholders</li>
      *   <li>{@code (ParentType, SiblingType, int)} — live parent/sibling plus harmless scalar placeholder</li>
+     *   <li>{@code (int, int)} — primitive-only coordinate constructor with zero placeholders</li>
      *   <li>{@code (int, int, int)} — primitive-only constructor with zero placeholders</li>
      *   <li>{@code (int, int, int, int)} — primitive-only constructor with zero placeholders</li>
      *   <li>{@code (int, int, int, boolean)} — primitive-only constructor with zero/false placeholders</li>
@@ -299,6 +298,12 @@ public final class ObjectRewindDynamicCodecs {
                 constructParentSiblingIntProbe(cls, ctx);
         if (parentSiblingIntProbe != null) {
             return parentSiblingIntProbe;
+        }
+
+        Constructor<? extends AbstractObjectInstance> intIntCtor =
+                findCtor(cls, int.class, int.class);
+        if (intIntCtor != null) {
+            return invokeProbeCtor(cls, intIntCtor, ctx, 0, 0);
         }
 
         Constructor<? extends AbstractObjectInstance> intIntIntCtor =
@@ -676,12 +681,7 @@ public final class ObjectRewindDynamicCodecs {
     public static List<DynamicObjectRewindCodec> sharedCodecs() {
         return List.of(
                 new LostRingRewindCodec(),
-                deferredPlayerBoundCodec(ShieldObjectInstance.class, ShieldObjectInstance.class),
-                // Batch-7: signpost ring sparkle (shared S1+S2; S3K uses S3kSignpostSparkleChild).
-                // worldX/worldY are reapplied by the post-recreate non-final scalar restore.
-                exactSpawnCodec(
-                        SignpostSparkleObjectInstance.class,
-                        spawn -> new SignpostSparkleObjectInstance(0, 0)));
+                deferredPlayerBoundCodec(ShieldObjectInstance.class, ShieldObjectInstance.class));
     }
 
     public static DynamicObjectRewindCodec deferredPlayerBoundCodec(
@@ -702,60 +702,6 @@ public final class ObjectRewindDynamicCodecs {
                     ObjectManagerSnapshot.DynamicObjectEntry entry) {
                 context.objectManager().enqueuePendingPlayerBoundEntry(baseTypeKey, entry);
                 return null;
-            }
-        };
-    }
-
-    public static DynamicObjectRewindCodec exactSpawnCodec(
-            Class<? extends AbstractObjectInstance> type,
-            Function<ObjectSpawn, ? extends AbstractObjectInstance> factory) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return ObjectConstructionContext.construct(
-                        context.objectServices(),
-                        () -> factory.apply(entry.spawn()));
-            }
-        };
-    }
-
-    /**
-     * Variant of {@link #exactSpawnCodec(Class, Function)} whose factory also
-     * receives the restore-time {@link ObjectServices}, so codecs that need
-     * runtime context (e.g. the current ROM zone id) can resolve it through the
-     * injected service handle rather than a global {@code GameServices} lookup.
-     */
-    public static DynamicObjectRewindCodec exactSpawnCodec(
-            Class<? extends AbstractObjectInstance> type,
-            BiFunction<ObjectSpawn, ObjectServices, ? extends AbstractObjectInstance> factory) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return ObjectConstructionContext.construct(
-                        context.objectServices(),
-                        () -> factory.apply(entry.spawn(), context.objectServices()));
             }
         };
     }

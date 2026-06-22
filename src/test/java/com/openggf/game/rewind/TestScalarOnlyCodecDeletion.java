@@ -120,6 +120,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SignpostSparkleObjectInstance;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -575,6 +576,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(AnimalObjectInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(ExplosionObjectInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(SkidDustObjectInstance.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> SHARED_SPARKLE_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(SignpostSparkleObjectInstance.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> CPZ_GRAPH_BATCH_A_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(CPZBossContainer.class.getName(), GameId.S2),
@@ -4163,6 +4167,38 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void sharedHelperClassesRoundTripThroughGenericRecreate() {
         for (CodecDeletionCandidate candidate : SHARED_HELPER_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through generic recreate");
+        }
+    }
+
+    // =====================================================================
+    // Shared sparkle codec deletion: signpost sparkle
+    // =====================================================================
+
+    @Test
+    void sharedSparkleClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : SHARED_SPARKLE_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after shared sparkle codec deletion");
+        }
+    }
+
+    @Test
+    void sharedSparkleClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : SHARED_SPARKLE_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through shared generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void sharedSparkleClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : SHARED_SPARKLE_DELETED_CODECS) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn() + " should round-trip through generic recreate");

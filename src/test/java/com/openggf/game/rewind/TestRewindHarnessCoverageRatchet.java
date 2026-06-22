@@ -212,12 +212,15 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-22: raised to 213 after deleting the shared animal,
  *       explosion, and skid-dust dynamic codecs and adding generic recreate
  *       probe support for (ObjectSpawn,ObjectServices).</li>
+ *   <li>2026-06-22: raised to 214 after deleting the shared signpost-sparkle
+ *       exact-spawn dynamic codec and adding generic recreate probe support for
+ *       (int,int).</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 213;
+    static final int RATCHET_FLOOR = 214;
 
     @BeforeEach
     void initHeadless() {
