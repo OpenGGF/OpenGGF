@@ -4,12 +4,12 @@ import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -147,12 +147,7 @@ class TestRewindFixS1Batch9Codecs {
     }
 
     private static boolean hasExplicitCodec(Class<?> type) {
-        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
-            if (type.getName().equals(codec.className())) {
-                return true;
-            }
-        }
-        return false;
+        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(type.getName());
     }
 
     private static List<AbstractObjectInstance> liveObjectsOfType(
