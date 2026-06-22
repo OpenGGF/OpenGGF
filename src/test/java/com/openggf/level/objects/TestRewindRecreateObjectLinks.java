@@ -103,6 +103,26 @@ class TestRewindRecreateObjectLinks {
         }
     }
 
+    @Test
+    void mhzEndBossChildrenUseSharedNearestLiveObjectHelper() throws Exception {
+        for (String className : List.of(
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikHeadChild",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild")) {
+            Class<?> childType = Class.forName(className);
+
+            for (Method method : childType.getDeclaredMethods()) {
+                assertFalse(method.getName().equals("findLiveParentForRewind")
+                                && method.getParameterCount() == 1
+                                && method.getParameterTypes()[0] == RewindRecreateContext.class,
+                        childType.getSimpleName()
+                                + " should delegate parent relinking to RewindRecreateObjectLinks");
+            }
+        }
+    }
+
     private static Camera mockCamera() {
         return new Camera() {
             @Override public short getX() { return 0; }

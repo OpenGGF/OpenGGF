@@ -6,9 +6,9 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -54,22 +54,9 @@ public final class MhzEndBossRobotnikHeadChild extends AbstractObjectInstance im
 
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        MhzEndBossInstance liveParent = findLiveParentForRewind(ctx);
+        MhzEndBossInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                ctx, MhzEndBossInstance.class);
         return liveParent != null ? new MhzEndBossRobotnikHeadChild(liveParent) : null;
-    }
-
-    private static MhzEndBossInstance findLiveParentForRewind(RewindRecreateContext ctx) {
-        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
-            return null;
-        }
-        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
-            if (instance.getClass() == MhzEndBossInstance.class
-                    && instance instanceof MhzEndBossInstance boss
-                    && !boss.isDestroyed()) {
-                return boss;
-            }
-        }
-        return null;
     }
 
     private static MhzEndBossInstance placeholderParentForRewindProbe() {
