@@ -55,7 +55,6 @@ import java.util.Map;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
@@ -64,9 +63,6 @@ public class ObjectManager {
     private static final int BUCKET_COUNT = RenderPriority.MAX - RenderPriority.MIN + 1;
     static final int ANIM_ROLL = 0x02;
     static final int ANIM_SPINDASH = 0x09;
-    private static final List<DynamicObjectRewindCodec> TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS =
-            new CopyOnWriteArrayList<>();
-
     private final ObjectPlacementController placement;
     private final ObjectRegistry registry;
     private final GraphicsManager graphicsManager;
@@ -3158,8 +3154,8 @@ public class ObjectManager {
      * restore (Track C). Other subsystems should do the same.
      *
      * <p>ObjectPlacementController-managed objects are restored through their original spawn.
-     * Non-ObjectPlacementController dynamic objects are restored when their class has a registered
-     * {@link DynamicObjectRewindCodec}; unsupported entries remain diagnostic-only.
+     * Non-ObjectPlacementController dynamic objects are restored when their class implements
+     * {@link RewindRecreatable}; unsupported entries remain diagnostic-only.
      */
     public com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot> rewindSnapshottable() {
         return new com.openggf.game.rewind.RewindSnapshottable<>() {
@@ -3771,8 +3767,7 @@ public class ObjectManager {
     }
 
     static boolean isRewindRestorableDynamicObject(ObjectInstance inst, ObjectRegistry registry) {
-        return rewindDynamicObjectCodecFor(inst).isPresent()
-                || inst instanceof RewindRecreatable;
+        return inst instanceof RewindRecreatable;
     }
 
     ObjectServices objectServicesForRewind() {
@@ -3792,7 +3787,7 @@ public class ObjectManager {
      * Enqueues a captured {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry}
      * for a player-bound dynamic class whose post-restore re-spawn happens
      * after object-manager restore (currently Shield + Stars). Called by the
-     * codec's recreate path.
+     * recreate path.
      */
     void enqueuePendingPlayerBoundEntry(Class<?> baseType,
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
@@ -3849,45 +3844,12 @@ public class ObjectManager {
         return null;
     }
 
-    static void registerRewindDynamicObjectCodecForTest(DynamicObjectRewindCodec codec) {
-        TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS.add(codec);
-    }
-
-    static void clearRewindDynamicObjectCodecsForTest() {
-        TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS.clear();
-    }
-
-    private static Optional<DynamicObjectRewindCodec> rewindDynamicObjectCodecFor(ObjectInstance inst) {
-        for (DynamicObjectRewindCodec codec : TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS) {
-            if (codec.supports(inst)) {
-                return Optional.of(codec);
-            }
-        }
-        return Optional.empty();
-    }
-
-    private static Optional<DynamicObjectRewindCodec> rewindDynamicObjectCodecForClassName(
-            String className, ObjectRegistry registry) {
-        for (DynamicObjectRewindCodec codec : TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS) {
-            if (codec.className().equals(className)) {
-                return Optional.of(codec);
-            }
-        }
-        return Optional.empty();
-    }
-
     private ObjectInstance recreateDynamicObject(
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
         DynamicObjectRecreateContext context = new DynamicObjectRecreateContext(this);
-        Optional<DynamicObjectRewindCodec> codec =
-                rewindDynamicObjectCodecForClassName(entry.className(), registry);
-        if (codec.isPresent()) {
-            return codec.get().recreate(context, entry);
-        }
-        // Phase-2 generic recreate (Task 4): opt-in fallback for classes that explicitly
-        // implement RewindRecreatable but have no registered codec. Classes without a codec
-        // AND without RewindRecreatable still drop on restore (unchanged behavior); broadly
-        // routing every codec-less class through genericRecreate is Task 6's job.
+        // Phase-2 generic recreate: only classes that explicitly implement
+        // RewindRecreatable opt into dynamic restore. Unsupported dynamic classes
+        // still drop on restore and remain visible in coverage diagnostics.
         if (isRewindRecreatableClassName(entry.className())) {
             return ObjectRewindDynamicCodecs.genericRecreate(entry, context);
         }

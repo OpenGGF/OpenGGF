@@ -22,6 +22,14 @@ class TestStaleRewindCodecHelperCleanup {
             "SHARED_REWIND_DYNAMIC_OBJECT_" + "CODECS";
     private static final String DELETED_REGISTRY_CODEC_METHOD =
             "dynamicRewind" + "Codecs";
+    private static final String DELETED_OBJECT_MANAGER_TEST_CODEC_REGISTRY =
+            "TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_" + "CODECS";
+    private static final String DELETED_OBJECT_MANAGER_TEST_CODEC_REGISTER =
+            "registerRewindDynamicObjectCodec" + "ForTest";
+    private static final String DELETED_OBJECT_MANAGER_TEST_CODEC_CLEAR =
+            "clearRewindDynamicObjectCodecs" + "ForTest";
+    private static final String DELETED_OBJECT_MANAGER_CODEC_LOOKUP =
+            "rewindDynamicObjectCodec" + "For";
 
     @Test
     void sourcesDoNotReferenceDeletedSpawnCodecHelper() throws IOException {
@@ -39,6 +47,18 @@ class TestStaleRewindCodecHelperCleanup {
     void sourcesDoNotReferenceDeletedRegistryCodecMethod() throws IOException {
         assertNoSourceReferences(DELETED_REGISTRY_CODEC_METHOD,
                 "Deleted per-registry dynamic-codec method is still referenced in ");
+    }
+
+    @Test
+    void sourcesDoNotReferenceDeletedObjectManagerCodecRegistry() throws IOException {
+        assertNoSourceReferences(DELETED_OBJECT_MANAGER_TEST_CODEC_REGISTRY,
+                "Deleted ObjectManager dynamic-codec registry is still referenced in ");
+        assertNoSourceReferences(DELETED_OBJECT_MANAGER_TEST_CODEC_REGISTER,
+                "Deleted ObjectManager dynamic-codec test register helper is still referenced in ");
+        assertNoSourceReferences(DELETED_OBJECT_MANAGER_TEST_CODEC_CLEAR,
+                "Deleted ObjectManager dynamic-codec test clear helper is still referenced in ");
+        assertNoSourceReferences(DELETED_OBJECT_MANAGER_CODEC_LOOKUP,
+                "Deleted ObjectManager dynamic-codec lookup helper is still referenced in ");
     }
 
     private static void assertNoSourceReferences(String needle, String messagePrefix) throws IOException {
