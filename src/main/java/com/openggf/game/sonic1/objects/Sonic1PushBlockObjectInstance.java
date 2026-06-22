@@ -20,6 +20,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -58,7 +59,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/33 Pushable Blocks.asm
  */
 public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // From disassembly: move.b #$F,obHeight(a0) / move.b #$F,obWidth(a0)
     private static final int HALF_HEIGHT = 0x0F;

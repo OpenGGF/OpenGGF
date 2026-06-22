@@ -203,12 +203,18 @@ public class TestRewindHarnessCoverageRatchet {
  *       four S1 platform-family scalar objects.</li>
  *   <li>2026-06-22: raised to 200 after adding generic recreate coverage for
  *       four S1 edge/monitor/conveyor scalar objects.</li>
+ *   <li>2026-06-22: raised to 204 after adding generic recreate coverage for
+ *       four S1 bridge/signpost trap scalar objects.</li>
+ *   <li>2026-06-22: raised to 208 after adding generic recreate coverage for
+ *       four S1 destructible/spawner parent objects.</li>
+ *   <li>2026-06-22: raised to 211 after adding generic recreate coverage for
+ *       three S1 stomper/push/ending scalar objects.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 208;
+    static final int RATCHET_FLOOR = 211;
 
     @BeforeEach
     void initHeadless() {

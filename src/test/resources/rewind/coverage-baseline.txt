@@ -25,7 +25,6 @@ com.openggf.game.sonic1.objects.Sonic1ChainedStomperObjectInstance#finalScalar#c
 com.openggf.game.sonic1.objects.Sonic1ChainedStomperObjectInstance#finalScalar#maxFallDistance
 com.openggf.game.sonic1.objects.Sonic1ChainedStomperObjectInstance#finalScalar#origY
 com.openggf.game.sonic1.objects.Sonic1ChainedStomperObjectInstance#finalScalar#spikesHaveCollision
-com.openggf.game.sonic1.objects.Sonic1ChainedStomperObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance#finalScalar#negateBoth
 com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance#finalScalar#origX
 com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance#finalScalar#origY
@@ -58,7 +57,6 @@ com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance#finalScalar#halfWid
 com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance#finalScalar#isSpawner
 com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance#finalScalar#origX
 com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance#finalScalar#origY
-com.openggf.game.sonic1.objects.Sonic1EndingSTHObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance#finalScalar#pointsAllocatedBeforeAnimal
 com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance#finalScalar#pointsValue
 com.openggf.game.sonic1.objects.Sonic1FanObjectInstance#finalScalar#alwaysOn
@@ -136,7 +134,6 @@ com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#active
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#frameIndex
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#spawnY
-com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#angularSpeed
 com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#detectionRadius
 com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#origX

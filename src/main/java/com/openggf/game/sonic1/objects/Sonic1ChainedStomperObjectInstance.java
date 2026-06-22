@@ -13,6 +13,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -63,7 +64,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/31 Chained Stompers.asm
  */
 public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider {
+        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider, SpawnRewindRecreatable {
 
     // ---- Sub-object configuration from CStom_Var ----
     // dc.b routine, y-offset, frame

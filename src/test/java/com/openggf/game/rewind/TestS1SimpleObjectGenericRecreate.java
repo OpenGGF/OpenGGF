@@ -6,11 +6,13 @@ import com.openggf.game.sonic1.objects.Sonic1BridgeObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ButtonObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1ChainedStomperObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ConveyorBeltObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1EdgeWallObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ElectrocuterObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1EndingSTHObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1FanObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance;
@@ -29,6 +31,7 @@ import com.openggf.game.sonic1.objects.Sonic1MovingBlockObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1MzBrickObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1PlatformObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1PoleThatBreaksObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SawObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SceneryObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SignpostObjectInstance;
@@ -59,11 +62,13 @@ class TestS1SimpleObjectGenericRecreate {
             Sonic1BreakableWallObjectInstance.class,
             Sonic1BubblesObjectInstance.class,
             Sonic1ButtonObjectInstance.class,
+            Sonic1ChainedStomperObjectInstance.class,
             Sonic1CollapsingLedgeObjectInstance.class,
             Sonic1ConveyorBeltObjectInstance.class,
             Sonic1EdgeWallObjectInstance.class,
             Sonic1ElectrocuterObjectInstance.class,
             Sonic1ElevatorObjectInstance.class,
+            Sonic1EndingSTHObjectInstance.class,
             Sonic1FanObjectInstance.class,
             Sonic1FlamethrowerObjectInstance.class,
             Sonic1GargoyleObjectInstance.class,
@@ -82,6 +87,7 @@ class TestS1SimpleObjectGenericRecreate {
             Sonic1MzBrickObjectInstance.class,
             Sonic1PlatformObjectInstance.class,
             Sonic1PoleThatBreaksObjectInstance.class,
+            Sonic1PushBlockObjectInstance.class,
             Sonic1SawObjectInstance.class,
             Sonic1SceneryObjectInstance.class,
             Sonic1SignpostObjectInstance.class,
@@ -113,6 +119,7 @@ class TestS1SimpleObjectGenericRecreate {
                 Sonic1BreakableWallObjectInstance.class,
                 Sonic1BubblesObjectInstance.class,
                 Sonic1ButtonObjectInstance.class,
+                Sonic1ChainedStomperObjectInstance.class,
                 Sonic1CollapsingLedgeObjectInstance.class,
                 Sonic1ConveyorBeltObjectInstance.class,
                 Sonic1EdgeWallObjectInstance.class,
@@ -136,6 +143,7 @@ class TestS1SimpleObjectGenericRecreate {
                 Sonic1MzBrickObjectInstance.class,
                 Sonic1PlatformObjectInstance.class,
                 Sonic1PoleThatBreaksObjectInstance.class,
+                Sonic1PushBlockObjectInstance.class,
                 Sonic1SawObjectInstance.class,
                 Sonic1SceneryObjectInstance.class,
                 Sonic1SignpostObjectInstance.class,
