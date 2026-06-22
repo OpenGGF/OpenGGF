@@ -185,12 +185,14 @@ public class TestRewindHarnessCoverageRatchet {
  *       the first S1 badnik head batch.</li>
  *   <li>2026-06-22: raised to 158 after adding generic recreate coverage for
  *       the second S1 badnik head batch.</li>
+ *   <li>2026-06-22: raised to 161 after adding generic recreate coverage for
+ *       the third S1 badnik head batch.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 158;
+    static final int RATCHET_FLOOR = 161;
 
     @BeforeEach
     void initHeadless() {

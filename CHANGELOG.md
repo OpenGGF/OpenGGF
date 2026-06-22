@@ -52,6 +52,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S1 invisible barrier rewind restore:** invisible barriers now restore through spawn-based generic recreate, clearing their rewind coverage gaps.
 - **S1 badnik rewind restore:** Ball Hog, Batbrain, Burrobot, and Crabmeat now restore through spawn-based generic recreate, moving them onto the rewind round-trip ratchet.
 - **S1 badnik rewind restore:** Bomb, Buzz Bomber, Motobug, Roller, and Yadrin now restore through spawn-based generic recreate, moving them onto the rewind round-trip ratchet.
+- **S1 badnik rewind restore:** Chopper, Jaws, and Newtron now restore through spawn-based generic recreate, moving them onto the rewind round-trip ratchet.
 - **S2 invisible block rewind restore:** invisible blocks now restore through spawn-based generic recreate, moving them onto the rewind round-trip ratchet.
 - **S2 Egg Prison button rewind graph restore:** Egg-prison buttons now restore through graph-tested generic recreate with exact parent/button relinks while deleting their dynamic codec.
 - **S2 OOZ burner flame rewind graph restore:** burner flame children now restore through graph-tested generic recreate with exact platform relinks while deleting their dynamic codec.
