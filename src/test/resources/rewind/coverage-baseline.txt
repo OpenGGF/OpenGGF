@@ -7,12 +7,10 @@ com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance#finalScalar#or
 com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance#finalScalar#origY
 com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance#finalScalar#speed
 com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance#finalScalar#frameIndex
-com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance$WallFragmentInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance#finalScalar#isMaker
 com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance#finalScalar#spawnFreq
 com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance#finalScalar#spawnSubtype
-com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1BumperObjectInstance#objectRef#pendingTouchedPlayer
 com.openggf.game.sonic1.objects.Sonic1BumperObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1ButtonObjectInstance#finalScalar#adjustedY
@@ -43,7 +41,6 @@ com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFl
 com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance#finalScalar#mappingFrame
 com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance#finalScalar#subtype
-com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance#finalScalar#hFlip
 com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance#finalScalar#pieceIndex
 com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance#finalScalar#priority
@@ -153,7 +150,6 @@ com.openggf.game.sonic1.objects.Sonic1SeesawObjectInstance#finalScalar#origX
 com.openggf.game.sonic1.objects.Sonic1SeesawObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SmallDoorObjectInstance#finalScalar#openFromRight
 com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance#finalScalar#frameIndex
-com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance$SmashBlockFragmentInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SpikeObjectInstance#finalScalar#actWidth
 com.openggf.game.sonic1.objects.Sonic1SpikeObjectInstance#finalScalar#baseX

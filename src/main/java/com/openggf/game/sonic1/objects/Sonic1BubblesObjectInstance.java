@@ -9,6 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -31,7 +32,8 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/64 Bubbles.asm
  */
-public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
+public class Sonic1BubblesObjectInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
 
     // ========================================================================
     // Routine IDs (from Bub_Index dispatch table)

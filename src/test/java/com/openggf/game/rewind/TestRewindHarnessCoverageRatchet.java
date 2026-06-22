@@ -208,7 +208,7 @@ public class TestRewindHarnessCoverageRatchet {
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 204;
+    static final int RATCHET_FLOOR = 208;
 
     @BeforeEach
     void initHeadless() {

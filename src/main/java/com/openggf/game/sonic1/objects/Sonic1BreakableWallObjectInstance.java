@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -47,7 +48,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/3C Smashable Wall.asm
  */
 public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // From disassembly: move.w #$1B,d1
     private static final int HALF_WIDTH = 0x1B;

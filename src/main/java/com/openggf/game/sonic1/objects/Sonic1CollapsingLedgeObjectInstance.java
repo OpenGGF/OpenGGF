@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -48,7 +49,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/1A Collapsing Ledge (part 1).asm
  */
 public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable {
 
     // From disassembly: move.w #$30,d1 (half-width for platform collision)
     private static final int PLATFORM_HALF_WIDTH = 0x30;
