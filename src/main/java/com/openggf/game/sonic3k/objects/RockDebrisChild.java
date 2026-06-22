@@ -5,8 +5,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnDefaultArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -23,7 +22,7 @@ import java.util.List;
  * velocities from word_2A8B0. Gravity = 0x18 subpixels/frame (same as
  * cork floor fragments).
  */
-public class RockDebrisChild extends GravityDebrisChild implements RewindRecreatable {
+public class RockDebrisChild extends GravityDebrisChild implements SpawnDefaultArgsRewindRecreatable {
 
     private static final int GRAVITY = 0x18;
 
@@ -43,11 +42,6 @@ public class RockDebrisChild extends GravityDebrisChild implements RewindRecreat
         super(spawn, "RockDebris", xVel, yVel, GRAVITY);
         this.mappingFrame = mappingFrame;
         this.artKey = artKey;
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new RockDebrisChild(ctx.spawn(), 0, 0, 0, null);
     }
 
     @Override

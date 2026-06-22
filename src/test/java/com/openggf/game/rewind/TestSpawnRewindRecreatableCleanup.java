@@ -134,6 +134,9 @@ class TestSpawnRewindRecreatableCleanup {
     private static final List<String> SPAWN_Y_COORDINATE_RECREATORS = List.of(
             "com.openggf.game.sonic3k.objects.AizBattleshipInstance");
 
+    private static final List<String> SPAWN_DEFAULT_ARGS_RECREATORS = List.of(
+            "com.openggf.game.sonic3k.objects.RockDebrisChild");
+
     private static final List<String> ZERO_ARG_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.Sonic1EndingSTHObjectInstance",
             "com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance",
@@ -344,6 +347,25 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnYCoordinateRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void spawnDefaultArgsRecreatorsUseMarkerInterface() {
+        Class<?> marker = loadClass("com.openggf.level.objects.SpawnDefaultArgsRewindRecreatable");
+        for (String className : SPAWN_DEFAULT_ARGS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(marker.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the spawn default-args recreate hook");
+        }
+    }
+
+    @Test
+    void spawnDefaultArgsRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_DEFAULT_ARGS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use SpawnDefaultArgsRewindRecreatable's default hook");
         }
     }
 
