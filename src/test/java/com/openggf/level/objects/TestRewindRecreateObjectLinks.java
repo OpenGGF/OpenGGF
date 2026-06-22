@@ -133,6 +133,16 @@ class TestRewindRecreateObjectLinks {
                 "findLiveParentForRewind");
     }
 
+    @Test
+    void mhzWeatherVisualUsesSharedNearestLiveObjectHelper() throws Exception {
+        assertNoDeclaredRewindContextLookup(
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild",
+                "findLiveParentForRewind");
+        assertNoDeclaredMethod(
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild",
+                "nearestLiveParent");
+    }
+
     private static void assertNoDeclaredRewindContextLookup(
             String className,
             String methodName) throws ClassNotFoundException {
@@ -143,6 +153,17 @@ class TestRewindRecreateObjectLinks {
                             && method.getParameterTypes()[0] == RewindRecreateContext.class,
                     childType.getSimpleName()
                             + " should delegate parent relinking to RewindRecreateObjectLinks");
+        }
+    }
+
+    private static void assertNoDeclaredMethod(
+            String className,
+            String methodName) throws ClassNotFoundException {
+        Class<?> childType = Class.forName(className);
+        for (Method method : childType.getDeclaredMethods()) {
+            assertFalse(method.getName().equals(methodName),
+                    childType.getSimpleName()
+                            + " should delegate generic relinking to RewindRecreateObjectLinks");
         }
     }
 

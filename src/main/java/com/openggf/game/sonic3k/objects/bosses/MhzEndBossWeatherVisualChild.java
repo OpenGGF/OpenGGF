@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -107,39 +108,9 @@ public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance i
 
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        MhzEndBossWeatherMachineChild liveParent = findLiveParentForRewind(ctx);
+        MhzEndBossWeatherMachineChild liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                ctx, MhzEndBossWeatherMachineChild.class);
         return liveParent != null ? forRewindRecreate(liveParent, ctx.spawn()) : null;
-    }
-
-    private static MhzEndBossWeatherMachineChild findLiveParentForRewind(RewindRecreateContext ctx) {
-        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
-            return null;
-        }
-        return nearestLiveParent(ctx.objectServices().objectManager().getActiveObjects(), ctx.spawn());
-    }
-
-    private static MhzEndBossWeatherMachineChild nearestLiveParent(Iterable<?> instances, ObjectSpawn spawn) {
-        MhzEndBossWeatherMachineChild best = null;
-        long bestDistance = Long.MAX_VALUE;
-        for (Object instance : instances) {
-            if (instance == null
-                    || instance.getClass() != MhzEndBossWeatherMachineChild.class
-                    || !(instance instanceof MhzEndBossWeatherMachineChild candidate)
-                    || candidate.isDestroyed()) {
-                continue;
-            }
-            if (spawn == null) {
-                return candidate;
-            }
-            long dx = candidate.getX() - spawn.x();
-            long dy = candidate.getY() - spawn.y();
-            long distance = dx * dx + dy * dy;
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = candidate;
-            }
-        }
-        return best;
     }
 
     private static MhzEndBossWeatherMachineChild placeholderWeatherMachineForRewindProbe() {
