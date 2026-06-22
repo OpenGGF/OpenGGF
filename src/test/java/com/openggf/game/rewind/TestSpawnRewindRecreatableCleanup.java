@@ -81,6 +81,10 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyShotChild",
             "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance");
 
+    private static final List<String> SPAWN_CONSTRUCTION_CONTEXT_RECREATORS = List.of(
+            "com.openggf.game.sonic3k.objects.AizEndBossInstance",
+            "com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance");
+
     private static final List<String> SPAWN_COORDINATE_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance",
             "com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance",
@@ -216,6 +220,29 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void spawnConstructionContextRecreatorsUseMarkerInterface() {
+        Class<?> marker = loadClass(
+                "com.openggf.level.objects.SpawnConstructionContextRewindRecreatable");
+        for (String className : SPAWN_CONSTRUCTION_CONTEXT_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(marker.isAssignableFrom(cls),
+                    cls.getName()
+                            + " should inherit the spawn construction-context recreate hook");
+        }
+    }
+
+    @Test
+    void spawnConstructionContextRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_CONSTRUCTION_CONTEXT_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName()
+                            + " should use "
+                            + "SpawnConstructionContextRewindRecreatable's default hook");
         }
     }
 

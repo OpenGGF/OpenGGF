@@ -14,11 +14,9 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectManager;
-import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -53,7 +51,8 @@ import java.util.logging.Logger;
  *   <li>Knuckles: camera lock at $4100, target $4160, Y offset $5DA</li>
  * </ul>
  */
-public class AizEndBossInstance extends AbstractBossInstance implements RewindRecreatable {
+public class AizEndBossInstance extends AbstractBossInstance
+        implements SpawnConstructionContextRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizEndBossInstance.class.getName());
 
     // ===== Routine constants (ROM: AIZ_EndBossIndex, stride 2) =====
@@ -180,13 +179,6 @@ public class AizEndBossInstance extends AbstractBossInstance implements RewindRe
     public AizEndBossInstance(ObjectSpawn spawn) {
         super(spawn, "AIZEndBoss");
         Aiz2BossEndSequenceState.reset();
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return ObjectConstructionContext.construct(
-                ctx.objectServices(),
-                () -> new AizEndBossInstance(ctx.spawn()));
     }
 
     // ===== Lifecycle =====

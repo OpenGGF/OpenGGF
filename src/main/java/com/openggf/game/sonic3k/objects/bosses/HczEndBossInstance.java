@@ -15,10 +15,8 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionController;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -42,7 +40,8 @@ import java.util.logging.Logger;
  * <p>Child objects (turbine, blades, visual child) are implemented separately
  * and follow the boss through explicit parent links.
  */
-public class HczEndBossInstance extends AbstractBossInstance implements RewindRecreatable {
+public class HczEndBossInstance extends AbstractBossInstance
+        implements SpawnConstructionContextRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(HczEndBossInstance.class.getName());
 
     // =========================================================================
@@ -169,13 +168,6 @@ public class HczEndBossInstance extends AbstractBossInstance implements RewindRe
 
     public HczEndBossInstance(ObjectSpawn spawn) {
         super(spawn, "HCZEndBoss");
-    }
-
-    @Override
-    public HczEndBossInstance recreateForRewind(RewindRecreateContext ctx) {
-        return ObjectConstructionContext.construct(
-                ctx.objectServices(),
-                () -> new HczEndBossInstance(ctx.spawn()));
     }
 
     // =========================================================================
