@@ -24,11 +24,16 @@ class TestSonic1SpringObjectInstance {
         SolidRoutineProfile horizontalProfile = horizontal.getSolidRoutineProfile();
 
         assertEquals(SolidRoutineKind.FULL_SOLID, verticalProfile.kind());
-        assertFalse(verticalProfile.inclusiveRightEdge());
+        // ROM Spring routines call SolidObject, whose x-range check rejects only when
+        // d0 > 2*halfWidth (Solid_ChkCollision `cmp d3,d0; bhi`), so the right edge
+        // (Sonic flush against the object's right face) still collides — inclusive.
+        // Required for the LR spring to register the side contact that fires its push
+        // bounce when Sonic falls flush against it (S1 SYZ1 f502 -> f816).
+        assertTrue(verticalProfile.inclusiveRightEdge());
         assertFalse(verticalProfile.bypassesOffscreenSolidGate());
         assertTrue(verticalProfile.stickyContactBuffer());
         assertEquals(SolidRoutineKind.FULL_SOLID, horizontalProfile.kind());
-        assertFalse(horizontalProfile.inclusiveRightEdge());
+        assertTrue(horizontalProfile.inclusiveRightEdge());
         assertFalse(horizontalProfile.bypassesOffscreenSolidGate());
         assertTrue(horizontalProfile.stickyContactBuffer());
     }
