@@ -379,6 +379,21 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM PlatformObject/Plat_NoXCheck_AltY (docs/s1disasm/sonic.lst 0x7B00-0x7B0A):
+        //   sub.w d1,d0            ; d0 = platform_top - sonic_bottom_edge
+        //   bhi.w  Plat_Exit       ; exit if d0 > 0 (Sonic above platform)
+        //   cmpi.w #-16,d0
+        //   blo.w  Plat_Exit       ; UNSIGNED lower vs $FFF0 -> also exits when d0 = 0
+        // The blo (unsigned) comparison makes the exact-touch case d0 = 0 (engine
+        // distY == 0) a NON-landing: the landing band is d0 in [-16,-1] (strict
+        // penetration), not [-16,0]. Verified by BizHawk capture of the GHZ1
+        // collapsing-ledge landing (BK2 3361 d0=0 keeps falling; BK2 3362 d0=-9
+        // lands) — engine was landing one frame early at the touch frame.
+        return true;
+    }
+
+    @Override
     public byte[] getSlopeData() {
         return SLOPE_DATA;
     }

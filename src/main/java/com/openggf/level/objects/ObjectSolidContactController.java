@@ -2876,9 +2876,21 @@ final class ObjectSolidContactController {
                     return null;
                 }
             }
-            boolean rejectsZeroDistanceTopLanding = distY == 0
+            // ROM PlatformObject detects a NEW landing against the same entry
+            // surface it later snaps to (obY-8 for Obj18), while continued riding
+            // uses MvSonicOnPtfm2's obY-9. Some objects model the riding surface in
+            // getSolidParams (so distY is computed against obY-9) and recover the
+            // entry surface only through getTopLandingSnapAdjustment, which fixes the
+            // landing POSITION but not the detection TIMING. Apply that same offset
+            // to the detection band for new landings (sticky=false) so the detect
+            // surface matches the snap surface; riding (sticky=true) is unchanged.
+            int detectionDistY = distY;
+            if (!sticky) {
+                detectionDistY = distY + getTopLandingSnapAdjustment(instance, player);
+            }
+            boolean rejectsZeroDistanceTopLanding = detectionDistY == 0
                     && rejectsZeroDistanceTopSolidLanding(instance);
-            if (distY < 0 || distY >= 0x10 || rejectsZeroDistanceTopLanding) {
+            if (detectionDistY < 0 || detectionDistY >= 0x10 || rejectsZeroDistanceTopLanding) {
                 if (rejectsZeroDistanceTopLanding) {
                     notifyZeroDistanceTopSolidLandingRejected(instance, player);
                 }
