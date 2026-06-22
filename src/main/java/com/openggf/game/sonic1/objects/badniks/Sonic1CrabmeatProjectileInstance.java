@@ -5,8 +5,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractProjectileInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateDefaultArgsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -30,7 +29,7 @@ import java.util.List;
  * </ul>
  */
 public class Sonic1CrabmeatProjectileInstance extends AbstractProjectileInstance
-        implements RewindRecreatable {
+        implements SpawnCoordinateDefaultArgsRewindRecreatable {
 
     // Standard Mega Drive gravity: $38 subpixels/frame² (ObjectFall)
     private static final int GRAVITY = 0x38;
@@ -77,12 +76,6 @@ public class Sonic1CrabmeatProjectileInstance extends AbstractProjectileInstance
 
     private Sonic1CrabmeatProjectileInstance(int x, int y, int xVel, int yVel) {
         this(x, y, xVel, yVel, null);
-    }
-
-    @Override
-    public Sonic1CrabmeatProjectileInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn spawn = ctx.spawn();
-        return new Sonic1CrabmeatProjectileInstance(spawn.x(), spawn.y(), 0, 0, null);
     }
 
     /**

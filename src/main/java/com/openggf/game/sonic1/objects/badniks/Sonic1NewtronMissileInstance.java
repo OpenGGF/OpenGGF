@@ -7,8 +7,7 @@ import com.openggf.level.objects.AbstractProjectileInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -34,7 +33,7 @@ import java.util.List;
  * </ul>
  */
 public class Sonic1NewtronMissileInstance extends AbstractProjectileInstance
-        implements RewindRecreatable {
+        implements SpawnCoordinateZeroScalarArgsRewindRecreatable {
 
     // Collision: obColType = $87 -> category HURT ($80), size index 7
     private static final int COLLISION_SIZE_INDEX = 0x07;
@@ -61,12 +60,6 @@ public class Sonic1NewtronMissileInstance extends AbstractProjectileInstance
         this.facingLeft = facingLeft;
         this.animTimer = 0;
         this.animFrame = 0;
-    }
-
-    @Override
-    public AbstractProjectileInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn spawn = ctx.spawn();
-        return new Sonic1NewtronMissileInstance(spawn.x(), spawn.y(), 0, false);
     }
 
     /**
