@@ -144,6 +144,32 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - S2 Rexon head oscillation stagger advances HTZ2 to f1343
+
+- Branch/worktree context: `bugfix/ai-htz2-f1078-launch` (worktree off `develop`).
+- Command: `mvn -q -Dmse=relaxed test "-Dtest=TestS2Htz2LevelSelectTraceReplay"
+  -DfailIfNoTests=false "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- **`s2_htz2` / `TestS2Htz2LevelSelectTraceReplay` advanced f1078 -> f1343.**
+  - Root: at HTZ2 f1078 the ROM launches the rolling player UP
+    (`y_speed +0568 -> -0568`). This is the `Touch_KillEnemy` "big bounce"
+    (`neg.w y_vel`, s2.asm:85385) when Sonic rolls into the attackable Rexon tip
+    head (Obj97, collision_flags `0x0B` -> Touch_Enemy). The engine missed it
+    because the Rexon heads were a few pixels off, nudging the tip head's x just
+    outside Sonic's 16x16 touch band.
+  - Fix: `RexonHeadObjectInstance` seeded `oscillationFrameCounter` (ROM
+    `objoff_39`) to `0` for every head. `Obj97_Init` (s2.asm:74316-74318) seeds
+    it with the head number; the phase/oscillation update only runs when
+    `(objoff_39 + 1) & 3 == 0` (Obj97_Normal, s2.asm:74407-74414), so each head
+    advances on a different frame of the 4-frame cycle. Restoring the stagger
+    aligned the body heads (now exact y match) and the tip head with the ROM, so
+    the rolling kill bounce lands.
+  - Net-positive gate: HTZ2 advanced f1078 -> f1343 (next frontier is an
+    unrelated sidekick/breakable-block launch, `tails_x_speed` at f1343). HTZ1
+    held at its develop baseline f6114 `air` (no regression; verified against a
+    clean-develop run). EHZ1 still green; CNZ1 held at f1691; the Rexon is
+    HTZ-only so no other S2 zone can be affected. `TestS2BadnikChildGraphRewind`
+    (4) still green.
+
 ## 2026-06-22 - S3K ICZ path-follow platform balance width advances ICZ to f3139
 
 - Branch/worktree context: `.worktrees/trace-cluster-fixes` on `develop`.
@@ -18675,3 +18701,34 @@ f534-620 (when each ring is created-as-attracted via Test_Ring_Collisions and wh
 each is given via the collision-response list), compared to the engine's
 addAttractedRing / give frames, to find the systematic attraction cadence fix.
 This greens MGZ-LS (its only roots are rings).
+
+### 2026-06-22 S3K LBZ1 drum-to-drum handoff: f1694 air -> f1950 status_byte
+
+Worktree base == develop. `TestS3kLbzCompleteRunTraceReplay` (`s3k_lbz1`) fresh
+first error was f1694 `air` (expected 0, actual 1), with status_byte 0x0C vs 0x06
+(ROM rolling+on_object; engine in_air+rolling). 357 ROOTS, 356x air -- a sustained
+air oscillation seeded at f1694.
+
+Root cause: the player rolls across a chain of `Obj_LBZRollingDrum` instances. At
+f1694 ROM hands the player off from drum slot 0x0F (`@0x600`) to slot 0x04
+(`@0x700`) seamlessly (`Stand_on_object` flips 0x0F->0x04, air stays 0). ROM
+`RideObject_SetRide` (sonic3k.asm:42027) clears the PREVIOUS interact object's
+standing bit (`bclr d6,status(a3)`) before installing the new ride. The engine's
+`LbzRollingDrumInstance` tracks a per-instance `pXRiding` boolean and never cleared
+the previous drum's flag on handoff, so the just-vacated drum (slot 15) still ran
+its release path that same frame -- exiting its horizontal window -> `release()`
+forced the player airborne, clobbering the new drum's ride.
+
+Fix: `LbzRollingDrumInstance.applyRideObjectSetRide` now mirrors `bclr d6,status(a3)`
+-- if the player is already on-object and the prior latched instance is a different
+`LbzRollingDrumInstance`, clear that instance's `pXRiding` so it cannot run its
+release path. Object exec is slot-order (low->high), matching ROM Object_RAM, so
+slot 4 enters first and slot 15 then re-checks as an entry (window-rejected), exactly
+as in ROM.
+
+Result: `s3k_lbz1` first error f1694 -> f1950 (6652 -> 5846 errors). New frontier is
+f1950 `status_byte` 0x21 vs 0x01 -- a wall-push while riding the drum (player pushes
+into a wall at x=0x4DF; ROM sets Status_Pushing, engine does not). Separate, smaller
+root. Regression sweep: AIZ complete-run unchanged at f1095 (matches baseline);
+keep-green S3K tests + 19 `TestLbzRollingDrumInstance` unit tests all pass. Drum is
+an LBZ-only object so no cross-zone/cross-game exposure.
