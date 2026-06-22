@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -89,7 +90,9 @@ public class HczEndBossBladeSplash extends AbstractBossChild implements RewindRe
         if (restoredBoss == null || ctx.spawn() == null) {
             return null;
         }
-        return new HczEndBossBladeSplash(restoredBoss, ctx.spawn().x());
+        return ObjectConstructionContext.construct(
+                ctx.objectServices(),
+                () -> new HczEndBossBladeSplash(restoredBoss, ctx.spawn().x()));
     }
 
     // =========================================================================

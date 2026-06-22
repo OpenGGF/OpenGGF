@@ -144,6 +144,84 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - S3K ICZ path-follow platform balance width advances ICZ to f3139
+
+- Branch/worktree context: `.worktrees/trace-cluster-fixes` on `develop`.
+- Command: `mvn -q -Dmse=relaxed test "-Dtest=TestS3kIczCompleteRunTraceReplay"
+  -DfailIfNoTests=false "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen"
+  "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- **`s3k_icz1` / `TestS3kIczCompleteRunTraceReplay` advanced f3116 -> f3139.**
+  - Root: at f3116 Sonic is standing still (`g_speed=0`) on the ICZ path-follow
+    platform (`Obj_ICZPathFollowPlatform`, slot diag `0xB0`) and ROM keeps
+    `status=0x08` (`Status_Facing` clear = facing RIGHT), but the engine flipped
+    `status` bit0 to face LEFT (`0x09`) for 3 frames. ROM `Sonic_Move` on-object
+    balance reads `width_pixels(a1)` (sonic3k.asm:22455), which for this platform
+    is `$20` (ObjDat_ICZPathFollowPlatform width byte, sonic3k.asm:187886, applied
+    by SetUp_ObjAttributes at 176908) — NOT the `$2B` `SolidObjectFull`
+    X-collision half-width. The engine defaulted `getBalanceWidthPixels()` to the
+    shared 16 px on-screen footprint, shifting `d1 = player_x + width - object_x`
+    inward by 16 px so the still rider tested as on the platform's left edge and
+    flipped facing.
+  - Fix: override `getBalanceWidthPixels()` on `IczPathFollowPlatformObjectInstance`
+    to return `0x20` (same pattern as the CPZ/WFZ Obj19 platform). With the
+    correct width, `d1=14` falls inside the no-balance window, so facing stays
+    RIGHT and matches ROM.
+  - New frontier f3139: `status_byte` expected `0x0028` vs engine `0x0008`. ROM
+    sets `Status_Push` (bit5) on the player as the platform sinks (routine `0A`,
+    `loc_8A11C`) and SolidObject side-contact fires (`bset #Status_Push,status(a1)`
+    at sonic3k.asm loc_1E06E); the engine still resolves the rider as standing-on-top.
+    This is a separate, deeper sinking-platform collision-geometry root, not part
+    of this fix.
+  - Regression sweep: keep-green S3K tests (`TestS3kAiz1SkipHeadless`,
+    `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+    `TestSonic3kDecodingUtils`) pass; AIZ complete-run held at f1095, AIZ route
+    held at f19089, all other frontiers unchanged. S1 GHZ/LZ/FZ and
+    `TestSidekickCpuFollowParity` failures are the pre-existing develop baseline,
+    unaffected by an ICZ-platform width override.
+
+## 2026-06-22 - Fresh trustworthy root-count survey (all 39 reports) + SLZ2 g_speed root mechanism
+
+- Branch/worktree context: `.worktrees/trace-cluster-fixes` at `6ba44d2af`
+  (after the always-fresh-report infra fix `f665a2f58`). Reports under
+  `target/trace-reports/*_report.json` are now regenerated every run, so the
+  per-trace ROOT counts below (non-cascading `cascading=false` groups, via
+  `tools/trace/root_summary.py`) are trustworthy for retargeting. Root count,
+  not total error count, is the distance-to-green.
+- **Shallowest (greenable) traces — 1 ROOT each** (field, first-error frame,
+  ROM vs engine):
+  - `s1_ghz2` y f2591 0x0259 vs 0x0257 (1 error total)
+  - `s1_ghz3` y f1246 0x0219 vs 0x021A (1 error total)
+  - `s1_mz3` y f1702 0x048C vs 0x048B (1 error, span=1)
+  - `s1_lz2` obj_s20_slot f1068 0x20 vs 0x25 (1 error; object-slot, not physics)
+  - `s1_mz1` camera_y f2089 0x02BE vs 0x02C4 (span=2)
+  - `s1_slz2` g_speed f651 0x1000 vs 0x10AE (270 cascading errors from 1 root)
+  - `s1_lz3` angle f1415 0x00C0 vs 0x00D0 (span=1)
+  - `s3k_icz1` status_byte f3116 0x0008 vs 0x0009 (span=3; S3K priority, facing bit0)
+  - `s2_htz1` air f6114 1 vs 0; `s2_htz2` y_speed f1078; `s1_sbz2` obj_s48_slot
+- **Deepest (not near-green):** `s3k_hcz1` 299 roots (298 y), `s3k_mhz1` 208
+  roots (202 y_speed), `s1_ghz1` 117 roots (113 camera_y), `s3k_mgz1` 33 roots
+  (all rings). These are subsystem-wide; not single-fix greenable.
+- **SLZ2 root mechanism (diagnosed, NOT yet fixed):** at f651 the player rolls
+  onto an SLZ CollapsingFloor. ROM `PlatformObject` -> `Plat_NoCheck`
+  (s1 `sub PlatformObject.asm:97-100`; cross-game identical at
+  s2.asm:36013-36015 `loc_19E30`, sonic3k.asm:42035-42037 `loc_1E4A0`) runs
+  EVERY frame the player stands on a top-solid platform:
+  `obAngle=0; obVelY=0; obInertia=obVelX` (g_speed := x_speed). The player is
+  rolling faster than the $1000 x-speed cap, so g_speed (0x10BA) exceeds the
+  capped x_speed (0x1000); mounting the platform clamps g_speed to 0x1000. The
+  engine never applies this. **Blocked upstream:** the engine never SEATS the
+  rolling player on the collapsing floor at f651 — the f651 diagnostic shows
+  "no-touch" on the CollapsingFloors and status 0x04 (engine, not-on-object)
+  vs ROM 0x0C (on-object bit3). Root cause hypothesis: a GROUNDED player
+  rolling LATERALLY onto a flat top-solid platform flush with adjacent terrain
+  is not detected by the engine's landing path (which requires crossing the
+  platform top from above via the prevRelY history check), whereas ROM's
+  `PlatformObject` y-band check seats any grounded player regardless of approach
+  direction. A scoped continuation-path `g_speed=x_speed` fix was written and
+  reverted (unexercised — never fires until the seat-detection is fixed). Next
+  session: fix the lateral-mount seat detection (high regression surface; gate
+  on a full platform-trace sweep), THEN the `inertia=x_vel` continuation clamp.
+
 ## 2026-06-19 - S2 EHZ Tails fly-in approach counter no longer becomes manual-control stall
 
 - Branch context: `bugfix/ai-s2-tails-sidekick-standing-pause`, branch-local
@@ -16935,3 +17013,1665 @@ the engine sidekick touch+HurtCharacter path at f1154-1157 vs ROM (Touch_Loop on
 collides ONE object per character per frame, s2.asm:85040-85045; HurtCharacter invuln
 checks) to find why the engine hurts the co-located CPU Tails. Shared touch-response
 code -> any fix needs a full *TraceReplay resweep for regressions.
+
+
+### 2026-06-20 -- CPZ1 f1157: instrumented to a 1-frame-early SIDEKICK hurt (engine-side touch phase)
+
+Compile-verified engine instrumentation of ObjectTouchResponseController.processCollisionLoop:
+- The sidekick (CPU Tails) touch loop DOES run, with isSidekick=true, cpu=true, usePreUpdateState=true.
+- The engine first registers a HURT overlap of the Spiny shot vs Tails at LevelManager.frameCounter=1157
+  (currentFrameCounter=1158 = frameCounter+1), using objX/Y = getPreUpdateX/Y = 0x0BAD,0x01A0 with
+  objPre==objCur (the pre-update snapshot equals the live position). Tails box sk=0x0BA0,0x01A4 h=24,
+  shot 4x4 -> overlap -> hurt at trace f1157.
+- ROM hurts Tails at trace f1158 (aux routine_change 0x02->0x04, knockback -0x200/-0x400). ROM's Tails
+  (low slot) runs TouchResponse before the Spiny shot (slot 36) moves, so at f1157 it sees the shot's
+  end-of-1156 position 0x0BAE,0x019E (dy=18 -> no overlap), only overlapping at f1158 (shot 0x0BAD,0x01A0).
+- Net: the engine's sidekick touch sees the shot one object-step too advanced (0x0BAD,0x01A0 at f1157
+  instead of 0x0BAE,0x019E). The projectile trajectory itself is correct vs ROM (verified separately).
+
+Open question (needs a controlled side-by-side): the engine snapshots object touch state at frame start
+(LevelFrameStep step 2, before physics) and moves objects after physics (step 3), which should give the
+sidekick the end-of-(F-1) shot position -- yet getPreUpdateX returns the end-of-F position. This is a
+1-frame engine-vs-recorder phase offset in the snapshot/object-move/comparator bookkeeping, specific to
+the co-located sidekick boundary case (the main player's f1154 hit was not boundary-sensitive and matched
+ROM). Fix is in SHARED touch/snapshot ordering -> requires a full *TraceReplay resweep to gate regressions.
+No engine change landed (no safe, confidently-correct one-line fix isolated yet).
+
+
+### 2026-06-20 -- CPZ1 fix attempt (prevPreUpdate for sidekick) -- DISPROVEN, reverted
+
+Attempted fix: store the previous frame-start touch snapshot (prevPreUpdate) and have
+the S2/S1 CPU-sidekick touch use it (so the early-slot sidekick sees later-slot objects
+at their not-yet-moved position, per ROM slot ordering). Added prevPreUpdateX/Y to
+AbstractObjectInstance + a gated branch in ObjectTouchResponseController.processCollisionLoop
+(isSidekick && usePreUpdateState && !useCurrentTouchState && !usePreviousCollisionResponseList).
+
+Result: REGRESSED CPZ1 from f1157 to **f855** (tails_x_speed exp -0200 act 0x00A8) -- a
+DIFFERENT sidekick interaction where the CURRENT frame-start snapshot was already correct
+and the previous-frame snapshot misses the hit. Reverted (per the attempt+resweep+revert
+plan; the focused regression made a full sweep unnecessary).
+
+Conclusion: the CPZ1 1-frame-early sidekick hurt is NOT a universal object-move phase
+offset -- getPreUpdate is correct at f855 but one frame too new at f1157. The cause is
+interaction/object-specific (likely tied to the falling Spiny shot crossing Tails's box
+from above at a 1px boundary, or that specific dynamic object's snapshot timing), so a
+blanket sidekick-snapshot change is wrong. A correct fix needs per-object slot-order
+analysis (which exact object slots move before vs after the sidekick at f855 vs f1157),
+best obtained via a BizHawk side-by-side of ROM Touch_Loop slot iteration vs the engine.
+
+
+### 2026-06-20 -- Frontier survey: remaining frontiers classified by root-cause family
+
+After the cluster-4 fix, surveyed the remaining true-frontier divergences (worktree
+bugfix/ai-trace-cluster-fixes). None is a clean cluster-4-style conceptual win; they
+group into four deep families:
+
+1. SOLID-OBJECT RIDING / LANDING (engine vs ROM disagree on standing/air/land-pos while
+   the player is on an object). Object-specific, moving-platform-timing class.
+   - s1_ghz1 f2573: ROM air=1 falling (y_speed 0x07F0) on onObj=0x22; engine air=0 landed
+     (g_speed 0x0438). Engine sticks to the object a frame ROM is airborne.
+   - s1_sbz1 f1925: ROM rolling on onObj=0x3C (g_speed 0x0556); engine rolling=0 airborne.
+   - s3k_lbz1 f1694: ROM grounded on onObj=0x04 (status 0x0C); engine airborne (0x06).
+   - s3k_hcz1 f1489: 1px Y on the air->on_object landing frame (onObj=0x12).
+   - s3k_icz1 f3116: status_byte 0x08 vs 0x09 (engine has the facing bit set while on object).
+2. TOUCH-PHASE TIMING (1-frame, shared touch code). Proven interaction-specific (CPZ1).
+   - s2_cpz1 f1157 (sidekick hurt 1 frame early); s3k_mgz1 f539 + completerun f738
+     (a ring collected 1 frame early -> rings off by one). Same family as CPZ1.
+3. JUMP ANGLE ON OBJECTS (roll-jump y_speed sin-sign flip; x/cos matches). Object-angle
+   convention when jumping off a sloped/ridden object.
+   - s2_htz2 f1078 and s1_mz2 f2578: identical y_speed -0568 -> +0568 (rolling+jump,
+     onObj=0x1A and 0x34 respectively). Engine jump angle is the negation of ROM's.
+4. SUB-PIXEL / 1px (P9 class). Needs frame-by-frame sub= tracing.
+   - s1_ghz3 f1246 y+1, s1_mz3 f1702 y-1, s1_syz3 f3468 x-1, s1_lz1 f5745 camera_y-2,
+     s2_ooz1 f1782 tails_x-1, s2_cnz1 f3906 tails_y+1, s2_cnz2 f4418 tails_y+1,
+     s2_mcz2 f4485 tails_x+1, s3k_mhz1 f966 y-3.
+   Plus structural one-offs: s1_lz3 f466 (vertical-loop-iteration), s2_dez1 f4007 (x_speed
+   sign flip in the DEZ ending), s2_arz2 f523 (object-slot allocation parity).
+
+Recommended targeting order for a future session (each needs a controlled side-by-side):
+family 1 (most traces; pick one object e.g. S1 Obj22/Obj3C and align its solid-contact
+land/air timing), then family 3 (find the on-object jump-angle negation -> likely one fix
+clears htz2+mz2), then family 2 (BizHawk Touch_Loop slot-order trace), then family 4.
+
+
+### 2026-06-20 -- Survey correction: family 3 (htz2/mz2) is a post-jump collision, not a jump-sign bug
+
+Instrumented doJump for htz2: every jump produces correct UPWARD velocity
+(yJumpChange=-1632, jump=0x680, e.g. hexAngle 0xF8/0x08/0x00). So htz2 f1078's
+engine y_speed=+0568 does NOT come from doJump. After the jump (both ROM and engine
+go up ~-0x680), the engine's y_speed flips up->down by ~5 frames in (gravity would
+leave it at -0568, where ROM stays) -- the engine REFLECTS the velocity, i.e. it hits
+a ceiling/object (the HTZ Obj96/97/98 cluster near 0x99x,0x6xx) that ROM does not.
+So family 3 is a post-jump CEILING/OBJECT-collision divergence, object-specific, NOT a
+shared jump-angle sign bug. Reclassify htz2/mz2 under family 1 (object/collision).
+
+Net survey conclusion: every remaining true-frontier divergence is a deep, object- or
+collision-specific parity issue (riding/landing/ceiling timing, touch-phase timing,
+sub-pixel). No clean cluster-4-style shared-cause win remains; cluster 4 was the
+low-hanging fruit. Further advances need per-object controlled side-by-sides (engine
+instrumentation + BizHawk where ROM-side ordering is needed) and carry shared-code
+regression risk -- best done with review, not landed speculatively. Verified deliverable
+this session: the cluster-4 Tails_control_counter fix (commit c80dd4dda).
+
+
+## 2026-06-21 -- Cluster 5 (CPZ1): Spiny spike one-frame-early fix
+
+Root cause (instrumented): the engine's object-execution phase places a freshly spawned
+projectile one frame ahead of ROM at CPU-sidekick touch time. The CMP diagnostic showed
+that during the inline sidekick touch every object has getX()==getPreUpdateX() (objects
+move AFTER touch in LevelFrameStep), so the touch position semantics are correct; the
+Spiny shot itself was one frame ahead (engine end-of-1156 = ROM end-of-1157), hurting the
+co-located CPU Tails at f1157 while ROM hurts at f1158. f855 (a slow ENEMY) matched only
+because a slow object's frame-ahead position still overlaps.
+
+Fix: `SpinyBadnikInstance.fireSpike` spawns the Obj98 spike with one extra init-phase
+stationary frame (initialDelay=1, alongside the existing LoadSubObject defer) so its
+trajectory aligns with ROM `Obj98_SpinyShotFall` (s2.asm:74742) frame-for-frame in the
+engine's object phase. Object-scoped (Spiny only).
+
+Commands:
+`mvn -Dmse=off -Dtrace.frontierOnly=true -Dtest='*TraceReplay' ... test`
+`mvn -Dmse=off -Dtest=TestArchUnitRules,TestRewindCoverageGuard,TestGameplayModeContextRewindRegistry,TestObjectServicesMigrationGuard ... test`
+
+Result (full `*TraceReplay` resweep, vs the cluster-4 baseline):
+- **TestS2CpzLevelSelect: f1157 -> f3365** (tails_x_speed -> tails_x; +2208 frames).
+- REGRESSED: none. The cluster-4 advances (ARZ1 green; MTZ1/HTZ1/MTZ3/CNZ1) all hold.
+- Guards: ArchUnit, RewindCoverageGuard, GameplayModeContextRewindRegistry,
+  ObjectServicesMigrationGuard all pass. (Note: `TestNoServicesInObjectConstructors`
+  fails on HczEndBossBladeSplash/WaterChute -- a PRE-EXISTING develop guard failure from
+  the rewind-refactor commits, not touched by this branch.)
+- CPZ1's new frontier f3365 is a tails_x -1 sub-pixel (family 4) onesie.
+
+
+### 2026-06-21 -- Cluster 5 exhaustion: CPZ1 fixed; remaining members are deep
+
+Investigated every remaining cluster-5 (Tails-movement) frontier with the proven
+instrument->root-cause method. Findings:
+- CPZ1 f1157: FIXED (Spiny spike one-frame realignment, see above) -> f3365.
+- CPZ2 f2888 (tails_x -8): Tails RIDING a moving CNZ-style platform (onObj=0x22);
+  carried position off by 8px. Family 1 (solid-object carry), object-specific.
+- CNZ complete-run f1846 (tails_x_speed -0x1000): engine Tails LAUNCHED ~-0x1000 by a
+  CNZ object (slot 20 @14B8,0770) while ROM Tails CPU-follows calmly (gv 0x24, status
+  0x20). A CNZ-bumper/object-vs-CPU-sidekick interaction; object-specific.
+- OOZ f1782 / MTZ3 f1973 / CNZ2 f4418 / MCZ2 f4485 (tails_x/y +/-1): CPU-follow MICRO-
+  OSCILLATION phase drift -- the engine's Tails follow-speed runs ~0x20 off (tolerated
+  as a warning for many frames) and accumulates to a 1px position error at the frontier.
+  P9 sub-pixel-carry class; needs frame-by-frame sub= tracing of the follow-speed
+  oscillation, no clean object-scoped fix.
+
+Conclusion: cluster 5's one cleanly-fixable trace (CPZ1) is done. The rest, and all of
+cluster 6 (onesies), are deep object-carry / bumper / CPU-follow-sub-pixel / terrain
+issues. Each needs its own multi-step instrument->root-cause->object-scoped-fix->resweep
+loop (the method that landed cluster 4 and CPZ1), and several touch shared sidekick/
+solid code with real regression risk. No further clean wins remain that are safe to land
+without per-issue deep work. Verified deliverables this run: cluster-4 Tails_control_counter
+split (c80dd4dda) and CPZ Spiny spike realignment (da2f0c528); 6 traces improved, zero
+regressions.
+
+
+### 2026-06-21 -- Cluster 5 shared cause found: S2 CPU sidekick missing Status_Push on terrain walls
+
+Three cluster-5 frontiers share ONE root cause (confirmed via context status_byte):
+- OOZ f1782, MTZ3 f1973, MCZ2 f4482/f4485: ROM's CPU Tails has Status_Push (0x20) set
+  while pushing against a terrain wall (stopped, g_speed pinned), but the engine's CPU
+  Tails is MISSING 0x20 and keeps moving past the wall -> tails_x/g_speed drift (+/-1px
+  and small speed deltas). (CNZ2 f4418 is DIFFERENT: engine Tails wrongly rolling, 0x04.)
+
+Location: `CollisionSystem.applyGroundWallVelocityResponse` (lines 338-375) sets
+Status_Push + zeroes g_speed when the predicted-position wall scan returns a NEGATIVE
+distance. The S3K CPU sidekick reaches the penetrating pixel via its per-frame follow
+nudge (loc_13E34 addq.w #1,x_pos; comment CollisionSystem:317-319), so it gets the
+negative distance and the push. The S2 CPU sidekick's follow nudge does NOT drive it to
+the penetrating pixel, so its wall scan returns distance>=0 (no push). Fix direction:
+give the S2 CPU sidekick an equivalent into-wall nudge / penetrating-pixel scan so
+applyGroundWallVelocityResponse fires, matching ROM Tails wall-push.
+
+RISK: this is shared sidekick/collision code. A wrong nudge would regress the sidekick
+traces advanced this run (MTZ1/HTZ1/MTZ3/CNZ1 from the cluster-4 fix, CPZ1 from the spike
+fix). MUST be developed against a full *TraceReplay resweep (keep/revert on the sweep
+result). High leverage (3 traces, one cause) but needs supervised design of the nudge to
+avoid over-pushing; left for a session that can weigh the regression trade-off. This is
+the recommended #1 next cluster-5 target.
+
+
+### 2026-06-21 -- Cluster-5 wall-push: flush-push override ATTEMPTED, regressed, reverted
+
+Attempted the S2 CPU-sidekick flush-wall-push fix: in resolveGroundWallCollision, when
+distance==0 and the sprite is a CPU sidekick (gated via !groundWallPushRequiresFacingIntoWall
+= S1/S2; S1 has no sidekick) on a wall mode (0x40/0xC0), fall through to
+applyGroundWallVelocityResponse (sets Status_Push + zeroes g_speed). Fail-fast on the 3
+target traces:
+- OOZ f1782 -> **REGRESSED to f1644** (tails_g_speed exp 0x000C act 0x0000).
+- MCZ2 f4482 -> **REGRESSED to f1806** (tails_g_speed exp -000C act 0x0000).
+- MTZ3 f1973 -> unchanged (override didn't help).
+Reverted (attempt+verify+revert).
+
+KEY empirical finding: ROM keeps a small g_speed (0x000C) on these frames -- the CPU
+sidekick is CREEPING into the wall while Status_Push is set; it does NOT zero g_speed.
+So the band-aid (force push + g_speed=0 on flush) over-pushes and pins g_speed to 0 a
+frame early. The correct model is the cumulative creep-and-pushback cycle: Tails advances
+its sub-pixel x each frame (g_speed ~0x000C), penetrates the wall by 1px every few frames,
+gets pushed back 1px with Status_Push set, and KEEPS its small g_speed. The engine's
+predicted-position CalcRoomInFront scan can't reproduce this for a sub-pixel follower
+(predicted ~= current at follow speed). Real fix = give the S2 CPU sidekick a ROM-accurate
+post-move wall-sensor push that sets Status_Push WITHOUT zeroing g_speed on the creep
+frames (or align its sub-pixel x_pos phase so the predicted scan naturally penetrates),
+verified against a full resweep. Deep cumulative-phase work; not a safe autonomous band-aid.
+
+
+### 2026-06-21 -- Cluster-5 wall-push: THREE override variants disproven; needs sub-pixel phase alignment
+
+Tried three resolveGroundWallCollision variants for the S2 CPU sidekick (all fail-fast-
+verified on OOZ/MTZ3/MCZ2, all reverted):
+1. distance==0 -> applyGroundWallVelocityResponse (push + zero g_speed): OVER-PUSHED
+   (ROM keeps g_speed ~0x000C creeping); OOZ regressed f1782->f1644.
+2. distance==0 -> setPushing only (no g_speed change): FALSE PUSH at flush seams
+   (ROM status 0x0001/no-push there); OOZ regressed f1782->f1654.
+3. current-position (dx=dy=0) scan -> setPushing on real penetration: NO-OP. The current-
+   position scan returns distance>=0 -- the engine's CPU Tails is FLUSH, not penetrating,
+   even though its pixel tails_x matches ROM. So ROM penetrates by a SUB-PIXEL amount the
+   engine never reaches.
+
+DEFINITIVE CONCLUSION: this is the cumulative CPU-sidekick sub-pixel x_pos PHASE lag
+(same class as the documented S3K AIZ HCZ analysis). The engine's CPU Tails trails ROM by
+a fraction of a pixel, so it sits flush while ROM is 1px penetrating and pushing. No wall-
+scan override can distinguish push-vs-no-push frames because the engine is flush in BOTH.
+The only correct fix is to align the CPU sidekick's sub-pixel x_pos phase with ROM (so its
+wall scan naturally penetrates exactly when ROM does), which needs frame-by-frame x_pos/
+x_sub diffing of the CPU-follow movement chain vs ROM (BizHawk-assisted) and is shared
+sidekick-physics work with cross-trace regression risk -- a supervised, multi-hour effort,
+NOT an autonomously-landable override. This forecloses the override approach entirely.
+
+
+### 2026-06-21 -- OOZ wall-push CORRECTED: push is PHASE-SHIFTED, not missing
+
+Full ROM dump at OOZ resolves the earlier mis-framing. The CPU sidekick's Status_Push
+is NOT simply missing -- it is OUT OF PHASE with ROM by a few frames:
+- f1776: ROM tails status=0x28 (push set), engine 0x08 (no push). Engine LAGS.
+- f1782: ROM tails status=0x09 (push CLEAR), engine 0x29 (push set). Engine LEADS.
+So the engine DOES set/clear the sidekick push (it has it at f1782), but a few frames
+off from ROM. Both characters are standing on OOZ objects here (Tails onObj=0x1D, Sonic
+onObj=0x22), among green platforms (0x33), spikes (0x36), etc.
+
+This DEFINITIVELY explains why all three 'set push on flush wall' override variants
+regressed: the engine already (wrongly) has push at f1782, so forcing more push makes
+it worse, and forcing it at flush seams (f1654) adds false push where ROM has none. The
+bit is not missing; its TIMING is wrong. The fix is sub-pixel / object-interaction phase
+alignment of the CPU sidekick (so its push set/clear lands on ROM's frames), NOT any
+push-setting override. Same cumulative-phase class as the documented S3K AIZ analysis.
+Needs frame-by-frame CPU-sidekick state diffing vs ROM (BizHawk-assisted) and is shared
+sidekick-physics work -- supervised, not an autonomous override. Override approach fully
+foreclosed (4 variants now: push+stop, push-only, current-scan, and this phase-shift
+diagnosis).
+
+
+### 2026-06-21 -- CPZ2 f2888 root cause: carry is correct; follow-steer x_speed is wrong
+
+CPZ2 Tails drifts -8px on a moving platform (engine moves Tails -16/frame where ROM
+moves -8; tails_x_speed=-0800). Traced it: the platform CARRY is correct --
+ObjectSolidContactController:1527-1529 does player.shiftX(currentX - ridingX) (additive
+platform delta), matching ROM MvSonicOnPF (rider.x += platformDelta). The bug is that
+the engine's CPU Tails carries a follow-steer x_speed of -0800 WHILE standing on the
+moving platform, so its own-move (-8) plus the carry (-8) = -16; ROM's Tails has x_speed
+~0 there (carried, not self-propelling) -> net -8. So the fix is in the follow-steer:
+the CPU sidekick must not self-propel at the platform's speed while it is being carried
+by that platform (zero/▼ its follow x_speed when ridingObject is a horizontally-moving
+solid and the leader is co-riding). That lives in the deep SidekickCpuController follow
+logic (regression-prone, TestSidekickCpuFollowParity), so it needs the full-suite +
+parity verification -- not an autonomous quick edit. NOTE for next session: do NOT touch
+the carry (it is ROM-correct); fix the sidekick's self-propel-while-carried x_speed.
+
+
+## 2026-06-21 -- UNIFYING INSIGHT: remaining cluster-5 is ONE object-execution-phase issue
+
+After tracing every cluster-5 member to root cause, they converge on a SINGLE underlying
+cause: the engine's per-frame execution phase does not match ROM's ExecuteObjects slot
+order for the CPU sidekick. ROM runs Sonic (slot 0), then Tails (slot 1), then dynamic
+objects (high slots) in one pass; the engine runs a snapshot -> player/sidekick physics
+-> object-execution sequence (LevelFrameStep) whose phase boundaries land one step off
+ROM for sidekick<->object interactions. Manifestations:
+- CPZ1 (FIXED): freshly-spawned Spiny shot was one object-step ahead at sidekick touch.
+  Fixed object-locally with one init-phase frame -- the per-object instance of this.
+- CPZ2 f2888: the follow-steer computes dx vs the leader at a phase where the leader's
+  slot-order move/carry hasn't/has applied differently than ROM, so Tails self-propels
+  (walks) when ROM's Tails stands (carried) -> double-move. The carry itself is correct.
+- OOZ/MTZ3/MCZ2 wall-push: the sidekick's Status_Push is set/cleared a frame off ROM
+  (lags then leads) because the push-driving collision runs at a different phase.
+- MGZ rings: a ring collected one frame early (same touch-phase).
+
+=> The high-leverage fix is NOT 5 point patches (all proven to regress as overrides);
+it is aligning the CPU sidekick's frame-execution phase with ROM's slot order so its
+follow-steer dx, touch reads, push set/clear, and carry all observe the same
+leader/object state ROM does. That is one architectural change in the sidekick update
+ordering (LevelFrameStep / SpriteManager sidekick tick vs object execution), verified by
+a full *TraceReplay resweep -- it should advance most of cluster 5 at once, but it is
+shared, high-blast-radius work that needs the full-suite + TestSidekickCpuFollowParity
+gate and careful before/after frontier comparison. This is the recommended next-session
+target: fix the phase, not the symptoms.
+
+
+---
+
+## 2026-06-21 -- Full sweep snapshot + cluster-4/5 root confirmed (object<->sidekick one-frame lag)
+
+Worktree: .worktrees/trace-cluster-fixes @ HEAD (bugfix/ai-trace-cluster-fixes,
+12 commits ahead of develop; 2 engine fixes: c80dd4dda sidekick control-counter,
+da2f0c528 CPZ Spiny spike). Both fixes still hold post-sweep -- no regressions.
+
+Command (frontierOnly, forkCount=2, all three ROMs):
+  mvn -Dmse=off -Dtrace.frontierOnly=true -Dtest='*TraceReplay' \
+    -Ds1.rom.path=.. -Ds2.rom.path=.. -Ds3k.rom.path=.. test
+Result: Tests run 90, Failures 53, Errors 1.
+
+Cluster landscape this sweep (clusters 1-3 effectively absent):
+- No frame-0 / BootstrapDivergence failures -> cluster 1 (frame-0 setup) clean.
+- No exact 0x100 speed-delta frontiers -> cluster 3 not represented.
+- Active work is cluster 4 (Tails CPU) + cluster 5 (movement downstream).
+
+CPZ2 (TestS2Cpz2LevelSelect) f2888 tails_x -- DEFINITIVE root cause:
+- Tails is airborne+rolling in a CPZ spin tube (CPZSpinTubeObjectInstance,
+  obj_control=$81, objSup=true). ROM moves Tails exactly x_speed (-8) at f2888;
+  engine moves -16 (one extra -8 tube step), then tracks ROM's -16/+8 tube
+  oscillation in lockstep but 8px to the left. So: a one-time extra tube step
+  for the sidekick, NOT a carry-math bug and NOT a persistent phase slip.
+- Per-frame move/decrement order in updateEntryPath (`duration--; if>=0 move`)
+  matches ROM loc_2271A (`subq.b #1,2(a4); bpl Obj1E_MoveCharacter`) exactly.
+- Only tails_* fields diverge (Sonic clean through the same tube) -> sidekick-
+  specific, not a shared tube off-by-one.
+
+OOZ (TestS2OozLevelSelect) f1782 tails_x -1 -- same family, different object:
+- tails_status_byte transitions one frame off (ROM 0x29->0x09, ENG 0x09->0x29).
+- ROM object slot 0x1D gives Tails a +0x80 x_speed kick at f1782 (Tails moves
+  0CE3->0CE4); engine applies the kick one frame late (x_speed 0 at f1782).
+
+Unifying root (refined): object<->sidekick interactions are consistently one
+frame off for the CPU sidekick, while Sonic<->object interactions are correct.
+LevelFrameStep order is physics(both players) -> objects, matching ROM slot
+order, so the lag is in the sidekick's own state-transition timing within the
+physics phase (status byte / position the interacting object reads), not the
+top-level phase order. Same signature across the cluster-4/5 onesies:
+  tails_x/y off by exactly 1: OOZ f1782, MTZ3 f1973, MCZ2 f4485, CNZ2 f4418,
+  CPZ f3365 (post-spike-fix frontier).
+This is the highest-leverage fix in the suite (one alignment advances ~5+
+traces) but is high-blast-radius: must gate on the full *TraceReplay sweep +
+TestSidekickCpuFollowParity, with before/after frontier comparison, because it
+touches shared sidekick code that many green traces depend on.
+
+## 2026-06-21 -- BizHawk grounding of OOZ f1782 (pushing-jitter limit cycle)
+
+Tool: tools/bizhawk/diag_s2_ooz_tails_push.lua (new; comparison-only per-frame
+ROM dump of Sonic/Tails + nearby objects), run on s2-lvl-select-OOZ.bk2 via
+EmuHawk --chromeless. Frame map: trace f1781 = emu 4554, f1782 = emu 4555
+(bk2_frame_offset 2772, +1).
+
+ROM ground truth around the divergence (Tails standing on slot 0x1D = id 0x36,
+a stationary OOZ solid; Sonic is to the left so the CPU sidekick keeps steering
+left into the solid):
+  emu  status  x_pos.sub     x_speed
+  4549 0x28    0CE3.D600     +36
+  4550 0x08    0CE4.0600     +48
+  4551 0x28    0CE3.8600     -128
+  4552 0x08    0CE4.0600     +128
+  4553 0x08    0CE4.0600       0
+  4554 0x29    0CE3.FA00     -12   (= trace f1781, pushing set)
+  4555 0x09    0CE4.7A00     +128  (= trace f1782, pushing clear + +0x80)
+  4556 0x29    0CE3.7A00       0
+The Status_Push bit (0x20) toggles every frame and x_speed oscillates +/-0x80:
+this is an UNSTABLE solid-contact limit cycle, not a clean one-shot push. The
+engine reproduces the same jitter but one frame out of phase (engine status
+0x09 at f1781, 0x29 at f1782), so the +/-1px / status onesie is a limit-cycle
+PHASE divergence.
+
+Implication: the OOZ/MTZ3/MCZ2/CNZ2 +/-1px sidekick onesies are fragile
+jitter-phase cases -- low cosmetic value, very sensitive to exact intra-frame
+solid-contact ordering, and risky to "fix" (a phase nudge that aligns OOZ can
+flip the phase of another jitter the other way). CPZ2's spin-tube case is the
+cleaner, deterministic target (a one-time extra tube step, engine-side) and is
+the better candidate for an actual landable fix; it needs no BizHawk grounding
+because the trace already carries the ROM truth (Tails moves exactly x_speed
+-8/frame with no extra step).
+
+## 2026-06-21 -- CPZ2 f2888 root: spin-tube-to-spin-tube handoff one frame early
+
+Instrumented the engine (property-gated logging in CPZSpinTubeObjectInstance +
+SidekickCpuController, all reverted) and BizHawk-grounded the ROM side
+(diag_s2_ooz_tails_push.lua extended to dump all id 0x1E tube objects; run on
+s2-lvl-select-CPZ.bk2). Frame map: trace f2888 = emu 11678 (offset ~8790).
+
+Findings:
+- objCtrl on Tails at f2888 is set by the SPIN TUBE (Obj1E,
+  ObjectControlState.nativeBit7FullControl()), not by SidekickCpuController --
+  the CPU controller sees objSup=true and moves Tails 0 px. So CPZ2 is a tube
+  bug, not a follow-steer bug (correcting the earlier eb86b8b5b hypothesis).
+- ROM has TWO spin tubes here: s10 (sub 0x3D, x=0x1000, collisionDistance 0x100,
+  entry range [0x1000,0x1100)) and s35 (far, dx=-912). ROM Tails is owned by
+  s10's main-path mode and moves -8/frame, with a -16/+8 jitter at f2889/f2890
+  that is the s10->second-tube handoff (first tube exits, second captures and
+  snaps to its entry waypoint -- sequential, one tube per character per ROM's
+  single obj_control/interact owner, s2.asm:48447-48457).
+- Engine bug: the first tube's main path and a SECOND tube's checkEntryCollision
+  act on Tails the SAME frame (the engine's first tube hands off one frame early
+  / both overlap), so the second tube re-snaps Tails to its entry waypoint while
+  the first still advances it -> -16 at f2888 vs ROM -8 (one frame early).
+
+Tried fix (REVERTED per net-positive policy): an "obj_control already set ->
+skip checkEntryCollision" guard (model ROM's one-tube-per-character invariant).
+It removed the f2888 double and advanced CPZ2 f2888->f2889 with NO regression to
+CPZ act1 (still f3365). BUT ROM's f2889 -16 is the LEGIT handoff, which the guard
+suppresses (engine then runs smooth -8 and misses it) -- so the +1 was an
+ARTIFICIAL frontier bump masking the true root (handoff one frame early), exactly
+the kind that must be reverted once the real root is patched. Reverted; not
+banked.
+
+True root for a focused follow-up: align the engine's spin-tube main-path
+completion / tube-to-tube handoff timing so the second tube captures one frame
+LATER (matching ROM's sequential exit-then-capture), instead of overlapping the
+first tube's last main-path frame. This is tube-path/handoff timing work in
+CPZSpinTubeObjectInstance (entry/main duration + exit sequencing), not a
+sidekick-physics change.
+
+## 2026-06-21 -- LANDED: CPZ2 spin-tube re-capture timing fix (f2888 -> f2889)
+
+Fix: CPZSpinTubeObjectInstance.checkEntryCollision now reads the player's
+frame-start (pre-physics) centre via getPrePhysicsCentreX/Y when the player is
+already mid-traversal of another tube (isObjectControlled && objSup), instead of
+getCentreX/Y (which the owning tube already advanced this frame). Models ROM
+Obj1E_Main slot ordering (s2.asm:48447-48457): the lower-slot capturing tube runs
+before the owning tube and reads the player's pre-owner-move position, so it does
+not re-capture on the same frame the owner steps the player. Free (not-yet-
+controlled) players still use the current post-physics centre, matching ROM's
+post-player-routine read for an initial capture.
+
+Verification (worktree bugfix/ai-trace-cluster-fixes):
+- Focused: TestS2Cpz2LevelSelectTraceReplay f2888 -> f2889 (tails_x); CPZ act1
+  unchanged at f3365.
+- Full sweep (frontierOnly, forkCount=2, all 3 ROMs): 90 run / 53 fail / 1 err
+  (identical totals to baseline); per-test frontier diff vs baseline shows ONLY
+  CPZ2 moving 2888 -> 2889, every other frontier byte-identical -> net-positive,
+  ZERO regressions.
+- Guards green: TestArchUnitRules, TestRewindCoverageGuard,
+  TestGameplayModeContextRewindRegistry.
+
+This is a genuine deviation fix (the f2888 -16 double-step is eliminated; engine
+now matches ROM -8 at f2888), not an artificial bump: the earlier obj_control
+"skip-capture" guard produced the same +1 by SUPPRESSING the capture forever
+(masking ROM's legit f2889 re-capture) and was reverted; this fix instead DEFERS
+the capture to the ROM frame via slot-order-accurate position basis. Remaining
+CPZ2 frontier f2889 (ROM -16 = owner + second-tube re-capture) is the next link:
+the deferred second-tube capture still does not fire at f2889 -- next target.
+
+## 2026-06-21 -- Cluster 2 (radius/rolling): airborne-rolling y_vel reflection (MZ2 f2578, HTZ2 f1078)
+
+Clustered the 53 failures by signature; highest-leverage non-CPZ cluster is an
+airborne+rolling y_speed SIGN-FLIP shared across games:
+  - TestS1Mz2CompleteRun f2578: y_speed exp -0568, act +0568 (1010 errs cascade)
+  - TestS2Htz2LevelSelect f1078: y_speed exp -0568, act +0568 (1118 errs)
+At both, every other field matches (y, x_speed, g_speed, camera, air=1, rolling=1,
+status=06). Decoded from the MZ2 CSV: ROM 2577 ysp=+0530 -> 2578 applies one
+gravity tick (+0530 -> +0568) then NEGATES (+0568 -> -0568 = 0xFA98). The engine
+applies gravity (->+0568) but does NOT negate -> falls instead of bouncing up.
+This is ROM `neg.w obVelY(a0)` -- the rolling bounce in S1 `React_Monitor`
+(.chkBreakMonitor, docs/s1disasm/_incObj/Sonic ReactToItem.asm:234-238: rolling +
+moving down -> neg y_vel + break) and the analogous S2/badnik reflection paths.
+
+Blocker to landing: the bouncing OBJECT is not identifiable from current data.
+- MZ2 (S1 completerun) has NO aux_state, and the engine's nearby objects at the
+  bounce frame (monitor @0490 is 129px away and only the stale stand_on_obj=0x34
+  reference; lava geysers at x=0380; animals) are NONE within touch range of Sonic
+  at x=040F. So the f2578 reflection is not an obvious nearby object touch.
+- HTZ2's near list has NO monitor (0x26); it has HTZ objects 0x96/0x97/0x98 -- so
+  MZ2 and HTZ2 are likely DIFFERENT objects producing the same value, i.e. a
+  shared CLASS of bug (rolling-airborne y_vel reflection not applied), not one
+  object.
+Next step: BizHawk S1 capture of MZ2 around f2578 (adapt diag lua with S1 RAM
+offsets) to identify which object/routine runs `neg.w obVelY` on Sonic, then port
+the rolling reflection to that engine object's touch/solid response. Engine
+Sonic1MonitorObjectInstance already negates on break (line 199) with
+requiresContinuousTouchCallbacks=true, so for the monitor case the gap would be
+overlap/position, not the bounce code -- pointing at a different object.
+
+## 2026-06-21 -- MZ2 f2578 BizHawk-resolved: missed Caterkiller-head destroy-bounce (head mispositioned)
+
+BizHawk (diag_s1_bounce.lua on s1-complete-run.bk2, MZ2 offset 29079 -> emu
+~31657) shows the y_speed sign-flip at emu f31658 is Sonic destroying a
+CATERKILLER (id 0x78) head from above while rolling: at the flip frame the four
+id=0x78 segments (s37-s3A @0414+,03D8) transition (s37 -> id 0x27 explosion,
+s38-3A -> rtn 0x0A, animal 0x28 spawns) and ROM applies React_Enemy's clean
+`neg.w obVelY` (Sonic above badnik, moving down -> bounce up;
+docs/s1disasm/_incObj/Sonic ReactToItem.asm:299-306). +0530 +gravity 0x38 = 0x568,
+neg -> -0x568. Matches exactly.
+
+Engine bounce code is CORRECT (ObjectTouchResponseController.applyEnemyBounce
+mirrors React_Enemy; Sonic1CaterkillerBadnikInstance head colSize 0x0B = 16x16 =
+ROM). The bug is NOT the bounce: instrumentation (oggf.diag.catbounce /
+oggf.diag.catbounce head log) shows applyEnemyBounce is NEVER called near the
+bounce, and at the bounce frame NO Caterkiller head updates with Sonic at the
+bounce position -- the engine's head is at x~0x047C while ROM's bouncing head is
+at x=0x0414 (~104px / 0x68 to the right). So there is nothing for Sonic to bounce
+off: the engine's Caterkiller HEAD X-POSITION (spawn/walk-cadence) diverges from
+ROM, and the missed React_Enemy bounce is a downstream symptom.
+
+Next: diagnose the Caterkiller head walk/spawn cadence (WALK_VELOCITY -0xC0, MOVE
+16 frames / wait 7, Cat_Head loc_16B02) vs ROM to close the ~0x68 x gap; once the
+head is ROM-positioned, the existing applyEnemyBounce should fire and the f2578
+sign-flip resolves. HTZ2 f1078 shows the same -0568 but with HTZ objects
+0x96/0x97/0x98 (no monitor/caterkiller) -- a sibling case in the same
+rolling-bounce class, to confirm after MZ2.
+
+## 2026-06-21 -- MZ2 f2578 refined: bounce Caterkiller absent (spawn-window/respawn), not movement
+
+Engine instrumentation (oggf.diag.cathead with gameplay frame counter) shows the
+engine's Caterkiller head walks to x~04B8,y03D8 and is DELETED at gameplay frame
+~29807 (trace ~728) when Sonic passes it moving right (px0627, head goes
+off-screen-left). Between trace 728 and the bounce at trace 2578 NO Caterkiller
+head exists in the bounce region (x 0x0380-0x0500, y 0x03C0-0x03F0). When Sonic
+loops back left to px040F at trace 2578, ROM has a Caterkiller at x0414 (persisted
++ walked, or re-spawned from the MZ2 layout on the leftward/return approach) but
+the engine has none -> no head to destroy -> no React_Enemy neg.w obVelY -> the
+y_speed sign-flip.
+
+So the chain is: bounce-code OK -> head mispositioned -> head ABSENT. Root is the
+object spawn-window / respawn lifecycle: the engine permanently deletes the
+Caterkiller on first pass and does not re-present it when Sonic re-approaches the
+layout slot. Likely related to the leftward/backward respawn margin
+(cameraX-128 coarse, cf. the BlueBalls MarkObjGone note) and/or the Caterkiller's
+usesCustomOutOfRangeCheck lifecycle. This is an MZ2-looping-layout
+spawn/persistence investigation, not a rolling-physics fix -- larger than a
+single-frame bisect and only fixes MZ2 (HTZ2 f1078 is a different object in the
+same rolling-bounce class).
+
+Session status: 1 engine fix landed (CPZ2 f2888->f2889, net-positive, 0
+regressions). Clusters remaining are each deep, distinct subsystem bugs (spawn
+windowing, sidekick object-phase, tube handoff). All-green is multi-session.
+
+## 2026-06-21 -- LANDED: S1 vertical-wrap player-Y mask gated to S3K (LZ3 f466 -> f1415)
+
+Root: Camera.applyScreenYWrapValue masked the player's y_pos every frame with
+`& 0x7FF` whenever verticalWrapEnabled (minY<0, e.g. S1 LZ3/SBZ2). But ROM S1/S2
+have NO Screen_Y_wrap_value on the player; their vertical wrap masks Sonic's y_pos
+ONLY in the frame the camera crosses the wrap boundary (ScrollVertical
+SV_BottomBoundary `subi #$7FF+1` / SV_TopBoundary `cmpi #-$100`,
+docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:237-269), which
+Camera.updatePosition already mirrors via the coupled wrapFocusedSpriteYPositionWord
+(lines 264-283). The unconditional per-frame mask wrapped Sonic at y=0x800 long
+before the camera reached the boundary: LZ3 f466 y 0x0807 & 0x7FF = 0x0007.
+
+Fix: gate the per-frame applyScreenYWrapValue player mask on
+PhysicsFeatureSet.useScreenYWrapValueForVisibility (true only for S3K, which DOES
+mask y_pos every frame per sonic3k.asm:21989-21992,26233-26236). The boundary-
+coupled wrap (wrapFocusedSpriteYPositionWord) is untouched, so S1/S2 LZ3/SBZ2
+still wrap correctly at the camera boundary.
+
+Verification (worktree bugfix/ai-trace-cluster-fixes):
+- LZ3 f466 -> f1415 (+949 frames; new frontier is an unrelated angle mismatch).
+- Full *TraceReplay sweep (frontierOnly, forkCount=2, 3 ROMs): 90 run / 53 fail /
+  1 err (totals unchanged); per-test diff shows ONLY LZ3 advancing -- SBZ1/SBZ2/
+  LZ1/LZ2 and ALL S3K (which need the per-frame mask kept) byte-identical. Net-
+  positive, ZERO regressions.
+- Guards green: TestArchUnitRules, TestRewindCoverageGuard, TestPhysicsProfile,
+  TestCollisionModel.
+
+## 2026-06-21 -- Session summary + LZ3 next target
+
+Two engine fixes landed this session (both net-positive, zero regressions, guards
+green, full *TraceReplay sweep verified):
+1. 91dcf3173 CPZ spin-tube re-capture timing (CPZ2 f2888 -> f2889).
+2. cab6937ad S1 vertical-wrap player-Y mask gated to S3K (LZ3 f466 -> f1415, +949).
+
+Fail COUNT still 53 (both advanced frontiers, neither cleared a whole trace yet);
+the vertical-wrap fix also latently unblocks any other LZ/SBZ trace that hits the
+same wrap bug behind an earlier frontier.
+
+LZ3 next frontier f1415: angle exp 0x00C0 act 0x00D0 (delta 0x10), all other
+fields match, Sonic grounded (status=01, air=0) on object 0x2B. A specific LZ
+sloped-object surface-angle divergence -- next target there is object 0x2B's
+surface-angle reporting.
+
+Remaining clusters by depth (for ordering next sessions):
+- Tractable/landable next: LZ3 f1415 (obj 0x2B angle); the "engine speed=0 vs ROM
+  nonzero" S1 group (GHZ1 f2573, GHZ2 f2369, SBZ1 f1925) likely shares a root.
+- Deep/multi-session: MZ2 Caterkiller spawn-window; cluster-4/5 sidekick
+  object-phase (CPZ2 f2889 tube handoff, OOZ jitter, MTZ3/MCZ2/CNZ2 onesies).
+
+## 2026-06-21 -- Re-clustering correction + GHZ "lands one frame early" cluster
+
+Cluster taxonomy mapped to ACTUAL current frontiers (field counts from the
+post-Y-wrap-fix sweep):
+- Cluster 1 (frame-0): EMPTY (no BootstrapDivergence / frame-0 failures).
+- Cluster 2 (radius/rolling wall-probe): NO clean members. The rolling-state
+  divergences are object BOUNCES, not the x_radius wall-probe hypothesis:
+  * AIZ f19089: x/y/g_speed ALL sign-flipped near AIZEndBoss (0x92) = boss-hit
+    bounce (Touch_Enemy_Part2 neg x+y + bossHitNegatesGroundSpeed neg g) not
+    applied by the engine -- a boss bounce, not radius/rolling.
+  * MZ2 f2578 / HTZ2 f1078: rolling-into-badnik bounce (neg y_vel) -- already
+    root-caused (MZ2 = absent Caterkiller; HTZ2 = HTZ object).
+- Cluster 3 (exact 0x100 deltas): no exact-0x100 frontiers observed.
+- Largest real cluster = y_speed (16). A coherent sub-cluster is "engine
+  y_speed=0 / air=0 (landed) vs ROM y_speed>0 / air=1 (still falling)":
+  GHZ1 f2573, GHZ2 f2369 (and likely MHZ f72, CNZ f1691). ROM CSV (GHZ1) shows a
+  normal gravity fall f2567-2573 (y_speed 06A0->07F0) LANDING at f2574; the engine
+  lands ONE FRAME EARLY at f2573 (snaps to floor, air=0, y_speed=0). So the
+  engine's airborne floor sensor reaches the landing surface a frame before ROM.
+  Shared "lands one frame early" root across these falls -> high leverage, but a
+  terrain/object floor-landing-sensor timing investigation (which surface/object,
+  ROM ObjFloorDist/Sonic_DoLevelCollision landing threshold) -- next target.
+- Cluster 4/5 (sidekick tails_x, 10) and cluster 6 (onesies): as before.
+
+Session: 2 engine fixes landed (CPZ2 spin-tube, S1 vertical-wrap), both verified
+net-positive zero-regression. Fail count 53 (frontiers advanced, none cleared a
+whole trace). Remaining frontiers are each deep distinct subsystem bugs;
+all-green is multi-session.
+
+## 2026-06-21 -- GHZ lands-one-frame-early: object-landing-phase timing (threshold matches ROM)
+
+Ran it down: the engine's terrain air-landing threshold already matches ROM
+(CollisionSystem land when floor d1<0, "no threshold check", mirrors S1
+Sonic_FloorDown `tst.w d1 / bpl .return`). And GHZ1/GHZ2 land on OBJECTS
+(stand_on_obj 0x23 / 0x30), not terrain -> the early-land is the object solid-top
+path (ROM Solid_TopBottom: land when penetration d3 in [0,0x10) moving down,
+sub SolidObject.asm:272-318).
+
+Mechanism: at f2573 ROM Sonic y=0206 (still 2px above the object top, d3<0, no
+land) but the ENGINE's Sonic is at y=0209 when the object solid-check runs (3px
+lower) -> already penetrated -> lands a frame early (snaps, air=0, y_speed=0).
+Engine integrated ~10px this frame vs ROM ~7-8px (gravity/subpixel timing) and the
+object solid pass runs after the physics move, so a few px of integration
+difference flips the landing a frame early on a fast fall. Not a clean threshold
+bug -- it's airborne y integration + object-execution-phase timing, shared code,
+high blast radius.
+
+Status this session: 2 engine fixes landed (CPZ2 spin-tube f2888->f2889; S1
+vertical-wrap player-Y gate LZ3 f466->f1415), both full-sweep-verified
+net-positive zero-regression, guards green. The remaining frontiers are each deep
+distinct subsystem bugs (boss bounce, Caterkiller spawn-window, object-landing
+integration timing, sidekick object-phase); none is a one-line threshold fix.
+all-green is multi-session.
+
+## 2026-06-21 -- MAJOR: GHZ landing-early == object SPAWN-WINDOW timing (unifies with MZ2)
+
+Instrumented resolveSlopedContact at the GHZ1 landing (oggf.diag.slopeland). The
+landing MATH matches ROM exactly: object 0x1A (GHZ collapsing ledge, a
+SlopedSolidProvider) -- at Sonic y=0206 the engine computes relY=0 -> LAND, and
+ROM Plat_NoXCheck_AltY computes d0=0 -> land too. So the landing window/offset is
+NOT the bug.
+
+The real reason ROM doesn't land at f2573: the collapsing-ledge OBJECT DOES NOT
+EXIST YET in ROM. BizHawk (diag_s1_bounce) shows slot s23 id=0x1A first appears
+at emu f3362 (= trace ~2574); the engine already has it (resolveSlopedContact runs
+on it at trace 2572). So the engine SPAWNS the ledge ~1-2 frames EARLY, and Sonic
+lands on it a frame before ROM.
+
+This UNIFIES with MZ2: both GHZ (ledge spawns early) and MZ2 (Caterkiller
+absent/mistimed) are OBJECT SPAWN-WINDOW timing divergences, not physics/landing
+bugs. Likely the same root behind several "object early/absent" frontiers.
+
+Fix location: the ObjPosLoad spawn-window / ObjectManager.Placement +
+postCameraPlacementUpdate (ROM cursor (screenposx-128)&0xFF80, 128px chunk
+boundaries). This code is ALREADY ROM-parity-aware and HIGH BLAST RADIUS -- most
+objects spawn correctly, so the discrepancy is a subtle per-object chunk-crossing
+timing case. A safe fix needs per-object ROM chunk-crossing comparison
+(instrument the engine's ledge spawn frame vs ROM emu 3362) + full-sweep gating;
+a blind margin change would net-regress the many correctly-spawning objects.
+
+Session: 2 engine fixes landed (CPZ2 spin-tube, S1 vertical-wrap), both verified
+net-positive zero-regression. Highest-leverage remaining root = object
+spawn-window timing (GHZ + MZ2), next step is its per-object ROM chunk-crossing
+diagnosis.
+
+## 2026-06-21 -- CORRECTION: GHZ early-land is NOT spawn-window; it's object-exec-phase position timing
+
+My prior "spawn-window timing" conclusion (commits 002c7b3da/c10dbcd6d) was WRONG
+-- caused by a measurement error: diag_s1_bounce filtered objects to |dy|<=0x40,
+which hid the GHZ collapsing ledge (id 0x1A @0ED0,0240) while Sonic fell from
+y~01D5 (dy>0x40). Re-running with |dy|<=0xA0 shows the ledge EXISTS the entire
+window (rtn=0x02), so it does NOT spawn late. Same for re-examining MZ2's premise.
+
+Corrected GHZ f2573 root: every landing input matches ROM --
+  - ROM Ledge_SlopeData (8x$20, range $21..$2F x2, 10x$30) index 13 = $23 = 35,
+    identical to the engine SLOPE_DATA[13].
+  - half-width #96/2=$30 (engine PLATFORM_HALF_WIDTH=0x30); obHeight=$13=19
+    (engine yRadius=19); +4 offset and [-16,0]/[0,maxTop2) window both present.
+Yet ROM lands at f3363 (Sonic y=0208) and the engine at f3362 (Sonic y=0206).
+The only consistent explanation: ROM's ledge SlopeObject evaluates Sonic at his
+PRE-MOVEMENT y (f3362 pre-move y=01FF -> d0=+7 -> no land; f3363 pre-move y=0206
+-> d0=0 -> land), while the engine's object-solid pass uses the POST-physics y
+(0206 at f3362 -> d0=0 -> land one frame early). This is the object-execution-
+PHASE / player-position-sampling timing family (same theme as CPZ2 and the
+sidekick onesies), NOT spawn-window.
+
+Caveat: this contradicts the naive S1 order (player slot 0 moves, then objects in
+ExecuteObjects read post-move obY(a1)). Resolving the exact ROM ordering needs
+runtime instrumentation of ExecuteObjects vs the engine's snapshot->physics->
+object phase; a candidate engine fix is to have object-solid LANDING sample the
+player's frame-start (pre-physics) position (cf. the CPZ2 prePhysicsCentre fix),
+but that is high-blast-radius (every object landing) and must be ROM-confirmed +
+full-sweep gated before landing.
+
+## 2026-06-21 -- GHZ runtime hook: ROM lands PENETRATED (one frame later), multi-write
+
+Built tools/bizhawk/diag_s1_ypos_writes.lua (onmemorywrite hook on Sonic y_pos
+0xFFD00C). Around the GHZ collapsing-ledge landing:
+- airborne frames: ONE y_pos write/frame from PC 0x00DC6A (Sonic movement).
+- landing: an EXTRA write from PC 0x007B28 carries Sonic to y=020E (penetrated
+  ~8px below the ledge surface) BEFORE the snap to 0208 (PCs 0x00DC90, 0x008BE4).
+So ROM lands when Sonic has PENETRATED (y=020E), one frame later than the engine,
+which lands at first touch (resolveSlopedContact relY=0 at y=0206).
+
+This contradicts the static [0,16] / [-16,0] landing window (which includes the
+touch frame d0=0), so the true behavior depends on WHICH position the landing
+routine evaluates and the multi-routine sequence (0x007B28 -> 0x00DC90 ->
+0x008BE4). Reconciling it needs: (a) a ROM symbol/address map to identify those
+PCs, and (b) a PC-hook directly on SlopeObject to read d0/obY at the instant it
+runs. Without that, any engine change to the (shared, high-blast-radius)
+object-landing condition is a guess against the static window and likely
+net-regresses, so it is NOT landed.
+
+Net for the session: 2 verified engine fixes (CPZ2 spin-tube, S1 vertical-wrap);
+the highest-leverage root (object-landing/exec-phase position timing, unifying
+GHZ + CPZ2 + sidekick) is now characterized to runtime evidence but blocked on
+ROM symbol mapping for a safe fix.
+
+## 2026-06-21 -- GHZ landing CRACKED to ground truth (built disasm + PC hook); penetration fix attempted+REVERTED
+
+Built docs/s1disasm (build_tools Lua + AS) -> sonic.lst, mapping the y_pos write
+PCs: 0x7B24 move.w d2,obY(a1) / 0x7B28 addq #2,obRoutine(a0) == Plat_NoXCheck_AltY
+landing (snap + bump the ledge routine 2->4). Hooked PC 0x7B02 (after sub.w d1,d0)
+via diag_s1_plat.lua to read d0 each time the GHZ collapsing ledge (id 0x1A)
+evaluates Sonic:
+  f3360 sonicY=01FF d0=8   EXIT(above)
+  f3361 sonicY=0206 d0=0   (range-pass)
+  f3362 sonicY=020E d0=-9  LAND  -> snap 020E + d0 + 3 = 0208 (== ROM trace 2574)
+GROUND TRUTH: ROM lands the ledge when Sonic has PENETRATED (d0=-9, y=020E),
+snapping to 0208 -- NOT at the exact-touch frame (d0=0, y=0206). The engine lands
+at first touch (resolveSlopedContact relY=0 -> snap 0209), one fall-step early.
+
+Attempted fix: resolveSlopedContact minRelY for an AIRBORNE first-landing = 1
+(require penetration) instead of 0 (touch). Result: GHZ1 f2573 -> f2790 (+217),
+but FULL SWEEP went 53->54 failures: it REGRESSED TestS1Mz1TraceReplay (was
+GREEN). Reverted per the net-positive rule (breaking a green trace is a clear
+regression).
+
+Conclusion: "require penetration" is DISPROVEN as the faithful root -- GHZ needs
+land-on-penetration while MZ1 needs land-on-touch, so the real difference must
+DISTINGUISH the two (object type/routine, fall-speed alignment, or object-exec
+phase for the collapsing ledge specifically), not a blanket landing-window change.
+Next step: BizHawk-hook MZ1's landing (same PC 0x7B02 / the relevant object) and
+compare its d0 sequence to GHZ's to find what separates touch-land from
+penetration-land. Tooling is now in place (sonic.lst + diag_s1_plat.lua).
+
+## 2026-06-21 -- Cluster 4 (Tails CPU) characterized: MTZ3 f1973 = sidekick-missing-Status_Push
+
+MTZ3 f1973 tails_x (exp 0x07C9 act 0x07CA): ROM Tails is PUSHING (status 0x21 =
+Status_Push|facing) with x_speed=0, stopped against an MTZ cog (id 0x70, onObj=0x16);
+the engine has Tails NOT pushing (status 0x01) and still moving INTO the cog
+(x_speed 0x01C2). Same root as OOZ f1782 and the documented "S2 CPU sidekick
+missing wall Status_Push" cluster (commits fe1ea186a / 7f9ba2e9f), where 3 override
+variants were tried and reverted (they over-push / regress). So cluster 4 (Tails
+CPU) is NOT a fresh/clean cluster -- it reduces to the same deep object<->sidekick
+push/solid-contact PHASE issue as cluster 5: the CPU sidekick's solid-object side
+contact (Status_Push + velocity stop, ROM SolidObject_LeftRight/StopCharacter) is
+phase-shifted/missing vs ROM. Override-resistant; needs the shared sidekick
+object-execution-phase alignment, same as CPZ2 and the GHZ-landing family.
+
+Cluster summary against ACTUAL frontiers: 1 empty; 2 no clean members (object
+bounces); 3 none; 4 = sidekick-missing-Status_Push (deep, override-resistant);
+5 = object-landing-phase + sidekick (GHZ paradox, CPZ2); 6 = onesies are subsets
+of 4/5. The two highest-leverage roots (object-landing-phase; sidekick
+push/solid-contact phase) are both object-execution-PHASE problems -- the genuine
+unifier -- and neither has a safe net-positive single-frame fix; both need a
+shared phase-alignment with full-sweep gating (high blast radius).
+
+## 2026-06-21 -- GHZ gate-hook: ROM exits Plat at bhi (d0>0) at the touch frame; lands only when penetrated
+
+diag_s1_plat_gate.lua hooks the Plat gates between the range check and the land
+write: PC 0x7B0E (tst f_playerctrl), 0x7B24 (move d2,obY = the land). Result:
+  f=3362 GATE0E sonicY=020E d0=-9 f_playerctrl=0x00 sonicRtn=0x02
+  f=3362 LAND-WRITE sonicY=020E
+-> 0x7B0E and the land write execute ONLY at f3362 (Sonic penetrated, d0=-9), NOT
+at f3361 (Sonic=0206). f_playerctrl=0 and sonicRtn=2 at f3362, so the post-range
+gates do NOT exit; therefore at f3361 ROM exited at the `bhi` (0x7B02) -> ROM's d0
+at f3361 was actually >0 (Sonic still ABOVE the surface), so ROM does not land at
+0206 and lands only once penetrated at 020E.
+
+But the engine computes d0=0 (relY=0) at the SAME Sonic position (0206) and lands
+one frame early. Every formula input matches ROM (Ledge_SlopeData[13]=0x23,
+half-width 0x30, obHeight/yRadius 0x13, +4); yet engine d0=0 vs ROM d0>0 at 0206
+-> a 1px surface/position difference that is GHZ-LEDGE-SPECIFIC (MZ1's sloped
+object has no such error -- the penetration band-aid broke it). So the faithful
+fix is the GHZ collapsing-ledge surface/position being ~1px low vs ROM, NOT a
+blanket touch-vs-penetration window change. The exact 1px source (sub-pixel
+sampling, slope index rounding, or object-exec phase) is below the resolution of
+static disasm + memory/PC/gate hooks; needs sub-pixel-level ROM state capture at
+the SlopeObject heightmap read (0x7AF2-0x7B00) for Sonic's exact x_sub/y_sub.
+
+Tooling now in place: sonic.lst, diag_s1_plat.lua, diag_s1_plat_gate.lua,
+diag_s1_ypos_writes.lua.
+
+## 2026-06-21 -- MGZ rings confirm the unifying root: object-contact detected ONE FRAME EARLY
+
+TestS3kMgzTraceReplay f539 rings exp 10 act 11 (1 error). ROM ring trajectory
+(trace csv): rings stay 0x0A through f539 and become 0x0B at f540 (Sonic x=05B3).
+The engine reaches 0x0B at f539 (Sonic x=05B9). Sonic moves ~6px/frame, so the
+engine collects the SAME ring exactly ONE FRAME (one move) EARLY.
+
+This is NOT a spurious ring, slot, or sidekick-specific bug -- it is the SAME
+object-execution-phase signature already ground-truthed for the GHZ ledge landing
+(engine lands a frame early), CPZ2 spin-tube (re-capture a frame early, fixed via
+prePhysicsCentre), and the sidekick push/solid contact. The engine detects
+object<->player CONTACT one frame before ROM, across object types (ring pickup,
+slope landing, tube capture, side push). Confirmed unifier:
+  ENGINE: snapshot -> physics(player moves) -> objects(detect contact at the
+          POST-physics player position) => contact fires same frame.
+  ROM:    detects the contact effectively one frame later (frame-start / prior
+          position), so the recorded effect appears one frame after the engine's.
+CPZ2 was fixed by reading the player's pre-physics centre for the tube entry
+check; the general fix is to evaluate object<->player contact against the
+frame-start (pre-physics) player position -- BUT the GHZ landing snap then lands
+on the correct FRAME yet 1px off (0209 vs ROM 0208, which snaps from the
+post-physics penetrated y), so a blanket frame-start change is not uniformly
+faithful and the penetration variant regressed green MZ1. The faithful fix is an
+object-execution-phase alignment that matches ROM's contact-evaluation point per
+object family, gated on the full sweep -- architectural, high-leverage (advances
+rings + landings + tube + push at once), multi-session.
+
+Highest-leverage target, now confirmed across 4 object families. Tooling in place:
+sonic.lst, diag_s1_plat.lua, diag_s1_plat_gate.lua, diag_s1_ypos_writes.lua.
+
+## 2026-06-21 -- CORRECTION: MGZ f539 ring frontier was STALE; ROM ring collection matches the engine
+
+Re-ran TestS3kMgzTraceReplay (worktree trace-cluster-fixes, S&K ROM). It does NOT
+fail at f539. It simulates 33271 frames of MGZ physics with no reported
+divergence, then fails at trace frame 33271 with an INPUT ALIGNMENT error:
+  Input alignment error at trace frame 33271: BK2 input=0x0001, trace input=0x0009.
+This is a per-frame check (AbstractTraceReplayTest:513 binder.validateInput) of
+the BK2 movie input vs the recorded physics.csv input column -- a TRACE-DATA
+inconsistency (likely a lag-frame/offset slip), NOT an engine physics bug. So the
+real TestS3kMgzTraceReplay blocker is trace-data alignment at f33271 (regeneration
+or bk2_frame_offset candidate), and MGZ physics is effectively green through
+f33271 -- far past the f539 cited in the prior entry.
+
+The f539 ring report (target/trace-reports/s3k_mgz1_report.json) used in the
+2026-06-21 "MGZ rings confirm unifying root" entry was STALE (an old run), so that
+entry's conclusion is RETRACTED.
+
+ROM ground-truth (skdisasm/sonic3k.asm), ring collection is POST-physics, exactly
+as the engine models it:
+  Obj_Sonic: line 21985 jsr Sonic_Modes (movement: SpeedToPos + DoLevelCollision)
+             line 22022 jsr TouchResponse -> Test_Ring_Collisions (18444).
+Test_Ring_Collisions box (non-attraction, 18465-18476): playerLeft = x_pos-8,
+player width d4=$10; playerTop = y_pos-(y_radius-3), height 2*(y_radius-3); ring
+half d1=6, ring span d6=$C. The engine's RingManager.ringOverlapsPlayer +
+collectStageRings reproduce this exactly (centreX-8 / width 0x10 / yRadius-3 /
+ringWidth 6), and LevelManager.applyTouchResponses runs ring collection
+post-movement. So MGZ ring collection is NOT evidence of an "object contact one
+frame early" phase; at identical player sub-pixel state (both sub=(0700,7600) @
+f539 in the stale report) the boxes are identical. The unifier claim is therefore
+weakened: of the prior "4 families", MGZ is invalid (ROM-confirmed to match the
+engine); GHZ remains a real but DISTINCT ~1px collapsing-ledge surface delta
+(live gate-hook, this session); CPZ2 was a real prePhysicsCentre fix; the sidekick
+push case is unverified. Treat GHZ, CPZ2, and sidekick as independent roots, not
+one phase bug.
+
+Cluster 2 (radius/rolling) also does not map to the wall/push sensor path: the
+engine already uses fixed push=10 (AbstractPlayableSprite.updatePushSensors /
+updatePushSensorYOffset) and CalcRoomInFront uses fixed +-10
+(CollisionSystem.describeCalcRoomInFrontProbe), matching ROM CheckRightWallDist
+addi.w #$A,d3. So the rolling x_radius shrink does NOT widen/narrow the push probe.
+
+## 2026-06-21 -- FULL SWEEP: true frontier table (frontierOnly) + MGZ f539 REINSTATED
+
+Command: mvn -q -Dmse=off -Dtrace.frontierOnly=true "-Dtest=*TraceReplay"
+"-Ds3k.rom.path=..." test  (worktree trace-cluster-fixes @ e4431099a). Result:
+Tests run 90, Failures 53, Errors 1 (S3K HCZ error). This is the TRUE current
+frontier (supersedes stale per-trace reports).
+
+CORRECTION to the prior entry: MGZ f539 rings (exp10/act11) is REAL and IS the
+frontier under frontierOnly. My earlier "stale/retracted" claim was wrong: I had
+run WITHOUT frontierOnly, so the loop ran past f539 (the ring divergence is an
+accumulated release-blocking divergence, not a hard stop) and hit the hard
+fail() input-alignment check at f33271 (AbstractTraceReplayTest:513), which MASKED
+f539. Both are real: f539 = ring divergence (true frontier); f33271 = a separate
+BK2-vs-physics.csv input desync only reached in full-run mode (trace-regen
+candidate). The ROM characterisation stands: ring collection is post-physics and
+the engine box matches Test_Ring_Collisions, so f539 is a ring-position/ring-set
+divergence, NOT an object-exec phase bug.
+
+True frontier table (first-error frame | trace | field):
+  72   MHZ-CR        y_speed exp00E0 act0000
+  291  CNZ(s3k)      x_speed exp0600 act-02D1
+  502  SYZ1-CR       x      exp0223 act022B
+  523  ARZ2-LS       obj_extra_s24_x absent/067F
+  539  MGZ(s3k)      rings  exp10 act11
+  651  SLZ2-CR       g_speed exp1000 act10AE
+  713  FZ-CR         y_speed exp0000 act-0700
+  718  SLZ3-CR       y_speed exp0000 act0610
+  723  SLZ1-CR       x_speed exp0000 act-0200
+  738  MGZ-CR        rings  exp17 act18
+  1068 LZ2-CR        obj_s20_slot 20/25
+  1070 OOZ2-LS       camera_y exp0475 act046F
+  1078 HTZ2-LS       y_speed exp-0568 act0568 (sign flip)
+  1088 SYZ2-CR       x_speed exp02E8 act02F4
+  1095 AIZ-CR        x_sub  exp0000 act0C00
+  1246 GHZ3-CR       y      exp0219 act021A
+  1265 MTZ2-LS       y      exp0464 act0462
+  1267 MTZ-LS        y      exp00AC act00A4
+  1395 SBZ2-CR       obj_s48_slot 48/3B
+  1415 LZ3-CR        angle  exp00C0 act00D0
+  1489 HCZ-CR        y      exp0776 act0775
+  1691 CNZ-LS(s2)    y_speed exp0400 act0000
+  1694 LBZ-CR        air    exp0 act1
+  1702 MZ3-CR        y      exp048C act048B
+  1782 OOZ-LS        tails_x exp0CE4 act0CE3   <- earliest cluster-4 (Tails)
+  1846 CNZ-CR(s3k)   tails_x_speed exp0024 act-1000  <- severe Tails-CPU
+  1925 SBZ1-CR       g_speed exp0556 act0000
+  1973 MTZ3-LS       tails_x exp07C9 act07CA
+  2089 MZ1-CR        camera_y exp02BE act02C4
+  2369 GHZ2-CR       y_speed exp0668 act0000
+  2573 GHZ1-CR       y_speed exp07F0 act0000
+  2578 MZ2-CR        y_speed exp-0568 act0568 (sign flip)
+  2889 CPZ2-LS       tails_x exp10E8 act10F0
+  3116 ICZ-CR        status_byte exp0008 act0009
+  3365 CPZ-LS        tails_x exp24AB act24AA
+  3468 SYZ3-CR       x      exp0CC5 act0CC4
+  4007 DEZ-LS        x_speed exp-01F3 act01F3 (sign flip)
+  4418 CNZ2-LS       tails_y exp02F0 act02F1
+  4485 MCZ2-LS       tails_x exp0EAB act0EAC
+  5745 LZ1-CR        camera_y exp028E act028C
+  6114 HTZ-LS        air    exp1 act0
+  19089 AIZ(s3k)     g_speed exp-00B0 act00B0 (sign flip)
+(plus a few not listed by the grep; 53 total.)
+
+Cluster mapping vs the goal's signatures:
+  1 frame-0 setup:        empty (earliest is f72, not frame-0).
+  2 radius/rolling:       no engine deviation in push/wall path (push=10 / +-10
+                          already match ROM CheckRightWallDist); hypothesis does
+                          not map to a fixable bug.
+  3 exact 0x100 deltas:   none (no first-error speed diff is exactly 0x100).
+  4 Tails CPU:            tails_* set; earliest OOZ-LS f1782 (1px), severe
+                          CNZ-CR(s3k) f1846 tails_x_speed -1000.
+  5 downstream of Tails:  velocity sign-flips HTZ2/MZ2 -0568->+0568, DEZ, AIZ.
+  6 onesies:              the single-error 1px/slot traces.
+Next actionable target (clusters 1-3 have no fixable deviation): cluster 4,
+earliest trace OOZ-LS f1782 tails_x.
+
+## 2026-06-21 -- CLUSTER 4 root (instrumented): sidekick object-contact PUSH is one frame late
+
+Earliest cluster-4 trace OOZ-LS f1782 (tails_x exp0CE4 act0CE3). Instrumented
+SidekickCpuController.updateNormal (throwaway, reverted) logging Tails push state
+keyed by centreX around 0x0CE3:
+  ... cx=0CE4 push=false xspd=-192      (Tails moving left toward contact)
+      cx=0CE3 push=TRUE  xspd=0  gw=false   (contact: push set, xspd zeroed)
+      cx=0CE3 push=false xspd=+12 grace=16  (push cleared, rebounds right)
+Trace (end-of-frame): ROM push SET @f1781 (status 0x29) / CLEAR @f1782 (0x09);
+ENGINE CLEAR @f1781 (0x09) / SET @f1782 (0x29). The push bit -- and the whole
+wall/object rebound -- is exactly ONE FRAME LATE in the engine. gw=false means the
+push is NOT from terrain ground-wall collision; Tails is in solid-object contact
+(OOZ popping platform id 0x33, "near s24 0x33 OOZPoppingPform"). So this is the
+object<->sidekick SOLID-CONTACT execution phase: the engine sets the sidekick's
+Status_Push one frame after ROM. That one-frame lag inverts the CPU follow-steering
+skip decision (loc_13DD0 btst #Status_Push branch) on the contact and rebound
+frames, so Tails accelerates on the wrong frame (ROM rebound +0x80 vs engine +0x0C)
+and lands 1px behind.
+
+This is the SAME object-execution-phase family already seen for the player
+(CPZ2 tube, fixed via prePhysicsCentre); it now explains the cluster-4 onesies,
+which are predominantly 1px tails_x/tails_y (CPZ f3365, MCZ2 f4485, CNZ2 f4418,
+MTZ3 f1973) -- all consistent with a one-frame sidekick contact-phase lag. The fix
+is to align the sidekick's solid-object-contact (push/rebound) evaluation phase
+with ROM, the architectural object-exec-phase alignment (high blast radius across
+the fragile SidekickCpuController + the non-must-keep-green TestSidekickCpuFollowParity
+suite); a blind edit risks regressing currently-green sidekick traces and must be
+gated on the full sweep + the parity suite. Baseline for that gating: 53 failures
+(this session's sweep).
+
+## 2026-06-21 -- CLUSTER 4 bisected to exact code paths (OOZ-LS f1782)
+
+Instrumented setPushing on the CPU sidekick (throwaway, reverted). In the f1781/f1782
+window the Tails push bit is driven by exactly two sites, every frame:
+  SET   : ObjectSolidContactController.processInlineObjectForPlayer  (step 4, object
+          exec, inline solid contact) -- fires at Tails centre (0CE3,0574).
+  CLEAR : PlayableSpriteMovement.updatePushingOnDirectionChange      (step 2,
+          handleMovement, on a grounded facing flip).
+Per-frame order (S2/S3K inline, LevelFrameStep:134-152): step2 physics (clear) then
+step4 objects (set). End-of-frame push = whether step4's contact fired.
+
+ROM sets push @f1781; engine's contact fires @f1782 -- one frame late -- although
+Tails is at the SAME position (0CE3) both frames. Findings:
+ - The player-position reference in processInlineObjectForPlayer is getCentreX/Y
+   (current/post-physics) = ROM-accurate (the contact already uses post-move pos).
+ - updatePushingOnDirectionChange is ROM-cited and correct (s2.asm MoveLeft/MoveRight
+   36569/39541 + animation prev_anim clear 38033/40879; sonic3k 27814/29359).
+ - Therefore the one-frame lateness is the CONTACTED OBJECT's sampled state at
+   contact-evaluation time being one frame behind ROM -- the object-execution-phase,
+   in SHARED collision/object-exec code (processInlineObjectForPlayer serves the
+   player too, and player traces pass). A blunt phase shift regresses green traces
+   (proven earlier: GHZ penetration variant regressed MZ1).
+
+Conclusion: cluster 4's earliest trace is bisected to a single mechanism (object
+side-contact fires one frame late -> push one frame late -> CPU follow-nudge
+inverted -> 1px tails_x). A correct fix needs the exact contacted object's f1781
+state captured from ROM (BizHawk) and a targeted phase alignment gated on the full
+sweep + TestSidekickCpuFollowParity; it is not a safe single-turn edit to shared
+collision code. Baseline for gating: 53 failures.
+
+## 2026-06-21 -- CLUSTER 4 ROM capture (OOZ-LS f1782): sub-frame push-oscillation phase
+
+BizHawk capture (diag_s2_ooz_pform.lua, OOZ-LS BK2). Mapping by status/xv signature:
+BK2 4554 = trace 1781, BK2 4555 = trace 1782 (effective offset 2773). ROM ground truth:
+  t1780(4553): tails x=0CE4 st=08(push n) xv=0000
+  t1781(4554): tails x=0CE3 st=29(push Y) xv=FFF4   pform slot30 x=0CC0 y=0570 dx=35
+  t1782(4555): tails x=0CE4 st=09(push n) xv=0080   pform slot30 x=0CC0 y=0570 dx=36
+The contacted object is popping-platform slot30 at a CONSTANT y=0570 (the oscillating
+slot28 is not the contact). dx=35 == solid half-width 0x23 exactly. ROM: Tails hunts
+0CE3<->0CE4 every frame (CPU follow-nudge toward Sonic@0CE4 vs platform edge-push back
+to 0CE3); push is SET at dx=35 (0CE3, moving left INTO the platform, xv<0) and CLEAR at
+dx=36 (0CE4). ROM even flips facing at t1781 (st 08->29) yet KEEPS push, because the
+platform slot runs after Tails' move and re-sets push that same frame.
+
+Engine vs ROM: the engine runs the SAME oscillation ONE FRAME OUT OF PHASE. At t1781
+(0CE3, dx=35) the engine's processInlineObjectForPlayer does NOT re-set push after
+updatePushingOnDirectionChange cleared it on the facing flip (end-of-frame push clear);
+at t1782 (still 0CE3) it does. So the engine's side-contact at the EXACT dx=35 boundary
+registers one frame late, shifting the whole follow<->push oscillation by a frame ->
+1px tails_x at f1782.
+
+Conclusion (ground-truthed, not speculative): OOZ-LS f1782 is a sub-frame phase offset
+in the tight CPU-follow <-> platform-edge-push feedback loop at an exact 1px contact
+boundary (dx == half-width). It is NOT a constant/threshold/zone bug; any change to the
+side-contact registration phase or the dx boundary would shift every other side-contact
+(shared collision code; player passes). No safe, isolated net-positive fix exists for
+this onesie at static/instrumentation resolution; it is gated behind the same
+object-contact-execution-phase alignment as the rest of cluster 4/5/6. Tooling added:
+tools/bizhawk/diag_s2_ooz_pform.lua.
+
+## 2026-06-21 -- CLUSTER 4 fix ATTEMPT + full sweep (net-negative, REVERTED)
+
+Hypothesis from the OOZ-LS f1782 ROM capture: the contact is at dx == solid
+half-width exactly; ROM Obj33 uses SolidObject (s2.asm:49222-49460 jsrto
+JmpTo3_SolidObject) whose SolidObject_cont rejects with bhi (strictly-greater) =
+INCLUSIVE right edge, while the engine default usesInclusiveRightEdge()=false uses
+relX >= 2*halfWidth (EXCLUSIVE), dropping the exact-edge side contact.
+
+Fix attempted: OOZPoppingPlatformObjectInstance.usesInclusiveRightEdge() -> true.
+Full sweep (frontierOnly, all *TraceReplay): Tests run 90, Failures 53 (unchanged).
+Frontier diff vs baseline -- exactly ONE change:
+  TestS2OozLevelSelectTraceReplay 1782 tails_x  ->  1251 tails_status_byte
+i.e. OOZ-LS REGRESSED (1782 -> 1251); nothing cleared or advanced. At f1251 the
+inclusive edge turns a CORNER ride contact (ROM status 0x0B = OnObj) into a
+side-push (engine 0x23 = Push). So the inclusive right edge is genuinely
+ROM-accurate for the pure side case (f1782) but exposes a separate corner
+ride-vs-push resolution bug at f1251 -- the change is net-negative on its own.
+REVERTED per the net-positive rule (an isolated edge fix that artificially shifts
+one boundary while breaking the corner is exactly the "artificial bump" to avoid).
+
+Lesson: the OOZ side-contact frontier needs BOTH the inclusive right edge AND
+corner ride-vs-push parity (prefer top/ride over side/push at relX==2*halfWidth,
+matching SolidObject_cont's d3/d2 ordering) landed together; neither half is
+net-positive alone. Two-part fix deferred. Baseline restored: 53 failures.
+
+## 2026-06-21 -- Grind cycle 2 (MHZ-CR f72) + object-contact-phase consolidation
+
+MHZ-CR f72: ROM player air=1 rolling=1 status=06 onObj=00 y_speed=+00E0 (rolled off
+the mushroom, airborne, falling); ENGINE air=0 rolling=0 status=08 riding the
+MHZMushroomCap (slot4 0x23) y_speed=0. Hypothesis: engine over-retains the rider via
+the default 16px sticky-contact buffer (mushroom carriesRiderOnHorizontalMove=false,
+ROM uses non-sticky SolidObjectTop). Fix attempted: MhzMushroomCap
+usesStickyContactBuffer()->false. Focused MHZ-CR run: NO CHANGE (still f72 y_speed
+exp00E0 act0000). Hypothesis disproved -> the riding is NOT sticky retention; the
+engine genuinely registers/keeps the mushroom contact at f72 where ROM has onObj=00.
+Reverted (neutral, unverified).
+
+Consolidation: MHZ-CR f72 is the SAME object-contact-execution-phase root already
+established for OOZ-LS f1782 (engine push one frame late) and OOZ ring f539 -- the
+engine's object<->player contact registration is one frame out of phase with ROM,
+which here keeps the player on the mushroom (blocking the roll-off ROM performs).
+That makes the shared object-contact-resolution / execution-phase the unifying root
+across the contact-driven cluster-4/5/6 traces; fixing it is the single
+highest-leverage move but it lives in shared collision code (resolveContact /
+processInlineObjectForPlayer / the step-2-vs-step-4 ordering) where blunt changes
+regress green traces (proven: OOZ inclusive-edge 1782->1251; GHZ penetration->MZ1).
+
+Two grind cycles executed this session (OOZ inclusive-edge: net-negative, reverted;
+MHZ sticky: neutral, reverted), both full-/focused-sweep measured. Baseline: 53.
+
+## 2026-06-21 -- Grind cycle 4 (GHZ collapsing-ledge heightmap) net-negative, REVERTED
+
+Static ROM comparison: engine Sonic1CollapsingLedgeObjectInstance.SLOPE_DATA tops out
+at $30 (two $30 in row5 + eight $30 row6, 48 bytes); ROM Ledge_SlopeData (sonic.lst
+:33121 / label 0x8BEE) is dcb 4*2,$20 + range $21,$2F,+1,2 and STOPS at $2F,$2F (max
+$2F, 38 bytes). Surface = obY - slopeHeight (sonic.lst:33129-33130), so the engine's
+$30 places the ledge top 1px higher than ROM. Fix attempted: cap SLOPE_DATA at $2F
+(indices 38-47 -> $2F). Full sweep (90 tests): 53 failures unchanged; frontier diff =
+ONE change: TestS1Ghz3CompleteRunTraceReplay REGRESSED 1246 -> 564. Net-negative,
+REVERTED.
+
+Lesson: the $30 entries are load-bearing for GHZ3 f564 -- the engine's index calc
+(playerX-objX+$30)/2 reaches indices 38-47 where ROM's 38-byte table does not, so ROM
+must clamp the index or use a narrower ledge x-range. The engine padded with $30 to
+cover that range; capping to $2F drops the ledge surface 1px there and breaks GHZ3.
+So this is ANOTHER coupled multi-part issue (heightmap values + index-range/clamp
+geometry must match ROM together), not a one-line data fix. GHZ1-CR f2573 / GHZ2-CR
+f2369 are NOT the collapsing ledge (unchanged by this edit) -- they land on something
+else.
+
+Four measured fix cycles this session, all reverted per net-positive:
+OOZ inclusive-edge (net-neg 1782->1251), MHZ sticky (neutral), MHZ rolling-landing
+(= GHZ-regression-prone root), GHZ ledge heightmap (net-neg GHZ3 1246->564).
+Baseline: 53.
+
+## 2026-06-21 -- Cluster-4 dramatic trace root: CNZ-CR f1846 = hover fan not solid
+
+CNZ-CR f1846 (tails_x_speed exp0024 act-1000): ROM Tails is ON the CNZ Hover Fan
+(onObj=04, status 0x20 Push, x_speed 0x24 -- riding it). Engine: the fan
+(CnzHoverFanInstance id 0x46, subtype 0x00 -> activeVariant=false) does NOT implement
+SolidObjectProvider, so Tails has no standable surface, falls off, and ends at
+x_speed=-1000. Root = CNZ hover fan missing solidity for the sidekick to stand on
+(needs verifying ROM Obj $46 calls SolidObject and porting its solid shape + the
+sidekick riding path). Non-trivial object change; another coupled multi-part fix.
+
+Eighth deep root confirmed this session (OOZ ring box, OOZ push phase, GHZ ledge
+heightmap+index, MHZ mushroom landing-phase, sign-flip angle, ARZ2 slot-alloc, CNZ
+hover-fan solidity). Every cluster-4/5/6 representative is a coupled multi-part bug
+in shared or object code; four full fix->sweep->revert cycles all net-negative/neutral.
+Baseline: 53.
+
+## 2026-06-21 -- CORRECTION: CNZ-CR f1846 fan root is NOT solidity (deeper)
+
+The prior entry's "make the hover fan solid" hypothesis is RETRACTED on inspection.
+Engine CnzHoverFanInstance.tryCapture does a VERTICAL lift and sets gSpeed=1
+(line 151), not a -$1000 blow, and does not implement solidity. ROM sub_31F62 (the
+fan core) sets ground_vel=$1000 -- a HORIZONTAL blow gated to a blow-zone ($A0 x $40).
+So: (a) the engine fan is not solid AND does not emit -$1000; (b) Tails' g_speed=-$1000
+in the engine comes from some OTHER source (not this fan); (c) the engine fan models a
+vertical hover/lift while ROM sub_31F62 models a horizontal $1000 blow -- the two fan
+behaviors themselves diverge. ROM Tails at f1846 is on the fan (onObj=04) with
+g_speed=0x24 (NOT blown -- outside the blow zone). The engine's Tails is not on the
+fan and has g_speed=-$1000 from elsewhere. Root is unresolved and multi-part; needs
+engine-side instrumentation of what sets Tails g_speed=-$1000, plus reconciling the
+engine lift-fan vs ROM blow-fan behaviors. Another coupled/uncertain root, not a clean
+solidity add.
+
+Net for the session: 8 roots investigated, EVERY one deep/coupled (and two -- GHZ
+heightmap, CNZ fan -- had initial hypotheses disproved on deeper inspection); 4 full
+fix->sweep->revert cycles, all net-negative/neutral. No clean surviving single-turn
+fix exists. Baseline: 53.
+
+## 2026-06-21 -- CNZ-CR f1846 REAL root (instrumented): horizontal spring launches 1 frame early
+
+setGSpeed instrumentation (throwaway, reverted) on the CPU sidekick at cx~14AD:
+  [GSDBG] cx=14AD gSpeed 0 -> -4096 via Sonic3kSpringObjectInstance.applyHorizontalSpring
+          <- onSolidContact <- resolveCheckpointForPlayer <- ... <- executeObjectWithSolidContext
+So the -$1000 is a HORIZONTAL SPRING launch, NOT the hover fan (fan hypothesis fully
+retracted). The engine launches Tails off the spring at f1846 (first touchSide frame);
+the trace shows ROM launches at f1847 (both tails_x_speed=-1000 there), with ROM at
+f1846 still PUSHING the spring (Status_Push 0x20, g_speed 0x24). ROM Obj_Spring sets
+Status_Push on the side-contact frame and only launches the FOLLOWING frame once push
+is established (cf. the existing line-597 comment citing bset #Status_Push at
+sonic3k.asm:41488-41495). The engine's Sonic3kSpringObjectInstance.onSolidContact
+launches on the FIRST contact.touchSide() frame -> one frame early.
+
+This is the SAME object-contact-execution-phase root now confirmed on a FIFTH object
+type (spring), alongside OOZ push (side-contact), OOZ ring, MHZ landing, GHZ ledge:
+the engine registers/acts on object<->player contact one frame before ROM. The fix is
+to gate the horizontal-spring launch on an ESTABLISHED push (contact persisted one
+frame), modelling ROM's bset-Status_Push-then-launch. That is shared spring code
+(all horizontal springs) and needs per-frame contact-state tracking + full-sweep
+gating; not attempted as a blind edit (high regression risk like the prior four).
+Baseline: 53.
+
+## 2026-06-21 -- Grind cycle 5 (horizontal spring defer-launch) NET-NEGATIVE, REVERTED + UNIFIER DISPROVEN
+
+Hypothesis: the object-contact-phase unifier (engine acts on contact one frame early)
+means horizontal springs should launch on the established-push frame (N+1), not first
+contact (N). Fix: Sonic3kSpringObjectInstance horizontal onSolidContact defers launch
+to the 2nd consecutive side-contact frame (tracked per player). Full sweep: Failures
+53 -> 57 (+4). Frontier diff:
+  AIZ(s3k)  19089 g_speed      -> 2919 tails_x_speed   (REGRESSED)
+  HCZ-CR    1489  y            -> 631  tails_x_speed    (REGRESSED)
+  ICZ-CR    3116  status_byte  -> 1646 camera_x         (REGRESSED)
+  CNZ-CR    1846  tails_x_speed-> 1846 tails_x          (same frame, field changed; NOT advanced)
+REVERTED.
+
+IMPORTANT -- this DISPROVES the "object-contact-phase unifier": horizontal springs in
+AIZ/HCZ/ICZ launch IMMEDIATELY (correctly) in the engine; deferring by one frame breaks
+them. So spring contact timing is NOT uniformly one-frame-early, and there is NO single
+architectural contact-phase fix that helps all contact traces -- each trace's contact
+timing is context-specific. Furthermore CNZ-CR f1846's spring launch is a DOWNSTREAM
+symptom: with the launch deferred, Tails is STILL 16px off ROM at f1846 (exp14B5
+act14A5), so the real CNZ-CR divergence is an upstream Tails POSITION error, not the
+spring trigger. The earlier "5 object types confirm one unifier" framing is RETRACTED:
+the contact-phase manifests differently per object/trace and is coupled to upstream
+position. Five measured fix cycles, all reverted; the architectural single-fix path is
+disproven. Baseline restored: 53.
+
+## 2026-06-21 -- Sign-flip cluster (MZ2/HTZ2 y_speed -0568/+0568) is a MISSED LAUNCH, not a sign error
+
+setYSpeed instrumentation (throwaway, reverted) on the main player at MZ2 f2578:
+  [YSDBG] angle=00 ySpeed 1328 -> 1384 via PlayableSpriteMovement.applyGravity
+          <- doObjectMoveAndFall <- modeAirborne <- handleMovement
+So the engine's +0568 (1384) is plain GRAVITY accumulation -- the player is falling.
+ROM has y_speed=-0568 (moving UP). exp-0568/act+0568 is therefore NOT a sign-flip of
+one event: ROM LAUNCHES the player upward at f2578 (spring/bounce/reflection) and the
+engine MISSES the launch, continuing to fall under gravity (the equal magnitude is
+coincidental). HTZ2 f1078 (identical -0568/+0568, rolling-airborne) is the same class:
+a missed upward object-launch. So the "exact sign-flip" cluster collapses into the
+object-contact / missed-launch family, NOT an isolated sign fix -- consistent with the
+other 8 roots. Ninth root investigated; all converge on coupled object-contact/landing/
+launch behaviour in shared code. No isolated single-turn fix. Baseline: 53.
+
+## 2026-06-21 -- CNZ short f291 root: bumper bounce is correct-formula but timing-hypersensitive
+
+Investigated (post-goal-clear) the s3k CNZ short f291 frontier (x_speed exp0600
+act-02D1, y_speed exp01F8 act-0666). The player bounces off an orbiting CNZ Bumper
+(Obj 0x4A, the s14 bumper, origin 03E8,0630, sub=2B). Findings (instrumented engine
+applyBounce, throwaway/reverted):
+  engine: bumper orbited to (03CE,066A); player (03C3,0653); dx=11 dy=23; angle=2F;
+          -> vel=(-721,-1638)=(-02D1,-0666)  [matches the trace's actual]
+ROM sub_32F56 and the orbit loc_32E7E were read from skdisasm: the engine's bounce
+formula (angle=GetArcTan(bumper-player), x_vel=cos*-0x700>>8, y_vel=sin*-0x700>>8,
++framePerturb from LFC high byte) and orbit (cos/sin of subtype+LFC_low, asr #2 =
+/4, 64px radius) BOTH match ROM exactly. So the divergence is NOT the formula.
+
+Root: at f291 the player contacts the bumper almost dead-center (dx=11, dy=23), so
+the bounce angle is HYPERSENSITIVE -- a few-px difference in the bumper's orbit
+position flips the bounce direction (engine left-up vs ROM right-down). The bumper
+orbits every frame, so the bounce depends on the bumper's orbit-position-vs-bounce
+TIMING (object-execution phase) being pixel-exact vs ROM. This is the same
+object-execution-phase/timing family as OOZ push, MHZ landing, the sign-flip
+launches, etc. -- NOT a clean isolated object fix. Pinning whether the orbit is
+off-by-N (fixable) vs sub-pixel-hypersensitive needs a ROM capture of the bumper's
+exact x_pos/y_pos at f291 (S3K object offsets + S&K-half address of sub_32F56).
+Tenth root; all converge on object-execution timing. Baseline: 53.
+
+## 2026-06-21 -- PLAN M1 attempt (OOZ f1782 queue head): paired inclusive-edge + rider-exclusion, NET-NEG, REVERTED
+
+Executing the object-execution-phase plan, M1 = queue head OOZ-LS f1782 (tails_x
+exp0CE4 act0CE3: Tails misses Status_Push at f1781 because the side-contact with the
+popping platform registers one frame late; the CPU follow-nudge then fails to advance
+Tails to 0CE4). Paired fix attempted per the plan (side-contact family):
+  (a) OOZPoppingPlatformObjectInstance.usesInclusiveRightEdge()=true (ROM Obj33
+      SolidObject_cont uses bhi = inclusive right edge);
+  (b) ObjectSolidContactController.resolveContact: apply the inclusive edge to NEW
+      contacts only (effectiveInclusiveRightEdge = inclusiveRightEdge && !ridingThisPiece),
+      so a rider is not spuriously side-pushed at the edge.
+Focused result: OOZ-LS STILL regressed 1782 -> 1251 (tails_status_byte exp0x0B OnObj
+act0x23 Push). The rider-exclusion did NOT fire: at f1251 the engine's
+isRidingCurrentPlayerObject is FALSE even though ROM has Status_OnObj set. So f1251 is
+a deeper OnObj/riding-STATE divergence -- the engine has not established the riding
+state that ROM has, so the inclusive edge classifies a should-be-rider as a fresh
+side-push. REVERTED (net-negative).
+
+Conclusion: OOZ f1782 is triple-coupled (push-timing -> inclusive-edge -> f1251
+OnObj/riding-state-vs-contact-timing). It cannot be cleared until the riding-state
+establishment timing at the platform edge matches ROM (the engine sets Status_OnObj a
+frame later / loses it near the edge). That OnObj-state-timing is itself a
+Family-B/landing-phase root and must be fixed first. M1 target is therefore blocked on
+a prerequisite root, not irreducible. Baseline restored: 53 (this worktree) / 52+1
+(Agent Quick State).
+
+## 2026-06-21 -- PLAN M1 (OOZ f1782) THREE variants all net-neg; blocked on sub-pixel Tails position at f1251
+
+Continued M1 on the queue head OOZ-LS f1782. Three paired inclusive-edge variants, all
+regress OOZ-LS 1782 -> 1251 (tails_status_byte exp0x0B OnObj act0x23 Push):
+  v1 plain inclusiveRightEdge=true                       -> f1251
+  v2 + rider-exclusion via isRidingCurrentPlayerObject   -> f1251 (riding map misses sidekick)
+  v3 + rider-exclusion via getOnObjectAtFrameStart       -> f1251 (Tails not OnObj at frame start either)
+Root of the f1251 regression: at f1251 Tails is LANDING this frame (new contact, not
+OnObj at frame start). ROM resolves the corner as a TOP landing (OnObj); the engine
+resolves it as a SIDE push because, with the inclusive edge, Tails sits at the EXACT
+right edge (relX==width2 -> d5=0 -> SolidObject_cont LeftRight) whereas ROM's Tails is
+1px INSIDE (d5>0 -> TopBottom/land). So the top-vs-side outcome hinges on a 1px Tails
+position difference at the corner -- sub-pixel hypersensitive, like the CNZ bumper. No
+edge-classification or rider-gate fixes it; it needs the sidekick's exact sub-pixel
+position at the platform corner to match ROM, which is a downstream-of-Tails-CPU
+sub-pixel root. REVERTED (net-negative).
+
+Plan status: M0 done (baseline 53/52+1). M1 (queue head OOZ f1782) is BLOCKED on a
+sub-pixel Tails-position hypersensitivity at f1251 -- not clearable by the side-contact
+family mechanics alone. Eight distinct fix attempts this session, zero net-positive
+landings: the frontier set is predominantly sub-pixel-hypersensitive / multi-root
+coupled. Completion is a sustained multi-session effort; each target needs its exact
+sub-pixel ROM state pinned (BizHawk) and frequently a prerequisite root fixed first.
+
+## 2026-06-21 -- PLAN M1 OOZ f1782 v4 (dy-driven inclusive edge) net-neg; queue head is SUB-PIXEL-IRREDUCIBLE
+
+v4: OOZ usesInclusiveRightEdge=true, but clamp relX==width2 -> width2-1 so the
+top-vs-side (d5/d1) decision is dy-driven (instead of v1-v3's forced d5=0 side).
+Result: f1251 landing regression GONE, but OOZ-LS regressed to f1235 (x exp08E3
+act08E4, main player 1px). Cause: ROM uses the zero-distance side (d5=0) at the exact
+edge -> correct push-out distance for genuine side contacts (f1235, f1782); clamping to
+d5=1 corrupts that distance by 1px. So the two needs are mutually exclusive under any
+clamp:
+  keep relX==width2 (d5=0)  -> correct side distance, but forces side at the edge -> f1251 landing breaks
+  clamp to width2-1 (d5=1)  -> dy decides top/side (fixes f1251) -> wrong side distance -> f1235 breaks
+Both only because the ENGINE's player sub-pixel x at the platform edge differs from ROM
+by <1px. That is the irreducible root. REVERTED.
+
+CONCLUSION (4 variants v1-v4): OOZ f1782 is SUB-PIXEL-IRREDUCIBLE via the side-contact
+family. It is blocked on the player/sidekick exact sub-pixel x at the platform right
+edge (a downstream-of-physics / downstream-of-Tails-CPU position root), not on
+edge-classification. Per the plan risk table ("some frontiers may be sub-pixel
+-irreducible; accept advanced-not-cleared, document, move on") this queue head cannot be
+cleared by Family-B mechanics alone; it needs the upstream sub-pixel position root
+fixed first. Nine fix attempts this session, zero net-positive landings -- the frontier
+set is dominated by sub-pixel-hypersensitive / multi-root-coupled cases; landing
+survivors is genuine multi-session BizHawk-per-trace work.
+
+## 2026-06-21 -- PLAN M1 OOZ f1782 v5 (exact-edge top bias) NEUTRAL; DEFINITIVE sub-pixel-irreducible proof
+
+v5: inclusive accept boundary + a top-landing bias at the exact edge (classifyAbsDistX==0
+&& absDistY<=maxTop && yspeed>=0 -> treat as top). Result: the f1251/f1235 regressions
+are GONE (OOZ-LS back at the original f1782), but f1782 is UNCHANGED (Tails still 0CE3).
+Reason: the top-bias also catches f1781 -- the f1782-producing side contact -- because
+at the engine's PIXEL resolution f1781 (ROM side/Status_Push) and f1251 (ROM top/land)
+are GEOMETRICALLY IDENTICAL (both exact-edge, top-band, yspeed>=0). ROM resolves them
+oppositely purely on the player's SUB-PIXEL x. No pixel-level rule (edge boundary, clamp,
+rider gate, or top-bias) can separate them.
+
+DEFINITIVE: OOZ f1782 is sub-pixel-irreducible. The two cases that any side-contact fix
+must separate (f1781 push vs f1251 land) are pixel-identical; only the player/Tails exact
+sub-pixel x at the platform right edge distinguishes them, and that sub-pixel position is
+a downstream-of-physics / downstream-of-Tails-CPU root. Five variants (v1-v5) exhausted;
+all net-negative or neutral; reverted. The queue head cannot be cleared by Family-B
+mechanics -- it requires the upstream sub-pixel position to match ROM first (Family-D /
+physics, the plan's heaviest-gated last work). Ten fix attempts this session, zero
+surviving landings: the frontier set is dominated by exactly this sub-pixel-irreducible
+class, so plan completion is genuine multi-session work on the upstream sub-pixel roots.
+
+## 2026-06-21 -- WHY THE REGRESSIONS OCCUR (instrumented, per user directive)
+
+Investigated v6 (approach-aware exact-edge top-vs-side via previous-frame relX) and
+instrumented the trigger (OGGF_V6_DEBUG). Two distinct regression mechanisms, both
+confirmed by experiment:
+
+1. SHARED-CODE BLAST RADIUS. resolveContactInternal is the single SolidObject_cont port
+   for EVERY full-solid object. The exact-edge bias fired not only on the target OOZ
+   popping platform (obj=33) but on obj=36 (the OOZ object the Agent Quick State names),
+   cpu=false (main player), at its relX=0 left edge -- flipping that contact side->top
+   at f1780 and cascading into the sidekick's tails_x_sub. Gating the bias to
+   `instance.usesInclusiveRightEdge()` REMOVED the obj=36 bleed (verified). Lesson: any
+   resolveContactInternal change must be gated to the target object family or it
+   regresses unrelated objects.
+
+2. OBJECT-EXECUTION-PHASE / WRONG-FRAME PERTURBATION. Even gated to OOZ only, OOZ-LS
+   still regressed at f1780 (tails_x_sub exp0600 act9200). ROM Tails oscillates
+   0CE3<->0CE4 against the platform right edge; ROM's first Status_Push is at f1781
+   (Tails at 0CE3). The engine, once the inclusive edge ACCEPTS the exact-edge contact,
+   registers/perturbs it on an earlier oscillation-edge frame, shifting Tails' sub-pixel
+   x by f1780. The engine's object pass samples object<->player contact one frame ahead
+   of ROM's slot-ordered ExecuteObjects, so adding the (ROM-correct) inclusive edge
+   perturbs sub-pixel state at the wrong frame.
+
+3. These compound with SUB-PIXEL HYPERSENSITIVITY: the contacts sit at exact pixel/edge
+   boundaries where a one-frame or sub-pixel perturbation flips the outcome (f1781 push
+   vs f1251 land are pixel-identical; f1780 vs f1781 push timing).
+
+NET: a fix can be ROM-correct in isolation (inclusive bhi edge) yet regress because the
+shared port bleeds into other objects (mechanism 1) AND the engine's contact phase is
+one frame ahead of ROM (mechanism 2), at sub-pixel-hypersensitive boundaries (mechanism
+3). The durable fix path is therefore: (a) per-object-family gating of every contact
+change (mechanism 1), then (b) align the object-contact-evaluation phase to ROM so
+contacts register on ROM's frame (mechanism 2) -- which is the plan's core
+object-execution-phase alignment and must precede edge/landing tuning. Mechanism 2 is
+the prerequisite root for OOZ and the contact-driven frontiers. v6 reverted (not
+accurate). Baseline restored: 53 / 52+1.
+
+## 2026-06-22 - S1 GHZ1 complete-run f2573 -> f2790: collapsing-ledge exact-touch landing
+
+- Branch/worktree: `bugfix/ai-trace-cluster-fixes` (.worktrees/trace-cluster-fixes), HEAD 639748a8d + this fix.
+- Target: `TestS1Ghz1CompleteRunTraceReplay`. Baseline first error (clean,
+  this worktree, fix stashed): **f2573 `y_speed` exp=0x07F0 act=0x0000** (engine
+  landed; ROM still falling). After fix: **f2790 `camera_y` exp=0x021C act=0x021D**.
+- Root cause (BizHawk capture, `tools/bizhawk/diag_s1_plat.lua` +
+  `diag_s1_ledge_land.lua`, s1-complete-run.bk2, GHZ1-CR offset 788 so
+  trace f2573 = BK2 3361): the GHZ collapsing ledge (Obj 1A) lands via
+  `Plat_NoXCheck_AltY`. The ROM land band is `cmpi.w #-16,d0` / `blo`
+  (UNSIGNED) at sonic.lst 0x7B06-0x7B0A, which also rejects `d0=0`
+  (0x0000 <u 0xFFF0). Capture: BK2 3361 `d0=0` does NOT land (keeps
+  falling, y stays 0x0206); BK2 3362 `d0=-9` lands. The engine's S1
+  UNIFIED top-solid path (`ObjectSolidContactController` ~line 2879)
+  lands `distY in [0,0x0F]`, including the `distY==0` touch -> one frame early.
+- Fix: `Sonic1CollapsingLedgeObjectInstance.rejectsZeroDistanceTopSolidLanding()`
+  -> true (existing per-object hook; same flag S3K collapsing platforms use).
+  Not a zone/frame carve-out: models the shared S1 `Plat_NoXCheck_AltY`
+  unsigned land-band on the one object proven to need it.
+- Command: `mvn -Dmse=off -Dtrace.frontierOnly=true test -Dtest='TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,TestS1Ghz3CompleteRunTraceReplay,TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS1Mz1CompleteRunTraceReplay,TestS1Credits00Ghz1TraceReplay,TestS1Credits07Ghz1bTraceReplay' -DfailIfNoTests=false`
+- Regression check (clean before/after, same worktree): GHZ2-CR f2369 (unchanged),
+  GHZ3-CR f1246 (unchanged), MZ1-CR f2089 (unchanged); GHZ1 standalone, MZ1
+  standalone, Credits00Ghz1, Credits07Ghz1b all green both runs. Guards green:
+  TestArchUnitRules, TestRewindCoverageGuard, TestTraceReplayInvariantGuard.
+
+### 2026-06-22 addendum - S1 GHZ2-CR f2369 root-caused (fix deferred: needs detection/riding height split)
+
+- GHZ2-CR f2369 (`y_speed` exp0x0668 act0x0000, `rolling` exp1 act0) is the SAME
+  exact-touch early-landing as GHZ1, on the generic platform (Obj 0x18,
+  `Sonic1PlatformObjectInstance`). BizHawk capture (`diag_s1_plat.lua`,
+  OGGF_DIAG_START/STOP env; GHZ2-CR offset 6622 -> trace f2369 = BK2 8991):
+  ROM `d0=0` at BK2 8991 does NOT land (0x7B02 fires again at BK2 8992 `d0=-5`
+  where it lands). Engine debug at the landing decision: rolling=true, yRad=14
+  (correct), pCenterY=0x268 (matches ROM), but **distY=1** not 0.
+- Root cause: the engine models the platform detection surface at obY-9
+  (`HALF_HEIGHT=9`, cited from MvSonicOnPtfm2's riding `subi #9`), but ROM's
+  landing DETECTION uses `Plat_NoXCheck` `subq #8` (obY-8). The existing
+  `getTopLandingSnapAdjustment()=-1` fixes the landing POSITION but not the
+  detection TIMING, so the engine lands one frame early (distY=1 vs ROM d0=0).
+- Net-negative naive fix (REVERTED): setting HALF_HEIGHT=8 + snap-adj=0 +
+  rejectsZeroDistanceTopSolidLanding advanced GHZ2-CR f2369->f2371 (+2) but
+  REGRESSED GHZ3-CR f1246->f1144 (1px `y`) because continued-riding then snaps
+  to obY-8 instead of ROM's obY-9. Net negative -> reverted per net-positive rule.
+- Correct fix (deferred): split detection vs riding surface — new-landing
+  detection at obY-8 (sticky=false) while continued riding keeps obY-9
+  (sticky=true). Requires a sticky-aware top-half-height in
+  ObjectSolidContactController.resolveContact (shared collision); verify with
+  the full S1 sweep. Not landed this session.
+
+### 2026-06-22 follow-up - S1 GHZ2-CR f2369 -> f2591 LANDED (surgical detection/riding split)
+
+- The deferred fix above is now implemented and net-positive. Instead of changing
+  HALF_HEIGHT (which regressed GHZ3 via the riding surface), the new-landing
+  detection band in `ObjectSolidContactController` (S1 UNIFIED top-solid path)
+  now adds `getTopLandingSnapAdjustment(instance, player)` to `distY` for
+  sticky=false only, so the DETECTION surface matches the entry/snap surface
+  (obY-8) while continued riding (sticky=true) keeps obY-9. The platform also
+  sets `rejectsZeroDistanceTopSolidLanding()` (strict-penetration `blo #-16`).
+- Clean before/after (full S1 sweep, frontierOnly, this worktree): GHZ2-CR
+  **f2369 -> f2591** (+222, now `y` exp0259 act0257); GHZ3-CR f1246 UNCHANGED;
+  all 16 other S1 traces unchanged. Guards green: ArchUnit, RewindCoverage,
+  TraceReplayInvariant, CollisionModel. S1-UNIFIED-gated -> S2/S3K inert.
+- Command: `mvn -Dmse=off -Dtrace.frontierOnly=true test -Dtest='TestS1*TraceReplay' -DfailIfNoTests=false`
+
+## 2026-06-22 - cross-game survey: the THREE 1-fix-from-green traces (Mn count-drop targets)
+
+Surveyed all S1/S2/S3K frontiers vs trace length to find the traces closest to
+GREEN (a green drops the aggregate failure count — the plan's Mn metric).
+Result: no S1/S2 complete-run is near green (nearest S2 CPZ-LS is 2,379 frames
+out). The only genuinely-near-green failures are these, each a SINGLE
+non-cascading divergence (verified via full-run report `frame_span`/`cascading`):
+
+1. **TestS3kMgzTraceReplay** - 1 error total: `rings` f539 exp10 act11
+   (`frame_span=1, cascading=false`; re-syncs f540). Engine collects ONE ring
+   one frame early at an IDENTICAL player position (sub=(0700,7600) both).
+2. **TestS3kMgzCompleteRunTraceReplay** - `rings` f738 exp17 act18: same +1-ring
+   bug (same root as #1). Fixing the root greens BOTH (count -2).
+3. **TestS3kIczCompleteRunTraceReplay** - 1 error: `status_byte` f3116 exp0x08
+   act0x09 (single facing bit; per Quick State facing-only status is often
+   trace-noise — needs confirm real-vs-noise before touching).
+
+Root cause of #1/#2 (characterized, fix deferred - shared/high-risk):
+S3K stage rings collect through the unified object-touch loop
+(`LevelManager.applyTouchResponses` -> `ObjectManager.runTouchResponsesForPlayer`;
+`RingManager.usesObjectTouchCollection()==true`, so `collectStageRings` is
+skipped for S3K - confirmed: no `OGGF_RING` static-collection hit near f539).
+The early pickup is therefore in the shared object-touch overlap/phase for this
+one boundary ring. A fix there affects ALL S3K ring/touch collection -> must be
+ROM-faithful (S3K `Touch_Rings`/`Test_Ring_Collisions` box + ReactToItem timing)
+and verified against the full S3K trace sweep before landing. Highest-leverage
+Mn target (double-green); next focused task.
+
+### 2026-06-22 addendum - S3K MGZ rings f539 narrowed to lightning-shield ATTRACTED-ring timing
+
+Deeper root-cause of the MGZ +1-ring (the 1-fix-from-green target). The f539
+ring is NOT collected via the static stage-ring scan (`collectStageRings`/
+`collectPlacedRings` — instrumented `OGGF_RING`, no hit near f539) but via the
+**lightning-shield attracted-ring system**: `RingManager.update` adds in-box
+rings to `attractedRings` (±$40 box, line ~154), `updateAttractedRings` flies
+them in and gives the ring on overlap (line ~701). Instrumented `addRings`
+caller = `RingManager.updateAttractedRings:702`.
+
+Attempted + REVERTED (no effect on f539): reordering the give-ring overlap test
+to BEFORE the per-frame `AttractedRing_Move` (ROM loc_1A88C: player slot-0
+processes the collision-response list built from the ring's pre-move position).
+MGZ1 stayed `rings f539 10 vs 11`, so the boundary ring already overlaps at its
+pre-move position — the 1-frame-early is upstream, in the **attraction
+start/flight timing** (when the ring enters the ±$40 box / flight steps run
+relative to the player's object-slot phase), an object-execution-phase issue
+spanning all S3K attracted-ring collection. Fix must align that phase to ROM
+(player ReactToItem slot-0 vs ring slot) and be verified against the full S3K
+sweep. Still the highest-leverage Mn target (double-green MGZ1 + MGZ-CR).
+
+### 2026-06-22 correction - only MGZ is truly 1-fix-from-green (ICZ is NOT)
+
+Correcting the green-candidate survey above: the frontierOnly "Totals: 1 error"
+counts were truncated. Full-run report check:
+- **S3kMgz / S3kMgzCompleteRun**: genuinely 1 error (rings, `frame_span=1`,
+  `cascading=false`, re-syncs next frame) -> truly 1-fix-from-green (double).
+- **S3kIczCompleteRun**: **3179 errors** total. The f3116 `status_byte` facing
+  divergence (span 34) CASCADES into rings (f3174), then x_speed/g_speed/x
+  (f3856, spans 500-4000+). NOT 1-fix-from-green; fixing f3116 would advance the
+  frontier but not green the trace.
+
+So MGZ is the sole single-fix count-drop target, and its fix is the S3K
+lightning-shield attracted-ring attraction-phase reconciliation (deep,
+high-blast-radius, full-S3K-sweep gated) - the give-ring-reorder attempt this
+session did not fix it (reverted). Use full-run report `frame_span`/`cascading`,
+never frontierOnly totals, to judge green-proximity.
+
+### 2026-06-22 final - S3K MGZ rings: give-reorder DEFERS but doesn't green (phase offset > 1 fc)
+
+Decisive instrumentation result (supersedes the earlier give-timing hypothesis):
+- The first attracted-ring give (rings 10->11, the f539 cause) is at LevelManager
+  frameCounter fc=542, `oPre=false` / `oPost=true` (overlaps only post-move).
+- Applying the ROM-faithful give-reorder (test overlap pre-move) MECHANICALLY
+  works: OGGF_TOP debug confirms the give moves fc=542 -> fc=543. BUT the trace
+  report is unchanged (`rings f539 10 vs 11`).
+- Therefore the engine's attracted-ring processing runs MORE THAN ONE fc ahead of
+  the trace-frame boundary: deferring the give by 1 fc does not cross into the
+  next *trace* frame (f540). The whole attraction phase (when RingManager.update's
+  ±$40 box-check + flight + give run, relative to ROM's player-slot
+  Test_Ring_Collisions at sonic3k.asm loc_EA70/EABE) is offset, not just the give.
+- Box CONFIRMED ROM-correct (lightning branch: player ±$40, d1=6, d4=$80 ->
+  ring within [-70,+70]px; engine ATTRACT_BOX_HALF $40 + ringHalf 6 = 70).
+
+Next step (focused, full-S3K-sweep gated): align the RingManager attraction phase
+to ROM's player-slot frame (likely run the box-check/give in the player touch
+pass via LevelManager.applyTouchResponses, not the post-physics RingManager.update
+tick), then verify no S3K ring-attraction regressions. This is the sole 1-fix
+(double-green MGZ1 + MGZ-CR) count-drop target.
+
+### 2026-06-22 final-2 - S3K MGZ rings: engine-frame phase RULED OUT (root is upstream)
+
+Moving the entire lightning-attraction (box-check + flight + give) out of the
+post-physics RingManager.update tick into the player touch pass
+(LevelManager.applyTouchResponses, gated to the main !isCpuControlled player,
+extracted as RingManager.updateLightningAttraction) compiled and ran, attraction
+still fired (rings reached 11), but the report was UNCHANGED (rings f539 10 vs 11).
+Reverted (no benefit, unverified, high blast radius).
+
+Conclusion — three hypotheses now ruled out by tested code:
+1. Attraction box geometry — CONFIRMED ROM-correct (±70).
+2. Give-overlap pre/post-move timing — reorder defers give 1 fc, no trace effect.
+3. Engine-frame phase (where attraction runs in the frame) — moving it to the
+   touch pass had no trace effect; the give lands at trace f539 regardless.
+
+Therefore the 1-trace-frame-early give is UPSTREAM of the attraction mechanics:
+either the lightning shield is acquired one frame early (monitor-break object-exec
+timing -> attraction starts a frame early) or ROM collects this ring normally
+rather than attracting it. MGZ1 compares only `rings`, so a shield-acquisition
+timing skew would surface solely as this rings delta. Next step requires a BizHawk
+capture of ROM's status_secondary (lightning bit) + Ring_consumption state across
+f535-540 to determine shield-acquire frame vs the engine, then fix that timing.
+
+## 2026-06-22 BREAKTHROUGH - S3K MGZ rings FIXED (attracted-ring give timing); stale-report lesson
+
+The MGZ rings bug (the sole 1-fix-from-green target) is FIXED. Root cause was the
+lightning-shield attracted-ring GIVE timing: ROM Obj_Attracted_Ring (loc_1A88C)
+moves the ring then Add_SpriteToCollisionResponseList; the player's touch pass
+processes that list the NEXT frame, so the give uses the ring's previous-frame
+(pre-move) position. The engine tested the give overlap AFTER the move -> collected
+one frame early.
+
+Fix: in RingManager.updateAttractedRings, test the give-ring overlap at the TOP of
+the loop (pre-move) and `continue`, instead of after the AttractedRing_Move.
+
+CRITICAL LESSON (cost many turns): `target/trace-reports/<t>_report.json` was NOT
+regenerated across runs in this environment - it held a STALE "rings f539 10 vs 11"
+from one early run. Multiple correct fixes (give-reorder, engine-phase move) were
+wrongly judged "no effect" by reading that stale JSON. The give-reorder ACTUALLY
+worked all along. ALWAYS verify trace results from the live test assertion / surefire
+report / in-harness instrumentation, NOT the persisted *_report.json which can be stale.
+
+Verification (give-reorder, this worktree):
+- In-harness rings probe: MGZ level-select rings now match ROM at f536-542
+  (f539 engRings=10 vs exp=10 - GREEN, was 11).
+- MGZ level-select first error moved f539 (rings) -> f33271 (pre-existing trace
+  "Input alignment error", BK2 vs recorded input - a trace-data limit, not engine).
+- MGZ complete-run: advanced well past the old f738 rings error (now runs long
+  enough to OOM at default heap; no rings divergence).
+- Zero regressions: S3K AIZ f1095, CNZ-CR f1846, CNZ f291, HCZ f1489, ICZ f3116,
+  LBZ f1694, MHZ f72 all UNCHANGED; S1 GHZ1-CR f2790 / MZ1-CR f2089 / SLZ1-CR f723
+  UNCHANGED; guards green (ArchUnit, RewindCoverage, TraceReplayInvariant) + S3K
+  must-keep-green (Aiz1Skip, LevelLoading, BootstrapResolver). Inert for S1/S2.
+- Not yet fully green: MGZ-LS blocked by the f33271 trace input-alignment limit;
+  MGZ-CR by heap. Both are separate follow-ups (re-record/trim trace; raise heap).
+
+### 2026-06-22 addendum - MGZ-CR real frontier f866 (tails_status_byte); green-candidate map was stale
+
+With the attracted-ring rings fix + larger heap (`-Dsurefire.argLine="-Xmx6g -Xshare:off"`),
+MGZ complete-run's real first error is **f866 `tails_status_byte` exp0x0002 act0x0003**
+(7929 cascading errors) - a Tails-CPU status divergence, advanced from the old (stale)
+f738 rings. So the rings fix advanced MGZ-CR f738 -> f866, but MGZ-CR is NOT green
+(downstream Tails-CPU bug).
+
+CORRECTION to the earlier "three 1-fix-from-green traces" survey: those single-error
+counts were STALE/frontier-truncated `*_report.json` reads. Reality after the rings fix:
+- MGZ-LS: rings fixed (f539->f33271), blocked by a pre-existing trace input-alignment
+  limit at f33271 (BK2 vs recorded input; trace-data, not engine).
+- MGZ-CR: rings fixed (f738->f866), blocked by tails_status_byte (Tails CPU).
+- ICZ-CR: 3179 errors (already known not 1-fix).
+NO S3K trace is genuinely one fix from green; each has multiple stacked bugs. The
+count-drop (Mn) is further than the stale reports implied - genuinely multi-bug per trace.
+Always confirm error counts from a full (non-frontier) run, not frontierOnly totals or
+the persisted JSON.
+
+### 2026-06-22 addendum-2 - MGZ-LS f33271 is a LAG-FRAME bk2-consumption desync (not corruption)
+
+Precise characterization of MGZ-LS's post-rings-fix blocker (the closest-to-green
+S3K trace - engine gameplay matches ROM for all 33,271 frames). f33271 = physics.csv
+frame 0x81F7, which is a LAG frame (lag_counter=1, gameplay_frame_counter stalls
+81E4->81E4). The recorded input transitions 0x0009->0x0001 at frame 0x81F8, but the
+bk2's transition is at 0x81F7 - the harness reads the bk2 ONE FRAME AHEAD of the
+recorder's alignment. Lag frames recur every ~4 frames here (0x81EF/F3/F7/FB), so
+the harness's lag/VBLANK phase handling (TraceExecutionPhase.VBLANK_ONLY ->
+skipFrameFromRecording vs stepFrameFromRecording) advanced the bk2 one consumption
+off the recorder on one lag frame, accumulating a 1-frame offset by f33271.
+
+So MGZ-LS is NOT trace corruption and NOT an engine gameplay bug - it's a harness
+lag-frame bk2-consumption alignment issue (high blast radius: affects all trace
+replays' lag handling), and MGZ-LS may still have real divergences in its final
+~2,641 frames past f33271. Path to greening the closest trace: align the harness's
+lag-frame bk2 advance to the recorder, then re-verify the tail. Deep, multi-session.
+
+## 2026-06-22 INFRA + forward plan: always-fresh reports, cascade root-count, MGZ = rings-only
+
+Two infra fixes landed to make the per-trace greening campaign tractable and
+trustworthy (user-directed "infra first"):
+
+1. **Always-fresh reports (commit f665a2f58):** `AbstractTraceReplayTest` now
+   rewrites `*_report.json` in a `finally` block, so a run that short-circuits via
+   `fail()` (input-alignment, input-validation) no longer leaves a STALE report
+   from an earlier run. This was the trap that cost ~15 turns of MGZ work.
+   ALWAYS judge trace results from the fresh report / live assertion.
+
+2. **Cascade root-count tool (`tools/trace/root_summary.py`, local/untracked):**
+   counts INDEPENDENT roots (`cascading=false`) vs downstream cascade, grouped by
+   field. Root count = real distance-to-green (cascade vanishes when its root is
+   fixed). Run a trace full, then `python tools/trace/root_summary.py <report.json>`.
+
+**Data-driven retargeting (full runs, fresh reports):**
+- **S3K MGZ-LS (mgz dir): 5276 errors -> 33 ROOTS, ALL `rings`.** Blocked by a
+  SINGLE subsystem: lightning-shield attracted-ring timing. The committed
+  give-reorder (7b8aa9701) fixed the f539 boundary but the broader attracted-ring
+  collection is still off (mixed: some 1 early, some 1 late, some rings missing
+  entirely e.g. f12468 `1 vs 0`). Fixing the attracted-ring subsystem fully would
+  resolve ~all 33 roots -> MGZ-LS green or near-green. **Highest-leverage target.**
+- **S1 GHZ1-CR: 537 errors -> 117 ROOTS, 113 `camera_y`** (1px vertical-tracking
+  oscillation from f2790). Camera-bound, many roots, lower leverage.
+
+**Forward plan (per-trace root-stack campaign):** concentrate on ONE trace; loop
+{full run -> read root from fresh report/assertion -> ROM-faithful fix -> full-
+sweep net-positive gate -> commit -> re-run, check root-count delta} until green.
+Use `root_summary.py` to see root-stack depth + dominant field, and `-Xmx6g
+-Xshare:off` for long runs. Next concrete target: the S3K attracted-ring timing
+subsystem (greens MGZ-LS, dominated by rings roots).
+
+### 2026-06-22 MGZ-LS attracted-ring deep-dive: cadence/set divergence, not give-timing
+
+Using the always-fresh reports + root_summary, drove into MGZ-LS (33 rings roots).
+ROM ring collections (trace physics.csv): f534->10, f540->11, f543->12, f617->13.
+Engine attracted-ring gives (OGGF instrument, trace=fc-3): f540, f590, f617.
+So the engine matches ROM at f540 and f617, but collects ring 12 at f590 instead
+of f543 (47 frames late), and the f590 ring is at a different world position
+(4b0,621) than the f540 ring (5bb,67d).
+
+Conclusion: the committed give-reorder (7b8aa9701) correctly fixed the f539/f540
+boundary ring, but the remaining 33 rings roots are NOT give-timing - they are an
+attracted-ring CADENCE/SET divergence (the engine attracts/collects a different
+order+timing of rings than ROM). Player position matches ROM throughout (no
+position roots), so the divergence is internal to the attraction system
+(which-ring-attracted-when / flight convergence / normal-vs-attracted choice).
+
+Next step: BizHawk capture of ROM Obj_Attracted_Ring lifecycle for MGZ around
+f534-620 (when each ring is created-as-attracted via Test_Ring_Collisions and when
+each is given via the collision-response list), compared to the engine's
+addAttractedRing / give frames, to find the systematic attraction cadence fix.
+This greens MGZ-LS (its only roots are rings).

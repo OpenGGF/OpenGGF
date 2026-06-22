@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -175,7 +176,9 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild implements Rewi
         if (restoredBoss == null || ctx.spawn() == null) {
             return null;
         }
-        return new HczEndBossBladeWaterChute(restoredBoss, ctx.spawn().x(), 0);
+        return ObjectConstructionContext.construct(
+                ctx.objectServices(),
+                () -> new HczEndBossBladeWaterChute(restoredBoss, ctx.spawn().x(), 0));
     }
 
     // =========================================================================

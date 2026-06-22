@@ -171,6 +171,11 @@ public abstract class AbstractTraceReplayTest {
         SharedLevel sharedLevel = requiresFreshLevelLoad
                 ? null
                 : SharedLevel.load(game(), zone(), act());
+        // Hoisted so the finally block can always regenerate the report, even when
+        // the run short-circuits via fail() (e.g. input-alignment) before the
+        // normal report-write at step 7. Previously such failures left a STALE
+        // *_report.json from an earlier run, silently masking the real result.
+        TraceBinder binder = null;
         try {
             HeadlessTestFixture.Builder fixtureBuilder = HeadlessTestFixture.builder()
                 .withRecording(bk2Path)
@@ -215,7 +220,7 @@ public abstract class AbstractTraceReplayTest {
             }
 
             // 5. Run frame-by-frame comparison
-            TraceBinder binder = new TraceBinder(tolerances());
+            binder = new TraceBinder(tolerances());
 
             // Frame-0 bootstrap comparison. Active only for traces recorded
             // against the post-universal-title-card engine (TraceMetadata
@@ -332,6 +337,21 @@ public abstract class AbstractTraceReplayTest {
             }
             assertReportHasNoReleaseBlockingDivergences(report);
         } finally {
+            // Always (re)write the report from the latest binder state so a stale
+            // *_report.json from a prior run can never mask the current result.
+            // Best-effort: report regeneration must not suppress the real failure.
+            if (binder != null) {
+                try {
+                    DivergenceReport finalReport = "s3k".equals(meta.game())
+                            ? binder.buildReport(trace)
+                            : binder.buildReport();
+                    if (finalReport.hasErrors() || finalReport.hasWarnings()) {
+                        writeReport(finalReport, meta);
+                    }
+                } catch (RuntimeException | java.io.IOError ignored) {
+                    // diagnostics only
+                }
+            }
             if (sharedLevel != null) {
                 sharedLevel.dispose();
             } else {
