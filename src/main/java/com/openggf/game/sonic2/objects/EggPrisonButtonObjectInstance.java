@@ -5,12 +5,11 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnNullableReferenceRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
@@ -30,7 +29,8 @@ import java.util.List;
  * Behavior: Depresses 8 pixels when player lands on it, triggers parent
  */
 public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener,
+        SpawnNullableReferenceRewindRecreatable {
 
     // ROM constants from s2.asm
     private static final int BUTTON_HALF_WIDTH = 0x1B;  // 27 pixels
@@ -62,11 +62,6 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
         this.baseY = spawn.y() + BUTTON_OFFSET_Y;
         this.currentY = baseY;
         this.triggered = false;
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new EggPrisonButtonObjectInstance(ctx.spawn(), null);
     }
 
     @Override

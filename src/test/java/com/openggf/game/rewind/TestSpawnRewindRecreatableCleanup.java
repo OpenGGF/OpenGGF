@@ -4,6 +4,7 @@ import com.openggf.level.objects.AbstractPointsObjectInstance;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
+import com.openggf.level.objects.SpawnNullableReferenceRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.ZeroArgRewindRecreatable;
@@ -98,6 +99,10 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart",
             "com.openggf.game.sonic3k.objects.AizRockFragmentChild");
 
+    private static final List<String> SPAWN_NULLABLE_REFERENCE_RECREATORS = List.of(
+            "com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance",
+            "com.openggf.game.sonic2.objects.MonitorContentsObjectInstance");
+
     private static final List<String> ZERO_ARG_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.Sonic1EndingSTHObjectInstance",
             "com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance",
@@ -190,6 +195,24 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnTrailingZeroIntsRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void spawnNullableReferenceRecreatorsUseMarkerInterface() {
+        for (String className : SPAWN_NULLABLE_REFERENCE_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(SpawnNullableReferenceRewindRecreatable.class.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the spawn nullable-reference recreate hook");
+        }
+    }
+
+    @Test
+    void spawnNullableReferenceRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_NULLABLE_REFERENCE_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use SpawnNullableReferenceRewindRecreatable's default hook");
         }
     }
 

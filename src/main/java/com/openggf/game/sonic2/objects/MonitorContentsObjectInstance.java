@@ -8,8 +8,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnNullableReferenceRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
@@ -24,7 +23,7 @@ import java.util.List;
  * allocation from Obj26_Break.
  */
 public final class MonitorContentsObjectInstance extends AbstractMonitorObjectInstance
-        implements RewindRecreatable {
+        implements SpawnNullableReferenceRewindRecreatable {
     private static final int ICON_FRAME_OFFSET = 1;
 
     private final int subtype;
@@ -45,11 +44,6 @@ public final class MonitorContentsObjectInstance extends AbstractMonitorObjectIn
 
     void delayFirstIconUpdateForPassedSlot() {
         iconPendingInit = true;
-    }
-
-    @Override
-    public MonitorContentsObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new MonitorContentsObjectInstance(ctx.spawn(), null);
     }
 
     @Override
