@@ -254,6 +254,7 @@ Highlights:
 - Sonic 3 & K LBZ rolling-drum chains now clear the previous drum's standing flag when the player rolls onto the next drum (ROM `RideObject_SetRide` `bclr d6,status(a3)`), keeping the player grounded across drum-to-drum handoffs (LBZ1 trace frontier f1694 -> f1950).
 - CPU sidekick auto-jump now re-triggers on the push-bypass cadence frame even while the jump latch is held, matching the ROM push-bypass route that branches straight to the trigger gate (S2 `s2.asm:39297`, S3K `sonic3k.asm:26702`); fixes a grounded pushing Tails failing to hop a breakable block (HTZ2 trace frontier f1343 -> f3315).
 - The S3K MGZ/LBZ Smashing Pillar now uses the ROM-accurate inclusive right-edge solid bound (`bhi`, sonic3k.asm:41405), so a player pinned flush against the pillar keeps `Status_Push` every grounded frame as the ROM does (LBZ1 trace frontier f1950 -> f2270; MGZ held at baseline).
+- A BizHawk capture worklist in [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md) now records the exact register/RAM datapoints needed to resolve three deep, precisely-characterized trace blockers (ICZ1 f3139 solid-object push, HTZ2 f3315 inline-solid rebound, CNZ1 f1691 slot-machine convergence) that require ROM register traces.
 
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
