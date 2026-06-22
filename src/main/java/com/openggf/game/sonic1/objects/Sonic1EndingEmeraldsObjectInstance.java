@@ -8,8 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectRenderManager;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -39,7 +38,8 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/88 Ending Sequence Emeralds.asm
  */
-public class Sonic1EndingEmeraldsObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class Sonic1EndingEmeraldsObjectInstance extends AbstractObjectInstance
+        implements SpawnCoordinateZeroPairRewindRecreatable {
 
     // ========================================================================
     // ROM Constants
@@ -97,14 +97,6 @@ public class Sonic1EndingEmeraldsObjectInstance extends AbstractObjectInstance i
     @Override
     public ObjectSpawn getSpawn() {
         return new ObjectSpawn(currentX, currentY, Sonic1ObjectIds.END_CHAOS, 0, 0, false, 0);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn rewindSpawn = ctx.spawn();
-        int x = rewindSpawn != null ? rewindSpawn.x() : 0;
-        int y = rewindSpawn != null ? rewindSpawn.y() : 0;
-        return new Sonic1EndingEmeraldsObjectInstance(x, y, 0, 0);
     }
 
     private void ensureRenderer() {

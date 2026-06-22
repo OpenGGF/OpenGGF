@@ -10,8 +10,7 @@ import com.openggf.game.sonic3k.scroll.SwScrlHcz;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.scroll.ZoneScrollHandler;
@@ -47,7 +46,8 @@ import java.util.logging.Logger;
  * existing HCZ scroll handler, exactly as the wall-stop shake in
  * {@code Sonic3kHCZEvents}.
  */
-public class HczEndBossGeyserCutscene extends AbstractObjectInstance implements RewindRecreatable {
+public class HczEndBossGeyserCutscene extends AbstractObjectInstance
+        implements SpawnCoordinateRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(HczEndBossGeyserCutscene.class.getName());
 
@@ -175,14 +175,6 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance implements 
 
     private HczEndBossGeyserCutscene() {
         this(0, 0);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn spawn = ctx.spawn();
-        return new HczEndBossGeyserCutscene(
-                spawn != null ? spawn.x() : 0,
-                spawn != null ? spawn.y() : 0);
     }
 
     // =========================================================================

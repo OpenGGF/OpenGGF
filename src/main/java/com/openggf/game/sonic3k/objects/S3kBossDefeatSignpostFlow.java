@@ -8,8 +8,7 @@ import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnCoordinateDefaultArgsRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -30,7 +29,8 @@ import java.util.logging.Logger;
  *   <li><b>AWAIT_ACT_TRANSITION</b> — polls until endOfLevelFlag is set, then self-destructs</li>
  * </ol>
  */
-public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance implements RewindRecreatable {
+public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
+        implements SpawnCoordinateDefaultArgsRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(S3kBossDefeatSignpostFlow.class.getName());
 
     private enum Phase { WAIT_FADE, SPAWN_SIGNPOST, AWAIT_RESULTS, AWAIT_ACT_TRANSITION }
@@ -85,12 +85,6 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance implements
 
     private S3kBossDefeatSignpostFlow() {
         this(0, 0, CleanupAction.NONE);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new S3kBossDefeatSignpostFlow(
-                ctx.spawn().x(), 0, CleanupAction.NONE);
     }
 
     @Override

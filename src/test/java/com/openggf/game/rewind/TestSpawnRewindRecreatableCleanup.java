@@ -89,6 +89,7 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile",
             "com.openggf.game.sonic3k.objects.Mgz2EndEggCapsuleInstance",
             "com.openggf.game.sonic3k.objects.S3kBossExplosionChild",
+            "com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene",
             "com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance",
             "com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance",
             "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossRobotnikEscapeShip",
@@ -101,6 +102,7 @@ class TestSpawnRewindRecreatableCleanup {
 
     private static final List<String> SPAWN_COORDINATE_ZERO_PAIR_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.badniks.Sonic1BombShrapnelInstance",
+            "com.openggf.game.sonic1.objects.Sonic1EndingEmeraldsObjectInstance",
             "com.openggf.game.sonic2.objects.BubbleObjectInstance",
             "com.openggf.game.sonic3k.objects.AizBombExplosionInstance",
             "com.openggf.game.sonic3k.objects.AizMinibossDebrisChild");
@@ -122,7 +124,8 @@ class TestSpawnRewindRecreatableCleanup {
 
     private static final List<String> SPAWN_COORDINATE_DEFAULT_ARGS_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance",
-            "com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance");
+            "com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance",
+            "com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow");
 
     private static final List<String> SPAWN_AND_COORDINATE_ZERO_SCALAR_ARGS_RECREATORS = List.of(
             "com.openggf.game.sonic2.objects.ArrowProjectileInstance",
