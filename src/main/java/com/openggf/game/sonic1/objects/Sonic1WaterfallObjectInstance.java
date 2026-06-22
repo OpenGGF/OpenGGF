@@ -1,6 +1,8 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.Level;
@@ -18,7 +20,7 @@ import java.util.List;
  * <p>
  * ROM reference: docs/s1disasm/_incObj/65 Waterfalls.asm
  */
-public class Sonic1WaterfallObjectInstance extends AbstractObjectInstance {
+public class Sonic1WaterfallObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int ROUTINE_ANIMATE = 2;
     private static final int ROUTINE_CHECK_DELETE = 4;
@@ -55,6 +57,11 @@ public class Sonic1WaterfallObjectInstance extends AbstractObjectInstance {
         this.priorityBucket = 1;
 
         initFromSubtype();
+    }
+
+    @Override
+    public Sonic1WaterfallObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1WaterfallObjectInstance(ctx.spawn());
     }
 
     private void initFromSubtype() {

@@ -80,7 +80,6 @@ com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance#finalScalar#fla
 com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance#finalScalar#isValve
 com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance#finalScalar#pauseDuration
 com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1FlappingDoorObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#halfHeight
 com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#halfWidth
 com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#isLZ
@@ -166,8 +165,6 @@ com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#frameI
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#spawnY
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1PylonObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1RockObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#angularSpeed
 com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#detectionRadius
 com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#origX
@@ -212,7 +209,6 @@ com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance#finalScalar#fra
 com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance#finalScalar#isSpinner
 com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance#finalScalar#spinTimelen
 com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1SpinningLightObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance#finalScalar#posX
 com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SpringObjectInstance#finalScalar#springType
@@ -243,8 +239,6 @@ com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance#finalScala
 com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance#finalScalar#phaseOffset
 com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance#finalScalar#timerLength
 com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1WaterfallObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1WaterfallSoundObjectInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance#finalScalar#origY
 com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance#finalScalar#currentX
 com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance#finalScalar#currentY

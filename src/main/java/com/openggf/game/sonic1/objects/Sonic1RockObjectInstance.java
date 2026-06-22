@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
@@ -26,7 +28,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/3B Purple Rock.asm
  */
 public class Sonic1RockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // From disassembly: move.w #$10+sonic_solid_width,d1 = $10 + $B = $1B
     private static final int HALF_WIDTH = 0x1B;
@@ -50,6 +52,11 @@ public class Sonic1RockObjectInstance extends AbstractObjectInstance
 
     public Sonic1RockObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PurpleRock");
+    }
+
+    @Override
+    public Sonic1RockObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1RockObjectInstance(ctx.spawn());
     }
 
     @Override
