@@ -197,6 +197,10 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.level.objects.InvincibilityStarsObjectInstance",
             "com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance");
 
+    private static final List<String> GROUNDER_ZERO_INDEX_CHILD_RECREATORS = List.of(
+            "com.openggf.game.sonic2.objects.GrounderRockProjectile",
+            "com.openggf.game.sonic2.objects.GrounderWallInstance");
+
     @Test
     void spawnOnlyRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_ONLY_RECREATORS) {
@@ -386,6 +390,25 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnRenderFlipRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void grounderZeroIndexChildRecreatorsUseMarkerInterface() {
+        Class<?> marker = loadClass("com.openggf.game.sonic2.objects.GrounderZeroIndexChildRewindRecreatable");
+        for (String className : GROUNDER_ZERO_INDEX_CHILD_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(marker.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the Grounder zero-index child recreate hook");
+        }
+    }
+
+    @Test
+    void grounderZeroIndexChildRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : GROUNDER_ZERO_INDEX_CHILD_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use GrounderZeroIndexChildRewindRecreatable's default hook");
         }
     }
 
