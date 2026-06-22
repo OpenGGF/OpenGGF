@@ -8,8 +8,7 @@ import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
@@ -27,7 +26,7 @@ import java.util.List;
  * layout-copy routines that are outside the current test scope.
  */
 public final class CnzMinibossScrollControlInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements SpawnRewindRecreatable {
     /**
      * ROM: {@code addi.l #$200,d0} in {@code Obj_CNZMinibossScrollMain}.
      */
@@ -81,10 +80,6 @@ public final class CnzMinibossScrollControlInstance extends AbstractObjectInstan
      * {@code exactSpawnCodec(CnzMinibossScrollControlInstance.class, CnzMinibossScrollControlInstance::new)}
      * (Phase-2 codec-deletion batch 2).
      */
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new CnzMinibossScrollControlInstance(ctx.spawn());
-    }
 
     /**
      * Test seam that injects the post-defeat phase transition the ROM normally

@@ -5,8 +5,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -35,7 +34,7 @@ import java.util.List;
  * Calls SolidObjectFull2 for full solid object collision.
  */
 public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     /** Gray color for debug wireframe rendering. */
     private static final float DEBUG_R = 0.5f;
@@ -59,11 +58,6 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
         // ROM: andi.w #$F,d1 / addq.w #1,d1 / lsl.w #3,d1
         // = ((lowerNibble + 1) * 8)
         this.halfHeight = ((subtype & 0xF) + 1) * 8;
-    }
-
-    @Override
-    public Sonic3kInvisibleBlockObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic3kInvisibleBlockObjectInstance(ctx.spawn());
     }
 
     @Override

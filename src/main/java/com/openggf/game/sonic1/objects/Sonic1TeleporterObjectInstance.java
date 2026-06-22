@@ -9,8 +9,7 @@ import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -39,7 +38,7 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/72 Teleporter.asm
  */
-public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     // ---- Trigger detection constants ----
     // From disassembly: cmpi.w #$10,d0 (X range check)
@@ -187,11 +186,6 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
         // a2 was advanced past the first word, so first pair is at index 0,1
         this.targetX = signExtend16(waypointData[0]);
         this.targetY = signExtend16(waypointData[1]);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1TeleporterObjectInstance(ctx.spawn());
     }
 
     @Override

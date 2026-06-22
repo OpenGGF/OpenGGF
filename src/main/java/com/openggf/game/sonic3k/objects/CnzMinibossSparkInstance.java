@@ -5,8 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -26,7 +25,7 @@ import java.util.List;
  * hurt-category touch objects while the boss remains open.
  */
 public final class CnzMinibossSparkInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable {
     private static final int COLLISION_FLAGS = 0x92;
     private static final int SHIELD_REACTION_LIGHTNING_IMMUNITY = 1 << 5;
     private static final int[][] SPARK_FRAMES = {
@@ -67,11 +66,6 @@ public final class CnzMinibossSparkInstance extends AbstractObjectInstance
         delays = SPARK_DELAYS[scriptIndex];
         mappingFrame = frames[0];
         rawAnimTimer = delays[0];
-    }
-
-    @Override
-    public CnzMinibossSparkInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new CnzMinibossSparkInstance(ctx.spawn());
     }
 
     public void attachBossForTest(CnzMinibossInstance boss) {

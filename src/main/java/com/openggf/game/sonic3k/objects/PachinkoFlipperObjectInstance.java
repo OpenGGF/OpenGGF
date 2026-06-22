@@ -7,8 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -28,7 +27,7 @@ import java.util.List;
  * the surface, and launches them when jump is pressed.
  */
 public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, RewindRecreatable {
+        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x20, 0x1C, 0x1D);
 
@@ -65,10 +64,6 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
      * former {@code exactSpawnCodec(PachinkoFlipperObjectInstance.class, PachinkoFlipperObjectInstance::new)}
      * (Phase-2 codec-deletion batch 2).
      */
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new PachinkoFlipperObjectInstance(ctx.spawn());
-    }
 
     @Override
     public SolidObjectParams getSolidParams() {

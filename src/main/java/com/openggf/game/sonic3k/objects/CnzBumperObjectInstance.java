@@ -8,8 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -36,7 +35,7 @@ import java.util.List;
  * 64px radius using the low byte at {@code Level_frame_counter+1}; X flip reverses the cycle.
  */
 public class CnzBumperObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
 
     private static final int COLLISION_FLAGS = 0x40 | 0x17;
     private static final int BOUNCE_VELOCITY = 0x700;
@@ -85,10 +84,6 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
      * {@code exactSpawnCodec(CnzBumperObjectInstance.class, s -> new CnzBumperObjectInstance(s))}
      * (Phase-2 codec-deletion batch 2).
      */
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new CnzBumperObjectInstance(ctx.spawn());
-    }
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {

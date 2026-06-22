@@ -7,8 +7,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.Arrays;
 import java.util.List;
@@ -40,7 +39,7 @@ import java.util.logging.Logger;
  * (palette colors 7-11), which ROM applies after object updates, still wins on
  * its colors — the bumpers keep glowing while the rest of the line goes dark.
  */
-public final class CnzLightsFlashChildInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class CnzLightsFlashChildInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(CnzLightsFlashChildInstance.class.getName());
 
     /** ROM: {@code word_624D0}. Six active steps; the trailing entry is unused. */
@@ -76,11 +75,6 @@ public final class CnzLightsFlashChildInstance extends AbstractObjectInstance im
 
     CnzLightsFlashChildInstance(ObjectSpawn spawn) {
         this(spawn, false);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new CnzLightsFlashChildInstance(ctx.spawn());
     }
 
     /** Test seam: whether this flash restores Pal_CNZ (lights on) after flicker. */

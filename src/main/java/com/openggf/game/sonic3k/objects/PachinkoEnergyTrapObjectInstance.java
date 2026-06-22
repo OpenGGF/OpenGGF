@@ -8,8 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -25,7 +24,7 @@ import java.util.logging.Logger;
  * beam particles, captures the player on the beam line, and ends the bonus stage.
  */
 public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements SpawnRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(PachinkoEnergyTrapObjectInstance.class.getName());
 
     private static final int COLUMN_SPACING = 0x190;
@@ -70,10 +69,6 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
      * former {@code exactSpawnCodec(PachinkoEnergyTrapObjectInstance.class, PachinkoEnergyTrapObjectInstance::new)}
      * (Phase-2 codec-deletion batch 2).
      */
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new PachinkoEnergyTrapObjectInstance(ctx.spawn());
-    }
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {

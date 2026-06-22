@@ -10,8 +10,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -304,7 +303,7 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     public static final class CorkeyShotChild extends AbstractObjectInstance
-            implements TouchResponseProvider, RewindRecreatable {
+            implements TouchResponseProvider, SpawnRewindRecreatable {
         private static final int COLLISION_FLAGS = 0xA0; // word_8C906 collision_flags.
         private static final int PRIORITY_BUCKET = 5;    // word_8C906 priority $280.
         private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
@@ -349,11 +348,6 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
 
         public CorkeyShotChild(ObjectSpawn spawn) {
             this(spawn, spawn.x(), spawn.y(), scriptForSpawn(spawn, null));
-        }
-
-        @Override
-        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            return new CorkeyShotChild(ctx.spawn());
         }
 
         /**
