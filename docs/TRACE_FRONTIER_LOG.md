@@ -144,6 +144,49 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - Fresh trustworthy root-count survey (all 39 reports) + SLZ2 g_speed root mechanism
+
+- Branch/worktree context: `.worktrees/trace-cluster-fixes` at `6ba44d2af`
+  (after the always-fresh-report infra fix `f665a2f58`). Reports under
+  `target/trace-reports/*_report.json` are now regenerated every run, so the
+  per-trace ROOT counts below (non-cascading `cascading=false` groups, via
+  `tools/trace/root_summary.py`) are trustworthy for retargeting. Root count,
+  not total error count, is the distance-to-green.
+- **Shallowest (greenable) traces — 1 ROOT each** (field, first-error frame,
+  ROM vs engine):
+  - `s1_ghz2` y f2591 0x0259 vs 0x0257 (1 error total)
+  - `s1_ghz3` y f1246 0x0219 vs 0x021A (1 error total)
+  - `s1_mz3` y f1702 0x048C vs 0x048B (1 error, span=1)
+  - `s1_lz2` obj_s20_slot f1068 0x20 vs 0x25 (1 error; object-slot, not physics)
+  - `s1_mz1` camera_y f2089 0x02BE vs 0x02C4 (span=2)
+  - `s1_slz2` g_speed f651 0x1000 vs 0x10AE (270 cascading errors from 1 root)
+  - `s1_lz3` angle f1415 0x00C0 vs 0x00D0 (span=1)
+  - `s3k_icz1` status_byte f3116 0x0008 vs 0x0009 (span=3; S3K priority, facing bit0)
+  - `s2_htz1` air f6114 1 vs 0; `s2_htz2` y_speed f1078; `s1_sbz2` obj_s48_slot
+- **Deepest (not near-green):** `s3k_hcz1` 299 roots (298 y), `s3k_mhz1` 208
+  roots (202 y_speed), `s1_ghz1` 117 roots (113 camera_y), `s3k_mgz1` 33 roots
+  (all rings). These are subsystem-wide; not single-fix greenable.
+- **SLZ2 root mechanism (diagnosed, NOT yet fixed):** at f651 the player rolls
+  onto an SLZ CollapsingFloor. ROM `PlatformObject` -> `Plat_NoCheck`
+  (s1 `sub PlatformObject.asm:97-100`; cross-game identical at
+  s2.asm:36013-36015 `loc_19E30`, sonic3k.asm:42035-42037 `loc_1E4A0`) runs
+  EVERY frame the player stands on a top-solid platform:
+  `obAngle=0; obVelY=0; obInertia=obVelX` (g_speed := x_speed). The player is
+  rolling faster than the $1000 x-speed cap, so g_speed (0x10BA) exceeds the
+  capped x_speed (0x1000); mounting the platform clamps g_speed to 0x1000. The
+  engine never applies this. **Blocked upstream:** the engine never SEATS the
+  rolling player on the collapsing floor at f651 — the f651 diagnostic shows
+  "no-touch" on the CollapsingFloors and status 0x04 (engine, not-on-object)
+  vs ROM 0x0C (on-object bit3). Root cause hypothesis: a GROUNDED player
+  rolling LATERALLY onto a flat top-solid platform flush with adjacent terrain
+  is not detected by the engine's landing path (which requires crossing the
+  platform top from above via the prevRelY history check), whereas ROM's
+  `PlatformObject` y-band check seats any grounded player regardless of approach
+  direction. A scoped continuation-path `g_speed=x_speed` fix was written and
+  reverted (unexercised — never fires until the seat-detection is fixed). Next
+  session: fix the lateral-mount seat detection (high regression surface; gate
+  on a full platform-trace sweep), THEN the `inertia=x_vel` continuation clamp.
+
 ## 2026-06-19 - S2 EHZ Tails fly-in approach counter no longer becomes manual-control stall
 
 - Branch context: `bugfix/ai-s2-tails-sidekick-standing-pause`, branch-local
