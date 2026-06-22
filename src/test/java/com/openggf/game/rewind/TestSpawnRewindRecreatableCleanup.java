@@ -7,6 +7,7 @@ import com.openggf.level.objects.SpawnCoordinateSubtypeDefaultArgsRewindRecreata
 import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.SpawnNullableReferenceRewindRecreatable;
+import com.openggf.level.objects.SpawnRenderFlipRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.objects.SpawnServicesDefaultArgsRewindRecreatable;
@@ -140,6 +141,10 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance$BlastoidProjectile",
             "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterProjectile",
             "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSpikeProjectile");
+
+    private static final List<String> SPAWN_RENDER_FLIP_RECREATORS = List.of(
+            "com.openggf.game.sonic2.objects.SteamPuffObjectInstance",
+            "com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance");
 
     private static final List<String> SPAWN_TRAILING_ZERO_INTS_RECREATORS = List.of(
             "com.openggf.level.objects.EggPrisonAnimalInstance",
@@ -363,6 +368,24 @@ class TestSpawnRewindRecreatableCleanup {
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName()
                             + " should use SpawnAndCoordinateZeroScalarArgsRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void spawnRenderFlipRecreatorsUseMarkerInterface() {
+        for (String className : SPAWN_RENDER_FLIP_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(SpawnRenderFlipRewindRecreatable.class.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the spawn render-flip recreate hook");
+        }
+    }
+
+    @Test
+    void spawnRenderFlipRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_RENDER_FLIP_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use SpawnRenderFlipRewindRecreatable's default hook");
         }
     }
 

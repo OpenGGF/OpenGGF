@@ -6,8 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRenderFlipRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -20,7 +19,7 @@ import java.util.List;
  * Moves vertically at a constant speed and flips horizontally each frame.
  */
 public class SpikerDrillObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, SpawnRenderFlipRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x12; // From Obj92_SubObjData
     private static final int Y_VELOCITY = 0x200; // 2 pixels/frame in 8.8 fixed
 
@@ -44,15 +43,6 @@ public class SpikerDrillObjectInstance extends AbstractObjectInstance
         // ROM: if y_flip set, velocity stays +2 (down). Otherwise it's negated.
         this.yVelocity = yFlip ? Y_VELOCITY : -Y_VELOCITY;
         this.motionState = new SubpixelMotion.State(x, y, 0, 0, 0, this.yVelocity);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn s = ctx.spawn();
-        return new SpikerDrillObjectInstance(
-                s, s.x(), s.y(),
-                (s.renderFlags() & 0x01) != 0,
-                (s.renderFlags() & 0x02) != 0);
     }
 
     @Override
