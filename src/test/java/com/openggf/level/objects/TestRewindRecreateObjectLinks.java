@@ -7,9 +7,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class TestRewindRecreateObjectLinks {
@@ -85,6 +87,20 @@ class TestRewindRecreateObjectLinks {
                 new StubObjectServices());
 
         assertNull(RewindRecreateObjectLinks.nearestLiveObject(ctx, LinkProbeObject.class));
+    }
+
+    @Test
+    void aizEndBossRewindLinksUsesSharedNearestLiveObjectHelper() throws Exception {
+        Class<?> links = Class.forName("com.openggf.game.sonic3k.objects.AizEndBossRewindLinks");
+
+        for (Method method : links.getDeclaredMethods()) {
+            assertFalse(method.getName().equals("nearest")
+                            && method.getParameterCount() == 2
+                            && method.getParameterTypes()[0] == RewindRecreateContext.class
+                            && method.getParameterTypes()[1] == Class.class,
+                    "AizEndBossRewindLinks should delegate generic nearest-live lookup to "
+                            + "RewindRecreateObjectLinks");
+        }
     }
 
     private static Camera mockCamera() {
