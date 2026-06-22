@@ -395,6 +395,22 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // ROM Ledge_ChkTouch passes #96/2 (= 0x30) directly as SlopeObject's d1
+        // (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:31-33),
+        // and SlopeObject does the X-range check on that d1 with no narrowing
+        // (docs/s1disasm/_incObj/sub PlatformObject.asm:133-139). PLATFORM_HALF_WIDTH
+        // (0x30) is therefore already the standable top-landing width and must not
+        // receive the generic SolidObjectFull +$B narrowing (which would shrink it
+        // to 0x25). Without this, a player falling onto the ledge near its left/right
+        // edge lands several frames late: s1_ghz1 f2790 (Sonic at relX=2 within the
+        // ledge) was rejected as out-of-width until relX=12 at f2793, so the engine
+        // overshot the landing by 3 frames. Matches the sibling collapsing FLOOR
+        // (Sonic1CollapsingFloorObjectInstance) which opts in for the same reason.
+        return true;
+    }
+
+    @Override
     public byte[] getSlopeData() {
         return SLOPE_DATA;
     }
