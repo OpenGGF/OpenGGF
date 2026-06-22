@@ -6,8 +6,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -31,7 +30,7 @@ import java.util.List;
  * the missile is deleted immediately (Msl_ChkCancel).
  */
 public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, SpawnCoordinateZeroScalarArgsRewindRecreatable {
 
     // Collision: obColType = $87 -> category HURT ($80), size index 7
     // Size 7: width=$06 (6px), height=$06 (6px)
@@ -106,12 +105,6 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
 
     private Sonic1BuzzBomberMissileInstance(int x, int y, int xVel, int yVel) {
         this(x, y, xVel, yVel, false, -1);
-    }
-
-    @Override
-    public Sonic1BuzzBomberMissileInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn spawn = ctx.spawn();
-        return new Sonic1BuzzBomberMissileInstance(spawn.x(), spawn.y(), 0, 0, false, -1);
     }
 
     @Override
