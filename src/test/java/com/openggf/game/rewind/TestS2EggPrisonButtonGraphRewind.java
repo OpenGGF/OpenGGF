@@ -10,7 +10,6 @@ import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
@@ -25,9 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -288,11 +285,7 @@ class TestS2EggPrisonButtonGraphRewind {
     }
 
     private static boolean hasExplicitS2DynamicCodec(String className) {
-        Set<String> names = new HashSet<>();
-        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
-            names.add(codec.className());
-        }
-        return names.contains(className);
+        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static int readIntField(Object target, String fieldName) {
