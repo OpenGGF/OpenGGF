@@ -83,6 +83,7 @@ class TestSpawnRewindRecreatableCleanup {
     private static final List<String> SPAWN_COORDINATE_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance",
             "com.openggf.game.sonic2.objects.bosses.LavaBubbleObjectInstance",
+            "com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceController",
             "com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance",
             "com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance$AizTreeRevealControlObjectInstance",
             "com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile",
@@ -111,7 +112,9 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic2.objects.HtzFireProjectileObjectInstance",
             "com.openggf.game.sonic2.objects.LeafParticleObjectInstance",
             "com.openggf.game.sonic3k.objects.AizEndBossDebrisChild",
-            "com.openggf.game.sonic3k.objects.MGZHeadTriggerProjectileInstance");
+            "com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance$HeadTriggerStoneChipChild",
+            "com.openggf.game.sonic3k.objects.MGZHeadTriggerProjectileInstance",
+            "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild");
 
     private static final List<String> SPAWN_COORDINATE_SUBTYPE_DEFAULT_ARGS_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.Sonic1MonitorPowerUpObjectInstance",

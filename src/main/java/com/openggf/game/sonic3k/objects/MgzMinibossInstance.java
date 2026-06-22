@@ -21,6 +21,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -970,15 +971,9 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
     }
 
     private static final class CeilingSpireChild extends CeilingDebrisChild
-            implements TouchResponseProvider, RewindRecreatable {
+            implements TouchResponseProvider, SpawnCoordinateZeroScalarArgsRewindRecreatable {
         private CeilingSpireChild(int x, int y, int mappingFrame) {
             super(x, y, mappingFrame, true);
-        }
-
-        @Override
-        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            ObjectSpawn spawn = ctx.spawn();
-            return new CeilingSpireChild(spawn.x(), spawn.y(), 0);
         }
 
         @Override

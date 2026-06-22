@@ -11,8 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -34,7 +33,8 @@ import java.util.List;
  *   <li>Transition to HCZ when Sonic falls past Y threshold</li>
  * </ol>
  */
-public class Aiz2BossEndSequenceController extends AbstractObjectInstance implements RewindRecreatable {
+public class Aiz2BossEndSequenceController extends AbstractObjectInstance
+        implements SpawnCoordinateRewindRecreatable {
 
     // ROM: Camera_stored_max_X_pos = _unkFA84 + $158
     private static final int MAX_X_TARGET_OFFSET = 0x158;
@@ -73,14 +73,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance implem
 
     Aiz2BossEndSequenceController(ObjectSpawn spawn) {
         this(spawn.x(), spawn.y());
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn spawn = ctx.spawn() != null
-                ? ctx.spawn()
-                : new ObjectSpawn(0, 0, Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0);
-        return new Aiz2BossEndSequenceController(spawn.x(), spawn.y());
     }
 
     @Override
