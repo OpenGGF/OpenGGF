@@ -9,6 +9,7 @@ import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.SpawnNullableReferenceRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
+import com.openggf.level.objects.SpawnServicesDefaultArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnServicesRewindRecreatable;
 import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SpawnYCoordinateRewindRecreatable;
@@ -127,6 +128,13 @@ class TestSpawnRewindRecreatableCleanup {
     private static final List<String> SPAWN_SERVICES_RECREATORS = List.of(
             "com.openggf.level.objects.ExplosionObjectInstance",
             "com.openggf.level.objects.SkidDustObjectInstance");
+
+    private static final List<String> SPAWN_SERVICES_DEFAULT_ARGS_RECREATORS = List.of(
+            "com.openggf.level.objects.AnimalObjectInstance",
+            "com.openggf.level.objects.AbstractPointsObjectInstance",
+            "com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance",
+            "com.openggf.game.sonic2.objects.PointsObjectInstance",
+            "com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance");
 
     private static final List<String> SPAWN_ROM_ZONE_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance",
@@ -333,6 +341,24 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnServicesRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void spawnServicesDefaultArgsRecreatorsUseMarkerInterface() {
+        for (String className : SPAWN_SERVICES_DEFAULT_ARGS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(SpawnServicesDefaultArgsRewindRecreatable.class.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the spawn-services default-args recreate hook");
+        }
+    }
+
+    @Test
+    void spawnServicesDefaultArgsRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_SERVICES_DEFAULT_ARGS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use SpawnServicesDefaultArgsRewindRecreatable's default hook");
         }
     }
 

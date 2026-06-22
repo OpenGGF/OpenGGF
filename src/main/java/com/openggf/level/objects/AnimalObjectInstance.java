@@ -9,7 +9,8 @@ import com.openggf.game.PlayableEntity;
 
 import java.util.List;
 
-public class AnimalObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class AnimalObjectInstance extends AbstractObjectInstance
+        implements SpawnServicesDefaultArgsRewindRecreatable {
     private static final int GRAVITY = 0x38;
     private static final int FLY_GRAVITY = 0x18;
     private static final int INITIAL_POP_VEL = -0x400;
@@ -42,20 +43,10 @@ public class AnimalObjectInstance extends AbstractObjectInstance implements Rewi
     }
 
     /**
-     * Rewind recreate path: skips the {@code services.rng()} draw so restore
-     * does not advance RNG state past the captured rewind point. The captured
-     * {@code artVariant} (and all other scalars) are reapplied via
-     * {@link AbstractObjectInstance#restoreRewindState} after construction.
+     * Rewind recreate path uses {@link SpawnServicesDefaultArgsRewindRecreatable}
+     * to skip the {@code services.rng()} draw. The captured {@code artVariant}
+     * and all other scalars are reapplied by the generic scalar pass.
      */
-    static AnimalObjectInstance forRewindRecreate(ObjectSpawn spawn, ObjectServices services) {
-        return new AnimalObjectInstance(spawn, services, 0);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return forRewindRecreate(ctx.spawn(), ctx.objectServices());
-    }
-
     private AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services, int artVariant) {
         super(spawn, "Animal");
         ObjectRenderManager renderManager = services.renderManager();
