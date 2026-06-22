@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -80,7 +81,7 @@ public final class ObjectRewindDynamicCodecs {
             AbstractObjectInstance probe = constructProbeForRewindRecreatable(cls, entry, ctx);
             if (probe instanceof RewindRecreatable rr) {
                 RewindRecreateContext rewindCtx = new RewindRecreateContext(
-                        entry.spawn(), entry.state(), ctx.objectServices(), entry);
+                        entry.spawn(), entry.state(), ctx.objectServices(), ctx.objectManager(), entry);
                 return rr.recreateForRewind(rewindCtx);
             }
             LOG.fine("genericRecreate: RewindRecreatable probe construction failed for " + className);
@@ -106,8 +107,8 @@ public final class ObjectRewindDynamicCodecs {
      *
      * <p>Tries constructors in order:
      * <ol>
-     *   <li>{@code (AbstractPlayableSprite)} — player-bound dynamic objects using the
-     *       captured owner as a probe</li>
+     *   <li>{@code (AbstractPlayableSprite)} or {@code (PlayableEntity)} —
+     *       player-bound dynamic objects using the captured owner as a probe</li>
      *   <li>non-static member constructors using a live enclosing object from
      *       {@link DynamicObjectRecreateContext#objectManager()} plus harmless
      *       placeholders — parent-linked inner children</li>
@@ -160,6 +161,14 @@ public final class ObjectRewindDynamicCodecs {
         if (entry.playerOwner() instanceof AbstractPlayableSprite player) {
             Constructor<? extends AbstractObjectInstance> playerCtor =
                     findCtor(cls, AbstractPlayableSprite.class);
+            if (playerCtor != null) {
+                return invokeProbeCtor(cls, playerCtor, ctx, player);
+            }
+        }
+
+        if (entry.playerOwner() instanceof PlayableEntity player) {
+            Constructor<? extends AbstractObjectInstance> playerCtor =
+                    findCtor(cls, PlayableEntity.class);
             if (playerCtor != null) {
                 return invokeProbeCtor(cls, playerCtor, ctx, player);
             }
@@ -679,30 +688,7 @@ public final class ObjectRewindDynamicCodecs {
     }
 
     public static List<DynamicObjectRewindCodec> sharedCodecs() {
-        return List.of(
-                deferredPlayerBoundCodec(ShieldObjectInstance.class, ShieldObjectInstance.class));
-    }
-
-    public static DynamicObjectRewindCodec deferredPlayerBoundCodec(
-            Class<? extends ObjectInstance> exactClass, Class<?> baseTypeKey) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == exactClass;
-            }
-
-            @Override
-            public String className() {
-                return exactClass.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                context.objectManager().enqueuePendingPlayerBoundEntry(baseTypeKey, entry);
-                return null;
-            }
-        };
+        return List.of();
     }
 
 }

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -25,6 +26,31 @@ class TestShieldRewindPendingRestore {
     @AfterEach
     void tearDown() {
         TestEnvironment.resetAll();
+    }
+
+    @Test
+    void shieldDynamicRestoreQueuesPendingEntryThroughGenericRecreateWithoutSharedCodec() {
+        ObjectManager objectManager = new ObjectManager(List.of(), null, 0, null, null);
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 100, (short) 200);
+        ShieldObjectInstance source = ObjectConstructionContext.construct(
+                objectManager.services(), () -> new ShieldObjectInstance(sonic));
+        source.setSlotIndex(60);
+        objectManager.addDynamicObject(source);
+
+        ObjectManagerSnapshot snapshot = objectManager.rewindSnapshottable().capture();
+
+        assertFalse(ObjectRewindDynamicCodecs.sharedCodecs().stream()
+                        .anyMatch(codec -> ShieldObjectInstance.class.getName().equals(codec.className())),
+                "basic shields must restore through RewindRecreatable generic recreate, not a shared codec");
+
+        objectManager.rewindSnapshottable().restore(snapshot);
+
+        PowerUpObject restoredPowerUp = new DefaultPowerUpSpawner(objectManager)
+                .spawnShield(sonic, ShieldType.BASIC);
+        ShieldObjectInstance restoredShield = assertInstanceOf(ShieldObjectInstance.class, restoredPowerUp);
+        assertSame(sonic, restoredShield.getPlayer());
+        assertEquals(60, restoredShield.getSlotIndex(),
+                "generic recreate should queue the captured dynamic entry for player refresh");
     }
 
     @Test

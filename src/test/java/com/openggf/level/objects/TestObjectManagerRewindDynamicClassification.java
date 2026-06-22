@@ -134,7 +134,7 @@ class TestObjectManagerRewindDynamicClassification {
     }
 
     @Test
-    void sonic2BuzzerFlameChildIsClassifiedThroughRegistryCodec() throws Exception {
+    void sonic2BuzzerFlameChildIsClassifiedAsRewindRestorable() throws Exception {
         Sonic2ObjectRegistry registry = new Sonic2ObjectRegistry();
         ObjectSpawn spawn = new ObjectSpawn(0x100, 0x180, 0x4B, 0, 0, false, 0);
         BuzzerBadnikInstance parent = new BuzzerBadnikInstance(spawn);

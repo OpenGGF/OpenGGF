@@ -3773,7 +3773,8 @@ public class ObjectManager {
     }
 
     static boolean isRewindRestorableDynamicObject(ObjectInstance inst, ObjectRegistry registry) {
-        return rewindDynamicObjectCodecFor(inst, registry).isPresent();
+        return rewindDynamicObjectCodecFor(inst, registry).isPresent()
+                || inst instanceof RewindRecreatable;
     }
 
     ObjectServices objectServicesForRewind() {
