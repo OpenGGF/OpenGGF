@@ -11,6 +11,8 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -50,7 +52,7 @@ import java.util.List;
  * multiplier (subtype * 60 frames).
  */
 public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable {
 
     // --- Collision ---
     // From disassembly: move.b #5,obColType(a0)
@@ -119,6 +121,11 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
         this.animTickCounter = 0;
         this.animStepIndex = 0;
         this.launchFlag = false;
+    }
+
+    @Override
+    public Sonic1BallHogBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1BallHogBadnikInstance(ctx.spawn());
     }
 
     @Override

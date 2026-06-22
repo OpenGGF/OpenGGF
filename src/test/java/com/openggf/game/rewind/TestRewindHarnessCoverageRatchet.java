@@ -181,12 +181,14 @@ public class TestRewindHarnessCoverageRatchet {
  *       the S2 invisible block.</li>
  *   <li>2026-06-22: raised to 149 after adding generic recreate coverage for
  *       the S1 invisible barrier.</li>
+ *   <li>2026-06-22: raised to 153 after adding generic recreate coverage for
+ *       the first S1 badnik head batch.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 149;
+    static final int RATCHET_FLOOR = 153;
 
     @BeforeEach
     void initHeadless() {
