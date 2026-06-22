@@ -5,6 +5,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.ZeroArgRewindRecreatable;
 import org.junit.jupiter.api.Test;
 
@@ -92,6 +93,11 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic3k.objects.AizBombExplosionInstance",
             "com.openggf.game.sonic3k.objects.AizMinibossDebrisChild");
 
+    private static final List<String> SPAWN_TRAILING_ZERO_INTS_RECREATORS = List.of(
+            "com.openggf.level.objects.EggPrisonAnimalInstance",
+            "com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart",
+            "com.openggf.game.sonic3k.objects.AizRockFragmentChild");
+
     private static final List<String> ZERO_ARG_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.Sonic1EndingSTHObjectInstance",
             "com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance",
@@ -166,6 +172,24 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnCoordinateZeroPairRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void spawnTrailingZeroIntsRecreatorsUseMarkerInterface() {
+        for (String className : SPAWN_TRAILING_ZERO_INTS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(SpawnTrailingZeroIntsRewindRecreatable.class.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the spawn trailing-zero-ints recreate hook");
+        }
+    }
+
+    @Test
+    void spawnTrailingZeroIntsRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_TRAILING_ZERO_INTS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use SpawnTrailingZeroIntsRewindRecreatable's default hook");
         }
     }
 

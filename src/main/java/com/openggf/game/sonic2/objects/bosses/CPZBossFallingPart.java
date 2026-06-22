@@ -8,8 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -20,7 +19,8 @@ import java.util.List;
  * ROM Reference: s2.asm Obj5D (ROUTINE_FALLING_PARTS = 0x14)
  * Explodes after timer, then falls with gravity.
  */
-public class CPZBossFallingPart extends AbstractObjectInstance implements RewindRecreatable {
+public class CPZBossFallingPart extends AbstractObjectInstance
+        implements SpawnTrailingZeroIntsRewindRecreatable {
 
     private static final int GRAVITY = 0x38;
     private static final int FLOOR_Y = 0x580;
@@ -56,11 +56,6 @@ public class CPZBossFallingPart extends AbstractObjectInstance implements Rewind
 
     private CPZBossFallingPart(ObjectSpawn spawn) {
         this(spawn, 0, 0, 0);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new CPZBossFallingPart(ctx.spawn(), 0, 0, 0);
     }
 
     @Override
