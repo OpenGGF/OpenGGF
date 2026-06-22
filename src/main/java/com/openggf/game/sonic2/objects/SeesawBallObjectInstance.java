@@ -2,12 +2,17 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.audio.GameSound;
+import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.Sprite;
@@ -26,7 +31,7 @@ import java.util.List;
  * Based on Sonic 2 disassembly s2.asm lines 47117-47271.
  */
 public class SeesawBallObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     // Ball Y offsets per seesaw frame (Obj14_YOffsets)
     // ROM: dc.w -8, -28, -47, -28, -8 ; low, balanced, high, balanced, low
@@ -65,8 +70,7 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
     private State state = State.RESTING;
 
     // Parent seesaw reference.
-    // Un-final so GenericFieldCapturer can reapply it after the parent-relink rewind
-    // codec recreates the ball; the codec relinks it through the ctor.
+    // Recreate relinks this through the ctor after matching the restored parent.
     private SeesawObjectInstance parent;
 
     // Position tracking - combined 16.16 fixed-point (pixel in bits 16-31, subpixel in bits 0-15)
@@ -77,8 +81,7 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
     private int yVel;  // 8.8 fixed-point velocity
 
     // Seesaw reference position (objoff_30, objoff_34 in ROM).
-    // Un-final so GenericFieldCapturer reapplies the captured values after the rewind
-    // codec recreates the ball with placeholder ctor args.
+    // Un-final so GenericFieldCapturer can seed captured values before parent matching.
     private int seesawCenterX;
     private int seesawBottomY;
 
@@ -92,6 +95,11 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
     // Un-final for rewind-capture consistency (policy-marked TRANSIENT; reapplied/relinked
     // via the ctor on recreate).
     private ObjectSpawn originalSpawn;
+
+    SeesawBallObjectInstance() {
+        super(new ObjectSpawn(0, 0, 0x14, 0, 0, false, 0), "SeesawBall");
+        this.originalSpawn = spawn;
+    }
 
     public SeesawBallObjectInstance(
             int seesawCenterX,
@@ -116,6 +124,59 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
 
         this.paletteFrame = 0;
         this.animTimer = 0;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        seedCapturedScalars(ctx);
+        SeesawObjectInstance restoredParent =
+                findParentForRewind(ctx, seesawCenterX, seesawBottomY);
+        if (restoredParent == null) {
+            return null;
+        }
+        int centerX = restoredParent.getSpawn().x();
+        int bottomY = restoredParent.getSpawn().y() + 0x10;
+        SeesawBallObjectInstance restored = new SeesawBallObjectInstance(
+                centerX,
+                bottomY,
+                centerX,
+                bottomY,
+                restoredParent,
+                restoredParent.isFlippedHorizontal());
+        restoredParent.adoptBallForRewind(restored);
+        return restored;
+    }
+
+    private void seedCapturedScalars(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.state() == null || ctx.state().compactGenericState() == null) {
+            return;
+        }
+        GenericFieldCapturer.restoreObjectSubclassScalarsCompact(this, ctx.state().compactGenericState());
+    }
+
+    private static SeesawObjectInstance findParentForRewind(
+            RewindRecreateContext ctx,
+            int capturedCenterX,
+            int capturedBottomY) {
+        if (ctx == null || ctx.objectServices() == null
+                || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectManager objectManager = ctx.objectServices().objectManager();
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (!(object instanceof SeesawObjectInstance seesaw) || seesaw.isDestroyed()) {
+                continue;
+            }
+            if (seesaw.getSpawn().subtype() != 0 || seesaw.hasLiveBall()) {
+                continue;
+            }
+            int centerX = seesaw.getSpawn().x();
+            int bottomY = seesaw.getSpawn().y() + 0x10;
+            if (centerX == capturedCenterX && bottomY == capturedBottomY) {
+                return seesaw;
+            }
+        }
+        return null;
     }
 
     /**

@@ -13,9 +13,12 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
@@ -545,8 +548,9 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance {
         }
     }
 
-    private static final class Mhz2KnucklesRouteSwitchChild extends AbstractObjectInstance {
-        private final CutsceneKnucklesMhz2Instance parent;
+    private static final class Mhz2KnucklesRouteSwitchChild extends AbstractObjectInstance
+            implements RewindRecreatable {
+        private CutsceneKnucklesMhz2Instance parent;
         // Non-final so the generic rewind field capturer can reapply the captured
         // value after the codec recreates this child (the ctor recomputes it from
         // the parent, but the capturer restores the exact captured value).
@@ -558,6 +562,12 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance {
                     "MHZ2KnucklesRouteSwitch");
             this.parent = parent;
             this.knucklesRoute = parent.isKnucklesPlayer();
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            CutsceneKnucklesMhz2Instance liveParent = findNearestLiveParent(ctx);
+            return liveParent == null ? null : new Mhz2KnucklesRouteSwitchChild(liveParent);
         }
 
         @Override
@@ -606,6 +616,31 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance {
                 return;
             }
             renderer.drawFrameIndex(childFrame, getX(), getY(), false, false);
+        }
+
+        private static CutsceneKnucklesMhz2Instance findNearestLiveParent(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            CutsceneKnucklesMhz2Instance best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (!(object instanceof CutsceneKnucklesMhz2Instance candidate) || candidate.isDestroyed()) {
+                    continue;
+                }
+                if (spawn == null) {
+                    return candidate;
+                }
+                long dx = candidate.getX() - spawn.x();
+                long dy = candidate.getY() - spawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = candidate;
+                }
+            }
+            return best;
         }
     }
 }

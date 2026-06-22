@@ -311,6 +311,15 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
         }
     }
 
+    boolean hasLiveBallForRewind() {
+        return ball != null && !ball.isDestroyed();
+    }
+
+    void adoptBallForRewind(Sonic1SeesawBallObjectInstance restoredBall) {
+        ball = restoredBall;
+        ballSpawned = true;
+    }
+
     // ---- SolidObjectProvider ----
 
     @Override

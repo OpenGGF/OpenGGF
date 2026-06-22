@@ -9,8 +9,12 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.sonic2.scroll.SwScrlDez;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -2174,7 +2178,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // INNER CLASS: BombChild - Projectile with arc trajectory
     // ========================================================================
 
-    static class BombChild extends AbstractBossChild implements TouchResponseProvider {
+    static class BombChild extends AbstractBossChild implements RewindRecreatable, TouchResponseProvider {
         private int xVel;
         private int yVel;
         private int groundTimer;
@@ -2195,6 +2199,42 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             this.onGround = false;
             this.detonating = false;
             this.groundTimer = BOMB_GROUND_TIMER;
+        }
+
+        @Override
+        public BombChild recreateForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
+                    || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            ObjectManager objectManager = ctx.objectServices().objectManager();
+            ObjectSpawn spawn = ctx.spawn();
+            Sonic2DeathEggRobotInstance boss = nearestLiveBoss(objectManager, spawn.x(), spawn.y());
+            if (boss == null) {
+                return null;
+            }
+            BombChild bomb = new BombChild(boss, spawn.x(), spawn.y(), 0, 0);
+            if (!boss.childComponents.contains(bomb)) {
+                boss.childComponents.add(bomb);
+            }
+            return bomb;
+        }
+
+        private static Sonic2DeathEggRobotInstance nearestLiveBoss(ObjectManager objectManager, int x, int y) {
+            Sonic2DeathEggRobotInstance nearest = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance instance : objectManager.getActiveObjects()) {
+                if (instance instanceof Sonic2DeathEggRobotInstance boss && !boss.isDestroyed()) {
+                    long dx = boss.getX() - (long) x;
+                    long dy = boss.getY() - (long) y;
+                    long distance = dx * dx + dy * dy;
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        nearest = boss;
+                    }
+                }
+            }
+            return nearest;
         }
 
         @Override

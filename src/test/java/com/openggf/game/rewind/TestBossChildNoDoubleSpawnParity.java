@@ -46,8 +46,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * <ul>
  *   <li><b>S2 DEZ Death Egg Robot</b>: {@code ArticulatedChild} ×6, {@code HeadChild} ×1,
  *       {@code JetChild} ×1, {@code ForearmChild} ×2 — 10 construction children total.
- *       {@code BombChild} and {@code SensorChild} are routine-spawned (correct to keep
- *       codecs for those if desired).
+ *       {@code BombChild} and {@code SensorChild} are routine-spawned; BombChild now
+ *       restores through a graph-tested {@code RewindRecreatable} relink, while SensorChild
+ *       remains transient.
  *       Test asserts count stays at 10 after restore.</li>
  *   <li><b>S1 SYZ Boss</b>: {@code SYZBossSpike} is spawned inside
  *       {@code initializeBossState()} — 1 construction child.
@@ -64,7 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  *       {@code MechaSonicTargetingSensor}/{@code MechaSonicDEZWindow}) never had codecs,
  *       so they never double-spawned. Guarded statically here: those construction children
  *       must never gain a codec ({@code MTZBossLaser}/{@code MechaSonicSpikeball} are
- *       routine-fired and may keep codecs).</li>
+ *       routine-fired and can use their own graph recreate or codec path as needed).</li>
  * </ul>
  */
 public class TestBossChildNoDoubleSpawnParity {

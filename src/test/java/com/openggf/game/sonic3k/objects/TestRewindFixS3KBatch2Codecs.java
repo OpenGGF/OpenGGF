@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic3kObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-2 S3K object that
+ * now exposes a dynamic rewind recreate path for every batch-2 S3K object that
  * was previously dropped on a held-rewind restore.
  *
  * <p>The accept-drop {@code MgzEndBossDefeatDebrisChild} is intentionally NOT
@@ -53,7 +53,7 @@ class TestRewindFixS3KBatch2Codecs {
     }
 
     @Test
-    void registersCodecsForReleaseSliceBatch2Objects() {
+    void registersRecreatePathsForReleaseSliceBatch2Objects() {
         Set<String> names = codecClassNames();
 
         List<String> required = List.of(
@@ -64,7 +64,6 @@ class TestRewindFixS3KBatch2Codecs {
                 MhzPollenParticleInstance.class.getName(),
                 IczEndBossEggCapsuleInstance.class.getName(),
                 CaterkillerJrBodyInstance.class.getName(),
-                MhzMinibossFlameInstance.class.getName(),
                 MhzMinibossEscapeShardInstance.class.getName(),
                 Sonic3kStarPostBonusStarChild.class.getName(),
                 Sonic3kSSEntryFlashObjectInstance.class.getName(),

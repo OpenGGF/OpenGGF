@@ -12,19 +12,15 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic2ObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-5 S2 object that
- * was previously dropped on a held-rewind restore.
+ * reflects the current batch-5 S2 dynamic rewind codec inventory.
  *
- * <p>Batch-5 adds parent/sibling-relink codecs for the CPZ-boss Dripper and
- * PipeSegment, the HTZ Rexon head, and the Egg-prison button, plus an exact-spawn
- * codec for the act-results screen. The destroyed Egg-prison body, ARZ leaf
- * particle, and act-results screen now use generic recreate. Remaining explicit
- * codecs are gameplay-relevant (boss progression and solid bodies), so none are
- * accept-drop.
+ * <p>The original batch-5 codecs for CPZ-boss Dripper/PipeSegment, Rexon head,
+ * Egg-prison button, destroyed Egg-prison body, ARZ leaf particle, and act
+ * results have been deleted in favour of graph-tested or self-contained
+ * {@code RewindRecreatable} generic recreate paths.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
  * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
@@ -45,18 +41,18 @@ class TestRewindFixS2Batch5Codecs {
     }
 
     @Test
-    void registersCodecsForBatch5S2Objects() {
+    void batch5S2ObjectsNoLongerRegisterDeletedCodecs() {
         Set<String> names = codecClassNames();
 
-        List<String> required = List.of(
+        List<String> deleted = List.of(
                 CPZBossDripper.class.getName(),
                 CPZBossPipeSegment.class.getName(),
                 RexonHeadObjectInstance.class.getName(),
                 EggPrisonButtonObjectInstance.class.getName());
 
-        for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+        for (String name : deleted) {
+            assertFalse(names.contains(name),
+                    name + " must restore through RewindRecreatable generic recreate, not a batch-5 codec");
         }
 
         assertFalse(names.contains(LeafParticleObjectInstance.class.getName()),

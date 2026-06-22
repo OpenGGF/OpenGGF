@@ -16973,7 +16973,7 @@ whereas the engine's NEBULA_BOMB path applies gravity THEN moves -- a one-frame
 ordering mismatch to fix when a Nebula-bomb (WFZ) frontier pins it.
 
 
-### 2026-06-20 -- Verified ROM facts (CPZ1 touch gate; LZ3 wrap) 
+### 2026-06-20 -- Verified ROM facts (CPZ1 touch gate; LZ3 wrap)
 
 - S2 runs `TouchResponse` for CPU Tails only when `obj_control(a0)` bit 7 is clear
   (`tst.b obj_control(a0) / bmi.s +`, s2.asm:38997-38999). At CPZ1 f1157 Tails

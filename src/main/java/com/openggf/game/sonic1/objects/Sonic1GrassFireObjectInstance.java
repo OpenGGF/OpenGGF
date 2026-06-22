@@ -10,6 +10,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -39,7 +41,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/35 Burning Grass.asm
  */
 public class Sonic1GrassFireObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     // ========================================================================
     // ROM Constants
@@ -107,7 +109,7 @@ public class Sonic1GrassFireObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     /** Whether this is the walking fire (subtype 0) or stationary (subtype 1). */
-    private final boolean isWalker;
+    private boolean isWalker;
 
     /** Current X position (updated for walker). */
     private int currentX;
@@ -135,10 +137,10 @@ public class Sonic1GrassFireObjectInstance extends AbstractObjectInstance
     private int originX;
 
     /** Slope height data from parent platform (objoff_30 pointer). */
-    private final byte[] slopeData;
+    private byte[] slopeData;
 
     /** Reference to parent platform for child registration and sink tracking. */
-    private final Sonic1LargeGrassyPlatformObjectInstance parentPlatform;
+    private Sonic1LargeGrassyPlatformObjectInstance parentPlatform;
 
     /** Animation timer. */
     private int animTimer;
@@ -147,10 +149,18 @@ public class Sonic1GrassFireObjectInstance extends AbstractObjectInstance
     private int animIndex;
 
     /** Walker: tracks spawned children for cleanup. */
-    private final List<Sonic1GrassFireObjectInstance> children;
+    private List<Sonic1GrassFireObjectInstance> children;
 
     /** Whether the sound has been played (only on init, routine 0). */
     private boolean soundPlayed;
+
+    /**
+     * Harmless probe constructor used by the generic rewind recreator before
+     * delegating to {@link #recreateForRewind(RewindRecreateContext)}.
+     */
+    public Sonic1GrassFireObjectInstance() {
+        this(0, 0, 0, null, null, true);
+    }
 
     /**
      * Creates a GrassFire instance.
@@ -179,6 +189,16 @@ public class Sonic1GrassFireObjectInstance extends AbstractObjectInstance
         this.animIndex = 0;
         this.children = isWalker ? new ArrayList<>() : null;
         this.soundPlayed = false;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        return new Sonic1GrassFireObjectInstance(
+                spawn.x(), spawn.y(), 0, null, null, spawn.subtype() == 0);
     }
 
     // ========================================================================

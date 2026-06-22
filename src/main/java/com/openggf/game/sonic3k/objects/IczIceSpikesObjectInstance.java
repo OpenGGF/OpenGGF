@@ -6,10 +6,13 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -128,6 +131,11 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
         hurtChild = spawnChild(() -> new SpikeHurtChild(this, originalX, childY));
     }
 
+    void rewindAttachHurtChild(SpikeHurtChild child) {
+        hurtChild = child;
+        childSpawned = true;
+    }
+
     @Override
     public SolidObjectParams getSolidParams() {
         return subtypeZero ? SUBTYPE_ZERO_SOLID : new SolidObjectParams(0, 0, 0);
@@ -223,13 +231,21 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
         MOVE_TOUCH
     }
 
-    public static final class SpikeHurtChild extends AbstractObjectInstance implements TouchResponseProvider {
-        private final IczIceSpikesObjectInstance parent;
+    public static final class SpikeHurtChild extends AbstractObjectInstance
+            implements TouchResponseProvider, RewindRecreatable {
+        private IczIceSpikesObjectInstance parent;
         // Non-final so the generic rewind field capturer reapplies the captured
         // (spawn-derived) values after the codec recreates this child; the codec
         // already passes them via the ctor, so this is idempotent.
         private int x;
         private int y;
+
+        private SpikeHurtChild(ObjectSpawn spawn) {
+            super(spawn, "ICZIceSpikesHurtChild");
+            this.parent = null;
+            this.x = spawn.x();
+            this.y = spawn.y();
+        }
 
         private SpikeHurtChild(IczIceSpikesObjectInstance parent, int x, int y) {
             super(new ObjectSpawn(x, y, Sonic3kObjectIds.ICZ_ICE_SPIKES, 0, 0, false, y),
@@ -237,6 +253,45 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
             this.parent = parent;
             this.x = x;
             this.y = y;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            IczIceSpikesObjectInstance liveParent = findNearestLiveParentForRewind(ctx);
+            if (liveParent == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            int restoredX = spawn != null ? spawn.x() : liveParent.originalX;
+            int restoredY = spawn != null ? spawn.y() : liveParent.originalY;
+            SpikeHurtChild restored = new SpikeHurtChild(liveParent, restoredX, restoredY);
+            liveParent.rewindAttachHurtChild(restored);
+            return restored;
+        }
+
+        private static IczIceSpikesObjectInstance findNearestLiveParentForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            IczIceSpikesObjectInstance best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (!(instance instanceof IczIceSpikesObjectInstance candidate) || candidate.isDestroyed()) {
+                    continue;
+                }
+                if (spawn == null) {
+                    return candidate;
+                }
+                long dx = (long) candidate.getX() - spawn.x();
+                long dy = (long) candidate.getY() - spawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = candidate;
+                }
+            }
+            return best;
         }
 
         @Override

@@ -24,8 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * differentiator scalars are then reapplied by the generic field capturer:
  * <ul>
  *   <li>{@code Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance} — Orbinaut HURT
- *       satellite/projectile. Parent-relink codec (reflection ctor); all live state
- *       is non-final and reapplied after recreate.</li>
+ *       satellite/projectile. Uses {@link RewindRecreatable} generic recreate to
+ *       relink/adopt into the live Orbinaut parent; all live state is non-final
+ *       and reapplied after recreate.</li>
  *   <li>{@code Sonic1FalseFloorInstance$FalseFloorBlock} — SBZ2 boss collapsing-floor
  *       tile. Uses {@link RewindRecreatable} generic recreate to re-register with the
  *       restored master; {@code currentX}/{@code currentY}/{@code blockIndex} are
@@ -63,18 +64,18 @@ class TestRewindFixS1InnerBatch1Codecs {
     }
 
     @Test
-    void registersCodecsForBatchInner1S1ChildrenThatStillNeedExplicitCodecs() {
+    void orbSpikeUsesRewindRecreatableInsteadOfExplicitCodec() throws Exception {
         Set<String> names = codecClassNames();
 
-        // ScrapEggmanButton intentionally absent: construction-spawned.
-        List<String> required = List.of(
-                "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance"
-                        + "$OrbSpikeObjectInstance");
+        String orbSpike = "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance"
+                + "$OrbSpikeObjectInstance";
+        Class<?> orbSpikeClass = Class.forName(orbSpike);
 
-        for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
-        }
+        assertFalse(names.contains(orbSpike),
+                "OrbSpikeObjectInstance should restore via RewindRecreatable genericRecreate, "
+                        + "not a Sonic1ObjectRegistry explicit codec");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(orbSpikeClass),
+                "OrbSpikeObjectInstance must opt into the generic RewindRecreatable path");
     }
 
     @Test

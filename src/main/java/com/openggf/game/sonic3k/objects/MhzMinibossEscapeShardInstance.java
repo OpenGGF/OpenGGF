@@ -5,7 +5,10 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -15,7 +18,7 @@ import java.util.List;
 /**
  * MHZ miniboss child spawned by {@code ChildObjDat_75E9E}.
  */
-final class MhzMinibossEscapeShardInstance extends AbstractObjectInstance {
+final class MhzMinibossEscapeShardInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int INITIAL_PRIORITY_BUCKET = 4;
     private static final int RETURN_PRIORITY_BUCKET = 2;
     private static final int Y_RADIUS = 6;
@@ -28,7 +31,7 @@ final class MhzMinibossEscapeShardInstance extends AbstractObjectInstance {
             0xFC
     };
 
-    private final MhzMinibossInstance parent;
+    private MhzMinibossInstance parent;
     private int x;
     private int y;
     private int xFixed;
@@ -54,6 +57,15 @@ final class MhzMinibossEscapeShardInstance extends AbstractObjectInstance {
         this.parent = parent;
         this.mappingFrame = 0;
         this.priorityBucket = INITIAL_PRIORITY_BUCKET;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        MhzMinibossInstance liveParent = findNearestLiveParentForRewind(ctx);
+        if (liveParent == null || ctx == null || ctx.spawn() == null) {
+            return null;
+        }
+        return new MhzMinibossEscapeShardInstance(ctx.spawn().x(), ctx.spawn().y(), liveParent);
     }
 
     @Override
@@ -221,6 +233,31 @@ final class MhzMinibossEscapeShardInstance extends AbstractObjectInstance {
     @Override
     public int getPriorityBucket() {
         return priorityBucket;
+    }
+
+    private static MhzMinibossInstance findNearestLiveParentForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        MhzMinibossInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (!(instance instanceof MhzMinibossInstance candidate) || candidate.isDestroyed()) {
+                continue;
+            }
+            if (spawn == null) {
+                return candidate;
+            }
+            long dx = candidate.getX() - spawn.x();
+            long dy = candidate.getY() - spawn.y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+        return best;
     }
 }
 

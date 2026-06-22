@@ -5,6 +5,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 
@@ -28,7 +30,7 @@ import java.util.List;
  * {@link #bypassesOffscreenSolidGate()} and {@link #usesInclusiveRightEdge()}.
  */
 public final class CutsceneKnuxCnz2WallInstance extends AbstractObjectInstance
-        implements SolidObjectProvider {
+        implements SolidObjectProvider, RewindRecreatable {
 
     // ROM loc_62458: moveq #$13,d1 (half-width); move.w #$100,d2 / move.w #$200,d3.
     // The tall vertical extent makes the barrier impassable across the whole
@@ -41,6 +43,36 @@ public final class CutsceneKnuxCnz2WallInstance extends AbstractObjectInstance
     public CutsceneKnuxCnz2WallInstance(ObjectSpawn spawn, ObjectInstance owner) {
         super(spawn, "CutsceneKnuxCNZ2Wall");
         this.owner = owner;
+        if (owner instanceof CutsceneKnucklesCnz2AInstance parent) {
+            parent.rewindAttachBlockingWall(this);
+        }
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        CutsceneKnucklesCnz2AInstance liveParent = findLiveParent(ctx);
+        if (liveParent == null) {
+            return null;
+        }
+        return new CutsceneKnuxCnz2WallInstance(ctx.spawn(), liveParent);
+    }
+
+    private static CutsceneKnucklesCnz2AInstance findLiveParent(RewindRecreateContext ctx) {
+        ObjectSpawn wallSpawn = ctx.spawn();
+        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (object instanceof CutsceneKnucklesCnz2AInstance parent
+                    && !parent.isDestroyed()
+                    && parent.getSpawn().x() - 0x20 == wallSpawn.x()
+                    && parent.getSpawn().y() - 0x6C == wallSpawn.y()) {
+                return parent;
+            }
+        }
+        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (object instanceof CutsceneKnucklesCnz2AInstance parent && !parent.isDestroyed()) {
+                return parent;
+            }
+        }
+        return null;
     }
 
     @Override

@@ -9,6 +9,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -48,7 +50,7 @@ import java.util.List;
  *   <li>Anim 2 (Roll): speed 3, frames {3,4,2}, afEnd -> loops</li>
  * </ul>
  */
-public class Sonic1RollerBadnikInstance extends AbstractBadnikInstance {
+public class Sonic1RollerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
 
     // From disassembly: obColType = $0E (normal) or $8E (invincible while rolling)
     // Size index is lower 6 bits = $0E
@@ -132,6 +134,11 @@ public class Sonic1RollerBadnikInstance extends AbstractBadnikInstance {
         this.invincible = false;
         this.hasStopped = false;
         this.hasJumped = false;
+    }
+
+    @Override
+    public Sonic1RollerBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1RollerBadnikInstance(ctx.spawn());
     }
 
     @Override

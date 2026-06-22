@@ -86,6 +86,7 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/CheckpointStarInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Sonic3kStarPostBonusStarChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Sonic3kStarPostStarChild.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kSignpostStubChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossArenaHelperInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossHitProxyChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossRobotnikHeadChild.java#@RewindTransient", 1),

@@ -445,10 +445,14 @@ sub-lifetime cosmetic fragment that re-emits in-frame does not qualify.
 
 All other batch-2 S3K transient/relink children (`AizRockFragmentChild`,
 `CnzMinibossDebrisChild`, `S3kBossExplosionChild`, `S3kSignpostSparkleChild`,
-`MhzPollenParticleInstance`, `MhzMinibossFlameInstance`, `MhzMinibossEscapeShardInstance`,
-`Sonic3kStarPostBonusStarChild`, `Sonic3kSSEntryFlashObjectInstance`,
-`IczEndBossEggCapsuleInstance`, `CaterkillerJrBodyInstance`, `BuggernautBabyInstance`) now
-have rewind codecs in `Sonic3kObjectRegistry` and are restored on a backward seek.
+`MhzPollenParticleInstance`, `MhzMinibossFlameInstance`,
+`Sonic3kStarPostBonusStarChild`, `IczEndBossEggCapsuleInstance`,
+`CaterkillerJrBodyInstance`, `BuggernautBabyInstance`) now have rewind codecs in
+`Sonic3kObjectRegistry` and are restored on a backward seek. `Sonic3kSSEntryFlashObjectInstance`
+now restores through graph-tested `RewindRecreatable`; compact restore resolves the exact
+captured parent ring by `ObjectRefId` and reapplies the flash scalars.
+`MhzMinibossEscapeShardInstance` likewise restores through graph-tested `RewindRecreatable`
+generic recreate with exact/compact parent relink instead of a dynamic codec.
 
 ## Batch-4 Rewind: Transient Cosmetic Children Not Rewound
 

@@ -386,11 +386,16 @@ public class SeesawObjectInstance extends BoxObjectInstance
 
     /**
      * Whether this seesaw currently has a live (non-destroyed) ball child.
-     * Used by the rewind codec to relink a recreated ball to the one seesaw
+     * Used by rewind graph restore to relink a recreated ball to the one seesaw
      * still missing its ball (one ball per subtype-0 seesaw).
      */
     public boolean hasLiveBall() {
         return ball != null && !ball.isDestroyed();
+    }
+
+    void adoptBallForRewind(SeesawBallObjectInstance restoredBall) {
+        ball = restoredBall;
+        ballSpawned = true;
     }
 
     /**

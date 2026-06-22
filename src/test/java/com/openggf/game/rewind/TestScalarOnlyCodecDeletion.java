@@ -12,16 +12,32 @@ import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance;
+import com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1RingFlashObjectInstance;
+import com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance;
+import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance;
+import com.openggf.game.sonic1.objects.bosses.FZCylinder;
+import com.openggf.game.sonic1.objects.bosses.FZPlasmaBall;
+import com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher;
+import com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall;
+import com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance;
+import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball;
 import com.openggf.game.sonic2.objects.BombPrizeObjectInstance;
 import com.openggf.game.sonic2.objects.CheckpointDongleInstance;
 import com.openggf.game.sonic2.objects.CheckpointStarInstance;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.ConveyorObjectInstance;
+import com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance;
+import com.openggf.game.sonic2.objects.OOZBurnerFlameObjectInstance;
 import com.openggf.game.sonic2.objects.PointsObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
+import com.openggf.game.sonic2.objects.bosses.ARZBossEyes;
 import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
 import com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainer;
@@ -35,6 +51,8 @@ import com.openggf.game.sonic2.objects.bosses.CPZBossPipePump;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPump;
 import com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik;
+import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
+import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
 import com.openggf.game.sonic2.objects.GrounderRockProjectile;
@@ -52,6 +70,8 @@ import com.openggf.game.sonic3k.objects.AizEndBossInstance;
 import com.openggf.game.sonic3k.objects.AizEndBossPropellerChild;
 import com.openggf.game.sonic3k.objects.AizEndBossShipChild;
 import com.openggf.game.sonic3k.objects.AizEndBossSmokeChild;
+import com.openggf.game.sonic3k.objects.AizIntroPlaneChild;
+import com.openggf.game.sonic3k.objects.AizIntroWaveChild;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.AizMinibossArmChild;
 import com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild;
@@ -60,14 +80,17 @@ import com.openggf.game.sonic3k.objects.AizMinibossBodyChild;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameChild;
 import com.openggf.game.sonic3k.objects.AizMinibossNapalmController;
+import com.openggf.game.sonic3k.objects.AizShipBombInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossTopInstance;
 import com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance;
+import com.openggf.game.sonic3k.objects.S3kSignpostStubChild;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild;
 import com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance;
@@ -160,7 +183,8 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S3K));
 
     private static final List<CodecDeletionCandidate> AUDITED_LIVE_REFERENCE_DELETED_CODECS = List.of(
-            new CodecDeletionCandidate(Sonic1EggPrisonObjectInstance.class.getName(), GameId.S1));
+            new CodecDeletionCandidate(Sonic1EggPrisonObjectInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1BossBlockInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> BATCH4_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
@@ -578,6 +602,22 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(AizEndBossBombChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizEndBossSmokeChild.class.getName(), GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> AIZ_SHIP_BOMB_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizShipBombInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_SPIKED_LOG_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_FALLING_LOG_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HczEndBossRobotnikShip.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(HczEndBossTurbine.class.getName(), GameId.S3K),
@@ -585,6 +625,10 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(HczEndBossBladeWaterChute.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(HczEndBossBladeSplash.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(HczEndBossWaterColumn.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_INTRO_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizIntroPlaneChild.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AizIntroWaveChild.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> S2_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(GrounderRockProjectile.class.getName(), GameId.S2),
@@ -602,6 +646,37 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(Sonic3kStarPostStarChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(Sonic3kStarPostBonusStarChild.class.getName(), GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S1_MZ_GLASS_REFLECTION_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1GlassReflectionInstance.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_RING_FLASH_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1RingFlashObjectInstance.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_FZ_BOSS_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(FZCylinder.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(FZPlasmaLauncher.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(FZPlasmaBall.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_GHZ_BOSS_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(GHZBossWreckingBall.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_SLZ_BOSS_SPIKEBALL_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1SLZBossSpikeball.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_ENDING_SONIC_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1EndingSonicObjectInstance.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_GRASS_FIRE_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1GrassFireObjectInstance.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1BombFuseInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1CaterkillerBodyInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance"
+                            + "$OrbSpikeObjectInstance",
+                    GameId.S1));
+
     private static final List<CodecDeletionCandidate> S2_WFZ_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZFloatingPlatform",
@@ -611,6 +686,23 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S2),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt",
+                    GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_HTZ_BOSS_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(HTZBossFlamethrower.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(HTZBossLavaBall.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_DEZ_BOMB_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$BombChild",
+                    GameId.S2));
+
+    private static final List<CodecDeletionCandidate> SEESAW_BALL_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SeesawBallObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SeesawBallObjectInstance",
                     GameId.S2));
 
     private static final List<CodecDeletionCandidate> S3K_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
@@ -623,6 +715,67 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",
                     GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(S3kSignpostStubChild.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_LBZ1_CUTSCENE_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1CollapseChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MHZ_CUTSCENE_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Mhz1CutsceneDoorInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MHZ_MINIBOSS_FLAME_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzMinibossFlameInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MHZ_MINIBOSS_ESCAPE_SHARD_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_NESTED_HURTBOX_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_CUTSCENE_KNUCKLES_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesRockChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S2_EGG_PRISON_BUTTON_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(EggPrisonButtonObjectInstance.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_OOZ_BURNER_FLAME_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(OOZBurnerFlameObjectInstance.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_ARZ_ARROW_GRAPH_SUPPORT = List.of(
+            new CodecDeletionCandidate(ARZBossArrow.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(ARZBossEyes.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S3K_SS_ENTRY_FLASH_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic3kSSEntryFlashObjectInstance.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -4061,6 +4214,72 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     // =====================================================================
+    // AIZ ship-bomb graph batch: battleship-linked dynamic bomb
+    // =====================================================================
+
+    @Test
+    void aizShipBombGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_SHIP_BOMB_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ ship-bomb graph batch");
+        }
+    }
+
+    @Test
+    void aizShipBombGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_SHIP_BOMB_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ ship-bomb graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ spiked-log graph batch: parent-linked spike collision child
+    // =====================================================================
+
+    @Test
+    void aizSpikedLogGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_SPIKED_LOG_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ spiked-log graph batch");
+        }
+    }
+
+    @Test
+    void aizSpikedLogGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_SPIKED_LOG_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ spiked-log graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ falling-log graph batch: bidirectional log/splash pair
+    // =====================================================================
+
+    @Test
+    void aizFallingLogGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_FALLING_LOG_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ falling-log graph batch");
+        }
+    }
+
+    @Test
+    void aizFallingLogGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_FALLING_LOG_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ falling-log graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
     // HCZ end-boss graph batch: parent/sibling-linked children, graph harness covers restore
     // =====================================================================
 
@@ -4079,6 +4298,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through HCZ end-boss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ intro graph batch: biplane parent-linked dynamic children
+    // =====================================================================
+
+    @Test
+    void aizIntroGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_INTRO_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ intro graph batch");
+        }
+    }
+
+    @Test
+    void aizIntroGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_INTRO_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ intro graph generic recreate, not a dynamic codec");
         }
     }
 
@@ -4127,6 +4368,185 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     // =====================================================================
+    // S1 MZ glass reflection graph batch: layout-parent-linked dynamic shine
+    // =====================================================================
+
+    @Test
+    void s1MzGlassReflectionGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_MZ_GLASS_REFLECTION_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 MZ glass graph batch");
+        }
+    }
+
+    @Test
+    void s1MzGlassReflectionGraphClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_MZ_GLASS_REFLECTION_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 MZ glass graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 ring flash graph batch: optional live-parent-linked special-stage flash
+    // =====================================================================
+
+    @Test
+    void s1RingFlashGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_RING_FLASH_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 ring flash graph batch");
+        }
+    }
+
+    @Test
+    void s1RingFlashGraphClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_RING_FLASH_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 ring flash graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 FZ boss graph batch: boss/launcher-linked cylinders and plasma balls
+    // =====================================================================
+
+    @Test
+    void s1FzBossGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_FZ_BOSS_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 FZ boss graph batch");
+        }
+    }
+
+    @Test
+    void s1FzBossGraphClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_FZ_BOSS_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 FZ boss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 GHZ boss graph batch: boss-linked wrecking ball
+    // =====================================================================
+
+    @Test
+    void s1GhzBossGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_GHZ_BOSS_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 GHZ boss graph batch");
+        }
+    }
+
+    @Test
+    void s1GhzBossGraphClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_GHZ_BOSS_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 GHZ boss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 SLZ boss graph batch: boss/seesaw-linked spikeball and fragments
+    // =====================================================================
+
+    @Test
+    void s1SlzBossSpikeballGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_SLZ_BOSS_SPIKEBALL_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 SLZ boss spikeball graph batch");
+        }
+    }
+
+    @Test
+    void s1SlzBossSpikeballGraphClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_SLZ_BOSS_SPIKEBALL_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 SLZ boss spikeball graph generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 ending Sonic graph batch: ending Sonic plus emerald family refs
+    // =====================================================================
+
+    @Test
+    void s1EndingSonicGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_ENDING_SONIC_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 ending Sonic graph batch");
+        }
+    }
+
+    @Test
+    void s1EndingSonicGraphClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_ENDING_SONIC_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 ending Sonic graph generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 Grass Fire graph batch: platform/fire bidirectional refs
+    // =====================================================================
+
+    @Test
+    void s1GrassFireGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_GRASS_FIRE_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 Grass Fire graph batch");
+        }
+    }
+
+    @Test
+    void s1GrassFireGraphClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_GRASS_FIRE_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 Grass Fire graph generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 badnik child graph batch: live-parent-linked dynamic children
+    // =====================================================================
+
+    @Test
+    void s1BadnikChildGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_BADNIK_CHILD_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 badnik child graph batch");
+        }
+    }
+
+    @Test
+    void s1BadnikChildGraphClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_BADNIK_CHILD_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 badnik child graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
     // S2 WFZ boss graph batch: boss/platform/hurt-linked dynamics
     // =====================================================================
 
@@ -4149,6 +4569,50 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     // =====================================================================
+    // S2 HTZ boss graph batch: boss-linked hazard children
+    // =====================================================================
+
+    @Test
+    void s2HtzBossGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_HTZ_BOSS_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 HTZ boss graph batch");
+        }
+    }
+
+    @Test
+    void s2HtzBossGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_HTZ_BOSS_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 HTZ boss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1/S2 seesaw ball graph batch: parent-linked child dynamics
+    // =====================================================================
+
+    @Test
+    void seesawBallGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : SEESAW_BALL_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after seesaw ball graph batch");
+        }
+    }
+
+    @Test
+    void seesawBallGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : SEESAW_BALL_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through seesaw ball graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
     // S3K badnik child graph batch: parent/sibling-linked dynamic children
     // =====================================================================
 
@@ -4167,6 +4631,270 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K badnik child graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K signpost stub graph batch: signpost-linked dynamic child
+    // =====================================================================
+
+    @Test
+    void s3kSignpostStubGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K signpost stub graph batch");
+        }
+    }
+
+    @Test
+    void s3kSignpostStubGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K signpost stub graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K LBZ1 cutscene graph batch: cutscene-parent-linked helpers
+    // =====================================================================
+
+    @Test
+    void s3kLbz1CutsceneGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ1_CUTSCENE_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K LBZ1 cutscene graph batch");
+        }
+    }
+
+    @Test
+    void s3kLbz1CutsceneGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ1_CUTSCENE_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K LBZ1 cutscene graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K MHZ cutscene graph batch: cutscene-parent-linked helpers
+    // =====================================================================
+
+    @Test
+    void s3kMhzCutsceneGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_CUTSCENE_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K MHZ cutscene graph batch");
+        }
+    }
+
+    @Test
+    void s3kMhzCutsceneGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_CUTSCENE_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MHZ cutscene graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K MHZ miniboss flame graph batch: boss-parent-linked flame children
+    // =====================================================================
+
+    @Test
+    void s3kMhzMinibossFlameGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MINIBOSS_FLAME_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K MHZ flame graph batch");
+        }
+    }
+
+    @Test
+    void s3kMhzMinibossFlameGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MINIBOSS_FLAME_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MHZ flame graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K MHZ miniboss escape-shard graph batch: boss-parent-linked shard children
+    // =====================================================================
+
+    @Test
+    void s3kMhzMinibossEscapeShardGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MINIBOSS_ESCAPE_SHARD_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K MHZ escape-shard graph batch");
+        }
+    }
+
+    @Test
+    void s3kMhzMinibossEscapeShardGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MINIBOSS_ESCAPE_SHARD_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MHZ escape-shard graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K nested hurtbox graph batch: parent-linked MGZ/ICZ hurt children
+    // =====================================================================
+
+    @Test
+    void s3kNestedHurtboxGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_NESTED_HURTBOX_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K nested hurtbox graph batch");
+        }
+    }
+
+    @Test
+    void s3kNestedHurtboxGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_NESTED_HURTBOX_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K nested hurtbox graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K cutscene Knuckles graph batch: AIZ rock and CNZ blocking wall
+    // =====================================================================
+
+    @Test
+    void s3kCutsceneKnucklesGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CUTSCENE_KNUCKLES_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K cutscene Knuckles graph batch");
+        }
+    }
+
+    @Test
+    void s3kCutsceneKnucklesGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CUTSCENE_KNUCKLES_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K cutscene Knuckles graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S2 Egg Prison button graph batch: parent/button linked capsule graph
+    // =====================================================================
+
+    @Test
+    void s2EggPrisonButtonGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_EGG_PRISON_BUTTON_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 Egg Prison button graph batch");
+        }
+    }
+
+    @Test
+    void s2EggPrisonButtonGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_EGG_PRISON_BUTTON_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 Egg Prison button graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S2 OOZ burner flame graph batch: constructor-required platform relink
+    // =====================================================================
+
+    @Test
+    void s2OozBurnerFlameGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_OOZ_BURNER_FLAME_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 OOZ burner flame graph batch");
+        }
+    }
+
+    @Test
+    void s2OozBurnerFlameGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_OOZ_BURNER_FLAME_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 OOZ burner flame graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S2 ARZ arrow graph support: boss/eyes-linked arrow dynamic
+    // =====================================================================
+
+    @Test
+    void s2ArzArrowGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_ARZ_ARROW_GRAPH_SUPPORT) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable for ARZ arrow graph support");
+        }
+    }
+
+    @Test
+    void s2ArzArrowGraphClassesHaveNoRegisteredCodec() {
+        assertFalse(hasRegisteredDynamicCodec(ARZBossArrow.class.getName(), GameId.S2),
+                "ARZBossArrow must restore through S2 ARZ graph generic recreate, not a dynamic codec");
+        assertFalse(hasRegisteredDynamicCodec(ARZBossEyes.class.getName(), GameId.S2),
+                "ARZBossEyes graph support must not add a dynamic codec");
+    }
+
+    // =====================================================================
+    // S2 DEZ bomb graph support: parent-dependent Death Egg Robot bomb dynamic
+    // =====================================================================
+
+    @Test
+    void s2DezBombGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_DEZ_BOMB_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 DEZ bomb graph deletion");
+        }
+    }
+
+    @Test
+    void s2DezBombGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_DEZ_BOMB_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 DEZ bomb graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K SS-entry flash graph support: layout-ring-linked special-stage flash
+    // =====================================================================
+
+    @Test
+    void s3kSsEntryFlashGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_SS_ENTRY_FLASH_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K SS-entry flash deletion");
+        }
+    }
+
+    @Test
+    void s3kSsEntryFlashGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_SS_ENTRY_FLASH_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K SS-entry flash graph generic recreate, not a dynamic codec");
         }
     }
 

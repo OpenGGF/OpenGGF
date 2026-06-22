@@ -4,7 +4,12 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -24,7 +29,8 @@ import java.util.List;
  * $FF in AnimateSprite means restart from beginning (infinite loop).
  * The flamethrower is destroyed via MarkObjGone when it drifts off-screen.
  */
-public class HTZBossFlamethrower extends AbstractBossChild implements TouchResponseProvider {
+public class HTZBossFlamethrower extends AbstractBossChild
+        implements TouchResponseProvider, RewindRecreatable {
 
     // Movement constants (ROM: s2.asm:63869-63892)
     /** Horizontal offset from boss (ROM: move.w #-$70,d0) */
@@ -50,6 +56,10 @@ public class HTZBossFlamethrower extends AbstractBossChild implements TouchRespo
     private int animFrame;
     private int animTimer;
 
+    HTZBossFlamethrower(ObjectSpawn spawn) {
+        this(new Sonic2HTZBossInstance(spawn), spawn.x(), spawn.y(), false);
+    }
+
     public HTZBossFlamethrower(Sonic2HTZBossInstance parent, int spawnX, int spawnY, boolean flipped) {
         super(parent, "HTZ Flamethrower", 4, Sonic2ObjectIds.HTZ_BOSS);
         this.flipped = flipped;
@@ -67,6 +77,24 @@ public class HTZBossFlamethrower extends AbstractBossChild implements TouchRespo
         // Animation state (ROM: animation 5 loops frames $C, $D via $FF restart)
         this.animFrame = 0;  // 0 = frame $C, 1 = frame $D
         this.animTimer = ANIM_DELAY;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2HTZBossInstance parent = requireLiveHtzBossForRewind(ctx);
+        return new HTZBossFlamethrower(parent, ctx.spawn().x(), ctx.spawn().y(), false);
+    }
+
+    private static Sonic2HTZBossInstance requireLiveHtzBossForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            throw new IllegalStateException("Cannot recreate HTZ boss flamethrower without ObjectManager services");
+        }
+        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (object instanceof Sonic2HTZBossInstance boss && !boss.isDestroyed()) {
+                return boss;
+            }
+        }
+        throw new IllegalStateException("Cannot recreate HTZ boss flamethrower: no live HTZ boss exists");
     }
 
     @Override

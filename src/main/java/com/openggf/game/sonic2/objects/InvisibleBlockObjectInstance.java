@@ -8,6 +8,8 @@ import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -23,13 +25,13 @@ import java.util.List;
  *   Lower 4 bits: height = ((n & 0xF) + 1) * 16 pixels
  */
 public class InvisibleBlockObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final boolean DEBUG_VIEW_ENABLED = staticDebugViewEnabled();
     private static final DebugOverlayManager OVERLAY_MANAGER = staticDebugOverlay();
 
-    private final int halfWidth;
-    private final int halfHeight;
+    private int halfWidth;
+    private int halfHeight;
 
     public InvisibleBlockObjectInstance(ObjectSpawn spawn, String name) {
         // Gray color for debug rendering
@@ -40,6 +42,11 @@ public class InvisibleBlockObjectInstance extends BoxObjectInstance
         this.halfWidth = (((subtype >> 4) & 0xF) + 1) * 8;
         // Height: ((lower 4 bits) + 1) * 16 / 2 for half-height
         this.halfHeight = ((subtype & 0xF) + 1) * 8;
+    }
+
+    @Override
+    public InvisibleBlockObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new InvisibleBlockObjectInstance(ctx.spawn(), "InvisibleBlock");
     }
 
     @Override

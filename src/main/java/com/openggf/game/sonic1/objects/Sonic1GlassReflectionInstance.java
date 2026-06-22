@@ -6,7 +6,12 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -33,7 +38,7 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/30 MZ Large Green Glass Blocks.asm
  */
-public class Sonic1GlassReflectionInstance extends AbstractObjectInstance {
+public class Sonic1GlassReflectionInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // From Glass_Main: move.b #3,obPriority(a1)
     private static final int PRIORITY = 3;
@@ -61,6 +66,17 @@ public class Sonic1GlassReflectionInstance extends AbstractObjectInstance {
     // glass_dist: synced from parent each frame
     private int glassDist;
 
+    private Sonic1GlassReflectionInstance(ObjectSpawn probeSpawn) {
+        super(probeSpawn, "MzGlassReflectProbe");
+        this.parent = null;
+        this.reflectSubtype = 0;
+        this.isTall = false;
+        this.x = probeSpawn.x();
+        this.baseY = probeSpawn.y();
+        this.glassDist = 0;
+        this.y = baseY;
+    }
+
     Sonic1GlassReflectionInstance(ObjectSpawn parentSpawn,
                                   Sonic1GlassBlockObjectInstance parent,
                                   int reflectSubtype,
@@ -79,6 +95,22 @@ public class Sonic1GlassReflectionInstance extends AbstractObjectInstance {
     }
 
     @Override
+    public Sonic1GlassReflectionInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        Sonic1GlassBlockObjectInstance liveParent = findLiveGlassBlockParentForRewind(ctx, spawn);
+        if (liveParent == null) {
+            return null;
+        }
+        int fullSubtype = spawn.subtype() & 0xFF;
+        int reflectedSubtype = (fullSubtype + 8) & 0x0F;
+        boolean tall = fullSubtype < 3;
+        return new Sonic1GlassReflectionInstance(spawn, liveParent, reflectedSubtype, tall);
+    }
+
+    @Override
     public int getX() {
         return x;
     }
@@ -91,7 +123,7 @@ public class Sonic1GlassReflectionInstance extends AbstractObjectInstance {
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Check if parent is destroyed -> self-destruct
-        if (parent.isDestroyed()) {
+        if (parent == null || parent.isDestroyed()) {
             setDestroyed(true);
             return;
         }
@@ -127,7 +159,33 @@ public class Sonic1GlassReflectionInstance extends AbstractObjectInstance {
     @Override
     public boolean isPersistent() {
         // Reflection follows parent; if parent is gone, we go too
-        return !isDestroyed() && !parent.isDestroyed();
+        return !isDestroyed() && parent != null && !parent.isDestroyed();
+    }
+
+    private static Sonic1GlassBlockObjectInstance findLiveGlassBlockParentForRewind(
+            RewindRecreateContext ctx, ObjectSpawn spawn) {
+        ObjectServices services = ctx.objectServices();
+        if (services == null) {
+            return null;
+        }
+        ObjectManager objectManager = services.objectManager();
+        if (objectManager == null) {
+            return null;
+        }
+        Sonic1GlassBlockObjectInstance best = null;
+        long bestDist = Long.MAX_VALUE;
+        for (ObjectInstance inst : objectManager.getActiveObjects()) {
+            if (inst instanceof Sonic1GlassBlockObjectInstance block && !block.isDestroyed()) {
+                long dx = block.getX() - spawn.x();
+                long dy = block.getBaseY() - spawn.y();
+                long dist = dx * dx + dy * dy;
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = block;
+                }
+            }
+        }
+        return best;
     }
 
     /**

@@ -68,9 +68,9 @@ class TestRewindCoverageAnalyzer {
     }
 
     /**
-     * POSITIVE test (Task 4): CutsceneKnuxCnz2WallInstance holds a non-transient,
-     * non-structural reference to an ObjectInstance ({@code owner} field, type
-     * {@code ObjectInstance}). The field name is not in the structural-name set of
+     * POSITIVE test (Task 4): CutsceneKnucklesMhz1Instance holds a non-transient,
+     * non-structural reference to an ObjectInstance ({@code parentButton} field).
+     * The field name is not in the structural-name set of
      * {@code DefaultObjectRewindPolicies}, so no policy suppresses it.
      * The analyzer must report it as an un-id'd object-ref gap.
      *
@@ -80,15 +80,15 @@ class TestRewindCoverageAnalyzer {
     @Test
     void flagsNonTransientObjectRefField() {
         RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
-        // CutsceneKnuxCnz2WallInstance has `private final ObjectInstance owner`.
-        // The field name "owner" is not in DefaultObjectRewindPolicies.STRUCTURAL_OBJECT_FIELD_NAMES,
+        // CutsceneKnucklesMhz1Instance has `private final Mhz1CutsceneButtonInstance parentButton`.
+        // The field name "parentButton" is not in DefaultObjectRewindPolicies.STRUCTURAL_OBJECT_FIELD_NAMES,
         // the field is not @RewindTransient / @RewindDeferred, and there is no exact-field policy.
         // The type ObjectInstance is assignable to ObjectInstance. This must be flagged.
         ObjectCoverage cov = report.objects().stream()
-                .filter(o -> o.className().endsWith("CutsceneKnuxCnz2WallInstance"))
+                .filter(o -> o.className().endsWith("CutsceneKnucklesMhz1Instance"))
                 .findFirst().orElseThrow();
-        assertTrue(cov.unIdObjectRefFields().contains("owner"),
-                "non-transient, non-structural ObjectInstance ref field 'owner' must be reported as un-id'd object-ref gap");
+        assertTrue(cov.unIdObjectRefFields().contains("parentButton"),
+                "non-transient, non-structural ObjectInstance ref field 'parentButton' must be reported as un-id'd object-ref gap");
     }
 
     /**

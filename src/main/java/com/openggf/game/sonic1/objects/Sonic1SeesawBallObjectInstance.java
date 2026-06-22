@@ -2,12 +2,17 @@ package com.openggf.game.sonic1.objects;
 
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -26,7 +31,7 @@ import java.util.List;
  * Disassembly reference: docs/s1disasm/_incObj/5E Seesaw.asm (See_Spikeball through See_SpikeFall)
  */
 public class Sonic1SeesawBallObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     // Ball Y offsets per parent seesaw frame (See_Speeds)
     // dc.w -8, -$1C, -$2F, -$1C, -8
@@ -84,7 +89,7 @@ public class Sonic1SeesawBallObjectInstance extends AbstractObjectInstance
     // Original reference positions (see_origX = objoff_30, see_origY = objoff_34)
     // Un-finaled for rewind: the ball's getSpawn() reports its RUNTIME position, not the
     // seesaw origin, so the generic field capturer reapplies the captured origX/origY
-    // values after the codec recreates with spawn.x()/spawn.y() placeholders.
+    // values before graph recreate matches the restored parent.
     private int origX;
     private int origY;
 
@@ -94,6 +99,11 @@ public class Sonic1SeesawBallObjectInstance extends AbstractObjectInstance
     // Palette animation: ROM uses obFrame to toggle between red/silver ball
     // move.b #1,obFrame(a0) — initialized to silver (frame 1)
     private int displayFrame = 1;
+
+    Sonic1SeesawBallObjectInstance() {
+        super(new ObjectSpawn(0, 0, 0x5E, 0, 0, false, 0), "SeesawBall");
+        this.parent = null;
+    }
 
     public Sonic1SeesawBallObjectInstance(
             Sonic1SeesawObjectInstance parent,
@@ -124,6 +134,51 @@ public class Sonic1SeesawBallObjectInstance extends AbstractObjectInstance
 
         this.xPos = initialX << 16;
         this.yPos = seesawY << 16;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        seedCapturedScalars(ctx);
+        Sonic1SeesawObjectInstance restoredParent =
+                findParentForRewind(ctx, origX, origY);
+        if (restoredParent == null) {
+            return null;
+        }
+        Sonic1SeesawBallObjectInstance restored =
+                new Sonic1SeesawBallObjectInstance(restoredParent, origX, origY, storedFrame == 2);
+        restoredParent.adoptBallForRewind(restored);
+        return restored;
+    }
+
+    private void seedCapturedScalars(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.state() == null || ctx.state().compactGenericState() == null) {
+            return;
+        }
+        GenericFieldCapturer.restoreObjectSubclassScalarsCompact(this, ctx.state().compactGenericState());
+    }
+
+    private static Sonic1SeesawObjectInstance findParentForRewind(
+            RewindRecreateContext ctx,
+            int capturedOrigX,
+            int capturedOrigY) {
+        if (ctx == null || ctx.objectServices() == null
+                || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectManager objectManager = ctx.objectServices().objectManager();
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (!(object instanceof Sonic1SeesawObjectInstance seesaw) || seesaw.isDestroyed()) {
+                continue;
+            }
+            if (seesaw.getSpawn().subtype() != 0 || seesaw.hasLiveBallForRewind()) {
+                continue;
+            }
+            if (seesaw.getSpawn().x() == capturedOrigX
+                    && seesaw.getSpawn().y() == capturedOrigY) {
+                return seesaw;
+            }
+        }
+        return null;
     }
 
     @Override

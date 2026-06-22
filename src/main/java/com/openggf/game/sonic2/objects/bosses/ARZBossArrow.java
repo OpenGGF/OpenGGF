@@ -5,8 +5,13 @@ import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -28,7 +33,7 @@ import java.util.List;
  * - FALLING: Arrow falls when stood on too long or boss defeated
  */
 public class ARZBossArrow extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider {
+        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider, RewindRecreatable {
 
     private static final int ARROW_SUB_INIT = 0;
     private static final int ARROW_SUB_FLYING = 2;
@@ -47,9 +52,9 @@ public class ARZBossArrow extends AbstractObjectInstance
             { 0x0F, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
                     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0xF9 }
     };
-    private final Sonic2ARZBossInstance mainBoss;
-    private final ARZBossEyes eyes;
-    private final boolean fromRightPillar;
+    private Sonic2ARZBossInstance mainBoss;
+    private transient ARZBossEyes eyes;
+    private boolean fromRightPillar;
 
     private int x;
     private int y;
@@ -82,6 +87,53 @@ public class ARZBossArrow extends AbstractObjectInstance
         this.arrowTimer = 0;
     }
 
+    ARZBossArrow(ObjectSpawn spawn) {
+        this(spawn, null, null, (spawn.renderFlags() & 1) != 0);
+    }
+
+    @Override
+    public ARZBossArrow recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+            return null;
+        }
+        ObjectServices services = ctx.objectServices();
+        ObjectManager objectManager = services.objectManager();
+        if (objectManager == null) {
+            return null;
+        }
+
+        Sonic2ARZBossInstance nearestBoss = null;
+        ARZBossEyes nearestEyes = null;
+        long nearestBossDistance = Long.MAX_VALUE;
+        long nearestEyesDistance = Long.MAX_VALUE;
+        int targetX = ctx.spawn().x();
+        int targetY = ctx.spawn().y();
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object == null || object.isDestroyed()) {
+                continue;
+            }
+            long distance = squaredDistance(object.getX(), object.getY(), targetX, targetY);
+            if (object instanceof Sonic2ARZBossInstance boss && distance < nearestBossDistance) {
+                nearestBoss = boss;
+                nearestBossDistance = distance;
+            } else if (object instanceof ARZBossEyes eye && distance < nearestEyesDistance) {
+                nearestEyes = eye;
+                nearestEyesDistance = distance;
+            }
+        }
+        if (nearestBoss == null) {
+            return null;
+        }
+        boolean derivedFromRightPillar = (ctx.spawn().renderFlags() & 1) != 0;
+        return new ARZBossArrow(ctx.spawn(), nearestBoss, nearestEyes, derivedFromRightPillar);
+    }
+
+    private static long squaredDistance(int x, int y, int targetX, int targetY) {
+        long dx = (long) x - targetX;
+        long dy = (long) y - targetY;
+        return dx * dx + dy * dy;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -111,6 +163,7 @@ public class ARZBossArrow extends AbstractObjectInstance
         if (eyes != null) {
             x = eyes.getX();
             y = eyes.getY();
+            eyes = null;
         }
         y += 9;
 

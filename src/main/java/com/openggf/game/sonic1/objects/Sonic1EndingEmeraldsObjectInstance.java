@@ -3,6 +3,7 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.PlayableEntity;
 
+import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
@@ -91,6 +92,11 @@ public class Sonic1EndingEmeraldsObjectInstance extends AbstractObjectInstance i
         this.frameId = frame;
         this.currentX = centerX;
         this.currentY = centerY;
+    }
+
+    @Override
+    public ObjectSpawn getSpawn() {
+        return new ObjectSpawn(currentX, currentY, Sonic1ObjectIds.END_CHAOS, 0, 0, false, 0);
     }
 
     @Override
