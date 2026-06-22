@@ -144,6 +144,16 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - S1 headroom ceiling-probe double-flip advances SYZ2 f1088 -> f6845
+
+- Branch/worktree context: `bugfix/ai-syz2-advance` (worktree off current `develop`; develop confirmed ancestor).
+- Command: `mvn -q -Dmse=relaxed test "-Dtest=TestS1Syz2CompleteRunTraceReplay" -DfailIfNoTests=false -Ds1.rom.path=s1.gen "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- SYZ2 before: f1088 `x_speed` exp=0x02E8 actual=0x02F4 (311 errors). After: f6845 `x` exp=0x211A actual=0x211C (55 errors). Frontier advanced ~5757 frames; error count 311 -> 55.
+- Root cause: at f1088 the BK2 input adds the jump button (0x08 -> 0x18) and ROM jumps (y_speed -0680, air/rolling) while the engine keeps ground-accelerating (x_speed 0x02E8 -> 0x02F4). The engine detected the jump press but `doJump()` was blocked: `getTerrainHeadroomDistance` returned 3 (< the 6px `Sonic_Jump` gate, `docs/s1disasm/_incObj/01 Sonic.asm:1180-1190`). The left ceiling probe hits SYZ2 collision tile 0x0093 (a left overhang; `rom[0x62A00+0x93*16]` = F7 F8 F9 FA FC FD FE 00..., verified identical to the engine's loaded tile by reading the ROM file directly — NOT a load bug). The headroom CalcRoomOverHead quadrant-0x80 probe pre-applied the `eori.w #$F` ceiling flip as a `dy` offset (`xorDelta`), but the engine's `Direction.UP` `scanVertical`/`calculateVerticalDistance` already models that flip — so it was DOUBLE-applied, yielding distance 3 instead of 8.
+- BizHawk capture (this is the decisive evidence; bk2 offset 71507, f72595 = trace f1088; `Sonic_FindCeiling` hooks at 0x156CE/0x156D2): ROM obX=0x074F, obWidth=9, left probe d3=0x0746 column 6 — ALL identical to the engine — but ROM `leftDist(d1)=8 rightDist(d0)=7` (min 7 >= 6 -> JUMPS). ROM `FindFloor` (`sub FindNearestTile & FindFloor & FindWall.asm:163-167`) negates the -2 ceiling height to +2 and returns `15 - (2 + (probeY&$F=5)) = 8`. The engine's UP path returns exactly 8 WITHOUT the pre-flip.
+- Fix: `CollisionSystem.describeCalcRoomOverHeadProbes` quadrant 0x80 drops the `xorDelta` Y pre-offset (`dy=0`), letting `scanVertical` own the single ceiling flip — matching the ordinary ceiling-sensor path. One file, `src/main/java/com/openggf/physics/CollisionSystem.java`. Shared S1/S2/S3K ceiling-probe code; game-agnostic.
+- Regression sweep (fix vs clean detached-`develop` baseline, first-error frame + error count): SYZ2 f1088/311 -> f6845/55 (advance). GHZ3 f2693/492 -> f2693/477 (same frame, FEWER errors). GHZ1 f2790/436, LZ1 f5745/2185, SLZ1 f723/661, SLZ3 f718/1073, SLZ2 f1016/221 — byte-identical. GHZ2 stays GREEN (0 errors). MZ1 first-error frame UNCHANGED at f2089; total count 185 -> 205, entirely within its pre-existing f4230+ physics cascade (a region already fully divergent and non-greenable; no new earlier divergence). S2 EHZ1 green, ARZ green, CPZ f3365/310 identical. S3K AIZ f1095/4309, ICZ f3139/3179, LBZ f2270/5881 identical; TestS3kAiz1SkipHeadless passes. No frontier regressed.
+
 ## 2026-06-22 - S1 camera bottom-boundary follow GREENS GHZ2 (TestS1Ghz2CompleteRunTraceReplay 0 errors)
 
 - Branch/worktree context: `bugfix/ai-s1-camera-vsettle` (worktree off current `develop`; develop confirmed ancestor). Base already carries the Obj18 platform-jump fix (develop b69c2c6ca) that took GHZ2 to f3349.

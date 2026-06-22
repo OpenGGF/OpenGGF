@@ -571,15 +571,22 @@ public class CollisionSystem {
                 };
             }
             case 0x80 -> {
-                int probeY = sprite.getCentreY() - yRadius;
-                int xorDelta = (probeY ^ 0x0F) - probeY;
-                // S1 Sonic_FindCeiling and S2/S3K Sonic_CheckCeiling probe
-                // x_pos +/- x_radius, then eori.w #$F the y coordinate before
-                // calling FindFloor upward. Reusing ordinary ceiling sensors
-                // misses that nibble flip at tile edges.
+                // ROM S1 Sonic_FindCeiling (sub FindNearestTile & FindFloor & FindWall.asm:
+                // 361-403) probes x_pos +/- obWidth at the top edge (obY-obHeight) and applies
+                // eori.w #$F to the Y before FindFloor upward. The engine's UP-direction
+                // GroundSensor.scanVertical/verticalTileLookupY ALREADY models that flip (the
+                // UP distance formula is the post-flip form, and verticalTileLookupY re-flips
+                // wrapped negative rows). Passing the eori #$F as a Y pre-offset here would
+                // DOUBLE-apply it, corrupting the ceiling distance: S1 SYZ2 f1088 ceiling tile
+                // 0x0093 col 6 (height -2) gave dist 3 with the pre-flip, blocking a jump,
+                // whereas ROM's Sonic_FindCeiling returns 8 there (BizHawk hook at 0x156CE on
+                // bk2 frame 72595 = trace f1088: leftDist=8, obX=074F obW=9 col=6 — same probe
+                // X/column as the engine), which is exactly what the UP path computes WITHOUT
+                // the pre-flip. So the probe passes the plain top-edge Y (dy=0) and lets
+                // scanVertical own the ceiling flip, matching the ordinary ceiling sensor path.
                 yield new CalcRoomOverHeadProbe[] {
-                        new CalcRoomOverHeadProbe(Direction.UP, xRadius, -yRadius, 0, xorDelta, sprite.getLrbSolidBit()),
-                        new CalcRoomOverHeadProbe(Direction.UP, -xRadius, -yRadius, 0, xorDelta, sprite.getLrbSolidBit())
+                        new CalcRoomOverHeadProbe(Direction.UP, xRadius, -yRadius, 0, 0, sprite.getLrbSolidBit()),
+                        new CalcRoomOverHeadProbe(Direction.UP, -xRadius, -yRadius, 0, 0, sprite.getLrbSolidBit())
                 };
             }
             case 0xC0 -> new CalcRoomOverHeadProbe[] {
