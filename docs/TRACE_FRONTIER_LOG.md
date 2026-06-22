@@ -152,6 +152,49 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 - Root cause: at f1343 ROM's CPU Tails presses jump (`ctrl2_pressed=0x10` = button B) via the auto-jump trigger gate while grounded and pushing the HTZ breakable block (Obj32); `y_speed` becomes -0680 and Tails goes air+rolling. The engine kept Tails grounded (`gen=0008`, no jump). The engine's `Tails_CPU_jumping` latch (`jumpingFlag`) was stuck set from the prior `$3F`-cadence jump and was never cleared because the grounded-clear (ROM `loc_13E64` / S2 `FilterAction`) is skipped on the push-bypass path. The trigger gate was guarded by `if (!jumpingFlag)`, so the held latch blocked the legitimate re-trigger. ROM's push-bypass route branches **directly** to the trigger gate (`loc_13E9C` / `FilterAction_Part2`), which never consults the latch (S3K `loc_13DD0` sonic3k.asm:26702-26705; S2 s2.asm:39297-39300; gate s2.asm:39015-39022).
 - Fix: `SidekickCpuController.updateNormal()` gate widened from `if (!jumpingFlag)` to `if (!jumpingFlag || autoJumpPushBypass)`. Shared S2/S3K CPU code, driven by real push state (no zone carve-out).
 - Regression sweep (this branch vs clean develop baseline, first-error frame is the metric): all S2 traces identical first-error frame — ARZ2 f523, CPZ f3365, CPZ2 f2889, DEZ f4007, MCZ2 f4485, MTZ f1267, MTZ2 f1265, OOZ f1782, OOZ2 f1070, HTZ1 f6114, MTZ3 f1973; CNZ1 f1691 and CNZ2 f4418 same first-error frame (downstream count only, 532->549 / 982->999); ARZ1/MCZ1/SCZ/WFZ/EHZ1 green both. S3K AIZ level-select f19089 and complete-run f1095 byte-identical to baseline. S1 credits GHZ1/MZ2 green. TestSidekickCpuFollowParity unchanged at its 2 pre-existing develop-baseline failures. No frontier regressed.
+## 2026-06-22 - S3K MGZ/LBZ Smashing Pillar inclusive right edge advances LBZ1 to f2270
+
+- Branch/worktree context: `bugfix/ai-lbz1-f1950-wallpush` (worktree off `develop`,
+  base `4eaf9fbed`, includes the prior LBZ1 rolling-drum-handoff fix at f1950).
+- Command: `mvn -q -Dmse=relaxed test "-Dtest=TestS3kLbzCompleteRunTraceReplay"
+  -DfailIfNoTests=false "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen"
+  "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- **`s3k_lbz1` / `TestS3kLbzCompleteRunTraceReplay` advanced f1950 -> f2270.**
+  - Root: at LBZ1 f1949 Sonic walks left into the LBZ Smashing-Spikes tube
+    (`Obj_MGZLBZSmashingPillar`, the engine `MGZLBZSmashingPillar`, a
+    `SolidObjectFull` body) and pins flush against its right edge at x=0x4DF.
+    ROM `status_byte` becomes 0x21 (Status_Facing + Status_Push) and STAYS 0x21
+    through f1950-1952 even after the player releases input (gv=0). The engine
+    set push on the wall-hit frame but the player's standing-still push-clear
+    (gSpeed==0 on flat ground) cleared it the next frame, giving 0x01.
+  - Why ROM keeps it: `SolidObjectFull_1P` -> `SolidObject_cont` rejects the X
+    bounding box with `bhi` (unsigned strictly-greater): `cmp.w d3,d0 / bhi.w
+    loc_1E0A2` (sonic3k.asm:41405; the same `bhi` is in S2 s2.asm:35353-35354
+    and the S1 equivalent). A player shoved flush has `d0 == width*2`, which
+    `bhi` keeps as a live SIDE contact, so the pillar's `SolidObject_cont`
+    side path re-sets `Status_Push` (loc_1E06E `bset #Status_Push,status(a1)`,
+    sonic3k.asm:41500) every frame the grounded player overlaps the edge. The
+    pillar runs after Sonic in slot order, so its push-set is the last word.
+  - Engine bug: the shared `ObjectSolidContactController` X gate defaults to an
+    exclusive (`relXRaw >= width*2 -> no contact`) bound and only flips to the
+    ROM-accurate inclusive `>` bound when a provider opts in via
+    `usesInclusiveRightEdge()`. The Smashing Pillar didn't opt in, so at the
+    flush edge the contact dropped, the pillar never re-set push, and the
+    player's standing-still clear won.
+  - Fix: `MGZLBZSmashingPillarObjectInstance.usesInclusiveRightEdge()` -> true,
+    citing sonic3k.asm:41405. This is the ROM `bhi` operator for this object's
+    own solid routine, not a zone/route/frame carve-out.
+  - Net-positive gate: LBZ1 advanced f1950 -> f2270 (next frontier is a separate
+    downstream sidekick delta, `tails_x` 0x04E1 vs 0x04E0 at f2270, Tails
+    following Sonic away from the pillar). MGZ (the only other zone that spawns
+    this object) held EXACTLY at its develop baseline: `s3k_mgz1` complete-run
+    f866 `tails_status_byte` and `s3k_mgz1` f523 `obj_extra_s24_x`, both
+    identical with and without the change (verified by stash). Keep-green
+    `TestS3kAiz1SkipHeadless` (8), `TestSonic3kLevelLoading` (30),
+    `TestSonic3kBootstrapResolver` (5), `TestSonic3kDecodingUtils` (3), and
+    `TestLbzRollingDrumInstance` (19) all pass. Other red traces (S2 level-select,
+    S3K AIZ, the two S2 `TestSidekickCpuFollowParity` cases) are pre-existing on
+    develop and cannot be reached by this MGZ/LBZ-only object change.
 
 ## 2026-06-22 - S2 Rexon head oscillation stagger advances HTZ2 to f1343
 

@@ -168,6 +168,18 @@ public class MGZLBZSmashingPillarObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM SolidObjectFull_1P -> SolidObject_cont rejects the X bounding box
+        // with bhi (unsigned strictly-greater): cmp.w d3,d0 / bhi.w loc_1E0A2
+        // (sonic3k.asm:41405). A player shoved flush against the right edge has
+        // d0 == width*2, which bhi keeps as a live side contact, so ROM re-sets
+        // Status_Push every frame the player holds against the pillar. The
+        // engine's default exclusive (>=) X gate would instead drop the contact
+        // at the flush edge and let the player's standing-still push-clear win.
+        return true;
+    }
+
+    @Override
     public int getTopLandingHalfWidth(PlayableEntity playerEntity, int collisionHalfWidth) {
         // ROM: top-surface retention uses width_pixels, not the padded d1.
         return halfWidth;
