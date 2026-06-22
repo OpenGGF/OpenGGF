@@ -5,7 +5,6 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MCZBossInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectFactory;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSlotLayout;
@@ -59,9 +58,6 @@ import java.util.logging.Logger;
 
 public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectRegistry.class.getName());
-    // Handwritten per-game dynamic rewind codecs were deleted in favor of
-    // RewindRecreatable generic recreate and focused graph harness coverage.
-    private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of();
 
     private final Map<Integer, List<String>> namesById = new HashMap<>();
     private final Set<Integer> unknownIds = new HashSet<>();
@@ -121,11 +117,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     @Override
     public com.openggf.level.objects.ObjectWindowingStrategy objectWindowingStrategy() {
         return S2ObjectWindowing.INSTANCE;
-    }
-
-    @Override
-    public List<DynamicObjectRewindCodec> dynamicRewindCodecs() {
-        return DYNAMIC_REWIND_CODECS;
     }
 
     @Override

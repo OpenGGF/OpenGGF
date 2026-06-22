@@ -39,13 +39,10 @@ import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
-
-import java.util.List;
 
 /**
  * Object registry for Sonic 3 &amp; Knuckles.
@@ -62,18 +59,10 @@ import java.util.List;
  * same underlying object names in most cases.
  */
 public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
-    // Handwritten per-game dynamic rewind codecs were deleted in favor of
-    // RewindRecreatable generic recreate and focused graph harness coverage.
-    private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of();
 
     @Override
     public ObjectSlotLayout objectSlotLayout() {
         return ObjectSlotLayout.SONIC_3K;
-    }
-
-    @Override
-    public List<DynamicObjectRewindCodec> dynamicRewindCodecs() {
-        return DYNAMIC_REWIND_CODECS;
     }
 
     @Override
