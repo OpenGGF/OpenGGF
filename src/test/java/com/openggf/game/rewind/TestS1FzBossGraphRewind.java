@@ -318,11 +318,6 @@ class TestS1FzBossGraphRewind {
                 return true;
             }
         }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
-            if (fqn.equals(codec.className())) {
-                return true;
-            }
-        }
         return false;
     }
 

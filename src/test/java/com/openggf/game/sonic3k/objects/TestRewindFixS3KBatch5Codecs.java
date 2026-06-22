@@ -13,7 +13,6 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
@@ -44,9 +43,6 @@ class TestRewindFixS3KBatch5Codecs {
         Set<String> names = new HashSet<>();
         List<DynamicObjectRewindCodec> codecs = new Sonic3kObjectRegistry().dynamicRewindCodecs();
         for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
             names.add(codec.className());
         }
         return names;

@@ -15,7 +15,6 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.InvincibilityStarsObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -56,7 +55,6 @@ class TestS2SelfContainedTransientRewind {
 
     @Test
     void phase2BatchCandidatesHaveNoExplicitDynamicCodec() {
-        assertNoRegisteredSharedDynamicCodec(InvincibilityStarsObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(HtzFireProjectileObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(ArrowProjectileInstance.class);
         assertNoRegisteredS2DynamicCodec(SteamPuffObjectInstance.class);
@@ -81,8 +79,6 @@ class TestS2SelfContainedTransientRewind {
 
     @Test
     void playerBoundInvincibilityStarsRestoreThroughSessionSnapshot() throws Exception {
-        assertNoRegisteredSharedDynamicCodec(InvincibilityStarsObjectInstance.class);
-
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(ZONE_EHZ, ACT_1)
                 .build();
@@ -421,13 +417,6 @@ class TestS2SelfContainedTransientRewind {
                 .anyMatch(codec -> type.getName().equals(codec.className()));
         assertFalse(hasCodec, type.getSimpleName()
                 + " must restore through RewindRecreatable generic recreate, not an explicit S2 dynamic codec");
-    }
-
-    private static void assertNoRegisteredSharedDynamicCodec(Class<?> type) {
-        boolean hasCodec = ObjectRewindDynamicCodecs.sharedCodecs().stream()
-                .anyMatch(codec -> type.getName().equals(codec.className()));
-        assertFalse(hasCodec, type.getSimpleName()
-                + " must restore through RewindRecreatable generic recreate, not an explicit shared dynamic codec");
     }
 
     private static <T extends AbstractObjectInstance> void assertSimpleStateRoundTrip(

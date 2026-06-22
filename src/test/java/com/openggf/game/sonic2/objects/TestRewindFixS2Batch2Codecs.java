@@ -5,7 +5,6 @@ import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
 import com.openggf.game.sonic2.objects.bosses.ARZBossEyes;
 import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
@@ -31,9 +30,6 @@ class TestRewindFixS2Batch2Codecs {
         Set<String> names = new HashSet<>();
         List<DynamicObjectRewindCodec> codecs = new Sonic2ObjectRegistry().dynamicRewindCodecs();
         for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
             names.add(codec.className());
         }
         return names;

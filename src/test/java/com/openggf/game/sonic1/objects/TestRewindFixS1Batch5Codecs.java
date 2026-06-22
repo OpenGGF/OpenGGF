@@ -1,7 +1,6 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -34,9 +33,6 @@ class TestRewindFixS1Batch5Codecs {
         Set<String> names = new HashSet<>();
         List<DynamicObjectRewindCodec> codecs = new Sonic1ObjectRegistry().dynamicRewindCodecs();
         for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
             names.add(codec.className());
         }
         return names;

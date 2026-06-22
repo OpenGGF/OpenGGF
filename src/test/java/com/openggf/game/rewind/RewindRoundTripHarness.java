@@ -24,7 +24,6 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectRegistry;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -596,17 +595,13 @@ public final class RewindRoundTripHarness {
 
     /**
      * Returns true if the given FQN has a registered dynamic rewind codec in
-     * the shared codecs or in any of the three per-game registries.
+     * any of the three per-game registries.
      *
      * <p>Objects without a codec are correctly dropped on restore (they have no
      * dynamic recreate path). Testing them would always produce a count-mismatch,
      * so they are excluded from the dynamic sweep.
      */
     private static boolean hasRegisteredCodec(String fqn) {
-        // Shared game-agnostic codecs
-        for (DynamicObjectRewindCodec c : ObjectRewindDynamicCodecs.sharedCodecs()) {
-            if (fqn.equals(c.className())) return true;
-        }
         // Per-game registries
         for (ObjectRegistry reg : new ObjectRegistry[]{
                 new Sonic1ObjectRegistry(),

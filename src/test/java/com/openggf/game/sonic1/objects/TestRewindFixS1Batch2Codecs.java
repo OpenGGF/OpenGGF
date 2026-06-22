@@ -5,7 +5,6 @@ import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance;
 import com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall;
 import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
@@ -42,9 +41,6 @@ class TestRewindFixS1Batch2Codecs {
         Set<String> names = new HashSet<>();
         List<DynamicObjectRewindCodec> codecs = new Sonic1ObjectRegistry().dynamicRewindCodecs();
         for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
             names.add(codec.className());
         }
         return names;

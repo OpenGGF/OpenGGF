@@ -6,7 +6,6 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
-import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -685,10 +684,6 @@ public final class ObjectRewindDynamicCodecs {
                             + cls.getName() + "; recreate cannot proceed", e);
             throw e;
         }
-    }
-
-    public static List<DynamicObjectRewindCodec> sharedCodecs() {
-        return List.of();
     }
 
 }

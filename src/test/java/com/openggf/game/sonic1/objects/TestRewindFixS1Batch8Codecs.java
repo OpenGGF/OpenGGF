@@ -19,7 +19,6 @@ import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreatable;
@@ -156,11 +155,6 @@ class TestRewindFixS1Batch8Codecs {
 
     private static boolean hasExplicitCodec(Class<?> type) {
         for (DynamicObjectRewindCodec codec : new Sonic1ObjectRegistry().dynamicRewindCodecs()) {
-            if (type.getName().equals(codec.className())) {
-                return true;
-            }
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
             if (type.getName().equals(codec.className())) {
                 return true;
             }

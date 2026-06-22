@@ -14,7 +14,6 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
@@ -324,9 +323,6 @@ class TestS3kMhzCutsceneGraphRewind {
     private static boolean hasRegisteredS3kCodec(String className) {
         Set<String> names = new HashSet<>();
         for (DynamicObjectRewindCodec codec : new Sonic3kObjectRegistry().dynamicRewindCodecs()) {
-            names.add(codec.className());
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
             names.add(codec.className());
         }
         return names.contains(className);

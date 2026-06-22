@@ -4,7 +4,6 @@ import com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.CPZBossDripper;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -32,9 +31,6 @@ class TestRewindFixS2Batch5Codecs {
         Set<String> names = new HashSet<>();
         List<DynamicObjectRewindCodec> codecs = new Sonic2ObjectRegistry().dynamicRewindCodecs();
         for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
             names.add(codec.className());
         }
         return names;

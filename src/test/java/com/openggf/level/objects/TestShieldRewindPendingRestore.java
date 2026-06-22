@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -38,10 +37,6 @@ class TestShieldRewindPendingRestore {
         objectManager.addDynamicObject(source);
 
         ObjectManagerSnapshot snapshot = objectManager.rewindSnapshottable().capture();
-
-        assertFalse(ObjectRewindDynamicCodecs.sharedCodecs().stream()
-                        .anyMatch(codec -> ShieldObjectInstance.class.getName().equals(codec.className())),
-                "basic shields must restore through RewindRecreatable generic recreate, not a shared codec");
 
         objectManager.rewindSnapshottable().restore(snapshot);
 

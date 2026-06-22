@@ -7,7 +7,6 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.TestEnvironment;
@@ -75,13 +74,6 @@ class TestLostRingRewindGenericRestore {
             });
         }
         return positions;
-    }
-
-    @Test
-    void lostRingsRestoreThroughGenericRecreateWithoutSharedCodec() {
-        assertFalse(ObjectRewindDynamicCodecs.sharedCodecs().stream()
-                        .anyMatch(codec -> LostRingObjectInstance.class.getName().equals(codec.className())),
-                "lost rings must restore through RewindRecreatable generic recreate, not a shared codec");
     }
 
     @Test

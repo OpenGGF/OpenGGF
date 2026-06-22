@@ -4975,16 +4975,13 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     /**
-     * Returns true if the given FQN has a registered dynamic rewind codec in the
-     * shared codecs or in any of the three per-game registries. Distinct from
+     * Returns true if the given FQN has a registered dynamic rewind codec in
+     * any of the three per-game registries. Distinct from
      * the harness's {@code hasRegisteredCodec}, which also returns true for
      * {@link RewindRecreatable} classes — here we want to confirm the explicit
      * codec entry is GONE, independent of the RewindRecreatable path.
      */
     private static boolean hasRegisteredDynamicCodec(String fqn) {
-        for (var c : com.openggf.level.objects.ObjectRewindDynamicCodecs.sharedCodecs()) {
-            if (fqn.equals(c.className())) return true;
-        }
         for (ObjectRegistry reg : new ObjectRegistry[]{
                 new Sonic1ObjectRegistry(),
                 new Sonic2ObjectRegistry(),
@@ -4997,9 +4994,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     private static boolean hasRegisteredDynamicCodec(String fqn, GameId gameId) {
-        for (var c : com.openggf.level.objects.ObjectRewindDynamicCodecs.sharedCodecs()) {
-            if (fqn.equals(c.className())) return true;
-        }
         ObjectRegistry reg = switch (gameId) {
             case S1 -> new Sonic1ObjectRegistry();
             case S2 -> new Sonic2ObjectRegistry();
