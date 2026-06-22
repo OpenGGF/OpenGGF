@@ -185,11 +185,9 @@ class TestS2ArzArrowGraphRewind {
                 "ARZBossArrow must restore through RewindRecreatable graph recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(ARZBossEyes.class),
                 "ARZBossEyes must support generic RewindRecreatable recreate");
-        assertFalse(java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
-                        .anyMatch(codec -> ARZBossArrow.class.getName().equals(codec.className())),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ARZBossArrow.class.getName()),
                 "ARZBossArrow must not have an explicit S2 dynamic rewind codec");
-        assertFalse(java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
-                        .anyMatch(codec -> ARZBossEyes.class.getName().equals(codec.className())),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ARZBossEyes.class.getName()),
                 "ARZBossEyes graph support must not add an explicit S2 dynamic rewind codec");
     }
 

@@ -12,7 +12,6 @@ import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
@@ -29,11 +28,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -314,11 +311,7 @@ class TestS1EndingSonicGraphRewind {
     }
 
     private static boolean hasRegisteredS1Codec(String className) {
-        Set<String> names = new HashSet<>();
-        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
-            names.add(codec.className());
-        }
-        return names.contains(className);
+        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T extends ObjectInstance> List<T> liveObjects(ObjectManager objectManager, Class<T> type) {

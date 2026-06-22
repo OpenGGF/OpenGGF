@@ -10,7 +10,6 @@ import com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
@@ -26,11 +25,9 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -205,13 +202,10 @@ class TestS1GrassFireGraphRewind {
                 "Grass Fire compact capture must stay supported so required parent/list refs are captured");
         assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1GrassFireObjectInstance.class),
                 "Grass Fire must restore through RewindRecreatable generic recreate");
-        Set<String> codecNames = new HashSet<>();
-        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
-            codecNames.add(codec.className());
-        }
-        assertFalse(codecNames.contains(Sonic1GrassFireObjectInstance.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(Sonic1GrassFireObjectInstance.class.getName()),
                 "Grass Fire must not keep an explicit S1 dynamic rewind codec");
-        assertTrue(codecNames.isEmpty(), "Sonic 1 should have no remaining game-specific dynamic rewind codecs");
+        assertTrue(DeletedDynamicRewindCodecs.classNames().isEmpty(),
+                "Sonic 1 should have no remaining game-specific dynamic rewind codecs");
     }
 
     private static FireGraph createCapturedFireGraph(
