@@ -7,8 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -29,7 +28,8 @@ import java.util.List;
  * - Large bubbles (mapping_frame >= 6) can be breathed by player
  * - When touched, restores player's air and plays inhaling sound
  */
-public class BubbleObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class BubbleObjectInstance extends AbstractObjectInstance
+        implements SpawnCoordinateZeroPairRewindRecreatable {
 
     // Rise velocity in 8.8 fixed point (-0x88 = ~-0.53 pixels/frame upward)
     private static final int RISE_VELOCITY = -0x88;
@@ -114,11 +114,6 @@ public class BubbleObjectInstance extends AbstractObjectInstance implements Rewi
 
     private static ObjectSpawn createDummySpawn(int x, int y) {
         return new ObjectSpawn(x, y, 0x24, 0, 0, false, 0);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new BubbleObjectInstance(ctx.spawn().x(), ctx.spawn().y(), 0, 0);
     }
 
     @Override

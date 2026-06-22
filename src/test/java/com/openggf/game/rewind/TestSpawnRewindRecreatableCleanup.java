@@ -3,6 +3,7 @@ package com.openggf.game.rewind;
 import com.openggf.level.objects.AbstractPointsObjectInstance;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import org.junit.jupiter.api.Test;
 
@@ -80,6 +81,11 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic2.objects.PointsObjectInstance",
             "com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance");
 
+    private static final List<String> SPAWN_COORDINATE_ZERO_PAIR_RECREATORS = List.of(
+            "com.openggf.game.sonic2.objects.BubbleObjectInstance",
+            "com.openggf.game.sonic3k.objects.AizBombExplosionInstance",
+            "com.openggf.game.sonic3k.objects.AizMinibossDebrisChild");
+
     @Test
     void spawnOnlyRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_ONLY_RECREATORS) {
@@ -131,6 +137,24 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use AbstractPointsObjectInstance's default hook");
+        }
+    }
+
+    @Test
+    void spawnCoordinateZeroPairRecreatorsUseMarkerInterface() {
+        for (String className : SPAWN_COORDINATE_ZERO_PAIR_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(SpawnCoordinateZeroPairRewindRecreatable.class.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the spawn-coordinate zero-pair recreate hook");
+        }
+    }
+
+    @Test
+    void spawnCoordinateZeroPairRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_COORDINATE_ZERO_PAIR_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use SpawnCoordinateZeroPairRewindRecreatable's default hook");
         }
     }
 
