@@ -8,6 +8,8 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -48,7 +50,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/6C SBZ Vanishing Platforms.asm
  */
 public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // From disassembly: move.b #$10,obActWid(a0)
     private static final int HALF_WIDTH = 0x10;
@@ -140,6 +142,11 @@ public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstanc
         this.animFrameTimer = ANIM_FRAME_DURATION;
         this.currentFrame = 0;
         this.playerStanding = false;
+    }
+
+    @Override
+    public Sonic1VanishingPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1VanishingPlatformObjectInstance(ctx.spawn());
     }
 
     @Override

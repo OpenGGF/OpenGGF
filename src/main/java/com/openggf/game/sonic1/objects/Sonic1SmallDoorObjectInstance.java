@@ -5,6 +5,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -41,7 +43,7 @@ import java.util.List;
  * ROM reference: docs/s1disasm/_incObj/2A SBZ Small Door.asm
  */
 public class Sonic1SmallDoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // Detection range for door opening: move.w #$40,d1
     private static final int DETECTION_RANGE = 0x40;
@@ -92,6 +94,11 @@ public class Sonic1SmallDoorObjectInstance extends AbstractObjectInstance
         this.animationTimer = 0;
         this.mappingFrame = 0;
         this.solidActive = false;
+    }
+
+    @Override
+    public Sonic1SmallDoorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1SmallDoorObjectInstance(ctx.spawn());
     }
 
     @Override
