@@ -144,6 +144,41 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - S3K ICZ path-follow platform balance width advances ICZ to f3139
+
+- Branch/worktree context: `.worktrees/trace-cluster-fixes` on `develop`.
+- Command: `mvn -q -Dmse=relaxed test "-Dtest=TestS3kIczCompleteRunTraceReplay"
+  -DfailIfNoTests=false "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen"
+  "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- **`s3k_icz1` / `TestS3kIczCompleteRunTraceReplay` advanced f3116 -> f3139.**
+  - Root: at f3116 Sonic is standing still (`g_speed=0`) on the ICZ path-follow
+    platform (`Obj_ICZPathFollowPlatform`, slot diag `0xB0`) and ROM keeps
+    `status=0x08` (`Status_Facing` clear = facing RIGHT), but the engine flipped
+    `status` bit0 to face LEFT (`0x09`) for 3 frames. ROM `Sonic_Move` on-object
+    balance reads `width_pixels(a1)` (sonic3k.asm:22455), which for this platform
+    is `$20` (ObjDat_ICZPathFollowPlatform width byte, sonic3k.asm:187886, applied
+    by SetUp_ObjAttributes at 176908) — NOT the `$2B` `SolidObjectFull`
+    X-collision half-width. The engine defaulted `getBalanceWidthPixels()` to the
+    shared 16 px on-screen footprint, shifting `d1 = player_x + width - object_x`
+    inward by 16 px so the still rider tested as on the platform's left edge and
+    flipped facing.
+  - Fix: override `getBalanceWidthPixels()` on `IczPathFollowPlatformObjectInstance`
+    to return `0x20` (same pattern as the CPZ/WFZ Obj19 platform). With the
+    correct width, `d1=14` falls inside the no-balance window, so facing stays
+    RIGHT and matches ROM.
+  - New frontier f3139: `status_byte` expected `0x0028` vs engine `0x0008`. ROM
+    sets `Status_Push` (bit5) on the player as the platform sinks (routine `0A`,
+    `loc_8A11C`) and SolidObject side-contact fires (`bset #Status_Push,status(a1)`
+    at sonic3k.asm loc_1E06E); the engine still resolves the rider as standing-on-top.
+    This is a separate, deeper sinking-platform collision-geometry root, not part
+    of this fix.
+  - Regression sweep: keep-green S3K tests (`TestS3kAiz1SkipHeadless`,
+    `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+    `TestSonic3kDecodingUtils`) pass; AIZ complete-run held at f1095, AIZ route
+    held at f19089, all other frontiers unchanged. S1 GHZ/LZ/FZ and
+    `TestSidekickCpuFollowParity` failures are the pre-existing develop baseline,
+    unaffected by an ICZ-platform width override.
+
 ## 2026-06-22 - Fresh trustworthy root-count survey (all 39 reports) + SLZ2 g_speed root mechanism
 
 - Branch/worktree context: `.worktrees/trace-cluster-fixes` at `6ba44d2af`
