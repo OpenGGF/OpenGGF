@@ -6,6 +6,7 @@ import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.SpawnNullableReferenceRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnServicesRewindRecreatable;
 import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.ZeroArgRewindRecreatable;
 import com.openggf.level.objects.ZeroScalarArgsRewindRecreatable;
@@ -103,6 +104,10 @@ class TestSpawnRewindRecreatableCleanup {
     private static final List<String> SPAWN_NULLABLE_REFERENCE_RECREATORS = List.of(
             "com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance",
             "com.openggf.game.sonic2.objects.MonitorContentsObjectInstance");
+
+    private static final List<String> SPAWN_SERVICES_RECREATORS = List.of(
+            "com.openggf.level.objects.ExplosionObjectInstance",
+            "com.openggf.level.objects.SkidDustObjectInstance");
 
     private static final List<String> ZERO_ARG_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.Sonic1EndingSTHObjectInstance",
@@ -220,6 +225,24 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnNullableReferenceRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void spawnServicesRecreatorsUseMarkerInterface() {
+        for (String className : SPAWN_SERVICES_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(SpawnServicesRewindRecreatable.class.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the spawn-services recreate hook");
+        }
+    }
+
+    @Test
+    void spawnServicesRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_SERVICES_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use SpawnServicesRewindRecreatable's default hook");
         }
     }
 

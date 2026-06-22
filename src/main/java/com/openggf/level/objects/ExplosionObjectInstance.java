@@ -6,7 +6,7 @@ import com.openggf.game.PlayableEntity;
 import java.util.List;
 import java.util.logging.Logger;
 
-public class ExplosionObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class ExplosionObjectInstance extends AbstractObjectInstance implements SpawnServicesRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(ExplosionObjectInstance.class.getName());
     private final ObjectRenderManager renderManager;
     private final DestructionEffects.AnimalFactory animalFactory;
@@ -50,11 +50,6 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements R
     public ExplosionObjectInstance(ObjectSpawn spawn, ObjectServices services) {
         this(spawn.objectId(), spawn.x(), spawn.y(),
                 services != null ? services.renderManager() : null, -1);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new ExplosionObjectInstance(ctx.spawn(), ctx.objectServices());
     }
 
     /**

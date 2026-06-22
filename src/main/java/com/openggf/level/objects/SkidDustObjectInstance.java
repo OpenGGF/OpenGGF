@@ -24,7 +24,7 @@ import java.util.List;
  * - Frames: 0x11, 0x12, 0x13, 0x14
  * - End action: $FC (routine increment - animation ends)
  */
-public class SkidDustObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class SkidDustObjectInstance extends AbstractObjectInstance implements SpawnServicesRewindRecreatable {
     // Skid animation frames from obj08.asm Obj08Ani_Skid
     private static final int[] SKID_FRAMES = { 0x11, 0x12, 0x13, 0x14 };
     private static final int FRAME_DELAY = 3; // 4 game ticks per frame
@@ -60,15 +60,6 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Re
     public SkidDustObjectInstance(ObjectSpawn spawn, ObjectServices services) {
         this(spawn.x(), spawn.y(), findRewindRenderer(services),
                 (spawn.renderFlags() & 1) != 0);
-    }
-
-    static SkidDustObjectInstance forRewindRecreate(ObjectSpawn spawn, ObjectServices services) {
-        return new SkidDustObjectInstance(spawn, services);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return forRewindRecreate(ctx.spawn(), ctx.objectServices());
     }
 
     private static PlayerSpriteRenderer findRewindRenderer(ObjectServices services) {
