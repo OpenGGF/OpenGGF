@@ -15,6 +15,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -44,7 +45,7 @@ import java.util.List;
  * ROM reference: docs/s1disasm/_incObj/69 SBZ Spinning Platforms.asm
  */
 public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // ---- Trapdoor solid params (Spin_Trapdoor) ----
     // move.w #$4B,d1 / move.w #$C,d2 / move.w d2,d3 / addq.w #1,d3

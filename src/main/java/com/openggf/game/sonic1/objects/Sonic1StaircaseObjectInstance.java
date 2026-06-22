@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -47,7 +48,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/5B Staircase.asm
  */
 public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider, SolidObjectListener {
+        implements MultiPieceSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // From disassembly: NUM_PIECES = dbf loop count (3) + 1
     private static final int NUM_PIECES = 4;

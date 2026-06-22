@@ -18,13 +18,17 @@ import com.openggf.game.sonic1.objects.Sonic1LavaBallObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LavaTagObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1MovingBlockObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1MzBrickObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1PlatformObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1PoleThatBreaksObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SawObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SceneryObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SmallDoorObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SpikedPoleHelixObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SpikeObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SpringObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1StaircaseObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -55,13 +59,17 @@ class TestS1SimpleObjectGenericRecreate {
             Sonic1LavaTagObjectInstance.class,
             Sonic1MovingBlockObjectInstance.class,
             Sonic1MzBrickObjectInstance.class,
+            Sonic1PlatformObjectInstance.class,
             Sonic1PoleThatBreaksObjectInstance.class,
             Sonic1SawObjectInstance.class,
             Sonic1SceneryObjectInstance.class,
             Sonic1SmallDoorObjectInstance.class,
             Sonic1SpikedPoleHelixObjectInstance.class,
             Sonic1SpikeObjectInstance.class,
+            Sonic1SpinPlatformObjectInstance.class,
             Sonic1SpringObjectInstance.class,
+            Sonic1StaircaseObjectInstance.class,
+            Sonic1SwingingPlatformObjectInstance.class,
             Sonic1VanishingPlatformObjectInstance.class
     })
     void s1SimpleObjectsRoundTripThroughGenericRecreate(Class<?> objectClass) {
@@ -93,13 +101,17 @@ class TestS1SimpleObjectGenericRecreate {
                 Sonic1LavaTagObjectInstance.class,
                 Sonic1MovingBlockObjectInstance.class,
                 Sonic1MzBrickObjectInstance.class,
+                Sonic1PlatformObjectInstance.class,
                 Sonic1PoleThatBreaksObjectInstance.class,
                 Sonic1SawObjectInstance.class,
                 Sonic1SceneryObjectInstance.class,
                 Sonic1SmallDoorObjectInstance.class,
                 Sonic1SpikedPoleHelixObjectInstance.class,
                 Sonic1SpikeObjectInstance.class,
+                Sonic1SpinPlatformObjectInstance.class,
                 Sonic1SpringObjectInstance.class,
+                Sonic1StaircaseObjectInstance.class,
+                Sonic1SwingingPlatformObjectInstance.class,
                 Sonic1VanishingPlatformObjectInstance.class
         };
 

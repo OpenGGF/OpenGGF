@@ -141,7 +141,6 @@ com.openggf.game.sonic1.objects.Sonic1MovingBlockObjectInstance#finalScalar#acti
 com.openggf.game.sonic1.objects.Sonic1MovingBlockObjectInstance#finalScalar#mappingFrame
 com.openggf.game.sonic1.objects.Sonic1PlatformObjectInstance#finalScalar#baseX
 com.openggf.game.sonic1.objects.Sonic1PlatformObjectInstance#finalScalar#baseY
-com.openggf.game.sonic1.objects.Sonic1PlatformObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#activeWidth
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#frameIndex
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#spawnX
@@ -185,7 +184,6 @@ com.openggf.game.sonic1.objects.Sonic1SpinConveyorObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance#finalScalar#frameCounterMask
 com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance#finalScalar#isSpinner
 com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance#finalScalar#spinTimelen
-com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance#finalScalar#posX
 com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SpringObjectInstance#finalScalar#springType
@@ -194,7 +192,6 @@ com.openggf.game.sonic1.objects.Sonic1SpringObjectInstance#finalScalar#yellow
 com.openggf.game.sonic1.objects.Sonic1StaircaseObjectInstance#finalScalar#baseX
 com.openggf.game.sonic1.objects.Sonic1StaircaseObjectInstance#finalScalar#baseY
 com.openggf.game.sonic1.objects.Sonic1StaircaseObjectInstance#finalScalar#xFlip
-com.openggf.game.sonic1.objects.Sonic1StaircaseObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance#finalScalar#actWidth
 com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance#finalScalar#bgRender
 com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance#finalScalar#height
@@ -207,7 +204,6 @@ com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance#finalScalar#xFli
 com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#baseX
 com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#chainCount
-com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance#finalScalar#subtype
 com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
