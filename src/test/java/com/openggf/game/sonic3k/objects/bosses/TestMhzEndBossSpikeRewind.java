@@ -130,7 +130,7 @@ class TestMhzEndBossSpikeRewind {
         assertEquals(0, restoredSpike.getCollisionFlags(),
                 "restored spike must stop colliding when the restored parent dash flag is clear");
 
-        assertFalse(hasExplicitS3kDynamicCodec(MhzEndBossSpikeChild.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MhzEndBossSpikeChild.class.getName()),
                 "MhzEndBossSpikeChild must restore through RewindRecreatable genericRecreate, "
                         + "not a handwritten S3K dynamic codec");
     }
@@ -201,10 +201,6 @@ class TestMhzEndBossSpikeRewind {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(target);
-    }
-
-    private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T> T singleLiveObject(ObjectManager objectManager, Class<T> type) {

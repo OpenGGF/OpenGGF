@@ -110,7 +110,7 @@ class TestMhzEndBossHitProxyRewind {
         assertEquals(hitsBefore - 1, restoredParent.getState().hitCount,
                 "restored proxy must delegate accepted attacks to the restored parent");
 
-        assertFalse(hasExplicitS3kDynamicCodec(MhzEndBossHitProxyChild.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MhzEndBossHitProxyChild.class.getName()),
                 "MhzEndBossHitProxyChild must restore through RewindRecreatable genericRecreate, "
                         + "not a handwritten S3K dynamic codec");
     }
@@ -142,10 +142,6 @@ class TestMhzEndBossHitProxyRewind {
         Field field = MhzEndBossHitProxyChild.class.getDeclaredField("parent");
         field.setAccessible(true);
         return (MhzEndBossInstance) field.get(proxy);
-    }
-
-    private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T> T singleLiveObject(ObjectManager objectManager, Class<T> type) {

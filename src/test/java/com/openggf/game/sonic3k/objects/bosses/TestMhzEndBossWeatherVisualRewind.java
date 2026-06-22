@@ -57,7 +57,7 @@ class TestMhzEndBossWeatherVisualRewind {
             int capturedFrameIndex,
             int capturedFrameTimer,
             int capturedMappingFrame) throws Exception {
-        assertFalse(hasExplicitS3kDynamicCodec(MhzEndBossWeatherVisualChild.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MhzEndBossWeatherVisualChild.class.getName()),
                 "MhzEndBossWeatherVisualChild must restore through RewindRecreatable genericRecreate, "
                         + "not a handwritten S3K dynamic codec");
 
@@ -243,10 +243,6 @@ class TestMhzEndBossWeatherVisualRewind {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getBoolean(target);
-    }
-
-    private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T> T singleLiveObject(ObjectManager objectManager, Class<T> type) {

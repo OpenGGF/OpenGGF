@@ -122,7 +122,7 @@ class TestMhzEndBossRobotnikHeadRewind {
         assertEquals(restoredParent.isHighPriority(), restoredHead.isHighPriority(),
                 "restored Robotnik head high-priority flag must derive from the restored parent");
 
-        assertFalse(hasExplicitS3kDynamicCodec(MhzEndBossRobotnikHeadChild.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MhzEndBossRobotnikHeadChild.class.getName()),
                 "MhzEndBossRobotnikHeadChild must restore through RewindRecreatable genericRecreate, "
                         + "not a handwritten S3K dynamic codec");
     }
@@ -174,10 +174,6 @@ class TestMhzEndBossRobotnikHeadRewind {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setBoolean(target, value);
-    }
-
-    private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T> T singleLiveObject(ObjectManager objectManager, Class<T> type) {

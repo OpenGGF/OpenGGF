@@ -125,7 +125,7 @@ class TestMhzEndBossVisualRewind {
         assertEquals(restoredParent.getY(), restoredVisual.getY(),
                 "restored visual Y must continue deriving from the restored parent");
 
-        assertFalse(hasExplicitS3kDynamicCodec(MhzEndBossVisualChild.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MhzEndBossVisualChild.class.getName()),
                 "MhzEndBossVisualChild must restore through RewindRecreatable genericRecreate, "
                         + "not a handwritten S3K dynamic codec");
     }
@@ -207,10 +207,6 @@ class TestMhzEndBossVisualRewind {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setBoolean(target, value);
-    }
-
-    private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T> T singleLiveObject(ObjectManager objectManager, Class<T> type) {

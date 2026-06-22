@@ -138,7 +138,7 @@ class TestMhzEndBossWeatherMachineRewind {
                 liveObjects(objectManager, MhzEndBossWeatherVisualChild.class).size(),
                 "restored visualChildrenSpawned=true latch must prevent duplicate weather visual children");
 
-        assertFalse(hasExplicitS3kDynamicCodec(MhzEndBossWeatherMachineChild.class.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MhzEndBossWeatherMachineChild.class.getName()),
                 "MhzEndBossWeatherMachineChild must restore through RewindRecreatable genericRecreate, "
                         + "not a handwritten S3K dynamic codec");
     }
@@ -249,10 +249,6 @@ class TestMhzEndBossWeatherMachineRewind {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setBoolean(target, value);
-    }
-
-    private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T> T singleLiveObject(ObjectManager objectManager, Class<T> type) {
