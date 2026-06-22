@@ -9,8 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -33,7 +32,7 @@ import java.util.List;
  * </ul>
  */
 public class SpikyBlockSpikeInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable {
 
     // From disassembly: Obj68_CollisionFlags (s2.asm line 53386-53390)
     // Direction 0=Up ($84), 1=Right ($A6), 2=Down ($84), 3=Left ($A6)
@@ -96,11 +95,6 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
 
     private SpikyBlockSpikeInstance(ObjectSpawn spawn) {
         this(spawn, "SpikyBlock-Spike", 0, 0);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new SpikyBlockSpikeInstance(ctx.spawn(), "SpikyBlock-Spike", 0, 0);
     }
 
     @Override

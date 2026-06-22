@@ -5,10 +5,9 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
@@ -32,7 +31,7 @@ import java.util.List;
  * - No updates: Just renders, no logic
  */
 public class DestroyedEggPrisonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable {
 
     private static final int FRAME_BODY_OPEN_3 = 3; // Fully open capsule frame
 
@@ -58,11 +57,6 @@ public class DestroyedEggPrisonObjectInstance extends AbstractObjectInstance
 
     DestroyedEggPrisonObjectInstance(ObjectSpawn spawn) {
         this(spawn, spawn.x(), spawn.y());
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DestroyedEggPrisonObjectInstance(ctx.spawn(), ctx.spawn().x(), ctx.spawn().y());
     }
 
     @Override
