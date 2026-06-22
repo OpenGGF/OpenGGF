@@ -3,13 +3,11 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateSubtypeDefaultArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
@@ -24,7 +22,7 @@ import java.util.List;
  * and apply the monitor effect at the apex.
  */
 public final class Sonic1MonitorPowerUpObjectInstance extends AbstractMonitorObjectInstance
-        implements RewindRecreatable {
+        implements SpawnCoordinateSubtypeDefaultArgsRewindRecreatable {
     private static final int ICON_FRAME_OFFSET = 2;
 
     private final int subtype;
@@ -37,12 +35,6 @@ public final class Sonic1MonitorPowerUpObjectInstance extends AbstractMonitorObj
 
     private Sonic1MonitorPowerUpObjectInstance() {
         this(0, 0, 0, null);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1MonitorPowerUpObjectInstance(
-                ctx.spawn().x(), ctx.spawn().y(), ctx.spawn().subtype(), null);
     }
 
     @Override

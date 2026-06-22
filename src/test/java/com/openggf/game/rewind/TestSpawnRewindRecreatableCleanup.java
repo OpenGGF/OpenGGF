@@ -3,6 +3,7 @@ package com.openggf.game.rewind;
 import com.openggf.level.objects.AbstractPointsObjectInstance;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateSubtypeDefaultArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.SpawnNullableReferenceRewindRecreatable;
@@ -102,6 +103,10 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic2.objects.bosses.MCZFallingDebrisInstance",
             "com.openggf.game.sonic3k.objects.AizEndBossDebrisChild",
             "com.openggf.game.sonic3k.objects.MGZHeadTriggerProjectileInstance");
+
+    private static final List<String> SPAWN_COORDINATE_SUBTYPE_DEFAULT_ARGS_RECREATORS = List.of(
+            "com.openggf.game.sonic1.objects.Sonic1MonitorPowerUpObjectInstance",
+            "com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild");
 
     private static final List<String> SPAWN_TRAILING_ZERO_INTS_RECREATORS = List.of(
             "com.openggf.level.objects.EggPrisonAnimalInstance",
@@ -221,6 +226,27 @@ class TestSpawnRewindRecreatableCleanup {
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName()
                             + " should use SpawnCoordinateZeroScalarArgsRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void spawnCoordinateSubtypeDefaultArgsRecreatorsUseMarkerInterface() {
+        for (String className : SPAWN_COORDINATE_SUBTYPE_DEFAULT_ARGS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(SpawnCoordinateSubtypeDefaultArgsRewindRecreatable.class.isAssignableFrom(cls),
+                    cls.getName()
+                            + " should inherit the spawn-coordinate subtype-default recreate hook");
+        }
+    }
+
+    @Test
+    void spawnCoordinateSubtypeDefaultArgsRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_COORDINATE_SUBTYPE_DEFAULT_ARGS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName()
+                            + " should use "
+                            + "SpawnCoordinateSubtypeDefaultArgsRewindRecreatable's default hook");
         }
     }
 
