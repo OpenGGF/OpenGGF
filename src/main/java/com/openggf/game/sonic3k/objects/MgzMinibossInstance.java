@@ -15,11 +15,11 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
@@ -793,7 +793,8 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
 
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            MgzMinibossInstance liveParent = findLiveParentForRewind(ctx);
+            MgzMinibossInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                    ctx, MgzMinibossInstance.class);
             if (liveParent == null) {
                 return null;
             }
@@ -803,18 +804,6 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
                     0);
             liveParent.rewindAttachArmChild(restored);
             return restored;
-        }
-
-        private static MgzMinibossInstance findLiveParentForRewind(RewindRecreateContext ctx) {
-            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
-                return null;
-            }
-            for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
-                if (instance instanceof MgzMinibossInstance candidate && !candidate.isDestroyed()) {
-                    return candidate;
-                }
-            }
-            return null;
         }
 
         private static int capturedXOffset(RewindRecreateContext ctx, MgzMinibossInstance parent) {

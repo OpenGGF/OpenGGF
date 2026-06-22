@@ -7,9 +7,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -147,25 +147,14 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
 
     @Override
     public CnzMinibossTopInstance recreateForRewind(RewindRecreateContext ctx) {
-        CnzMinibossInstance parent = findLiveCnzMinibossParentForRewind(ctx);
+        CnzMinibossInstance parent = RewindRecreateObjectLinks.nearestLiveObject(
+                ctx, CnzMinibossInstance.class);
         if (parent == null) {
             return null;
         }
         CnzMinibossTopInstance top = new CnzMinibossTopInstance(ctx.spawn());
         top.attachBossForTest(parent);
         return top;
-    }
-
-    private static CnzMinibossInstance findLiveCnzMinibossParentForRewind(RewindRecreateContext ctx) {
-        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
-            return null;
-        }
-        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
-            if (instance instanceof CnzMinibossInstance parent && !parent.isDestroyed()) {
-                return parent;
-            }
-        }
-        return null;
     }
 
     /**

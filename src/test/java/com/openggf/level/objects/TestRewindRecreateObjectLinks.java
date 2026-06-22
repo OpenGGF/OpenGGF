@@ -123,6 +123,29 @@ class TestRewindRecreateObjectLinks {
         }
     }
 
+    @Test
+    void cnzAndMgzMinibossChildrenUseSharedNearestLiveObjectHelper() throws Exception {
+        assertNoDeclaredRewindContextLookup(
+                "com.openggf.game.sonic3k.objects.CnzMinibossTopInstance",
+                "findLiveCnzMinibossParentForRewind");
+        assertNoDeclaredRewindContextLookup(
+                "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
+                "findLiveParentForRewind");
+    }
+
+    private static void assertNoDeclaredRewindContextLookup(
+            String className,
+            String methodName) throws ClassNotFoundException {
+        Class<?> childType = Class.forName(className);
+        for (Method method : childType.getDeclaredMethods()) {
+            assertFalse(method.getName().equals(methodName)
+                            && method.getParameterCount() == 1
+                            && method.getParameterTypes()[0] == RewindRecreateContext.class,
+                    childType.getSimpleName()
+                            + " should delegate parent relinking to RewindRecreateObjectLinks");
+        }
+    }
+
     private static Camera mockCamera() {
         return new Camera() {
             @Override public short getX() { return 0; }
