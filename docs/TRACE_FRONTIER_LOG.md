@@ -18427,3 +18427,25 @@ lightning-shield attracted-ring attraction-phase reconciliation (deep,
 high-blast-radius, full-S3K-sweep gated) - the give-ring-reorder attempt this
 session did not fix it (reverted). Use full-run report `frame_span`/`cascading`,
 never frontierOnly totals, to judge green-proximity.
+
+### 2026-06-22 final - S3K MGZ rings: give-reorder DEFERS but doesn't green (phase offset > 1 fc)
+
+Decisive instrumentation result (supersedes the earlier give-timing hypothesis):
+- The first attracted-ring give (rings 10->11, the f539 cause) is at LevelManager
+  frameCounter fc=542, `oPre=false` / `oPost=true` (overlaps only post-move).
+- Applying the ROM-faithful give-reorder (test overlap pre-move) MECHANICALLY
+  works: OGGF_TOP debug confirms the give moves fc=542 -> fc=543. BUT the trace
+  report is unchanged (`rings f539 10 vs 11`).
+- Therefore the engine's attracted-ring processing runs MORE THAN ONE fc ahead of
+  the trace-frame boundary: deferring the give by 1 fc does not cross into the
+  next *trace* frame (f540). The whole attraction phase (when RingManager.update's
+  ±$40 box-check + flight + give run, relative to ROM's player-slot
+  Test_Ring_Collisions at sonic3k.asm loc_EA70/EABE) is offset, not just the give.
+- Box CONFIRMED ROM-correct (lightning branch: player ±$40, d1=6, d4=$80 ->
+  ring within [-70,+70]px; engine ATTRACT_BOX_HALF $40 + ringHalf 6 = 70).
+
+Next step (focused, full-S3K-sweep gated): align the RingManager attraction phase
+to ROM's player-slot frame (likely run the box-check/give in the player touch
+pass via LevelManager.applyTouchResponses, not the post-physics RingManager.update
+tick), then verify no S3K ring-attraction regressions. This is the sole 1-fix
+(double-green MGZ1 + MGZ-CR) count-drop target.
