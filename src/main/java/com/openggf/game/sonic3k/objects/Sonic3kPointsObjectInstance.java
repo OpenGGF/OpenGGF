@@ -1,11 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.AbstractPointsObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
 
 /**
  * Sonic 3&amp;K floating points display object (Obj_EnemyScore).
@@ -17,15 +14,10 @@ import com.openggf.level.objects.RewindRecreatable;
  * Art shared with StarPost via ArtNem_EnemyPtsStarPost.
  * Score tiles occupy the first 8 tiles of the combined art blob.
  */
-public class Sonic3kPointsObjectInstance extends AbstractPointsObjectInstance implements RewindRecreatable {
+public class Sonic3kPointsObjectInstance extends AbstractPointsObjectInstance {
 
     public Sonic3kPointsObjectInstance(ObjectSpawn spawn, ObjectServices services, int points) {
         super(spawn, "S3KPoints", services, points);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic3kPointsObjectInstance(ctx.spawn(), ctx.objectServices(), 0);
     }
 
     @Override

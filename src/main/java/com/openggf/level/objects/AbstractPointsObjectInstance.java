@@ -4,6 +4,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 /**
@@ -17,7 +18,7 @@ import java.util.List;
  * </ul>
  * Subclasses provide game-specific score-to-frame mapping via {@link #getFrameForScore(int)}.
  */
-public abstract class AbstractPointsObjectInstance extends AbstractObjectInstance {
+public abstract class AbstractPointsObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     /** ROM: move.w #-$300,y_vel(a0) */
     protected static final int INITIAL_Y_VEL = -0x300;
     /** ROM: addi.w #$18,y_vel(a0) */
@@ -44,6 +45,26 @@ public abstract class AbstractPointsObjectInstance extends AbstractObjectInstanc
      * Each game has its own mapping of point values to art frames.
      */
     protected abstract int getFrameForScore(int score);
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Class<? extends AbstractPointsObjectInstance> objectClass =
+                getClass().asSubclass(AbstractPointsObjectInstance.class);
+        try {
+            var constructor = objectClass.getDeclaredConstructor(
+                    ObjectSpawn.class, ObjectServices.class, int.class);
+            constructor.setAccessible(true);
+            return constructor.newInstance(ctx.spawn(), ctx.objectServices(), 0);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(
+                    objectClass.getName() + " extends AbstractPointsObjectInstance "
+                            + "but has no (ObjectSpawn, ObjectServices, int) constructor",
+                    e);
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            throw new IllegalStateException(
+                    objectClass.getName() + " failed points rewind recreate", e);
+        }
+    }
 
     /**
      * Sets the score display by looking up the frame for the given point value.

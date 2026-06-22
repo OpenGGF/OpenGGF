@@ -1,5 +1,6 @@
 package com.openggf.game.rewind;
 
+import com.openggf.level.objects.AbstractPointsObjectInstance;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -74,6 +75,11 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance",
             "com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance");
 
+    private static final List<String> POINTS_RECREATORS = List.of(
+            "com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance",
+            "com.openggf.game.sonic2.objects.PointsObjectInstance",
+            "com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance");
+
     @Test
     void spawnOnlyRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_ONLY_RECREATORS) {
@@ -107,6 +113,24 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnCoordinateRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void pointsRecreatorsUseBaseHook() {
+        for (String className : POINTS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(AbstractPointsObjectInstance.class.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the points recreate hook");
+        }
+    }
+
+    @Test
+    void pointsRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : POINTS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use AbstractPointsObjectInstance's default hook");
         }
     }
 
