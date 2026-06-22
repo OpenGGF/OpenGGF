@@ -144,6 +144,14 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - S1 Electrocuter read the wrong frame counter for its zap gate; SBZ1 f1925 -> f2268 (997 -> 805)
+
+- Branch/worktree context: `bugfix/ai-sbz1-advance` off `develop` 351a10476.
+- **`s1_sbz1` advanced f1925 -> f2268, errors 997 -> 805.** First error before: f1925 `g_speed` exp=0x0556 act=0x0000 (rolling player zapped). After: f2268 `y_speed` (an unrelated VanishingPlatform / `onObj=0x53` object-landing miss — engine airborne, ROM grounded — a separate frontier).
+- Root (BizHawk-confirmed, tools/bizhawk/sbz1_diag.lua): the SBZ Electrocuter (Obj6E, `Sonic1ElectrocuterObjectInstance`) gates its zap on ROM `Elec_Shock` `(v_framecount & elec_freq) == 0` (`docs/s1disasm/_incObj/6E SBZ Electrocuter.asm`); only `obFrame==4` of the zap animation sets the `col_144x16|col_hurt` ($A4) HURT box. The engine's elec was vfc-correct in isolation (capture: elec subtype 8 / freq 0x7F, zap triggers at v_framecount=1920, frame4 at v_framecount=1926 = trace 1925, ROM player hurt at v_framecount=1927 = trace 1926 via the normal 1-frame slot-order touch latency). But it resolved `v_framecount` from `objectManager.getFrameCounter()` — ObjectManager's OWN free-running counter, which is NOT seeded from the trace (`TraceReplaySessionBootstrap` seeds only LevelManager/Sprites). That counter ran +1 ahead of ROM `v_framecount`, so at trace 1925 the engine vfc was 1927 vs ROM 1926, and the frame-4 hurt landed one trace-frame early on the rolling player (engine player x matched ROM at every frame; only the vfc clock was +1).
+- Fix: `Sonic1ElectrocuterObjectInstance.resolveVFrameCounter` now reads `services().levelManager().getFrameCounter() + 1` — `LevelManager.frameCounter` is the canonical trace-seeded `Level_frame_counter`, and objects execute with `frameCounter+1` (LevelManager.updateObjectPositions* pre-increment), so this equals the current ROM `v_framecount`. The elec's `update(frameCounter,...)` param is the VBla clock for S1 objects and cannot be used. Object-local (SBZ Electrocuter only).
+- Regression sweep (vs develop baseline, first-error frame + count): SBZ2 f1395/1000 byte-identical (its frontier is an `obj_s48_slot` allocation before any zap), SBZ3 GREEN, GHZ1 f3246/255, GHZ2 GREEN, MZ1 f2089/205, SLZ1 f933/246 — all match. S2 EHZ1 green; S3K AIZ f1095/4309 identical. `TestObjectServicesMigrationGuard` passes. (No electrocuter unit test exists.) Latent sibling noted but untouched: `Sonic1RingInstance` also reads `objectManager.getFrameCounter()` for ring-sparkle timing (visual only).
+
 ## 2026-06-22 - S1 GHZ collapsing-ledge top-landing width advances GHZ1 f2790 -> f3246 (436 -> 255)
 
 - Branch/worktree context: `bugfix/ai-s1-camera-vscroll` (worktree off current `develop`, which carries the GHZ2-green camera fix 99557976c; develop confirmed ancestor).

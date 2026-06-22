@@ -270,6 +270,8 @@ Highlights:
 
 - The S1 Walking Bomb fuse no longer counts down on its own spawn frame (ROM doesn't run a just-created object's routine until the next frame), so the bomb explodes and spawns shrapnel one frame later, matching ROM — fixing a one-frame-early hurt hit (SLZ1 trace frontier f723 -> f933, 661 -> 246 errors; also improves SBZ2; object-local, GHZ2 stays green).
 
+- The S1 SBZ Electrocuter now reads the trace-seeded canonical `Level_frame_counter` (not `ObjectManager`'s free-running counter, which ran a frame ahead on trace replay) for its `v_framecount` zap gate, so it zaps the player on the ROM-correct frame instead of one early (SBZ1 trace frontier f1925 -> f2268, 997 -> 805 errors; SBZ-only object, GHZ2 stays green).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)

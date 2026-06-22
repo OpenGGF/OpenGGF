@@ -5,7 +5,7 @@ import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -108,8 +108,20 @@ public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
     }
 
     private int resolveVFrameCounter(int fallbackFrameCounter) {
-        ObjectManager objectManager = services().objectManager();
-        return objectManager != null ? objectManager.getFrameCounter() : fallbackFrameCounter;
+        // ROM Elec_Shock reads v_framecount (Level_frame_counter). The engine's
+        // canonical Level_frame_counter is LevelManager.frameCounter (the value the
+        // trace records as gameplay_frame_counter and seeds on replay). The
+        // ObjectManager's own free-running counter is NOT trace-seeded, so reading
+        // it drifts the zap phase relative to ROM (SBZ1 f1925: a frame-4 zap that
+        // hurts Sonic one trace-frame early). LevelManager.frameCounter has not yet
+        // been incremented for the current frame at object-execution time (objects
+        // run with frameCounter+1, see LevelManager.updateObjectPositions*), so +1
+        // gives the current frame's v_framecount.
+        LevelManager levelManager = services().levelManager();
+        if (levelManager != null) {
+            return levelManager.getFrameCounter() + 1;
+        }
+        return fallbackFrameCounter;
     }
 
     private void animate() {
