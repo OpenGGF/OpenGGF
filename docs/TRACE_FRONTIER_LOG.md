@@ -144,6 +144,32 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - S2 Rexon head oscillation stagger advances HTZ2 to f1343
+
+- Branch/worktree context: `bugfix/ai-htz2-f1078-launch` (worktree off `develop`).
+- Command: `mvn -q -Dmse=relaxed test "-Dtest=TestS2Htz2LevelSelectTraceReplay"
+  -DfailIfNoTests=false "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- **`s2_htz2` / `TestS2Htz2LevelSelectTraceReplay` advanced f1078 -> f1343.**
+  - Root: at HTZ2 f1078 the ROM launches the rolling player UP
+    (`y_speed +0568 -> -0568`). This is the `Touch_KillEnemy` "big bounce"
+    (`neg.w y_vel`, s2.asm:85385) when Sonic rolls into the attackable Rexon tip
+    head (Obj97, collision_flags `0x0B` -> Touch_Enemy). The engine missed it
+    because the Rexon heads were a few pixels off, nudging the tip head's x just
+    outside Sonic's 16x16 touch band.
+  - Fix: `RexonHeadObjectInstance` seeded `oscillationFrameCounter` (ROM
+    `objoff_39`) to `0` for every head. `Obj97_Init` (s2.asm:74316-74318) seeds
+    it with the head number; the phase/oscillation update only runs when
+    `(objoff_39 + 1) & 3 == 0` (Obj97_Normal, s2.asm:74407-74414), so each head
+    advances on a different frame of the 4-frame cycle. Restoring the stagger
+    aligned the body heads (now exact y match) and the tip head with the ROM, so
+    the rolling kill bounce lands.
+  - Net-positive gate: HTZ2 advanced f1078 -> f1343 (next frontier is an
+    unrelated sidekick/breakable-block launch, `tails_x_speed` at f1343). HTZ1
+    held at its develop baseline f6114 `air` (no regression; verified against a
+    clean-develop run). EHZ1 still green; CNZ1 held at f1691; the Rexon is
+    HTZ-only so no other S2 zone can be affected. `TestS2BadnikChildGraphRewind`
+    (4) still green.
+
 ## 2026-06-22 - S3K ICZ path-follow platform balance width advances ICZ to f3139
 
 - Branch/worktree context: `.worktrees/trace-cluster-fixes` on `develop`.
