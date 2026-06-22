@@ -8,8 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.AnimalType;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnDefaultArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -21,7 +20,8 @@ import java.util.List;
  * carried player while the level-results object is active, then sends them left
  * when the results flag clears and the fade-out/fly-off sequence begins.
  */
-public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
+        implements SpawnDefaultArgsRewindRecreatable {
     private static final int FRAMES_PER_MAPPING = 3;
     private static final int ART_VARIANT_COUNT = 2;
 
@@ -54,14 +54,6 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance implements
 
     private Mgz2CapsuleAnimalInstance() {
         this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), 0, 0, 0);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn spawn = ctx.spawn() != null
-                ? ctx.spawn()
-                : new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
-        return new Mgz2CapsuleAnimalInstance(spawn, 0, 0, 0);
     }
 
     @Override

@@ -165,6 +165,7 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic3k.objects.AizBattleshipInstance");
 
     private static final List<String> SPAWN_DEFAULT_ARGS_RECREATORS = List.of(
+            "com.openggf.game.sonic3k.objects.Mgz2CapsuleAnimalInstance",
             "com.openggf.game.sonic3k.objects.RockDebrisChild");
 
     private static final List<String> ZERO_ARG_RECREATORS = List.of(
