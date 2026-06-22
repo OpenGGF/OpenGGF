@@ -152,6 +152,49 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 - Root cause: at f1343 ROM's CPU Tails presses jump (`ctrl2_pressed=0x10` = button B) via the auto-jump trigger gate while grounded and pushing the HTZ breakable block (Obj32); `y_speed` becomes -0680 and Tails goes air+rolling. The engine kept Tails grounded (`gen=0008`, no jump). The engine's `Tails_CPU_jumping` latch (`jumpingFlag`) was stuck set from the prior `$3F`-cadence jump and was never cleared because the grounded-clear (ROM `loc_13E64` / S2 `FilterAction`) is skipped on the push-bypass path. The trigger gate was guarded by `if (!jumpingFlag)`, so the held latch blocked the legitimate re-trigger. ROM's push-bypass route branches **directly** to the trigger gate (`loc_13E9C` / `FilterAction_Part2`), which never consults the latch (S3K `loc_13DD0` sonic3k.asm:26702-26705; S2 s2.asm:39297-39300; gate s2.asm:39015-39022).
 - Fix: `SidekickCpuController.updateNormal()` gate widened from `if (!jumpingFlag)` to `if (!jumpingFlag || autoJumpPushBypass)`. Shared S2/S3K CPU code, driven by real push state (no zone carve-out).
 - Regression sweep (this branch vs clean develop baseline, first-error frame is the metric): all S2 traces identical first-error frame — ARZ2 f523, CPZ f3365, CPZ2 f2889, DEZ f4007, MCZ2 f4485, MTZ f1267, MTZ2 f1265, OOZ f1782, OOZ2 f1070, HTZ1 f6114, MTZ3 f1973; CNZ1 f1691 and CNZ2 f4418 same first-error frame (downstream count only, 532->549 / 982->999); ARZ1/MCZ1/SCZ/WFZ/EHZ1 green both. S3K AIZ level-select f19089 and complete-run f1095 byte-identical to baseline. S1 credits GHZ1/MZ2 green. TestSidekickCpuFollowParity unchanged at its 2 pre-existing develop-baseline failures. No frontier regressed.
+## 2026-06-22 - S3K MGZ/LBZ Smashing Pillar inclusive right edge advances LBZ1 to f2270
+
+- Branch/worktree context: `bugfix/ai-lbz1-f1950-wallpush` (worktree off `develop`,
+  base `4eaf9fbed`, includes the prior LBZ1 rolling-drum-handoff fix at f1950).
+- Command: `mvn -q -Dmse=relaxed test "-Dtest=TestS3kLbzCompleteRunTraceReplay"
+  -DfailIfNoTests=false "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen"
+  "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- **`s3k_lbz1` / `TestS3kLbzCompleteRunTraceReplay` advanced f1950 -> f2270.**
+  - Root: at LBZ1 f1949 Sonic walks left into the LBZ Smashing-Spikes tube
+    (`Obj_MGZLBZSmashingPillar`, the engine `MGZLBZSmashingPillar`, a
+    `SolidObjectFull` body) and pins flush against its right edge at x=0x4DF.
+    ROM `status_byte` becomes 0x21 (Status_Facing + Status_Push) and STAYS 0x21
+    through f1950-1952 even after the player releases input (gv=0). The engine
+    set push on the wall-hit frame but the player's standing-still push-clear
+    (gSpeed==0 on flat ground) cleared it the next frame, giving 0x01.
+  - Why ROM keeps it: `SolidObjectFull_1P` -> `SolidObject_cont` rejects the X
+    bounding box with `bhi` (unsigned strictly-greater): `cmp.w d3,d0 / bhi.w
+    loc_1E0A2` (sonic3k.asm:41405; the same `bhi` is in S2 s2.asm:35353-35354
+    and the S1 equivalent). A player shoved flush has `d0 == width*2`, which
+    `bhi` keeps as a live SIDE contact, so the pillar's `SolidObject_cont`
+    side path re-sets `Status_Push` (loc_1E06E `bset #Status_Push,status(a1)`,
+    sonic3k.asm:41500) every frame the grounded player overlaps the edge. The
+    pillar runs after Sonic in slot order, so its push-set is the last word.
+  - Engine bug: the shared `ObjectSolidContactController` X gate defaults to an
+    exclusive (`relXRaw >= width*2 -> no contact`) bound and only flips to the
+    ROM-accurate inclusive `>` bound when a provider opts in via
+    `usesInclusiveRightEdge()`. The Smashing Pillar didn't opt in, so at the
+    flush edge the contact dropped, the pillar never re-set push, and the
+    player's standing-still clear won.
+  - Fix: `MGZLBZSmashingPillarObjectInstance.usesInclusiveRightEdge()` -> true,
+    citing sonic3k.asm:41405. This is the ROM `bhi` operator for this object's
+    own solid routine, not a zone/route/frame carve-out.
+  - Net-positive gate: LBZ1 advanced f1950 -> f2270 (next frontier is a separate
+    downstream sidekick delta, `tails_x` 0x04E1 vs 0x04E0 at f2270, Tails
+    following Sonic away from the pillar). MGZ (the only other zone that spawns
+    this object) held EXACTLY at its develop baseline: `s3k_mgz1` complete-run
+    f866 `tails_status_byte` and `s3k_mgz1` f523 `obj_extra_s24_x`, both
+    identical with and without the change (verified by stash). Keep-green
+    `TestS3kAiz1SkipHeadless` (8), `TestSonic3kLevelLoading` (30),
+    `TestSonic3kBootstrapResolver` (5), `TestSonic3kDecodingUtils` (3), and
+    `TestLbzRollingDrumInstance` (19) all pass. Other red traces (S2 level-select,
+    S3K AIZ, the two S2 `TestSidekickCpuFollowParity` cases) are pre-existing on
+    develop and cannot be reached by this MGZ/LBZ-only object change.
 
 ## 2026-06-22 - S2 Rexon head oscillation stagger advances HTZ2 to f1343
 
@@ -18741,3 +18784,74 @@ into a wall at x=0x4DF; ROM sets Status_Pushing, engine does not). Separate, sma
 root. Regression sweep: AIZ complete-run unchanged at f1095 (matches baseline);
 keep-green S3K tests + 19 `TestLbzRollingDrumInstance` unit tests all pass. Drum is
 an LBZ-only object so no cross-zone/cross-game exposure.
+
+### 2026-06-22 BizHawk capture worklist (3 blocked roots — register/RAM datapoints)
+
+Three trace frontiers this session resolved to **deep sim-fidelity / inline-solid /
+RNG divergences** that cannot be pinned by static disassembly + engine file-debug
+alone — they need frame-by-frame ROM register/RAM traces from BizHawk. Each was
+diagnosed precisely (hypotheses ruled out) and reverted clean (0 commits). This
+worklist consolidates the exact datapoints a BizHawk-equipped follow-up session
+should capture in one pass so each root can be closed. Methodology note that bit
+this session: under `-Dmse=relaxed`, MSE **swallows `System.err`** — engine-side
+instrumentation must `Files.writeString` to a Windows/relative path (NOT `/tmp`,
+which throws silently on the Windows JVM).
+
+1. **S3K ICZ1 f3139 — `status_byte` 0x0028 (OnObj+Push) vs 0x0008** (`s3k_icz1`,
+   `TestS3kIczCompleteRunTraceReplay`). Sonic rides a free-falling
+   `Obj_ICZPathFollowPlatform` (routine 0x0A) stationary; ROM adds Status_Push,
+   engine stays OnObj-only. Engine geometry at f3139 resolves continued-ride TOP
+   (distX=25, distY=4 → top wins; zero real vertical penetration), so the push is
+   NOT an object side-classification, and every static Push source (MvSonicOnPtfm
+   ride, Sonic_Move stationary `bclr Status_Push`, ground-wall push gated on
+   ground_vel!=0, second-object overlap) is ruled out.
+   - **Capture at f3139, inside `SolidObjectFull` for the ICZ platform a0:** the
+     platform's `a0.d6` standing-bit state (set vs clear), and registers `d0`
+     (relX overlap), `d1`/`d5` (X push dist), `d3`/`d1` (Y push dist) at
+     `loc_1DFFE`/`loc_1E034` — to confirm whether ROM is in continued-ride
+     (`MvSonicOnPtfm`) or new-contact reclassification (`SolidObject_cont`).
+   - **Pre-snap player vs platform Δ:** Player_1 `y_pos`+`y_vel` and the platform
+     `y_pos`+`y_vel` at the START of f3139's ExecuteObjects (player runs slot 0
+     first), BEFORE the platform's MoveSprite2/SolidObjectFull. physics.csv `y` is
+     post-resolution; the missing datum is whether the player lags the descending
+     platform pre-snap, exposing penetration that flips the standing bit clear.
+   - Detail: memory `icz1-f3139-sinkpush-blocked.md`.
+
+2. **S2 HTZ2 f3315 — `tails_x_speed` 0x01E8 vs 0x00E8** (+0x100/+1px) (`s2_htz2`,
+   `TestS2Htz2LevelSelectTraceReplay`). CPU Tails is wedged against a wall (x_pos
+   frozen 0x170A) while riding a rising lava platform; ROM x_vel oscillates
+   0x00E8↔0xFFF4 and bumps to 0x01E8 at f3315, engine sticks accelerating left.
+   Push-bypass logic confirmed ROM-correct (Tails pushing every frame, Sonic
+   delayed status 0, bypass correctly active; delay 16-engine = 17-ROM via
+   documented update-order comp). So the +0x100 is a wall/push-PHYSICS event, not
+   follow steering. Terrain ground-wall scan returns null (no terrain), and the
+   `ObjectSolidContactController.update()` solid loop never fires for the wedged
+   sidekick (HTZ2/S2 trace replay drives object solids via the INLINE path
+   `processInlineObjectForPlayer`, like S3K).
+   - **Capture at f3315:** which SST object's `SolidObject`/`SolidObject_Always`
+     side-contact touches Tails (a1=Sidekick) at x=0x170A,y≈0x074C, and the d-regs
+     (`d0` X overlap, `d3` Y overlap) + the resulting `x_vel(a1)` write inside that
+     solid resolution. Compare the wedged-Tails inline solid contact frame-by-frame
+     f3311-3320 to see why f3315's rebound differs by exactly 1px (overlaps with the
+     LBZ wall-push inline-solid-rebound probe — same class of inline-solid rider
+     rebound).
+   - Detail: memory `htz2-f3315-rising-lava-partial.md`.
+
+3. **S2 CNZ1 f1691 — `y_speed` 0x0400 vs 0x0000** (+ `air` 1 vs 0) (`s2_cnz1`,
+   `TestS2CnzLevelSelectTraceReplay`). The CNZ slot-machine Point Pokey cage (ROM
+   `ObjD6`, s2.asm:59006) holds Sonic while the slot spins, then ejects him with
+   `move.w #$400,y_vel(a1)` (`loc_2BE2E`, s2.asm:59215-59222). ROM holds 169 frames
+   (capture f1522 → release f1691, reward 0); engine holds ~196 → launch ~27 frames
+   late. V-int seed at capture matches (engine vblaCounter 0x0FBC == trace `vbc` at
+   f1522). Slowdown is in FINE_TUNE (slot routine 0x10) per-slot position/speed
+   convergence carried in from MAIN_ROLLING. One concrete discrepancy already
+   found: engine fine-tune timer seed uses `frameCounter & 0xFF` but ROM
+   `SlotMachine_Routine4` uses `(Vint_runcount+3)` — a different counter byte the
+   engine doesn't model.
+   - **Capture `SlotMachineVariables` (a4) frame-by-frame f1522-1691:** `slot_rout`,
+     `slot_timer`, `slot_index`, `slots_targ`, and per-slot `slotN_index`/`offset`/
+     `speed`/`rout` (the 12 `slots_data` bytes). Plus `Vint_runcount` (all 4 bytes,
+     esp. `+3`) at the Routine4→Routine5 transition. This pins where the engine's
+     per-frame slot position/speed diverges from ROM and validates the
+     `(Vint_runcount+3)` seed fix.
+   - Detail: memory `cnz1-f1691-slotmachine-timing.md`.
