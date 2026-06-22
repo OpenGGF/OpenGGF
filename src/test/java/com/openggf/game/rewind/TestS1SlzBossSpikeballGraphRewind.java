@@ -10,7 +10,6 @@ import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
@@ -246,12 +245,7 @@ class TestS1SlzBossSpikeballGraphRewind {
     }
 
     private static boolean hasRegisteredDynamicCodec(String fqn, ObjectRegistry registry) {
-        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
-            if (fqn.equals(codec.className())) {
-                return true;
-            }
-        }
-        return false;
+        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(fqn);
     }
 
     private static ObjectRefId objectId(ObjectManager objectManager, ObjectInstance object) {
