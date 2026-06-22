@@ -9,7 +9,7 @@ import com.openggf.game.PlayableEntity;
 
 import java.util.List;
 
-public class AnimalObjectInstance extends AbstractObjectInstance {
+public class AnimalObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int GRAVITY = 0x38;
     private static final int FLY_GRAVITY = 0x18;
     private static final int INITIAL_POP_VEL = -0x400;
@@ -49,6 +49,11 @@ public class AnimalObjectInstance extends AbstractObjectInstance {
      */
     static AnimalObjectInstance forRewindRecreate(ObjectSpawn spawn, ObjectServices services) {
         return new AnimalObjectInstance(spawn, services, 0);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return forRewindRecreate(ctx.spawn(), ctx.objectServices());
     }
 
     private AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services, int artVariant) {

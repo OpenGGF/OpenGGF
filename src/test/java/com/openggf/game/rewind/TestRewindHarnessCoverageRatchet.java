@@ -209,12 +209,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       four S1 destructible/spawner parent objects.</li>
  *   <li>2026-06-22: raised to 211 after adding generic recreate coverage for
  *       three S1 stomper/push/ending scalar objects.</li>
+ *   <li>2026-06-22: raised to 213 after deleting the shared animal,
+ *       explosion, and skid-dust dynamic codecs and adding generic recreate
+ *       probe support for (ObjectSpawn,ObjectServices).</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 211;
+    static final int RATCHET_FLOOR = 213;
 
     @BeforeEach
     void initHeadless() {

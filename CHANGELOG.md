@@ -75,6 +75,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S1 bridge/signpost trap rewind restore:** Bridge, Gargoyle, Lava Ball Maker, and Signpost now restore through shared spawn-based generic recreate coverage.
 - **S1 destructible/spawner rewind restore:** Breakable Wall, Bubbles, Collapsing Ledge, and Smash Block parents now restore through shared spawn-based generic recreate coverage.
 - **S1 stomper/push/ending rewind restore:** Chained Stomper, Push Block, and ending STH text now restore through generic recreate coverage.
+- **Shared helper rewind restore:** animal, explosion, and skid-dust dynamic objects now restore through generic recreate with restore-time services, deleting their shared private dynamic codec helpers.
 - **S2 invisible block rewind restore:** invisible blocks now restore through spawn-based generic recreate, moving them onto the rewind round-trip ratchet.
 - **S2 Egg Prison button rewind graph restore:** Egg-prison buttons now restore through graph-tested generic recreate with exact parent/button relinks while deleting their dynamic codec.
 - **S2 OOZ burner flame rewind graph restore:** burner flame children now restore through graph-tested generic recreate with exact platform relinks while deleting their dynamic codec.

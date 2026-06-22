@@ -117,6 +117,7 @@ public final class ObjectRewindDynamicCodecs {
      *   <li>{@code (ObjectSpawn, String)} — spawn plus harmless name placeholder</li>
      *   <li>{@code (ObjectSpawn, int)} — spawn plus harmless zero placeholder</li>
      *   <li>{@code (ObjectSpawn, boolean)} — spawn plus default false option</li>
+     *   <li>{@code (ObjectSpawn, ObjectServices)} — spawn plus restore-time services</li>
      *   <li>{@code (ObjectSpawn, ObjectServices, int)} — points-style constructor
      *       with default score/frame placeholder</li>
      *   <li>{@code (ObjectSpawn, ParentType)} — spawn plus a live parent</li>
@@ -220,6 +221,12 @@ public final class ObjectRewindDynamicCodecs {
                 findCtor(cls, ObjectSpawn.class, boolean.class);
         if (spawnBooleanCtor != null) {
             return invokeProbeCtor(cls, spawnBooleanCtor, ctx, spawn, false);
+        }
+
+        Constructor<? extends AbstractObjectInstance> spawnServicesCtor =
+                findCtor(cls, ObjectSpawn.class, ObjectServices.class);
+        if (spawnServicesCtor != null) {
+            return invokeProbeCtor(cls, spawnServicesCtor, ctx, spawn, ctx.objectServices());
         }
 
         Constructor<? extends AbstractObjectInstance> spawnServicesIntCtor =
@@ -668,11 +675,8 @@ public final class ObjectRewindDynamicCodecs {
 
     public static List<DynamicObjectRewindCodec> sharedCodecs() {
         return List.of(
-                animalCodec(),
                 new LostRingRewindCodec(),
                 deferredPlayerBoundCodec(ShieldObjectInstance.class, ShieldObjectInstance.class),
-                explosionCodec(),
-                skidDustCodec(),
                 // Batch-7: signpost ring sparkle (shared S1+S2; S3K uses S3kSignpostSparkleChild).
                 // worldX/worldY are reapplied by the post-recreate non-final scalar restore.
                 exactSpawnCodec(
@@ -756,68 +760,4 @@ public final class ObjectRewindDynamicCodecs {
         };
     }
 
-    private static DynamicObjectRewindCodec animalCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof AnimalObjectInstance;
-            }
-
-            @Override
-            public String className() {
-                return AnimalObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return AnimalObjectInstance.forRewindRecreate(
-                        entry.spawn(), context.objectServices());
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec explosionCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof ExplosionObjectInstance;
-            }
-
-            @Override
-            public String className() {
-                return ExplosionObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                ObjectSpawn spawn = entry.spawn();
-                ObjectRenderManager renderManager = context.objectServices().renderManager();
-                return new ExplosionObjectInstance(
-                        spawn.objectId(), spawn.x(), spawn.y(), renderManager, -1);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec skidDustCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof SkidDustObjectInstance;
-            }
-
-            @Override
-            public String className() {
-                return SkidDustObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return SkidDustObjectInstance.forRewindRecreate(
-                        entry.spawn(), context.objectServices());
-            }
-        };
-    }
 }

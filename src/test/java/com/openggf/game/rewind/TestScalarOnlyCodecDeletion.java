@@ -107,7 +107,9 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstan
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
+import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -118,6 +120,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -567,6 +570,11 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> BATCH52_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(ARZBossPillar.class.getName(), GameId.S2),
             new CodecDeletionCandidate(CNZBossElectricBall.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> SHARED_HELPER_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AnimalObjectInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(ExplosionObjectInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(SkidDustObjectInstance.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> CPZ_GRAPH_BATCH_A_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(CPZBossContainer.class.getName(), GameId.S2),
@@ -4126,6 +4134,38 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed through parent-seeded harness coverage; got: "
                             + result);
+        }
+    }
+
+    // =====================================================================
+    // Shared helper codec deletion: animal/explosion/skid dust
+    // =====================================================================
+
+    @Test
+    void sharedHelperClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : SHARED_HELPER_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after shared helper codec deletion");
+        }
+    }
+
+    @Test
+    void sharedHelperClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : SHARED_HELPER_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through shared generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void sharedHelperClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : SHARED_HELPER_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through generic recreate");
         }
     }
 
