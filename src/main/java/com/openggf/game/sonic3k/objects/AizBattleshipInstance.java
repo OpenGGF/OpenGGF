@@ -6,8 +6,7 @@ import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnYCoordinateRewindRecreatable;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -29,7 +28,7 @@ import java.util.logging.Logger;
  * When the ship crosses below $3CDC, spawns {@link AizBossSmallInstance}.
  * Every 16 frames plays {@code cfx_LargeShip} SFX.
  */
-public class AizBattleshipInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class AizBattleshipInstance extends AbstractObjectInstance implements SpawnYCoordinateRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizBattleshipInstance.class.getName());
 
     /** ROM: Battleship bomb script — {delay, bombX} pairs in secondary camera space. */
@@ -83,11 +82,6 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Rew
         this.frameCounter = 0;
         this.finished = false;
         this.bombingStarted = false;
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new AizBattleshipInstance(ctx.spawn(), ctx.spawn().y());
     }
 
     @Override

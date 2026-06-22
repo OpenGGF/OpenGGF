@@ -11,6 +11,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.objects.SpawnServicesRewindRecreatable;
 import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
+import com.openggf.level.objects.SpawnYCoordinateRewindRecreatable;
 import com.openggf.level.objects.ZeroArgRewindRecreatable;
 import com.openggf.level.objects.ZeroScalarArgsRewindRecreatable;
 import org.junit.jupiter.api.Test;
@@ -126,6 +127,9 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance",
             "com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance",
             "com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance");
+
+    private static final List<String> SPAWN_Y_COORDINATE_RECREATORS = List.of(
+            "com.openggf.game.sonic3k.objects.AizBattleshipInstance");
 
     private static final List<String> ZERO_ARG_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.Sonic1EndingSTHObjectInstance",
@@ -319,6 +323,24 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnRomZoneRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void spawnYCoordinateRecreatorsUseMarkerInterface() {
+        for (String className : SPAWN_Y_COORDINATE_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(SpawnYCoordinateRewindRecreatable.class.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the spawn-Y-coordinate recreate hook");
+        }
+    }
+
+    @Test
+    void spawnYCoordinateRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_Y_COORDINATE_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use SpawnYCoordinateRewindRecreatable's default hook");
         }
     }
 
