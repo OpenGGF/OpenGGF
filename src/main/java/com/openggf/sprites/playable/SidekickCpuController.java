@@ -2375,7 +2375,26 @@ public class SidekickCpuController {
             }
         }
 
-        if (!jumpingFlag) {
+        // ROM reaches the auto-jump trigger gate (loc_13E9C /
+        // TailsCPU_Normal_FilterAction_Part2) along two routes:
+        //  - the NON-bypass route runs loc_13E64 / FilterAction first (the flag
+        //    carry/clear, handled by the block above) and then falls through to
+        //    loc_13E7C and the trigger gate, all gated on the flag being absent;
+        //  - the PUSH-BYPASS route (Tails pushing AND delayed-Sonic not pushing)
+        //    branches DIRECTLY to the trigger gate, SKIPPING loc_13E64 / the
+        //    FilterAction flag carry/clear entirely (S3K loc_13DD0
+        //    "btst #Status_Push;beq loc_13DF2 / btst #5,d4;beq.w loc_13E9C",
+        //    sonic3k.asm:26702-26705; S2 "btst #pushing,status;beq + /
+        //    btst #pushing,d4;beq.w TailsCPU_Normal_FilterAction_Part2",
+        //    s2.asm:39297-39300).
+        // The trigger gate itself (loc_13E9C) never consults Tails_CPU_jumping /
+        // Tails_CPU_auto_jump_flag, so on the push-bypass route it must fire on
+        // the $3F cadence frame even while the latch is still set. The engine
+        // previously skipped it whenever jumpingFlag was held, stranding a
+        // grounded pushing sidekick that re-qualifies on a later $3F frame
+        // (S2 HTZ2 f1343: Tails pushing the breakable block, dy=-10 so only the
+        // bypass passes the height gate, latch stuck from the prior $3F jump).
+        if (!jumpingFlag || autoJumpPushBypass) {
             // ROM runs the auto-jump distance/height/gate path regardless of
             // Status_InAir; the in-air check only belongs to the existing
             // Tails_CPU_auto_jump_flag clear path above (S2 s2.asm:38994-39022,
