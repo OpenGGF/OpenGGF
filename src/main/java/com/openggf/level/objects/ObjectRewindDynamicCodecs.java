@@ -9,12 +9,12 @@ import java.lang.reflect.Modifier;
 import java.util.logging.Logger;
 
 /**
- * Shared dynamic-object rewind codec factories. Game-specific registries compose
+ * Shared dynamic-object rewind recreate helpers. Game-specific registries compose
  * these helpers with their concrete object classes.
  *
  * <p>The static {@link #genericRecreate(ObjectManagerSnapshot.DynamicObjectEntry, DynamicObjectRecreateContext)}
- * method is the Phase-2 uniform recreate entry point (Task 4). It supersedes per-object codecs
- * for classes that either:
+ * method is the Phase-2 uniform recreate entry point (Task 4). It supersedes per-object
+ * restore hooks for classes that either:
  * <ul>
  *   <li>Can be reconstructed from the captured {@link ObjectSpawn} via
  *       {@link ObjectRegistry#create(ObjectSpawn)} (registry path), or</li>

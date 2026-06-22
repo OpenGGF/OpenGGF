@@ -260,7 +260,7 @@ public interface ObjectServices {
     /**
      * Returns the active bonus-stage provider, or {@code null} when no bonus
      * stage is active. Exposes the gameplay-scoped provider through the injected
-     * object-service handle so object/codec code can resolve bonus-stage state
+     * object-service handle so object/restore code can resolve bonus-stage state
      * without a global {@code GameServices.bonusStageOrNull()} lookup.
      */
     default BonusStageProvider bonusStageProviderOrNull() {

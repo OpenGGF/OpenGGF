@@ -91,8 +91,8 @@ public final class CnzCannonInstance extends AbstractObjectInstance
      *
      * <p>Self-contained: rebuilds from the captured spawn. Scalar fields are reapplied
      * by the standard scalar-restore pass after recreate; player back-references are not
-     * wired here (they were not captured by the deleted codec either). Replaces the
-     * former explicit dynamic codec (Phase-2 codec-deletion batch 2).
+     * wired here (they were not captured by the deleted explicit restore path either).
+     * Replaces the former explicit dynamic restore path (Phase-2 codec-deletion batch 2).
      */
 
     @Override

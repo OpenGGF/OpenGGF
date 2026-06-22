@@ -30,6 +30,8 @@ class TestStaleRewindCodecHelperCleanup {
             "clearRewindDynamicObjectCodecs" + "ForTest";
     private static final String DELETED_OBJECT_MANAGER_CODEC_LOOKUP =
             "rewindDynamicObjectCodec" + "For";
+    private static final String DELETED_DYNAMIC_OBJECT_REWIND_CODEC =
+            "DynamicObjectRewind" + "Codec";
     private static final List<String> STALE_DYNAMIC_OBJECT_CODEC_PHRASES = List.of(
             "the " + "codec passes",
             "after the " + "codec recreates",
@@ -40,7 +42,27 @@ class TestStaleRewindCodecHelperCleanup {
             "rewind " + "codec recreates",
             "rewind " + "codec can re-derive",
             "the " + "codec recovers",
-            "as the " + "codec did");
+            "as the " + "codec did",
+            "dynamic rewind " + "codecs and to",
+            "NOT recreated by the " + "codec",
+            "duplicate via a " + "codec",
+            "codec " + "recreate would cause",
+            "reuse / adopt / " + "codec",
+            "codec's " + "recreate",
+            "Shared dynamic-object rewind " + "codec factories",
+            "object/" + "codec code",
+            "deferred " + "codec behavior",
+            "after " + "codec recreates",
+            "parent-relink " + "codec",
+            "mtzBossLaser" + "Codec",
+            "hczEndBossChild" + "Codec",
+            "codec-era " + "callers",
+            "former explicit dynamic " + "codec",
+            "dynamic " + "codec used",
+            "deleted " + "codec did",
+            "codec " + "recreates the",
+            "codec " + "passes placeholders",
+            "codecs " + "in place");
 
     @Test
     void sourcesDoNotReferenceDeletedSpawnCodecHelper() throws IOException {
@@ -70,6 +92,12 @@ class TestStaleRewindCodecHelperCleanup {
                 "Deleted ObjectManager dynamic-codec test clear helper is still referenced in ");
         assertNoSourceReferences(DELETED_OBJECT_MANAGER_CODEC_LOOKUP,
                 "Deleted ObjectManager dynamic-codec lookup helper is still referenced in ");
+    }
+
+    @Test
+    void sourcesDoNotReferenceDeletedDynamicObjectRestoreCodecType() throws IOException {
+        assertNoSourceReferences(DELETED_DYNAMIC_OBJECT_REWIND_CODEC,
+                "Deleted dynamic-object rewind codec interface is still referenced in ");
     }
 
     @Test

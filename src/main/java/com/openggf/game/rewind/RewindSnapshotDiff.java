@@ -124,7 +124,7 @@ public final class RewindSnapshotDiff {
             }
         }
         // Dynamic objects: bucket by slotIndex so insertion-order divergence
-        // (e.g. Shield re-spawned by post-restore callback after codec recreates
+        // (e.g. Shield re-spawned by post-restore callback after generic restore
         // for non-deferred dynamics) doesn't masquerade as content divergence.
         // Both runs may legitimately end up with the same {slot -> instance}
         // set in different list positions; only true content/slot/membership

@@ -42,7 +42,7 @@ public final class MhzEndBossDefeatFragmentChild extends AbstractObjectInstance
     private int flickerCounter;
 
     /**
-     * Parent-linked construction entry retained for tests and codec-era callers.
+     * Parent-linked construction entry retained for tests and legacy callers.
      * Rewind restore now uses {@link #recreateForRewind(RewindRecreateContext)}
      * and lets compact restore reapply the captured parent-derived {@code xVel}.
      */

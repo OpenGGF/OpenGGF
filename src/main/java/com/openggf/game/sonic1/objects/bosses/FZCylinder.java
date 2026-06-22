@@ -101,7 +101,7 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
         if (boss == null) {
             return null;
         }
-        // FZ has one boss group; this preserves the deleted explicit codec's
+        // FZ has one boss group; this preserves the deleted explicit restore path's
         // first-live parent matching while keeping the relink local to FZ.
         FZCylinder restored = new FZCylinder(boss);
         seedCapturedScalars(restored, ctx);

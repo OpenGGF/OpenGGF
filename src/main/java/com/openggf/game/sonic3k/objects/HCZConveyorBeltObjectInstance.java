@@ -188,7 +188,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
      *
      * <p>Self-contained: all state (including the {@code final} bound fields) is
      * derived deterministically from the captured spawn, so re-running the constructor
-     * reproduces it exactly. Replaces the former explicit dynamic codec
+     * reproduces it exactly. Replaces the former explicit dynamic restore path
      * (Phase-2 codec-deletion batch 2).
      */
 

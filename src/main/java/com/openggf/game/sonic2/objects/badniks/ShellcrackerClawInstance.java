@@ -79,7 +79,7 @@ public class ShellcrackerClawInstance extends AbstractObjectInstance
     }
     private final ShellcrackerBadnikInstance parent;
     // Un-final for rewind: GenericFieldCapturer reapplies these captured non-spawn
-    // scalars after the parent-relink codec recreates the claw with placeholders.
+    // scalars after the parent-relink recreate hook rebuilds the claw with placeholders.
     private int pieceIndex; // 0, 2, 4, 6, 8, 10, 12, 14
     private boolean facingRight;
     private int currentX;

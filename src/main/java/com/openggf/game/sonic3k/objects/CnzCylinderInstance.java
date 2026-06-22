@@ -123,7 +123,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
      * <p>Self-contained: all state (including the {@code final} geometry fields) is
      * derived deterministically from the captured spawn, so re-running the constructor
      * reproduces it exactly. Mutable scalar fields are reapplied by the standard
-     * scalar-restore pass after recreate. Replaces the former explicit dynamic codec
+     * scalar-restore pass after recreate. Replaces the former explicit dynamic restore path
      * (Phase-2 codec-deletion batch 2).
      */
 

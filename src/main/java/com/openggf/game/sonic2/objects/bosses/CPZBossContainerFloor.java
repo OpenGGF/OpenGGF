@@ -22,8 +22,8 @@ import java.util.List;
 public class CPZBossContainerFloor extends AbstractObjectInstance implements RewindRecreatable {
     private final Sonic2CPZBossInstance mainBoss;
     private final CPZBossContainer container;
-    // Non-final so GenericFieldCapturer captures/restores it across held rewind: the codec
-    // recreates with a placeholder (false) and the captured value is reapplied on restore.
+    // Non-final so GenericFieldCapturer captures/restores it across held rewind: the
+    // recreate hook uses a placeholder (false) and the captured value is reapplied on restore.
     private boolean isFloor2;
 
     private int x;

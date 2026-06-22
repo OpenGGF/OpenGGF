@@ -38,7 +38,7 @@ public record RewindRecreateContext(
 
     /**
      * Queues the captured dynamic entry for the post-restore player-bound
-     * power-up refresh path. This preserves the old deferred codec behavior:
+     * power-up refresh path. This preserves the old deferred restore behavior:
      * {@code recreateForRewind} returns {@code null}, then the live player
      * refresh asks the power-up spawner to recreate and relink the concrete
      * object using the captured slot and field state.

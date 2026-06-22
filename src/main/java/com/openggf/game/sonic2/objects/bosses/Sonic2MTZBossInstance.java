@@ -1511,8 +1511,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance {
         private int currentY;
         // Un-final for rewind: GenericFieldCapturer skips final scalars and xVel
         // is NOT spawn-derivable (getSpawn() reports current position, not firing
-        // direction). The parent-relink codec passes a placeholder and the capturer
-        // reapplies xVel on restore (mtzBossLaserCodec).
+        // direction). The parent-relink recreate hook passes a placeholder and the
+        // capturer reapplies xVel on restore.
         private int xVel; // 8.8 fixed point
         private boolean firstUpdate = true;
 

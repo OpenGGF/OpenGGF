@@ -1610,7 +1610,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * force-lock the camera every frame forever (softlock).
      *
      * <p>This is a live-object predicate, not a zone/frame/route carve-out: with the
-     * codecs in place the driver objects are present and nothing here fires. It is a
+     * restore paths in place the driver objects are present and nothing here fires. It is a
      * defense-in-depth backstop guaranteeing the camera lock is never left orphaned.
      */
     public void reconcileSequenceAfterRewindRestore() {

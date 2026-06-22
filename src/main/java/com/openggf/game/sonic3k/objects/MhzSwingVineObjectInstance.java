@@ -100,7 +100,7 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
      * {@inheritDoc}
      *
      * <p>Self-contained: rebuilds from the captured spawn (same path the deleted
-     * dynamic codec used). The object's own scalar fields are reapplied by the standard scalar-restore
+     * dynamic restore path used). The object's own scalar fields are reapplied by the standard scalar-restore
      * pass (Phase-2 codec-deletion batch 2).
      */
 

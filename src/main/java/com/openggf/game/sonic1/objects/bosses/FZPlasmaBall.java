@@ -90,7 +90,7 @@ public class FZPlasmaBall extends AbstractObjectInstance implements TouchRespons
         if (liveLauncher == null) {
             return null;
         }
-        // FZ has one launcher group; preserve the deleted explicit codec's
+        // FZ has one launcher group; preserve the deleted explicit restore path's
         // first-live launcher matching and let compact restore reapply target/scalars.
         FZPlasmaBall restored = new FZPlasmaBall(
                 liveLauncher, ctx.spawn().x(), ctx.spawn().y(), 0);

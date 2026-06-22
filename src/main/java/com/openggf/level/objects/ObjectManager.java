@@ -144,7 +144,7 @@ public class ObjectManager {
     private final Map<ObjectSpawn, int[]> reservedChildSlots = new IdentityHashMap<>();
 
     // Rewind: captured DynamicObjectEntry payloads for player-bound dynamics
-    // (Shield, Stars) that are NOT recreated by the codec on restore. The
+    // (Shield, Stars) that are NOT recreated by generic dynamic restore. The
     // post-restore callback in
     // AbstractPlayableSprite#refreshPowerUpObjectsAfterRewindRestore relinks a
     // live matching shield when one exists, otherwise re-spawns via the power-up
@@ -185,10 +185,10 @@ public class ObjectManager {
     // reconstructed during restore. The reconstructed parent wires its back-references
     // (childComponents, named child fields) to THESE instances; the step-4 dynamic-object
     // reconciliation loop then adopts each one in place — registering it at its captured slot
-    // and applying its EXACT captured state — instead of recreating a duplicate via a codec.
+    // and applying its EXACT captured state — instead of recreating a duplicate via generic restore.
     // This gives exact-state fidelity for construction children while keeping the parent's
     // back-references valid (they point at the very instances the loop restores onto), and
-    // avoids the double-spawn that a codec recreate would cause. Cleared at the start and end
+    // avoids the double-spawn that generic recreate would cause. Cleared at the start and end
     // of each restore so it never leaks instances across passes.
     private final List<AbstractObjectInstance> rewindReconstructionChildren = new ArrayList<>();
     private boolean rewindReconstructionChildCapture;
@@ -3260,7 +3260,7 @@ public class ObjectManager {
             @Override
             public void restore(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot s) {
                 // The restore is TWO-PHASE so object-reference resolution is order-independent.
-                //   Phase 1 recreates (reuse / adopt / codec / genericRecreate / registry) every
+                //   Phase 1 recreates (reuse / adopt / genericRecreate / registry) every
                 //           captured object — active and dynamic — and registers each under its
                 //           captured ObjectRefId in a fresh restore identity table, WITHOUT yet
                 //           applying any field blob.
@@ -3399,7 +3399,7 @@ public class ObjectManager {
                 // 5. PHASE 1 (dynamic objects): recreate each captured dynamic object and register
                 //    its captured id, still deferring field-blob application to phase 2.
                 // Stop routing further child spawns into the reconstruction-children scratch:
-                // any spawns triggered below (e.g. by a codec's recreate) are normal restore
+                // any spawns triggered below (e.g. by a recreate hook) are normal restore
                 // wiring, not reconstruction side effects to be adopted.
                 rewindReconstructionChildCapture = false;
                 for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry

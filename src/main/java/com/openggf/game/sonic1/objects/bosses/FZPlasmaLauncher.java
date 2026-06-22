@@ -78,7 +78,7 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
         if (boss == null) {
             return null;
         }
-        // FZ has one boss group; preserve the deleted explicit codec's first-live
+        // FZ has one boss group; preserve the deleted explicit restore path's first-live
         // matching while rebuilding the parent-side graph link locally.
         FZPlasmaLauncher restored = new FZPlasmaLauncher(boss);
         boss.adoptPlasmaLauncherForRewind(restored);

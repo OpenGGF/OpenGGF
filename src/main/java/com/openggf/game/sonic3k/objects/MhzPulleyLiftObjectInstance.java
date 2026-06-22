@@ -72,9 +72,9 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
      * {@inheritDoc}
      *
      * <p>Self-contained: rebuilds from the captured spawn (the same path the deleted
-     * dynamic codec used). The object's own scalar fields are reapplied by the standard scalar-restore
+     * dynamic restore path used). The object's own scalar fields are reapplied by the standard scalar-restore
      * pass; the {@code final} handle structs are re-initialised to their defaults exactly
-     * as the deleted codec did (Phase-2 codec-deletion batch 2).
+     * as the deleted explicit restore path did (Phase-2 codec-deletion batch 2).
      */
 
     @Override

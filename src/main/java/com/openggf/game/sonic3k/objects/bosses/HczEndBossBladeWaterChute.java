@@ -119,7 +119,7 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild implements Rewi
     // =========================================================================
     private final HczEndBossInstance boss;
     // Non-final so the generic field capturer reapplies it after a rewind
-    // recreate (see hczEndBossChildCodec in Sonic3kObjectRegistry).
+    // recreate through the HCZ end-boss restore path.
     private int slotIndex;               // 0-4 (subtype / 2)
 
     private int state;

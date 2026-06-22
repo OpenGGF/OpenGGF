@@ -516,7 +516,7 @@ public final class RewindRoundTripHarness {
             boolean recreateReturnedNullInIsolation =
                     beforeForClass > 0 && afterForClass == 0 && afterCounts.isEmpty();
             if (recreateReturnedNullInIsolation) {
-                // The codec's recreate() returned null because it scanned getActiveObjects()
+                // The recreate hook returned null because it scanned getActiveObjects()
                 // for a live parent that is not present in the isolated harness ObjectManager.
                 // Retry with a seeded parent: build a fresh ObjectManager with a stub parent
                 // of the known type, then redo the round-trip.

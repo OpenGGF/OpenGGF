@@ -65,8 +65,8 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
      * and does not spawn any children (column/beam children are spawned lazily from
      * {@code update()}), so re-running it on restore is side-effect free. Scalar fields
      * are reapplied by the standard scalar-restore pass; the captured-player back-reference
-     * is not wired here (it was not captured by the deleted codec either). Replaces the
-     * former explicit dynamic codec (Phase-2 codec-deletion batch 2).
+     * is not wired here (it was not captured by the deleted explicit restore path either).
+     * Replaces the former explicit dynamic restore path (Phase-2 codec-deletion batch 2).
      */
 
     @Override
