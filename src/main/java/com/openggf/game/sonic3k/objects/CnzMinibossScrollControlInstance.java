@@ -73,14 +73,6 @@ public final class CnzMinibossScrollControlInstance extends AbstractObjectInstan
     }
 
     /**
-     * {@inheritDoc}
-     *
-     * <p>Self-contained: rebuilds from the captured spawn. Scalar fields are reapplied
-     * by the standard scalar-restore pass after recreate. Replaces the former explicit
-     * dynamic codec (Phase-2 codec-deletion batch 2).
-     */
-
-    /**
      * Test seam that injects the post-defeat phase transition the ROM normally
      * receives from {@code Events_fg_5}.
      */

@@ -62,6 +62,7 @@ class TestStaleRewindCodecHelperCleanup {
             "deleted " + "codec did",
             "codec " + "recreates the",
             "codec " + "passes placeholders",
+            "dynamic " + "codec (Phase-2",
             "codecs " + "in place");
 
     @Test
