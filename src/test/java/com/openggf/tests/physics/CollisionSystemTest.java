@@ -18,10 +18,8 @@ import org.mockito.Mockito;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -84,18 +82,6 @@ public class CollisionSystemTest {
 
         assertNotNull(fresh.getTrace());
         assertEquals(NoOpCollisionTrace.INSTANCE, fresh.getTrace());
-    }
-
-    @Test
-    public void resetStateClearsPendingOddSensorFallbackAngles() throws Exception {
-        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
-        Map<AbstractPlayableSprite, Byte> pending = pendingOddSensorFallbackAngles(collisionSystem);
-        pending.put(player, (byte) 0xA0);
-
-        collisionSystem.resetState();
-
-        assertTrue(pending.isEmpty(),
-                "RIGHTWALL odd-sensor fallback memory must not survive CollisionSystem.resetState()");
     }
 
     @Test
@@ -661,36 +647,25 @@ public class CollisionSystemTest {
     }
 
     @Test
-    public void oddRightWallAngleFallbackIsSensorDrivenNotCoordinateWindow() {
-        AbstractPlayableSprite player = newCollisionTestSprite();
+    public void oddRightWallZeroDistanceUsesCurrentCardinalFallbackInsteadOfStaleAlternate() {
+        FeatureSetCollisionTestSprite player = newCollisionTestSprite();
+        player.setFeatureSet(PhysicsFeatureSet.SONIC_3K);
         player.setGroundMode(GroundMode.RIGHTWALL);
-        player.setCentreX((short) 0x0100);
-        player.setCentreY((short) 0x0400);
+        player.setAngle((byte) 0xC0);
 
-        SensorResult selectedOddWall = new SensorResult((byte) 0xFF, (byte) 0, 0x10, Direction.DOWN);
-        SensorResult alternateEvenWall = new SensorResult((byte) 0x20, (byte) 2, 0x11, Direction.DOWN);
+        SensorResult selectedOddWall = new SensorResult((byte) 0xFF, (byte) 0, 0x72, Direction.RIGHT);
+        SensorResult previousAlternate = new SensorResult((byte) 0xB4, (byte) 1, 0x8C, Direction.RIGHT);
+        SensorResult currentAlternate = new SensorResult((byte) 0xCC, (byte) 1, 0x8D, Direction.RIGHT);
 
-        invokeSelectSensorWithAngle(player, alternateEvenWall, selectedOddWall);
-        invokeSelectSensorWithAngle(player, alternateEvenWall, selectedOddWall);
+        invokeSelectSensorWithAngle(player, selectedOddWall, previousAlternate);
+        assertEquals(0xC0, player.getAngle() & 0xFF,
+                "First odd-angle frame should snap to the current right-wall cardinal angle");
 
-        assertEquals(0x20, player.getAngle() & 0xFF,
-                "Odd right-wall contact should reuse the even alternate sensor on the next zero-distance frame "
-                        + "without depending on SBZ coordinates");
-    }
+        invokeSelectSensorWithAngle(player, selectedOddWall, currentAlternate);
 
-    @Test
-    public void oddRightWallAngleFallbackIgnoresDistantAlternateSensor() {
-        AbstractPlayableSprite player = newCollisionTestSprite();
-        player.setGroundMode(GroundMode.RIGHTWALL);
-
-        SensorResult selectedOddWall = new SensorResult((byte) 0xFF, (byte) 0, 0x10, Direction.DOWN);
-        SensorResult distantAlternate = new SensorResult((byte) 0x20, (byte) 3, 0x11, Direction.DOWN);
-
-        invokeSelectSensorWithAngle(player, distantAlternate, selectedOddWall);
-        invokeSelectSensorWithAngle(player, distantAlternate, selectedOddWall);
-
-        assertEquals(0x00, player.getAngle() & 0xFF,
-                "Right-wall fallback must not reuse alternates outside the ROM-shaped near-contact range");
+        assertEquals(0xC0, player.getAngle() & 0xFF,
+                "S3K Player_Angle has no cross-frame alternate-angle cache; a zero-distance odd right-wall "
+                        + "sensor snaps from the current angle to the current cardinal quadrant");
     }
 
     @Test
@@ -768,14 +743,6 @@ public class CollisionSystemTest {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed reading probe accessor " + accessor, e);
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<AbstractPlayableSprite, Byte> pendingOddSensorFallbackAngles(CollisionSystem collisionSystem)
-            throws Exception {
-        Field field = CollisionSystem.class.getDeclaredField("pendingOddSensorFallbackAngles");
-        field.setAccessible(true);
-        return (Map<AbstractPlayableSprite, Byte>) field.get(collisionSystem);
     }
 
     private static Direction readProbeDirection(Object probe, String accessor) {
@@ -883,5 +850,3 @@ public class CollisionSystemTest {
         }
     }
 }
-
-

@@ -7,8 +7,6 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-import java.util.IdentityHashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -34,7 +32,6 @@ public class CollisionSystem {
 
     private final TerrainCollisionManager terrainCollisionManager;
     private final GroundSensor calcRoomProbe = new GroundSensor(null, Direction.DOWN, (byte) 0, (byte) 0, true);
-    private final Map<AbstractPlayableSprite, Byte> pendingOddSensorFallbackAngles = new IdentityHashMap<>();
     private ObjectManager objectManager;
 
     // Trace for debugging/testing - defaults to no-op
@@ -56,7 +53,6 @@ public class CollisionSystem {
     public void resetState() {
         terrainCollisionManager.resetState();
         objectManager = null;
-        pendingOddSensorFallbackAngles.clear();
         trace = NoOpCollisionTrace.INSTANCE;
     }
 
@@ -969,53 +965,8 @@ public class CollisionSystem {
         SensorResult primary = leftIsPrimary ? leftSensor : rightSensor;
         SensorResult secondary = leftIsPrimary ? rightSensor : leftSensor;
         SensorResult selected = primary.distance() < secondary.distance() ? primary : secondary;
-        SensorResult alternate = selected == primary ? secondary : primary;
-        if (mode != GroundMode.RIGHTWALL || !usesOddRightWallFallback(selected, alternate)) {
-            pendingOddSensorFallbackAngles.remove(sprite);
-            applyAngleFromSensor(sprite, selected.angle());
-            return selected;
-        }
-
-        applyAngleFromSelectedSensor(sprite, selected, alternate);
+        applyAngleFromSensor(sprite, selected.angle());
         return selected;
-    }
-
-    private void applyAngleFromSelectedSensor(AbstractPlayableSprite sprite,
-                                              SensorResult selected,
-                                              SensorResult alternate) {
-        byte selectedAngle = selected.angle();
-        if ((selectedAngle & 0x01) == 0) {
-            pendingOddSensorFallbackAngles.remove(sprite);
-            applyAngleFromSensor(sprite, selectedAngle);
-            return;
-        }
-
-        Byte pendingFallback = pendingOddSensorFallbackAngles.remove(sprite);
-        if (pendingFallback != null && selected.distance() == 0) {
-            sprite.setAngle(pendingFallback);
-            rememberOddSensorFallback(sprite, alternate);
-            return;
-        }
-
-        rememberOddSensorFallback(sprite, alternate);
-        applyAngleFromSensor(sprite, selectedAngle);
-    }
-
-    private void rememberOddSensorFallback(AbstractPlayableSprite sprite, SensorResult alternate) {
-        if (alternate != null
-                && (alternate.angle() & 0x01) == 0
-                && alternate.distance() >= 0
-                && alternate.distance() <= 2) {
-            pendingOddSensorFallbackAngles.put(sprite, alternate.angle());
-        }
-    }
-
-    private boolean usesOddRightWallFallback(SensorResult selected,
-                                             SensorResult alternate) {
-        return selected != null
-                && selected.distance() == 0
-                && (selected.angle() & 0x01) != 0
-                && alternate != null;
     }
 
     private void applyAngleFromSensor(AbstractPlayableSprite sprite, byte sensorAngle) {
