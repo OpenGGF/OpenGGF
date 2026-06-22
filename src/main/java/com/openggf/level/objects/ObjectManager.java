@@ -1759,7 +1759,7 @@ public class ObjectManager {
      * <p>
      * The ring is added to {@link #dynamicObjects} (NOT {@code activeObjects}):
      * rewind capture restores {@code dynamicObjects} entries through the
-     * {@code LostRingRewindCodec} dynamic recreate path (Stage 4.1), whereas
+     * {@code LostRingObjectInstance} generic recreate path, whereas
      * {@code activeObjects} entries are restored through the placement registry —
      * a lost ring placed in {@code activeObjects} would be recreated by the wrong
      * path. {@code execOrder} is wired only when same-frame execution is needed.

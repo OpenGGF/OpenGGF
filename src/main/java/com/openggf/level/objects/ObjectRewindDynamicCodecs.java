@@ -680,7 +680,6 @@ public final class ObjectRewindDynamicCodecs {
 
     public static List<DynamicObjectRewindCodec> sharedCodecs() {
         return List.of(
-                new LostRingRewindCodec(),
                 deferredPlayerBoundCodec(ShieldObjectInstance.class, ShieldObjectInstance.class));
     }
 

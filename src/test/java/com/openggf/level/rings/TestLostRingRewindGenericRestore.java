@@ -7,6 +7,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.TestEnvironment;
@@ -22,13 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Stage 4.1 — proves {@code LostRingObjectInstance} (Obj37 spilled rings) survive a
- * rewind seek via {@code LostRingRewindCodec}: the restore path clears
- * {@code dynamicObjects} and recreates each captured ring through the codec, so
- * without a registered codec the rings would be diagnostic-only and the restored set
- * would be empty.
+ * Proves {@code LostRingObjectInstance} (Obj37 spilled rings) survive a rewind
+ * seek through the generic {@code RewindRecreatable} path: the restore path
+ * clears {@code dynamicObjects} and recreates each captured ring from its
+ * captured dynamic entry.
  */
-class TestLostRingRewindCodec {
+class TestLostRingRewindGenericRestore {
 
     @BeforeEach
     void setUp() {
@@ -78,6 +78,13 @@ class TestLostRingRewindCodec {
     }
 
     @Test
+    void lostRingsRestoreThroughGenericRecreateWithoutSharedCodec() {
+        assertFalse(ObjectRewindDynamicCodecs.sharedCodecs().stream()
+                        .anyMatch(codec -> LostRingObjectInstance.class.getName().equals(codec.className())),
+                "lost rings must restore through RewindRecreatable generic recreate, not a shared codec");
+    }
+
+    @Test
     void ringsReappearOnSeekAcrossSpill() {
         ObjectManager manager = makeManager();
         manager.reset(0);
@@ -114,7 +121,7 @@ class TestLostRingRewindCodec {
         assertFalse(before.equals(
                 positionsOf(manager.activeObjectsOfType(LostRingObjectInstance.class))));
 
-        // Restore must clear dynamicObjects and recreate each ring via the codec.
+        // Restore must clear dynamicObjects and recreate each ring via generic recreate.
         snap.restore(snapshot);
 
         List<int[]> after =

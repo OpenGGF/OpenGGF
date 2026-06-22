@@ -808,7 +808,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         // --- Shared spilled-ring spin owner ---
         // Per-ring lost-ring state is no longer snapshotted here: physics runs in the
         // object exec loop and each LostRingObjectInstance round-trips via the generic
-        // field capture + LostRingRewindCodec (Task 4.1). Only the small GLOBAL spin
+        // field capture + LostRingObjectInstance generic recreate. Only the small GLOBAL spin
         // (Ring_spill_anim_counter/accum/frame) is captured, via SpillAnimationState.
         int[] spin = lostRings.spillAnimation.snapshot();
 
@@ -859,7 +859,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
         // --- Shared spilled-ring spin owner ---
         // Only the GLOBAL spin is restored here; the spilled rings themselves are
-        // dynamic objects recreated via LostRingRewindCodec (Task 4.1). The legacy
+        // dynamic objects recreated via LostRingObjectInstance generic recreate. The legacy
         // per-ring ringPool restore is retired with the per-ring physics loop.
         lostRings.spillAnimation.restore(new int[] {
                 snap.spillAnimCounter(), snap.spillAnimAccum(), snap.spillAnimFrame() });
