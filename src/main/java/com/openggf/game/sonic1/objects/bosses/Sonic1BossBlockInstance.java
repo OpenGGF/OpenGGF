@@ -83,7 +83,7 @@ public class Sonic1BossBlockInstance extends AbstractObjectInstance
     // Instance fields
     // Un-finaled for rewind: blockColumn is NOT spawn-derivable for the fragment form
     // (it is -1 while spawn.subtype()==0), so the generic field capturer reapplies the
-    // captured value after the codec recreates via the public column ctor.
+    // captured value after the recreate hook uses the public column ctor.
     private int blockColumn;   // 0-9, from low byte of obSubtype
     private int blockState;
     private Sonic1SYZBossInstance grabbingBoss;

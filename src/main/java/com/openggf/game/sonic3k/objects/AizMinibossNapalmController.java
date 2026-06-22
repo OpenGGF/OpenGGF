@@ -34,8 +34,8 @@ public class AizMinibossNapalmController extends AbstractBossChild implements Re
         FIRE
     }
 
-    // Non-final so the generic rewind field capturer reapplies it after a
-    // codec-driven recreate (the codec passes a placeholder subtype).
+    // Non-final so the generic rewind field capturer reapplies it after the
+    // recreate hook passes a placeholder subtype.
     private int subtype;
     private State state = State.IDLE;
     private int timer;

@@ -30,6 +30,17 @@ class TestStaleRewindCodecHelperCleanup {
             "clearRewindDynamicObjectCodecs" + "ForTest";
     private static final String DELETED_OBJECT_MANAGER_CODEC_LOOKUP =
             "rewindDynamicObjectCodec" + "For";
+    private static final List<String> STALE_DYNAMIC_OBJECT_CODEC_PHRASES = List.of(
+            "the " + "codec passes",
+            "after the " + "codec recreates",
+            "dynamic rewind " + "codec relinks",
+            "Sonic3kObjectRegistry rewind " + "codec",
+            "relinked by the " + "codec",
+            "codec-driven " + "recreate",
+            "rewind " + "codec recreates",
+            "rewind " + "codec can re-derive",
+            "the " + "codec recovers",
+            "as the " + "codec did");
 
     @Test
     void sourcesDoNotReferenceDeletedSpawnCodecHelper() throws IOException {
@@ -59,6 +70,14 @@ class TestStaleRewindCodecHelperCleanup {
                 "Deleted ObjectManager dynamic-codec test clear helper is still referenced in ");
         assertNoSourceReferences(DELETED_OBJECT_MANAGER_CODEC_LOOKUP,
                 "Deleted ObjectManager dynamic-codec lookup helper is still referenced in ");
+    }
+
+    @Test
+    void sourcesDoNotDescribeGenericRecreateAsDynamicObjectCodecs() throws IOException {
+        for (String phrase : STALE_DYNAMIC_OBJECT_CODEC_PHRASES) {
+            assertNoSourceReferences(phrase,
+                    "Stale dynamic-object codec wording is still referenced in ");
+        }
     }
 
     private static void assertNoSourceReferences(String needle, String messagePrefix) throws IOException {

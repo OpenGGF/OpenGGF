@@ -913,7 +913,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         private static final int LIFE = 0x5F;
 
         // Non-final so the generic rewind field capturer can reapply the captured
-        // values after a codec recreates this child with placeholder ctor args.
+        // values after the recreate hook rebuilds this child with placeholder ctor args.
         private int mappingFrame;
         private boolean spire;
         private int xFixed;

@@ -334,7 +334,7 @@ public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance {
      * constructor and the baby class are package-private, so the registry (in the
      * parent package) reaches them through this public static bridge — mirroring
      * {@code S3kBadnikProjectileInstance.forRewindRecreate}. The {@code parent} is
-     * relinked by the codec; all other baby state is reapplied by the generic
+     * relinked by object-reference restore; all other baby state is reapplied by the generic
      * field capturer after recreate.
      */
     public static BuggernautBabyInstance recreateBabyForRewind(

@@ -27,7 +27,7 @@ public class RockDebrisChild extends GravityDebrisChild implements SpawnDefaultA
     private static final int GRAVITY = 0x18;
 
     // Non-final: not derivable from the carried ObjectSpawn (only x/y are
-    // carried; velocities/subtype are 0). The rewind codec passes placeholders
+    // carried; velocities/subtype are 0). Rewind recreate passes placeholders
     // (0, null) and the GenericFieldCapturer reapplies these captured values
     // after recreateDynamicObject. Mirrors the AizRockFragmentChild sibling.
     private int mappingFrame;

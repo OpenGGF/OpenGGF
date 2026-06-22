@@ -118,7 +118,7 @@ public class Sonic1GrassFireObjectInstance extends AbstractObjectInstance
      * Base Y from the platform surface (objoff_2C in ROM = lgrass_origY + 5).
      * Un-finaled for rewind: NOT spawn-derivable (getSpawn() reports baseY + sinkOffset,
      * not baseY), so the generic field capturer reapplies the captured value after the
-     * codec recreates with a placeholder.
+     * recreate hook uses a placeholder.
      */
     private int baseY;
 
@@ -132,7 +132,7 @@ public class Sonic1GrassFireObjectInstance extends AbstractObjectInstance
      * Starting X position (gfire_origX).
      * Un-finaled for rewind: NOT spawn-derivable (getSpawn() reports the walked currentX,
      * not originX), so the generic field capturer reapplies the captured value after the
-     * codec recreates with a placeholder.
+     * recreate hook uses a placeholder.
      */
     private int originX;
 

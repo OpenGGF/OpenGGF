@@ -52,8 +52,8 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         IDLE
     }
 
-    // Non-final so the generic rewind field capturer reapplies them after a
-    // codec-driven recreate (the codec passes placeholder barrelIndex/false).
+    // Non-final so the generic rewind field capturer reapplies them after the
+    // recreate hook passes placeholder barrelIndex/false.
     private int barrelIndex;
     private boolean cutsceneVariant;
 

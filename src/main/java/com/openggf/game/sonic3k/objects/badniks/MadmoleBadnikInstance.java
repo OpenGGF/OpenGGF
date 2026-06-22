@@ -323,7 +323,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
         private int xSubpixel;
         private int ySubpixel;
         // Un-final so the generic field capturer reapplies it after a rewind
-        // recreate (the codec recovers it from spawn.renderFlags()).
+        // recreate (the hook recovers it from spawn.renderFlags()).
         private boolean facingLeft;
         private boolean initialized;
         private boolean arcing;

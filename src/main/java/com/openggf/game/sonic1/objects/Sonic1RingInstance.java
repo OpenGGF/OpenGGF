@@ -43,7 +43,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
     private final List<RingSpawn> childRingSpawns;
     // Un-finaled for rewind: outOfRangeAnchorX is the PARENT placement X, NOT recoverable
     // from a child ring's spawn (child spawn x = childX), so the generic field capturer
-    // reapplies the captured value after the codec recreates with a placeholder.
+    // reapplies the captured value after the recreate hook uses a placeholder.
     private int outOfRangeAnchorX;
 
     private State state;

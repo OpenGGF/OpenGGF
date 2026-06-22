@@ -48,7 +48,7 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
     private int perfectBonusRemaining;
 
     // Input data. Non-final so GenericFieldCapturer captures them and restoreObjectRewindState
-    // reapplies them after the rewind codec recreates this screen with placeholder ctor args
+    // reapplies them after rewind recreate rebuilds this screen with placeholder ctor args
     // (these gameplay-derived values are not encoded in the ObjectSpawn).
     private int elapsedTimeSeconds;
     private int ringCount;

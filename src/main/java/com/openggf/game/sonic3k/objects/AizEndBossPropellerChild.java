@@ -76,8 +76,8 @@ public class AizEndBossPropellerChild extends AbstractBossChild implements Rewin
     };
     private final AizEndBossInstance boss;
     private final AizEndBossArmChild arm;
-    // Non-final so the rewind field capturer reapplies it after the codec
-    // recreates the propeller (the codec passes a placeholder subtype).
+    // Non-final so the rewind field capturer reapplies it after the recreate
+    // hook rebuilds the propeller with a placeholder subtype.
     private int subtype;
     private int routine;
     private int mappingFrame;

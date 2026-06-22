@@ -208,7 +208,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
         private int timer;
         private boolean bobHidden; // $36(a0) bit 0: toggled for visibility bob
         // Un-final so the generic field capturer reapplies the captured value
-        // after a rewind recreate (the codec passes a best-effort placeholder).
+        // after the rewind recreate hook uses a best-effort placeholder.
         private String artKey;
         private SplashChild linkedSplash;
 

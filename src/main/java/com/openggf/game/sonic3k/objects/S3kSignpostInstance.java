@@ -104,7 +104,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     /**
      * ROM's Apparent_act — display-only act number, not affected by seamless reloads.
      * Non-final so the generic field capturer reapplies it after a rewind recreate
-     * (the signpost's spawn is null, so the codec passes a placeholder).
+     * (the signpost's spawn is null, so the recreate hook uses a placeholder).
      */
     private int apparentAct;
 

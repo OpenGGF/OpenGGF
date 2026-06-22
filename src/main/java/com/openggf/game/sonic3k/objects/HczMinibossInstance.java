@@ -1500,7 +1500,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private final class RocketTouchChild extends AbstractObjectInstance
             implements TouchResponseProvider, RewindRecreatable {
         // Non-final so the generic rewind field capturer can reapply the captured
-        // spawn-derived values after the codec recreates this child.
+        // spawn-derived values after the recreate hook rebuilds this child.
         private int rocketIndex;
         private int objectId;
         private int layoutIndex;

@@ -36,7 +36,7 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
     private int posX;
     private final int posY;
     // animIndex/initialDelay are non-final so the rewind field capturer reapplies
-    // them after the codec recreates the fragment from its spawn (placeholders 0).
+    // them after spawn-coordinate recreate uses placeholders 0.
     private int animIndex;
     private int initialDelay;
 

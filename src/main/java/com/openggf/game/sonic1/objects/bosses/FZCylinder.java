@@ -57,7 +57,7 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
 
     // Un-finaled for rewind: subtype is NOT spawn-derivable (AbstractBossChild's ctor
     // hardcodes ObjectSpawn subtype 0), so the generic field capturer reapplies the
-    // captured per-cylinder values after the codec recreates with placeholder subtype 0.
+    // captured per-cylinder values after the recreate hook uses placeholder subtype 0.
     private int subtype;      // 0, 2, 4, or 6
     private boolean isBottom;  // subtypes 0-2 are bottom, 4-6 are top
     private int baseX;

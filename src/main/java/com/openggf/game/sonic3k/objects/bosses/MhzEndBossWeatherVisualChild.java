@@ -56,7 +56,7 @@ public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance i
 
     /**
      * Bit 0 of {@code rawYWord} encodes the {@code spark} discriminator so a
-     * rewind codec can re-derive it from the captured spawn (which round-trips
+     * rewind recreate can re-derive it from the captured spawn (which round-trips
      * through {@link #buildSpawnAt}). {@code subtype} round-trips as the spawn's
      * subtype field. The high {@code rawFlags()} bits ({@code 0xF000}) are
      * untouched.
@@ -75,7 +75,7 @@ public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance i
      * Rewind-restore entry: re-derives {@code subtype} and {@code spark} from the
      * captured spawn and routes through the correct static factory so the
      * construction-time branch matches the original instance. The live parent is
-     * relinked by the codec.
+     * relinked by object-reference restore.
      */
     public static MhzEndBossWeatherVisualChild forRewindRecreate(
             MhzEndBossWeatherMachineChild parent, ObjectSpawn spawn) {

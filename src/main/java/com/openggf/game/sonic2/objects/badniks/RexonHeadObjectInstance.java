@@ -123,8 +123,8 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
     }
     private final RexonBadnikInstance parent;
     // headIndex/headNumber/xFlip are non-final so GenericFieldCapturer captures them and
-    // restoreObjectRewindState reapplies them after the rewind codec recreates this head
-    // (the codec passes placeholders; these values are not derivable from the ObjectSpawn).
+    // restoreObjectRewindState reapplies them after the rewind recreate hook rebuilds this head
+    // (the hook passes placeholders; these values are not derivable from the ObjectSpawn).
     private int headIndex;  // 0, 2, 4, 6, or 8
     private int headNumber; // 0-4 for array indexing
     private boolean xFlip;

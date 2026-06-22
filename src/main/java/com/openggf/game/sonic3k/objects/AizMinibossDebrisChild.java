@@ -28,7 +28,7 @@ public class AizMinibossDebrisChild extends AbstractObjectInstance
     private int xFixed;
     private int yFixed;
     // xVel/mappingFrame are non-final so the rewind field capturer reapplies them
-    // after the codec recreates the debris from its spawn (placeholders 0).
+    // after spawn-coordinate recreate uses placeholders 0.
     private int xVel;
     private int waitTimer;
     private boolean moving;

@@ -52,7 +52,7 @@ public class AizEndBossDebrisChild extends AbstractObjectInstance
     private static final int GRAVITY = 0x38;
 
     // mappingFrame/xVel are non-final so the rewind field capturer reapplies them
-    // after the codec recreates the debris from its spawn (placeholder index 0).
+    // after spawn-coordinate recreate uses placeholder index 0.
     private int mappingFrame;
     private int xVel;  // 8:8 fixed-point
     private int yVel;        // 8:8 fixed-point, modified by gravity each frame

@@ -59,7 +59,7 @@ public class AizEndBossFlameChild extends AbstractObjectInstance
     private final AizEndBossInstance boss;
     private final AizEndBossPropellerChild propeller;
     // angle and its derived offsets are non-final so the rewind field capturer
-    // reapplies them after the codec recreates the flame (placeholder angle 0).
+    // reapplies them after the recreate hook rebuilds the flame with placeholder angle 0.
     private int angle;
     private int offsetX;
     private int offsetY;

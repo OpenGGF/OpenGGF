@@ -136,8 +136,8 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
         return firingLatch;
     }
 
-    // Public so the cross-package Sonic3kObjectRegistry rewind codec can name the
-    // nozzle type for relinking the fired shot's script on a held-rewind restore.
+    // Public so cross-package rewind recreate can name the nozzle type for
+    // relinking the fired shot's script on a held-rewind restore.
     public static final class CorkeyNozzleChild extends AbstractObjectInstance {
         private static final int PRIORITY_BUCKET = 5;       // word_8C900 priority $280.
         private static final int DEFAULT_FRAME = 1;         // word_8C900 mapping_frame.
@@ -354,7 +354,7 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
          * Reconstructs the shot's fire script from its spawn position relative to
          * the live firing nozzle. {@link CorkeyNozzleChild#spawnShot} offsets the
          * shot x by {@code -4} (left), {@code +4} (right), or {@code 0} (center).
-         * Used by the rewind codec to relink the correct variant; defaults to the
+         * Used by rewind recreate to relink the correct variant; defaults to the
          * center script when the nozzle is unavailable.
          */
         public static int[] scriptForSpawn(ObjectSpawn spawn, CorkeyNozzleChild nozzle) {

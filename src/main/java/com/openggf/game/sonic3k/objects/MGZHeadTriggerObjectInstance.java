@@ -526,7 +526,7 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
         private static final int[] ANIM_STONE_CHIP = {1, 5, 7, 5, 7, 5, 7, 0xFB};
 
         // Non-final so the generic rewind field capturer can reapply the captured
-        // values after the codec recreates this chip with placeholder ctor args
+        // values after spawn-coordinate recreate rebuilds this chip with placeholder ctor args
         // (the chip's ObjectSpawn carries x/y but not the h-flip).
         private int originX;
         private int originY;

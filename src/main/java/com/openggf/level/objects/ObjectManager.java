@@ -3272,7 +3272,7 @@ public class ObjectManager {
                 // instance (or threw). See TestTwoPhaseRestoreOrdering.
                 //
                 // The restore table registers the live players (unchanged across a restore) plus
-                // every restored object; it is the resolution table phase 2 hands to the codecs.
+                // every restored object; it is the resolution table phase 2 hands to restore.
                 com.openggf.game.rewind.identity.RewindIdentityTable restoreTable =
                         new com.openggf.game.rewind.identity.RewindIdentityTable();
                 registerPlayersInto(restoreTable);
@@ -3408,7 +3408,7 @@ public class ObjectManager {
                     // already created and back-references. Adopting it in place gives exact
                     // captured state AND keeps the parent's child reference valid, with no
                     // double-spawn. Routine-spawned children (no construction counterpart) fall
-                    // back to the codec recreate path.
+                    // back to the generic recreate path.
                     AbstractObjectInstance adopted = adoptRewindReconstructionChild(entry.className());
                     ObjectInstance inst = adopted != null ? adopted : recreateDynamicObject(entry);
                     if (inst instanceof AbstractObjectInstance aoi) {
@@ -3897,7 +3897,7 @@ public class ObjectManager {
      * {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry} with
      * the same logical child the parent re-spawned. Returns {@code null} when no construction
      * child of that class is pending (e.g. routine-spawned children, which fall back to the
-     * codec recreate path).
+     * generic recreate path).
      */
     private AbstractObjectInstance adoptRewindReconstructionChild(String className) {
         if (className == null) {

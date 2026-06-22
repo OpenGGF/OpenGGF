@@ -552,7 +552,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance {
             implements RewindRecreatable {
         private CutsceneKnucklesMhz2Instance parent;
         // Non-final so the generic rewind field capturer can reapply the captured
-        // value after the codec recreates this child (the ctor recomputes it from
+        // value after the recreate hook rebuilds this child (the ctor recomputes it from
         // the parent, but the capturer restores the exact captured value).
         private boolean knucklesRoute;
 

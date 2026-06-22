@@ -48,8 +48,8 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
     private int displayDelay;
 
     // Reference to parent counter (for decrementing). Un-final for rewind: the
-    // shared array reference cannot be captured/relinked, so the codec passes a
-    // fresh placeholder; only the parent slot-machine bookkeeping decrement drifts.
+    // shared array reference cannot be captured/relinked, so spawn-based recreate
+    // uses a fresh placeholder; only the parent slot-machine bookkeeping decrement drifts.
     private int[] prizeCounter;
 
     // Reference to LevelManager for rendering

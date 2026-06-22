@@ -40,8 +40,8 @@ public class AizEndBossArmChild extends AbstractBossChild implements RewindRecre
     private static final int ROUTINE_WAIT_FIRE = 8;
     private static final int ROUTINE_WAIT_RETRACT = 10;
     private final AizEndBossInstance boss;
-    // Non-final so the generic rewind field capturer reapplies them after a
-    // codec-driven recreate (the codec passes placeholder 0/0/0).
+    // Non-final so the generic rewind field capturer reapplies them after the
+    // recreate hook passes placeholder 0/0/0.
     private int offsetX;
     private int offsetY;
     private int subtype;

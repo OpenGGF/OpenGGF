@@ -235,7 +235,7 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
             implements TouchResponseProvider, RewindRecreatable {
         private IczIceSpikesObjectInstance parent;
         // Non-final so the generic rewind field capturer reapplies the captured
-        // (spawn-derived) values after the codec recreates this child; the codec
+        // (spawn-derived) values after the recreate hook rebuilds this child; the hook
         // already passes them via the ctor, so this is idempotent.
         private int x;
         private int y;

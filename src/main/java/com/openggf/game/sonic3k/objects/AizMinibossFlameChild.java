@@ -55,7 +55,7 @@ public class AizMinibossFlameChild extends AbstractObjectInstance implements Tou
     }
     private final AbstractBossInstance parent;
     // xOffset/yOffset/subtype are non-final so the rewind field capturer reapplies
-    // them after the codec recreates the flame (placeholders 0; parent is relinked).
+    // them after the recreate hook rebuilds the flame with placeholders 0; parent is relinked.
     private int xOffset;
     private int yOffset;
     private int subtype;
