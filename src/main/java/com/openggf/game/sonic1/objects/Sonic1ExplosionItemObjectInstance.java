@@ -2,12 +2,10 @@ package com.openggf.game.sonic1.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ExplosionObjectInstance;
-import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateDefaultArgsRewindRecreatable;
 
 /**
  * Sonic 1 badnik replacement explosion.
@@ -16,7 +14,8 @@ import com.openggf.level.objects.RewindRecreatable;
  * animal from its first routine-0 update. The points popup is allocated after
  * the animal, preserving the same FindFreeObj ordering.
  */
-public class Sonic1ExplosionItemObjectInstance extends ExplosionObjectInstance implements RewindRecreatable {
+public class Sonic1ExplosionItemObjectInstance extends ExplosionObjectInstance
+        implements SpawnCoordinateDefaultArgsRewindRecreatable {
     // Un-finaled for rewind: pointsValue is NOT spawn-derivable (it is the destroyed
     // badnik's points value passed by the spawner), so the generic field capturer
     // reapplies the captured value after the codec recreates with placeholder 0.
@@ -30,11 +29,6 @@ public class Sonic1ExplosionItemObjectInstance extends ExplosionObjectInstance i
 
     private Sonic1ExplosionItemObjectInstance() {
         this(0, 0, null, 0);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1ExplosionItemObjectInstance(ctx.spawn().x(), ctx.spawn().y(), null, 0);
     }
 
     @Override
