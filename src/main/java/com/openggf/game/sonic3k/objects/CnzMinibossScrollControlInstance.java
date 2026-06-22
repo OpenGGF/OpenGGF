@@ -76,9 +76,8 @@ public final class CnzMinibossScrollControlInstance extends AbstractObjectInstan
      * {@inheritDoc}
      *
      * <p>Self-contained: rebuilds from the captured spawn. Scalar fields are reapplied
-     * by the standard scalar-restore pass after recreate. Replaces the former
-     * {@code exactSpawnCodec(CnzMinibossScrollControlInstance.class, CnzMinibossScrollControlInstance::new)}
-     * (Phase-2 codec-deletion batch 2).
+     * by the standard scalar-restore pass after recreate. Replaces the former explicit
+     * dynamic codec (Phase-2 codec-deletion batch 2).
      */
 
     /**

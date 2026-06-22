@@ -61,8 +61,7 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
      * <p>Self-contained: rebuilds from the captured spawn. Scalar fields are reapplied
      * by the standard scalar-restore pass after recreate; the locked-player back-reference
      * is not wired here (it was not captured by the deleted codec either). Replaces the
-     * former {@code exactSpawnCodec(PachinkoFlipperObjectInstance.class, PachinkoFlipperObjectInstance::new)}
-     * (Phase-2 codec-deletion batch 2).
+     * former explicit dynamic codec (Phase-2 codec-deletion batch 2).
      */
 
     @Override

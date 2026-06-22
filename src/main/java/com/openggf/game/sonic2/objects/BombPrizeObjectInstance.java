@@ -40,7 +40,7 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
     private int currentX;      // 16.16 fixed point X
     private int currentY;      // 16.16 fixed point Y
     // Un-final for rewind: machineX/machineY are non-spawn-derivable scalars
-    // reapplied by GenericFieldCapturer after the exactSpawnCodec recreates the bomb.
+    // reapplied by GenericFieldCapturer after spawn-based recreate.
     private int machineX; // Machine center X
     private int machineY; // Machine center Y
 

@@ -88,8 +88,7 @@ public class AizBossSmallInstance extends AbstractObjectInstance implements Rewi
      * <p>Self-contained: rebuilds a fresh instance via the zero-arg constructor.
      * All scalar fields are reapplied immediately afterward by the standard
      * scalar-restore pass, so the constructor defaults are placeholders. Replaces
-     * the former {@code exactSpawnCodec(AizBossSmallInstance.class, s -> new AizBossSmallInstance())}
-     * (Phase-2 codec-deletion batch 2).
+     * the former explicit dynamic codec (Phase-2 codec-deletion batch 2).
      */
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {

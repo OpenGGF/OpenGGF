@@ -425,7 +425,7 @@ public final class RewindCoverageAnalyzer {
      *
      * <p>{@link com.openggf.level.objects.ObjectRewindDynamicCodecs#genericRecreate} handles
      * {@code RewindRecreatable} classes via Path 1, so they do not need an
-     * {@code exactSpawnCodec} registration to have a recreate path.
+     * explicit dynamic-codec registration to have a recreate path.
      */
     private static boolean isRewindRecreatable(String fqn) {
         try {

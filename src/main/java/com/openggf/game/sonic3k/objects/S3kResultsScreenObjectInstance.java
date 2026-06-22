@@ -78,8 +78,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     // State
     // Un-finaled for rewind: character/act are constructor args not carried by any
-    // ObjectSpawn, so the exactSpawnCodec passes placeholders and the
-    // GenericFieldCapturer (which skips final scalars) reapplies the captured values
+    // ObjectSpawn, so recreate uses placeholders and GenericFieldCapturer (which
+    // skips final scalars) reapplies the captured values
     // after recreate. Covers this class and its Mgz2 subclass.
     private PlayerCharacter character;
     private int act;  // 0-indexed: 0=Act 1, 1=Act 2

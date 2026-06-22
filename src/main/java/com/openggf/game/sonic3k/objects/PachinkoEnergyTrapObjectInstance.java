@@ -66,8 +66,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
      * {@code update()}), so re-running it on restore is side-effect free. Scalar fields
      * are reapplied by the standard scalar-restore pass; the captured-player back-reference
      * is not wired here (it was not captured by the deleted codec either). Replaces the
-     * former {@code exactSpawnCodec(PachinkoEnergyTrapObjectInstance.class, PachinkoEnergyTrapObjectInstance::new)}
-     * (Phase-2 codec-deletion batch 2).
+     * former explicit dynamic codec (Phase-2 codec-deletion batch 2).
      */
 
     @Override

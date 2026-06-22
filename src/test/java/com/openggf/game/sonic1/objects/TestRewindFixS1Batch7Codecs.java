@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  *       {@code emeralds} ref), so it stays accept-drop.</li>
  *   <li>{@link BreathingBubbleInstance} — shared underwater drowning bubble spawned by
  *       {@code com.openggf.sprites.playable.DrowningController} (S1 LZ Obj0A + S2). A
- *       short-lived cosmetic particle re-emitted in-frame; not {@code exactSpawnCodec}-able
+ *       short-lived cosmetic particle re-emitted in-frame; not spawn-codec eligible
  *       (6 non-spawn ctor args incl. the RNG-gated {@code countdownNumber}), not
  *       parent/sibling-linked. Stays accept-drop, mirroring {@code Sonic1SplashObjectInstance}.</li>
  * </ul>

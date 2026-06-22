@@ -45,7 +45,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance implements R
     private int currentY;      // 16.16 fixed point Y
     // Un-final: not spawn-derivable (cage center, distinct from spawn position) and not
     // captured by GenericFieldCapturer when final. Reapplied by restoreObjectRewindState
-    // after the exactSpawnCodec recreates with placeholder 0 (mirrors BombPrizeObjectInstance).
+    // after recreate uses placeholder 0 (mirrors BombPrizeObjectInstance).
     private int machineX; // Machine center X
     private int machineY; // Machine center Y
 

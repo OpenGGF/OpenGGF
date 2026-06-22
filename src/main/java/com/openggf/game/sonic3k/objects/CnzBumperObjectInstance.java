@@ -80,9 +80,8 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
      * is derived deterministically from the captured spawn. Mutable scalar fields are
      * reapplied by the standard scalar-restore pass after recreate; pending player-touch
      * back-references are not wired here (they were not captured by the deleted codec
-     * either). Replaces the former
-     * {@code exactSpawnCodec(CnzBumperObjectInstance.class, s -> new CnzBumperObjectInstance(s))}
-     * (Phase-2 codec-deletion batch 2).
+     * either). Replaces the former explicit dynamic codec (Phase-2 codec-deletion
+     * batch 2).
      */
 
     @Override
