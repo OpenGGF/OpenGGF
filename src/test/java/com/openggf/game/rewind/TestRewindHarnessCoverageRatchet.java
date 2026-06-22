@@ -177,12 +177,14 @@ public class TestRewindHarnessCoverageRatchet {
  *       flash child.</li>
  *   <li>2026-06-22: raised to 147 after adding generic recreate coverage for
  *       the S3K invisible block and invisible hurt block family.</li>
+ *   <li>2026-06-22: raised to 148 after adding generic recreate coverage for
+ *       the S2 invisible block.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 147;
+    static final int RATCHET_FLOOR = 148;
 
     @BeforeEach
     void initHeadless() {

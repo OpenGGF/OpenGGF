@@ -464,7 +464,6 @@ com.openggf.game.sonic2.objects.InvisibleBlockObjectInstance#finalScalar#halfHei
 com.openggf.game.sonic2.objects.InvisibleBlockObjectInstance#finalScalar#halfWidth
 com.openggf.game.sonic2.objects.InvisibleBlockObjectInstance#finalScalar#highPriority
 com.openggf.game.sonic2.objects.InvisibleBlockObjectInstance#finalScalar#r
-com.openggf.game.sonic2.objects.InvisibleBlockObjectInstance#recreate
 com.openggf.game.sonic2.objects.LargeRotPformObjectInstance#finalScalar#baseX
 com.openggf.game.sonic2.objects.LargeRotPformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.LargeRotPformObjectInstance#finalScalar#isIndent
