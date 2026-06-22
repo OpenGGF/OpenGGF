@@ -8,6 +8,7 @@ import com.openggf.level.objects.SpawnNullableReferenceRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.ZeroArgRewindRecreatable;
+import com.openggf.level.objects.ZeroScalarArgsRewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
@@ -107,6 +108,12 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic1.objects.Sonic1EndingSTHObjectInstance",
             "com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance",
             "com.openggf.game.sonic3k.objects.AizBossSmallInstance");
+
+    private static final List<String> ZERO_SCALAR_ARGS_RECREATORS = List.of(
+            "com.openggf.level.objects.SignpostSparkleObjectInstance",
+            "com.openggf.game.sonic1.objects.Sonic1ResultsScreenObjectInstance",
+            "com.openggf.game.sonic2.objects.ResultsScreenObjectInstance",
+            "com.openggf.game.sonic3k.objects.AizBgTreeInstance");
 
     @Test
     void spawnOnlyRecreatorsUseMarkerInterface() {
@@ -231,6 +238,24 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use ZeroArgRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void zeroScalarArgsRecreatorsUseMarkerInterface() {
+        for (String className : ZERO_SCALAR_ARGS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(ZeroScalarArgsRewindRecreatable.class.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the zero-scalar recreate hook");
+        }
+    }
+
+    @Test
+    void zeroScalarArgsRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : ZERO_SCALAR_ARGS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use ZeroScalarArgsRewindRecreatable's default hook");
         }
     }
 

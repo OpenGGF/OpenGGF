@@ -10,8 +10,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.ZeroScalarArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -29,7 +28,8 @@ import java.util.logging.Logger;
  * 3. WAIT: Brief pause after tally
  * 4. TRANSITION: Load next level
  */
-public class ResultsScreenObjectInstance extends AbstractResultsScreen implements RewindRecreatable {
+public class ResultsScreenObjectInstance extends AbstractResultsScreen
+        implements ZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(ResultsScreenObjectInstance.class.getName());
 
     // Time bonus table from s2.asm (TimeBonuses), indexed by (seconds / 15)
@@ -80,11 +80,6 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen implement
         LOGGER.info(
                 "Results screen created: act=" + actNumber + ", timeBonus=" + timeBonus + ", ringBonus=" + ringBonus +
                         ", total=" + totalBonus + ", perfect=" + perfectBonus);
-    }
-
-    @Override
-    public ResultsScreenObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new ResultsScreenObjectInstance(0, 0, 0, false);
     }
 
     private void calculateBonuses() {

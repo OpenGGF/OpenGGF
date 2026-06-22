@@ -10,11 +10,9 @@ import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Pattern;
-import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ZeroScalarArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -38,7 +36,8 @@ import java.util.logging.Logger;
  *
  * @see AbstractResultsScreen
  */
-public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen implements RewindRecreatable {
+public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
+        implements ZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1ResultsScreenObjectInstance.class.getName());
 
     // -----------------------------------------------------------------------
@@ -184,11 +183,6 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen imp
 
         LOGGER.info("S1 Results screen created: act=" + actNumber
                 + ", timeBonus=" + timeBonus + ", ringBonus=" + ringBonus);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1ResultsScreenObjectInstance(0, 0, 0);
     }
 
     private void calculateBonuses() {
