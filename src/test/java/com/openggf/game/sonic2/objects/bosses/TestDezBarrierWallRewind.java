@@ -158,7 +158,7 @@ class TestDezBarrierWallRewind {
     }
 
     private static void assertNoRegisteredS2DynamicCodec(String className) {
-        boolean hasCodec = new Sonic2ObjectRegistry().dynamicRewindCodecs().stream()
+        boolean hasCodec = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
                 .map(codec -> codec.className())
                 .anyMatch(className::equals);
         assertFalse(hasCodec, className

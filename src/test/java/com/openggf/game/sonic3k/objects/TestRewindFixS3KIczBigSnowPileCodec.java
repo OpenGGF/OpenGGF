@@ -128,7 +128,7 @@ class TestRewindFixS3KIczBigSnowPileCodec {
     }
 
     private static boolean hasExplicitCodec(Class<?> targetClass) {
-        return new Sonic3kObjectRegistry().dynamicRewindCodecs().stream()
+        return java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
                 .map(DynamicObjectRewindCodec::className)
                 .anyMatch(targetClass.getName()::equals);
     }

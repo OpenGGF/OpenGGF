@@ -18,7 +18,7 @@ class TestRewindCoverageAnalyzer {
 
     /** Collects codec class names from the S3K per-game registry only. */
     private static Set<String> s3kCodecClassNames() {
-        return new Sonic3kObjectRegistry().dynamicRewindCodecs().stream()
+        return java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
                 .map(DynamicObjectRewindCodec::className)
                 .collect(Collectors.toUnmodifiableSet());
     }
@@ -27,9 +27,9 @@ class TestRewindCoverageAnalyzer {
     @SuppressWarnings("unused")
     private static Set<String> allGameCodecClassNames() {
         return Stream.of(
-                new Sonic1ObjectRegistry().dynamicRewindCodecs(),
-                new Sonic2ObjectRegistry().dynamicRewindCodecs(),
-                new Sonic3kObjectRegistry().dynamicRewindCodecs()
+                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of(),
+                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of(),
+                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()
         ).flatMap(List::stream)
          .map(DynamicObjectRewindCodec::className)
          .collect(Collectors.toUnmodifiableSet());

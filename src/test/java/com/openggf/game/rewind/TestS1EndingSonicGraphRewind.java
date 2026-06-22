@@ -315,7 +315,7 @@ class TestS1EndingSonicGraphRewind {
 
     private static boolean hasRegisteredS1Codec(String className) {
         Set<String> names = new HashSet<>();
-        for (DynamicObjectRewindCodec codec : new Sonic1ObjectRegistry().dynamicRewindCodecs()) {
+        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
             names.add(codec.className());
         }
         return names.contains(className);

@@ -18,7 +18,6 @@ import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -366,12 +365,12 @@ public final class RewindRoundTripHarness {
      * Probes the given class through the REAL ObjectManager + RewindRegistry
      * capture→restore round-trip.
      *
-     * <p>Only classes with a registered dynamic rewind codec (in the shared or
-     * game-specific registry) are tested via the dynamic round-trip path. Classes
-     * WITHOUT a codec are classified as {@code Unprobed("no dynamic recreate path")}
-     * because dropping them on restore is correct (expected) behaviour for the current
-     * codebase. Placed-object recreation (which does not require a codec) is tested by
-     * the keystone boss-child test in {@code TestEveryObjectRewindRoundTrip}.
+     * <p>Only classes with a dynamic recreate path are tested via the dynamic
+     * round-trip path. Classes without a recreate path are classified as
+     * {@code Unprobed("no dynamic recreate path")} because dropping them on restore is
+     * correct (expected) behaviour for the current codebase. Placed-object recreation
+     * (which does not require a dynamic recreate path) is tested by the keystone
+     * boss-child test in {@code TestEveryObjectRewindRoundTrip}.
      *
      * <p>Construction is attempted through the supported headless probe strategies
      * exposed by {@link #constructHeadless(Class, StubObjectServices)}.
@@ -594,24 +593,13 @@ public final class RewindRoundTripHarness {
     }
 
     /**
-     * Returns true if the given FQN has a registered dynamic rewind codec in
-     * any of the three per-game registries.
+     * Returns true if the given FQN has a dynamic recreate path.
      *
-     * <p>Objects without a codec are correctly dropped on restore (they have no
-     * dynamic recreate path). Testing them would always produce a count-mismatch,
-     * so they are excluded from the dynamic sweep.
+     * <p>Objects without a recreate path are correctly dropped on restore.
+     * Testing them would always produce a count-mismatch, so they are excluded
+     * from the dynamic sweep.
      */
     private static boolean hasRegisteredCodec(String fqn) {
-        // Per-game registries
-        for (ObjectRegistry reg : new ObjectRegistry[]{
-                new Sonic1ObjectRegistry(),
-                new Sonic2ObjectRegistry(),
-                new Sonic3kObjectRegistry()}) {
-            for (DynamicObjectRewindCodec c : reg.dynamicRewindCodecs()) {
-                if (fqn.equals(c.className())) return true;
-            }
-        }
-        // Phase-2 Path 1: RewindRecreatable -- genericRecreate handles these directly.
         try {
             Class<?> cls = Class.forName(fqn);
             if (com.openggf.level.objects.RewindRecreatable.class.isAssignableFrom(cls)) {
@@ -661,11 +649,6 @@ public final class RewindRoundTripHarness {
                 @Override
                 public com.openggf.level.objects.ObjectWindowingStrategy objectWindowingStrategy() {
                     return delegate.objectWindowingStrategy();
-                }
-
-                @Override
-                public List<DynamicObjectRewindCodec> dynamicRewindCodecs() {
-                    return delegate.dynamicRewindCodecs();
                 }
 
                 @Override

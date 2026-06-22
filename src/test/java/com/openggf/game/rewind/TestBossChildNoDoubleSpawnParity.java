@@ -336,7 +336,7 @@ public class TestBossChildNoDoubleSpawnParity {
     /** Collect the binary class names of every registered dynamic rewind codec. */
     private static Set<String> codecClassNames(Sonic2ObjectRegistry registry) {
         Set<String> names = new HashSet<>();
-        for (DynamicObjectRewindCodec codec : registry.dynamicRewindCodecs()) {
+        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
             String cn = codec.className();
             if (cn != null) {
                 names.add(cn);

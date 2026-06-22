@@ -23,13 +23,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * intentionally-dropped AIZ2 transients.
  *
  * <p>This is a pure recreate-path test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} / class metadata without a ROM, OpenGL, or an
+ * {@code deleted dynamic-codec registry API} / class metadata without a ROM, OpenGL, or an
  * active gameplay session.
  */
 class TestAiz2ObjectRewindCodecs {
 
     private static Set<String> codecClassNames() {
-        List<DynamicObjectRewindCodec> codecs = new Sonic3kObjectRegistry().dynamicRewindCodecs();
+        List<DynamicObjectRewindCodec> codecs = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of();
         Set<String> names = new HashSet<>();
         for (DynamicObjectRewindCodec codec : codecs) {
             names.add(codec.className());

@@ -20,6 +20,8 @@ class TestStaleRewindCodecHelperCleanup {
     private static final String DELETED_HELPER_NAME = "exact" + "SpawnCodec";
     private static final String DELETED_SHARED_CODEC_CACHE =
             "SHARED_REWIND_DYNAMIC_OBJECT_" + "CODECS";
+    private static final String DELETED_REGISTRY_CODEC_METHOD =
+            "dynamicRewind" + "Codecs";
 
     @Test
     void sourcesDoNotReferenceDeletedSpawnCodecHelper() throws IOException {
@@ -33,12 +35,18 @@ class TestStaleRewindCodecHelperCleanup {
                 "Deleted shared dynamic-codec cache is still referenced in ");
     }
 
+    @Test
+    void sourcesDoNotReferenceDeletedRegistryCodecMethod() throws IOException {
+        assertNoSourceReferences(DELETED_REGISTRY_CODEC_METHOD,
+                "Deleted per-registry dynamic-codec method is still referenced in ");
+    }
+
     private static void assertNoSourceReferences(String needle, String messagePrefix) throws IOException {
         List<Path> staleReferences = new ArrayList<>();
         for (Path root : List.of(Path.of("src/main/java"), Path.of("src/test/java"))) {
             try (Stream<Path> paths = Files.walk(root)) {
                 paths.filter(path -> path.toString().endsWith(".java"))
-                        .filter(path -> contains(path, DELETED_HELPER_NAME))
+                        .filter(path -> contains(path, needle))
                         .forEach(staleReferences::add);
             }
         }

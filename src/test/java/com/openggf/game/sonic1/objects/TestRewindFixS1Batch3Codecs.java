@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * was previously dropped on a held-rewind restore.
  *
  * <p>Most assertions are registry-content checks that construct a registry and
- * read {@code dynamicRewindCodecs()} without a ROM or active gameplay session.
+ * read {@code deleted dynamic-codec registry API} without a ROM or active gameplay session.
  * Codec deletions that now rely on generic recreate also run the headless
  * ObjectManager round-trip harness here.
  *
@@ -36,7 +36,7 @@ class TestRewindFixS1Batch3Codecs {
 
     private static Set<String> codecClassNames() {
         Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = new Sonic1ObjectRegistry().dynamicRewindCodecs();
+        List<DynamicObjectRewindCodec> codecs = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of();
         for (DynamicObjectRewindCodec codec : codecs) {
             names.add(codec.className());
         }

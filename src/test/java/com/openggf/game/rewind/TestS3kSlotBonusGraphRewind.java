@@ -294,7 +294,7 @@ class TestS3kSlotBonusGraphRewind {
     }
 
     private static boolean hasExplicitCodec(Class<?> targetClass) {
-        Set<String> classNames = new Sonic3kObjectRegistry().dynamicRewindCodecs().stream()
+        Set<String> classNames = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
                 .map(DynamicObjectRewindCodec::className)
                 .collect(Collectors.toUnmodifiableSet());
         return classNames.contains(targetClass.getName());

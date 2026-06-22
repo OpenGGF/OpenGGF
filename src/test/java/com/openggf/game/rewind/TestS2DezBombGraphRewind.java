@@ -125,7 +125,7 @@ class TestS2DezBombGraphRewind {
     void bombUsesRewindRecreatableWithoutExplicitS2DynamicCodec() throws Exception {
         assertTrue(RewindRecreatable.class.isAssignableFrom(bombClass()),
                 "DEZ BombChild must restore through RewindRecreatable graph recreate");
-        assertFalse(new Sonic2ObjectRegistry().dynamicRewindCodecs().stream()
+        assertFalse(java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
                         .anyMatch(codec -> BOMB_CLASS.equals(codec.className())),
                 "DEZ BombChild must not keep an explicit S2 dynamic rewind codec");
     }

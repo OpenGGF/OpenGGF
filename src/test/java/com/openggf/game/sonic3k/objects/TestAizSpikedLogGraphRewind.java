@@ -228,7 +228,7 @@ class TestAizSpikedLogGraphRewind {
     }
 
     private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return new Sonic3kObjectRegistry().dynamicRewindCodecs().stream()
+        return java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
                 .anyMatch(codec -> className.equals(codec.className()));
     }
 

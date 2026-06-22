@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * either a registered codec or the Phase-2 {@link RewindRecreatable} generic path.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
+ * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
  * session. A full session round-trip is a separate concern handled by the
  * rewind campaign / coverage guard.
  */
@@ -25,7 +25,7 @@ class TestS3kRewindFixBatch1Codecs {
 
     private static Set<String> codecClassNames() {
         Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = new Sonic3kObjectRegistry().dynamicRewindCodecs();
+        List<DynamicObjectRewindCodec> codecs = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of();
         for (DynamicObjectRewindCodec codec : codecs) {
             names.add(codec.className());
         }

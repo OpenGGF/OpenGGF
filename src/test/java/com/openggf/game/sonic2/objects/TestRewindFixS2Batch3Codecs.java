@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * was previously dropped on a held-rewind restore.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} and checks {@link RewindRecreatable} opt-ins
+ * {@code deleted dynamic-codec registry API} and checks {@link RewindRecreatable} opt-ins
  * without a ROM, OpenGL, or an active gameplay session. Full session round-trip
  * is handled by the rewind coverage guard.
  */
@@ -54,7 +54,7 @@ class TestRewindFixS2Batch3Codecs {
 
     private static Set<String> codecClassNames() {
         Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = new Sonic2ObjectRegistry().dynamicRewindCodecs();
+        List<DynamicObjectRewindCodec> codecs = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of();
         for (DynamicObjectRewindCodec codec : codecs) {
             names.add(codec.className());
         }

@@ -199,7 +199,7 @@ class TestHczMinibossRocketTouchRewind {
     }
 
     private static boolean hasExplicitRocketTouchCodec() {
-        for (DynamicObjectRewindCodec codec : new Sonic3kObjectRegistry().dynamicRewindCodecs()) {
+        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
             if (ROCKET_TOUCH_CLASS.equals(codec.className())) {
                 return true;
             }

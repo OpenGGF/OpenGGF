@@ -3771,7 +3771,7 @@ public class ObjectManager {
     }
 
     static boolean isRewindRestorableDynamicObject(ObjectInstance inst, ObjectRegistry registry) {
-        return rewindDynamicObjectCodecFor(inst, registry).isPresent()
+        return rewindDynamicObjectCodecFor(inst).isPresent()
                 || inst instanceof RewindRecreatable;
     }
 
@@ -3857,14 +3857,8 @@ public class ObjectManager {
         TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS.clear();
     }
 
-    private static Optional<DynamicObjectRewindCodec> rewindDynamicObjectCodecFor(
-            ObjectInstance inst, ObjectRegistry registry) {
+    private static Optional<DynamicObjectRewindCodec> rewindDynamicObjectCodecFor(ObjectInstance inst) {
         for (DynamicObjectRewindCodec codec : TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS) {
-            if (codec.supports(inst)) {
-                return Optional.of(codec);
-            }
-        }
-        for (DynamicObjectRewindCodec codec : registryDynamicRewindCodecs(registry)) {
             if (codec.supports(inst)) {
                 return Optional.of(codec);
             }
@@ -3879,16 +3873,7 @@ public class ObjectManager {
                 return Optional.of(codec);
             }
         }
-        for (DynamicObjectRewindCodec codec : registryDynamicRewindCodecs(registry)) {
-            if (codec.className().equals(className)) {
-                return Optional.of(codec);
-            }
-        }
         return Optional.empty();
-    }
-
-    private static List<DynamicObjectRewindCodec> registryDynamicRewindCodecs(ObjectRegistry registry) {
-        return registry == null ? List.of() : registry.dynamicRewindCodecs();
     }
 
     private ObjectInstance recreateDynamicObject(

@@ -134,7 +134,7 @@ class TestRewindFixS1Batch10Codecs {
     }
 
     private static boolean hasExplicitCodec(Class<?> type) {
-        for (DynamicObjectRewindCodec codec : new Sonic1ObjectRegistry().dynamicRewindCodecs()) {
+        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
             if (type.getName().equals(codec.className())) {
                 return true;
             }

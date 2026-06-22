@@ -117,7 +117,7 @@ class TestRewindFixS3KSlotCodecs {
     }
 
     private static boolean hasExplicitCodec(Class<?> targetClass) {
-        List<DynamicObjectRewindCodec> codecs = new Sonic3kObjectRegistry().dynamicRewindCodecs();
+        List<DynamicObjectRewindCodec> codecs = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of();
         Set<String> classNames = codecs.stream()
                 .map(DynamicObjectRewindCodec::className)
                 .collect(Collectors.toUnmodifiableSet());

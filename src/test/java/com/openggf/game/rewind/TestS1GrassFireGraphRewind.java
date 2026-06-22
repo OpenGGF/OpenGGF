@@ -206,7 +206,7 @@ class TestS1GrassFireGraphRewind {
         assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1GrassFireObjectInstance.class),
                 "Grass Fire must restore through RewindRecreatable generic recreate");
         Set<String> codecNames = new HashSet<>();
-        for (DynamicObjectRewindCodec codec : new Sonic1ObjectRegistry().dynamicRewindCodecs()) {
+        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
             codecNames.add(codec.className());
         }
         assertFalse(codecNames.contains(Sonic1GrassFireObjectInstance.class.getName()),

@@ -413,7 +413,7 @@ class TestS2SelfContainedTransientRewind {
     }
 
     private static void assertNoRegisteredS2DynamicCodec(Class<?> type) {
-        boolean hasCodec = new Sonic2ObjectRegistry().dynamicRewindCodecs().stream()
+        boolean hasCodec = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
                 .anyMatch(codec -> type.getName().equals(codec.className()));
         assertFalse(hasCodec, type.getSimpleName()
                 + " must restore through RewindRecreatable generic recreate, not an explicit S2 dynamic codec");

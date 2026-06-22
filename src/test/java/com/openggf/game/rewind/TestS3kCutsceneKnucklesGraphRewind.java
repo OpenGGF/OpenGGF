@@ -275,7 +275,7 @@ class TestS3kCutsceneKnucklesGraphRewind {
 
     private static boolean hasExplicitS3kDynamicCodec(String className) {
         Set<String> names = new HashSet<>();
-        for (DynamicObjectRewindCodec codec : new Sonic3kObjectRegistry().dynamicRewindCodecs()) {
+        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
             names.add(codec.className());
         }
         return names.contains(className);

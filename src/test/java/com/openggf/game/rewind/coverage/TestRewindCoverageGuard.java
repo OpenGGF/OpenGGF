@@ -18,9 +18,9 @@ class TestRewindCoverageGuard {
     /** Collects codec class names from all three per-game registries. */
     private static Set<String> allGameCodecClassNames() {
         return Stream.of(
-                new Sonic1ObjectRegistry().dynamicRewindCodecs(),
-                new Sonic2ObjectRegistry().dynamicRewindCodecs(),
-                new Sonic3kObjectRegistry().dynamicRewindCodecs()
+                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of(),
+                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of(),
+                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()
         ).flatMap(List::stream)
          .map(DynamicObjectRewindCodec::className)
          .collect(Collectors.toUnmodifiableSet());

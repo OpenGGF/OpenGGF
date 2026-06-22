@@ -731,7 +731,7 @@ class TestS3kSelfContainedTransientRewind {
     }
 
     private static void assertNoRegisteredS3kDynamicCodec(Class<?> type) {
-        boolean hasCodec = new Sonic3kObjectRegistry().dynamicRewindCodecs().stream()
+        boolean hasCodec = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
                 .anyMatch(codec -> type.getName().equals(codec.className()));
         assertFalse(hasCodec, type.getSimpleName()
                 + " must restore through RewindRecreatable generic recreate, not an explicit S3K dynamic codec");

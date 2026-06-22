@@ -323,7 +323,7 @@ class TestS3kLbz1CutsceneGraphRewind {
 
     private static boolean hasRegisteredS3kCodec(String fqn) {
         ObjectRegistry registry = new Sonic3kObjectRegistry();
-        return registry.dynamicRewindCodecs().stream()
+        return java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
                 .anyMatch(codec -> fqn.equals(codec.className()));
     }
 

@@ -245,7 +245,7 @@ class TestS2OozBurnerFlameGraphRewind {
 
     private static boolean hasExplicitS2DynamicCodec(String className) {
         Set<String> names = new HashSet<>();
-        for (DynamicObjectRewindCodec codec : new Sonic2ObjectRegistry().dynamicRewindCodecs()) {
+        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
             names.add(codec.className());
         }
         return names.contains(className);

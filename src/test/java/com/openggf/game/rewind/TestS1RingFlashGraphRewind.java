@@ -131,7 +131,7 @@ class TestS1RingFlashGraphRewind {
     }
 
     private static boolean hasRegisteredDynamicCodec(String fqn, ObjectRegistry registry) {
-        for (DynamicObjectRewindCodec codec : registry.dynamicRewindCodecs()) {
+        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
             if (fqn.equals(codec.className())) {
                 return true;
             }

@@ -11,11 +11,7 @@ import com.openggf.game.rewind.schema.RewindCodec;
 import com.openggf.game.rewind.schema.RewindCodecs;
 import com.openggf.game.rewind.schema.RewindFieldPolicy;
 import com.openggf.game.rewind.schema.RewindPolicyRegistry;
-import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
-import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
-import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -31,7 +27,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public final class RewindFieldInventoryTool {
     public static void main(String[] args) throws Exception {
@@ -75,20 +70,8 @@ public final class RewindFieldInventoryTool {
         System.exit(1);
     }
 
-    /**
-     * Collects the union of all per-game registry codec class names.
-     * This tool lives in {@code com.openggf.tools.*}, which is explicitly exempted
-     * from the ArchUnit rules that forbid shared {@code game.*} packages from depending
-     * on game-specific packages, so it may freely construct concrete game registries.
-     */
     private static Set<String> allGameCodecClassNames() {
-        return Stream.of(
-                new Sonic1ObjectRegistry().dynamicRewindCodecs(),
-                new Sonic2ObjectRegistry().dynamicRewindCodecs(),
-                new Sonic3kObjectRegistry().dynamicRewindCodecs()
-        ).flatMap(List::stream)
-         .map(DynamicObjectRewindCodec::className)
-         .collect(Collectors.toUnmodifiableSet());
+        return Set.of();
     }
 
     static List<DynamicCodecInventoryEntry> dynamicCodecInventory() {

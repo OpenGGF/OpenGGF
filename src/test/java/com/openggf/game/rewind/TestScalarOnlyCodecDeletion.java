@@ -4975,33 +4975,16 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     /**
-     * Returns true if the given FQN has a registered dynamic rewind codec in
-     * any of the three per-game registries. Distinct from
-     * the harness's {@code hasRegisteredCodec}, which also returns true for
-     * {@link RewindRecreatable} classes — here we want to confirm the explicit
-     * codec entry is GONE, independent of the RewindRecreatable path.
+     * Returns true if the given FQN has an explicit game-registry dynamic rewind
+     * codec. Game registries no longer expose dynamic rewind codecs, so this
+     * stays false while the architecture guard prevents the deleted API from
+     * returning.
      */
     private static boolean hasRegisteredDynamicCodec(String fqn) {
-        for (ObjectRegistry reg : new ObjectRegistry[]{
-                new Sonic1ObjectRegistry(),
-                new Sonic2ObjectRegistry(),
-                new Sonic3kObjectRegistry()}) {
-            for (var c : reg.dynamicRewindCodecs()) {
-                if (fqn.equals(c.className())) return true;
-            }
-        }
         return false;
     }
 
     private static boolean hasRegisteredDynamicCodec(String fqn, GameId gameId) {
-        ObjectRegistry reg = switch (gameId) {
-            case S1 -> new Sonic1ObjectRegistry();
-            case S2 -> new Sonic2ObjectRegistry();
-            case S3K -> new Sonic3kObjectRegistry();
-        };
-        for (var c : reg.dynamicRewindCodecs()) {
-            if (fqn.equals(c.className())) return true;
-        }
         return false;
     }
 
@@ -5068,11 +5051,6 @@ public class TestScalarOnlyCodecDeletion {
             @Override
             public com.openggf.level.objects.ObjectWindowingStrategy objectWindowingStrategy() {
                 return delegate.objectWindowingStrategy();
-            }
-
-            @Override
-            public List<com.openggf.level.objects.DynamicObjectRewindCodec> dynamicRewindCodecs() {
-                return delegate.dynamicRewindCodecs();
             }
 
             @Override
