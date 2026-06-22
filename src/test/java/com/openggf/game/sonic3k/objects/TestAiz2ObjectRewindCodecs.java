@@ -1,10 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.level.objects.DynamicObjectRewindCodec;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -29,12 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestAiz2ObjectRewindCodecs {
 
     private static Set<String> codecClassNames() {
-        List<DynamicObjectRewindCodec> codecs = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of();
-        Set<String> names = new HashSet<>();
-        for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        return names;
+        return DeletedDynamicRewindCodecs.classNames();
     }
 
     private static boolean hasDynamicRecreatePath(Class<?> type, Set<String> codecNames) {

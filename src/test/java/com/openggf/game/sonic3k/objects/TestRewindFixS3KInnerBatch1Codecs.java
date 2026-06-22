@@ -1,10 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.level.objects.DynamicObjectRewindCodec;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -30,12 +29,7 @@ class TestRewindFixS3KInnerBatch1Codecs {
             "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild";
 
     private static Set<String> codecClassNames() {
-        Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of();
-        for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        return names;
+        return DeletedDynamicRewindCodecs.classNames();
     }
 
     @Test
