@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -534,7 +535,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private static final class SpikerSpikeProjectile extends AbstractObjectInstance
-            implements TouchResponseProvider, RewindRecreatable {
+            implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {
 
         private static final int COLLISION_FLAGS = 0x98;
         private static final int PRIORITY_BUCKET = 5;
@@ -584,12 +585,6 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
             this.xVelocity = xVelocity;
             this.yVelocity = yVelocity;
             this.hFlip = hFlip;
-        }
-
-        @Override
-        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            ObjectSpawn spawn = ctx.spawn();
-            return new SpikerSpikeProjectile(spawn, spawn.x(), spawn.y(), 0, 0, false);
         }
 
         @Override

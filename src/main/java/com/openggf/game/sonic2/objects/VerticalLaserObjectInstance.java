@@ -7,8 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -38,7 +37,7 @@ import java.util.List;
  * - 16 pieces: 8 pairs of 3x4 tiles forming a tall vertical beam spanning Y -$70 to $90.
  */
 public class VerticalLaserObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {
 
     // From ObjB7_SubObjData: priority = 4, width_pixels = $18
     private static final int PRIORITY = 4;
@@ -78,12 +77,6 @@ public class VerticalLaserObjectInstance extends AbstractObjectInstance
                 parent.renderFlags(),
                 false, // Don't track respawn for dynamic children
                 parent.rawYWord());
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn s = ctx.spawn();
-        return new VerticalLaserObjectInstance(s, s.x(), s.y());
     }
 
     @Override

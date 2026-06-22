@@ -124,6 +124,14 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance",
             "com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance");
 
+    private static final List<String> SPAWN_AND_COORDINATE_ZERO_SCALAR_ARGS_RECREATORS = List.of(
+            "com.openggf.game.sonic2.objects.ArrowProjectileInstance",
+            "com.openggf.game.sonic2.objects.VerticalLaserObjectInstance",
+            "com.openggf.game.sonic2.objects.WallTurretShotInstance",
+            "com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance$BlastoidProjectile",
+            "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterProjectile",
+            "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSpikeProjectile");
+
     private static final List<String> SPAWN_TRAILING_ZERO_INTS_RECREATORS = List.of(
             "com.openggf.level.objects.EggPrisonAnimalInstance",
             "com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart",
@@ -295,6 +303,26 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnCoordinateDefaultArgsRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void spawnAndCoordinateZeroScalarArgsRecreatorsUseMarkerInterface() {
+        Class<?> marker = loadClass("com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable");
+        for (String className : SPAWN_AND_COORDINATE_ZERO_SCALAR_ARGS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(marker.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the spawn-and-coordinate zero-scalar recreate hook");
+        }
+    }
+
+    @Test
+    void spawnAndCoordinateZeroScalarArgsRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_AND_COORDINATE_ZERO_SCALAR_ARGS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName()
+                            + " should use SpawnAndCoordinateZeroScalarArgsRewindRecreatable's default hook");
         }
     }
 

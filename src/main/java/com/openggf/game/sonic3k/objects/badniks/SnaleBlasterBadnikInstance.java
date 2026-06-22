@@ -8,8 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -499,7 +498,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance 
     }
 
     private static final class SnaleBlasterProjectile extends AbstractObjectInstance
-            implements TouchResponseProvider, RewindRecreatable {
+            implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {
         private static final int COLLISION_FLAGS = 0x98; // ObjDat3_8C27E.
         private static final int PRIORITY_BUCKET = 4;    // ObjDat3_8C27E priority $200.
         private static final int MAPPING_FRAME = 9;
@@ -538,12 +537,6 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance 
             this.xVelocity = xVelocity;
             this.yVelocity = yVelocity;
             this.hFlip = hFlip;
-        }
-
-        @Override
-        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            ObjectSpawn spawn = ctx.spawn();
-            return new SnaleBlasterProjectile(spawn, spawn.x(), spawn.y(), 0, 0, false);
         }
 
         @Override

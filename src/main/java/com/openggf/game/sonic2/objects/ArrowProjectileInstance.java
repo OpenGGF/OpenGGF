@@ -9,8 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -34,7 +33,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class ArrowProjectileInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(ArrowProjectileInstance.class.getName());
 
     private static final int ARROW_VELOCITY = 0x400; // Fixed-point 8.8 = 4 pixels/frame
@@ -70,12 +69,6 @@ public class ArrowProjectileInstance extends AbstractObjectInstance
         } else {
             this.xVelocity = ARROW_VELOCITY;
         }
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn s = ctx.spawn();
-        return new ArrowProjectileInstance(s, s.x(), s.y(), false);
     }
 
     private static ObjectSpawn createArrowSpawn(ObjectSpawn parent, int x, int y) {

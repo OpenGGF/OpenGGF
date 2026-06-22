@@ -7,8 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
@@ -38,7 +37,7 @@ import java.util.logging.Logger;
  * Initial mapping_frame = 3 (set by parent: move.b #3,mapping_frame(a1)).
  */
 public class WallTurretShotInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(WallTurretShotInstance.class.getName());
 
     // From ObjB8_SubObjData2: priority=3, width_pixels=4, collision_flags=$98
@@ -92,12 +91,6 @@ public class WallTurretShotInstance extends AbstractObjectInstance
                 parent.renderFlags(),
                 false, // Don't track respawn for projectiles
                 parent.rawYWord());
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn s = ctx.spawn();
-        return new WallTurretShotInstance(s, s.x(), s.y(), 0, 0);
     }
 
     @Override
