@@ -14,6 +14,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -63,7 +64,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/61 LZ Blocks.asm
  */
 public class Sonic1LabyrinthBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // ---- LBlk_Var table: {halfWidth, halfHeight} indexed by (subtype >> 4) & 0x7 ----
     // From disassembly: dc.b $10,$10 / $20,$C / $10,$10 / $10,$10

@@ -17,6 +17,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -40,7 +41,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/32 Button.asm
  */
 public class Sonic1ButtonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // From disassembly: move.w #$1B,d1 / move.w #5,d2 / move.w #5,d3
     private static final int SOLID_HALF_WIDTH = 0x1B; // 27 pixels

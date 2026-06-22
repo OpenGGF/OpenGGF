@@ -15,6 +15,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -65,7 +66,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/52 Moving Blocks.asm
  */
 public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // ---- MBlock_Var table: {obActWid, obFrame} indexed by (subtype >> 4) ----
     // From disassembly: dc.b $10, 0 / dc.b $20, 1 / dc.b $20, 2 / dc.b $40, 3 / dc.b $30, 4

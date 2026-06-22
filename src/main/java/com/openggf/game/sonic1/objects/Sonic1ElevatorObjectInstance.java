@@ -15,6 +15,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -56,7 +57,7 @@ import java.util.List;
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/59 SLZ Elevators.asm
  */
 public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // From disassembly Elev_Var1: dc.b $28, 0
     private static final int HALF_WIDTH_DEFAULT = 0x28;
