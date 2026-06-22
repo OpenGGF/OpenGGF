@@ -18389,3 +18389,24 @@ one boundary ring. A fix there affects ALL S3K ring/touch collection -> must be
 ROM-faithful (S3K `Touch_Rings`/`Test_Ring_Collisions` box + ReactToItem timing)
 and verified against the full S3K trace sweep before landing. Highest-leverage
 Mn target (double-green); next focused task.
+
+### 2026-06-22 addendum - S3K MGZ rings f539 narrowed to lightning-shield ATTRACTED-ring timing
+
+Deeper root-cause of the MGZ +1-ring (the 1-fix-from-green target). The f539
+ring is NOT collected via the static stage-ring scan (`collectStageRings`/
+`collectPlacedRings` — instrumented `OGGF_RING`, no hit near f539) but via the
+**lightning-shield attracted-ring system**: `RingManager.update` adds in-box
+rings to `attractedRings` (±$40 box, line ~154), `updateAttractedRings` flies
+them in and gives the ring on overlap (line ~701). Instrumented `addRings`
+caller = `RingManager.updateAttractedRings:702`.
+
+Attempted + REVERTED (no effect on f539): reordering the give-ring overlap test
+to BEFORE the per-frame `AttractedRing_Move` (ROM loc_1A88C: player slot-0
+processes the collision-response list built from the ring's pre-move position).
+MGZ1 stayed `rings f539 10 vs 11`, so the boundary ring already overlaps at its
+pre-move position — the 1-frame-early is upstream, in the **attraction
+start/flight timing** (when the ring enters the ±$40 box / flight steps run
+relative to the player's object-slot phase), an object-execution-phase issue
+spanning all S3K attracted-ring collection. Fix must align that phase to ROM
+(player ReactToItem slot-0 vs ring slot) and be verified against the full S3K
+sweep. Still the highest-leverage Mn target (double-green MGZ1 + MGZ-CR).
