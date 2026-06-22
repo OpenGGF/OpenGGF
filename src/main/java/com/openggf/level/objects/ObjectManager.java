@@ -733,6 +733,7 @@ public class ObjectManager {
                     if (spawn != null) {
                         freeAllReservedChildSlots(spawn);
                         placement.clearStayActive(spawn);
+                        resetRespawnStateForOffscreenSelfDelete(instance, spawn);
                         dispatchDestroyRemoveFromActive(instance, spawn);
                         removeActiveObject(spawn);
                     } else {
@@ -775,6 +776,7 @@ public class ObjectManager {
                 if (inst.isDestroyed()) {
                     inst.onUnload();
                     placement.clearStayActive(spawn);
+                    resetRespawnStateForOffscreenSelfDelete(inst, spawn);
                     dispatchDestroyRemoveFromActive(inst, spawn);
                     removeActiveObject(spawn);
                     objectsRemoved = true;
@@ -789,6 +791,7 @@ public class ObjectManager {
                 if (inst.isDestroyed()) {
                     inst.onUnload();
                     placement.clearStayActive(spawn);
+                    resetRespawnStateForOffscreenSelfDelete(inst, spawn);
                     dispatchDestroyRemoveFromActive(inst, spawn);
                     removeActiveObject(spawn);
                     objectsRemoved = true;
@@ -886,6 +889,7 @@ public class ObjectManager {
                     if (spawn != null) {
                         freeAllReservedChildSlots(spawn);
                         placement.clearStayActive(spawn);
+                        resetRespawnStateForOffscreenSelfDelete(instance, spawn);
                         dispatchDestroyRemoveFromActive(instance, spawn);
                         removeActiveObject(spawn);
                     } else {
@@ -933,6 +937,7 @@ public class ObjectManager {
                 if (inst.isDestroyed()) {
                     inst.onUnload();
                     placement.clearStayActive(spawn);
+                    resetRespawnStateForOffscreenSelfDelete(inst, spawn);
                     dispatchDestroyRemoveFromActive(inst, spawn);
                     removeActiveObject(spawn);
                     objectsRemoved = true;
@@ -948,6 +953,7 @@ public class ObjectManager {
                 if (inst.isDestroyed()) {
                     inst.onUnload();
                     placement.clearStayActive(spawn);
+                    resetRespawnStateForOffscreenSelfDelete(inst, spawn);
                     dispatchDestroyRemoveFromActive(inst, spawn);
                     removeActiveObject(spawn);
                     objectsRemoved = true;
@@ -2597,6 +2603,40 @@ public class ObjectManager {
             placement.removeFromActive(spawn);
             solidContacts.evictLatchForDestroyedSpawn(spawn);
         }
+    }
+
+    /**
+     * Mirror of the S1 {@code RememberState}/{@code Cat_Despawn} respawn-table
+     * bit-7 clear for objects that delete themselves off-screen instead of
+     * routing through {@link #unloadCounterBasedOutOfRange}.
+     * <p>
+     * Some S1 objects own their {@code out_of_range} tail (they set
+     * {@link ObjectInstance#usesCustomOutOfRangeCheck()} with a no-op
+     * {@link ObjectInstance#isCustomOutOfRange(int)}) and instead call
+     * {@code setDestroyedByOffscreen()} from their own routine — e.g. the
+     * Caterkiller, whose {@code Cat_Despawn} (docs/s1disasm/_incObj/78 Badnik -
+     * Caterkiller.asm:139-148) runs after its fragment-entry check and clears
+     * {@code bit 7} of its {@code v_objstate} entry so the placement cursor
+     * re-spawns it when the player returns. Those self-deletes reach the
+     * destroyed-removal path, which previously only called
+     * {@code clearStayActive} and left the counter bit latched, so the badnik
+     * never respawned. Reset the placement counter exactly as the
+     * out_of_range path does, but only for off-screen self-deletes
+     * ({@code destroyedRespawnable}); player kills keep the bit set and must
+     * not respawn.
+     */
+    private void resetRespawnStateForOffscreenSelfDelete(ObjectInstance instance, ObjectSpawn spawn) {
+        if (spawn == null
+                || !placement.isCounterBasedRespawn()
+                || !instance.isDestroyedRespawnable()
+                || !instance.clearsRespawnStateOnCounterBasedOutOfRange()) {
+            return;
+        }
+        placement.clearCounterForSpawn(spawn);
+        // ROM parity: bit 7 is cleared but the cursor may still sit between this
+        // spawn's entry and the window edge, so keep it dormant until ObjPosLoad
+        // reprocesses it (matches unloadCounterBasedOutOfRange).
+        placement.markDormant(spawn);
     }
 
     private boolean unloadCounterBasedOutOfRange(ObjectInstance instance, ObjectSpawn spawn,

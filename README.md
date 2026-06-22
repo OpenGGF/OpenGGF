@@ -274,6 +274,10 @@ Highlights:
 
 - The S1 spring now uses the ROM-accurate inclusive right-edge solid bound (ROM `Solid_ChkCollision` rejects only when strictly greater), so a player landing flush against a horizontal spring's right face registers the side contact and gets bounced as ROM does, instead of falling through to a terrain stop (SYZ1 trace frontier f502 -> f816, 484 -> 351 errors; Obj41-only, GHZ2 stays green).
 
+- S1 off-screen self-deleting badniks now clear their counter-based respawn-table bit when they despawn, so a Caterkiller that walks off-screen in MZ2 can respawn when the player returns and preserve the ROM badnik-hit bounce (MZ2 trace frontier f2578 -> f2819; S1 counter-placement only).
+
+- Counter-respawn badniks that self-delete when they walk off-screen (e.g. the MZ Caterkiller) now clear their respawn-suppression bit on removal (ROM `Cat_Despawn` / `RememberState` bit-7 clear), so they respawn when the player returns instead of staying permanently gone — fixing a missed enemy bounce (S1 MZ2 trace frontier f2578 -> f2819; S1 counter-respawn path only, player-kills still suppress respawn, GHZ2 stays green).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)
