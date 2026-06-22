@@ -766,10 +766,22 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                 positionChildren();
             }
             case 6 -> { // Wait for sensor to report player X
+                // ROM ObjC7 loc_3D784 reads the body's objoff_28 (the sensor's
+                // reported X) at the START of the body's frame, but the targeting
+                // sensor (ChildObjC7_TargettingSensor) is a separate object in a
+                // HIGHER RAM slot, so it runs AFTER the body in ExecuteObjects and
+                // writes objoff_28 only on its lock-on-report frame (loc_3DE62).
+                // The body therefore observes the report ONE frame after the sensor
+                // produces it. Check targetedPlayerX BEFORE advancing the sensor so
+                // we read the prior frame's value, then advance the sensor for next
+                // frame -- otherwise the engine descends one frame early (the body
+                // reads the same-frame inline report), drifting every jet-stomp by a
+                // frame across the DEZ fight.
+                boolean sensorReported = targetedPlayerX != 0;
                 if (sensorChild != null) {
                     sensorChild.update(frameCounter, player);
                 }
-                if (targetedPlayerX != 0) {
+                if (sensorReported) {
                     attackPhase = 8;
                     state.x = targetedPlayerX;
                     bodyXFixed = (long) state.x << 16;

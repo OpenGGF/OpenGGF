@@ -144,6 +144,14 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - DEZ jet-stomp reads targeting sensor 1 frame late; DEZ1 f5261->f5952, errors 98->46
+
+- Branch/worktree context: `bugfix/ai-dez1-green` (builds on the group-anim $C0 + boss-id boundary fixes below).
+- **`s2_dez1` advanced f5261 -> f5952, errors 98 -> 46, roots 5 -> 3.** First error before: f5261 `y_speed` sign-flip (jet-stomp bounce miss). After: f5952 `y_speed` exp=0x0098 act=-0098 (a later jet-stomp; small residual drift remains).
+- Root: BizHawk phase-alignment of the jet-stomp cycle (engine fc = trace-1) showed, after the $C0 fix, the body's pa06(spawn)->pa0A(recovery) span was 227 frames vs ROM 228 — the engine lost 1 frame in the descent/sensor region per jet-stomp, re-drifting the attack clock (ascent-start Δ +1/0/-1/-2 across jet-stomps). The body's wait-for-sensor phase updated `ChildObjC7_TargettingSensor` inline and read `targetedPlayerX` the SAME frame, so the descent began the frame the sensor reported. ROM `loc_3D784` reads the body's `objoff_28` at the body's frame start, but the sensor is a higher-slot object that runs AFTER the body in ExecuteObjects and writes `objoff_28` on its lock-on-report frame (`loc_3DE62`), so the body observes the report ONE frame later.
+- Fix: capture `targetedPlayerX` BEFORE advancing the sensor child, then advance the sensor (for next frame). Restores the one-frame report latency; the descent starts on ROM's frame. Errors 98 -> 46.
+- Regression: object-local (`Sonic2DeathEggRobotInstance`, DEZ-only). Residual: a smaller attack-clock drift (~1 frame / 2 jet-stomps) still misses the f5952 bounce; under investigation.
+
 ## 2026-06-22 - DEZ Silver Sonic does not clear Current_Boss_ID; DEZ1 f4933->f5261 (roots 13->5)
 
 - Branch/worktree context: `bugfix/ai-dez1-green` (worktree off `develop`, builds on the group-anim $C0 fix below).
