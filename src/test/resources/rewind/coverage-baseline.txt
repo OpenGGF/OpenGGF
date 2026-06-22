@@ -9,7 +9,6 @@ com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance#finalScalar#sp
 com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance#finalScalar#frameIndex
 com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance$WallFragmentInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1BridgeObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance#finalScalar#isMaker
 com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance#finalScalar#spawnFreq
 com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance#finalScalar#spawnSubtype
@@ -81,7 +80,6 @@ com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#or
 com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#zoneIndex
 com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance#finalScalar#facingRight
 com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance#finalScalar#spitDelay
-com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance$Fireball#finalScalar#movingRight
 com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance$Fireball#finalScalar#velX
 com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance$Fireball#recreate
@@ -116,7 +114,6 @@ com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1LavaBallMakerObjectInstance#finalScalar#ballSubtype
 com.openggf.game.sonic1.objects.Sonic1LavaBallMakerObjectInstance#finalScalar#rateIndex
 com.openggf.game.sonic1.objects.Sonic1LavaBallMakerObjectInstance#finalScalar#spawnDelay
-com.openggf.game.sonic1.objects.Sonic1LavaBallMakerObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1LavaBallObjectInstance#finalScalar#bossDroppedVariant
 com.openggf.game.sonic1.objects.Sonic1LavaBallObjectInstance#finalScalar#isHorizontal
 com.openggf.game.sonic1.objects.Sonic1LavaBallObjectInstance#finalScalar#originY
@@ -154,7 +151,6 @@ com.openggf.game.sonic1.objects.Sonic1SawObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic1.objects.Sonic1SceneryObjectInstance#finalScalar#frameIndex
 com.openggf.game.sonic1.objects.Sonic1SeesawObjectInstance#finalScalar#origX
 com.openggf.game.sonic1.objects.Sonic1SeesawObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1SignpostObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SmallDoorObjectInstance#finalScalar#openFromRight
 com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance#finalScalar#frameIndex
 com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance#recreate

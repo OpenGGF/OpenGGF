@@ -5,6 +5,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
 
@@ -39,7 +40,8 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/13 Lava Ball Maker.asm
  */
-public class Sonic1LavaBallMakerObjectInstance extends AbstractObjectInstance {
+public class Sonic1LavaBallMakerObjectInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
 
     // ========================================================================
     // ROM Constants

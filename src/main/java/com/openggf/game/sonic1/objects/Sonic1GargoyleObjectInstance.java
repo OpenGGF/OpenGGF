@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -41,7 +42,8 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/62 Gargoyle.asm
  */
-public class Sonic1GargoyleObjectInstance extends AbstractObjectInstance {
+public class Sonic1GargoyleObjectInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
 
     // ========================================================================
     // ROM Constants

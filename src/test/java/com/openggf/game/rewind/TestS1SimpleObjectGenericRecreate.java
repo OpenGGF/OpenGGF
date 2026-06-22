@@ -2,6 +2,7 @@ package com.openggf.game.rewind;
 
 import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
 import com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1BridgeObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ButtonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ConveyorBeltObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1EdgeWallObjectInstance;
@@ -9,11 +10,13 @@ import com.openggf.game.sonic1.objects.Sonic1ElectrocuterObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1FanObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1GiantRingObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1GirderBlockObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1HarpoonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1HiddenBonusObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1LavaBallMakerObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LamppostObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LavaBallObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LavaTagObjectInstance;
@@ -25,6 +28,7 @@ import com.openggf.game.sonic1.objects.Sonic1PlatformObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1PoleThatBreaksObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SawObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SceneryObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1SignpostObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SmallDoorObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SpinConveyorObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SpikedPoleHelixObjectInstance;
@@ -47,6 +51,7 @@ class TestS1SimpleObjectGenericRecreate {
     @ParameterizedTest(name = "{0} round-trips via generic recreate")
     @ValueSource(classes = {
             Sonic1BigSpikedBallObjectInstance.class,
+            Sonic1BridgeObjectInstance.class,
             Sonic1ButtonObjectInstance.class,
             Sonic1ConveyorBeltObjectInstance.class,
             Sonic1EdgeWallObjectInstance.class,
@@ -54,11 +59,13 @@ class TestS1SimpleObjectGenericRecreate {
             Sonic1ElevatorObjectInstance.class,
             Sonic1FanObjectInstance.class,
             Sonic1FlamethrowerObjectInstance.class,
+            Sonic1GargoyleObjectInstance.class,
             Sonic1GiantRingObjectInstance.class,
             Sonic1GirderBlockObjectInstance.class,
             Sonic1HarpoonObjectInstance.class,
             Sonic1HiddenBonusObjectInstance.class,
             Sonic1LabyrinthBlockObjectInstance.class,
+            Sonic1LavaBallMakerObjectInstance.class,
             Sonic1LamppostObjectInstance.class,
             Sonic1LavaBallObjectInstance.class,
             Sonic1LavaTagObjectInstance.class,
@@ -70,6 +77,7 @@ class TestS1SimpleObjectGenericRecreate {
             Sonic1PoleThatBreaksObjectInstance.class,
             Sonic1SawObjectInstance.class,
             Sonic1SceneryObjectInstance.class,
+            Sonic1SignpostObjectInstance.class,
             Sonic1SmallDoorObjectInstance.class,
             Sonic1SpinConveyorObjectInstance.class,
             Sonic1SpikedPoleHelixObjectInstance.class,
@@ -93,6 +101,7 @@ class TestS1SimpleObjectGenericRecreate {
                 () -> Class.forName("com.openggf.level.objects.SpawnRewindRecreatable"));
         Class<?>[] objectClasses = {
                 Sonic1BigSpikedBallObjectInstance.class,
+                Sonic1BridgeObjectInstance.class,
                 Sonic1ButtonObjectInstance.class,
                 Sonic1ConveyorBeltObjectInstance.class,
                 Sonic1EdgeWallObjectInstance.class,
@@ -100,11 +109,13 @@ class TestS1SimpleObjectGenericRecreate {
                 Sonic1ElevatorObjectInstance.class,
                 Sonic1FanObjectInstance.class,
                 Sonic1FlamethrowerObjectInstance.class,
+                Sonic1GargoyleObjectInstance.class,
                 Sonic1GiantRingObjectInstance.class,
                 Sonic1GirderBlockObjectInstance.class,
                 Sonic1HarpoonObjectInstance.class,
                 Sonic1HiddenBonusObjectInstance.class,
                 Sonic1LabyrinthBlockObjectInstance.class,
+                Sonic1LavaBallMakerObjectInstance.class,
                 Sonic1LamppostObjectInstance.class,
                 Sonic1LavaBallObjectInstance.class,
                 Sonic1LavaTagObjectInstance.class,
@@ -116,6 +127,7 @@ class TestS1SimpleObjectGenericRecreate {
                 Sonic1PoleThatBreaksObjectInstance.class,
                 Sonic1SawObjectInstance.class,
                 Sonic1SceneryObjectInstance.class,
+                Sonic1SignpostObjectInstance.class,
                 Sonic1SmallDoorObjectInstance.class,
                 Sonic1SpinConveyorObjectInstance.class,
                 Sonic1SpikedPoleHelixObjectInstance.class,
