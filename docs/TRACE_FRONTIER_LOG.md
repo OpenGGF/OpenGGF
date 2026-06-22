@@ -18361,3 +18361,31 @@ accurate). Baseline restored: 53 / 52+1.
   all 16 other S1 traces unchanged. Guards green: ArchUnit, RewindCoverage,
   TraceReplayInvariant, CollisionModel. S1-UNIFIED-gated -> S2/S3K inert.
 - Command: `mvn -Dmse=off -Dtrace.frontierOnly=true test -Dtest='TestS1*TraceReplay' -DfailIfNoTests=false`
+
+## 2026-06-22 - cross-game survey: the THREE 1-fix-from-green traces (Mn count-drop targets)
+
+Surveyed all S1/S2/S3K frontiers vs trace length to find the traces closest to
+GREEN (a green drops the aggregate failure count — the plan's Mn metric).
+Result: no S1/S2 complete-run is near green (nearest S2 CPZ-LS is 2,379 frames
+out). The only genuinely-near-green failures are these, each a SINGLE
+non-cascading divergence (verified via full-run report `frame_span`/`cascading`):
+
+1. **TestS3kMgzTraceReplay** - 1 error total: `rings` f539 exp10 act11
+   (`frame_span=1, cascading=false`; re-syncs f540). Engine collects ONE ring
+   one frame early at an IDENTICAL player position (sub=(0700,7600) both).
+2. **TestS3kMgzCompleteRunTraceReplay** - `rings` f738 exp17 act18: same +1-ring
+   bug (same root as #1). Fixing the root greens BOTH (count -2).
+3. **TestS3kIczCompleteRunTraceReplay** - 1 error: `status_byte` f3116 exp0x08
+   act0x09 (single facing bit; per Quick State facing-only status is often
+   trace-noise — needs confirm real-vs-noise before touching).
+
+Root cause of #1/#2 (characterized, fix deferred - shared/high-risk):
+S3K stage rings collect through the unified object-touch loop
+(`LevelManager.applyTouchResponses` -> `ObjectManager.runTouchResponsesForPlayer`;
+`RingManager.usesObjectTouchCollection()==true`, so `collectStageRings` is
+skipped for S3K - confirmed: no `OGGF_RING` static-collection hit near f539).
+The early pickup is therefore in the shared object-touch overlap/phase for this
+one boundary ring. A fix there affects ALL S3K ring/touch collection -> must be
+ROM-faithful (S3K `Touch_Rings`/`Test_Ring_Collisions` box + ReactToItem timing)
+and verified against the full S3K trace sweep before landing. Highest-leverage
+Mn target (double-green); next focused task.
