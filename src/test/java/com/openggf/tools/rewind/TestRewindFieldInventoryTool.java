@@ -187,15 +187,4 @@ class TestRewindFieldInventoryTool {
         assertTrue(out.contains("gaps"), "must report gap count");
     }
 
-    @Test
-    void dynamicCodecInventoryClassifiesSimpleAndLiveReferenceEntries() {
-        List<RewindFieldInventoryTool.DynamicCodecInventoryEntry> inventory =
-                RewindFieldInventoryTool.dynamicCodecInventory();
-
-        assertTrue(inventory.isEmpty(), "dynamic codec inventory should stay deleted end-to-end");
-        assertEquals(0, inventory.stream().filter(entry -> !entry.classFound()).count());
-        assertEquals(0, inventory.stream().filter(entry -> entry.hasSimpleProbeConstructor()).count());
-        assertEquals(0, inventory.stream().filter(entry -> entry.objectReferenceFieldCount() > 0).count());
-        assertEquals(0, inventory.stream().filter(entry -> entry.nonTransientObjectReferenceFieldCount() > 0).count());
-    }
 }

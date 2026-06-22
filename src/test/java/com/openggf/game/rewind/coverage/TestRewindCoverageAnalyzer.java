@@ -9,20 +9,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestRewindCoverageAnalyzer {
 
-    /** Explicit dynamic codecs have been deleted; recreate coverage comes from RewindRecreatable. */
-    private static Set<String> s3kCodecClassNames() {
-        return Set.of();
-    }
-
-    /** Explicit dynamic codecs have been deleted; recreate coverage comes from RewindRecreatable. */
-    @SuppressWarnings("unused")
-    private static Set<String> allGameCodecClassNames() {
-        return Set.of();
-    }
-
     @Test
     void enumeratesSpawnableObjectsForS3k() {
-        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
         assertFalse(report.objects().isEmpty(), "must enumerate S3K spawnable objects");
         assertTrue(report.objects().stream()
                 .anyMatch(o -> o.className().endsWith("AizLrzRockObjectInstance")),
@@ -31,7 +20,7 @@ class TestRewindCoverageAnalyzer {
 
     @Test
     void flagsUncapturedFinalScalarField() {
-        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
         // AutomaticTunnelObjectInstance has `private final int subtype` (no @RewindTransient /
         // @RewindDeferred). It is a concrete AbstractObjectInstance subclass in the LBZ/S3K route.
         // GenericFieldCapturer skips it solely because it is final — this is the gap we detect.
@@ -44,7 +33,7 @@ class TestRewindCoverageAnalyzer {
 
     @Test
     void dynamicObjectWithRewindRecreatableHasRecreatePath() {
-        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
         ObjectCoverage cov = report.objects().stream()
                 .filter(o -> o.className().endsWith("AizBattleshipInstance"))
                 .findFirst().orElseThrow();
@@ -64,7 +53,7 @@ class TestRewindCoverageAnalyzer {
      */
     @Test
     void flagsNonTransientObjectRefField() {
-        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
         // CutsceneKnucklesMhz1Instance has `private final Mhz1CutsceneButtonInstance parentButton`.
         // The field name "parentButton" is not in DefaultObjectRewindPolicies.STRUCTURAL_OBJECT_FIELD_NAMES,
         // the field is not @RewindTransient / @RewindDeferred, and there is no exact-field policy.
@@ -86,7 +75,7 @@ class TestRewindCoverageAnalyzer {
      */
     @Test
     void transientObjectRefFieldIsNotFlagged() {
-        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
         // MhzEndBossHitProxyChild has only `@RewindTransient private final MhzEndBossInstance parent`.
         // No other ObjectInstance-typed fields exist on this class (x and y are primitives).
         ObjectCoverage cov = report.objects().stream()
@@ -104,7 +93,7 @@ class TestRewindCoverageAnalyzer {
      */
     @Test
     void structuralObjectRefFieldIsNotFlagged() {
-        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
         // AizEndBossArmChild has `private final AizEndBossInstance boss`.
         // The name "boss" is in DefaultObjectRewindPolicies.STRUCTURAL_OBJECT_FIELD_NAMES,
         // causing policyForAudit to return TRANSIENT — so it must NOT be in unIdObjectRefFields.
@@ -117,7 +106,7 @@ class TestRewindCoverageAnalyzer {
 
     @Test
     void exactCapturedObjectRefFieldIsNotFlagged() {
-        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
         // SpikerTopSpikeChild.parent is an exact CAPTURED field policy. The object-ref
         // codec captures/restores it by ObjectRefId, so it must not be reported as an un-id'd gap.
         ObjectCoverage cov = report.objects().stream()
@@ -129,7 +118,7 @@ class TestRewindCoverageAnalyzer {
 
     @Test
     void enumerationIncludesRuntimeChildSpawnedClasses() {
-        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
         assertTrue(report.objects().stream()
                 .anyMatch(o -> o.className().endsWith("AizShipBombInstance")),
                 "child-spawned classes must be enumerated by the classpath scan");
@@ -155,7 +144,7 @@ class TestRewindCoverageAnalyzer {
      */
     @Test
     void enumerationIncludesInnerClassObjectChildren() {
-        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
 
         assertTrue(report.objects().stream()
                 .anyMatch(o -> o.className().contains("HCZWaterDropObjectInstance$WaterDropChild")),

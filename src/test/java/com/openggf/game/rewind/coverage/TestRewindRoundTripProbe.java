@@ -39,15 +39,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @Tag("rewind-probe")
 class TestRewindRoundTripProbe {
 
-    /** Explicit dynamic codecs have been deleted; recreate coverage comes from RewindRecreatable. */
-    private static Set<String> allGameCodecClassNames() {
-        return Set.of();
-    }
-
     @Test
     void probeReturnsNonEmptyResults() {
         RewindRoundTripProbe probe = new RewindRoundTripProbe();
-        RewindRoundTripProbe.ProbeReport report = probe.run(allGameCodecClassNames());
+        RewindRoundTripProbe.ProbeReport report = probe.run(Set.of());
 
         assertNotNull(report, "probe must return a non-null report");
         assertTrue(report.totalClasses() > 0,
@@ -61,7 +56,7 @@ class TestRewindRoundTripProbe {
     @Test
     void probeReportIsWrittenToDisk() throws IOException {
         RewindRoundTripProbe probe = new RewindRoundTripProbe();
-        RewindRoundTripProbe.ProbeReport report = probe.run(allGameCodecClassNames());
+        RewindRoundTripProbe.ProbeReport report = probe.run(Set.of());
 
         Path outDir = Paths.get("docs/rewind");
         Files.createDirectories(outDir);
@@ -78,7 +73,7 @@ class TestRewindRoundTripProbe {
     @Test
     void probeCoverageIsHonestlyReported() {
         RewindRoundTripProbe probe = new RewindRoundTripProbe();
-        RewindRoundTripProbe.ProbeReport report = probe.run(allGameCodecClassNames());
+        RewindRoundTripProbe.ProbeReport report = probe.run(Set.of());
 
         // Skipped count + probed count must equal total
         assertEquals(report.totalClasses(), report.probed() + report.skipped(),
@@ -100,7 +95,7 @@ class TestRewindRoundTripProbe {
     @Test
     void realGapRecordsHaveFieldDetails() {
         RewindRoundTripProbe probe = new RewindRoundTripProbe();
-        RewindRoundTripProbe.ProbeReport report = probe.run(allGameCodecClassNames());
+        RewindRoundTripProbe.ProbeReport report = probe.run(Set.of());
 
         for (RewindRoundTripProbe.GapRecord gap : report.realGaps()) {
             assertFalse(gap.className().isBlank(),

@@ -15,7 +15,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -249,11 +248,4 @@ public class TestEveryObjectRewindRoundTrip {
                         + ". Shrink UNPROBED_ALLOWANCE or make objects headlessly constructable.");
     }
 
-    // =========================================================================
-    // Helpers
-    // =========================================================================
-
-    private static Set<String> allGameCodecClassNames() {
-        return Set.of();
-    }
 }

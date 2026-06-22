@@ -32,6 +32,16 @@ class TestStaleRewindCodecHelperCleanup {
             "rewindDynamicObjectCodec" + "For";
     private static final String DELETED_DYNAMIC_OBJECT_REWIND_CODEC =
             "DynamicObjectRewind" + "Codec";
+    private static final String DELETED_DYNAMIC_CODEC_INVENTORY_OPTION =
+            "--dynamic-" + "codec-inventory";
+    private static final String DELETED_DYNAMIC_CODEC_INVENTORY_METHOD =
+            "dynamic" + "CodecInventory";
+    private static final String DELETED_DYNAMIC_CODEC_INVENTORY_ENTRY =
+            "Dynamic" + "CodecInventoryEntry";
+    private static final String DELETED_ALL_GAME_CODEC_CLASS_NAMES =
+            "allGame" + "CodecClassNames";
+    private static final String DELETED_PRINT_DYNAMIC_CODEC_INVENTORY =
+            "printDynamic" + "CodecInventory";
     private static final List<String> STALE_DYNAMIC_OBJECT_CODEC_PHRASES = List.of(
             "the " + "codec passes",
             "after the " + "codec recreates",
@@ -99,6 +109,20 @@ class TestStaleRewindCodecHelperCleanup {
     void sourcesDoNotReferenceDeletedDynamicObjectRestoreCodecType() throws IOException {
         assertNoSourceReferences(DELETED_DYNAMIC_OBJECT_REWIND_CODEC,
                 "Deleted dynamic-object rewind codec interface is still referenced in ");
+    }
+
+    @Test
+    void sourcesDoNotReferenceDeletedDynamicCodecInventoryHelpers() throws IOException {
+        assertNoSourceReferences(DELETED_DYNAMIC_CODEC_INVENTORY_OPTION,
+                "Deleted dynamic-codec inventory CLI option is still referenced in ");
+        assertNoSourceReferences(DELETED_DYNAMIC_CODEC_INVENTORY_METHOD,
+                "Deleted dynamic-codec inventory helper is still referenced in ");
+        assertNoSourceReferences(DELETED_DYNAMIC_CODEC_INVENTORY_ENTRY,
+                "Deleted dynamic-codec inventory entry type is still referenced in ");
+        assertNoSourceReferences(DELETED_ALL_GAME_CODEC_CLASS_NAMES,
+                "Deleted game-codec class-name helper is still referenced in ");
+        assertNoSourceReferences(DELETED_PRINT_DYNAMIC_CODEC_INVENTORY,
+                "Deleted dynamic-codec inventory printer is still referenced in ");
     }
 
     @Test

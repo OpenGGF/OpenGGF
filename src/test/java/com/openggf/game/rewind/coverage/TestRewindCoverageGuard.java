@@ -9,16 +9,11 @@ class TestRewindCoverageGuard {
     private static final Path BASELINE =
             Path.of("src/test/resources/rewind/coverage-baseline.txt");
 
-    /** Explicit dynamic codecs have been deleted; recreate coverage comes from RewindRecreatable. */
-    private static Set<String> allGameCodecClassNames() {
-        return Set.of();
-    }
-
     @Test
     void noNewCoverageGapsBeyondBaseline() throws Exception {
         // Compare stable gap KEYS, not class names: class#recreate,
         // class#finalScalar#field, class#objectRef#field.
-        Set<String> current = new TreeSet<>(RewindCoverageAnalyzer.analyzeAll(allGameCodecClassNames()).gapKeys());
+        Set<String> current = new TreeSet<>(RewindCoverageAnalyzer.analyzeAll(Set.of()).gapKeys());
         Set<String> baseline = new TreeSet<>(Files.readAllLines(BASELINE));
         baseline.removeIf(String::isBlank);
 
