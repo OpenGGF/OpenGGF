@@ -15,6 +15,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SpringBounceHelper;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -38,7 +39,7 @@ import java.util.List;
  * No flip/twirl subtype bit (S2-only feature).
  */
 public class Sonic1SpringObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final int TYPE_UP = 0;
     private static final int TYPE_HORIZONTAL = 1;

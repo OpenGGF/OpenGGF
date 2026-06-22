@@ -11,6 +11,7 @@ import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -35,7 +36,7 @@ import java.util.logging.Logger;
  *   <li>Frame 3 (.red): Pole + red ball (visited)</li>
  * </ul>
  */
-public class Sonic1LamppostObjectInstance extends AbstractObjectInstance {
+public class Sonic1LamppostObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1LamppostObjectInstance.class.getName());
 
     // Mapping frame indices from Map_Lamp_internal
