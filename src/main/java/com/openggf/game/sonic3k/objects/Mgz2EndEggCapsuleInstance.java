@@ -7,8 +7,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 
 /**
  * MGZ2 floating end capsule.
@@ -18,7 +17,7 @@ import com.openggf.level.objects.RewindRecreateContext;
  * finish before running {@code loc_6D104}, the MGZ-to-CNZ palette fade.
  */
 public class Mgz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleInstance
-        implements RewindRecreatable {
+        implements SpawnCoordinateRewindRecreatable {
 
     public Mgz2EndEggCapsuleInstance(int initialX, int initialY) {
         super(initialX, initialY, "MGZ2EndEggCapsule");
@@ -30,11 +29,6 @@ public class Mgz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
 
     public static Mgz2EndEggCapsuleInstance createForCamera(int cameraX, int cameraY) {
         return new Mgz2EndEggCapsuleInstance(cameraX + X_OFFSET, cameraY + Y_START_OFFSET);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Mgz2EndEggCapsuleInstance(ctx.spawn().x(), ctx.spawn().y());
     }
 
     @Override

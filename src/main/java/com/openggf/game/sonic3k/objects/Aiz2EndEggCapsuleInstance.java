@@ -4,8 +4,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -13,7 +12,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * Floating upside-down egg prison used by the AIZ2 post-boss cutscene.
  */
 public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleInstance
-        implements RewindRecreatable {
+        implements SpawnCoordinateRewindRecreatable {
     private static final int RESULTS_OWNER_TAILS_ENDING_POSE_ENTRY = 6;
 
     private boolean tailsEndingPoseApplied;
@@ -34,11 +33,6 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
 
     public static Aiz2EndEggCapsuleInstance createForCamera(int cameraX, int cameraY) {
         return new Aiz2EndEggCapsuleInstance(cameraX + X_OFFSET, cameraY + Y_START_OFFSET, true);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Aiz2EndEggCapsuleInstance(ctx.spawn().x(), ctx.spawn().y());
     }
 
     @Override

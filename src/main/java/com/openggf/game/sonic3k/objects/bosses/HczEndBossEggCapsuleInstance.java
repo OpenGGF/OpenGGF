@@ -17,8 +17,7 @@ import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -48,7 +47,7 @@ import java.util.logging.Logger;
  * Button detection: SolidObjectFull with small hitbox d1=$1B, d2=4, d3=6.
  */
 public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, SpawnCoordinateRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(HczEndBossEggCapsuleInstance.class.getName());
 
     private static final int OBJECT_ID = Sonic3kObjectIds.EGG_CAPSULE;
@@ -96,11 +95,6 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
 
     private HczEndBossEggCapsuleInstance() {
         this(0, 0);
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new HczEndBossEggCapsuleInstance(ctx.spawn().x(), ctx.spawn().y());
     }
 
     // ===== Position / lifecycle =====

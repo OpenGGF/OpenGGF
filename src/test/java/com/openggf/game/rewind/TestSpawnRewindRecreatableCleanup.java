@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import org.junit.jupiter.api.Test;
 
@@ -63,6 +64,16 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyShotChild",
             "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance");
 
+    private static final List<String> SPAWN_COORDINATE_RECREATORS = List.of(
+            "com.openggf.game.sonic2.objects.bosses.LavaBubbleObjectInstance",
+            "com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance",
+            "com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile",
+            "com.openggf.game.sonic3k.objects.Mgz2EndEggCapsuleInstance",
+            "com.openggf.game.sonic3k.objects.S3kBossExplosionChild",
+            "com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance",
+            "com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance",
+            "com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance");
+
     @Test
     void spawnOnlyRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_ONLY_RECREATORS) {
@@ -78,6 +89,24 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void spawnCoordinateRecreatorsUseMarkerInterface() {
+        for (String className : SPAWN_COORDINATE_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(SpawnCoordinateRewindRecreatable.class.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the spawn-coordinate recreate hook");
+        }
+    }
+
+    @Test
+    void spawnCoordinateRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : SPAWN_COORDINATE_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use SpawnCoordinateRewindRecreatable's default hook");
         }
     }
 
