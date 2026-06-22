@@ -26,7 +26,7 @@ import java.util.List;
  * both sign-extended. Index is a byte value masked by 0x3E (0-62 even = 32 entries).
  */
 public class InvincibilityStarsObjectInstance extends AbstractObjectInstance
-        implements PowerUpObject, RewindRecreatable {
+        implements PowerUpObject, PlayerBoundInvincibilityStarsRewindRecreatable {
     private final PlayableEntity player;
     private final PatternSpriteRenderer renderer;
     private Boolean sonic1TrailMode;
@@ -270,11 +270,4 @@ public class InvincibilityStarsObjectInstance extends AbstractObjectInstance
         return true;
     }
 
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        // Player-bound stars are recreated by the post-restore player refresh
-        // so the live player, captured slot, and captured animation state stay aligned.
-        ctx.enqueuePendingPlayerBoundEntry(InvincibilityStarsObjectInstance.class);
-        return null;
-    }
 }

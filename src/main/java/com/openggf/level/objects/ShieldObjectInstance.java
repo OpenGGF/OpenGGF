@@ -15,7 +15,8 @@ import com.openggf.game.rewind.RewindTransient;
 
 import java.util.List;
 
-public class ShieldObjectInstance extends AbstractObjectInstance implements PowerUpObject, RewindRecreatable {
+public class ShieldObjectInstance extends AbstractObjectInstance
+        implements PowerUpObject, PlayerBoundShieldRewindRecreatable {
     @RewindTransient(reason = "player binding is structural and restored by the power-up spawner")
     private final PlayableEntity player;
     private final PatternSpriteRenderer renderer;
@@ -129,11 +130,4 @@ public class ShieldObjectInstance extends AbstractObjectInstance implements Powe
         return sequenceIndex;
     }
 
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        // Player-bound shields are recreated by the post-restore player refresh
-        // so the live player, concrete shield type, slot, and captured state stay aligned.
-        ctx.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class);
-        return null;
-    }
 }

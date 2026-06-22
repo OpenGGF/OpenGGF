@@ -185,6 +185,13 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic2.objects.ResultsScreenObjectInstance",
             "com.openggf.game.sonic3k.objects.AizBgTreeInstance");
 
+    private static final List<String> PLAYER_BOUND_SHIELD_RECREATORS = List.of(
+            "com.openggf.level.objects.ShieldObjectInstance");
+
+    private static final List<String> PLAYER_BOUND_INVINCIBILITY_STARS_RECREATORS = List.of(
+            "com.openggf.level.objects.InvincibilityStarsObjectInstance",
+            "com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance");
+
     @Test
     void spawnOnlyRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_ONLY_RECREATORS) {
@@ -519,6 +526,47 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use ZeroScalarArgsRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void playerBoundShieldRecreatorsUseMarkerInterface() {
+        Class<?> marker = loadClass("com.openggf.level.objects.PlayerBoundShieldRewindRecreatable");
+        for (String className : PLAYER_BOUND_SHIELD_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(marker.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the player-bound shield recreate hook");
+        }
+    }
+
+    @Test
+    void playerBoundShieldRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : PLAYER_BOUND_SHIELD_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use PlayerBoundShieldRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void playerBoundInvincibilityStarsRecreatorsUseMarkerInterface() {
+        Class<?> marker = loadClass(
+                "com.openggf.level.objects.PlayerBoundInvincibilityStarsRewindRecreatable");
+        for (String className : PLAYER_BOUND_INVINCIBILITY_STARS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(marker.isAssignableFrom(cls),
+                    cls.getName()
+                            + " should inherit the player-bound invincibility-stars recreate hook");
+        }
+    }
+
+    @Test
+    void playerBoundInvincibilityStarsRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : PLAYER_BOUND_INVINCIBILITY_STARS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName()
+                            + " should use PlayerBoundInvincibilityStarsRewindRecreatable's default hook");
         }
     }
 

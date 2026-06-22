@@ -5,10 +5,8 @@ import com.openggf.game.PowerUpObject;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.InvincibilityStarsObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.PlayerBoundInvincibilityStarsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 
@@ -32,7 +30,7 @@ import java.util.List;
  * Rotation direction reverses when the player faces left.
  */
 public class Sonic3kInvincibilityStarsObjectInstance extends AbstractObjectInstance
-        implements PowerUpObject, RewindRecreatable {
+        implements PowerUpObject, PlayerBoundInvincibilityStarsRewindRecreatable {
     private final PlayableEntity player;
     private final PatternSpriteRenderer renderer;
 
@@ -189,11 +187,4 @@ public class Sonic3kInvincibilityStarsObjectInstance extends AbstractObjectInsta
         return true;
     }
 
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        // Player-bound stars are recreated by the post-restore player refresh
-        // so the live player, captured slot, and captured animation state stay aligned.
-        ctx.enqueuePendingPlayerBoundEntry(InvincibilityStarsObjectInstance.class);
-        return null;
-    }
 }
