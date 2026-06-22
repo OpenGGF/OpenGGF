@@ -9,8 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -35,7 +34,7 @@ import java.util.List;
  * <p>
  * Animation selection is based on terrain angle (flat/upslope/downslope) via Crab_SetAni.
  */
-public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
 
     // From disassembly: obColType = 6 (enemy, collision size index 6)
     // Size 6: width=$14 (20px), height=$14 (20px)
@@ -114,11 +113,6 @@ public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance impleme
         this.initialized = false;
         this.baseAnimIndex = 0;
         this.renderedFrame = 0;
-    }
-
-    @Override
-    public Sonic1CrabmeatBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1CrabmeatBadnikInstance(ctx.spawn());
     }
 
     @Override

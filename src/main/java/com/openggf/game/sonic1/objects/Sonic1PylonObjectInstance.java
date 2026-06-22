@@ -3,8 +3,7 @@ import com.openggf.game.PlayableEntity;
 
 import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -49,7 +48,7 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/5C Pylon.asm
  */
-public class Sonic1PylonObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class Sonic1PylonObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     // From disassembly: move.b #$10,obActWid(a0)
     private static final int ACTIVE_WIDTH = 0x10;
@@ -62,11 +61,6 @@ public class Sonic1PylonObjectInstance extends AbstractObjectInstance implements
 
     public Sonic1PylonObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Pylon");
-    }
-
-    @Override
-    public Sonic1PylonObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1PylonObjectInstance(ctx.spawn());
     }
 
     /**

@@ -8,8 +8,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -38,7 +37,7 @@ import java.util.List;
  *   <li>2 (still): frame 0 at speed 7 - used when below threshold and descending</li>
  * </ul>
  */
-public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
 
     // From disassembly: obColType = $9 (enemy, collision size index $9)
     private static final int COLLISION_SIZE_INDEX = 0x09;
@@ -81,11 +80,6 @@ public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance implemen
         this.yVelocity = INITIAL_Y_VELOCITY;
         this.currentAnim = ANIM_FAST;
         this.animTickCounter = 0;
-    }
-
-    @Override
-    public Sonic1ChopperBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1ChopperBadnikInstance(ctx.spawn());
     }
 
     @Override

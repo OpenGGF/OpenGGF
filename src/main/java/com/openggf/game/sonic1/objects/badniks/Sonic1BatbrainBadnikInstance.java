@@ -13,8 +13,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -54,7 +53,7 @@ import java.util.List;
  *   <li>2 (.fly): frames 1, 2, 3, 2 at speed 3 - wing flapping cycle</li>
  * </ul>
  */
-public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
 
     // From disassembly: obColType = $B (enemy category 0x00, size index $0B)
     private static final int COLLISION_SIZE_INDEX = 0x0B;
@@ -124,11 +123,6 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance impleme
         this.yVelocity = 0;
         this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
         this.targetY = 0;
-    }
-
-    @Override
-    public Sonic1BatbrainBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1BatbrainBadnikInstance(ctx.spawn());
     }
 
     @Override

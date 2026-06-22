@@ -10,8 +10,7 @@ import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseResult;
@@ -52,7 +51,7 @@ import java.util.List;
  * </ul>
  */
 public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
-        implements TouchResponseListener, RewindRecreatable {
+        implements TouchResponseListener, SpawnRewindRecreatable {
 
     // From disassembly: obColType = $CC
     // Upper 2 bits ($C0) = collision category, lower 6 bits ($0C) = size index
@@ -112,11 +111,6 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
         this.fallVelocity = 0;
         this.initialized = false;
         this.walkAnimIndex = 0;
-    }
-
-    @Override
-    public Sonic1YadrinBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1YadrinBadnikInstance(ctx.spawn());
     }
 
     @Override

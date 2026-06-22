@@ -4,8 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.audio.AudioManager;
 import com.openggf.game.sonic1.Sonic1ZoneFeatureProvider;
 import com.openggf.game.ZoneFeatureProvider;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -26,7 +25,7 @@ import java.util.List;
  * ROM reference: docs/s1disasm/_incObj/0C Flapping Door.asm
  */
 public class Sonic1FlappingDoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final int FRAME_DURATION = 3;
 
@@ -59,11 +58,6 @@ public class Sonic1FlappingDoorObjectInstance extends AbstractObjectInstance
         this.animationTimer = 0;
         this.mappingFrame = 0;
         this.solidActive = false;
-    }
-
-    @Override
-    public Sonic1FlappingDoorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1FlappingDoorObjectInstance(ctx.spawn());
     }
 
     @Override

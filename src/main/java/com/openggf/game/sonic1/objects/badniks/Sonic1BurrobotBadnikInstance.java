@@ -8,8 +8,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -23,7 +22,7 @@ import java.util.List;
  * <p>
  * ROM reference: docs/s1disasm/_incObj/2D Burrobot.asm
  */
-public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x05;
     private static final int Y_RADIUS = 0x13;
@@ -69,11 +68,6 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance impleme
 
         this.animationId = ANIM_DIGGING;
         this.animationTick = 0;
-    }
-
-    @Override
-    public Sonic1BurrobotBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1BurrobotBadnikInstance(ctx.spawn());
     }
 
     @Override

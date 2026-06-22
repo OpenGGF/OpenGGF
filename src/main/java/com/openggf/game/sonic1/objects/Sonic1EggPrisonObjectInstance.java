@@ -13,8 +13,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -42,7 +41,7 @@ import java.util.logging.Logger;
  * </ol>
  */
 public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1EggPrisonObjectInstance.class.getName());
 
     // === Solid collision from Pri_BodyMain: d1=$2B, d2=$18, d3=$18 ===
@@ -110,11 +109,6 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
 
     public Sonic1EggPrisonObjectInstance(ObjectSpawn spawn) {
         super(spawn, "EggPrison");
-    }
-
-    @Override
-    public Sonic1EggPrisonObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1EggPrisonObjectInstance(ctx.spawn());
     }
 
     /**
