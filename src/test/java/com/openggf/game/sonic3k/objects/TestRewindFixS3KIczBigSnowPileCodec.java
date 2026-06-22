@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -8,7 +9,6 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kICZEvents;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
@@ -128,9 +128,7 @@ class TestRewindFixS3KIczBigSnowPileCodec {
     }
 
     private static boolean hasExplicitCodec(Class<?> targetClass) {
-        return java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
-                .map(DynamicObjectRewindCodec::className)
-                .anyMatch(targetClass.getName()::equals);
+        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(targetClass.getName());
     }
 
     private List<IczBigSnowPileInstance> liveSnowPiles() {

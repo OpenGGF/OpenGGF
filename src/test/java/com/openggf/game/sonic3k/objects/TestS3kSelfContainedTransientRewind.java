@@ -5,6 +5,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
@@ -731,8 +732,7 @@ class TestS3kSelfContainedTransientRewind {
     }
 
     private static void assertNoRegisteredS3kDynamicCodec(Class<?> type) {
-        boolean hasCodec = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
-                .anyMatch(codec -> type.getName().equals(codec.className()));
+        boolean hasCodec = DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(type.getName());
         assertFalse(hasCodec, type.getSimpleName()
                 + " must restore through RewindRecreatable generic recreate, not an explicit S3K dynamic codec");
     }

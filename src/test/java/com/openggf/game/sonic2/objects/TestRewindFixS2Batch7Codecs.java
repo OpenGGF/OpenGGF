@@ -1,13 +1,11 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRoundTripHarness;
 import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -25,12 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 class TestRewindFixS2Batch7Codecs {
 
     private static Set<String> codecClassNames() {
-        Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of();
-        for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        return names;
+        return DeletedDynamicRewindCodecs.classNames();
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
@@ -413,8 +414,7 @@ class TestS2SelfContainedTransientRewind {
     }
 
     private static void assertNoRegisteredS2DynamicCodec(Class<?> type) {
-        boolean hasCodec = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
-                .anyMatch(codec -> type.getName().equals(codec.className()));
+        boolean hasCodec = DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(type.getName());
         assertFalse(hasCodec, type.getSimpleName()
                 + " must restore through RewindRecreatable generic recreate, not an explicit S2 dynamic codec");
     }

@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
@@ -13,7 +14,6 @@ import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
-import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -322,9 +322,7 @@ class TestS3kLbz1CutsceneGraphRewind {
     }
 
     private static boolean hasRegisteredS3kCodec(String fqn) {
-        ObjectRegistry registry = new Sonic3kObjectRegistry();
-        return java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
-                .anyMatch(codec -> fqn.equals(codec.className()));
+        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(fqn);
     }
 
     private static ObjectRefId objectId(ObjectManager objectManager, ObjectInstance object) {

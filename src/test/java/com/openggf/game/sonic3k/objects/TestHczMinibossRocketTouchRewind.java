@@ -2,11 +2,11 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -199,11 +199,6 @@ class TestHczMinibossRocketTouchRewind {
     }
 
     private static boolean hasExplicitRocketTouchCodec() {
-        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
-            if (ROCKET_TOUCH_CLASS.equals(codec.className())) {
-                return true;
-            }
-        }
-        return false;
+        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ROCKET_TOUCH_CLASS);
     }
 }
