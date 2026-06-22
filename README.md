@@ -264,6 +264,8 @@ Highlights:
 
 - Jump headroom: the ceiling probe no longer double-applies the ROM `eori #$F` Y-flip (the probe pre-applied it and `GroundSensor.verticalTileLookupY` applied it again), which had under-reported ceiling clearance and wrongly blocked jumps ROM performs (Spring Yard `SYZ2` trace frontier f1088 -> f6845, 311 -> 55 errors; shared S1/S2/S3K player-physics, GHZ2 stays green).
 
+- Moving-platform ride-off ordering: a rider walking off a horizontally-sliding Obj18 platform now uses the platform's pre-move x for the walk-off bounds and applies ROM `MvSonicOnPtfm2`'s unconditional final carry (matching ROM's ExitPlatform-before-Plat_Move order), so the engine no longer drops the rider one frame early. **This greens the Spring Yard `SYZ2` complete-run trace — the second fully passing S1 complete-run trace replay** (shared S1/S2/S3K solid-contact code; GHZ2 stays green, S3K CNZ/MGZ platform traces byte-identical).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)
