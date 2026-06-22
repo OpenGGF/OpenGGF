@@ -18449,3 +18449,26 @@ to ROM's player-slot frame (likely run the box-check/give in the player touch
 pass via LevelManager.applyTouchResponses, not the post-physics RingManager.update
 tick), then verify no S3K ring-attraction regressions. This is the sole 1-fix
 (double-green MGZ1 + MGZ-CR) count-drop target.
+
+### 2026-06-22 final-2 - S3K MGZ rings: engine-frame phase RULED OUT (root is upstream)
+
+Moving the entire lightning-attraction (box-check + flight + give) out of the
+post-physics RingManager.update tick into the player touch pass
+(LevelManager.applyTouchResponses, gated to the main !isCpuControlled player,
+extracted as RingManager.updateLightningAttraction) compiled and ran, attraction
+still fired (rings reached 11), but the report was UNCHANGED (rings f539 10 vs 11).
+Reverted (no benefit, unverified, high blast radius).
+
+Conclusion — three hypotheses now ruled out by tested code:
+1. Attraction box geometry — CONFIRMED ROM-correct (±70).
+2. Give-overlap pre/post-move timing — reorder defers give 1 fc, no trace effect.
+3. Engine-frame phase (where attraction runs in the frame) — moving it to the
+   touch pass had no trace effect; the give lands at trace f539 regardless.
+
+Therefore the 1-trace-frame-early give is UPSTREAM of the attraction mechanics:
+either the lightning shield is acquired one frame early (monitor-break object-exec
+timing -> attraction starts a frame early) or ROM collects this ring normally
+rather than attracting it. MGZ1 compares only `rings`, so a shield-acquisition
+timing skew would surface solely as this rings delta. Next step requires a BizHawk
+capture of ROM's status_secondary (lightning bit) + Ring_consumption state across
+f535-540 to determine shield-acquire frame vs the engine, then fix that timing.
