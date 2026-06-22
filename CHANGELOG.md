@@ -48,6 +48,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S3K SS-entry flash rewind graph restore:** special-stage entry flash effects now restore through graph-tested generic recreate with exact parent-ring relinks while deleting their dynamic codec.
 - **S3K nested hurtbox rewind graph restore:** MGZ miniboss drill arms and ICZ ice-spike hurt children now restore through graph-tested generic recreate with exact parent relinks while deleting their dynamic codecs.
 - **S3K cutscene Knuckles rewind graph restore:** AIZ rock children and CNZ2 blocking walls now restore through graph-tested generic recreate with exact parent/owner relinks while deleting their dynamic codecs.
+- **S3K invisible block rewind restore:** invisible blocks and invisible hurt blocks now restore through spawn-based generic recreate, clearing their rewind coverage gaps.
 - **S2 Egg Prison button rewind graph restore:** Egg-prison buttons now restore through graph-tested generic recreate with exact parent/button relinks while deleting their dynamic codec.
 - **S2 OOZ burner flame rewind graph restore:** burner flame children now restore through graph-tested generic recreate with exact platform relinks while deleting their dynamic codec.
 - **Gameplay rewind performance:** reduced multi-sidekick keyframe capture cost by omitting unused terminal sidekick follow-history arrays and empty sidekick touch-overlap snapshots, with a deterministic 20-sidekick rewind/replay performance trace.

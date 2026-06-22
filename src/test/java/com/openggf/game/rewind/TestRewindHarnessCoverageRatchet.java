@@ -175,12 +175,14 @@ public class TestRewindHarnessCoverageRatchet {
  *       other-failure tail in the round-trip harness, including S2 HTZ boss
  *       children, S3K badnik/cutscene/miniboss children, and the SS-entry
  *       flash child.</li>
+ *   <li>2026-06-22: raised to 147 after adding generic recreate coverage for
+ *       the S3K invisible block and invisible hurt block family.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 144;
+    static final int RATCHET_FLOOR = 147;
 
     @BeforeEach
     void initHeadless() {

@@ -1442,15 +1442,6 @@ com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$Collaps
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#priority
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#x
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#recreate
-com.openggf.game.sonic3k.objects.Sonic3kInvisibleBlockObjectInstance#finalScalar#halfHeight
-com.openggf.game.sonic3k.objects.Sonic3kInvisibleBlockObjectInstance#finalScalar#halfWidth
-com.openggf.game.sonic3k.objects.Sonic3kInvisibleBlockObjectInstance#recreate
-com.openggf.game.sonic3k.objects.Sonic3kInvisibleHurtBlockHObjectInstance#finalScalar#halfHeight
-com.openggf.game.sonic3k.objects.Sonic3kInvisibleHurtBlockHObjectInstance#finalScalar#halfWidth
-com.openggf.game.sonic3k.objects.Sonic3kInvisibleHurtBlockHObjectInstance#recreate
-com.openggf.game.sonic3k.objects.Sonic3kInvisibleHurtBlockVObjectInstance#finalScalar#halfHeight
-com.openggf.game.sonic3k.objects.Sonic3kInvisibleHurtBlockVObjectInstance#finalScalar#halfWidth
-com.openggf.game.sonic3k.objects.Sonic3kInvisibleHurtBlockVObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#finalScalar#type
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#objectRef#monitorContentsSlot
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#recreate

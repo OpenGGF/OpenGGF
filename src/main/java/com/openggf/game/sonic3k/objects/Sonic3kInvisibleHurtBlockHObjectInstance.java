@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.DamageCause;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SolidContact;
 
 /**
@@ -22,6 +23,11 @@ public class Sonic3kInvisibleHurtBlockHObjectInstance extends Sonic3kInvisibleBl
 
     public Sonic3kInvisibleHurtBlockHObjectInstance(ObjectSpawn spawn) {
         super(spawn, "InvisibleHurtBlockH");
+    }
+
+    @Override
+    public Sonic3kInvisibleHurtBlockHObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic3kInvisibleHurtBlockHObjectInstance(ctx.spawn());
     }
 
     @Override
