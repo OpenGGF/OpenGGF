@@ -278,6 +278,8 @@ Highlights:
 
 - Counter-respawn badniks that self-delete when they walk off-screen (e.g. the MZ Caterkiller) now clear their respawn-suppression bit on removal (ROM `Cat_Despawn` / `RememberState` bit-7 clear), so they respawn when the player returns instead of staying permanently gone — fixing a missed enemy bounce (S1 MZ2 trace frontier f2578 -> f2819; S1 counter-respawn path only, player-kills still suppress respawn, GHZ2 stays green).
 
+- Riding off a vertically-bobbing moving platform (Obj18 / Obj52 moving block / Obj59 elevator) now re-seats the rider's Y to the platform's moved surface on the walk-off frame (ROM's unconditional `MvSonicOnPtfm2`), completing the exit-frame fidelity the earlier X-carry fix began — so the rider tracks a bobbing platform's last frame instead of holding the pre-move Y (SYZ3 trace frontier f3476 -> f6065; gated to the three platform routines that call MvSonicOnPtfm2, GHZ2 + SYZ2 stay green).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)
