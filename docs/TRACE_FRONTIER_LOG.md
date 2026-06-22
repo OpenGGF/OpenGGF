@@ -144,6 +144,15 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - S2 CPU sidekick push-bypass auto-jump re-trigger advances HTZ2 to f3315
+
+- Branch/worktree context: `bugfix/ai-htz2-f1343-tails-autojump` (worktree off `develop`, base already carries the Rexon-stagger fix that put HTZ2 at f1343).
+- Command: `mvn -q -Dmse=relaxed test "-Dtest=TestS2Htz2LevelSelectTraceReplay" -DfailIfNoTests=false "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- First error before: f1343 `tails_x_speed` expected=0x0030 actual=0x003C. First error after: f3315 `tails_x_speed` expected=0x01E8 actual=0x00E8. Status: still red at the new (unrelated) frontier; HTZ2 advanced ~1972 frames, error count 1359 -> 1059.
+- Root cause: at f1343 ROM's CPU Tails presses jump (`ctrl2_pressed=0x10` = button B) via the auto-jump trigger gate while grounded and pushing the HTZ breakable block (Obj32); `y_speed` becomes -0680 and Tails goes air+rolling. The engine kept Tails grounded (`gen=0008`, no jump). The engine's `Tails_CPU_jumping` latch (`jumpingFlag`) was stuck set from the prior `$3F`-cadence jump and was never cleared because the grounded-clear (ROM `loc_13E64` / S2 `FilterAction`) is skipped on the push-bypass path. The trigger gate was guarded by `if (!jumpingFlag)`, so the held latch blocked the legitimate re-trigger. ROM's push-bypass route branches **directly** to the trigger gate (`loc_13E9C` / `FilterAction_Part2`), which never consults the latch (S3K `loc_13DD0` sonic3k.asm:26702-26705; S2 s2.asm:39297-39300; gate s2.asm:39015-39022).
+- Fix: `SidekickCpuController.updateNormal()` gate widened from `if (!jumpingFlag)` to `if (!jumpingFlag || autoJumpPushBypass)`. Shared S2/S3K CPU code, driven by real push state (no zone carve-out).
+- Regression sweep (this branch vs clean develop baseline, first-error frame is the metric): all S2 traces identical first-error frame — ARZ2 f523, CPZ f3365, CPZ2 f2889, DEZ f4007, MCZ2 f4485, MTZ f1267, MTZ2 f1265, OOZ f1782, OOZ2 f1070, HTZ1 f6114, MTZ3 f1973; CNZ1 f1691 and CNZ2 f4418 same first-error frame (downstream count only, 532->549 / 982->999); ARZ1/MCZ1/SCZ/WFZ/EHZ1 green both. S3K AIZ level-select f19089 and complete-run f1095 byte-identical to baseline. S1 credits GHZ1/MZ2 green. TestSidekickCpuFollowParity unchanged at its 2 pre-existing develop-baseline failures. No frontier regressed.
+
 ## 2026-06-22 - S2 Rexon head oscillation stagger advances HTZ2 to f1343
 
 - Branch/worktree context: `bugfix/ai-htz2-f1078-launch` (worktree off `develop`).
