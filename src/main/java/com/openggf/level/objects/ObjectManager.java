@@ -66,8 +66,6 @@ public class ObjectManager {
     static final int ANIM_SPINDASH = 0x09;
     private static final List<DynamicObjectRewindCodec> TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS =
             new CopyOnWriteArrayList<>();
-    private static final List<DynamicObjectRewindCodec> SHARED_REWIND_DYNAMIC_OBJECT_CODECS =
-            ObjectRewindDynamicCodecs.sharedCodecs();
 
     private final ObjectPlacementController placement;
     private final ObjectRegistry registry;
@@ -3866,11 +3864,6 @@ public class ObjectManager {
                 return Optional.of(codec);
             }
         }
-        for (DynamicObjectRewindCodec codec : SHARED_REWIND_DYNAMIC_OBJECT_CODECS) {
-            if (codec.supports(inst)) {
-                return Optional.of(codec);
-            }
-        }
         for (DynamicObjectRewindCodec codec : registryDynamicRewindCodecs(registry)) {
             if (codec.supports(inst)) {
                 return Optional.of(codec);
@@ -3882,11 +3875,6 @@ public class ObjectManager {
     private static Optional<DynamicObjectRewindCodec> rewindDynamicObjectCodecForClassName(
             String className, ObjectRegistry registry) {
         for (DynamicObjectRewindCodec codec : TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS) {
-            if (codec.className().equals(className)) {
-                return Optional.of(codec);
-            }
-        }
-        for (DynamicObjectRewindCodec codec : SHARED_REWIND_DYNAMIC_OBJECT_CODECS) {
             if (codec.className().equals(className)) {
                 return Optional.of(codec);
             }
