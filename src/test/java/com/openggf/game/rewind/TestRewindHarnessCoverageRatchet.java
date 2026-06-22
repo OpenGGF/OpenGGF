@@ -215,12 +215,15 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-22: raised to 214 after deleting the shared signpost-sparkle
  *       exact-spawn dynamic codec and adding generic recreate probe support for
  *       (int,int).</li>
+ *   <li>2026-06-22: raised to 219 after adding RewindRecreatable-only
+ *       (ObjectSpawn,int) probe support, making the S1 ROM-zone constructor
+ *       family and AizBattleship headlessly verified.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 214;
+    static final int RATCHET_FLOOR = 219;
 
     @BeforeEach
     void initHeadless() {

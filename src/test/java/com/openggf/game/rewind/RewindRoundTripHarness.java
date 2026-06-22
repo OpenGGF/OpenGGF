@@ -813,7 +813,19 @@ public final class RewindRoundTripHarness {
         }
 
         if (RewindRecreatable.class.isAssignableFrom(cls)) {
-            // Strategy 7: (int, int) — primitive-only coordinate generic-recreate object.
+            // Strategy 7: (ObjectSpawn, int) — generic-recreate object with one
+            // scalar placeholder constructor value, e.g. zone-dependent data id.
+            Constructor<? extends AbstractObjectInstance> spawnIntCtor =
+                    findCtor(cls, ObjectSpawn.class, int.class);
+            if (spawnIntCtor != null) {
+                try {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(spawnIntCtor, PROBE_SPAWN, 0));
+                } catch (Throwable ignored) {
+                }
+            }
+
+            // Strategy 8: (int, int) — primitive-only coordinate generic-recreate object.
             Constructor<? extends AbstractObjectInstance> intIntCtor =
                     findCtor(cls, int.class, int.class);
             if (intIntCtor != null) {
@@ -824,7 +836,7 @@ public final class RewindRoundTripHarness {
                 }
             }
 
-            // Strategy 8: (int, int, int) — primitive-only generic-recreate object.
+            // Strategy 9: (int, int, int) — primitive-only generic-recreate object.
             Constructor<? extends AbstractObjectInstance> ctor6 =
                     findCtor(cls, int.class, int.class, int.class);
             if (ctor6 != null) {
@@ -835,7 +847,7 @@ public final class RewindRoundTripHarness {
                 }
             }
 
-            // Strategy 9: (int, int, int, int) — primitive-only generic-recreate object.
+            // Strategy 10: (int, int, int, int) — primitive-only generic-recreate object.
             Constructor<? extends AbstractObjectInstance> ctor7 =
                     findCtor(cls, int.class, int.class, int.class, int.class);
             if (ctor7 != null) {
@@ -846,7 +858,7 @@ public final class RewindRoundTripHarness {
                 }
             }
 
-            // Strategy 10: (int, int, int, boolean) — primitive-only generic-recreate object.
+            // Strategy 11: (int, int, int, boolean) — primitive-only generic-recreate object.
             Constructor<? extends AbstractObjectInstance> ctor8 =
                     findCtor(cls, int.class, int.class, int.class, boolean.class);
             if (ctor8 != null) {
@@ -877,7 +889,7 @@ public final class RewindRoundTripHarness {
                         + " (tried zero-arg, (ObjectSpawn), (ObjectSpawn,String),"
                         + " (ObjectSpawn,ObjectServices), (ObjectSpawn,boolean),"
                         + " (ObjectSpawn,ObjectServices,int),"
-                        + " (int,int), (int,int,int),"
+                        + " (ObjectSpawn,int), (int,int), (int,int,int),"
                         + " (int,int,int,int), (int,int,int,boolean),"
                         + " (ObjectSpawn,ParentType), (ParentType),"
                         + " (ParentType,String), (ParentType,int,int),"
