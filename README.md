@@ -262,6 +262,8 @@ Highlights:
 
 - Sonic 2 Death Egg Zone boss fight: the Death Egg Robot's attack clock now processes ROM's group-animation `$C0` end-marker frame, Silver Sonic keeps `Current_Boss_ID` so the player's right boundary stays boss-strict, and the jet-stomp reads its targeting sensor with ROM's one-frame slot-order latency — collapsing the DEZ1 complete-run trace from 127 to 46 errors (frontier f4007 -> f5952).
 
+- Jump headroom: the ceiling probe no longer double-applies the ROM `eori #$F` Y-flip (the probe pre-applied it and `GroundSensor.verticalTileLookupY` applied it again), which had under-reported ceiling clearance and wrongly blocked jumps ROM performs (Spring Yard `SYZ2` trace frontier f1088 -> f6845, 311 -> 55 errors; shared S1/S2/S3K player-physics, GHZ2 stays green).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)
