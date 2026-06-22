@@ -1,6 +1,5 @@
 package com.openggf.game.sonic2.objects;
 
-import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
 import com.openggf.game.sonic2.objects.bosses.ARZBossEyes;
@@ -9,9 +8,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -25,29 +22,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TestRewindFixS2Batch2Codecs {
 
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
-
     @Test
     void batch2S2ObjectsUseCurrentRewindPaths() {
-        Set<String> names = codecClassNames();
-
-        List<String> phase2Deleted = List.of(
-                ARZBossArrow.class.getName(),
-                ARZBossPillar.class.getName(),
-                GrounderRockProjectile.class.getName(),
-                GrounderWallInstance.class.getName(),
+        List<Class<?>> phase2Deleted = List.of(
+                ARZBossArrow.class,
+                ARZBossPillar.class,
+                GrounderRockProjectile.class,
+                GrounderWallInstance.class,
                 // EHZBossSpike / EHZBossWheel codecs intentionally REMOVED:
                 // construction-spawned children re-established by boss reconstruction
                 // (see TestBossChildNoDoubleSpawnParity / KNOWN_DISCREPANCIES).
-                BalkiryJetObjectInstance.class.getName(),
-                HtzFireProjectileObjectInstance.class.getName(),
-                HtzGroundFireObjectInstance.class.getName(),
-                ArrowProjectileInstance.class.getName());
-        for (String name : phase2Deleted) {
-            assertFalse(names.contains(name),
-                    name + " must restore through RewindRecreatable generic recreate, not a batch-2 codec");
+                BalkiryJetObjectInstance.class,
+                HtzFireProjectileObjectInstance.class,
+                HtzGroundFireObjectInstance.class,
+                ArrowProjectileInstance.class);
+        for (Class<?> type : phase2Deleted) {
+            assertTrue(RewindRecreatable.class.isAssignableFrom(type),
+                    type.getName() + " must restore through RewindRecreatable generic recreate");
         }
 
         assertTrue(RewindRecreatable.class.isAssignableFrom(ARZBossArrow.class),
