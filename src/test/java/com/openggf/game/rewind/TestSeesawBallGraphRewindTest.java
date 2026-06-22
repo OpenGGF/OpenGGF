@@ -16,7 +16,6 @@ import com.openggf.game.sonic2.objects.SeesawObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
@@ -239,9 +238,9 @@ abstract class AbstractSeesawBallGraphRewindTest {
                 "S1 seesaw ball must restore through RewindRecreatable");
         assertTrue(RewindRecreatable.class.isAssignableFrom(SeesawBallObjectInstance.class),
                 "S2 seesaw ball must restore through RewindRecreatable");
-        assertFalse(hasRegisteredDynamicCodec(Sonic1SeesawBallObjectInstance.class.getName(), new Sonic1ObjectRegistry()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(Sonic1SeesawBallObjectInstance.class.getName()),
                 "S1 seesaw ball must not keep an explicit dynamic rewind codec");
-        assertFalse(hasRegisteredDynamicCodec(SeesawBallObjectInstance.class.getName(), new Sonic2ObjectRegistry()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(SeesawBallObjectInstance.class.getName()),
                 "S2 seesaw ball must not keep an explicit dynamic rewind codec");
     }
 
@@ -310,15 +309,6 @@ abstract class AbstractSeesawBallGraphRewindTest {
                 .toList();
         assertEquals(1, matches.size(), "expected one live S2 seesaw at X " + x);
         return matches.getFirst();
-    }
-
-    private static boolean hasRegisteredDynamicCodec(String fqn, ObjectRegistry registry) {
-        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
-            if (fqn.equals(codec.className())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static void adoptS1(Sonic1SeesawObjectInstance parent, Sonic1SeesawBallObjectInstance ball) {

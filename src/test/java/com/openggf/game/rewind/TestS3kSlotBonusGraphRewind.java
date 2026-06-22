@@ -13,7 +13,6 @@ import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
@@ -29,8 +28,6 @@ import java.lang.reflect.Field;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -294,10 +291,7 @@ class TestS3kSlotBonusGraphRewind {
     }
 
     private static boolean hasExplicitCodec(Class<?> targetClass) {
-        Set<String> classNames = java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
-                .map(DynamicObjectRewindCodec::className)
-                .collect(Collectors.toUnmodifiableSet());
-        return classNames.contains(targetClass.getName());
+        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(targetClass.getName());
     }
 
     private static ObjectInstance genericRecreate(

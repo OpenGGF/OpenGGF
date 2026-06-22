@@ -8,7 +8,6 @@ import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
@@ -18,7 +17,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -293,7 +291,7 @@ public class TestBossChildNoDoubleSpawnParity {
      */
     @Test
     void mtzBossConstructionChildrenHaveNoCodecs() {
-        Set<String> codecClassNames = codecClassNames(new Sonic2ObjectRegistry());
+        Set<String> codecClassNames = DeletedDynamicRewindCodecs.classNames();
 
         assertNoCodec(codecClassNames,
                 "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb",
@@ -316,7 +314,7 @@ public class TestBossChildNoDoubleSpawnParity {
      */
     @Test
     void mechaSonicConstructionChildrenHaveNoCodecs() {
-        Set<String> codecClassNames = codecClassNames(new Sonic2ObjectRegistry());
+        Set<String> codecClassNames = DeletedDynamicRewindCodecs.classNames();
 
         assertNoCodec(codecClassNames,
                 "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicLEDWindow",
@@ -332,18 +330,6 @@ public class TestBossChildNoDoubleSpawnParity {
     // =========================================================================
     // Helpers
     // =========================================================================
-
-    /** Collect the binary class names of every registered dynamic rewind codec. */
-    private static Set<String> codecClassNames(Sonic2ObjectRegistry registry) {
-        Set<String> names = new HashSet<>();
-        for (DynamicObjectRewindCodec codec : java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()) {
-            String cn = codec.className();
-            if (cn != null) {
-                names.add(cn);
-            }
-        }
-        return names;
-    }
 
     /** Assert that the given construction-child class has NO registered codec. */
     private static void assertNoCodec(Set<String> codecClassNames, String childClassName,
