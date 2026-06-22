@@ -1,14 +1,10 @@
 package com.openggf.game.sonic2.objects;
 
-import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRoundTripHarness;
 import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 /**
@@ -21,18 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
  * restore reapplies the captured position.
  */
 class TestRewindFixS2Batch7Codecs {
-
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
-
-    @Test
-    void signpostSparkleNoLongerHasRegisteredCodec() {
-        Set<String> names = codecClassNames();
-
-        assertFalse(names.contains(SignpostSparkleObjectInstance.class.getName()),
-                "signpost sparkle should restore through generic recreate, not a dynamic codec");
-    }
 
     @Test
     void signpostSparkleRoundTripsThroughGenericRecreate() {

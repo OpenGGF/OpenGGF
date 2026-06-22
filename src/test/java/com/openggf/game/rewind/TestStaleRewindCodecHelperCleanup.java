@@ -42,6 +42,10 @@ class TestStaleRewindCodecHelperCleanup {
             "allGame" + "CodecClassNames";
     private static final String DELETED_PRINT_DYNAMIC_CODEC_INVENTORY =
             "printDynamic" + "CodecInventory";
+    private static final String DELETED_S2_BATCH7_CLASSNAMES_CALL =
+            "TestRewindFixS2Batch7Codecs.java";
+    private static final String DELETED_DYNAMIC_CODECS_CLASSNAMES_CALL =
+            "DeletedDynamicRewindCodecs." + "classNames()";
     private static final List<String> STALE_DYNAMIC_OBJECT_CODEC_PHRASES = List.of(
             "the " + "codec passes",
             "after the " + "codec recreates",
@@ -126,6 +130,14 @@ class TestStaleRewindCodecHelperCleanup {
     }
 
     @Test
+    void s2Batch7TestDoesNotUseDeletedCodecClassNamesShim() throws IOException {
+        assertNoSourceReferences(
+                DELETED_DYNAMIC_CODECS_CLASSNAMES_CALL,
+                DELETED_S2_BATCH7_CLASSNAMES_CALL,
+                "Deleted test-only dynamic-codec classNames shim is still referenced in ");
+    }
+
+    @Test
     void sourcesDoNotDescribeGenericRecreateAsDynamicObjectCodecs() throws IOException {
         for (String phrase : STALE_DYNAMIC_OBJECT_CODEC_PHRASES) {
             assertNoSourceReferences(phrase,
@@ -134,10 +146,17 @@ class TestStaleRewindCodecHelperCleanup {
     }
 
     private static void assertNoSourceReferences(String needle, String messagePrefix) throws IOException {
+        assertNoSourceReferences(needle, null, messagePrefix);
+    }
+
+    private static void assertNoSourceReferences(
+            String needle, String requiredFileName, String messagePrefix) throws IOException {
         List<Path> staleReferences = new ArrayList<>();
         for (Path root : List.of(Path.of("src/main/java"), Path.of("src/test/java"))) {
             try (Stream<Path> paths = Files.walk(root)) {
                 paths.filter(path -> path.toString().endsWith(".java"))
+                        .filter(path -> requiredFileName == null
+                                || path.getFileName().toString().equals(requiredFileName))
                         .filter(path -> contains(path, needle))
                         .forEach(staleReferences::add);
             }
