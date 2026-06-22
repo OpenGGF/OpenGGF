@@ -186,13 +186,17 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         var objectManager = services().objectManager();
         boolean wasPlayerRiding = objectManager != null && objectManager.isAnyPlayerRiding(this);
-        playerStanding = hasStandingContact(checkpointAll());
 
         if (!inFallingRoutine) {
-            // Routine 2/4: update bob angle (frozen in routine 8 / Plat_Action)
+            // Routine 2/4: update bob angle (frozen in routine 8 / Plat_Action).
             // Plat_Solid (routine 2) only subtracts from objoff_38 before
-            // PlatformObject can create a new ride. The +4 nudge ramp starts
-            // on the next frame in Plat_Action2 (routine 4).
+            // PlatformObject can create a new ride; the +4 nudge ramp runs in
+            // Plat_Action2 (routine 4). The routine for THIS frame was decided by
+            // last frame's standing/ExitPlatform result, so the ramp gate uses the
+            // prior-frame standing latch (playerStanding from the previous update).
+            // On the jump-off frame ROM is still in routine 4 (objoff_38 ramps +4
+            // once more) before ExitPlatform resets it to routine 2 next frame,
+            // matching wasPlayerRiding && (prior playerStanding).
             bobHelper.update(wasPlayerRiding && playerStanding);
         }
 
@@ -202,15 +206,17 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
         // Apply nudge (sine-based vertical offset)
         applyNudge();
 
-        if (wasPlayerRiding && playerStanding) {
-            // Plat_Action2 runs ExitPlatform before Plat_Move/Plat_Nudge, then
-            // MvSonicOnPtfm2 after both position updates (docs/s1disasm/.../18
-            // Platforms.asm:74-87). The first checkpoint above models the
-            // ExitPlatform test; this post-move checkpoint models the carry.
-            checkpointAll();
-        }
-
         updateDynamicSpawn(x, y);
+
+        // ROM routine order (docs/s1disasm/_incObj/18 Platforms.asm:74-87): routine 4
+        // (Plat_Action2) runs ExitPlatform, then Plat_Move/Plat_Nudge, then
+        // unconditionally MvSonicOnPtfm2. Both the ExitPlatform detach test and the
+        // MvSonicOnPtfm2 re-seat observe the POST-move platform surface, so a single
+        // post-move checkpoint models them. Resolving after the move (and after the
+        // dynamic-spawn position update above) ensures the airborne-rider carry on
+        // the jump-off frame re-seats to the platform's new y, not its pre-move y.
+        SolidCheckpointBatch batch = checkpointAll();
+        playerStanding = hasStandingContact(batch);
     }
 
     @Override
@@ -252,6 +258,29 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
         // Continued riding still observes the post-move/post-nudge surface
         // through routine 4's ExitPlatform -> Plat_Move -> Plat_Nudge ->
         // MvSonicOnPtfm2 order (same file:74-87).
+        return true;
+    }
+
+    @Override
+    public boolean carriesAirborneRiderAfterExitPlatform() {
+        // ROM Plat_Action2 (routine 4, docs/s1disasm/_incObj/18 Platforms.asm:74-87)
+        // calls ExitPlatform first (which clears the on-object bit when the player
+        // jumped this frame, docs/s1disasm/_incObj/sub ExitPlatform.asm:20-27),
+        // then runs Plat_Move/Plat_Nudge, then unconditionally calls MvSonicOnPtfm2
+        // (docs/s1disasm/_incObj/sub MvSonicOnPtfm.asm:18-41). MvSonicOnPtfm2 does
+        // NOT check the rider's velocity, so on the jump-off frame it still pulls
+        // Sonic's y_pos to platformY-9-obHeight using the platform's post-move
+        // position, overwriting the Sonic_Jump rolling-radius adjust
+        // (sonic.asm:1228 addq.w #sonic_height-sonic_roll_height,obY(a0)). This is
+        // structurally identical to Obj52 MBlock_StandOn / Obj59 Elev_Action, which
+        // already opt in (Sonic1MovingBlockObjectInstance / Sonic1ElevatorObjectInstance).
+        //
+        // Without this opt-in the engine applies only the +5 jump adjust and skips
+        // the post-jump pull-up, leaving Sonic ~2px high when the platform moves up
+        // on the launch frame (s1_ghz2 trace frame 2591: ROM y=0x0259, ENG y=0x0257;
+        // BizHawk capture platY 0x026E->0x0270, height 0x13->0x0E). The engine carry
+        // is implemented in ObjectSolidContactController.processInlineRidingObject /
+        // applyRidingCarry once the provider opts in.
         return true;
     }
 
