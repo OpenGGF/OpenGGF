@@ -1,38 +1,23 @@
 package com.openggf.game.rewind.coverage;
 
 import com.openggf.game.GameId;
-import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
-import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
-import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestRewindCoverageAnalyzer {
 
-    /** Collects codec class names from the S3K per-game registry only. */
+    /** Explicit dynamic codecs have been deleted; recreate coverage comes from RewindRecreatable. */
     private static Set<String> s3kCodecClassNames() {
-        return java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
-                .map(DynamicObjectRewindCodec::className)
-                .collect(Collectors.toUnmodifiableSet());
+        return Set.of();
     }
 
-    /** Collects codec class names from all three per-game registries. */
+    /** Explicit dynamic codecs have been deleted; recreate coverage comes from RewindRecreatable. */
     @SuppressWarnings("unused")
     private static Set<String> allGameCodecClassNames() {
-        return Stream.of(
-                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of(),
-                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of(),
-                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()
-        ).flatMap(List::stream)
-         .map(DynamicObjectRewindCodec::className)
-         .collect(Collectors.toUnmodifiableSet());
+        return Set.of();
     }
 
     @Test
@@ -58,13 +43,13 @@ class TestRewindCoverageAnalyzer {
     }
 
     @Test
-    void dynamicObjectWithCodecHasRecreatePath() {
+    void dynamicObjectWithRewindRecreatableHasRecreatePath() {
         RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
         ObjectCoverage cov = report.objects().stream()
                 .filter(o -> o.className().endsWith("AizBattleshipInstance"))
                 .findFirst().orElseThrow();
         assertTrue(cov.isDynamicSpawnable());
-        assertTrue(cov.hasRecreatePath(), "battleship has a dynamic rewind codec on this branch");
+        assertTrue(cov.hasRecreatePath(), "battleship has a generic recreate path on this branch");
     }
 
     /**

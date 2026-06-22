@@ -1,9 +1,5 @@
 package com.openggf.game.rewind.coverage;
 
-import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
-import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
-import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -11,10 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -46,15 +39,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @Tag("rewind-probe")
 class TestRewindRoundTripProbe {
 
-    /** Collects codec class names from all three per-game registries. */
+    /** Explicit dynamic codecs have been deleted; recreate coverage comes from RewindRecreatable. */
     private static Set<String> allGameCodecClassNames() {
-        return Stream.of(
-                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of(),
-                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of(),
-                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()
-        ).flatMap(List::stream)
-         .map(DynamicObjectRewindCodec::className)
-         .collect(Collectors.toUnmodifiableSet());
+        return Set.of();
     }
 
     @Test

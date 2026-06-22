@@ -1,29 +1,17 @@
 package com.openggf.game.rewind.coverage;
 
-import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
-import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
-import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import org.junit.jupiter.api.Test;
 import java.nio.file.*;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestRewindCoverageGuard {
     private static final Path BASELINE =
             Path.of("src/test/resources/rewind/coverage-baseline.txt");
 
-    /** Collects codec class names from all three per-game registries. */
+    /** Explicit dynamic codecs have been deleted; recreate coverage comes from RewindRecreatable. */
     private static Set<String> allGameCodecClassNames() {
-        return Stream.of(
-                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of(),
-                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of(),
-                java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of()
-        ).flatMap(List::stream)
-         .map(DynamicObjectRewindCodec::className)
-         .collect(Collectors.toUnmodifiableSet());
+        return Set.of();
     }
 
     @Test
