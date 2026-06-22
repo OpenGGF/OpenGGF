@@ -4,9 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.NullableSpawnCoordinateZeroScalarArgsRewindRecreatable;
 
 import java.util.List;
 
@@ -19,7 +17,8 @@ import java.util.List;
  * dynamic SST, but {@code AirCountdown_MakeItem} allocates these children via
  * the normal dynamic {@code AllocateObject} scan (sonic3k.asm:33591-33610).
  */
-public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
+        implements NullableSpawnCoordinateZeroScalarArgsRewindRecreatable {
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_RISE = 0x02;
     private static final int ROUTINE_CHECK_WATER = 0x04;
@@ -67,14 +66,6 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance 
         this.subtype = subtype & 0xFF;
         this.angle = angle & 0xFF;
         this.initialDisplayTimer = displayTimer & 0xFFFF;
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn capturedSpawn = ctx.spawn();
-        int spawnX = capturedSpawn != null ? capturedSpawn.x() : 0;
-        int spawnY = capturedSpawn != null ? capturedSpawn.y() : 0;
-        return new S3kAirCountdownObjectInstance(spawnX, spawnY, 0, 0, 0);
     }
 
     @Override

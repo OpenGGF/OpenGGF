@@ -120,6 +120,10 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic3k.objects.MGZHeadTriggerProjectileInstance",
             "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild");
 
+    private static final List<String> NULLABLE_SPAWN_COORDINATE_ZERO_SCALAR_ARGS_RECREATORS = List.of(
+            "com.openggf.game.sonic2.objects.RingPrizeObjectInstance",
+            "com.openggf.game.sonic3k.objects.S3kAirCountdownObjectInstance");
+
     private static final List<String> SPAWN_COORDINATE_SUBTYPE_DEFAULT_ARGS_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.Sonic1MonitorPowerUpObjectInstance",
             "com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild");
@@ -269,6 +273,29 @@ class TestSpawnRewindRecreatableCleanup {
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName()
                             + " should use SpawnCoordinateZeroScalarArgsRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void nullableSpawnCoordinateZeroScalarArgsRecreatorsUseMarkerInterface() {
+        Class<?> marker = loadClass(
+                "com.openggf.level.objects.NullableSpawnCoordinateZeroScalarArgsRewindRecreatable");
+        for (String className : NULLABLE_SPAWN_COORDINATE_ZERO_SCALAR_ARGS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(marker.isAssignableFrom(cls),
+                    cls.getName()
+                            + " should inherit the nullable-spawn coordinate zero-scalar recreate hook");
+        }
+    }
+
+    @Test
+    void nullableSpawnCoordinateZeroScalarArgsRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : NULLABLE_SPAWN_COORDINATE_ZERO_SCALAR_ARGS_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName()
+                            + " should use "
+                            + "NullableSpawnCoordinateZeroScalarArgsRewindRecreatable's default hook");
         }
     }
 
