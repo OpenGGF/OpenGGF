@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
@@ -144,8 +145,7 @@ class TestMhzEndBossHitProxyRewind {
     }
 
     private static boolean hasExplicitS3kDynamicCodec(String className) {
-        return java.util.List.<com.openggf.level.objects.DynamicObjectRewindCodec>of().stream()
-                .anyMatch(codec -> className.equals(codec.className()));
+        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(className);
     }
 
     private static <T> T singleLiveObject(ObjectManager objectManager, Class<T> type) {

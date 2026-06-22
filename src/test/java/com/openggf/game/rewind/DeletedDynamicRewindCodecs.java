@@ -2,15 +2,15 @@ package com.openggf.game.rewind;
 
 import java.util.Set;
 
-final class DeletedDynamicRewindCodecs {
+public final class DeletedDynamicRewindCodecs {
     private DeletedDynamicRewindCodecs() {
     }
 
-    static Set<String> classNames() {
+    public static Set<String> classNames() {
         return Set.of();
     }
 
-    static boolean hasRegisteredDynamicCodec(String className) {
+    public static boolean hasRegisteredDynamicCodec(String className) {
         return false;
     }
 }
