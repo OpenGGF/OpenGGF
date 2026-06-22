@@ -7,8 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ZeroArgRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -32,7 +31,8 @@ import java.util.logging.Logger;
  * <p>
  * Reference: docs/s1disasm/_incObj/89 Ending Sequence STH.asm
  */
-public class Sonic1EndingSTHObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class Sonic1EndingSTHObjectInstance extends AbstractObjectInstance
+        implements ZeroArgRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1EndingSTHObjectInstance.class.getName());
 
     // ========================================================================
@@ -72,11 +72,6 @@ public class Sonic1EndingSTHObjectInstance extends AbstractObjectInstance implem
         // Routine 0: ESth_Main — initialize
         this.screenX = INITIAL_SCREEN_X;
         this.routine = 2; // Advance immediately (ROM falls through)
-    }
-
-    @Override
-    public Sonic1EndingSTHObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic1EndingSTHObjectInstance();
     }
 
     private void ensureRenderer() {

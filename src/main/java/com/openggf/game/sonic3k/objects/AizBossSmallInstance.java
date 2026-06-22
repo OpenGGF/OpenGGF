@@ -11,8 +11,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.ZeroArgRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -34,7 +33,8 @@ import java.util.logging.Logger;
  * <p>Every 16 frames plays {@code cfx_RobotnikSiren}.
  * Rendered using {@link Sonic3kObjectArtKeys#AIZ2_BOSS_SMALL} mapping frame 0.
  */
-public class AizBossSmallInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class AizBossSmallInstance extends AbstractObjectInstance
+        implements ZeroArgRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizBossSmallInstance.class.getName());
 
     /** Camera X threshold to start movement. ROM: cmpi.w #$4670,(Camera_X_pos).w */
@@ -80,19 +80,6 @@ public class AizBossSmallInstance extends AbstractObjectInstance implements Rewi
         this.movementStarted = false;
         this.decelerating = true;
         this.paletteLoaded = false;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Self-contained: rebuilds a fresh instance via the zero-arg constructor.
-     * All scalar fields are reapplied immediately afterward by the standard
-     * scalar-restore pass, so the constructor defaults are placeholders. Replaces
-     * the former explicit dynamic codec (Phase-2 codec-deletion batch 2).
-     */
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new AizBossSmallInstance();
     }
 
     @Override

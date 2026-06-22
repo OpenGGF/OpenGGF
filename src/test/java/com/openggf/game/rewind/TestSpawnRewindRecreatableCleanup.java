@@ -5,6 +5,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.ZeroArgRewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
@@ -86,6 +87,11 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic3k.objects.AizBombExplosionInstance",
             "com.openggf.game.sonic3k.objects.AizMinibossDebrisChild");
 
+    private static final List<String> ZERO_ARG_RECREATORS = List.of(
+            "com.openggf.game.sonic1.objects.Sonic1EndingSTHObjectInstance",
+            "com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance",
+            "com.openggf.game.sonic3k.objects.AizBossSmallInstance");
+
     @Test
     void spawnOnlyRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_ONLY_RECREATORS) {
@@ -155,6 +161,24 @@ class TestSpawnRewindRecreatableCleanup {
             Class<?> cls = loadClass(className);
             assertFalse(declaresRecreateForRewind(cls),
                     cls.getName() + " should use SpawnCoordinateZeroPairRewindRecreatable's default hook");
+        }
+    }
+
+    @Test
+    void zeroArgRecreatorsUseMarkerInterface() {
+        for (String className : ZERO_ARG_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertTrue(ZeroArgRewindRecreatable.class.isAssignableFrom(cls),
+                    cls.getName() + " should inherit the zero-arg recreate hook");
+        }
+    }
+
+    @Test
+    void zeroArgRecreatorsDoNotDeclareRecreateForRewind() {
+        for (String className : ZERO_ARG_RECREATORS) {
+            Class<?> cls = loadClass(className);
+            assertFalse(declaresRecreateForRewind(cls),
+                    cls.getName() + " should use ZeroArgRewindRecreatable's default hook");
         }
     }
 
