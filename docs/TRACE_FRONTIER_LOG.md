@@ -18524,3 +18524,21 @@ NO S3K trace is genuinely one fix from green; each has multiple stacked bugs. Th
 count-drop (Mn) is further than the stale reports implied - genuinely multi-bug per trace.
 Always confirm error counts from a full (non-frontier) run, not frontierOnly totals or
 the persisted JSON.
+
+### 2026-06-22 addendum-2 - MGZ-LS f33271 is a LAG-FRAME bk2-consumption desync (not corruption)
+
+Precise characterization of MGZ-LS's post-rings-fix blocker (the closest-to-green
+S3K trace - engine gameplay matches ROM for all 33,271 frames). f33271 = physics.csv
+frame 0x81F7, which is a LAG frame (lag_counter=1, gameplay_frame_counter stalls
+81E4->81E4). The recorded input transitions 0x0009->0x0001 at frame 0x81F8, but the
+bk2's transition is at 0x81F7 - the harness reads the bk2 ONE FRAME AHEAD of the
+recorder's alignment. Lag frames recur every ~4 frames here (0x81EF/F3/F7/FB), so
+the harness's lag/VBLANK phase handling (TraceExecutionPhase.VBLANK_ONLY ->
+skipFrameFromRecording vs stepFrameFromRecording) advanced the bk2 one consumption
+off the recorder on one lag frame, accumulating a 1-frame offset by f33271.
+
+So MGZ-LS is NOT trace corruption and NOT an engine gameplay bug - it's a harness
+lag-frame bk2-consumption alignment issue (high blast radius: affects all trace
+replays' lag handling), and MGZ-LS may still have real divergences in its final
+~2,641 frames past f33271. Path to greening the closest trace: align the harness's
+lag-frame bk2 advance to the recorder, then re-verify the tail. Deep, multi-session.
