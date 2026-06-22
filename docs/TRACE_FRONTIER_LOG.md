@@ -18472,3 +18472,36 @@ rather than attracting it. MGZ1 compares only `rings`, so a shield-acquisition
 timing skew would surface solely as this rings delta. Next step requires a BizHawk
 capture of ROM's status_secondary (lightning bit) + Ring_consumption state across
 f535-540 to determine shield-acquire frame vs the engine, then fix that timing.
+
+## 2026-06-22 BREAKTHROUGH - S3K MGZ rings FIXED (attracted-ring give timing); stale-report lesson
+
+The MGZ rings bug (the sole 1-fix-from-green target) is FIXED. Root cause was the
+lightning-shield attracted-ring GIVE timing: ROM Obj_Attracted_Ring (loc_1A88C)
+moves the ring then Add_SpriteToCollisionResponseList; the player's touch pass
+processes that list the NEXT frame, so the give uses the ring's previous-frame
+(pre-move) position. The engine tested the give overlap AFTER the move -> collected
+one frame early.
+
+Fix: in RingManager.updateAttractedRings, test the give-ring overlap at the TOP of
+the loop (pre-move) and `continue`, instead of after the AttractedRing_Move.
+
+CRITICAL LESSON (cost many turns): `target/trace-reports/<t>_report.json` was NOT
+regenerated across runs in this environment - it held a STALE "rings f539 10 vs 11"
+from one early run. Multiple correct fixes (give-reorder, engine-phase move) were
+wrongly judged "no effect" by reading that stale JSON. The give-reorder ACTUALLY
+worked all along. ALWAYS verify trace results from the live test assertion / surefire
+report / in-harness instrumentation, NOT the persisted *_report.json which can be stale.
+
+Verification (give-reorder, this worktree):
+- In-harness rings probe: MGZ level-select rings now match ROM at f536-542
+  (f539 engRings=10 vs exp=10 - GREEN, was 11).
+- MGZ level-select first error moved f539 (rings) -> f33271 (pre-existing trace
+  "Input alignment error", BK2 vs recorded input - a trace-data limit, not engine).
+- MGZ complete-run: advanced well past the old f738 rings error (now runs long
+  enough to OOM at default heap; no rings divergence).
+- Zero regressions: S3K AIZ f1095, CNZ-CR f1846, CNZ f291, HCZ f1489, ICZ f3116,
+  LBZ f1694, MHZ f72 all UNCHANGED; S1 GHZ1-CR f2790 / MZ1-CR f2089 / SLZ1-CR f723
+  UNCHANGED; guards green (ArchUnit, RewindCoverage, TraceReplayInvariant) + S3K
+  must-keep-green (Aiz1Skip, LevelLoading, BootstrapResolver). Inert for S1/S2.
+- Not yet fully green: MGZ-LS blocked by the f33271 trace input-alignment limit;
+  MGZ-CR by heap. Both are separate follow-ups (re-record/trim trace; raise heap).
