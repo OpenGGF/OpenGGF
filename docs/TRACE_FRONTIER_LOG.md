@@ -18410,3 +18410,20 @@ relative to the player's object-slot phase), an object-execution-phase issue
 spanning all S3K attracted-ring collection. Fix must align that phase to ROM
 (player ReactToItem slot-0 vs ring slot) and be verified against the full S3K
 sweep. Still the highest-leverage Mn target (double-green MGZ1 + MGZ-CR).
+
+### 2026-06-22 correction - only MGZ is truly 1-fix-from-green (ICZ is NOT)
+
+Correcting the green-candidate survey above: the frontierOnly "Totals: 1 error"
+counts were truncated. Full-run report check:
+- **S3kMgz / S3kMgzCompleteRun**: genuinely 1 error (rings, `frame_span=1`,
+  `cascading=false`, re-syncs next frame) -> truly 1-fix-from-green (double).
+- **S3kIczCompleteRun**: **3179 errors** total. The f3116 `status_byte` facing
+  divergence (span 34) CASCADES into rings (f3174), then x_speed/g_speed/x
+  (f3856, spans 500-4000+). NOT 1-fix-from-green; fixing f3116 would advance the
+  frontier but not green the trace.
+
+So MGZ is the sole single-fix count-drop target, and its fix is the S3K
+lightning-shield attracted-ring attraction-phase reconciliation (deep,
+high-blast-radius, full-S3K-sweep gated) - the give-ring-reorder attempt this
+session did not fix it (reverted). Use full-run report `frame_span`/`cascading`,
+never frontierOnly totals, to judge green-proximity.
