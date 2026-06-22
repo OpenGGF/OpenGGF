@@ -55,7 +55,6 @@ com.openggf.game.sonic1.objects.Sonic1ConveyorBeltObjectInstance#finalScalar#con
 com.openggf.game.sonic1.objects.Sonic1ConveyorBeltObjectInstance#finalScalar#convWidth
 com.openggf.game.sonic1.objects.Sonic1EdgeWallObjectInstance#finalScalar#frameIndex
 com.openggf.game.sonic1.objects.Sonic1EdgeWallObjectInstance#finalScalar#solid
-com.openggf.game.sonic1.objects.Sonic1EdgeWallObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance#finalScalar#baseY
 com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1ElectrocuterObjectInstance#finalScalar#frequencyMask
@@ -99,7 +98,6 @@ com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#finalScalar#switchI
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1LZConveyorObjectInstance#finalScalar#mode
-com.openggf.game.sonic1.objects.Sonic1LZConveyorObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance#finalScalar#halfHeight
 com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance#finalScalar#halfWidth
 com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance#finalScalar#mappingFrame
@@ -135,7 +133,6 @@ com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance#finalScalar#current
 com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance#finalScalar#role
 com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance#finalScalar#type
-com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1MonitorPowerUpObjectInstance#finalScalar#subtype
 com.openggf.game.sonic1.objects.Sonic1MovingBlockObjectInstance#finalScalar#activeWidth
 com.openggf.game.sonic1.objects.Sonic1MovingBlockObjectInstance#finalScalar#mappingFrame
@@ -180,7 +177,6 @@ com.openggf.game.sonic1.objects.Sonic1SpikedPoleHelixObjectInstance#finalScalar#
 com.openggf.game.sonic1.objects.Sonic1SpikedPoleHelixObjectInstance#finalScalar#spikeCount
 com.openggf.game.sonic1.objects.Sonic1SpikedPoleHelixObjectInstance#finalScalar#spikeY
 com.openggf.game.sonic1.objects.Sonic1SpinConveyorObjectInstance#finalScalar#mode
-com.openggf.game.sonic1.objects.Sonic1SpinConveyorObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance#finalScalar#frameCounterMask
 com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance#finalScalar#isSpinner
 com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance#finalScalar#spinTimelen

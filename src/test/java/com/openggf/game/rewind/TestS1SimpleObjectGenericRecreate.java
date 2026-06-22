@@ -4,6 +4,7 @@ import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
 import com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ButtonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ConveyorBeltObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1EdgeWallObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ElectrocuterObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1FanObjectInstance;
@@ -16,6 +17,8 @@ import com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LamppostObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LavaBallObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LavaTagObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1LZConveyorObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1MovingBlockObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1MzBrickObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1PlatformObjectInstance;
@@ -23,6 +26,7 @@ import com.openggf.game.sonic1.objects.Sonic1PoleThatBreaksObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SawObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SceneryObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SmallDoorObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1SpinConveyorObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SpikedPoleHelixObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SpikeObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance;
@@ -45,6 +49,7 @@ class TestS1SimpleObjectGenericRecreate {
             Sonic1BigSpikedBallObjectInstance.class,
             Sonic1ButtonObjectInstance.class,
             Sonic1ConveyorBeltObjectInstance.class,
+            Sonic1EdgeWallObjectInstance.class,
             Sonic1ElectrocuterObjectInstance.class,
             Sonic1ElevatorObjectInstance.class,
             Sonic1FanObjectInstance.class,
@@ -57,6 +62,8 @@ class TestS1SimpleObjectGenericRecreate {
             Sonic1LamppostObjectInstance.class,
             Sonic1LavaBallObjectInstance.class,
             Sonic1LavaTagObjectInstance.class,
+            Sonic1LZConveyorObjectInstance.class,
+            Sonic1MonitorObjectInstance.class,
             Sonic1MovingBlockObjectInstance.class,
             Sonic1MzBrickObjectInstance.class,
             Sonic1PlatformObjectInstance.class,
@@ -64,6 +71,7 @@ class TestS1SimpleObjectGenericRecreate {
             Sonic1SawObjectInstance.class,
             Sonic1SceneryObjectInstance.class,
             Sonic1SmallDoorObjectInstance.class,
+            Sonic1SpinConveyorObjectInstance.class,
             Sonic1SpikedPoleHelixObjectInstance.class,
             Sonic1SpikeObjectInstance.class,
             Sonic1SpinPlatformObjectInstance.class,
@@ -87,6 +95,7 @@ class TestS1SimpleObjectGenericRecreate {
                 Sonic1BigSpikedBallObjectInstance.class,
                 Sonic1ButtonObjectInstance.class,
                 Sonic1ConveyorBeltObjectInstance.class,
+                Sonic1EdgeWallObjectInstance.class,
                 Sonic1ElectrocuterObjectInstance.class,
                 Sonic1ElevatorObjectInstance.class,
                 Sonic1FanObjectInstance.class,
@@ -99,6 +108,8 @@ class TestS1SimpleObjectGenericRecreate {
                 Sonic1LamppostObjectInstance.class,
                 Sonic1LavaBallObjectInstance.class,
                 Sonic1LavaTagObjectInstance.class,
+                Sonic1LZConveyorObjectInstance.class,
+                Sonic1MonitorObjectInstance.class,
                 Sonic1MovingBlockObjectInstance.class,
                 Sonic1MzBrickObjectInstance.class,
                 Sonic1PlatformObjectInstance.class,
@@ -106,6 +117,7 @@ class TestS1SimpleObjectGenericRecreate {
                 Sonic1SawObjectInstance.class,
                 Sonic1SceneryObjectInstance.class,
                 Sonic1SmallDoorObjectInstance.class,
+                Sonic1SpinConveyorObjectInstance.class,
                 Sonic1SpikedPoleHelixObjectInstance.class,
                 Sonic1SpikeObjectInstance.class,
                 Sonic1SpinPlatformObjectInstance.class,

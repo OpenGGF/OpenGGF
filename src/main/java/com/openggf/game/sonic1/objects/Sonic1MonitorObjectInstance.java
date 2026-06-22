@@ -22,6 +22,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
@@ -44,7 +45,7 @@ import java.util.logging.Logger;
  * Reference: docs/s1disasm/_incObj/26 Monitor.asm
  */
 public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
-        implements TouchResponseProvider, TouchResponseListener,
+        implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseListener,
         SolidObjectProvider, SolidObjectListener {
     private static final Logger LOGGER = Logger.getLogger(Sonic1MonitorObjectInstance.class.getName());
 
