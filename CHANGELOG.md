@@ -54,6 +54,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S1 badnik rewind restore:** Bomb, Buzz Bomber, Motobug, Roller, and Yadrin now restore through spawn-based generic recreate, moving them onto the rewind round-trip ratchet.
 - **S1 badnik rewind restore:** Chopper, Jaws, and Newtron now restore through spawn-based generic recreate, moving them onto the rewind round-trip ratchet.
 - **S1 static object rewind restore:** Flapping Door, Pylon, Purple Rock, Spinning Light, Waterfall, and Waterfall Sound now restore through spawn-based generic recreate coverage.
+- **S1 simple object rewind restore:** Harpoon, Hidden Bonus, MZ Brick, Pole That Breaks, and Scenery now restore through spawn-based generic recreate coverage.
 - **S2 invisible block rewind restore:** invisible blocks now restore through spawn-based generic recreate, moving them onto the rewind round-trip ratchet.
 - **S2 Egg Prison button rewind graph restore:** Egg-prison buttons now restore through graph-tested generic recreate with exact parent/button relinks while deleting their dynamic codec.
 - **S2 OOZ burner flame rewind graph restore:** burner flame children now restore through graph-tested generic recreate with exact platform relinks while deleting their dynamic codec.

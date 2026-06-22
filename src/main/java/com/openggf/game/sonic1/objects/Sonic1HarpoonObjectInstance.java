@@ -6,6 +6,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -46,7 +48,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/16 Harpoon.asm
  */
 public class Sonic1HarpoonObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     // ---- Constants from disassembly ----
 
@@ -121,6 +123,11 @@ public class Sonic1HarpoonObjectInstance extends AbstractObjectInstance
         // Set initial frame from animation sequence
         int safeAnimIndex = animIndex & 0x03;
         this.currentFrame = ANIM_SEQUENCES[safeAnimIndex][0];
+    }
+
+    @Override
+    public Sonic1HarpoonObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1HarpoonObjectInstance(ctx.spawn());
     }
 
     @Override

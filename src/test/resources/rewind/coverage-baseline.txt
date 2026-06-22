@@ -104,8 +104,6 @@ com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#moveT
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#isTall
 com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#reflectSubtype
-com.openggf.game.sonic1.objects.Sonic1HarpoonObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1HiddenBonusObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#finalScalar#switchIndex
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance#recreate
@@ -155,11 +153,9 @@ com.openggf.game.sonic1.objects.Sonic1MonitorPowerUpObjectInstance#finalScalar#s
 com.openggf.game.sonic1.objects.Sonic1MovingBlockObjectInstance#finalScalar#activeWidth
 com.openggf.game.sonic1.objects.Sonic1MovingBlockObjectInstance#finalScalar#mappingFrame
 com.openggf.game.sonic1.objects.Sonic1MovingBlockObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1MzBrickObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1PlatformObjectInstance#finalScalar#baseX
 com.openggf.game.sonic1.objects.Sonic1PlatformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic1.objects.Sonic1PlatformObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1PoleThatBreaksObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#activeWidth
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#frameIndex
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#spawnX
@@ -175,7 +171,6 @@ com.openggf.game.sonic1.objects.Sonic1SawObjectInstance#finalScalar#sawType
 com.openggf.game.sonic1.objects.Sonic1SawObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic1.objects.Sonic1SawObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SceneryObjectInstance#finalScalar#frameIndex
-com.openggf.game.sonic1.objects.Sonic1SceneryObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SeesawObjectInstance#finalScalar#origX
 com.openggf.game.sonic1.objects.Sonic1SeesawObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SignpostObjectInstance#recreate

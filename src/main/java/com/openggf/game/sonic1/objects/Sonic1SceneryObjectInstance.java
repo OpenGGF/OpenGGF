@@ -4,6 +4,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -24,7 +26,7 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/1C Scenery.asm
  */
-public class Sonic1SceneryObjectInstance extends AbstractObjectInstance {
+public class Sonic1SceneryObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // From Scen_Values: subtype 3 uses Map_Bri frame 1 (bridge stump)
     private static final int SUBTYPE_BRIDGE_STUMP = 3;
@@ -48,6 +50,11 @@ public class Sonic1SceneryObjectInstance extends AbstractObjectInstance {
             artKey = ObjectArtKeys.SCENERY;
             frameIndex = 0;
         }
+    }
+
+    @Override
+    public Sonic1SceneryObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1SceneryObjectInstance(ctx.spawn());
     }
 
     @Override

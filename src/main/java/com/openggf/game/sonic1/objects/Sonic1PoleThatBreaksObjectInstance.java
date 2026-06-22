@@ -11,6 +11,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -34,7 +36,7 @@ import java.util.List;
  * Disassembly reference: docs/s1disasm/_incObj/0B Pole that Breaks.asm
  */
 public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
     // move.w #make_art_tile(ArtTile_LZ_Pole,2,0),obGfx(a0)
     private static final int DISPLAY_PRIORITY = 4;
@@ -86,6 +88,11 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
         super(spawn, "PoleThatBreaks");
         int subtype = spawn.subtype() & 0xFF;
         this.poleTime = subtype * 60;
+    }
+
+    @Override
+    public Sonic1PoleThatBreaksObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1PoleThatBreaksObjectInstance(ctx.spawn());
     }
 
     @Override

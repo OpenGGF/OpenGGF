@@ -8,6 +8,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -41,7 +43,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/46 MZ Bricks.asm
  */
 public class Sonic1MzBrickObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // From disassembly: move.w #$1B,d1
     private static final int HALF_WIDTH = 0x1B;
@@ -108,6 +110,11 @@ public class Sonic1MzBrickObjectInstance extends AbstractObjectInstance
         this.yVelocity = 0;
 
         updateDynamicSpawn(x, y);
+    }
+
+    @Override
+    public Sonic1MzBrickObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1MzBrickObjectInstance(ctx.spawn());
     }
 
     @Override
