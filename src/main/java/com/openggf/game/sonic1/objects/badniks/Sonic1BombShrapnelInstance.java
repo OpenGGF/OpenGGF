@@ -7,8 +7,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.SubpixelMotion;
@@ -32,7 +31,7 @@ import java.util.List;
  * Animations: Uses shrapnel animation (Ani_Bomb index 4): frames $A, $B at speed 3.
  */
 public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, SpawnCoordinateZeroPairRewindRecreatable {
 
     // From disassembly: move.b #$98,obColType(a1)
     // $80 = HURT category, $18 = size index (width 4, height 4)
@@ -79,12 +78,6 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         this.motionState = new SubpixelMotion.State(x, y, 0, 0, xVel, yVel);
         this.animTickCounter = 0;
         this.destroyed = false;
-    }
-
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        ObjectSpawn spawn = ctx.spawn();
-        return new Sonic1BombShrapnelInstance(spawn.x(), spawn.y(), 0, 0);
     }
 
     @Override

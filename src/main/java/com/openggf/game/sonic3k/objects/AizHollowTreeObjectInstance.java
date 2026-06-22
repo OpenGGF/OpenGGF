@@ -7,8 +7,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -364,7 +363,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
     // The parent only spawns this control shim on the one-shot first-capture
     // transition, so a held rewind must recreate it.
     static final class AizTreeRevealControlObjectInstance extends AbstractObjectInstance
-            implements RewindRecreatable {
+            implements SpawnCoordinateRewindRecreatable {
         // Mirrors object RAM word $2E (with low byte at $2F used for odd/even gating).
         private int timer2EWord;
 
@@ -374,12 +373,6 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
 
         AizTreeRevealControlObjectInstance(int x, int y) {
             super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "AIZ1TreeRevealControl");
-        }
-
-        @Override
-        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            ObjectSpawn spawn = ctx.spawn();
-            return new AizTreeRevealControlObjectInstance(spawn.x(), spawn.y());
         }
 
         @Override

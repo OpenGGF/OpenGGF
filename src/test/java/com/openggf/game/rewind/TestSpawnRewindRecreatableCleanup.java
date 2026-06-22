@@ -42,6 +42,7 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic1.objects.Sonic1InvisibleBarrierObjectInstance",
             "com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance",
             "com.openggf.game.sonic2.objects.BombPrizeObjectInstance",
+            "com.openggf.game.sonic2.objects.HtzGroundFireObjectInstance",
             "com.openggf.game.sonic2.objects.bosses.ARZBossEyes",
             "com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance$SmallMetalPformChildInstance",
             "com.openggf.game.sonic3k.objects.CnzBumperObjectInstance",
@@ -68,13 +69,16 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance");
 
     private static final List<String> SPAWN_COORDINATE_RECREATORS = List.of(
+            "com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance",
             "com.openggf.game.sonic2.objects.bosses.LavaBubbleObjectInstance",
             "com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance",
+            "com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance$AizTreeRevealControlObjectInstance",
             "com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile",
             "com.openggf.game.sonic3k.objects.Mgz2EndEggCapsuleInstance",
             "com.openggf.game.sonic3k.objects.S3kBossExplosionChild",
             "com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance",
             "com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance",
+            "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossRobotnikEscapeShip",
             "com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance");
 
     private static final List<String> POINTS_RECREATORS = List.of(
@@ -83,6 +87,7 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance");
 
     private static final List<String> SPAWN_COORDINATE_ZERO_PAIR_RECREATORS = List.of(
+            "com.openggf.game.sonic1.objects.badniks.Sonic1BombShrapnelInstance",
             "com.openggf.game.sonic2.objects.BubbleObjectInstance",
             "com.openggf.game.sonic3k.objects.AizBombExplosionInstance",
             "com.openggf.game.sonic3k.objects.AizMinibossDebrisChild");

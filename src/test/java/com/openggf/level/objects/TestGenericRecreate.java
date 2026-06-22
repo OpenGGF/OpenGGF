@@ -102,7 +102,7 @@ class TestGenericRecreate {
 
         assertNotNull(result);
         assertEquals(HtzGroundFireObjectInstance.class, result.getClass());
-        // HtzGroundFireObjectInstance.recreateForRewind builds from ctx.spawn().x()/y().
+        // SpawnRewindRecreatable rebuilds HtzGroundFireObjectInstance from ctx.spawn().
         // getX()/getY() return the constructor-supplied position, so x==42 proves the
         // captured spawn coordinate actually propagated through the hook.
         assertEquals(42, result.getX(),
