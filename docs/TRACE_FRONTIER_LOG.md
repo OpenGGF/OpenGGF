@@ -144,6 +144,16 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-22 - DEZ Death Egg Robot group-anim end-marker frame collapses DEZ1 127->98, advances f4007->f4933
+
+- Branch/worktree context: `bugfix/ai-dez1-green` (worktree off `develop`).
+- Command: `mvn -q -Dmse=relaxed test "-Dtest=TestS2DezEndingLevelSelectTraceReplay" -DfailIfNoTests=false "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- **`s2_dez1` / `TestS2DezEndingLevelSelectTraceReplay` advanced f4007 -> f4933, errors 127 -> 98.** First error before: f4007 `y_speed`/`x_speed` velocity sign-flips (Death Egg Robot bounce miss). First error after: f4933 `x_speed` exp=0x0000 act=0x02DC (a later attack; residual 1-frame sensor-report drift).
+- Root: the boss group-animation player `Sonic2DeathEggRobotInstance.stepGroupAnimation` returned "script complete" on the same frame the last keyframe's substeps finished, but ROM `ObjC7_GroupAni` (`loc_3E1AA`) terminates each script with a `$C0` end-marker keyframe processed on a SEPARATE frame (reads `anim_frame` at frame start: last real substep frame N advances `anim_frame` to `$C0`; frame N+1 reads `$C0` -> `loc_3E23E`/`loc_3E27E`/`loc_3E236` returns done with no deltas). So every ROM script costs one extra completion frame (off_3E3D0 crouch `0,1,2,$C0` = 41f not 40f; off_3E30A walk `0..8,$C0`). The engine omitted the marker, so every group-anim-gated attack-phase transition (crouch, walk-punch, stand-up walk) advanced one frame early. BizHawk-measured: the engine attack clock drifted progressively behind ROM (jet-stomp ascent-start Δ -2/-5/-7 across attacks), so by the f4007 jet-stomp the targeting-sensor lock-on snapped 7-8 frames early (engine trace f3877 vs ROM f3885, player moving left ~240/frame), the descent stomped at x=0x815 vs ROM 0x80E, and the body sat ~+5x/+8y of ROM at the bounce frame, missing the player's roll-up bounce box (`Touch_Enemy` neg.w x_vel/y_vel, s2.asm:85318-85345).
+- Fix: model the `$C0` end-marker frame — when the substep advance lands `groupAnimFrameIdx == sequence.length`, fall through WITHOUT returning true (no deltas; last real keyframe's deltas already applied this frame); the next call's top-of-method end check returns done. Re-measured: jet-stomp ascent-start Δ collapses to 0/+1 through f4007, the f4007 bounce connects. Object-local to `Sonic2DeathEggRobotInstance` (the Death Egg Robot spawns only in DEZ), so no other zone/trace is affected.
+- Regression: object-local change; no shared code touched. CNZ1 first-error held at its develop baseline f1691 (downstream count only); EHZ1/ARZ1/MCZ1/SCZ/WFZ stay green; S1 GHZ2 untouched (S1, different game). No frontier regressed.
+- Residual (NOT in this commit): f4933 onward, a later jet-stomp still has a ~1-frame sensor lock-on report drift (the body ph06->ph08 descent-start reads the sensor's reported X one frame off ROM's pa06->pa08 handoff). Separate sensor/body update-order alignment; tracked for a follow-up. See memory `dez1-f4007-boss-body-position`.
+
 ## 2026-06-22 - S1 camera bottom-boundary follow GREENS GHZ2 (TestS1Ghz2CompleteRunTraceReplay 0 errors)
 
 - Branch/worktree context: `bugfix/ai-s1-camera-vsettle` (worktree off current `develop`; develop confirmed ancestor). Base already carries the Obj18 platform-jump fix (develop b69c2c6ca) that took GHZ2 to f3349.
