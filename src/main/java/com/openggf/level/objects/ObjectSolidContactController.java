@@ -1595,6 +1595,22 @@ final class ObjectSolidContactController {
             if (exitDeltaX != 0) {
                 player.shiftX(exitDeltaX);
             }
+            // MvSonicOnPtfm2 also re-seats the rider's Y unconditionally on the
+            // exit frame: obY(rider) = platform_Y - 9 - obHeight (sub MvSonicOnPtfm
+            // .asm:20-36). When the platform moved vertically on the exit frame
+            // (e.g. Obj18 Plat_Nudge bob), skipping this leaves the rider one px
+            // off ROM, holding the pre-move surface Y. S1 SYZ3 f3476: ROM seats the
+            // rider to the platform's post-nudge Y=0x02DD -> centre 0x02C1, the
+            // engine kept the pre-nudge centre 0x02C0. The sloped-exit re-seat
+            // below (sampleSlopeOnRideExit) covers the slope case; this covers the
+            // flat MvSonicOnPtfm2 path used by Obj18/52/59 (which all opt into
+            // carriesAirborneRiderAfterExitPlatform).
+            if (!(provider.sampleSlopeOnRideExit(player) && instance instanceof SlopedSolidProvider)) {
+                int exitCentreY = currentY + params.offsetY()
+                        - params.groundHalfHeight() - player.getYRadius();
+                int exitNewY = exitCentreY - (player.getHeight() / 2);
+                player.setY((short) exitNewY);
+            }
         }
         if (provider.sampleSlopeOnRideExit(player) && instance instanceof SlopedSolidProvider sloped) {
             int slopeAnchorX = currentX + params.offsetX();
