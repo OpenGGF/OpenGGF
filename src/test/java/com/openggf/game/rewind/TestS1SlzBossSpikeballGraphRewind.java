@@ -13,7 +13,6 @@ import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
-import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -178,8 +177,8 @@ class TestS1SlzBossSpikeballGraphRewind {
         assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1SLZBossSpikeball.class),
                 "SLZ boss spikeball must restore through RewindRecreatable graph recreate");
 
-        ObjectRegistry registry = new Sonic1ObjectRegistry();
-        assertFalse(hasRegisteredDynamicCodec(Sonic1SLZBossSpikeball.class.getName(), registry),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic1SLZBossSpikeball.class.getName()),
                 "SLZ boss spikeball must not keep an explicit S1 dynamic rewind codec");
     }
 
@@ -242,10 +241,6 @@ class TestS1SlzBossSpikeballGraphRewind {
         RewindRegistry registry = new RewindRegistry();
         registry.register(objectManager.rewindSnapshottable());
         return registry;
-    }
-
-    private static boolean hasRegisteredDynamicCodec(String fqn, ObjectRegistry registry) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(fqn);
     }
 
     private static ObjectRefId objectId(ObjectManager objectManager, ObjectInstance object) {

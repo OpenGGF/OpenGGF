@@ -111,7 +111,7 @@ class TestRewindFixS1Batch8Codecs {
     @Test
     void batch8S1ProjectileDynamicsHaveNoExplicitCodec() {
         for (Candidate candidate : CANDIDATES) {
-            assertFalse(hasExplicitCodec(candidate.type()),
+            assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(candidate.type().getName()),
                     candidate.type().getName()
                             + " must restore through genericRecreate, not an explicit S1 dynamic codec");
         }
@@ -151,10 +151,6 @@ class TestRewindFixS1Batch8Codecs {
                     candidate.type().getSimpleName()
                             + " restore must reapply captured scalar/helper state");
         }
-    }
-
-    private static boolean hasExplicitCodec(Class<?> type) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(type.getName());
     }
 
     private static List<AbstractObjectInstance> liveObjectsOfType(

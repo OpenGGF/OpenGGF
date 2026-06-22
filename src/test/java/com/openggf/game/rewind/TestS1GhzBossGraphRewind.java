@@ -11,7 +11,6 @@ import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
-import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -132,8 +131,7 @@ class TestS1GhzBossGraphRewind {
         assertTrue(RewindRecreatable.class.isAssignableFrom(GHZBossWreckingBall.class),
                 "GHZ wrecking ball must restore through RewindRecreatable");
 
-        ObjectRegistry registry = new Sonic1ObjectRegistry();
-        assertFalse(hasRegisteredDynamicCodec(GHZBossWreckingBall.class.getName(), registry),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(GHZBossWreckingBall.class.getName()),
                 "GHZ wrecking ball must not keep an explicit S1 dynamic rewind codec");
     }
 
@@ -181,10 +179,6 @@ class TestS1GhzBossGraphRewind {
         writeInt(ball, "anchorY", 0x0348);
         writeInt(ball, "ballFrame", 0);
         writeBoolean(ball, "parentDefeated", false);
-    }
-
-    private static boolean hasRegisteredDynamicCodec(String fqn, ObjectRegistry registry) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(fqn);
     }
 
     private static ObjectRefId objectId(ObjectManager objectManager, ObjectInstance object) {

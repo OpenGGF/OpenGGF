@@ -15,7 +15,6 @@ import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
-import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -129,12 +128,13 @@ class TestS1BadnikChildGraphRewind {
         assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1CaterkillerBodyInstance.class));
         assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(ORB_SPIKE_CLASS)));
 
-        ObjectRegistry registry = new Sonic1ObjectRegistry();
-        assertFalse(hasRegisteredDynamicCodec(Sonic1BombFuseInstance.class.getName(), registry),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic1BombFuseInstance.class.getName()),
                 "Bomb fuse must not keep an explicit S1 dynamic rewind codec");
-        assertFalse(hasRegisteredDynamicCodec(Sonic1CaterkillerBodyInstance.class.getName(), registry),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic1CaterkillerBodyInstance.class.getName()),
                 "Caterkiller body must not keep an explicit S1 dynamic rewind codec");
-        assertFalse(hasRegisteredDynamicCodec(ORB_SPIKE_CLASS, registry),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ORB_SPIKE_CLASS),
                 "Orbinaut spike must not keep an explicit S1 dynamic rewind codec");
     }
 
@@ -294,10 +294,6 @@ class TestS1BadnikChildGraphRewind {
                 "Orbinaut unload must clear restored parent spike list");
         assertEquals(0, readInt(orbinaut, "activeSpikes"),
                 "Orbinaut unload must clear activeSpikes after removing restored spikes");
-    }
-
-    private static boolean hasRegisteredDynamicCodec(String fqn, ObjectRegistry registry) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(fqn);
     }
 
     private static ObjectRefId objectId(ObjectManager objectManager, ObjectInstance object) {

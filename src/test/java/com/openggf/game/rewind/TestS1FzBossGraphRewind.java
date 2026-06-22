@@ -14,7 +14,6 @@ import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
-import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -157,12 +156,11 @@ class TestS1FzBossGraphRewind {
         assertTrue(RewindRecreatable.class.isAssignableFrom(FZPlasmaBall.class),
                 "FZPlasmaBall must restore through RewindRecreatable");
 
-        ObjectRegistry registry = new Sonic1ObjectRegistry();
-        assertFalse(hasRegisteredDynamicCodec(FZCylinder.class.getName(), registry),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(FZCylinder.class.getName()),
                 "FZCylinder must not keep an explicit S1 dynamic rewind codec");
-        assertFalse(hasRegisteredDynamicCodec(FZPlasmaLauncher.class.getName(), registry),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(FZPlasmaLauncher.class.getName()),
                 "FZPlasmaLauncher must not keep an explicit S1 dynamic rewind codec");
-        assertFalse(hasRegisteredDynamicCodec(FZPlasmaBall.class.getName(), registry),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(FZPlasmaBall.class.getName()),
                 "FZPlasmaBall must not keep an explicit S1 dynamic rewind codec");
     }
 
@@ -309,10 +307,6 @@ class TestS1FzBossGraphRewind {
             }
         }
         return count;
-    }
-
-    private static boolean hasRegisteredDynamicCodec(String fqn, ObjectRegistry registry) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(fqn);
     }
 
     private static ObjectRefId objectId(ObjectManager objectManager, ObjectInstance object) {

@@ -12,7 +12,6 @@ import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
-import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -112,8 +111,8 @@ class TestS1RingFlashGraphRewind {
         assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1RingFlashObjectInstance.class),
                 "S1 ring flash must restore through RewindRecreatable generic recreate");
 
-        ObjectRegistry registry = new Sonic1ObjectRegistry();
-        assertFalse(hasRegisteredDynamicCodec(Sonic1RingFlashObjectInstance.class.getName(), registry),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic1RingFlashObjectInstance.class.getName()),
                 "S1 ring flash must not keep an explicit S1 dynamic rewind codec");
     }
 
@@ -127,10 +126,6 @@ class TestS1RingFlashGraphRewind {
         return new PerObjectRewindSnapshot(
                 false, false, false, 0, 0, 0, 0, false, 0,
                 false, false, 0, -1, null, null, null);
-    }
-
-    private static boolean hasRegisteredDynamicCodec(String fqn, ObjectRegistry registry) {
-        return DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(fqn);
     }
 
     private static ObjectRefId objectId(ObjectManager objectManager, ObjectInstance object) {
