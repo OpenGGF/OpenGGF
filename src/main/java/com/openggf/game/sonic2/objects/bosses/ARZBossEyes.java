@@ -6,8 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -18,7 +17,7 @@ import java.util.List;
  * ROM Reference: s2.asm Obj89 (subtype 8)
  * Simple timed object that displays for ~40 frames then disappears.
  */
-public class ARZBossEyes extends AbstractObjectInstance implements RewindRecreatable {
+public class ARZBossEyes extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     private static final int EYES_DURATION = 0x28; // 40 frames
     private static final int EYES_MAPPING_FRAME = 2;
@@ -36,14 +35,6 @@ public class ARZBossEyes extends AbstractObjectInstance implements RewindRecreat
         this.renderFlags = spawn.renderFlags();
         this.eyesTimer = EYES_DURATION;
         this.mappingFrame = EYES_MAPPING_FRAME;
-    }
-
-    @Override
-    public ARZBossEyes recreateForRewind(RewindRecreateContext ctx) {
-        if (ctx == null || ctx.spawn() == null) {
-            return null;
-        }
-        return new ARZBossEyes(ctx.spawn());
     }
 
     @Override
