@@ -18701,3 +18701,34 @@ f534-620 (when each ring is created-as-attracted via Test_Ring_Collisions and wh
 each is given via the collision-response list), compared to the engine's
 addAttractedRing / give frames, to find the systematic attraction cadence fix.
 This greens MGZ-LS (its only roots are rings).
+
+### 2026-06-22 S3K LBZ1 drum-to-drum handoff: f1694 air -> f1950 status_byte
+
+Worktree base == develop. `TestS3kLbzCompleteRunTraceReplay` (`s3k_lbz1`) fresh
+first error was f1694 `air` (expected 0, actual 1), with status_byte 0x0C vs 0x06
+(ROM rolling+on_object; engine in_air+rolling). 357 ROOTS, 356x air -- a sustained
+air oscillation seeded at f1694.
+
+Root cause: the player rolls across a chain of `Obj_LBZRollingDrum` instances. At
+f1694 ROM hands the player off from drum slot 0x0F (`@0x600`) to slot 0x04
+(`@0x700`) seamlessly (`Stand_on_object` flips 0x0F->0x04, air stays 0). ROM
+`RideObject_SetRide` (sonic3k.asm:42027) clears the PREVIOUS interact object's
+standing bit (`bclr d6,status(a3)`) before installing the new ride. The engine's
+`LbzRollingDrumInstance` tracks a per-instance `pXRiding` boolean and never cleared
+the previous drum's flag on handoff, so the just-vacated drum (slot 15) still ran
+its release path that same frame -- exiting its horizontal window -> `release()`
+forced the player airborne, clobbering the new drum's ride.
+
+Fix: `LbzRollingDrumInstance.applyRideObjectSetRide` now mirrors `bclr d6,status(a3)`
+-- if the player is already on-object and the prior latched instance is a different
+`LbzRollingDrumInstance`, clear that instance's `pXRiding` so it cannot run its
+release path. Object exec is slot-order (low->high), matching ROM Object_RAM, so
+slot 4 enters first and slot 15 then re-checks as an entry (window-rejected), exactly
+as in ROM.
+
+Result: `s3k_lbz1` first error f1694 -> f1950 (6652 -> 5846 errors). New frontier is
+f1950 `status_byte` 0x21 vs 0x01 -- a wall-push while riding the drum (player pushes
+into a wall at x=0x4DF; ROM sets Status_Pushing, engine does not). Separate, smaller
+root. Regression sweep: AIZ complete-run unchanged at f1095 (matches baseline);
+keep-green S3K tests + 19 `TestLbzRollingDrumInstance` unit tests all pass. Drum is
+an LBZ-only object so no cross-zone/cross-game exposure.
