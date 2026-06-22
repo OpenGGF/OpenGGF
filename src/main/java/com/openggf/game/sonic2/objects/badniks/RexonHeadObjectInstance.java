@@ -181,7 +181,17 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         // Initialize phase from byte_374BE based on head number (s2.asm:73866-73868)
         this.oscillationPhase = INITIAL_PHASES[headNumber];
         this.phaseDirection = 1;  // Start incrementing (objoff_38 = 1)
-        this.oscillationFrameCounter = 0;
+        // Obj97_Init seeds objoff_39 with the head number, not 0
+        // (s2.asm:74316-74318: d0 = objoff_2E >> 1 = headNumber, then
+        // move.b d0,objoff_39). The phase/oscillation update only runs on the
+        // frame where (objoff_39 + 1) & 3 == 0 (Obj97_Normal, s2.asm:74407-74414),
+        // so each head advances its part of the wave on a different frame of the
+        // 4-frame cycle. Seeding every head at 0 collapsed that stagger and left
+        // the wave a couple of pixels off; in HTZ2 that nudged the attackable tip
+        // head just outside Sonic's 16x16 touch band, so the rolling kill bounce
+        // the ROM lands (Touch_KillEnemy "big bounce" neg.w y_vel, s2.asm:85385)
+        // was missed (HTZ2 trace f1078: y_speed should flip +0568 -> -0568).
+        this.oscillationFrameCounter = headNumber;
         this.projectileTimer = PROJECTILE_INITIAL_DELAY;
         this.destroyed = false;
         this.linkedHead = null;

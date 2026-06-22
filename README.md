@@ -250,6 +250,7 @@ Highlights:
 - Sonic 2 multi-sidekick follow-up fixed Tails pausing after fly-in by clearing the approach timer before NORMAL follow, preventing a false Player 2 manual-control stall; chained sidekicks also use the root leader while a direct Sonic sidekick's delayed follow history warms.
 - Sonic 2 sidekick CPU parity now keeps ROM `Tails_control_counter` separate from the engine's multi-sidekick approach cadence, clearing the ARZ1 trace frontier and advancing the MTZ/HTZ/CNZ sidekick-counter cluster.
 - Trace-cluster fixes: trace reports now regenerate every run (killing a stale-report trap that masked working fixes), a root-count survey ranks traces by true distance-to-green, S1 GHZ collapsing-ledge/platform exact-touch landing now matches the ROM `blo #-16` penetration band, S3K MGZ lightning-shield attracted-ring give timing matches the ROM collision-response list, and the S3K ICZ path-follow platform now reads its ROM `width_pixels` for the on-object balance check (ICZ1 trace frontier f3116 -> f3139).
+- Sonic 2 Rexon snake heads now stagger their oscillation phase by head number (ROM `objoff_39` seeding), keeping the head wave aligned to ROM so a rolling player's kill-bounce off the tip head lands (HTZ2 trace frontier f1078 -> f1343).
 
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
