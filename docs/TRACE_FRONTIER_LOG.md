@@ -18505,3 +18505,22 @@ Verification (give-reorder, this worktree):
   must-keep-green (Aiz1Skip, LevelLoading, BootstrapResolver). Inert for S1/S2.
 - Not yet fully green: MGZ-LS blocked by the f33271 trace input-alignment limit;
   MGZ-CR by heap. Both are separate follow-ups (re-record/trim trace; raise heap).
+
+### 2026-06-22 addendum - MGZ-CR real frontier f866 (tails_status_byte); green-candidate map was stale
+
+With the attracted-ring rings fix + larger heap (`-Dsurefire.argLine="-Xmx6g -Xshare:off"`),
+MGZ complete-run's real first error is **f866 `tails_status_byte` exp0x0002 act0x0003**
+(7929 cascading errors) - a Tails-CPU status divergence, advanced from the old (stale)
+f738 rings. So the rings fix advanced MGZ-CR f738 -> f866, but MGZ-CR is NOT green
+(downstream Tails-CPU bug).
+
+CORRECTION to the earlier "three 1-fix-from-green traces" survey: those single-error
+counts were STALE/frontier-truncated `*_report.json` reads. Reality after the rings fix:
+- MGZ-LS: rings fixed (f539->f33271), blocked by a pre-existing trace input-alignment
+  limit at f33271 (BK2 vs recorded input; trace-data, not engine).
+- MGZ-CR: rings fixed (f738->f866), blocked by tails_status_byte (Tails CPU).
+- ICZ-CR: 3179 errors (already known not 1-fix).
+NO S3K trace is genuinely one fix from green; each has multiple stacked bugs. The
+count-drop (Mn) is further than the stale reports implied - genuinely multi-bug per trace.
+Always confirm error counts from a full (non-frontier) run, not frontierOnly totals or
+the persisted JSON.
