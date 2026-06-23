@@ -852,6 +852,12 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance",
                     GameId.S1),
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SpikedPoleHelixObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.badniks.Sonic1ChopperBadnikInstance",
                     GameId.S1),
             new CodecDeletionCandidate(
@@ -969,6 +975,19 @@ public class TestScalarOnlyCodecDeletion {
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance",
                             "frameIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance",
+                            "activeWidth", "frameIndex", "spawnX", "spawnY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance",
+                            "elementCount", "isLZ", "origX", "origY", "speed"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SpikedPoleHelixObjectInstance",
+                            "parentIndex", "spikeCount", "spikeY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance",
+                            "actWidth", "bgRender", "height", "isSbz3", "mappingFrame",
+                            "moveDistance", "origY", "switchIndex", "xFlipped"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.badniks.Sonic1ChopperBadnikInstance",
                             "origY"),

@@ -74,19 +74,19 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
             false, TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     // Zone variant
-    private final boolean isLZ;
+    private boolean isLZ;
 
     // Anchor / pivot position (sball_origX = objoff_3A, sball_origY = objoff_38)
-    private final int origX;
-    private final int origY;
+    private int origX;
+    private int origY;
 
     // Rotation state
     private int angle;        // obAngle: 16-bit angle accumulator (high byte used for CalcSine)
-    private final int speed;  // sball_speed = objoff_3E: angular velocity per frame
+    private int speed;  // sball_speed = objoff_3E: angular velocity per frame
 
     // Chain element data (parent + children, ordered from outermost to innermost)
     // Index 0 = parent (outermost), last index = innermost (closest to pivot)
-    private final int elementCount;
+    private int elementCount;
     private final int[] elementRadius;   // sball_radius per element
     private final int[] elementFrame;    // mapping frame per element
     private final int[] elementColType;  // collision type per element

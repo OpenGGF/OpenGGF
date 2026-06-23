@@ -65,15 +65,15 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
     // ---- Spike data ----
 
     // Per-spike state: positions and phase offsets
-    private final int spikeCount;       // Total number of spikes (including parent at center)
+    private int spikeCount;       // Total number of spikes (including parent at center)
     private final int[] spikeX;         // X position of each spike
-    private final int spikeY;           // Y position (all share the same Y)
+    private int spikeY;           // Y position (all share the same Y)
     private final int[] spikePhase;     // hel_frame per spike (0-7)
     private final int[] spikeFrame;     // Current display frame per spike (computed each update)
     private final boolean[] spikeHarmful; // Whether each spike is harmful this frame
 
     // Parent spike index (the one at the original spawn X position)
-    private final int parentIndex;
+    private int parentIndex;
 
     // v_ani0_frame is ROM's GLOBAL sync counter 0, ticked by SynchroAnimate every 12 gfc ticks.
     // It is NOT a per-object counter. ROM initialises v_ani0_time=0 and v_ani0_frame=0 at level
