@@ -11,8 +11,8 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
     private final ObjectRenderManager renderManager;
     private final DestructionEffects.AnimalFactory animalFactory;
     private final DestructionEffects.PointsFactory pointsFactory;
-    private final int pointsValue;
-    private final boolean pointsAllocatedBeforeAnimal;
+    private int pointsValue;
+    private boolean pointsAllocatedBeforeAnimal;
     private int pendingSfxId = -1;
     private int animFrame = 0;
     private boolean spawnedDestructionChildren;

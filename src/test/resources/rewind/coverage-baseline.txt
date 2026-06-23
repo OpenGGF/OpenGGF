@@ -22,8 +22,6 @@ com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLe
 com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance#finalScalar#baseY
 com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance#finalScalar#pointsAllocatedBeforeAnimal
-com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance#finalScalar#pointsValue
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#blockFrame
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#fullSubtype
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#isTall
@@ -61,14 +59,9 @@ com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#f
 com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#recreate
 com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance#finalScalar#posX
 com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#baseX
-com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#baseY
-com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#chainCount
 com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance#finalScalar#origY
-com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance#finalScalar#currentX
-com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance#finalScalar#currentY
 com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance#finalScalar#gravity
@@ -1469,8 +1462,6 @@ com.openggf.level.objects.BoxObjectInstance#recreate
 com.openggf.level.objects.BreathingBubbleInstance#finalScalar#maxBubbleFrame
 com.openggf.level.objects.BreathingBubbleInstance#finalScalar#riseVelocity
 com.openggf.level.objects.BreathingBubbleInstance#recreate
-com.openggf.level.objects.ExplosionObjectInstance#finalScalar#pointsAllocatedBeforeAnimal
-com.openggf.level.objects.ExplosionObjectInstance#finalScalar#pointsValue
 com.openggf.level.objects.PlaceholderObjectInstance#recreate
 com.openggf.level.objects.SkidDustObjectInstance#finalScalar#facingLeft
 com.openggf.level.objects.SplashObjectInstance#finalScalar#facingLeft

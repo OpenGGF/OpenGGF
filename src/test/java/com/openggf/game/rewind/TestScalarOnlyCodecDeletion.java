@@ -989,6 +989,18 @@ public class TestScalarOnlyCodecDeletion {
                             "actWidth", "bgRender", "height", "isSbz3", "mappingFrame",
                             "moveDistance", "origY", "switchIndex", "xFlipped"),
                     new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance",
+                            "pointsAllocatedBeforeAnimal", "pointsValue"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.level.objects.ExplosionObjectInstance",
+                            "pointsAllocatedBeforeAnimal", "pointsValue"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance",
+                            "baseX", "baseY", "chainCount"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance",
+                            "currentX", "currentY"),
+                    new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.badniks.Sonic1ChopperBadnikInstance",
                             "origY"),
                     new MutableFieldCoverageCandidate(

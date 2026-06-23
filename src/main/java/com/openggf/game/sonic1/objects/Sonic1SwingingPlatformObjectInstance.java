@@ -60,8 +60,8 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     // Position state (anchor/pivot point)
-    private final int baseX;  // swing_origX = objoff_3A
-    private final int baseY;  // swing_origY = objoff_38
+    private int baseX;  // swing_origX = objoff_3A
+    private int baseY;  // swing_origY = objoff_38
 
     // Current platform position (end of chain)
     private int x;
@@ -69,7 +69,7 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
 
     // Zone variant and configuration
     private ZoneVariant variant;
-    private final int chainCount;     // Number of chain segments (bits 0-3 of subtype)
+    private int chainCount;     // Number of chain segments (bits 0-3 of subtype)
     private int halfWidth;      // obActWid
     private int halfHeight;     // obHeight
     private int continuedRideSurfaceHeight; // Swing_Action2 passes obHeight+1 to MvSonicOnPtfm
