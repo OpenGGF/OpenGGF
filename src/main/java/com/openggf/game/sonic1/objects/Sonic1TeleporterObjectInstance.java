@@ -120,7 +120,7 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
     }
 
     private Routine routine = Routine.WAIT;
-    private final int subtype;
+    private int subtype;
 
     // ---- Waypoint tracking (objoff_3A, objoff_3B, objoff_3C, objoff_36, objoff_38) ----
     // waypointIndex corresponds to objoff_3A (byte) - current offset into waypoint data

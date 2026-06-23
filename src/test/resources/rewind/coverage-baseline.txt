@@ -8,11 +8,6 @@ com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance#finalScalar#or
 com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance#finalScalar#speed
 com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance#finalScalar#frameIndex
 com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance$WallFragmentInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance#finalScalar#isMaker
-com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance#finalScalar#spawnFreq
-com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance#finalScalar#spawnSubtype
-com.openggf.game.sonic1.objects.Sonic1BumperObjectInstance#objectRef#pendingTouchedPlayer
-com.openggf.game.sonic1.objects.Sonic1BumperObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1ButtonObjectInstance#finalScalar#adjustedY
 com.openggf.game.sonic1.objects.Sonic1ButtonObjectInstance#finalScalar#blockPressable
 com.openggf.game.sonic1.objects.Sonic1ButtonObjectInstance#finalScalar#flashMode
@@ -131,12 +126,6 @@ com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#active
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#frameIndex
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#spawnY
-com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#angularSpeed
-com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#detectionRadius
-com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#origX
-com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#origY
-com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#finalScalar#spotDistance
-com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SawObjectInstance#finalScalar#sawType
 com.openggf.game.sonic1.objects.Sonic1SawObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic1.objects.Sonic1SceneryObjectInstance#finalScalar#frameIndex
@@ -186,7 +175,6 @@ com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance#finalScalar#xFli
 com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#baseX
 com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#chainCount
-com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance#finalScalar#subtype
 com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance#finalScalar#phaseMask

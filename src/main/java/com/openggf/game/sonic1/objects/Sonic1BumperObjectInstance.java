@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategory;
@@ -60,7 +61,7 @@ import java.util.List;
  * </pre>
  */
 public class Sonic1BumperObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
 
     // ---- ROM Constants ----
 
@@ -113,7 +114,7 @@ public class Sonic1BumperObjectInstance extends AbstractObjectInstance
     private int hitAnimIndex = -1;  // -1 = not playing hit anim
     private int hitAnimTimer = 0;
     private int collisionProperty = 0;
-    private AbstractPlayableSprite pendingTouchedPlayer;
+    private transient AbstractPlayableSprite pendingTouchedPlayer;
     private int hitCount = 0;
 
     public Sonic1BumperObjectInstance(ObjectSpawn spawn) {

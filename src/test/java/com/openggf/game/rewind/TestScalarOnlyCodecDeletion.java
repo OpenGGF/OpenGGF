@@ -735,6 +735,20 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance$Fireball",
                     GameId.S1));
 
+    private static final List<CodecDeletionCandidate> S1_RUNTIME_SPAWN_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1BumperObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance",
+                    GameId.S1));
+
     private static final List<CodecDeletionCandidate> SEESAW_BALL_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1SeesawBallObjectInstance",
@@ -5011,6 +5025,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 Gargoyle fireball graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1RuntimeSpawnRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_RUNTIME_SPAWN_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 runtime spawn recreate coverage");
+        }
+    }
+
+    @Test
+    void s1RuntimeSpawnRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_RUNTIME_SPAWN_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 runtime spawn generic recreate, not a dynamic codec");
         }
     }
 
