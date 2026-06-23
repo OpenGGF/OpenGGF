@@ -12,6 +12,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.physics.Direction;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -43,7 +45,7 @@ import java.util.List;
  * as the player passes underneath through the tube.
  */
 public class PipeExitSpringObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // Animation IDs matching Ani_obj7B in the disassembly
     private static final int ANIM_IDLE = 0;
@@ -54,7 +56,7 @@ public class PipeExitSpringObjectInstance extends BoxObjectInstance
     private static final int PROXIMITY_X_RANGE = 0x10;  // ± 16 pixels from center
     private static final int PROXIMITY_Y_BELOW = 0x30;  // 48 pixels below spring
 
-    private final boolean fullStrength;
+    private boolean fullStrength;
     private ObjectAnimationState animationState;
     private int mappingFrame;
     private boolean initialized;
@@ -65,6 +67,11 @@ public class PipeExitSpringObjectInstance extends BoxObjectInstance
         // ROM: bit 1 of subtype: 0=full strength (-$1000), 1=reduced (-$A80)
         this.fullStrength = (spawn.subtype() & 0x02) == 0;
         this.mappingFrame = 0;
+    }
+
+    @Override
+    public PipeExitSpringObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new PipeExitSpringObjectInstance(ctx.spawn(), getName());
     }
 
     private void ensureInitialized() {

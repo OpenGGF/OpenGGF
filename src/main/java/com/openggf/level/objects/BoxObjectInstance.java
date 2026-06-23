@@ -1,20 +1,18 @@
 package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectSpawn;
 
 import java.util.List;
 
 
 
 public class BoxObjectInstance extends AbstractObjectInstance {
-    private final int halfWidth;
-    private final int halfHeight;
-    private final float r;
-    private final float g;
-    private final float b;
-    private final boolean highPriority;
+    private int halfWidth;
+    private int halfHeight;
+    private float r;
+    private float g;
+    private float b;
+    private boolean highPriority;
 
     public BoxObjectInstance(ObjectSpawn spawn, String name, int halfWidth, int halfHeight,
                              float r, float g, float b, boolean highPriority) {
