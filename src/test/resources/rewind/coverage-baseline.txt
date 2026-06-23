@@ -58,17 +58,6 @@ com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#finalScalar#buttonX
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#finalScalar#buttonY
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#recreate
-com.openggf.game.sonic2.objects.ARZPlatformObjectInstance#recreate
-com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance#finalScalar#initialX
-com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance#finalScalar#initialY
-com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance#finalScalar#speed
-com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance#recreate
-com.openggf.game.sonic2.objects.BlueBallsObjectInstance#finalScalar#arcMotion
-com.openggf.game.sonic2.objects.BlueBallsObjectInstance#finalScalar#initialX
-com.openggf.game.sonic2.objects.BlueBallsObjectInstance#finalScalar#initialY
-com.openggf.game.sonic2.objects.BlueBallsObjectInstance#finalScalar#siblingCount
-com.openggf.game.sonic2.objects.BlueBallsObjectInstance#finalScalar#xFlipped
-com.openggf.game.sonic2.objects.BlueBallsObjectInstance#recreate
 com.openggf.game.sonic2.objects.BreakableBlockObjectInstance#finalScalar#b
 com.openggf.game.sonic2.objects.BreakableBlockObjectInstance#finalScalar#g
 com.openggf.game.sonic2.objects.BreakableBlockObjectInstance#finalScalar#halfHeight
@@ -115,10 +104,6 @@ com.openggf.game.sonic2.objects.CNZRectBlocksObjectInstance#finalScalar#r
 com.openggf.game.sonic2.objects.CNZRectBlocksObjectInstance#recreate
 com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance#finalScalar#collisionDistance
 com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance#recreate
-com.openggf.game.sonic2.objects.CPZStaircaseObjectInstance#finalScalar#baseX
-com.openggf.game.sonic2.objects.CPZStaircaseObjectInstance#finalScalar#baseY
-com.openggf.game.sonic2.objects.CPZStaircaseObjectInstance#finalScalar#xFlip
-com.openggf.game.sonic2.objects.CPZStaircaseObjectInstance#recreate
 com.openggf.game.sonic2.objects.CheckpointDongleInstance#finalScalar#centerX
 com.openggf.game.sonic2.objects.CheckpointDongleInstance#finalScalar#centerY
 com.openggf.game.sonic2.objects.CheckpointObjectInstance#finalScalar#b
@@ -186,8 +171,6 @@ com.openggf.game.sonic2.objects.ForcedSpinObjectInstance#finalScalar#verticalMod
 com.openggf.game.sonic2.objects.ForcedSpinObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.ForcedSpinObjectInstance#recreate
 com.openggf.game.sonic2.objects.GrabObjectInstance#recreate
-com.openggf.game.sonic2.objects.HPropellerObjectInstance#finalScalar#routineMode
-com.openggf.game.sonic2.objects.HPropellerObjectInstance#recreate
 com.openggf.game.sonic2.objects.HTZLiftObjectInstance#finalScalar#baseX
 com.openggf.game.sonic2.objects.HTZLiftObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.HTZLiftObjectInstance#finalScalar#flippedX
@@ -315,7 +298,6 @@ com.openggf.game.sonic2.objects.RisingLavaObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.RisingLavaObjectInstance#finalScalar#subtype
 com.openggf.game.sonic2.objects.RisingLavaObjectInstance#finalScalar#widthPixels
 com.openggf.game.sonic2.objects.RisingLavaObjectInstance#recreate
-com.openggf.game.sonic2.objects.RisingPillarObjectInstance#recreate
 com.openggf.game.sonic2.objects.RisingPillarObjectInstance$RisingPillarDebrisInstance#recreate
 com.openggf.game.sonic2.objects.RivetObjectInstance#objectRef#lastNativeMainPlayer
 com.openggf.game.sonic2.objects.RivetObjectInstance#recreate
@@ -337,7 +319,6 @@ com.openggf.game.sonic2.objects.SignpostObjectInstance#recreate
 com.openggf.game.sonic2.objects.SlidingSpikesObjectInstance#finalScalar#baseX
 com.openggf.game.sonic2.objects.SlidingSpikesObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic2.objects.SlidingSpikesObjectInstance#recreate
-com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance#recreate
 com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance$SmallMetalPformChildInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance#finalScalar#b
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance#finalScalar#g
@@ -347,7 +328,6 @@ com.openggf.game.sonic2.objects.SmashableGroundObjectInstance#finalScalar#highPr
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance#finalScalar#r
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance#recreate
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance#recreate
-com.openggf.game.sonic2.objects.Sonic2LayerSwitcherObjectInstance#recreate
 com.openggf.game.sonic2.objects.SpeedBoosterObjectInstance#finalScalar#boostSpeed
 com.openggf.game.sonic2.objects.SpeedBoosterObjectInstance#recreate
 com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#accel

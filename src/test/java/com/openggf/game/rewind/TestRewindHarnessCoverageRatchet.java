@@ -237,12 +237,14 @@ public class TestRewindHarnessCoverageRatchet {
  *       name-preserving generic recreate and shed stale recreate baselines.</li>
  *   <li>2026-06-23: raised to 234 after S2 CNZ bumper/block/cloud/bubble-generator
  *       objects moved to generic recreate and shed stale scalar/recreate baselines.</li>
+ *   <li>2026-06-23: raised to 254 after S2 mechanism/platform objects moved to
+ *       generic recreate and shed stale scalar/recreate baselines.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 246;
+    static final int RATCHET_FLOOR = 254;
 
     @BeforeEach
     void initHeadless() {

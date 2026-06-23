@@ -12,6 +12,8 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -47,7 +49,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class RisingPillarObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(RisingPillarObjectInstance.class.getName());
 
     // art_tile palette from disassembly: make_art_tile(ArtTile_ArtKos_LevelArt,1,0)
@@ -115,6 +117,11 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
         this.debrisPiece = null;
 
         updateDynamicSpawn(x, y);
+    }
+
+    @Override
+    public RisingPillarObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new RisingPillarObjectInstance(ctx.spawn(), getName());
     }
 
     @Override
