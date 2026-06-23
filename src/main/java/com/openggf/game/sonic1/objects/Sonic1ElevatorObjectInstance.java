@@ -87,11 +87,11 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
     };
 
     // Saved original positions (elev_origX = objoff_32, elev_origY = objoff_30)
-    private final int origX;
-    private final int origY;
+    private int origX;
+    private int origY;
 
     // Half-width for platform collision
-    private final int halfWidth;
+    private int halfWidth;
 
     // Current dynamic position
     private int x;
@@ -104,7 +104,7 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
     private int actionType;
 
     // Whether this is a spawner (Elev_MakeMulti mode, bit 7 of original subtype)
-    private final boolean isSpawner;
+    private boolean isSpawner;
 
     // Spawner fields (Elev_MakeMulti: routine 6)
     private int spawnTimer;       // elev_dist when in spawner mode

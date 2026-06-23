@@ -138,13 +138,13 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     private int y;
 
     // Saved base positions (fb_origX = objoff_34, fb_origY = objoff_30)
-    private final int origX;
-    private final int origY;
+    private int origX;
+    private int origY;
 
     // Visual properties
-    private final int halfWidth;   // obActWid
-    private final int halfHeight;  // obHeight
-    private final int mappingFrame; // obFrame
+    private int halfWidth;   // obActWid
+    private int halfHeight;  // obHeight
+    private int mappingFrame; // obFrame
 
     // fb_height (objoff_3A): total movement distance remaining
     private int fbHeight;
@@ -162,13 +162,13 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     private int statusDirection;
 
     // Whether the object is in LZ (uses door art)
-    private final boolean isLZ;
+    private boolean isLZ;
 
     // Art key for rendering
     private final String artKey;
 
     // Zone index
-    private final int zoneIndex;
+    private int zoneIndex;
 
     public Sonic1FloatingBlockObjectInstance(ObjectSpawn spawn, int zoneIndex) {
         super(spawn, "FloatingBlock");

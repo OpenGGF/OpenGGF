@@ -61,16 +61,16 @@ public class Sonic1LavaBallMakerObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     /** Spawn delay in frames, from LavaM_Rates. Stored in obDelayAni. */
-    private final int spawnDelay;
+    private int spawnDelay;
 
     /** Countdown timer. Stored in obTimeFrame. */
     private int timer;
 
     /** Lower nybble of original subtype, passed to spawned lava balls as their subtype. */
-    private final int ballSubtype;
+    private int ballSubtype;
 
     /** Rate index for debug display. */
-    private final int rateIndex;
+    private int rateIndex;
 
     public Sonic1LavaBallMakerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LavaBallMaker");
