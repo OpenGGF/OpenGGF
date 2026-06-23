@@ -10,6 +10,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -30,7 +32,7 @@ import java.util.List;
  * persist between frames and accumulate velocity offsets during the lunge.
  * We simulate this by tracking persistent segment positions in arrays.
  */
-public class CrawltonBadnikInstance extends AbstractBadnikInstance {
+public class CrawltonBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     // Collision from Obj9E_SubObjData (s2.asm:75380): collision_flags = $0B
     private static final int COLLISION_SIZE_INDEX = 0x0B;
 
@@ -95,6 +97,11 @@ public class CrawltonBadnikInstance extends AbstractBadnikInstance {
             segX[i] = currentX;
             segY[i] = currentY;
         }
+    }
+
+    @Override
+    public CrawltonBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CrawltonBadnikInstance(ctx.spawn());
     }
 
     @Override

@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -19,7 +21,7 @@ import java.util.List;
  * Coconuts (0x9D) - Monkey Badnik from EHZ.
  * Climbs up and down a tree and throws coconut projectiles at the player.
  */
-public class CoconutsBadnikInstance extends AbstractBadnikInstance {
+public class CoconutsBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x09;
     private static final int IDLE_TIMER_INIT = 0x10;
     private static final int ATTACK_TIMER_RESET = 0x20;
@@ -67,6 +69,11 @@ public class CoconutsBadnikInstance extends AbstractBadnikInstance {
         this.yVelocity = 0;
         this.state = State.IDLE;
         this.throwState = ThrowState.HAND_RAISED;
+    }
+
+    @Override
+    public CoconutsBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CoconutsBadnikInstance(ctx.spawn());
     }
 
     /**

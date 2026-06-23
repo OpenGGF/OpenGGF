@@ -13,6 +13,8 @@ import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -33,7 +35,7 @@ import java.util.List;
  *
  * SubObjData: collision_flags=$0B, priority=4, width_pixels=$10.
  */
-public class AsteronBadnikInstance extends AbstractBadnikInstance {
+public class AsteronBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     // From ObjA4_SubObjData: collision_flags = $0B
     private static final int COLLISION_SIZE_INDEX = 0x0B;
 
@@ -86,6 +88,11 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
         this.state = State.IDLE;
         this.moveTimer = 0;
         this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+    }
+
+    @Override
+    public AsteronBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AsteronBadnikInstance(ctx.spawn());
     }
 
     @Override

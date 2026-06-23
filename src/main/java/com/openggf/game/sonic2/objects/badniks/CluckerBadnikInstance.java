@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -45,7 +47,7 @@ import java.util.List;
  *   y_pos offset = +$B
  *   x_pos offset = -8 (or +8 if x_flip)
  */
-public class CluckerBadnikInstance extends AbstractBadnikInstance {
+public class CluckerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
 
     // Collision size index from disassembly: collision_flags = 6
     // Set during routine 4->6 transition (move.b #6,collision_flags(a0))
@@ -123,6 +125,11 @@ public class CluckerBadnikInstance extends AbstractBadnikInstance {
         this.waitTimer = 0;
         this.animationIndex = 0;
         this.animDuration = 0;
+    }
+
+    @Override
+    public CluckerBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CluckerBadnikInstance(ctx.spawn());
     }
 
     @Override

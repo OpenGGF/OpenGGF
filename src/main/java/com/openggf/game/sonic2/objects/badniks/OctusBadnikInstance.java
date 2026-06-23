@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
@@ -25,7 +27,7 @@ import java.util.List;
  * then descends back to its starting position.
  * Based on disassembly Obj4A (lines 59860-60026).
  */
-public class OctusBadnikInstance extends AbstractBadnikInstance {
+public class OctusBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
 
     private enum State {
         WAIT_FOR_PLAYER,    // routine_secondary 0: check player distance
@@ -46,8 +48,8 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
 
     private static final SpriteAnimationSet ANIMATIONS = createAnimations();
 
-    private final int startY;
-    private final boolean xFlip;
+    private int startY;
+    private boolean xFlip;
     private State state;
     private int timer;
     private final SubpixelMotion.State motionState;
@@ -65,6 +67,11 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
         this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
         this.bulletFired = false;
         this.animationState = new ObjectAnimationState(ANIMATIONS, 0, 1);
+    }
+
+    @Override
+    public OctusBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new OctusBadnikInstance(ctx.spawn());
     }
 
     @Override

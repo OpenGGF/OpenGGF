@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -18,7 +20,7 @@ import java.util.List;
  *
  * ROM reference: ObjA3 in s2.asm.
  */
-public class FlasherBadnikInstance extends AbstractBadnikInstance {
+public class FlasherBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x06; // subObjData ... ,6
 
     // Routine timers/velocities from ObjA3.
@@ -96,6 +98,11 @@ public class FlasherBadnikInstance extends AbstractBadnikInstance {
         this.flightPhaseIndex = 0;
         this.electrified = false;
         this.animFrame = 0;
+    }
+
+    @Override
+    public FlasherBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new FlasherBadnikInstance(ctx.spawn());
     }
 
     @Override

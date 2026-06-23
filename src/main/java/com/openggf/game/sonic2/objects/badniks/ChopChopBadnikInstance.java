@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -33,7 +35,7 @@ import java.util.List;
  * - Vertical range: -32 to +31 pixels (asymmetric, +-0x20 band)
  * - Only attacks if already moving toward the player
  */
-public class ChopChopBadnikInstance extends AbstractBadnikInstance {
+public class ChopChopBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     // Collision size from subObjData in disassembly
     private static final int COLLISION_SIZE_INDEX = 0x02;
 
@@ -65,7 +67,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance {
     private int xSubpixel;           // Subpixel accumulator for x movement (ObjectMove 16.16 carry)
     private int ySubpixel;           // Subpixel accumulator for y movement during charge
     private boolean chargeLatched;   // Have charge velocities been latched (Obj91_MoveTowardsPlayer)?
-    private final int startX;        // Initial X position for direction reference
+    private int startX;              // Initial X position for direction reference
 
     public ChopChopBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "ChopChop", Sonic2BadnikConfig.DESTRUCTION);
@@ -85,6 +87,11 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance {
 
         // Set initial velocity based on facing direction
         xVelocity = facingLeft ? -PATROL_SPEED : PATROL_SPEED;
+    }
+
+    @Override
+    public ChopChopBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new ChopChopBadnikInstance(ctx.spawn());
     }
 
     @Override
