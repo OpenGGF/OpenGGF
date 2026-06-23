@@ -244,6 +244,16 @@
 -- words used by Tails_Display / Render_Sprites visibility
 -- (sonic3k.constants.asm:9-16,62,416-417; sonic3k.asm:26278-26300,
 -- 36323-36370). Diagnostic-only.
+-- v6.27-s3k-completerun: RECORDER HYGIENE ONLY (no schema/data change; existing
+-- traces stay valid). (1) No more per-segment cmd-window flashes: all per-zone
+-- segment subdirs are pre-created in a SINGLE os.execute at load
+-- (precreate_segment_dirs), and start_new_segment's per-segment
+-- os.execute("mkdir") is replaced by the shell-free ensure_segment_dir() probe.
+-- (2) Reliable movie-end self-exit: a hard FRAME_CAP backstop guarantees the
+-- while-true loop terminates even if every movie-end signal fails, and a guarded
+-- post-loop block re-issues client.exit() (a no-op on some BizHawk builds) then
+-- client.pause() so EmuHawk idles at 0% CPU instead of free-running. Mirrors S1
+-- recorder v3.6.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -467,6 +477,42 @@ ZONE_TOKEN = {
 
 function zone_token_for(zone_id)
     return ZONE_TOKEN[zone_id] or string.format("zone%02x", zone_id)
+end
+
+-- v6.27 directory hygiene: pre-create the base dir AND every per-zone segment
+-- subdir in ONE os.execute at load so start_new_segment's per-segment
+-- os.execute("mkdir") (which flashed a cmd window for each zone) is gone.
+-- Windows mkdir takes multiple paths in one call; 2>NUL swallows "already
+-- exists". GLOBAL (no `local`) to respect this recorder's 200-local budget.
+function precreate_segment_dirs()
+    -- Strip trailing slash before quoting: a trailing "\" inside a cmd-quoted
+    -- path escapes the closing quote (`"trace_output\"` is malformed).
+    local function quote_dir(p)
+        local win = (p:gsub("/", "\\"))
+        win = (win:gsub("\\+$", ""))
+        return "\"" .. win .. "\""
+    end
+    local quoted = { quote_dir(BASE_OUTPUT_DIR) }
+    for _, token in pairs(ZONE_TOKEN) do
+        quoted[#quoted + 1] = quote_dir(BASE_OUTPUT_DIR .. token)
+    end
+    -- One brief cmd window for the whole run.
+    os.execute("mkdir " .. table.concat(quoted, " ") .. " 2>NUL")
+end
+
+-- Shell-free fallback for an UNKNOWN zone token not in the pre-created set
+-- (zone_token_for returns "zoneXX"). Probes via a temp file; only shells out if
+-- the dir genuinely does not exist, so the normal known-zone path never spawns a
+-- console.
+function ensure_segment_dir(dir)
+    local probe_path = dir .. ".oggf_dir_probe"
+    local probe = io.open(probe_path, "w")
+    if probe then
+        probe:close()
+        os.remove(probe_path)
+        return  -- dir exists (pre-created); no shell-out.
+    end
+    os.execute("mkdir \"" .. (dir:gsub("/", "\\")) .. "\" 2>NUL")
 end
 
 -- GLOBALS (no `local`): keeps the main chunk under Lua's 200-local limit
@@ -1042,7 +1088,7 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.26-s3k-completerun",\n')
+    meta_file:write('  "lua_script_version": "6.27-s3k-completerun",\n')
     -- trace_schema: csv schema is unchanged from 5. v5 CSV + new per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux
     -- events are detected by parsers via aux_schema_extras rather than a
@@ -4578,7 +4624,10 @@ end
 -- for the per-zone token directory.
 function start_new_segment(zone_id)
     OUTPUT_DIR = BASE_OUTPUT_DIR .. zone_token_for(zone_id) .. "/"
-    os.execute("mkdir \"" .. OUTPUT_DIR .. "\" 2>NUL")
+    -- v6.27: dir was pre-created at load (precreate_segment_dirs); ensure_segment_dir
+    -- is a shell-free probe that only shells out for an unexpected unknown-zone
+    -- token. NO per-segment os.execute("mkdir") -> no cmd-window per zone.
+    ensure_segment_dir(OUTPUT_DIR)
 
     started = true
     current_segment_zone = zone_id
@@ -4987,7 +5036,9 @@ function on_frame_end()
     trace_frame = trace_frame + 1
 end
 
-os.execute("mkdir \"" .. OUTPUT_DIR .. "\" 2>NUL")
+-- v6.27: single load-time shell-out creating the base dir + every per-zone
+-- segment dir (replaces the old per-segment os.execute("mkdir") cmd-window spam).
+precreate_segment_dirs()
 
 HEADLESS_VISIBLE = false
 if HEADLESS then
@@ -5000,7 +5051,7 @@ end
 
 WAIT_DESC = "first level entry (Game_Mode=0x0C). Auto-segmenting per ROM zone."
 print(string.format(
-    "S3K Complete-Run Recorder v6.26-s3k-completerun loaded. Profile=%s. Base output=%s. Waiting for %s",
+    "S3K Complete-Run Recorder v6.27-s3k-completerun loaded. Profile=%s. Base output=%s. Waiting for %s",
     TRACE_PROFILE, BASE_OUTPUT_DIR, WAIT_DESC))
 
 -- Register the CNZ wire cage execution hooks. Done once at script load
@@ -5046,8 +5097,34 @@ V611_SOLID.register_hooks()
 -- collision_property bytes during the CNZ F=619-625 window.
 V615_CRL.register_hooks()
 
+-- v6.27 hard safety net: even if every movie-end signal fails (movie.length()==0,
+-- mode never reports FINISHED, never leaves a level family), the loop must not
+-- run forever. Cap at the known end bound (+ margin), else a large absolute
+-- bound. This is the backstop that prevents the runaway EmuHawk.
+-- GLOBAL (no `local`) to respect this recorder's 200-local budget.
+function absolute_frame_cap()
+    local len = movie.isloaded() and movie.length() or 0
+    if BK2_FRAME_COUNT ~= nil and BK2_FRAME_COUNT > len then len = BK2_FRAME_COUNT end
+    if TRACE_STOP_FRAME ~= nil and TRACE_STOP_FRAME > 0 and (len == 0 or TRACE_STOP_FRAME < len) then
+        len = TRACE_STOP_FRAME
+    end
+    if len > 0 then
+        return len + 64  -- a few frames past the end to let finalisation land
+    end
+    return 2000000       -- far beyond any S3K complete-run BK2
+end
+FRAME_CAP = absolute_frame_cap()
+
 while true do
     on_frame_end()
+
+    -- Backstop: force-finish if we somehow blew past the movie/cap without any
+    -- normal stop signal firing.
+    if not finished and emu.framecount() >= FRAME_CAP then
+        print(string.format(
+            "Frame cap %d reached without a movie-end signal; finalising and exiting.", FRAME_CAP))
+        finished = true
+    end
 
     if finished then
         print("Recording complete. Finalising last segment...")
@@ -5061,9 +5138,6 @@ while true do
                 "  segment %-7s zone_id=%-2d act=%d bk2_frame_offset=%-7d rows=%d",
                 seg.token, seg.zone_id, seg.act, seg.bk2_frame_offset, seg.rows))
         end
-        if HEADLESS then
-            client.exit()
-        end
         break
     end
 
@@ -5072,4 +5146,20 @@ while true do
     end
 
     emu.frameadvance()
+end
+
+-- v6.27 reliable termination: client.exit() is a no-op on some BizHawk builds
+-- (the "kept running past the movie" symptom). All segment files are already
+-- flushed/closed by finalize_segment() above, so call client.exit() repeatedly
+-- (with an emu.frameadvance() yield so a working exit takes effect), then
+-- client.pause() as a last resort so EmuHawk idles at 0% CPU instead of
+-- free-running into a multi-GB runaway -- the host launcher's process-kill /
+-- tasklist check then reaps it cleanly.
+if HEADLESS then
+    for _ = 1, 8 do
+        client.exit()
+        if client.ispaused() then client.unpause() end
+        emu.frameadvance()
+    end
+    client.pause()
 end
