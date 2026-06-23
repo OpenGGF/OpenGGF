@@ -211,3 +211,19 @@ the ROM `SolidObject` call site's d2 value.
 **ROM citation.** `docs/s1disasm/_incObj/17 GHZ Spiked Pole Helix.asm:95-105` (`Hel_RotateSpikes`: `move.b (v_ani0_frame).w,d0`). `SynchroAnimate`: `docs/s1disasm/sonic.asm:3111-3119` (bpl branch on underflow; reload to 11). `Level_MainLoop` order: `docs/s1disasm/sonic.asm:2984-3010`.
 
 **Originating commits.** `bugfix/ai-s1-ghz3-f4650` (f4650 -> f5043, unseeded counter); `bugfix/ai-s1-ghz3-f5043` (f5043 -> f6464, off-by-one formula).
+
+## P6 — Object-set control lock (locktime/move_lock) decrements only on grounded frames
+
+**Symptom.** An object that disables the player's D-pad for N frames (a horizontal spring, a launcher, anything writing `locktime`/`move_lock`) lets input back in too early when the lock window spans airborne frames — the player starts accelerating/decelerating before ROM does. Typical trace signature: a 1px `x` and ~0x80 `x_speed`/`x_sub` divergence on the frame just after the player lands from the launch, with input freshly pressed that the ROM still ignores.
+
+**Root cause.** ROM's horizontal control lock is the single RAM word `locktime` (S1, objoff_3E) = `move_lock` (S2/S3K). It is decremented **only on grounded frames**, inside `Sonic_SlopeRepel` (S1) / the slope-repel routine (S2/S3K), which the grounded player modes (`MdNormal`/`MdRoll`) call but the airborne modes (`MdJump`/`MdJump2`) do **not**. So while the player is airborne the lock is FROZEN — its countdown pauses for the entire jump/launch arc and resumes only on landing.
+
+The engine models `locktime`/`move_lock` as `moveLockTimer`, decremented only in the grounded `doSlopeRepel()` path — correct. The trap: do NOT invent a per-object lock field decremented every frame (e.g. S1 spring's old `springingFrames`, ticked unconditionally in `tickStatus()`). A per-frame counter expires several frames early whenever the lock spans airborne frames.
+
+**What to check.** Any object porting a `move.w #N,locktime(a1)` / `move.w #N,move_lock(a1)`:
+- Set the lock through `player.setMoveLockTimer(N)`, NOT a bespoke counter. `moveLockTimer` already has the grounded-only decrement and feeds the same `!air && (moveLocked || ...)` ground control-lock gate.
+- Confirm in the ROM which spring/launcher variant actually sets the lock. In S1 only `Spring_LR` (horizontal) sets `locktime`; vertical/down springs do not.
+
+**ROM citation.** `docs/s1disasm/_incObj/41 Springs.asm:145` (`Spring_BounceLR`: `move.w #15,locktime(a1)`). Grounded-only decrement: `docs/s1disasm/_incObj/01 Sonic.asm:1383,1410` (`Sonic_SlopeRepel` `tst.w locktime` / `subq.w #1,locktime`), called from `Sonic_MdNormal`/`Sonic_MdRoll` (`asm:323,352`) but not the airborne modes (`asm:328-341,357-370`). S2 equivalent: `docs/s2disasm/s2.asm:34031` (horizontal spring `move.w #$F,move_lock(a1)`).
+
+**Originating commit.** `bugfix/ai-s1-slz2-f1493` (SLZ2 f1714 -> f2552, 215 -> 137; S1 LR spring routed control lock through moveLockTimer).

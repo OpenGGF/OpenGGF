@@ -246,7 +246,23 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         // ROM: bchg #0,obStatus(a1) — toggle facing direction
         player.setDirection(xVel > 0 ? Direction.RIGHT : Direction.LEFT);
 
-        // ROM: move.w #$F,objoff_3E(a1) — 15 frame control lock
+        // ROM: move.w #$F,objoff_3E(a1) — 15 frame control lock (Spring_BounceLR,
+        // docs/s1disasm/_incObj/41 Springs.asm:145). objoff_3E is the player's
+        // locktime field — the same RAM word S2 writes as move_lock from the
+        // horizontal spring (docs/s2disasm/s2.asm:34031, loc_18B1C). The ROM only
+        // decrements locktime on grounded frames via Sonic_SlopeRepel
+        // (docs/s1disasm/_incObj/01 Sonic.asm:1383,1410); it is FROZEN while
+        // airborne. The engine models locktime as moveLockTimer, which is
+        // likewise only decremented in doSlopeRepel() on grounded modes. The
+        // springing flag alone is decremented unconditionally every frame in
+        // tickStatus(), so when the LR spring launches Sonic airborne (he flies
+        // off a ledge) the bespoke spring lock expires several frames early and
+        // the engine starts applying D-pad deceleration before the ROM does
+        // (S1 SLZ2 trace f1714 / spring at f06A2: 6 airborne frames must freeze
+        // the lock). Drive the control lock through moveLockTimer so the
+        // grounded-only decrement matches ROM. Keep springing for the carry /
+        // air-spring animation marker consumed elsewhere.
+        player.setMoveLockTimer(SpringBounceHelper.CONTROL_LOCK_FRAMES);
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
 
         // ROM: btst #2,obStatus(a1) / bne.s loc_DC56 — skip Walk anim if rolling
