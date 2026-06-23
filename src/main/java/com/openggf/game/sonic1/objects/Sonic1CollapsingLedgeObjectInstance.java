@@ -98,10 +98,10 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     private int y;
 
     // Subtype determines facing: 0 = left, 1 = right
-    private final int subtype;
+    private int subtype;
 
     // Mapping frame index: 0=left, 1=right (from obSubtype -> obFrame in init)
-    private final int mappingFrame;
+    private int mappingFrame;
 
     // Collapse timer (ledge_timedelay = objoff_38)
     private int collapseDelay;

@@ -837,6 +837,21 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance",
                     GameId.S1),
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1ChainedStomperObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.badniks.Sonic1ChopperBadnikInstance",
                     GameId.S1),
             new CodecDeletionCandidate(
@@ -932,6 +947,28 @@ public class TestScalarOnlyCodecDeletion {
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance",
                             "phaseMask", "phaseOffset", "timerLength"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance",
+                            "frameIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1ChainedStomperObjectInstance",
+                            "blockActiveWidth", "blockFrame", "ceilingY", "chainBaseY",
+                            "maxFallDistance", "origY", "spikesHaveCollision"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance",
+                            "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance",
+                            "mappingFrame", "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance",
+                            "type"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1MonitorPowerUpObjectInstance",
+                            "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance",
+                            "frameIndex"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.badniks.Sonic1ChopperBadnikInstance",
                             "origY"),

@@ -90,7 +90,7 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
     // Fragment count (d1 = 7 means 8 fragments, dbf loop)
     private static final int FRAGMENT_COUNT = 8;
 
-    private final int frameIndex;
+    private int frameIndex;
     private boolean broken;
     private boolean initialized;
 

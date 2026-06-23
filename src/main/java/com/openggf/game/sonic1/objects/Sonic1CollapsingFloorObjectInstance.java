@@ -103,7 +103,7 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
     };
 
     // The subtype byte from ROM placement
-    private final int subtype;
+    private int subtype;
 
     // The art key for rendering (zone-specific)
     private final String artKey;

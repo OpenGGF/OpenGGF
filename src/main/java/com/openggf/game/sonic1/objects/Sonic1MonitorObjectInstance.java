@@ -64,7 +64,7 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
     // Standard object gravity
     private static final int FALLING_GRAVITY = 0x38;
 
-    private final MonitorType type;
+    private MonitorType type;
     private ObjectAnimationState animationState;
     private boolean broken;
     private int mappingFrame;

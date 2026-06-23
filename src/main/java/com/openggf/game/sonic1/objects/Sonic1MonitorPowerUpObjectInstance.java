@@ -25,7 +25,7 @@ public final class Sonic1MonitorPowerUpObjectInstance extends AbstractMonitorObj
         implements SpawnCoordinateSubtypeDefaultArgsRewindRecreatable {
     private static final int ICON_FRAME_OFFSET = 2;
 
-    private final int subtype;
+    private int subtype;
 
     public Sonic1MonitorPowerUpObjectInstance(int x, int y, int subtype, PlayableEntity player) {
         super(new ObjectSpawn(x, y, Sonic1ObjectIds.POWER_UP, subtype, 0, false, 0), "PowerUp");

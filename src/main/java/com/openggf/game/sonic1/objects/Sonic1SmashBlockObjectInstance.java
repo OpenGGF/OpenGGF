@@ -106,7 +106,7 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
     // In our engine this is checked via cached pre-collision animation, with
     // player.getRolling() as a fallback.
 
-    private final int frameIndex;
+    private int frameIndex;
     private boolean broken;
     private boolean initialized;
 
