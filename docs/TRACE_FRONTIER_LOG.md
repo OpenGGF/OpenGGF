@@ -144,6 +144,15 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-23 - S1 type-03 platform fall timer missed the landing frame; GHZ1 f3246 -> GREEN (255 -> 0)
+
+- Branch/worktree: `bugfix/ai-s1-ghz1-advance` off `origin/develop` 88a4be974; cherry-picked Orbinaut CalcSine fix (f9fac6f25) first to restore SLZ2 to its correct develop baseline before the platform fix.
+- **`s1_ghz1` GREENED (255 -> 0 errors).** First error before fix: f3246 `y` exp=0x0171 act=0x0170 / `camera_y` exp=0x0111 act=0x0110 (1px; Sonic 1px too high on a type-03 falling platform). After: complete-run passes with 0 errors.
+- Root: ROM `Plat_Solid` (routine 2) calls `PlatformObject` — which sets `obStatus` bit 3 (standing) AND changes routine to 4 — then falls through to `Plat_Action` which calls `Plat_Move`. `.type03` (`docs/s1disasm/_incObj/18 Platforms.asm:201-216`): `tst.w objoff_3A; bne .type03_wait; btst #3,obStatus; beq .nomove; move.w #30,objoff_3A`. So on the landing frame, the timer is set to 30. The engine's `moveFallOnStand()` runs BEFORE `checkpointAll()` (which is the engine's `PlatformObject` equivalent), so on the landing frame it read the PREVIOUS frame's `playerStanding=false`, missed the timer start, and started the 30-frame countdown 1 frame late. This meant the platform transitioned to type04 (falling, 16.16 gravity 0x38) 1 frame late, holding Sonic on the surface 1 frame longer. At GHZ1 f3246, the platform `@13A0,0188 subtype=03`: with correct timing the platform had already fallen 1px (type04 workingY advanced), setting its Y to 0x018D vs the engine's 0x018C; Sonic rode via `MvSonicOnPtfm2` (`platform.Y - 9 - 19`) = 0x0171 (ROM) vs engine 0x0170.
+- Fix: after `checkpointAll()` sets `playerStanding` in `Sonic1PlatformObjectInstance.update`, added a post-checkpoint guard: `if (moveType == 0x03 && timer == 0 && playerStanding) { timer = FALL_STAND_DELAY; }`. This mirrors `.type03`'s first-time-standing detection on the landing frame. Object-local to Obj 18.
+- Regression sweep (full S1 sweep, vs develop baseline including cherry-picked Orbinaut fix): GHZ2 GREEN, SYZ2 GREEN, all other S1 frontiers unchanged: GHZ3 f2693, LZ1 f5745, LZ2 f1068, LZ3 f6517, MZ1 f2089, MZ2 f2819, MZ3 f2079, SBZ1 f2268, SBZ2 f1395, SLZ1 f933, SLZ2 f1493, SLZ3 f718, SYZ1 f816, SYZ3 f6065. Unit tests: TestSolidRoutineProfiles 13/0, TestSonic1SpringObjectInstance 2/0, TestOrbinautBadnikInstance 6/0 — all pass.
+- Note: this fix was developed in worktree `ghz1-advance` which was based on `origin/develop` 88a4be974 (before `f9fac6f25` Orbinaut fix). Without cherry-picking the Orbinaut fix first, the timer fix caused SLZ2 to regress from f1493 to f1016: the earlier platform fall timing changed Sonic's trajectory so he hit the Orbinaut spike 4 frames early (a pre-existing spike-orbit 1px Y offset that the Orbinaut fix addresses). Cherry-picking the Orbinaut fix into the branch first restored the correct behavior.
+
 ## 2026-06-23 - S1 Orbinaut satellite orbit used float Math.round instead of ROM CalcSine integer shift; SLZ2 f1016 -> f1493
 
 - Branch: `bugfix/ai-s1-syz-slz-advance` off `develop` 326de21ad.

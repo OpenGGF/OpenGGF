@@ -217,6 +217,19 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
         // the jump-off frame re-seats to the platform's new y, not its pre-move y.
         SolidCheckpointBatch batch = checkpointAll();
         playerStanding = hasStandingContact(batch);
+
+        // ROM landing-frame timer start (type 03 only):
+        // On the landing frame, Plat_Solid calls PlatformObject which sets obStatus bit 3
+        // (standing), then falls through to Plat_Action where Plat_Move (.type03) reads
+        // that bit and sets objoff_3A=30 (docs/s1disasm/_incObj/18 Platforms.asm:54-71,
+        // docs/s1disasm/_incObj/18 Platforms.asm:200-209). In the engine,
+        // moveFallOnStand() runs BEFORE the checkpoint, so it uses the previous frame's
+        // playerStanding=false and misses the landing-frame timer start. The engine's
+        // PlatformObject equivalent (checkpointAll) runs afterward, so the timer must
+        // be started post-checkpoint when we detect the fresh first-time standing.
+        if (moveType == 0x03 && timer == 0 && playerStanding) {
+            timer = FALL_STAND_DELAY;
+        }
     }
 
     @Override
