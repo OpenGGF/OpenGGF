@@ -883,6 +883,14 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance",
                     GameId.S1));
 
+    private static final List<CodecDeletionCandidate> S2_SCALAR_NAMED_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.ArrowShooterObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.BarrierObjectInstance",
+                    GameId.S2));
+
     private static final List<MutableFieldCoverageCandidate> S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS =
             List.of(
                     new MutableFieldCoverageCandidate(
@@ -5383,6 +5391,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 collapsing fragment generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2ScalarNamedRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_SCALAR_NAMED_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 scalar named coverage");
+        }
+    }
+
+    @Test
+    void s2ScalarNamedRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_SCALAR_NAMED_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 scalar named generic recreate, not a dynamic codec");
         }
     }
 

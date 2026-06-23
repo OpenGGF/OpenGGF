@@ -9,6 +9,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -36,7 +38,7 @@ import java.util.logging.Logger;
  *   <li>Anim 2 (Firing): delay $07, frames 3,4,$FC,4,3,1,$FD,0 (fires arrow on $FD)</li>
  * </ul>
  */
-public class ArrowShooterObjectInstance extends AbstractObjectInstance {
+public class ArrowShooterObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(ArrowShooterObjectInstance.class.getName());
 
     private static final int DETECTION_DISTANCE = 0x40; // 64 pixels
@@ -82,6 +84,11 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance {
         this.firingIndex = 0;
         this.arrowFired = false;
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public ArrowShooterObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new ArrowShooterObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -38,7 +40,8 @@ import java.util.logging.Logger;
  * - Max rise: 64 pixels (0x40)
  * - Solid collision enabled while visible
  */
-public class BarrierObjectInstance extends AbstractObjectInstance implements SolidObjectProvider, SolidObjectListener {
+public class BarrierObjectInstance extends AbstractObjectInstance
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(BarrierObjectInstance.class.getName());
 
     // Movement constants (from disassembly)
@@ -81,6 +84,11 @@ public class BarrierObjectInstance extends AbstractObjectInstance implements Sol
     public BarrierObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         init();
+    }
+
+    @Override
+    public BarrierObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BarrierObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

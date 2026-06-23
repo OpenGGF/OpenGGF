@@ -63,8 +63,6 @@ com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance#finalScalar#initialX
 com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance#finalScalar#initialY
 com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance#finalScalar#speed
 com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance#recreate
-com.openggf.game.sonic2.objects.ArrowShooterObjectInstance#recreate
-com.openggf.game.sonic2.objects.BarrierObjectInstance#recreate
 com.openggf.game.sonic2.objects.BlueBallsObjectInstance#finalScalar#arcMotion
 com.openggf.game.sonic2.objects.BlueBallsObjectInstance#finalScalar#initialX
 com.openggf.game.sonic2.objects.BlueBallsObjectInstance#finalScalar#initialY
