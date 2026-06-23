@@ -282,6 +282,8 @@ Highlights:
 
 - Trace-workflow documentation now captures the BizHawk live-diagnostic capture technique (the fast self-exiting headless lua trio — `emu.limitframerate(false)` + `client.speedmode(6400)` + `client.invisibleemulation(true)` — the `tools/bizhawk/diag_template_fast.lua` template, the NLua read-count crash workaround, and the simple-named `s1.gen`/`s2.gen`/`s3k.gen` ROM-arg fix) in the `trace-replay-bug-fixing` skill, plus a new lead-orchestrator runbook documenting the continuous multi-agent trace-advancing loop (survey → assign → net-positive gate → verify → merge → reassign) and its shared-worktree hygiene rules.
 
+- The S1 Orbinaut satellite spikeball now computes its orbital offset with ROM-faithful integer arithmetic — `CalcSine` then `asr.w #4` (a truncating shift) — instead of floating-point `Math.round`, which rounded `254>>4 = 15.875` up to 16 and placed the spike 1px too low, triggering a premature hurt hit (SLZ2 trace frontier f1016 -> f1493; Orbinaut-only, SYZ2 + GHZ2 stay green, S3K Orbinaut unit byte-identical).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)
