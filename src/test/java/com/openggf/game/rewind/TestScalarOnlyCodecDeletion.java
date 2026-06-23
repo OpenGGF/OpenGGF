@@ -1331,6 +1331,17 @@ public class TestScalarOnlyCodecDeletion {
                             "com.openggf.game.sonic2.objects.TiltingPlatformObjectInstance",
                             "behaviorType"));
 
+    private static final List<CodecDeletionCandidate> S2_INTERACTION_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.GrabObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SwingingPformObjectInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_INTERACTION_SCALAR_RECREATE_MUTABLE_FIELDS =
+            List.of();
+
     private static final List<MutableFieldCoverageCandidate> S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS =
             List.of(
                     new MutableFieldCoverageCandidate(
@@ -6282,6 +6293,52 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s2MechanismFragmentParentRecreateFieldsAreMutableForCompactRestore() {
         for (MutableFieldCoverageCandidate candidate : S2_MECHANISM_FRAGMENT_PARENT_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2InteractionScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_INTERACTION_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 interaction scalar coverage");
+        }
+    }
+
+    @Test
+    void s2InteractionScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_INTERACTION_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 interaction scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2InteractionScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_INTERACTION_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2InteractionScalarRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_INTERACTION_SCALAR_RECREATE_MUTABLE_FIELDS) {
             Class<?> cls = loadClass(candidate.fqn());
             for (String fieldName : candidate.fieldNames()) {
                 try {

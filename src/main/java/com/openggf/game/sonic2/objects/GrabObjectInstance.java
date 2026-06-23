@@ -8,6 +8,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -46,7 +48,7 @@ import java.util.logging.Logger;
  * <b>Per-player state:</b> Uses objoff_30 (P1 grab flag), objoff_31 (P2 grab flag),
  * objoff_32 (P1 release delay), objoff_33 (P2 release delay).
  */
-public class GrabObjectInstance extends AbstractObjectInstance {
+public class GrabObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(GrabObjectInstance.class.getName());
 
@@ -88,6 +90,11 @@ public class GrabObjectInstance extends AbstractObjectInstance {
 
         LOGGER.fine(() -> String.format("Grab init: pos=(%d,%d), subtype=0x%02X",
                 spawn.x(), spawn.y(), spawn.subtype()));
+    }
+
+    @Override
+    public GrabObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new GrabObjectInstance(ctx.spawn(), "Grab");
     }
 
     @Override

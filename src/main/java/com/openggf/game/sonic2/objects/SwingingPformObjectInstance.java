@@ -11,6 +11,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -61,7 +63,7 @@ import java.util.logging.Logger;
  * decreases it. Max angle is 0x40 (90 degrees), giving ~4 pixels of Y offset.
  */
 public class SwingingPformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(SwingingPformObjectInstance.class.getName());
 
@@ -125,6 +127,11 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
 
         initFromSubtype();
         updateDynamicSpawn(x, y);
+    }
+
+    @Override
+    public SwingingPformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SwingingPformObjectInstance(ctx.spawn(), "SwingingPform");
     }
 
     private void initFromSubtype() {
@@ -597,4 +604,3 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
     }
 
 }
-

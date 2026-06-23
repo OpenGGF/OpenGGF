@@ -36,6 +36,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S2 misc scalar rewind coverage:** HTZ fire shooters, signposts, steam springs, tornado smoke, and WFZ wheels now rebuild through generic rewind recreate without stale constructor-scalar baselines.
 - **S2 mechanism-tail rewind coverage:** Monitors, spiky blocks, springboards, and Buzzer bodies now rebuild through generic rewind recreate without stale constructor-scalar baselines.
 - **S2 fragment-parent rewind coverage:** Smashable ground and WFZ tilting-platform parent objects now rebuild through generic rewind recreate without stale constructor-scalar baselines.
+- **S2 interaction scalar rewind coverage:** Grab points and ARZ swinging platforms now rebuild through generic rewind recreate without stale recreate baselines.
 - **S1 Gargoyle fireball rewind restore coverage:** Gargoyle fireballs now restore through generic spawn-based rewind recreate, preserving captured direction/speed state without an explicit dynamic codec and tightening the coverage baseline.
 - **S2 DEZ Eggman exhaust-puff rewind restore coverage:** DEZ Eggman exhaust puffs now restore through generic spawn-based rewind recreate, preserving captured scalar motion/frame state without an explicit dynamic codec and tightening the coverage baseline.
 - **S2 HTZ boss smoke rewind restore coverage:** HTZ boss defeat smoke particles now restore through generic spawn-based rewind recreate and are included in the HTZ boss graph restore proof alongside the flame and lava hazards.

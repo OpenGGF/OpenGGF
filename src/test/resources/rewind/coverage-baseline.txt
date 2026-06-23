@@ -97,7 +97,6 @@ com.openggf.game.sonic2.objects.FallingPillarObjectInstance#finalScalar#isChild
 com.openggf.game.sonic2.objects.FallingPillarObjectInstance#recreate
 com.openggf.game.sonic2.objects.FlipperObjectInstance#finalScalar#idleAnimId
 com.openggf.game.sonic2.objects.FlipperObjectInstance#recreate
-com.openggf.game.sonic2.objects.GrabObjectInstance#recreate
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#finalScalar#renderXFlip
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#finalScalar#renderYFlip
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#finalScalar#reverseAnim
@@ -146,7 +145,6 @@ com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#recreate
 com.openggf.game.sonic2.objects.SpiralObjectInstance#recreate
 com.openggf.game.sonic2.objects.SteamPuffObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate
-com.openggf.game.sonic2.objects.SwingingPformObjectInstance#recreate
 com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#finalScalar#baseX
 com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#finalScalar#behaviorMode
