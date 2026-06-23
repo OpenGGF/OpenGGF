@@ -63,11 +63,11 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
-    private final int baseX;
-    private final int baseY;
-    private final int frameIndex;
-    private final int actWidth;
-    private final int movementType;
+    private int baseX;
+    private int baseY;
+    private int frameIndex;
+    private int actWidth;
+    private int movementType;
 
     private int currentX;
     private int currentY;

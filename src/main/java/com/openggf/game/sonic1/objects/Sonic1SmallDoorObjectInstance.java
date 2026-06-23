@@ -69,7 +69,7 @@ public class Sonic1SmallDoorObjectInstance extends AbstractObjectInstance
 
     // obStatus bit 0: determines which side the door opens from.
     // Set from spawn renderFlags x-flip bit.
-    private final boolean openFromRight;
+    private boolean openFromRight;
 
     // Animation state
     private int animationId;         // 0 = closing, 1 = opening

@@ -139,7 +139,7 @@ public class Sonic1LavaBallObjectInstance extends AbstractObjectInstance
     private int currentSubtype;
 
     /** Whether this ball started as a horizontal type (subtypes 6-7). */
-    private final boolean isHorizontal;
+    private boolean isHorizontal;
 
     /**
      * Base V-flip from obStatus bit 1, set when velY < 0 (moving up).
@@ -171,7 +171,7 @@ public class Sonic1LavaBallObjectInstance extends AbstractObjectInstance
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
 
     /** Original Y position (objoff_30), used for deletion check in subtypes 0-3. */
-    private final int originY;
+    private int originY;
 
     /** Animation frame index (cycling through animation frames). */
     private int animFrameIndex;
@@ -188,9 +188,9 @@ public class Sonic1LavaBallObjectInstance extends AbstractObjectInstance
     /** Art key to use for rendering (zone-dependent: MZ_FIREBALL or SLZ_FIREBALL). */
     private String artKey;
     /** Boss-spawned variant uses subtype word $00FF in ROM. */
-    private final boolean bossDroppedVariant;
+    private boolean bossDroppedVariant;
     /** Priority bucket can be elevated for boss-spawned lava. */
-    private final int priorityBucket;
+    private int priorityBucket;
 
     public Sonic1LavaBallObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LavaBall");
