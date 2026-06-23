@@ -10,6 +10,7 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
 import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
+import com.openggf.game.sonic2.objects.bosses.HTZBossSmokeParticle;
 import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
@@ -64,6 +65,7 @@ class TestS2HtzBossGraphRewind {
         FlamethrowerScalars beforeFlame = FlamethrowerScalars.read(before.flamethrower());
         LavaBallScalars beforeLeft = LavaBallScalars.read(before.leftBall());
         LavaBallScalars beforeRight = LavaBallScalars.read(before.rightBall());
+        SmokeScalars beforeSmoke = SmokeScalars.read(before.smoke());
 
         RewindRegistry rewindRegistry = new RewindRegistry();
         rewindRegistry.register(objectManager.rewindSnapshottable());
@@ -94,6 +96,7 @@ class TestS2HtzBossGraphRewind {
         assertNotSame(before.flamethrower(), restored.flamethrower());
         assertNotSame(before.leftBall(), restored.leftBall());
         assertNotSame(before.rightBall(), restored.rightBall());
+        assertNotSame(before.smoke(), restored.smoke());
 
         assertEquals(beforeFlame, FlamethrowerScalars.read(restored.flamethrower()),
                 "ObjectManager restore must reapply captured flamethrower scalar state");
@@ -101,6 +104,8 @@ class TestS2HtzBossGraphRewind {
                 "ObjectManager restore must reapply captured left lava ball scalar state");
         assertEquals(beforeRight, LavaBallScalars.read(restored.rightBall()),
                 "ObjectManager restore must reapply captured right lava ball scalar state");
+        assertEquals(beforeSmoke, SmokeScalars.read(restored.smoke()),
+                "ObjectManager restore must reapply captured smoke scalar state");
     }
 
     @Test
@@ -173,7 +178,8 @@ class TestS2HtzBossGraphRewind {
             Sonic2HTZBossInstance boss,
             HTZBossFlamethrower flamethrower,
             HTZBossLavaBall leftBall,
-            HTZBossLavaBall rightBall) {
+            HTZBossLavaBall rightBall,
+            HTZBossSmokeParticle smoke) {
 
         static HtzGraph spawnRepresentativeFamily(ObjectManager objectManager) {
             Sonic2HTZBossInstance boss = only(objectManager, Sonic2HTZBossInstance.class);
@@ -196,7 +202,9 @@ class TestS2HtzBossGraphRewind {
                     () -> new HTZBossLavaBall(boss, x, y, true, true));
             HTZBossLavaBall rightBall = objectManager.createDynamicObject(
                     () -> new HTZBossLavaBall(boss, x, y, false, true));
-            return new HtzGraph(boss, flamethrower, leftBall, rightBall);
+            HTZBossSmokeParticle smoke = objectManager.createDynamicObject(
+                    () -> new HTZBossSmokeParticle(x, y - 0x28));
+            return new HtzGraph(boss, flamethrower, leftBall, rightBall, smoke);
         }
 
         static HtzGraph fromLiveObjects(ObjectManager objectManager) throws Exception {
@@ -206,7 +214,8 @@ class TestS2HtzBossGraphRewind {
                     only(objectManager, Sonic2HTZBossInstance.class),
                     only(objectManager, HTZBossFlamethrower.class),
                     lavaBallBySide(lavaBalls, true),
-                    lavaBallBySide(lavaBalls, false));
+                    lavaBallBySide(lavaBalls, false),
+                    only(objectManager, HTZBossSmokeParticle.class));
         }
 
         void writeDistinctScalarState() throws Exception {
@@ -221,6 +230,13 @@ class TestS2HtzBossGraphRewind {
                     -0x1200, -0x3300, true, false, 1, 2);
             writeLavaScalars(rightBall, 0x3090, 0x0528, 0x30900000, 0x05280000,
                     0x1600, -0x2A00, false, true, 0, 1);
+
+            writeIntField(smoke, "x", 0x3012);
+            writeIntField(smoke, "y", 0x04C8);
+            writeIntField(smoke, "xFixed", 0x30120000);
+            writeIntField(smoke, "yFixed", 0x04C80000);
+            writeIntField(smoke, "animFrame", 2);
+            writeIntField(smoke, "animTimer", 3);
         }
 
         Map<Class<?>, Integer> counts() {
@@ -238,6 +254,7 @@ class TestS2HtzBossGraphRewind {
             ids.put("flamethrower", table.idFor(flamethrower));
             ids.put("leftBall", table.idFor(leftBall));
             ids.put("rightBall", table.idFor(rightBall));
+            ids.put("smoke", table.idFor(smoke));
             return ids;
         }
 
@@ -245,10 +262,11 @@ class TestS2HtzBossGraphRewind {
             objectManager.removeDynamicObject(flamethrower);
             objectManager.removeDynamicObject(leftBall);
             objectManager.removeDynamicObject(rightBall);
+            objectManager.removeDynamicObject(smoke);
         }
 
         private List<ObjectInstance> objects() {
-            return List.of(boss, flamethrower, leftBall, rightBall);
+            return List.of(boss, flamethrower, leftBall, rightBall, smoke);
         }
     }
 
@@ -293,6 +311,24 @@ class TestS2HtzBossGraphRewind {
                     readBooleanField(lavaBall, "fromLeftSide"),
                     readIntField(lavaBall, "animFrame"),
                     readIntField(lavaBall, "animTimer"));
+        }
+    }
+
+    private record SmokeScalars(
+            int x,
+            int y,
+            int xFixed,
+            int yFixed,
+            int animFrame,
+            int animTimer) {
+        static SmokeScalars read(HTZBossSmokeParticle smoke) throws Exception {
+            return new SmokeScalars(
+                    readIntField(smoke, "x"),
+                    readIntField(smoke, "y"),
+                    readIntField(smoke, "xFixed"),
+                    readIntField(smoke, "yFixed"),
+                    readIntField(smoke, "animFrame"),
+                    readIntField(smoke, "animTimer"));
         }
     }
 

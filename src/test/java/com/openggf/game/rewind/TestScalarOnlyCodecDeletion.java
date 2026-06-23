@@ -717,7 +717,8 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S2_HTZ_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HTZBossFlamethrower.class.getName(), GameId.S2),
-            new CodecDeletionCandidate(HTZBossLavaBall.class.getName(), GameId.S2));
+            new CodecDeletionCandidate(HTZBossLavaBall.class.getName(), GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.bosses.HTZBossSmokeParticle", GameId.S2));
 
     private static final List<CodecDeletionCandidate> S2_DEZ_BOMB_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(

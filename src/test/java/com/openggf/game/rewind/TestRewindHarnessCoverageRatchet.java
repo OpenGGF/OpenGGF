@@ -218,12 +218,14 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-22: raised to 219 after adding RewindRecreatable-only
  *       (ObjectSpawn,int) probe support, making the S1 ROM-zone constructor
  *       family and AizBattleship headlessly verified.</li>
+ *   <li>2026-06-23: raised to 220 after HTZ boss smoke particles moved to
+ *       spawn-based generic recreate and joined the HTZ graph restore proof.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 219;
+    static final int RATCHET_FLOOR = 220;
 
     @BeforeEach
     void initHeadless() {
