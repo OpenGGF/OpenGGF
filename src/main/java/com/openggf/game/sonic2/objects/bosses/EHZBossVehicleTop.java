@@ -6,6 +6,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -15,7 +17,7 @@ import java.util.List;
  * EHZ Boss - Flying vehicle top part (Eggman capsule top).
  * ROM Reference: Obj56 routine 0x0E
  */
-public class EHZBossVehicleTop extends AbstractBossChild {
+public class EHZBossVehicleTop extends AbstractBossChild implements RewindRecreatable {
     private static final int TOP_FRAME_OFFSET = 15;
 
     private final ObjectAnimationState animationState;
@@ -30,6 +32,12 @@ public class EHZBossVehicleTop extends AbstractBossChild {
                 1);
         this.renderFlags = 0;
         this.flyingOff = false;
+    }
+
+    @Override
+    public EHZBossVehicleTop recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2EHZBossInstance boss = EhzBossRewindLinks.requireNearestBoss(ctx, "EHZ boss vehicle top");
+        return new EHZBossVehicleTop(boss);
     }
 
     @Override

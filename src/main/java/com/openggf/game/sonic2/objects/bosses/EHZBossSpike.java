@@ -7,6 +7,8 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -17,7 +19,7 @@ import java.util.List;
  * EHZ Boss - Retractable spike hazard.
  * ROM Reference: s2.asm:63415-63496 (loc_2F7F4 - Obj56_Spike)
  */
-public class EHZBossSpike extends AbstractBossChild implements TouchResponseProvider {
+public class EHZBossSpike extends AbstractBossChild implements TouchResponseProvider, RewindRecreatable {
     private static final int CAMERA_GATE_X = 0x28F0;
     private static final int APPROACH_TARGET_X = 0x299A;
     private static final int OBJOFF_FLAGS = 0x2D;
@@ -50,6 +52,12 @@ public class EHZBossSpike extends AbstractBossChild implements TouchResponseProv
         this.collisionEnabled = false;
         this.currentX = 0x2AF0 - 0x36;
         this.currentY = parent.getInitialY() + 0x08;
+    }
+
+    @Override
+    public EHZBossSpike recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2EHZBossInstance boss = EhzBossRewindLinks.requireNearestBoss(ctx, "EHZ boss spike");
+        return new EHZBossSpike(boss);
     }
 
     @Override

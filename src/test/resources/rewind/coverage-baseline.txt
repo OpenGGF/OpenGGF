@@ -662,12 +662,6 @@ com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.WFZStickBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.WFZUnknownBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.WhispBadnikInstance#recreate
-com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle#finalScalar#initialY
-com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle#recreate
-com.openggf.game.sonic2.objects.bosses.EHZBossPropeller#recreate
-com.openggf.game.sonic2.objects.bosses.EHZBossSpike#recreate
-com.openggf.game.sonic2.objects.bosses.EHZBossVehicleTop#recreate
-com.openggf.game.sonic2.objects.bosses.EHZBossWheel#recreate
 com.openggf.game.sonic2.objects.bosses.HTZBossSmokeParticle#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance#recreate
