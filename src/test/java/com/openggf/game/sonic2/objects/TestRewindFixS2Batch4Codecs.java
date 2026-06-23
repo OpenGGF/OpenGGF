@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart;
+import com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff;
 import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
@@ -14,9 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * have moved to generic recreate coverage.
  *
  * <p>The CPZ boss-component chain, OOZ burner flame, falling part, ARZ rising
- * bubble, and scalar-only lava/MCZ falling hazards now use graph/generic
- * recreate. {@link com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff} is
- * intentionally accept-drop (cosmetic + dead code).
+ * bubble, smoke puff, and scalar-only lava/MCZ falling hazards now use graph/generic
+ * recreate.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
  * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
@@ -29,7 +29,8 @@ class TestRewindFixS2Batch4Codecs {
         List<Class<?>> deleted = List.of(
                 OOZBurnerFlameObjectInstance.class,
                 BubbleObjectInstance.class,
-                CPZBossFallingPart.class);
+                CPZBossFallingPart.class,
+                CPZBossSmokePuff.class);
 
         for (Class<?> type : deleted) {
             assertTrue(RewindRecreatable.class.isAssignableFrom(type),

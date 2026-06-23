@@ -52,6 +52,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **Lost-ring rewind generic restore:** spilled lost-ring dynamic objects now restore through `RewindRecreatable` generic recreate while preserving their shared spill-animation owner, deleting the dedicated shared lost-ring dynamic codec.
 - **Shield rewind generic restore:** basic shield dynamics now restore through the generic player-bound `RewindRecreatable` path, deleting the final shared dynamic codec helper.
 - **S2 CPZ rewind graph restore:** CPZ boss child graphs now restore through generic recreate with graph-level tests for identity, counts, and parent/sibling references.
+- **S2 CPZ boss smoke-puff rewind restore:** CPZ boss smoke puffs now recreate through the graph-tested generic rewind path and relink to the restored live boss instead of remaining an accepted recreate gap.
 - **S2 DEZ bomb rewind graph restore:** Death Egg Robot bombs now restore through graph-tested generic recreate with nearest live boss relinks while deleting the explicit bomb dynamic codec.
 - **S2 ARZ arrow rewind graph restore:** ARZ boss arrows and eyes now restore through graph-tested generic recreate while deleting the explicit arrow dynamic codec.
 - **S2 WFZ rewind graph restore:** WFZ boss laser walls, floating platforms, and platform hurt children now restore through graph-tested generic recreate while deleting their explicit dynamic codecs.
