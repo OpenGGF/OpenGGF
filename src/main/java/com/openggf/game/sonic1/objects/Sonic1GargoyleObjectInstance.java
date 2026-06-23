@@ -74,13 +74,13 @@ public class Sonic1GargoyleObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     /** Spit delay in frames, from Gar_SpitRate. Stored in obDelayAni. */
-    private final int spitDelay;
+    private int spitDelay;
 
     /** Countdown timer. Stored in obTimeFrame. */
     private int timer;
 
     /** Whether gargoyle faces right (obStatus bit 0: 0=left, 1=right). */
-    private final boolean facingRight;
+    private boolean facingRight;
 
     public Sonic1GargoyleObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Gargoyle");

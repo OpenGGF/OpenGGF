@@ -94,7 +94,7 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
     /** Object mode: SPAWNER, PLATFORM, or WHEEL. */
     private enum Mode { SPAWNER, PLATFORM, WHEEL }
 
-    private final Mode mode;
+    private Mode mode;
 
     // Current position (updated by movement for platforms)
     private int x;

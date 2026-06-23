@@ -766,6 +766,24 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S1),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1ElectrocuterObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1FanObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1GirderBlockObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1LZConveyorObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance",
                     GameId.S1));
 
     private static final List<MutableFieldCoverageCandidate> S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS =
@@ -784,7 +802,25 @@ public class TestScalarOnlyCodecDeletion {
                             "frameIndex", "solid"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1ElectrocuterObjectInstance",
-                            "frequencyMask"));
+                            "frequencyMask"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1FanObjectInstance",
+                            "alwaysOn", "facingRight", "reverseDirection"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance",
+                            "dangerFrame", "flamingDuration", "isValve", "pauseDuration"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance",
+                            "facingRight", "spitDelay"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1GirderBlockObjectInstance",
+                            "origX", "origY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LZConveyorObjectInstance",
+                            "mode"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance",
+                            "halfHeight", "halfWidth", "mappingFrame", "origX"));
 
     private static final List<CodecDeletionCandidate> SEESAW_BALL_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(

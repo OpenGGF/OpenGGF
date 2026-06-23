@@ -78,11 +78,11 @@ public class Sonic1FanObjectInstance extends AbstractObjectInstance implements S
     private static final int BASE_PUSH_STRENGTH = 0x60;
 
     // Subtype fields
-    private final boolean reverseDirection;  // bit 0: reverse wind direction
-    private final boolean alwaysOn;          // bit 1: always blowing
+    private boolean reverseDirection;  // bit 0: reverse wind direction
+    private boolean alwaysOn;          // bit 1: always blowing
 
     // Facing direction from obStatus bit 0 (spawn renderFlags bit 0)
-    private final boolean facingRight;
+    private boolean facingRight;
 
     // Cyclic on/off state
     // fan_time = objoff_30: countdown timer

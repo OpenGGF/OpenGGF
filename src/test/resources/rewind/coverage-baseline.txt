@@ -39,13 +39,6 @@ com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance#finalScalar#origX
 com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance#finalScalar#origY
 com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance#finalScalar#pointsAllocatedBeforeAnimal
 com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance#finalScalar#pointsValue
-com.openggf.game.sonic1.objects.Sonic1FanObjectInstance#finalScalar#alwaysOn
-com.openggf.game.sonic1.objects.Sonic1FanObjectInstance#finalScalar#facingRight
-com.openggf.game.sonic1.objects.Sonic1FanObjectInstance#finalScalar#reverseDirection
-com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance#finalScalar#dangerFrame
-com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance#finalScalar#flamingDuration
-com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance#finalScalar#isValve
-com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance#finalScalar#pauseDuration
 com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#halfHeight
 com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#halfWidth
 com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#isLZ
@@ -53,10 +46,6 @@ com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#ma
 com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#origX
 com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#origY
 com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#zoneIndex
-com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance#finalScalar#facingRight
-com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance#finalScalar#spitDelay
-com.openggf.game.sonic1.objects.Sonic1GirderBlockObjectInstance#finalScalar#origX
-com.openggf.game.sonic1.objects.Sonic1GirderBlockObjectInstance#finalScalar#origY
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#blockFrame
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#fullSubtype
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#isTall
@@ -67,11 +56,6 @@ com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#reflec
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#finalScalar#switchIndex
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1LZConveyorObjectInstance#finalScalar#mode
-com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance#finalScalar#halfHeight
-com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance#finalScalar#halfWidth
-com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance#finalScalar#mappingFrame
-com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance#finalScalar#origX
 com.openggf.game.sonic1.objects.Sonic1LamppostObjectInstance#finalScalar#cameraLockFlag
 com.openggf.game.sonic1.objects.Sonic1LamppostObjectInstance#finalScalar#checkpointIndex
 com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance#finalScalar#centerX
