@@ -700,11 +700,6 @@ com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeb
 com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicTargetingSensor#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaser#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserShooter#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformReleaser#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnik#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnikPlatform#recreate
 com.openggf.game.sonic3k.objects.Aiz1TreeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Aiz1ZiplinePegObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizBombExplosionInstance#finalScalar#posY

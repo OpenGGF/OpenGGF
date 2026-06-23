@@ -56,6 +56,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S2 DEZ bomb rewind graph restore:** Death Egg Robot bombs now restore through graph-tested generic recreate with nearest live boss relinks while deleting the explicit bomb dynamic codec.
 - **S2 ARZ arrow rewind graph restore:** ARZ boss arrows and eyes now restore through graph-tested generic recreate while deleting the explicit arrow dynamic codec.
 - **S2 WFZ rewind graph restore:** WFZ boss laser walls, floating platforms, and platform hurt children now restore through graph-tested generic recreate while deleting their explicit dynamic codecs.
+- **S2 WFZ secondary boss-child rewind restore:** WFZ platform releasers, laser shooters, lasers, Robotnik, and Robotnik platforms now restore through the graph-tested generic recreate path with restored boss/Robotnik relinks.
 - **S2 HTZ rewind graph restore:** HTZ boss flamethrower and lava-ball hazards now restore through graph-tested generic recreate while deleting their explicit dynamic codecs.
 - **S1/S2 seesaw ball rewind graph restore:** Seesaw ball children now restore through graph-tested parent relinks while deleting their explicit dynamic codecs.
 - **S2 badnik child rewind graph restore:** Grounder, Balkiry, Rexon, Shellcracker, Slicer, and Sol dynamic child graphs now restore through generic recreate with parent/sibling relinks while deleting their explicit dynamic codecs.

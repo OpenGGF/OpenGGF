@@ -27,7 +27,12 @@ covered|com.openggf.game.sonic2.objects.bosses.CPZBossPump|TestS2CpzBossGraphRew
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik|TestS2CpzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff|TestS2CpzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZFloatingPlatform|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
+covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaser|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
+covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserShooter|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserWall|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
+covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformReleaser|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
+covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnik|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
+covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnikPlatform|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.SeesawBallObjectInstance|TestSeesawBallGraphRewind
 covered|com.openggf.game.sonic3k.objects.AizEndBossFlameColumnChild|TestS3kAizEndBossGraphRewind
 covered|com.openggf.game.sonic3k.objects.AizEndBossShipChild|TestS3kAizEndBossGraphRewind

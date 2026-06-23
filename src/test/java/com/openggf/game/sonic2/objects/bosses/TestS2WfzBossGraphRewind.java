@@ -103,12 +103,34 @@ class TestS2WfzBossGraphRewind {
                 "restored platform must point at its restored hurt child");
         assertSame(graph.platform(), readObjectField(graph.hurt(), "platformParent"),
                 "restored hurt child must point at its restored platform");
+        assertSame(graph.boss(), readObjectField(graph.platformReleaser(), "parent"));
+        assertSame(graph.boss(), readObjectField(graph.laserShooter(), "parent"));
+        assertSame(graph.boss(), readObjectField(graph.laser(), "parent"));
+        assertSame(graph.boss(), readObjectField(graph.robotnik(), "parent"));
+        assertSame(graph.boss(), readObjectField(graph.robotnikPlatform(), "parent"));
+        assertSame(graph.platformReleaser(), readObjectField(graph.boss(), "platformReleaser"),
+                "restored boss platformReleaser must relink to the restored child");
+        assertSame(graph.laserShooter(), readObjectField(graph.boss(), "laserShooter"),
+                "restored boss laserShooter must relink to the restored child");
+        assertSame(graph.laser(), readObjectField(graph.boss(), "laser"),
+                "restored boss laser must relink to the restored child");
+        assertSame(graph.robotnik(), readObjectField(graph.boss(), "robotnik"),
+                "restored boss robotnik must relink to the restored child");
+        assertSame(graph.robotnikPlatform(), readObjectField(graph.robotnik(), "robotnikPlatform"),
+                "restored Robotnik must relink to the restored platform child");
+        assertSame(graph.robotnik(), readObjectField(graph.robotnikPlatform(), "robotnikParent"),
+                "restored Robotnik platform must point at the restored Robotnik");
 
         List<BossChildComponent> components = graph.boss().getChildComponents();
         assertEquals(1, countIdentity(components, graph.leftWall()));
         assertEquals(1, countIdentity(components, graph.rightWall()));
         assertEquals(1, countIdentity(components, graph.platform()));
         assertEquals(1, countIdentity(components, graph.hurt()));
+        assertEquals(1, countIdentity(components, graph.platformReleaser()));
+        assertEquals(1, countIdentity(components, graph.laserShooter()));
+        assertEquals(1, countIdentity(components, graph.laser()));
+        assertEquals(1, countIdentity(components, graph.robotnik()));
+        assertEquals(1, countIdentity(components, graph.robotnikPlatform()));
     }
 
     private static void assertRestoredObjectsAreFresh(WfzGraph before, WfzGraph restored) {
@@ -117,6 +139,11 @@ class TestS2WfzBossGraphRewind {
         assertNotSame(before.rightWall(), restored.rightWall());
         assertNotSame(before.platform(), restored.platform());
         assertNotSame(before.hurt(), restored.hurt());
+        assertNotSame(before.platformReleaser(), restored.platformReleaser());
+        assertNotSame(before.laserShooter(), restored.laserShooter());
+        assertNotSame(before.laser(), restored.laser());
+        assertNotSame(before.robotnik(), restored.robotnik());
+        assertNotSame(before.robotnikPlatform(), restored.robotnikPlatform());
     }
 
     private record Harness(ObjectManager objectManager) {
@@ -155,7 +182,12 @@ class TestS2WfzBossGraphRewind {
             Sonic2WFZBossInstance.WFZLaserWall leftWall,
             Sonic2WFZBossInstance.WFZLaserWall rightWall,
             Sonic2WFZBossInstance.WFZFloatingPlatform platform,
-            Sonic2WFZBossInstance.WFZPlatformHurt hurt) {
+            Sonic2WFZBossInstance.WFZPlatformHurt hurt,
+            Sonic2WFZBossInstance.WFZPlatformReleaser platformReleaser,
+            Sonic2WFZBossInstance.WFZLaserShooter laserShooter,
+            Sonic2WFZBossInstance.WFZLaser laser,
+            Sonic2WFZBossInstance.WFZRobotnik robotnik,
+            Sonic2WFZBossInstance.WFZRobotnikPlatform robotnikPlatform) {
 
         static WfzGraph spawnRepresentativeFamily(ObjectManager objectManager) {
             Sonic2WFZBossInstance boss = only(objectManager, Sonic2WFZBossInstance.class);
@@ -181,11 +213,26 @@ class TestS2WfzBossGraphRewind {
                     () -> new Sonic2WFZBossInstance.WFZFloatingPlatform(boss, platformX, platformY));
             Sonic2WFZBossInstance.WFZPlatformHurt hurt = objectManager.createDynamicObject(
                     () -> new Sonic2WFZBossInstance.WFZPlatformHurt(boss, platform));
+            Sonic2WFZBossInstance.WFZPlatformReleaser platformReleaser = objectManager.createDynamicObject(
+                    () -> new Sonic2WFZBossInstance.WFZPlatformReleaser(boss));
+            Sonic2WFZBossInstance.WFZLaserShooter laserShooter = objectManager.createDynamicObject(
+                    () -> new Sonic2WFZBossInstance.WFZLaserShooter(boss));
+            Sonic2WFZBossInstance.WFZLaser laser = objectManager.createDynamicObject(
+                    () -> new Sonic2WFZBossInstance.WFZLaser(boss));
+            Sonic2WFZBossInstance.WFZRobotnik robotnik = objectManager.createDynamicObject(
+                    () -> new Sonic2WFZBossInstance.WFZRobotnik(boss));
+            Sonic2WFZBossInstance.WFZRobotnikPlatform robotnikPlatform = objectManager.createDynamicObject(
+                    () -> new Sonic2WFZBossInstance.WFZRobotnikPlatform(boss, robotnik));
 
             try {
                 writeObjectField(boss, "leftWall", leftWall);
                 writeObjectField(boss, "rightWall", rightWall);
                 writeObjectField(platform, "hurtChild", hurt);
+                writeObjectField(boss, "platformReleaser", platformReleaser);
+                writeObjectField(boss, "laserShooter", laserShooter);
+                writeObjectField(boss, "laser", laser);
+                writeObjectField(boss, "robotnik", robotnik);
+                writeObjectField(robotnik, "robotnikPlatform", robotnikPlatform);
             } catch (Exception e) {
                 throw new AssertionError("Unable to wire WFZ graph fixture", e);
             }
@@ -193,7 +240,22 @@ class TestS2WfzBossGraphRewind {
             addChildComponentOnce(boss, rightWall);
             addChildComponentOnce(boss, platform);
             addChildComponentOnce(boss, hurt);
-            return new WfzGraph(boss, leftWall, rightWall, platform, hurt);
+            addChildComponentOnce(boss, platformReleaser);
+            addChildComponentOnce(boss, laserShooter);
+            addChildComponentOnce(boss, laser);
+            addChildComponentOnce(boss, robotnik);
+            addChildComponentOnce(boss, robotnikPlatform);
+            return new WfzGraph(
+                    boss,
+                    leftWall,
+                    rightWall,
+                    platform,
+                    hurt,
+                    platformReleaser,
+                    laserShooter,
+                    laser,
+                    robotnik,
+                    robotnikPlatform);
         }
 
         static WfzGraph fromLiveObjects(ObjectManager objectManager) {
@@ -206,7 +268,12 @@ class TestS2WfzBossGraphRewind {
                     wallBySide(walls, boss, true),
                     wallBySide(walls, boss, false),
                     only(objectManager, Sonic2WFZBossInstance.WFZFloatingPlatform.class),
-                    only(objectManager, Sonic2WFZBossInstance.WFZPlatformHurt.class));
+                    only(objectManager, Sonic2WFZBossInstance.WFZPlatformHurt.class),
+                    only(objectManager, Sonic2WFZBossInstance.WFZPlatformReleaser.class),
+                    only(objectManager, Sonic2WFZBossInstance.WFZLaserShooter.class),
+                    only(objectManager, Sonic2WFZBossInstance.WFZLaser.class),
+                    only(objectManager, Sonic2WFZBossInstance.WFZRobotnik.class),
+                    only(objectManager, Sonic2WFZBossInstance.WFZRobotnikPlatform.class));
         }
 
         Map<Class<?>, Integer> counts() {
@@ -225,6 +292,11 @@ class TestS2WfzBossGraphRewind {
             ids.put("rightWall", table.idFor(rightWall));
             ids.put("platform", table.idFor(platform));
             ids.put("hurt", table.idFor(hurt));
+            ids.put("platformReleaser", table.idFor(platformReleaser));
+            ids.put("laserShooter", table.idFor(laserShooter));
+            ids.put("laser", table.idFor(laser));
+            ids.put("robotnik", table.idFor(robotnik));
+            ids.put("robotnikPlatform", table.idFor(robotnikPlatform));
             return ids;
         }
 
@@ -233,10 +305,25 @@ class TestS2WfzBossGraphRewind {
             objectManager.removeDynamicObject(rightWall);
             objectManager.removeDynamicObject(platform);
             objectManager.removeDynamicObject(hurt);
+            objectManager.removeDynamicObject(platformReleaser);
+            objectManager.removeDynamicObject(laserShooter);
+            objectManager.removeDynamicObject(laser);
+            objectManager.removeDynamicObject(robotnik);
+            objectManager.removeDynamicObject(robotnikPlatform);
         }
 
         private List<ObjectInstance> objects() {
-            return List.of(boss, leftWall, rightWall, platform, hurt);
+            return List.of(
+                    boss,
+                    leftWall,
+                    rightWall,
+                    platform,
+                    hurt,
+                    platformReleaser,
+                    laserShooter,
+                    laser,
+                    robotnik,
+                    robotnikPlatform);
         }
     }
 
