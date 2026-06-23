@@ -195,7 +195,6 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | MgzEndBossDefeatDebrisChild | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MgzEndBossDefeatDeb... |
 | MGZHeadTriggerProjectileInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MGZHeadTriggerProje... |
 | Mhz1CutsceneDoorInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.Mhz1CutsceneDoorIns... |
-| MhzMinibossEscapeShardInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MhzMinibossEscapeSh... |
 | MhzMinibossFlameInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MhzMinibossFlameIns... |
 | MhzPollenParticleInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MhzPollenParticleIn... |
 | MhzPulleyLiftObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
@@ -217,7 +216,7 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | SongFadeTransitionInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.SongFadeTransitionI... |
 | Sonic3kInvincibilityStarsObjectInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.Sonic3kInvincibilit... |
 | Sonic3kPointsObjectInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.Sonic3kPointsObject... |
-| Sonic3kSSEntryFlashObjectInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlash... |
+| Sonic3kSSEntryFlashObjectInstance | Graph-tested by TestS3kSsEntryFlashGraphRewind; standalone probe lacks the live layout SS-entry ring parent. |
 | Sonic3kStarPostBonusStarChild | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.Sonic3kStarPostBonu... |
 | Sonic3kStarPostStarChild | NoSuchMethodException: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.Sonic3kStarPostStar... |
 | BossExplosionObjectInstance | NoSuchMethodException: No probe-compatible constructor found for com.openggf.level.objects.boss.BossExplosionObjectIn... |

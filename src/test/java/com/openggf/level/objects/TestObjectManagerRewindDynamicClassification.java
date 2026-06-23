@@ -39,31 +39,13 @@ class TestObjectManagerRewindDynamicClassification {
 
     @AfterEach
     void tearDown() {
-        ObjectManager.clearRewindDynamicObjectCodecsForTest();
         GenericRewindEligibility.clearForTest();
         SessionManager.clear();
     }
 
     @Test
-    void registeredDynamicRewindCodecCapturesAndRecreatesDynamicObject() {
+    void rewindRecreatableDynamicObjectCapturesAndRecreatesThroughGenericPath() {
         GenericRewindEligibility.registerForTestOrMigration(TestDynamicObject.class);
-        ObjectManager.registerRewindDynamicObjectCodecForTest(new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof TestDynamicObject;
-            }
-
-            @Override
-            public String className() {
-                return TestDynamicObject.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return new TestDynamicObject(entry.spawn());
-            }
-        });
 
         ObjectSpawn spawn = new ObjectSpawn(0x100, 0x180, 0x01, 0, 0, false, 0);
         ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null);
@@ -104,7 +86,7 @@ class TestObjectManagerRewindDynamicClassification {
     }
 
     @Test
-    void sonic2BadnikProjectileRestoresThroughRegistryCodec() {
+    void sonic2BadnikProjectileRestoresThroughGenericRecreate() {
         Sonic2ObjectRegistry registry = new Sonic2ObjectRegistry();
         ObjectManager manager = new ObjectManager(List.of(), registry, 0, null, null);
         ObjectSpawn spawn = new ObjectSpawn(0x100, 0x180, 0x98, 0, 0, false, 0);
@@ -134,7 +116,7 @@ class TestObjectManagerRewindDynamicClassification {
     }
 
     @Test
-    void sonic2BuzzerFlameChildIsClassifiedThroughRegistryCodec() throws Exception {
+    void sonic2BuzzerFlameChildIsClassifiedAsRewindRestorable() throws Exception {
         Sonic2ObjectRegistry registry = new Sonic2ObjectRegistry();
         ObjectSpawn spawn = new ObjectSpawn(0x100, 0x180, 0x4B, 0, 0, false, 0);
         BuzzerBadnikInstance parent = new BuzzerBadnikInstance(spawn);
@@ -216,24 +198,6 @@ class TestObjectManagerRewindDynamicClassification {
 
     @Test
     void dynamicRestoreHonorsLegacySingleArgumentSubclassRestoreOverride() {
-        ObjectManager.registerRewindDynamicObjectCodecForTest(new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof LegacyOverrideDynamicObject;
-            }
-
-            @Override
-            public String className() {
-                return LegacyOverrideDynamicObject.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return new LegacyOverrideDynamicObject(entry.spawn());
-            }
-        });
-
         ObjectSpawn spawn = new ObjectSpawn(0x100, 0x180, 0x01, 0, 0, false, 0);
         ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null);
         LegacyOverrideDynamicObject object = new LegacyOverrideDynamicObject(spawn);
@@ -345,7 +309,8 @@ class TestObjectManagerRewindDynamicClassification {
         }
     }
 
-    private static final class TestDynamicObject extends AbstractObjectInstance {
+    private static final class TestDynamicObject extends AbstractObjectInstance
+            implements SpawnRewindRecreatable {
         private int phase;
 
         TestDynamicObject(ObjectSpawn spawn) {
@@ -362,7 +327,8 @@ class TestObjectManagerRewindDynamicClassification {
         }
     }
 
-    private static final class LegacyOverrideDynamicObject extends AbstractObjectInstance {
+    private static final class LegacyOverrideDynamicObject extends AbstractObjectInstance
+            implements SpawnRewindRecreatable {
         private int phase;
 
         LegacyOverrideDynamicObject(ObjectSpawn spawn) {

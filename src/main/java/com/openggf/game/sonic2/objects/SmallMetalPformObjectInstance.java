@@ -13,6 +13,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -150,7 +151,7 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
      * This is the actual visible, rideable platform that unfolds, moves, folds, and deletes.
      */
     public static class SmallMetalPformChildInstance extends AbstractObjectInstance
-            implements SolidObjectProvider, SolidObjectListener {
+            implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
         // ====================================================================
         // ROM Constants (Child)
@@ -247,6 +248,10 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
             this.animDelayCounter = 0;
 
             updateDynamicSpawn(currentX, currentY);
+        }
+
+        SmallMetalPformChildInstance(ObjectSpawn spawn) {
+            this(spawn, (spawn.renderFlags() & 0x01) != 0);
         }
 
         @Override

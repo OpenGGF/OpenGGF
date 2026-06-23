@@ -1,35 +1,34 @@
 package com.openggf.game.sonic1.objects;
 
-import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic1ObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-inner1 S1
+ * now exposes a dynamic rewind recreate path for every batch-inner1 S1
  * inner-class hazard/solid/cutscene child that was previously dropped on a
  * held-rewind restore (no codec matched their JVM binary name).
  *
  * <p>These are static nested children keyed by their JVM binary name
- * ({@code Outer$Inner}). Each codec relinks the live parent recreated earlier
- * in the restore loop, then either re-runs the child's constructor from the
- * captured spawn or reflection-constructs the private nested type; non-spawn
- * differentiator scalars were un-finaled so the generic field capturer reapplies
- * them after recreate:
+ * ({@code Outer$Inner}). Parent-owned children either keep an explicit codec or
+ * implement {@link RewindRecreatable} and use the generic recreate path; non-spawn
+ * differentiator scalars are then reapplied by the generic field capturer:
  * <ul>
- *   <li>{@code Sonic1FalseFloorInstance$FalseFloorBlock} — SBZ2 boss collapsing-floor
- *       tile. Parent-relink codec re-registers the block into the master's
- *       {@code childBlocks}; {@code currentX}/{@code currentY}/{@code blockIndex}
- *       were un-finaled.</li>
  *   <li>{@code Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance} — Orbinaut HURT
- *       satellite/projectile. Parent-relink codec (reflection ctor); all live state
- *       is non-final and reapplied after recreate.</li>
+ *       satellite/projectile. Uses {@link RewindRecreatable} generic recreate to
+ *       relink/adopt into the live Orbinaut parent; all live state is non-final
+ *       and reapplied after recreate.</li>
+ *   <li>{@code Sonic1FalseFloorInstance$FalseFloorBlock} — SBZ2 boss collapsing-floor
+ *       tile. Uses {@link RewindRecreatable} generic recreate to re-register with the
+ *       restored master; {@code currentX}/{@code currentY}/{@code blockIndex} are
+ *       restored afterward.</li>
  * </ul>
  *
  * <p><b>Intentionally absent:</b> {@code ScrapEggmanButton} is construction-spawned
@@ -44,38 +43,43 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * is documented in {@code docs/KNOWN_DISCREPANCIES.md} and is NOT asserted here.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
+ * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
  * session. Full session round-trip coverage is enforced by the rewind coverage
  * guard ({@code TestRewindCoverageGuard}).
  */
 class TestRewindFixS1InnerBatch1Codecs {
 
     private static Set<String> codecClassNames() {
-        Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = new Sonic1ObjectRegistry().dynamicRewindCodecs();
-        for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
-            names.add(codec.className());
-        }
-        return names;
+        return DeletedDynamicRewindCodecs.classNames();
     }
 
     @Test
-    void registersCodecsForBatchInner1S1Children() {
+    void orbSpikeUsesRewindRecreatableInsteadOfExplicitCodec() throws Exception {
         Set<String> names = codecClassNames();
 
-        // ScrapEggmanButton intentionally absent: construction-spawned.
-        List<String> required = List.of(
-                "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance"
-                        + "$FalseFloorBlock",
-                "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance"
-                        + "$OrbSpikeObjectInstance");
+        String orbSpike = "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance"
+                + "$OrbSpikeObjectInstance";
+        Class<?> orbSpikeClass = Class.forName(orbSpike);
 
-        for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
-        }
+        assertFalse(names.contains(orbSpike),
+                "OrbSpikeObjectInstance should restore via RewindRecreatable genericRecreate, "
+                        + "not a Sonic1ObjectRegistry explicit codec");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(orbSpikeClass),
+                "OrbSpikeObjectInstance must opt into the generic RewindRecreatable path");
+    }
+
+    @Test
+    void falseFloorBlockUsesRewindRecreatableInsteadOfExplicitCodec() {
+        String falseFloorBlock =
+                "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance"
+                        + "$FalseFloorBlock";
+
+        assertFalse(codecClassNames().contains(falseFloorBlock),
+                "FalseFloorBlock should restore via RewindRecreatable genericRecreate, "
+                        + "not a Sonic1ObjectRegistry explicit codec");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(
+                        com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance
+                                .FalseFloorBlock.class),
+                "FalseFloorBlock must opt into the generic RewindRecreatable path");
     }
 }

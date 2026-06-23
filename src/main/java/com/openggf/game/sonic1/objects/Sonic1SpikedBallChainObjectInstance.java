@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -51,7 +52,7 @@ import java.util.List;
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/57 Spiked Ball and Chain.asm
  */
 public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnRomZoneRewindRecreatable {
 
     // Display priority: move.b #4,obPriority(a0)
     private static final int DISPLAY_PRIORITY = 4;

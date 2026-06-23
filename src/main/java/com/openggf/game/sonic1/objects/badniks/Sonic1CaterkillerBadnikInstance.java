@@ -619,6 +619,21 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
         bodySegments.clear();
     }
 
+    void adoptBodySegmentForRewind(Sonic1CaterkillerBodyInstance restoredBody) {
+        bodySegments.removeIf(body -> body == null || body.isDestroyed() || !body.isLinkedToHead(this));
+        bodySegments.remove(restoredBody);
+        bodySegments.add(restoredBody);
+
+        // Dynamic body entries are captured/restored in runtime spawn order
+        // (head, segment0, segment1, segment2). Compact scalars are restored
+        // later, so build the structural parent chain from that restore order.
+        CaterkillerParentState parent = this;
+        for (Sonic1CaterkillerBodyInstance body : bodySegments) {
+            body.relinkForRewind(this, parent);
+            parent = body;
+        }
+    }
+
     @Override
     public void onUnload() {
         deleting = true;

@@ -16,9 +16,12 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
@@ -46,7 +49,7 @@ import java.util.logging.Logger;
  *   <li>Act 1 exit shows act 2 title card; act 2 exit sets End_of_level_flag</li>
  * </ul>
  */
-public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
+public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(S3kResultsScreenObjectInstance.class.getName());
 
     // ROM-accurate timing
@@ -75,8 +78,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
 
     // State
     // Un-finaled for rewind: character/act are constructor args not carried by any
-    // ObjectSpawn, so the exactSpawnCodec passes placeholders and the
-    // GenericFieldCapturer (which skips final scalars) reapplies the captured values
+    // ObjectSpawn, so recreate uses placeholders and GenericFieldCapturer (which
+    // skips final scalars) reapplies the captured values
     // after recreate. Covers this class and its Mgz2 subclass.
     private PlayerCharacter character;
     private int act;  // 0-indexed: 0=Act 1, 1=Act 2
@@ -128,6 +131,16 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
 
         LOG.fine(() -> String.format("S3K results init: character=%s act=%d timeBonus=%d ringBonus=%d",
                 character, act, timeBonus, ringBonus));
+    }
+
+    private S3kResultsScreenObjectInstance() {
+        this(PlayerCharacter.SONIC_AND_TAILS, 0);
+    }
+
+    @Override
+    public AbstractResultsScreen recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
     }
 
     @Override

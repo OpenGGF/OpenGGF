@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -39,7 +40,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/70 Girder Block.asm
  */
 public class Sonic1GirderBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // From disassembly: move.b #$60,obActWid(a0)
     private static final int ACTIVE_WIDTH = 0x60;

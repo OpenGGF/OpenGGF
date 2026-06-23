@@ -1,20 +1,20 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Constructor;
-import java.util.List;
-import java.util.function.BiFunction;
-import java.util.function.Function;
+import java.lang.reflect.Modifier;
 import java.util.logging.Logger;
 
 /**
- * Shared dynamic-object rewind codec factories. Game-specific registries compose
+ * Shared dynamic-object rewind recreate helpers. Game-specific registries compose
  * these helpers with their concrete object classes.
  *
  * <p>The static {@link #genericRecreate(ObjectManagerSnapshot.DynamicObjectEntry, DynamicObjectRecreateContext)}
- * method is the Phase-2 uniform recreate entry point (Task 4). It supersedes per-object codecs
- * for classes that either:
+ * method is the Phase-2 uniform recreate entry point (Task 4). It supersedes per-object
+ * restore hooks for classes that either:
  * <ul>
  *   <li>Can be reconstructed from the captured {@link ObjectSpawn} via
  *       {@link ObjectRegistry#create(ObjectSpawn)} (registry path), or</li>
@@ -37,8 +37,8 @@ public final class ObjectRewindDynamicCodecs {
      * <ol>
      *   <li>Load the captured class name.</li>
      *   <li>If the class implements {@link RewindRecreatable}: construct a minimal probe
-     *       instance via {@link ObjectConstructionContext} (trying spawn-arg then zero-arg
-     *       constructors) and delegate to
+     *       instance via {@link ObjectConstructionContext} (trying known harmless
+     *       constructor signatures) and delegate to
      *       {@link RewindRecreatable#recreateForRewind(RewindRecreateContext)}.</li>
      *   <li>Else: rebuild via {@link ObjectRegistry#create(ObjectSpawn)} using the registry
      *       in {@link DynamicObjectRecreateContext#objectRegistry()}.</li>
@@ -77,10 +77,10 @@ public final class ObjectRewindDynamicCodecs {
 
         // Path 1: RewindRecreatable — class provides its own creation hook.
         if (RewindRecreatable.class.isAssignableFrom(cls)) {
-            AbstractObjectInstance probe = constructProbeForRewindRecreatable(cls, ctx);
+            AbstractObjectInstance probe = constructProbeForRewindRecreatable(cls, entry, ctx);
             if (probe instanceof RewindRecreatable rr) {
                 RewindRecreateContext rewindCtx = new RewindRecreateContext(
-                        entry.spawn(), entry.state(), ctx.objectServices());
+                        entry.spawn(), entry.state(), ctx.objectServices(), ctx.objectManager(), entry);
                 return rr.recreateForRewind(rewindCtx);
             }
             LOG.fine("genericRecreate: RewindRecreatable probe construction failed for " + className);
@@ -106,7 +106,37 @@ public final class ObjectRewindDynamicCodecs {
      *
      * <p>Tries constructors in order:
      * <ol>
+     *   <li>{@code (AbstractPlayableSprite)} or {@code (PlayableEntity)} —
+     *       player-bound dynamic objects using the captured owner as a probe</li>
+     *   <li>non-static member constructors using a live enclosing object from
+     *       {@link DynamicObjectRecreateContext#objectManager()} plus harmless
+     *       placeholders — parent-linked inner children</li>
      *   <li>{@code (ObjectSpawn)} — single-arg spawn constructor</li>
+     *   <li>{@code (ObjectSpawn, String)} — spawn plus harmless name placeholder</li>
+     *   <li>{@code (ObjectSpawn, int)} — spawn plus harmless zero placeholder</li>
+     *   <li>{@code (ObjectSpawn, boolean)} — spawn plus default false option</li>
+     *   <li>{@code (ObjectSpawn, ObjectServices)} — spawn plus restore-time services</li>
+     *   <li>{@code (ObjectSpawn, ObjectServices, int)} — points-style constructor
+     *       with default score/frame placeholder</li>
+     *   <li>{@code (ObjectSpawn, ParentType)} — spawn plus a live parent</li>
+     *   <li>{@code (ObjectSpawn, ParentType, int)} — spawn, a live parent, and a
+     *       harmless zero placeholder</li>
+     *   <li>{@code (ObjectSpawn, ParentType, int, int, int)} — spawn, a live parent,
+     *       and harmless zero coordinate/index placeholders</li>
+     *   <li>{@code (ObjectSpawn, int, int, ParentType)} — spawn, coordinate
+     *       placeholders, and a live or null parent placeholder</li>
+     *   <li>{@code (int, int, ParentType)} — coordinate placeholders and a
+     *       live parent placeholder</li>
+     *   <li>{@code (ParentType)} — live parent constructor for structural children</li>
+     *   <li>{@code (ParentType, int, int)} — live parent plus harmless coordinate placeholders</li>
+     *   <li>{@code (ParentType, int, int, int)} — live parent plus harmless scalar placeholders</li>
+     *   <li>{@code (ParentType, int, int, int, int)} — live parent plus harmless scalar placeholders</li>
+     *   <li>{@code (ParentType, int, int, boolean)} — live parent plus harmless scalar placeholders</li>
+     *   <li>{@code (ParentType, SiblingType, int)} — live parent/sibling plus harmless scalar placeholder</li>
+     *   <li>{@code (int, int)} — primitive-only coordinate constructor with zero placeholders</li>
+     *   <li>{@code (int, int, int)} — primitive-only constructor with zero placeholders</li>
+     *   <li>{@code (int, int, int, int)} — primitive-only constructor with zero placeholders</li>
+     *   <li>{@code (int, int, int, boolean)} — primitive-only constructor with zero/false placeholders</li>
      *   <li>zero-arg — no-argument default constructor</li>
      * </ol>
      *
@@ -123,12 +153,183 @@ public final class ObjectRewindDynamicCodecs {
      */
     private static AbstractObjectInstance constructProbeForRewindRecreatable(
             Class<? extends AbstractObjectInstance> cls,
+            ObjectManagerSnapshot.DynamicObjectEntry entry,
             DynamicObjectRecreateContext ctx) {
         ObjectSpawn spawn = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
+
+        if (entry.playerOwner() instanceof AbstractPlayableSprite player) {
+            Constructor<? extends AbstractObjectInstance> playerCtor =
+                    findCtor(cls, AbstractPlayableSprite.class);
+            if (playerCtor != null) {
+                return invokeProbeCtor(cls, playerCtor, ctx, player);
+            }
+        }
+
+        if (entry.playerOwner() instanceof PlayableEntity player) {
+            Constructor<? extends AbstractObjectInstance> playerCtor =
+                    findCtor(cls, PlayableEntity.class);
+            if (playerCtor != null) {
+                return invokeProbeCtor(cls, playerCtor, ctx, player);
+            }
+        }
+
+        AbstractObjectInstance enclosingInstance = findLiveEnclosingInstanceForProbe(cls, ctx);
+        if (enclosingInstance != null) {
+            Class<?> enclosingType = cls.getEnclosingClass();
+            Constructor<? extends AbstractObjectInstance> enclosingCtor = findCtor(cls, enclosingType);
+            if (enclosingCtor != null) {
+                return invokeProbeCtor(cls, enclosingCtor, ctx, enclosingInstance);
+            }
+
+            Constructor<? extends AbstractObjectInstance> enclosingSpawnCtor =
+                    findCtor(cls, enclosingType, ObjectSpawn.class);
+            if (enclosingSpawnCtor != null) {
+                return invokeProbeCtor(cls, enclosingSpawnCtor, ctx, enclosingInstance, spawn);
+            }
+
+            Constructor<? extends AbstractObjectInstance> enclosingIntIntIntCtor =
+                    findCtor(cls, enclosingType, int.class, int.class, int.class);
+            if (enclosingIntIntIntCtor != null) {
+                return invokeProbeCtor(cls, enclosingIntIntIntCtor, ctx, enclosingInstance, 0, 0, 0);
+            }
+
+            Constructor<? extends AbstractObjectInstance> enclosingIntIntIntIntCtor =
+                    findCtor(cls, enclosingType, int.class, int.class, int.class, int.class);
+            if (enclosingIntIntIntIntCtor != null) {
+                return invokeProbeCtor(cls, enclosingIntIntIntIntCtor, ctx, enclosingInstance, 0, 0, 0, 0);
+            }
+
+            Constructor<? extends AbstractObjectInstance> enclosingIntIntIntBooleanCtor =
+                    findCtor(cls, enclosingType, int.class, int.class, int.class, boolean.class);
+            if (enclosingIntIntIntBooleanCtor != null) {
+                return invokeProbeCtor(
+                        cls, enclosingIntIntIntBooleanCtor, ctx, enclosingInstance, 0, 0, 0, false);
+            }
+        }
 
         Constructor<? extends AbstractObjectInstance> spawnCtor = findCtor(cls, ObjectSpawn.class);
         if (spawnCtor != null) {
             return invokeProbeCtor(cls, spawnCtor, ctx, spawn);
+        }
+
+        Constructor<? extends AbstractObjectInstance> spawnStringCtor =
+                findCtor(cls, ObjectSpawn.class, String.class);
+        if (spawnStringCtor != null) {
+            return invokeProbeCtor(cls, spawnStringCtor, ctx, spawn, "RewindProbe");
+        }
+
+        Constructor<? extends AbstractObjectInstance> spawnIntCtor =
+                findCtor(cls, ObjectSpawn.class, int.class);
+        if (spawnIntCtor != null) {
+            return invokeProbeCtor(cls, spawnIntCtor, ctx, spawn, 0);
+        }
+
+        Constructor<? extends AbstractObjectInstance> spawnBooleanCtor =
+                findCtor(cls, ObjectSpawn.class, boolean.class);
+        if (spawnBooleanCtor != null) {
+            return invokeProbeCtor(cls, spawnBooleanCtor, ctx, spawn, false);
+        }
+
+        Constructor<? extends AbstractObjectInstance> spawnServicesCtor =
+                findCtor(cls, ObjectSpawn.class, ObjectServices.class);
+        if (spawnServicesCtor != null) {
+            return invokeProbeCtor(cls, spawnServicesCtor, ctx, spawn, ctx.objectServices());
+        }
+
+        Constructor<? extends AbstractObjectInstance> spawnServicesIntCtor =
+                findCtor(cls, ObjectSpawn.class, ObjectServices.class, int.class);
+        if (spawnServicesIntCtor != null) {
+            return invokeProbeCtor(cls, spawnServicesIntCtor, ctx, spawn, ctx.objectServices(), 0);
+        }
+
+        AbstractObjectInstance spawnParentProbe =
+                constructSpawnParentProbe(cls, spawn, ctx);
+        if (spawnParentProbe != null) {
+            return spawnParentProbe;
+        }
+
+        AbstractObjectInstance spawnParentIntProbe =
+                constructSpawnParentIntProbe(cls, spawn, ctx);
+        if (spawnParentIntProbe != null) {
+            return spawnParentIntProbe;
+        }
+
+        AbstractObjectInstance spawnParentIntIntIntProbe =
+                constructSpawnParentIntIntIntProbe(cls, spawn, ctx);
+        if (spawnParentIntIntIntProbe != null) {
+            return spawnParentIntIntIntProbe;
+        }
+
+        AbstractObjectInstance spawnIntIntParentProbe =
+                constructSpawnIntIntParentProbe(cls, spawn, ctx);
+        if (spawnIntIntParentProbe != null) {
+            return spawnIntIntParentProbe;
+        }
+
+        AbstractObjectInstance intIntParentProbe =
+                constructIntIntParentProbe(cls, ctx);
+        if (intIntParentProbe != null) {
+            return intIntParentProbe;
+        }
+
+        AbstractObjectInstance parentProbe =
+                constructParentProbe(cls, ctx);
+        if (parentProbe != null) {
+            return parentProbe;
+        }
+
+        AbstractObjectInstance parentIntIntProbe =
+                constructParentIntIntProbe(cls, ctx);
+        if (parentIntIntProbe != null) {
+            return parentIntIntProbe;
+        }
+
+        AbstractObjectInstance parentIntIntIntProbe =
+                constructParentIntIntIntProbe(cls, ctx);
+        if (parentIntIntIntProbe != null) {
+            return parentIntIntIntProbe;
+        }
+
+        AbstractObjectInstance parentIntIntIntIntProbe =
+                constructParentIntIntIntIntProbe(cls, ctx);
+        if (parentIntIntIntIntProbe != null) {
+            return parentIntIntIntIntProbe;
+        }
+
+        AbstractObjectInstance parentIntIntBooleanProbe =
+                constructParentIntIntBooleanProbe(cls, ctx);
+        if (parentIntIntBooleanProbe != null) {
+            return parentIntIntBooleanProbe;
+        }
+
+        AbstractObjectInstance parentSiblingIntProbe =
+                constructParentSiblingIntProbe(cls, ctx);
+        if (parentSiblingIntProbe != null) {
+            return parentSiblingIntProbe;
+        }
+
+        Constructor<? extends AbstractObjectInstance> intIntCtor =
+                findCtor(cls, int.class, int.class);
+        if (intIntCtor != null) {
+            return invokeProbeCtor(cls, intIntCtor, ctx, 0, 0);
+        }
+
+        Constructor<? extends AbstractObjectInstance> intIntIntCtor =
+                findCtor(cls, int.class, int.class, int.class);
+        if (intIntIntCtor != null) {
+            return invokeProbeCtor(cls, intIntIntCtor, ctx, 0, 0, 0);
+        }
+
+        Constructor<? extends AbstractObjectInstance> intIntIntIntCtor =
+                findCtor(cls, int.class, int.class, int.class, int.class);
+        if (intIntIntIntCtor != null) {
+            return invokeProbeCtor(cls, intIntIntIntCtor, ctx, 0, 0, 0, 0);
+        }
+
+        Constructor<? extends AbstractObjectInstance> intIntIntBooleanCtor =
+                findCtor(cls, int.class, int.class, int.class, boolean.class);
+        if (intIntIntBooleanCtor != null) {
+            return invokeProbeCtor(cls, intIntIntBooleanCtor, ctx, 0, 0, 0, false);
         }
 
         Constructor<? extends AbstractObjectInstance> noArgCtor = findCtor(cls);
@@ -136,7 +337,309 @@ public final class ObjectRewindDynamicCodecs {
             return invokeProbeCtor(cls, noArgCtor, ctx);
         }
 
-        // No (ObjectSpawn) or zero-arg constructor — cannot build a probe for this class.
+        // No supported probe constructor — cannot build a probe for this class.
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructSpawnParentProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            ObjectSpawn spawn,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 2
+                    || params[0] != ObjectSpawn.class
+                    || !ObjectInstance.class.isAssignableFrom(params[1])) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[1], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, spawn, parent);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructSpawnParentIntProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            ObjectSpawn spawn,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 3
+                    || params[0] != ObjectSpawn.class
+                    || !ObjectInstance.class.isAssignableFrom(params[1])
+                    || params[2] != int.class) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[1], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, spawn, parent, 0);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructSpawnParentIntIntIntProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            ObjectSpawn spawn,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 5
+                    || params[0] != ObjectSpawn.class
+                    || !ObjectInstance.class.isAssignableFrom(params[1])
+                    || params[2] != int.class
+                    || params[3] != int.class
+                    || params[4] != int.class) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[1], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, spawn, parent, 0, 0, 0);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructSpawnIntIntParentProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            ObjectSpawn spawn,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 4
+                    || params[0] != ObjectSpawn.class
+                    || params[1] != int.class
+                    || params[2] != int.class
+                    || !AbstractObjectInstance.class.isAssignableFrom(params[3])) {
+                continue;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[3], ctx);
+            return invokeProbeCtor(
+                    cls, ctor, ctx, spawn, 0, 0, parent);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructIntIntParentProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 3
+                    || params[0] != int.class
+                    || params[1] != int.class
+                    || !ObjectInstance.class.isAssignableFrom(params[2])) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[2], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, 0, 0, parent);
+        }
+        return null;
+    }
+
+    private static ObjectInstance findLiveAssignableParentForProbe(
+            Class<?> parentType,
+            DynamicObjectRecreateContext ctx) {
+        if (ctx == null || ctx.objectManager() == null) {
+            return null;
+        }
+        for (ObjectInstance instance : ctx.objectManager().getActiveObjects()) {
+            if (parentType.isInstance(instance) && !instance.isDestroyed()) {
+                return instance;
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructParentProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 1
+                    || !ObjectInstance.class.isAssignableFrom(params[0])) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[0], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, parent);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructParentIntIntProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 3
+                    || !ObjectInstance.class.isAssignableFrom(params[0])
+                    || params[1] != int.class
+                    || params[2] != int.class) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[0], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, parent, 0, 0);
+        }
+        return null;
+    }
+
+    private static AbstractObjectInstance constructParentIntIntIntProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 4
+                    || !ObjectInstance.class.isAssignableFrom(params[0])
+                    || params[1] != int.class
+                    || params[2] != int.class
+                    || params[3] != int.class) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[0], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, parent, 0, 0, 0);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructParentIntIntIntIntProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 5
+                    || !ObjectInstance.class.isAssignableFrom(params[0])
+                    || params[1] != int.class
+                    || params[2] != int.class
+                    || params[3] != int.class
+                    || params[4] != int.class) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[0], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, parent, 0, 0, 0, 0);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructParentIntIntBooleanProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 4
+                    || !ObjectInstance.class.isAssignableFrom(params[0])
+                    || params[1] != int.class
+                    || params[2] != int.class
+                    || params[3] != boolean.class) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[0], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, parent, 0, 0, false);
+        }
+        return null;
+    }
+
+    private static AbstractObjectInstance constructParentSiblingIntProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 3
+                    || !ObjectInstance.class.isAssignableFrom(params[0])
+                    || !ObjectInstance.class.isAssignableFrom(params[1])
+                    || params[2] != int.class) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[0], ctx);
+            ObjectInstance sibling = findLiveAssignableParentForProbe(params[1], ctx);
+            if (parent == null || sibling == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, parent, sibling, 0);
+        }
+        return null;
+    }
+
+    private static AbstractObjectInstance findLiveEnclosingInstanceForProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            DynamicObjectRecreateContext ctx) {
+        if (!cls.isMemberClass() || Modifier.isStatic(cls.getModifiers())) {
+            return null;
+        }
+        Class<?> enclosingType = cls.getEnclosingClass();
+        if (enclosingType == null || !AbstractObjectInstance.class.isAssignableFrom(enclosingType)
+                || ctx == null || ctx.objectManager() == null) {
+            return null;
+        }
+        for (ObjectInstance instance : ctx.objectManager().getActiveObjects()) {
+            if (enclosingType.isInstance(instance) && instance instanceof AbstractObjectInstance aoi) {
+                return aoi;
+            }
+        }
         return null;
     }
 
@@ -183,184 +686,4 @@ public final class ObjectRewindDynamicCodecs {
         }
     }
 
-    public static List<DynamicObjectRewindCodec> sharedCodecs() {
-        return List.of(
-                animalCodec(),
-                new LostRingRewindCodec(),
-                deferredPlayerBoundCodec(ShieldObjectInstance.class, ShieldObjectInstance.class),
-                deferredPlayerBoundCodec(
-                        InvincibilityStarsObjectInstance.class,
-                        InvincibilityStarsObjectInstance.class),
-                explosionCodec(),
-                skidDustCodec(),
-                // Batch-7: signpost ring sparkle (shared S1+S2; S3K uses S3kSignpostSparkleChild).
-                // worldX/worldY are reapplied by the post-recreate non-final scalar restore.
-                exactSpawnCodec(
-                        SignpostSparkleObjectInstance.class,
-                        spawn -> new SignpostSparkleObjectInstance(0, 0)));
-    }
-
-    public static DynamicObjectRewindCodec deferredPlayerBoundCodec(
-            Class<? extends ObjectInstance> exactClass, Class<?> baseTypeKey) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == exactClass;
-            }
-
-            @Override
-            public String className() {
-                return exactClass.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                context.objectManager().enqueuePendingPlayerBoundEntry(baseTypeKey, entry);
-                return null;
-            }
-        };
-    }
-
-    public static DynamicObjectRewindCodec pointsCodec(Class<? extends AbstractPointsObjectInstance> type) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    Constructor<? extends AbstractPointsObjectInstance> ctor =
-                            type.getDeclaredConstructor(ObjectSpawn.class, ObjectServices.class, int.class);
-                    return ctor.newInstance(entry.spawn(), context.objectServices(), 0);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + type.getName(), e);
-                }
-            }
-        };
-    }
-
-    public static DynamicObjectRewindCodec exactSpawnCodec(
-            Class<? extends AbstractObjectInstance> type,
-            Function<ObjectSpawn, ? extends AbstractObjectInstance> factory) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return factory.apply(entry.spawn());
-            }
-        };
-    }
-
-    /**
-     * Variant of {@link #exactSpawnCodec(Class, Function)} whose factory also
-     * receives the restore-time {@link ObjectServices}, so codecs that need
-     * runtime context (e.g. the current ROM zone id) can resolve it through the
-     * injected service handle rather than a global {@code GameServices} lookup.
-     */
-    public static DynamicObjectRewindCodec exactSpawnCodec(
-            Class<? extends AbstractObjectInstance> type,
-            BiFunction<ObjectSpawn, ObjectServices, ? extends AbstractObjectInstance> factory) {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return factory.apply(entry.spawn(), context.objectServices());
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec animalCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof AnimalObjectInstance;
-            }
-
-            @Override
-            public String className() {
-                return AnimalObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return AnimalObjectInstance.forRewindRecreate(
-                        entry.spawn(), context.objectServices());
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec explosionCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof ExplosionObjectInstance;
-            }
-
-            @Override
-            public String className() {
-                return ExplosionObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                ObjectSpawn spawn = entry.spawn();
-                ObjectRenderManager renderManager = context.objectServices().renderManager();
-                return new ExplosionObjectInstance(
-                        spawn.objectId(), spawn.x(), spawn.y(), renderManager, -1);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec skidDustCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof SkidDustObjectInstance;
-            }
-
-            @Override
-            public String className() {
-                return SkidDustObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return SkidDustObjectInstance.forRewindRecreate(
-                        entry.spawn(), context.objectServices());
-            }
-        };
-    }
 }

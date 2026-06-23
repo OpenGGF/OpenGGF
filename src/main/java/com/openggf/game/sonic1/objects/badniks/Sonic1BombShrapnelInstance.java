@@ -7,6 +7,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.SubpixelMotion;
@@ -30,7 +31,7 @@ import java.util.List;
  * Animations: Uses shrapnel animation (Ani_Bomb index 4): frames $A, $B at speed 3.
  */
 public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnCoordinateZeroPairRewindRecreatable {
 
     // From disassembly: move.b #$98,obColType(a1)
     // $80 = HURT category, $18 = size index (width 4, height 4)

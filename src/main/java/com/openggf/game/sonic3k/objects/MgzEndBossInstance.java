@@ -16,4 +16,5 @@ public final class MgzEndBossInstance extends MgzDrillingRobotnikInstance {
     public MgzEndBossInstance(ObjectSpawn spawn) {
         super(spawn, false);
     }
+
 }

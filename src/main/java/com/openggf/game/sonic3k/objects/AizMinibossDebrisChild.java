@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -20,13 +21,14 @@ import java.util.List;
  * - After wait: MoveSprite2 applies velocity + gravity ($38/frame)
  * - Slower aircraft (x_vel=$100) appear first, fastest ($200) last
  */
-public class AizMinibossDebrisChild extends AbstractObjectInstance {
+public class AizMinibossDebrisChild extends AbstractObjectInstance
+        implements SpawnCoordinateZeroPairRewindRecreatable {
     private int worldX;
     private int worldY;
     private int xFixed;
     private int yFixed;
     // xVel/mappingFrame are non-final so the rewind field capturer reapplies them
-    // after the codec recreates the debris from its spawn (placeholders 0).
+    // after spawn-coordinate recreate uses placeholders 0.
     private int xVel;
     private int waitTimer;
     private boolean moving;

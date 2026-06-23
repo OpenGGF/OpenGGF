@@ -36,12 +36,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * bombs visibly fell forward and re-triggered instead of rewinding.
  *
  * <h2>The fix</h2>
- * {@code Sonic3kObjectRegistry.DYNAMIC_REWIND_CODECS} now registers a codec for
- * {@link AizShipBombInstance} that relinks the live battleship parent and
- * recreates the bomb. The bomb's mid-flight scalar state ({@code state},
- * {@code portYOffset}, ...) is captured by the generic field capturer and
- * reapplied after recreate, so the bomb resumes exactly where it was — not at
- * its spawn defaults.
+ * {@link AizShipBombInstance} now restores through generic recreate, relinking
+ * the live battleship parent during restore. The bomb's mid-flight scalar state
+ * ({@code state}, {@code portYOffset}, ...) is captured by the generic field
+ * capturer and reapplied after recreate, so the bomb resumes exactly where it
+ * was — not at its spawn defaults.
  *
  * <p>Pre-fix, the restore left zero live bombs (dropped), so every assertion in
  * the second half of this test fails.
@@ -116,13 +115,13 @@ class TestAiz2TransientChildRewind {
         assertEquals(0, countLiveBombs(objectManager),
                 "Diverge step must remove the bomb from the live object manager");
 
-        // 6. Restore. The codec must recreate the bomb (relinked to the live ship)
-        //    and the field capturer must reapply its mid-flight scalars.
+        // 6. Restore. Generic recreate must rebuild the bomb (relinked to the
+        //    live ship) and the field capturer must reapply its mid-flight scalars.
         registry.restore(snap);
 
         List<AizShipBombInstance> restored = liveBombs(objectManager);
         assertEquals(1, restored.size(),
-                "Rewind codec must recreate exactly one live AizShipBombInstance on restore "
+                "Generic recreate must restore exactly one live AizShipBombInstance "
                         + "(pre-fix: zero — the bomb was dropped)");
         AizShipBombInstance restoredBomb = restored.get(0);
 
@@ -135,7 +134,7 @@ class TestAiz2TransientChildRewind {
                 "Restored bomb must keep its non-spawn sourceSecondaryX differentiator");
 
         // 6b. The bomb relinked to the live battleship recreated earlier in restore.
-        //     The battleship's own codec also recreates it, so the live ship is a
+        //     The battleship's generic recreate path also restores it, so the live ship is a
         //     fresh instance (not the pre-restore `ship`); the bomb must point at
         //     whichever battleship is live now.
         AizBattleshipInstance liveShip = findLiveShip(objectManager);

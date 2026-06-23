@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -311,7 +312,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
      * Shield reaction: bounce (bit 3) via {@code bset #3,shield_reaction(a0)}.
      */
     private static final class BlastoidProjectile extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {
 
         // loc_86D4A: bset #3,shield_reaction(a0)
         private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
@@ -345,6 +346,10 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
         private int ySubpixel;
         private int animFrame;
         private boolean collisionEnabled = true;
+
+        private BlastoidProjectile() {
+            this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), 0, 0, 0, 0);
+        }
 
         BlastoidProjectile(ObjectSpawn ownerSpawn, int x, int y,
                            int xVel, int yVel) {

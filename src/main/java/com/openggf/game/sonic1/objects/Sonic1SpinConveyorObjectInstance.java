@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.WaypointPathFollower;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -50,7 +51,7 @@ import java.util.logging.Logger;
  * ROM reference: docs/s1disasm/_incObj/6F SBZ Spin Platform Conveyor.asm
  */
 public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SpawnRewindRecreatable, SolidObjectProvider, SolidObjectListener {
 
     private static final Logger LOGGER = Logger.getLogger(Sonic1SpinConveyorObjectInstance.class.getName());
 

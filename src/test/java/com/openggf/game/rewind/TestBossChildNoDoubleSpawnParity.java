@@ -8,7 +8,6 @@ import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
@@ -18,7 +17,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -46,8 +44,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * <ul>
  *   <li><b>S2 DEZ Death Egg Robot</b>: {@code ArticulatedChild} ×6, {@code HeadChild} ×1,
  *       {@code JetChild} ×1, {@code ForearmChild} ×2 — 10 construction children total.
- *       {@code BombChild} and {@code SensorChild} are routine-spawned (correct to keep
- *       codecs for those if desired).
+ *       {@code BombChild} and {@code SensorChild} are routine-spawned; BombChild now
+ *       restores through a graph-tested {@code RewindRecreatable} relink, while SensorChild
+ *       remains transient.
  *       Test asserts count stays at 10 after restore.</li>
  *   <li><b>S1 SYZ Boss</b>: {@code SYZBossSpike} is spawned inside
  *       {@code initializeBossState()} — 1 construction child.
@@ -64,7 +63,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  *       {@code MechaSonicTargetingSensor}/{@code MechaSonicDEZWindow}) never had codecs,
  *       so they never double-spawned. Guarded statically here: those construction children
  *       must never gain a codec ({@code MTZBossLaser}/{@code MechaSonicSpikeball} are
- *       routine-fired and may keep codecs).</li>
+ *       routine-fired and can use their own graph recreate or codec path as needed).</li>
  * </ul>
  */
 public class TestBossChildNoDoubleSpawnParity {
@@ -292,7 +291,7 @@ public class TestBossChildNoDoubleSpawnParity {
      */
     @Test
     void mtzBossConstructionChildrenHaveNoCodecs() {
-        Set<String> codecClassNames = codecClassNames(new Sonic2ObjectRegistry());
+        Set<String> codecClassNames = DeletedDynamicRewindCodecs.classNames();
 
         assertNoCodec(codecClassNames,
                 "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb",
@@ -315,7 +314,7 @@ public class TestBossChildNoDoubleSpawnParity {
      */
     @Test
     void mechaSonicConstructionChildrenHaveNoCodecs() {
-        Set<String> codecClassNames = codecClassNames(new Sonic2ObjectRegistry());
+        Set<String> codecClassNames = DeletedDynamicRewindCodecs.classNames();
 
         assertNoCodec(codecClassNames,
                 "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicLEDWindow",
@@ -331,18 +330,6 @@ public class TestBossChildNoDoubleSpawnParity {
     // =========================================================================
     // Helpers
     // =========================================================================
-
-    /** Collect the binary class names of every registered dynamic rewind codec. */
-    private static Set<String> codecClassNames(Sonic2ObjectRegistry registry) {
-        Set<String> names = new HashSet<>();
-        for (DynamicObjectRewindCodec codec : registry.dynamicRewindCodecs()) {
-            String cn = codec.className();
-            if (cn != null) {
-                names.add(cn);
-            }
-        }
-        return names;
-    }
 
     /** Assert that the given construction-child class has NO registered codec. */
     private static void assertNoCodec(Set<String> codecClassNames, String childClassName,

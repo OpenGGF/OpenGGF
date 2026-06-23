@@ -14,6 +14,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -64,7 +65,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/56 Floating Blocks and Doors.asm
  */
 public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRomZoneRewindRecreatable {
 
     // ---- FBlock_Var table: {halfWidth, halfHeight} indexed by (subtype >> 4) & 7 ----
     // From disassembly: dc.b $10,$10 / $20,$20 / $10,$20 / $20,$1A / $10,$27 / $10,$10 / 8,$20 / $40,$10

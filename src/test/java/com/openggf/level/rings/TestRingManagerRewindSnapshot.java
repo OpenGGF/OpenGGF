@@ -182,7 +182,7 @@ class TestRingManagerRewindSnapshot {
     @Test
     void roundTripSharedSpillAnimation() {
         // Per-ring lost-ring state is no longer snapshotted (physics moved to the
-        // object exec loop; per-ring round-trip is covered by TestLostRingRewindCodec).
+        // object exec loop; per-ring round-trip is covered by TestLostRingRewindGenericRestore).
         // Only the small GLOBAL spin (Ring_spill_anim_counter/accum/frame) survives here.
         RingManager mgr = buildManager(2);
         RingSnapshot base = mgr.capture();
@@ -225,7 +225,7 @@ class TestRingManagerRewindSnapshot {
     void restoreIgnoresLegacyPerRingEntriesButKeepsSharedSpin() {
         // The legacy per-ring pool restore is retired: a snapshot carrying per-ring
         // LostRingEntry rows must NOT repopulate any pool (the spilled rings are now
-        // dynamic objects restored via LostRingRewindCodec), while the shared spin
+        // dynamic objects restored via LostRingObjectInstance generic recreate), while the shared spin
         // still round-trips.
         RingManager mgr = buildManager(0);
         RingSnapshot base = mgr.capture();

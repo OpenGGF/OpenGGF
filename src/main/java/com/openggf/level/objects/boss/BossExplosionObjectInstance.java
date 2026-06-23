@@ -3,6 +3,7 @@ package com.openggf.level.objects.boss;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
 
@@ -12,11 +13,12 @@ import java.util.List;
  * Boss Explosion (Obj58).
  * Uses ArtNem_FieryExplosion with mappings from Obj58_MapUnc_2D50A.
  */
-public class BossExplosionObjectInstance extends AbstractObjectInstance {
+public class BossExplosionObjectInstance extends AbstractObjectInstance
+        implements SpawnCoordinateZeroScalarArgsRewindRecreatable {
     private static final int FRAME_DELAY = 7;
     private static final int LAST_FRAME = 6;
 
-    private final int sfxId;
+    private int sfxId;
     private int mappingFrame;
     private int frameTimer;
     private boolean initialized;

@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.WaypointPathFollower;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -52,7 +53,7 @@ import java.util.logging.Logger;
  * Reference: docs/s1disasm/_incObj/63 LZ Conveyor.asm
  */
 public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SpawnRewindRecreatable, SolidObjectProvider, SolidObjectListener {
 
     private static final Logger LOGGER = Logger.getLogger(Sonic1LZConveyorObjectInstance.class.getName());
 
@@ -61,8 +62,11 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
     // From disassembly: move.b #$10,obActWid(a0)
     private static final int HALF_WIDTH = 0x10;
 
-    // Platform surface height for SolidObjectParams
-    private static final int HALF_HEIGHT = 0x08;
+    // MvSonicOnPtfm2 hardcodes "subi.w #9,d0" for the ground half-height
+    // (docs/s1disasm/_incObj/sub MvSonicOnPtfm.asm). PlatformObject uses obY-8
+    // for detection (sub PlatformObject.asm:17); the -1 adjustment in
+    // getTopLandingSnapAdjustment() compensates so detection lands at obY-8.
+    private static final int HALF_HEIGHT = 9;
 
     // From disassembly: move.b #4,obPriority(a0)
     private static final int PLATFORM_PRIORITY = 4;
@@ -305,6 +309,49 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
+        // LCon_Platform (routine 2) calls PlatformObject before LCon_Platform_Update
+        // which calls SpeedToPos (docs/s1disasm/_incObj/63 LZ Conveyor.asm:149-153,
+        // 191-232). Contact must be checked at the pre-move position, matching the
+        // same pattern as S1 Obj18 (Sonic1PlatformObjectInstance).
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // PlatformObject (docs/s1disasm/_incObj/sub PlatformObject.asm:21-22) uses
+        // UNSIGNED cmpi.w #-16,d0 / blo — rejects d0=0 (exact touch), standable
+        // band is d0 in [-16,-1]. Matches Sonic1PlatformObjectInstance.
+        return true;
+    }
+
+    @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // LCon_Platform passes obActWid directly as PlatformObject's d1
+        // (docs/s1disasm/_incObj/63 LZ Conveyor.asm:150-152), so collision
+        // half-width is already the standable width and must not be narrowed again.
+        return true;
+    }
+
+    @Override
+    public boolean carriesAirborneRiderAfterExitPlatform() {
+        // LCon_OnPlatform (routine 4) calls ExitPlatform then unconditionally calls
+        // MvSonicOnPtfm2 (docs/s1disasm/_incObj/63 LZ Conveyor.asm:157-164),
+        // matching S1 Obj18 behaviour (Sonic1PlatformObjectInstance).
+        return true;
+    }
+
+    @Override
+    public int getTopLandingSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
+        // PlatformObject builds its entry surface from obY-8 (subq.w #8,d0 at
+        // docs/s1disasm/_incObj/sub PlatformObject.asm:17), while MvSonicOnPtfm2
+        // uses obY-9 for the riding surface. With HALF_HEIGHT=9 (riding surface),
+        // this -1 offset shifts the detection band to obY-8. Matches
+        // Sonic1PlatformObjectInstance.getTopLandingSnapAdjustment().
+        return -1;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Platform contact is managed via ObjectManager riding checks.
@@ -342,6 +389,8 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
             return !spawnerDone;
         }
         // Platform: out_of_range uses objoff_30 (base X)
+        // ROM: out_of_range.s loc_1236A, objoff_30(a0)
+        // (docs/s1disasm/_incObj/63 LZ Conveyor.asm, line 10)
         return isInRangeAt(baseX);
     }
 

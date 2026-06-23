@@ -290,6 +290,40 @@ When a divergence can't be pinpointed without more ROM-side state:
 3. **Diagnostic use.** Wire the new data into `DivergenceReport.getContextWindow` rendering, or into a dedicated probe class for targeted bug investigation. **Do not** wire it into engine state mutation in the per-frame test loop.
 4. **Regenerate the affected trace(s).** Commit the regen separately from the recorder schema change so reviewers can see the data churn distinctly.
 
+## BizHawk Live Diagnostic Capture (ad-hoc register/RAM dumps)
+
+Separate from the recorder (which produces full trace files), you often need a **one-off lua** that dumps ROM registers/RAM at a few specific frames to compare against the engine — e.g. the ROM value of a player/object field at the exact divergence frame. Three hard-won rules make this fast and non-destructive.
+
+**Use the canonical template — do NOT hand-roll.** Copy `tools/bizhawk/diag_template_fast.lua` and fill only its two USER sections (PC hooks via `event.onmemoryexecute`, and per-frame `mainmemory` reads). It bakes in the non-negotiables below. Run it headless:
+
+```
+OGGF_START=<firstFrame> OGGF_STOP=<lastFrame> OGGF_OUT=tools/bizhawk/trace_output/<name>.txt \
+  "docs/BizHawk-2.11-win-x64/EmuHawk.exe" --chromeless \
+      --lua "tools/bizhawk/<your_copy>.lua" --movie "<bk2>" "<rom>.gen"
+```
+
+BizHawk frame for trace frame `F` = `bk2_frame_offset` (from `metadata.json`) + `F`.
+
+**ROM arg: use the simple-named copy, NOT the full filename.** The full ROM name (e.g. `Sonic The Hedgehog (W) (REV01) [!].gen`) has spaces, parens, and `[!]` (a shell glob char) that don't pass through to EmuHawk — it launches, loads **no ROM**, and hangs (~316 MB resident, never writes output, `emu.framecount()` stays 0). The repo root has byte-identical simple-named copies — `s1.gen` / `s2.gen` / `s3k.gen` (md5-verified == the REV01 ROMs) — pass one of those (absolute path) as the EmuHawk ROM arg. This failure looks like the timeout case below but is distinct: here EmuHawk runs yet never advances a frame (no ROM); there it advances but is killed mid-seek. (The trace-replay mvn tests are unaffected — this only bites the EmuHawk invocation.)
+
+**1. Fast headless is THREE lua calls, not the `--chromeless` flag.** At the top, before the loop:
+
+```lua
+emu.limitframerate(false)        -- remove the 60fps cap
+client.speedmode(6400)           -- 6400% speed
+client.invisibleemulation(true)  -- SKIP rendering: ~100x faster AND bounds memory
+```
+
+`--chromeless` only hides window chrome. Without these calls a long seek (e.g. to BizHawk frame ~190000) runs at real-time (~50 min) while EmuHawk renders, piling up to multiple GB. `invisibleemulation(true)` is the memory fix (captures drop from ~3.4 GB to ~475 MB).
+
+**2. The script MUST self-exit, or EmuHawk lingers as a multi-GB zombie.** End the capture window with `client.exit()` (flush/close the outfile first). Both of these LEAK the process: a `while true do emu.frameadvance() end` loop with no exit, and a `...; client.pause()` tail. The robust pattern (what the production recorder uses) is: detect `movie.mode() == "FINISHED"` (or `emu.framecount() > STOP`) → flush → `client.exit()`. Always check `tasklist | grep -i emuhawk` is empty before each run and kill any stray instance after — `client.exit()` is not 100% reliable in every BizHawk build.
+
+**3. NLua silently dies on heavy per-frame reads at turbo.** A diag doing more than ~12–16 `mainmemory.read_*` calls/frame while `speedmode(6400)` is active can make EmuHawk exit at "start" (core loads, no frames, exit code 0, no lua error). Workarounds, in order: (a) keep 6400% for the long SEEK, then `client.speedmode(100)` for ONLY the small capture window (a few frames at normal speed costs nothing); (b) buffer into an in-memory table and write once at exit, never `io.open` per frame; (c) split a multi-slot object scan across runs (e.g. slots 0x11–0x16, then 0x17–0x1C). **Prefer the recorder** for full-movie / object-position needs — regenerating with the recorder lua (which already emits `object_appeared`/`object_near` aux and exits robustly) beats a hand-rolled multi-object live capture.
+
+**The "writes 'start' then exits code 0, no frames" trap is almost always a SHORT TIMEOUT, not a crash.** Seeking the BK2 from frame 0 to a far capture frame (e.g. ~190000) takes SEVERAL MINUTES even at `speedmode(6400)` + `invisibleemulation`, so a bash `timeout 180-200` SIGTERMs EmuHawk mid-seek before it reaches your window, leaving only the file's initial "start" write — which looks exactly like a core-init crash but isn't. Give EmuHawk a GENEROUS timeout (600s+ for windows far into the movie), or none. Only if EmuHawk exits in *seconds* (gpgx core loads, then quits immediately) is it a genuine core-init abort, which usually means the `docs/BizHawk-2.11-win-x64/` install isn't present in that worktree (some worktrees symlink only `docs/*disasm`) — run from one that has it.
+
+**Engine-side companion:** when adding `System.err` debug to the *engine* during trace work, note MSE-relaxed SWALLOWS `System.err` — write to a file (`Files.writeString` to a relative/Windows path; `/tmp` throws on the Windows JVM and the catch hides it) to see your output.
+
 ## Recorder Limitations and Existing Tooling
 
 ### "Input alignment error at trace frame N" failure mode

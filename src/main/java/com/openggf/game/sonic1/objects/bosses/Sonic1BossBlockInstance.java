@@ -6,8 +6,11 @@ import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -32,7 +35,7 @@ import java.util.List;
  * Art: Map_BossBlock, make_art_tile(ArtTile_Level,2,0) — level art, palette line 2
  */
 public class Sonic1BossBlockInstance extends AbstractObjectInstance
-        implements SolidObjectProvider {
+        implements SolidObjectProvider, RewindRecreatable {
 
     // Block states
     private static final int STATE_SOLID = 0;
@@ -80,7 +83,7 @@ public class Sonic1BossBlockInstance extends AbstractObjectInstance
     // Instance fields
     // Un-finaled for rewind: blockColumn is NOT spawn-derivable for the fragment form
     // (it is -1 while spawn.subtype()==0), so the generic field capturer reapplies the
-    // captured value after the codec recreates via the public column ctor.
+    // captured value after the recreate hook uses the public column ctor.
     private int blockColumn;   // 0-9, from low byte of obSubtype
     private int blockState;
     private Sonic1SYZBossInstance grabbingBoss;
@@ -108,6 +111,24 @@ public class Sonic1BossBlockInstance extends AbstractObjectInstance
         this.blockState = STATE_SOLID;
         this.x = BLOCK_START_X + (column * BLOCK_SPACING);
         this.y = BLOCK_Y;
+    }
+
+    Sonic1BossBlockInstance() {
+        this(0);
+    }
+
+    @Override
+    public Sonic1BossBlockInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic1BossBlockInstance block = new Sonic1BossBlockInstance(ctx.spawn().subtype());
+        if (ctx.objectServices() != null && ctx.objectServices().objectManager() != null) {
+            for (ObjectInstance inst : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (inst instanceof Sonic1SYZBossInstance boss) {
+                    block.relinkGrabbingBoss(boss);
+                    break;
+                }
+            }
+        }
+        return block;
     }
 
     /**

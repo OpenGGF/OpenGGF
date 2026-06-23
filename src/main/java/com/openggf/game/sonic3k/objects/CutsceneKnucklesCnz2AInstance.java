@@ -100,6 +100,10 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
         return blockingWall;
     }
 
+    void rewindAttachBlockingWall(CutsceneKnuxCnz2WallInstance wall) {
+        blockingWall = wall;
+    }
+
     public static void clearActiveInstance() {
         activeInstance = null;
     }

@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 
 import java.util.List;
 
@@ -17,7 +19,7 @@ import java.util.List;
  * {@code Obj_Wait}, and routes through {@code Obj_BossExpControl1} to emit
  * visible boss-explosion sprites.
  */
-public final class CutsceneKnucklesLbz1CollapseChild extends AbstractObjectInstance {
+public final class CutsceneKnucklesLbz1CollapseChild extends AbstractObjectInstance implements RewindRecreatable {
     private static final int[][] START_POSITIONS = {
             {0x3BC0, 0x01A0},
             {0x3B80, 0x01A0},
@@ -50,6 +52,21 @@ public final class CutsceneKnucklesLbz1CollapseChild extends AbstractObjectInsta
         this.x = START_POSITIONS[this.subtype][0];
         this.y = START_POSITIONS[this.subtype][1];
         this.explosionIntervalCounter = 0;
+    }
+
+    CutsceneKnucklesLbz1CollapseChild(ObjectSpawn spawn) {
+        this(null, spawn != null ? spawn.subtype() : 0);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        CutsceneKnucklesLbz1Instance liveParent = CutsceneKnucklesLbz1RewindLinks.singleLiveParent(ctx);
+        if (liveParent == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        int capturedSubtype = spawn != null ? spawn.subtype() : subtype;
+        return new CutsceneKnucklesLbz1CollapseChild(liveParent, capturedSubtype);
     }
 
     @Override

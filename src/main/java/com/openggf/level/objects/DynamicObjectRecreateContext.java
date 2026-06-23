@@ -1,7 +1,7 @@
 package com.openggf.level.objects;
 
 /**
- * Narrow restore-time context exposed to dynamic rewind codecs and to
+ * Narrow restore-time context exposed to dynamic object restore and to
  * {@link ObjectRewindDynamicCodecs#genericRecreate}.
  */
 public record DynamicObjectRecreateContext(ObjectManager objectManager) {

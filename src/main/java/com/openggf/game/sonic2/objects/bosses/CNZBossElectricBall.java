@@ -7,8 +7,11 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -26,7 +29,7 @@ import java.util.List;
  * - FALL: Ball drops toward floor
  * - SPLIT: Ball splits into two after hitting floor
  */
-public class CNZBossElectricBall extends AbstractObjectInstance implements TouchResponseProvider {
+public class CNZBossElectricBall extends AbstractObjectInstance implements TouchResponseProvider, RewindRecreatable {
 
     // Routine states
     private static final int BALL_ATTACH = 0;
@@ -45,7 +48,7 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
     private static final int FRAME_SPIKED_BALL = 17;
     private static final int FRAME_ORB_1 = 18;
     private static final int FRAME_ORB_2 = 19;
-    private final Sonic2CNZBossInstance mainBoss;
+    private Sonic2CNZBossInstance mainBoss;
 
     // Position
     private int x;
@@ -85,6 +88,35 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
         this.ballRiseOffset = 0;  // ROM: objoff_28 starts at 0
         this.exploding = false;
         this.renderFlags = 0;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2CNZBossInstance parent = findClosestLiveParent(ctx);
+        return parent == null ? null : new CNZBossElectricBall(ctx.spawn(), parent);
+    }
+
+    private static Sonic2CNZBossInstance findClosestLiveParent(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
+                || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        Sonic2CNZBossInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        int childX = ctx.spawn().x();
+        int childY = ctx.spawn().y();
+        for (ObjectInstance inst : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (inst instanceof Sonic2CNZBossInstance boss && !boss.isDestroyed()) {
+                long dx = (long) boss.getX() - childX;
+                long dy = (long) boss.getY() - childY;
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = boss;
+                }
+            }
+        }
+        return best;
     }
 
     /**

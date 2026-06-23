@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -27,7 +28,8 @@ import java.util.List;
  * - Large bubbles (mapping_frame >= 6) can be breathed by player
  * - When touched, restores player's air and plays inhaling sound
  */
-public class BubbleObjectInstance extends AbstractObjectInstance {
+public class BubbleObjectInstance extends AbstractObjectInstance
+        implements SpawnCoordinateZeroPairRewindRecreatable {
 
     // Rise velocity in 8.8 fixed point (-0x88 = ~-0.53 pixels/frame upward)
     private static final int RISE_VELOCITY = -0x88;

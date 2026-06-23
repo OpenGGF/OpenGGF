@@ -1,32 +1,28 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1BombShrapnelInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1CannonballInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance;
 import com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall;
 import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic1ObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-2 S1 object that
- * was previously dropped on a held-rewind restore.
+ * still exposes explicit dynamic rewind recreate codecs for the remaining
+ * batch-2 S1 objects that need one. The self-contained projectile children and
+ * graph-restored badnik children now restore through generic recreate and are
+ * asserted absent below.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
+ * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
  * session. Full session round-trip is handled by the rewind coverage guard.
  *
  * <p><b>Intentionally absent:</b> {@code SYZBossSpike} is construction-spawned
@@ -41,38 +37,40 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestRewindFixS1Batch2Codecs {
 
     private static Set<String> codecClassNames() {
-        Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = new Sonic1ObjectRegistry().dynamicRewindCodecs();
-        for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
-            names.add(codec.className());
-        }
-        return names;
+        return DeletedDynamicRewindCodecs.classNames();
     }
 
     @Test
-    void registersCodecsForBatch2S1Objects() {
+    void registersOnlyRemainingCodecsForBatch2S1Objects() {
         Set<String> names = codecClassNames();
 
-        List<String> required = List.of(
-                Sonic1BombFuseInstance.class.getName(),
-                Sonic1BombShrapnelInstance.class.getName(),
-                Sonic1BuzzBomberMissileInstance.class.getName(),
-                Sonic1BuzzBomberMissileDissolveInstance.class.getName(),
-                Sonic1CannonballInstance.class.getName(),
-                Sonic1CaterkillerBodyInstance.class.getName(),
-                Sonic1CrabmeatProjectileInstance.class.getName(),
-                Sonic1NewtronMissileInstance.class.getName(),
-                GHZBossWreckingBall.class.getName(),
-                // SYZBossSpike intentionally absent: construction-spawned child.
-                // Adding a codec would double it on restore. See TestBossChildNoDoubleSpawnParity.
-                Sonic1SLZBossSpikeball.class.getName());
+        // SYZBossSpike intentionally absent: construction-spawned child.
+        // Adding a codec would double it on restore. See TestBossChildNoDoubleSpawnParity.
 
-        for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+        List<String> genericRecreate = List.of(
+                "com.openggf.game.sonic1.objects.badniks.Sonic1BombShrapnelInstance",
+                "com.openggf.game.sonic1.objects.badniks.Sonic1CannonballInstance",
+                "com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance",
+                "com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileInstance",
+                "com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance",
+                "com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance",
+                Sonic1SLZBossSpikeball.class.getName());
+        for (String name : genericRecreate) {
+            assertFalse(names.contains(name),
+                    name + " must restore through RewindRecreatable generic recreate, not a batch-2 codec");
+        }
+
+        List<Class<?>> graphRecreate = List.of(
+                GHZBossWreckingBall.class,
+                Sonic1BombFuseInstance.class,
+                Sonic1CaterkillerBodyInstance.class,
+                Sonic1SLZBossSpikeball.class);
+        for (Class<?> type : graphRecreate) {
+            assertFalse(names.contains(type.getName()),
+                    type.getName() + " must restore through graph-tested RewindRecreatable, "
+                            + "not a batch-2 codec");
+            assertTrue(RewindRecreatable.class.isAssignableFrom(type),
+                    type.getName() + " must opt into RewindRecreatable graph restore");
         }
     }
 }

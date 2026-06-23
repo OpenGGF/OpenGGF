@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -17,11 +19,11 @@ import java.util.List;
  * ROM Reference: s2.asm Obj5D (ROUTINE_CONTAINER routineSecondary 4/8)
  * Follows container position and shows floor animations.
  */
-public class CPZBossContainerFloor extends AbstractObjectInstance {
+public class CPZBossContainerFloor extends AbstractObjectInstance implements RewindRecreatable {
     private final Sonic2CPZBossInstance mainBoss;
     private final CPZBossContainer container;
-    // Non-final so GenericFieldCapturer captures/restores it across held rewind: the codec
-    // recreates with a placeholder (false) and the captured value is reapplied on restore.
+    // Non-final so GenericFieldCapturer captures/restores it across held rewind: the
+    // recreate hook uses a placeholder (false) and the captured value is reapplied on restore.
     private boolean isFloor2;
 
     private int x;
@@ -47,6 +49,19 @@ public class CPZBossContainerFloor extends AbstractObjectInstance {
         this.timer2 = isFloor2 ? 0x24 : 0;
         this.animationState = new ObjectAnimationState(CPZBossAnimations.getDripperAnimations(), anim, mappingFrame);
         animate();  // Initialize mappingFrame to correct first frame for this anim
+    }
+
+    private CPZBossContainerFloor(ObjectSpawn spawn) {
+        this(spawn, null, null, false);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2CPZBossInstance boss = CpzBossRewindLinks.nearestBoss(ctx);
+        CPZBossContainer parentContainer = CpzBossRewindLinks.nearestContainer(ctx);
+        return boss == null || parentContainer == null
+                ? null
+                : new CPZBossContainerFloor(ctx.spawn(), boss, parentContainer, false);
     }
 
     @Override

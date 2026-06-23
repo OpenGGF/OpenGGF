@@ -10,6 +10,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -30,7 +32,7 @@ import java.util.List;
  * Animation: Ani_objA2 = {3, 5, 6, 7, 8, $FF} → frames 5-8 at speed 4.
  */
 public class SlicerPincerInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     // From ObjA2_SubObjData: collision_flags = $9A
     private static final int COLLISION_SIZE_INDEX = 0x1A;
@@ -91,6 +93,17 @@ public class SlicerPincerInstance extends AbstractObjectInstance
         this.phase = Phase.HOMING;
         this.animIndex = 0;
         this.animTimer = ANIM_SPEED;
+    }
+
+    private SlicerPincerInstance() {
+        this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), null, 0, 0, 0, false, 0);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn();
+        SlicerBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestSlicer(ctx);
+        return new SlicerPincerInstance(spawn, parent, spawn.x(), spawn.y(), 0, false, 0);
     }
 
     @Override

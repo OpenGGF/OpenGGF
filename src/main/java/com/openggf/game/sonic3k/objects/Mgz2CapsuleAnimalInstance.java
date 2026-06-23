@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.AnimalType;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnDefaultArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -19,14 +20,15 @@ import java.util.List;
  * carried player while the level-results object is active, then sends them left
  * when the results flag clears and the fade-out/fly-off sequence begins.
  */
-public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance {
+public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
+        implements SpawnDefaultArgsRewindRecreatable {
     private static final int FRAMES_PER_MAPPING = 3;
     private static final int ART_VARIANT_COUNT = 2;
 
     // Un-finaled for rewind: index (animal loop counter) and artVariant (RNG-derived
-    // at spawn) are not spawn-derivable, so the exactSpawnCodec passes placeholder 0
-    // and the GenericFieldCapturer (which skips final scalars) reapplies the captured
-    // values after recreate.
+    // at spawn) are not spawn-derivable, so recreate uses placeholder values and
+    // GenericFieldCapturer (which skips final scalars) reapplies the captured values
+    // after recreate.
     private int index;
     private int artVariant;
     private int currentX;
@@ -48,6 +50,10 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance {
         this.artVariant = artVariant & (ART_VARIANT_COUNT - 1);
         this.index = index;
         this.mappingSetIndex = AnimalType.RABBIT.mappingSet().ordinal();
+    }
+
+    private Mgz2CapsuleAnimalInstance() {
+        this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), 0, 0, 0);
     }
 
     @Override

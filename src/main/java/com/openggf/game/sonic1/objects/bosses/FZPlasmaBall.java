@@ -4,11 +4,14 @@ import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationScript;
@@ -30,7 +33,7 @@ import java.util.List;
  * Uses palette line 1 (obGfx has palette bit set).
  * Collision type $9A = category 4 (hurt player), size $1A.
  */
-public class FZPlasmaBall extends AbstractObjectInstance implements TouchResponseProvider {
+public class FZPlasmaBall extends AbstractObjectInstance implements TouchResponseProvider, RewindRecreatable {
 
     private static final int BOSS_FZ_Y = Sonic1Constants.BOSS_FZ_Y;
     private static final SpriteAnimationSet PLASMA_ANIMATIONS = Sonic1BossAnimations.getPlasmaAnimations();
@@ -79,6 +82,34 @@ public class FZPlasmaBall extends AbstractObjectInstance implements TouchRespons
         this.animTimeFrame = 0;
         this.animFrame = 0;
         this.hasCollision = false;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        FZPlasmaLauncher liveLauncher = firstLiveLauncher(ctx);
+        if (liveLauncher == null) {
+            return null;
+        }
+        // FZ has one launcher group; preserve the deleted explicit restore path's
+        // first-live launcher matching and let compact restore reapply target/scalars.
+        FZPlasmaBall restored = new FZPlasmaBall(
+                liveLauncher, ctx.spawn().x(), ctx.spawn().y(), 0);
+        liveLauncher.adoptPlasmaBallForRewind(restored);
+        return restored;
+    }
+
+    private static FZPlasmaLauncher firstLiveLauncher(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null
+                || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectManager objectManager = ctx.objectServices().objectManager();
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof FZPlasmaLauncher launcher && !launcher.isDestroyed()) {
+                return launcher;
+            }
+        }
+        return null;
     }
 
     @Override

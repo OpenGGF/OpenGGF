@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -17,7 +19,7 @@ import java.util.List;
  * ROM Reference: s2.asm Obj5D (ROUTINE_PIPE_PUMP = 0x06)
  * Animates pumping motion as liquid is sucked up.
  */
-public class CPZBossPipePump extends AbstractObjectInstance {
+public class CPZBossPipePump extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int SUB_ANIMATE = 2;
     private static final int SUB_END = 4;
@@ -52,6 +54,17 @@ public class CPZBossPipePump extends AbstractObjectInstance {
         this.timer3 = 2;
         this.animationState = new ObjectAnimationState(CPZBossAnimations.getDripperAnimations(), anim, mappingFrame);
         animate();  // Initialize mappingFrame to correct first frame for this anim
+    }
+
+    private CPZBossPipePump(ObjectSpawn spawn) {
+        this(spawn, null, null);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2CPZBossInstance boss = CpzBossRewindLinks.nearestBoss(ctx);
+        CPZBossPipe pipe = CpzBossRewindLinks.nearestPipe(ctx);
+        return pipe == null ? null : new CPZBossPipePump(ctx.spawn(), boss, pipe);
     }
 
     @Override

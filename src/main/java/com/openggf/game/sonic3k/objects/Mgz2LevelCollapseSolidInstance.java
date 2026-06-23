@@ -1,9 +1,14 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.events.Sonic3kMGZEvents;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 
@@ -19,7 +24,7 @@ import java.util.function.IntSupplier;
  * visually deforming floor columns while they drop away.
  */
 public final class Mgz2LevelCollapseSolidInstance extends AbstractObjectInstance
-        implements SolidObjectProvider {
+        implements SolidObjectProvider, RewindRecreatable {
 
     private static final int OBJECT_ID = 0xFF;
     private static final int HALF_WIDTH = 0x1B;
@@ -29,6 +34,10 @@ public final class Mgz2LevelCollapseSolidInstance extends AbstractObjectInstance
     private final int baseY;
     private final IntSupplier scrollSupplier;
     private final BooleanSupplier deleteSupplier;
+
+    Mgz2LevelCollapseSolidInstance() {
+        this(0, 0, () -> 0, () -> false);
+    }
 
     public Mgz2LevelCollapseSolidInstance(int anchorX, int baseY,
                                           IntSupplier scrollSupplier,
@@ -79,6 +88,19 @@ public final class Mgz2LevelCollapseSolidInstance extends AbstractObjectInstance
     @Override
     public boolean isPersistent() {
         return true;
+    }
+
+    @Override
+    public Mgz2LevelCollapseSolidInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectServices services = ctx.objectServices();
+        if (services == null || !(services.levelEventProvider() instanceof Sonic3kLevelEventManager manager)) {
+            return null;
+        }
+        Sonic3kMGZEvents mgzEvents = manager.getMgzEvents();
+        if (mgzEvents == null) {
+            return null;
+        }
+        return mgzEvents.recreateCollapseSolidForRewind(ctx.spawn());
     }
 
     @Override

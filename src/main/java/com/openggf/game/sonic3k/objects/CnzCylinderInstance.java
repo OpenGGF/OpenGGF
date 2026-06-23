@@ -7,8 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -29,7 +28,7 @@ import java.util.List;
  * rider-control seam from {@code sub_324C0}.</p>
  */
 public final class CnzCylinderInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
     private static final SolidObjectParams SOLID_PARAMS =
             new SolidObjectParams(0x2B, 0x20, 0x21);
     private static final int PLAYER_CAPTURE_PRIORITY = RenderPriority.PLAYER_DEFAULT;
@@ -124,14 +123,9 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
      * <p>Self-contained: all state (including the {@code final} geometry fields) is
      * derived deterministically from the captured spawn, so re-running the constructor
      * reproduces it exactly. Mutable scalar fields are reapplied by the standard
-     * scalar-restore pass after recreate. Replaces the former
-     * {@code exactSpawnCodec(CnzCylinderInstance.class, CnzCylinderInstance::new)}
+     * scalar-restore pass after recreate. Replaces the former explicit dynamic restore path
      * (Phase-2 codec-deletion batch 2).
      */
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new CnzCylinderInstance(ctx.spawn());
-    }
 
     @Override
     public boolean isSkipSolidContactThisFrame() {

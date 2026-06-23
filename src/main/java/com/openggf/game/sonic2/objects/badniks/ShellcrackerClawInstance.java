@@ -9,6 +9,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -36,7 +38,7 @@ import java.util.List;
  *   Routine 4 (FALLING): Parent died - fall with gravity and delete after timer
  */
 public class ShellcrackerClawInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
     // From ObjA0_SubObjData (s2.asm:75308): collision_flags = $9A
     // = 0x80 (HURT category) | $1A (x_radius=$C → size index $1A).
     // The claw hurts the player every frame it exists (ENEMY/HURT poll rule —
@@ -77,7 +79,7 @@ public class ShellcrackerClawInstance extends AbstractObjectInstance
     }
     private final ShellcrackerBadnikInstance parent;
     // Un-final for rewind: GenericFieldCapturer reapplies these captured non-spawn
-    // scalars after the parent-relink codec recreates the claw with placeholders.
+    // scalars after the parent-relink recreate hook rebuilds the claw with placeholders.
     private int pieceIndex; // 0, 2, 4, 6, 8, 10, 12, 14
     private boolean facingRight;
     private int currentX;
@@ -118,6 +120,19 @@ public class ShellcrackerClawInstance extends AbstractObjectInstance
         this.timer = INITIAL_DELAYS[index];
         this.state = State.INITIAL_DELAY;
         this.initRoutinePending = true;
+    }
+
+    private ShellcrackerClawInstance() {
+        this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), null, 0, 0, 0, false);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn();
+        ShellcrackerBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestShellcracker(ctx);
+        return parent != null
+                ? new ShellcrackerClawInstance(spawn, parent, spawn.x(), spawn.y(), 0, false)
+                : null;
     }
 
     @Override

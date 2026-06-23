@@ -28,8 +28,9 @@ import java.util.List;
  *       {@code currentExecSlot}, {@code peakSlotCount}.</li>
  *   <li>Render-cache dirty flag ({@code bucketsDirty}).</li>
  *   <li>Reserved child-slot mapping entries ({@code childSpawns}).</li>
- *   <li>Dynamic object entries. Restore recreates entries with registered codecs; unsupported
- *       entries remain diagnostic-only until a codec is added.</li>
+ *   <li>Dynamic object entries. Restore recreates supported entries through generic
+ *       dynamic restore; unsupported entries remain diagnostic-only until a recreate
+ *       path is added.</li>
  *   <li>Placement cursor/window state needed by the next replayed frame.</li>
  * </ul>
  */

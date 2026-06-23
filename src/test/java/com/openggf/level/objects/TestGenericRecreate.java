@@ -102,13 +102,101 @@ class TestGenericRecreate {
 
         assertNotNull(result);
         assertEquals(HtzGroundFireObjectInstance.class, result.getClass());
-        // HtzGroundFireObjectInstance.recreateForRewind builds from ctx.spawn().x()/y().
+        // SpawnRewindRecreatable rebuilds HtzGroundFireObjectInstance from ctx.spawn().
         // getX()/getY() return the constructor-supplied position, so x==42 proves the
         // captured spawn coordinate actually propagated through the hook.
         assertEquals(42, result.getX(),
                 "recreated instance X must reflect the captured spawn X (42)");
         assertEquals(77, result.getY(),
                 "recreated instance Y must reflect the captured spawn Y (77)");
+    }
+
+    @Test
+    void rewindRecreatableProbeSupportsObjectSpawnIntConstructor() {
+        ObjectSpawn capturedSpawn = new ObjectSpawn(0x120, 0x90, 0x7002, 0, 0, false, -1);
+        DynamicObjectEntry entry = new DynamicObjectEntry(
+                SpawnIntRewindRecreatableObject.class.getName(),
+                capturedSpawn,
+                -1,
+                null);
+
+        ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(entry, ctx);
+
+        SpawnIntRewindRecreatableObject recreated =
+                assertInstanceOf(SpawnIntRewindRecreatableObject.class, result,
+                        "genericRecreate must reach the RewindRecreatable hook for (ObjectSpawn, int) classes");
+        assertSame(capturedSpawn, recreated.getSpawn(),
+                "recreateForRewind must receive and use the captured spawn, not the probe spawn");
+        assertEquals(0xCAFE, recreated.constructorMarker(),
+                "fixture hook must create the final restored instance, proving the hook ran");
+    }
+
+    @Test
+    void rewindRecreatableProbeSupportsPrimitiveIntIntIntConstructor() {
+        ObjectSpawn capturedSpawn = new ObjectSpawn(0x220, 0x190, 0x7003, 0, 0, false, -1);
+        DynamicObjectEntry entry = new DynamicObjectEntry(
+                IntIntIntRewindRecreatableObject.class.getName(),
+                capturedSpawn,
+                -1,
+                null);
+
+        ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(entry, ctx);
+
+        IntIntIntRewindRecreatableObject recreated =
+                assertInstanceOf(IntIntIntRewindRecreatableObject.class, result,
+                        "genericRecreate must reach the RewindRecreatable hook for (int,int,int) classes");
+        assertEquals(capturedSpawn.x(), recreated.getX(),
+                "recreated fixture must use captured spawn X from the hook context");
+        assertEquals(capturedSpawn.y(), recreated.getY(),
+                "recreated fixture must use captured spawn Y from the hook context");
+        assertEquals(0xCAFE, recreated.constructorMarker(),
+                "fixture hook marker proves recreateForRewind ran after primitive probe construction");
+    }
+
+    @Test
+    void rewindRecreatableProbeSupportsPrimitiveIntIntIntIntConstructor() {
+        ObjectSpawn capturedSpawn = new ObjectSpawn(0x230, 0x1A0, 0x7004, 0, 0, false, -1);
+        DynamicObjectEntry entry = new DynamicObjectEntry(
+                IntIntIntIntRewindRecreatableObject.class.getName(),
+                capturedSpawn,
+                -1,
+                null);
+
+        ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(entry, ctx);
+
+        IntIntIntIntRewindRecreatableObject recreated =
+                assertInstanceOf(IntIntIntIntRewindRecreatableObject.class, result,
+                        "genericRecreate must reach the RewindRecreatable hook for (int,int,int,int) classes");
+        assertEquals(capturedSpawn.x(), recreated.getX(),
+                "recreated fixture must use captured spawn X from the hook context");
+        assertEquals(capturedSpawn.y(), recreated.getY(),
+                "recreated fixture must use captured spawn Y from the hook context");
+        assertEquals(0xCAFE, recreated.constructorMarker(),
+                "fixture hook marker proves recreateForRewind ran after primitive probe construction");
+    }
+
+    @Test
+    void rewindRecreatableProbeSupportsPrimitiveIntIntIntBooleanConstructor() {
+        ObjectSpawn capturedSpawn = new ObjectSpawn(0x240, 0x1B0, 0x7005, 0x0A, 0, false, -1);
+        DynamicObjectEntry entry = new DynamicObjectEntry(
+                IntIntIntBooleanRewindRecreatableObject.class.getName(),
+                capturedSpawn,
+                -1,
+                null);
+
+        ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(entry, ctx);
+
+        IntIntIntBooleanRewindRecreatableObject recreated =
+                assertInstanceOf(IntIntIntBooleanRewindRecreatableObject.class, result,
+                        "genericRecreate must reach the RewindRecreatable hook for (int,int,int,boolean) classes");
+        assertEquals(capturedSpawn.x(), recreated.getX(),
+                "recreated fixture must use captured spawn X from the hook context");
+        assertEquals(capturedSpawn.y(), recreated.getY(),
+                "recreated fixture must use captured spawn Y from the hook context");
+        assertEquals(capturedSpawn.subtype(), recreated.subtypeMarker(),
+                "fixture hook must be able to preserve the captured spawn subtype");
+        assertEquals(0xCAFE, recreated.constructorMarker(),
+                "fixture hook marker proves recreateForRewind ran after primitive probe construction");
     }
 
     // =========================================================================
@@ -255,6 +343,110 @@ class TestGenericRecreate {
     private static final class MinimalRegistryObject extends AbstractObjectInstance {
         MinimalRegistryObject(ObjectSpawn spawn) {
             super(spawn, "MinimalRegistryObject");
+        }
+
+        @Override
+        public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) {
+            // no-op
+        }
+    }
+
+    private static final class SpawnIntRewindRecreatableObject
+            extends AbstractObjectInstance implements RewindRecreatable {
+        private final int constructorMarker;
+
+        SpawnIntRewindRecreatableObject(ObjectSpawn spawn, int constructorMarker) {
+            super(spawn, "SpawnIntRewindRecreatableObject");
+            this.constructorMarker = constructorMarker;
+        }
+
+        int constructorMarker() {
+            return constructorMarker;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new SpawnIntRewindRecreatableObject(ctx.spawn(), 0xCAFE);
+        }
+
+        @Override
+        public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) {
+            // no-op
+        }
+    }
+
+    private static final class IntIntIntRewindRecreatableObject
+            extends AbstractObjectInstance implements RewindRecreatable {
+        private final int constructorMarker;
+
+        IntIntIntRewindRecreatableObject(int x, int y, int constructorMarker) {
+            super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "IntIntIntRewindRecreatableObject");
+            this.constructorMarker = constructorMarker;
+        }
+
+        int constructorMarker() {
+            return constructorMarker;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new IntIntIntRewindRecreatableObject(ctx.spawn().x(), ctx.spawn().y(), 0xCAFE);
+        }
+
+        @Override
+        public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) {
+            // no-op
+        }
+    }
+
+    private static final class IntIntIntIntRewindRecreatableObject
+            extends AbstractObjectInstance implements RewindRecreatable {
+        private final int constructorMarker;
+
+        IntIntIntIntRewindRecreatableObject(int x, int y, int ignored, int constructorMarker) {
+            super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "IntIntIntIntRewindRecreatableObject");
+            this.constructorMarker = constructorMarker;
+        }
+
+        int constructorMarker() {
+            return constructorMarker;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new IntIntIntIntRewindRecreatableObject(ctx.spawn().x(), ctx.spawn().y(), 0, 0xCAFE);
+        }
+
+        @Override
+        public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) {
+            // no-op
+        }
+    }
+
+    private static final class IntIntIntBooleanRewindRecreatableObject
+            extends AbstractObjectInstance implements RewindRecreatable {
+        private final int subtypeMarker;
+        private final int constructorMarker;
+
+        IntIntIntBooleanRewindRecreatableObject(int x, int y, int subtypeMarker, boolean hookMarker) {
+            super(new ObjectSpawn(x, y, 0, subtypeMarker, 0, false, 0),
+                    "IntIntIntBooleanRewindRecreatableObject");
+            this.subtypeMarker = subtypeMarker;
+            this.constructorMarker = hookMarker ? 0xCAFE : 0;
+        }
+
+        int subtypeMarker() {
+            return subtypeMarker;
+        }
+
+        int constructorMarker() {
+            return constructorMarker;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new IntIntIntBooleanRewindRecreatableObject(
+                    ctx.spawn().x(), ctx.spawn().y(), ctx.spawn().subtype(), true);
         }
 
         @Override

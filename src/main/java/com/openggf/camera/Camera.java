@@ -292,7 +292,22 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// camera to a different position than Sonic was wrapped to.
 		// Normal (non-wrap) frames still clamp, which handles pit death in SBZ2
 		// where v_limitbtm2=$510 constrains the camera even though wrapping is active.
-		if (!lastFrameWrapped && y != yBeforeVerticalScroll) {
+		// ROM: ScrollVertical's SV_OnGround / SV_NotInAir path consults
+		// f_bgscrollvert (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:148-149,
+		// 157-158): when the bottom level boundary is moving this frame, it branches
+		// to SV_BottomBoundaryMoving (line 210) which forces d0=0 and falls through
+		// SV_SweetSpot -> SV_BottomBoundary (line 259), clamping the camera to the
+		// freshly-moved v_limitbtm2 EVEN when Sonic is exactly at the sweet spot and
+		// the normal grounded scroll produced no movement. DynamicLevelEvents
+		// (DynamicLevelEvents.asm:5-49) sets f_bgscrollvert=1 and steps v_limitbtm2
+		// toward v_limitbtm1 BEFORE ScrollVertical runs, so the camera follows the
+		// moving boundary on the same frame. The engine mirrors f_bgscrollvert with
+		// maxYChanging (set by updateBoundaryEasing, called before updatePosition).
+		// Without including maxYChanging here, a sweet-spot frame whose vertical
+		// scroll did not move the camera skips the clamp, so the camera lags the
+		// rising bottom boundary by one frame (S1 GHZ2 f3349 camera_y 0x034C vs ROM
+		// 0x034A while the boundary eases 0x0400 -> 0x0300 under a grounded roll).
+		if (!lastFrameWrapped && (y != yBeforeVerticalScroll || maxYChanging)) {
 			y = clampAxisWithWrap(y, minY, maxY);
 		}
 		fastVerticalScrollRequested = false;
@@ -761,6 +776,19 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public boolean applyScreenYWrapValue(AbstractPlayableSprite sprite) {
 		if (!verticalWrapEnabled || sprite == null) {
+			return false;
+		}
+		// ROM masks the PLAYER's y_pos every frame ONLY for games that have a real
+		// Screen_Y_wrap_value (S3K: sonic3k.asm:21989-21992, 26233-26236). S1/S2 have
+		// no such value on the player (useScreenYWrapValueForVisibility is false for
+		// both); their LZ3/SBZ2 vertical wrap masks Sonic's y_pos ONLY in the same
+		// frame the CAMERA crosses the wrap boundary (ScrollVertical
+		// SV_BottomBoundary/SV_TopBoundary), which updatePosition already mirrors via
+		// wrapFocusedSpriteYPositionWord. Applying an unconditional per-frame
+		// y & 0x7FF here wrongly wrapped Sonic at y=0x800 long before the camera
+		// reached the boundary (S1 LZ3 f466: 0x0807 -> 0x0007).
+		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+		if (fs == null || !fs.useScreenYWrapValueForVisibility()) {
 			return false;
 		}
 		short before = sprite.getCentreY();

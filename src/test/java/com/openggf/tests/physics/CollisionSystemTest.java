@@ -18,10 +18,8 @@ import org.mockito.Mockito;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -84,18 +82,6 @@ public class CollisionSystemTest {
 
         assertNotNull(fresh.getTrace());
         assertEquals(NoOpCollisionTrace.INSTANCE, fresh.getTrace());
-    }
-
-    @Test
-    public void resetStateClearsPendingOddSensorFallbackAngles() throws Exception {
-        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
-        Map<AbstractPlayableSprite, Byte> pending = pendingOddSensorFallbackAngles(collisionSystem);
-        pending.put(player, (byte) 0xA0);
-
-        collisionSystem.resetState();
-
-        assertTrue(pending.isEmpty(),
-                "RIGHTWALL odd-sensor fallback memory must not survive CollisionSystem.resetState()");
     }
 
     @Test
@@ -167,7 +153,21 @@ public class CollisionSystemTest {
     }
 
     @Test
-    public void testCalcRoomOverHeadCeilingProbeAppliesRomNibbleFlip() {
+    public void testCalcRoomOverHeadCeilingProbeDoesNotPreApplyRomNibbleFlip() {
+        // ROM Sonic_FindCeiling / Sonic_CheckCeiling applies eori.w #$F to the
+        // top-edge probe Y exactly ONCE before FindFloor scans upward. The engine's
+        // Direction.UP terrain path (GroundSensor.scanVertical -> verticalTileLookupY
+        // for wrapped rows, and the UP branch of calculateVerticalDistance which is
+        // already the post-flip `origY - (checkBase + metric)` form) owns that single
+        // flip. The CalcRoomOverHead ceiling probe therefore must NOT also pre-apply
+        // the flip as a probe `dy` offset, or it gets DOUBLE-applied. This was the
+        // S1 SYZ2 f1088 jump-block bug: with a probe-level dy=-15 the ceiling distance
+        // for tile 0x0093 col 6 came out as 3 (< the 6px Sonic_Jump gate), but the ROM
+        // (BizHawk Sonic_FindCeiling hook 0x156CE/0x156D2 at SYZ2 bk2 f1088: obX=0x074F,
+        // obW=9, left probe col 6) returns 8 — exactly what the UP path computes with
+        // dy=0. So the probe passes the plain top-edge Y (dy=0) and lets scanVertical
+        // own the flip. The flip itself is verified at its real home in
+        // testGroundSensorVerticalLookupAppliesSingleCeilingNibbleFlip below.
         AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
         Mockito.when(player.getCentreX()).thenReturn((short) 0x0893);
         Mockito.when(player.getCentreY()).thenReturn((short) 0x07A2);
@@ -182,14 +182,35 @@ public class CollisionSystemTest {
         assertEquals(9, readProbeInt(probes[0], "worldOffsetX"));
         assertEquals(-19, readProbeInt(probes[0], "worldOffsetY"));
         assertEquals(0, readProbeInt(probes[0], "dx"));
-        assertEquals(-15, readProbeInt(probes[0], "dy"),
-                "Sonic_CheckCeiling eori.w #$F turns y=$078F into y=$0780 at this edge");
+        assertEquals(0, readProbeInt(probes[0], "dy"),
+                "Ceiling probe must not pre-apply the eori.w #$F flip; scanVertical owns it");
         assertEquals(0x0E, readProbeInt(probes[0], "solidityBit"));
 
         assertEquals(Direction.UP, readProbeDirection(probes[1], "globalDirection"));
         assertEquals(-9, readProbeInt(probes[1], "worldOffsetX"));
         assertEquals(-19, readProbeInt(probes[1], "worldOffsetY"));
-        assertEquals(-15, readProbeInt(probes[1], "dy"));
+        assertEquals(0, readProbeInt(probes[1], "dy"),
+                "Ceiling probe must not pre-apply the eori.w #$F flip; scanVertical owns it");
+    }
+
+    @Test
+    public void testGroundSensorVerticalLookupAppliesSingleCeilingNibbleFlip() {
+        // The eori.w #$F ceiling flip is REAL ROM behavior (Sonic_CheckCeiling /
+        // Sonic_FindCeiling). It is not deleted by the SYZ2 fix, only relocated to the
+        // single place that owns it: GroundSensor.verticalTileLookupY, which transforms a
+        // wrapped (negative) UP probe row with `(y ^ 0x0F) & 0x07FF`. DOWN is untouched.
+        // y = -1 (top-edge probe that wrapped above the level) -> (0xFFFF ^ 0x0F) & 0x7FF
+        // = 0x07F0; the single flip is applied here so the ceiling probe upstream stays
+        // dy=0 (testCalcRoomOverHeadCeilingProbeDoesNotPreApplyRomNibbleFlip).
+        assertEquals(0x07F0, invokeVerticalTileLookupY((short) -1, Direction.UP),
+                "UP wrapped row gets the single eori.w #$F flip (Sonic_CheckCeiling)");
+        assertEquals(0x07FF, invokeVerticalTileLookupY((short) -16, Direction.UP),
+                "eori.w #$F flips only the low nibble of the wrapped UP row");
+        assertEquals(-1, invokeVerticalTileLookupY((short) -1, Direction.DOWN),
+                "DOWN floor probe must not receive the ceiling flip");
+        assertEquals(0x0575, invokeVerticalTileLookupY((short) 0x0575, Direction.UP),
+                "Non-wrapped positive UP rows are untouched here; the flip is folded into "
+                        + "the UP calculateVerticalDistance form, never double-applied");
     }
 
     @Test
@@ -661,36 +682,25 @@ public class CollisionSystemTest {
     }
 
     @Test
-    public void oddRightWallAngleFallbackIsSensorDrivenNotCoordinateWindow() {
-        AbstractPlayableSprite player = newCollisionTestSprite();
+    public void oddRightWallZeroDistanceUsesCurrentCardinalFallbackInsteadOfStaleAlternate() {
+        FeatureSetCollisionTestSprite player = newCollisionTestSprite();
+        player.setFeatureSet(PhysicsFeatureSet.SONIC_3K);
         player.setGroundMode(GroundMode.RIGHTWALL);
-        player.setCentreX((short) 0x0100);
-        player.setCentreY((short) 0x0400);
+        player.setAngle((byte) 0xC0);
 
-        SensorResult selectedOddWall = new SensorResult((byte) 0xFF, (byte) 0, 0x10, Direction.DOWN);
-        SensorResult alternateEvenWall = new SensorResult((byte) 0x20, (byte) 2, 0x11, Direction.DOWN);
+        SensorResult selectedOddWall = new SensorResult((byte) 0xFF, (byte) 0, 0x72, Direction.RIGHT);
+        SensorResult previousAlternate = new SensorResult((byte) 0xB4, (byte) 1, 0x8C, Direction.RIGHT);
+        SensorResult currentAlternate = new SensorResult((byte) 0xCC, (byte) 1, 0x8D, Direction.RIGHT);
 
-        invokeSelectSensorWithAngle(player, alternateEvenWall, selectedOddWall);
-        invokeSelectSensorWithAngle(player, alternateEvenWall, selectedOddWall);
+        invokeSelectSensorWithAngle(player, selectedOddWall, previousAlternate);
+        assertEquals(0xC0, player.getAngle() & 0xFF,
+                "First odd-angle frame should snap to the current right-wall cardinal angle");
 
-        assertEquals(0x20, player.getAngle() & 0xFF,
-                "Odd right-wall contact should reuse the even alternate sensor on the next zero-distance frame "
-                        + "without depending on SBZ coordinates");
-    }
+        invokeSelectSensorWithAngle(player, selectedOddWall, currentAlternate);
 
-    @Test
-    public void oddRightWallAngleFallbackIgnoresDistantAlternateSensor() {
-        AbstractPlayableSprite player = newCollisionTestSprite();
-        player.setGroundMode(GroundMode.RIGHTWALL);
-
-        SensorResult selectedOddWall = new SensorResult((byte) 0xFF, (byte) 0, 0x10, Direction.DOWN);
-        SensorResult distantAlternate = new SensorResult((byte) 0x20, (byte) 3, 0x11, Direction.DOWN);
-
-        invokeSelectSensorWithAngle(player, distantAlternate, selectedOddWall);
-        invokeSelectSensorWithAngle(player, distantAlternate, selectedOddWall);
-
-        assertEquals(0x00, player.getAngle() & 0xFF,
-                "Right-wall fallback must not reuse alternates outside the ROM-shaped near-contact range");
+        assertEquals(0xC0, player.getAngle() & 0xFF,
+                "S3K Player_Angle has no cross-frame alternate-angle cache; a zero-distance odd right-wall "
+                        + "sensor snaps from the current angle to the current cardinal quadrant");
     }
 
     @Test
@@ -760,6 +770,17 @@ public class CollisionSystemTest {
         }
     }
 
+    private static int invokeVerticalTileLookupY(short y, Direction direction) {
+        try {
+            Method method = GroundSensor.class.getDeclaredMethod(
+                    "verticalTileLookupY", short.class, Direction.class);
+            method.setAccessible(true);
+            return ((Number) method.invoke(null, y, direction)).intValue();
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to invoke GroundSensor.verticalTileLookupY", e);
+        }
+    }
+
     private static int readProbeInt(Object probe, String accessor) {
         try {
             Method method = probe.getClass().getDeclaredMethod(accessor);
@@ -768,14 +789,6 @@ public class CollisionSystemTest {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed reading probe accessor " + accessor, e);
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<AbstractPlayableSprite, Byte> pendingOddSensorFallbackAngles(CollisionSystem collisionSystem)
-            throws Exception {
-        Field field = CollisionSystem.class.getDeclaredField("pendingOddSensorFallbackAngles");
-        field.setAccessible(true);
-        return (Map<AbstractPlayableSprite, Byte>) field.get(collisionSystem);
     }
 
     private static Direction readProbeDirection(Object probe, String accessor) {
@@ -883,5 +896,3 @@ public class CollisionSystemTest {
         }
     }
 }
-
-

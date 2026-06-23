@@ -8,6 +8,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -44,7 +45,7 @@ import java.util.List;
  *   <li>4 (A_Newt_Fires): frames 0,1,1,2,1,1,0 at speed $13 with afRoutine - firing</li>
  * </ul>
  */
-public class Sonic1NewtronBadnikInstance extends AbstractBadnikInstance {
+public class Sonic1NewtronBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
 
     // From disassembly: obColType values used during different phases
     private static final int COLLISION_SIZE_FALLING = 0x0C;

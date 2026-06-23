@@ -3,10 +3,14 @@ package com.openggf.game.sonic1.objects.badniks;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
-import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -26,7 +30,7 @@ import java.util.List;
  * <p>
  * Animations: Uses fuse animation (Ani_Bomb index 3): frames 8, 9 at speed 3.
  */
-public class Sonic1BombFuseInstance extends AbstractObjectInstance {
+public class Sonic1BombFuseInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // Animation speed 3 + 1 = 4 ticks per frame
     private static final int ANIM_SPEED = 3 + 1;
@@ -47,6 +51,10 @@ public class Sonic1BombFuseInstance extends AbstractObjectInstance {
     private boolean facingLeft;
     private boolean ceilingBomb;    // obStatus bit 1: parent is upside-down
     private boolean destroyed;
+
+    Sonic1BombFuseInstance() {
+        this(0, 0, false, false, 0, 0, null);
+    }
 
     /**
      * Creates a fuse child at the bomb's position.
@@ -76,6 +84,59 @@ public class Sonic1BombFuseInstance extends AbstractObjectInstance {
         this.ceilingBomb = ceilingBomb;
         this.animTickCounter = 0;
         this.destroyed = false;
+    }
+
+    @Override
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        // ROM parity: Bom_CheckStartFuse (docs/s1disasm/_incObj/5F Badnik - Walking
+        // Bomb.asm) creates the fuse via FindNextFreeObj and sets bom_time = 143,
+        // but the fuse's Bom_Fuse routine (which runs Bom_BurnFuseAndExplode ->
+        // subq.w #1,bom_time) does NOT decrement on the creation frame — BizHawk
+        // shows the fuse holding bom_time=143 at the end of the frame it appears
+        // (SLZ1 bk2 f137203), then counting down 142,141,... on subsequent frames,
+        // expiring when 0 -> -1 at f137347. Letting the engine fuse decrement on
+        // its spawn frame expired it one frame early, which spawned the shrapnel
+        // one frame early and landed the shrapnel hurt at SLZ1 trace f723 instead
+        // of ROM's f724 (the whole 38-frame shrapnel flight was shifted back one
+        // frame). Deferring the fuse's first update reproduces the ROM creation-
+        // frame hold.
+        return true;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn capturedSpawn = ctx.spawn();
+        Sonic1BombBadnikInstance restoredParent = nearestLiveBombParentForRewind(ctx);
+        if (capturedSpawn == null || restoredParent == null) {
+            return null;
+        }
+        // Non-final scalars are restored after recreate; origY is final and equals spawn.y().
+        return new Sonic1BombFuseInstance(
+                capturedSpawn.x(), capturedSpawn.y(), false, false, 0, 0, restoredParent);
+    }
+
+    private static Sonic1BombBadnikInstance nearestLiveBombParentForRewind(RewindRecreateContext ctx) {
+        ObjectServices services = ctx.objectServices();
+        ObjectManager objectManager = services != null ? services.objectManager() : null;
+        ObjectSpawn capturedSpawn = ctx.spawn();
+        if (objectManager == null || capturedSpawn == null) {
+            return null;
+        }
+        Sonic1BombBadnikInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (!(object instanceof Sonic1BombBadnikInstance bomb) || bomb.isDestroyed()) {
+                continue;
+            }
+            long dx = bomb.getX() - capturedSpawn.x();
+            long dy = bomb.getY() - capturedSpawn.y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = bomb;
+            }
+        }
+        return best;
     }
 
     @Override

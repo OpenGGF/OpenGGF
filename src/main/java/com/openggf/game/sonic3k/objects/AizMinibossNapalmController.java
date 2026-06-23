@@ -3,6 +3,9 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -18,7 +21,7 @@ import java.util.List;
  *
  * State machine: IDLE -> DELAY -> FIRE -> IDLE (loops while bit is set)
  */
-public class AizMinibossNapalmController extends AbstractBossChild {
+public class AizMinibossNapalmController extends AbstractBossChild implements RewindRecreatable {
     private static final int FLAG_PARENT_BITS = 0x38;
     private static final int NAPALM_ACTIVATE_BIT = 1 << 4; // bit 4 (dedicated napalm bit)
 
@@ -31,8 +34,8 @@ public class AizMinibossNapalmController extends AbstractBossChild {
         FIRE
     }
 
-    // Non-final so the generic rewind field capturer reapplies it after a
-    // codec-driven recreate (the codec passes a placeholder subtype).
+    // Non-final so the generic rewind field capturer reapplies it after the
+    // recreate hook passes a placeholder subtype.
     private int subtype;
     private State state = State.IDLE;
     private int timer;
@@ -44,6 +47,16 @@ public class AizMinibossNapalmController extends AbstractBossChild {
     public AizMinibossNapalmController(AbstractBossInstance parent, int subtype) {
         super(parent, "AIZMinibossNapalm", 4, 0x91);
         this.subtype = subtype;
+    }
+
+    private AizMinibossNapalmController(ObjectSpawn spawn, AizMinibossInstance parent) {
+        this(parent, 0);
+    }
+
+    @Override
+    public AizMinibossNapalmController recreateForRewind(RewindRecreateContext ctx) {
+        AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
+        return boss == null ? null : new AizMinibossNapalmController(boss, 0);
     }
 
     @Override

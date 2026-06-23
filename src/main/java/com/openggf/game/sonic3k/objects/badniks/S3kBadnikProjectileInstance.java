@@ -4,6 +4,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -17,7 +19,9 @@ import java.util.List;
  * Shared projectile object for S3K badniks that use Map_Bloominator / Map_MonkeyDude
  * projectile frames and hurt-category touch flags.
  */
-public final class S3kBadnikProjectileInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public final class S3kBadnikProjectileInstance
+        extends AbstractObjectInstance
+        implements TouchResponseProvider, RewindRecreatable {
     private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
     private static final int DEFLECT_SPEED = 0x800;
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
@@ -76,8 +80,12 @@ public final class S3kBadnikProjectileInstance extends AbstractObjectInstance im
         this.hFlip = hFlip;
     }
 
+    private S3kBadnikProjectileInstance(ObjectSpawn spawn) {
+        this(spawn, "", 0, spawn.x(), spawn.y(), 0, 0, 0, 0, 0, false);
+    }
+
     /**
-     * Rewind recreate factory. The codec only needs a structurally-valid
+     * Rewind recreate factory. Generic recreate only needs a structurally-valid
      * instance positioned at the captured spawn; the non-final differentiator
      * fields (rendererKey, mappingFrame, gravity, collisionSizeIndex,
      * priorityBucket, hFlip) and the in-flight motion scalars are reapplied by
@@ -87,6 +95,14 @@ public final class S3kBadnikProjectileInstance extends AbstractObjectInstance im
      */
     public static S3kBadnikProjectileInstance forRewindRecreate(ObjectSpawn spawn) {
         return new S3kBadnikProjectileInstance(spawn, "", 0, spawn.x(), spawn.y(), 0, 0, 0, 0, 0, false);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn() != null
+                ? ctx.spawn()
+                : new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
+        return forRewindRecreate(spawn);
     }
 
     @Override

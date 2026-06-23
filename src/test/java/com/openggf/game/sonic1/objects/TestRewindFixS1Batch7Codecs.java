@@ -1,11 +1,9 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.level.objects.BreathingBubbleInstance;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -33,26 +31,18 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  *       {@code emeralds} ref), so it stays accept-drop.</li>
  *   <li>{@link BreathingBubbleInstance} — shared underwater drowning bubble spawned by
  *       {@code com.openggf.sprites.playable.DrowningController} (S1 LZ Obj0A + S2). A
- *       short-lived cosmetic particle re-emitted in-frame; not {@code exactSpawnCodec}-able
+ *       short-lived cosmetic particle re-emitted in-frame; not spawn-codec eligible
  *       (6 non-spawn ctor args incl. the RNG-gated {@code countdownNumber}), not
  *       parent/sibling-linked. Stays accept-drop, mirroring {@code Sonic1SplashObjectInstance}.</li>
  * </ul>
  *
  * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay session.
+ * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay session.
  */
 class TestRewindFixS1Batch7Codecs {
 
     private static Set<String> codecClassNames() {
-        Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = new Sonic1ObjectRegistry().dynamicRewindCodecs();
-        for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
-            names.add(codec.className());
-        }
-        return names;
+        return DeletedDynamicRewindCodecs.classNames();
     }
 
     @Test

@@ -270,6 +270,15 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance {
         // frame ahead of the ROM. Mirror CluckerBadnikInstance/NebulaBadnikInstance:
         // build with construction context, defer the init frame, add-after-current.
         spawnChild(() -> {
+            // ROM Obj98_SpinyShotFall runs one routine-0 init frame (no move) then
+            // moves from routine 2. The engine models that with
+            // deferFirstMovementForLoadSubObjectInit(). However, the engine's
+            // object-execution phase (objects move at end of frame; the CPU sidekick's
+            // slot-1 TouchResponse reads them at frame start) places a freshly spawned
+            // projectile one frame ahead of ROM's Obj98 at sidekick-touch time, hurting
+            // the co-located CPU sidekick one frame early (CPZ1 f1157; ROM hurts f1158).
+            // One extra stationary (initialDelay) frame realigns the spike's trajectory
+            // with ROM frame-for-frame. See docs/TRACE_FRONTIER_LOG.md (CPZ1 f1157).
             BadnikProjectileInstance spike = new BadnikProjectileInstance(
                     spawn,
                     BadnikProjectileInstance.ProjectileType.SPINY_SPIKE,
@@ -278,7 +287,8 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance {
                     fireXVel,
                     SPIKE_Y_VEL,
                     true,  // Apply gravity (Obj98_SpinyShotFall)
-                    false  // No initial flip
+                    false, // No initial flip
+                    1      // Extra init-phase stationary frame (engine object-phase realignment)
             );
             spike.deferFirstMovementForLoadSubObjectInit();
             return spike;

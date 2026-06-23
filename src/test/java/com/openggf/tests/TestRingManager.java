@@ -283,7 +283,7 @@ public class TestRingManager {
     // on-expiry slot release) was retired with the legacy LostRingPool.updatePhysics
     // loop — per-ring physics/lifetime now runs in the object exec loop
     // (LostRingObjectInstance). Per-ring round-trip is covered by
-    // com.openggf.level.rings.TestLostRingRewindCodec; the object-loop expiry/slot
+    // com.openggf.level.rings.TestLostRingRewindGenericRestore; the object-loop expiry/slot
     // release lands with the Stage-5 object physics relocation. updateLostRingPhysics
     // now only advances the shared decelerating spin (Ring_spill_anim_*).
 

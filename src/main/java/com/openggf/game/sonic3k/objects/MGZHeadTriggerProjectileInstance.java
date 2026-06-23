@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -29,7 +30,7 @@ import java.util.List;
  * index 0x1B. Non-attackable — the projectile can only damage the player.
  */
 public class MGZHeadTriggerProjectileInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnCoordinateZeroScalarArgsRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_HEAD_TRIGGER;
 

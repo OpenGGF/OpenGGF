@@ -1,11 +1,10 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.level.objects.DynamicObjectRewindCodec;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -26,21 +25,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * exclude here.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
+ * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
  * session. Full session round-trip is handled by the rewind coverage guard.
  */
 class TestRewindFixS3KBatch7Codecs {
 
     private static Set<String> codecClassNames() {
-        Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = new Sonic3kObjectRegistry().dynamicRewindCodecs();
-        for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
+        return DeletedDynamicRewindCodecs.classNames();
+    }
+
+    private static boolean hasDynamicRecreatePath(String className, Set<String> codecNames) {
+        if (codecNames.contains(className)) {
+            return true;
         }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
-            names.add(codec.className());
+        try {
+            return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
         }
-        return names;
     }
 
     @Test
@@ -61,8 +63,8 @@ class TestRewindFixS3KBatch7Codecs {
                 EggPrisonAnimalInstance.class.getName());
 
         for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+            assertTrue(hasDynamicRecreatePath(name, names),
+                    "missing rewind recreate path for " + name);
         }
     }
 }

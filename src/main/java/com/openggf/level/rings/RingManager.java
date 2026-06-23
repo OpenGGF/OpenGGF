@@ -652,6 +652,18 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 continue;
             }
 
+            // ROM give-ring timing: player processes the collision-response list
+            // built by the ring's PREVIOUS-frame Add_SpriteToCollisionResponseList,
+            // so the give uses the pre-move position. Test here (pre-move) to defer
+            // one frame to match ROM (S3K MGZ rings f539).
+            if (attractedRingOverlapsPlayerTouchBox(ar, player)) {
+                player.addRings(1);
+                audioManager.playSfx(GameSound.RING);
+                ar.collected = true;
+                ar.sparkleStartFrame = frameCounter;
+                continue;
+            }
+
             // --- X axis acceleration (AttractedRing_Move) ---
             int accelX = ATTRACT_ACCEL;
             if (pcx >= ar.x) {
@@ -693,20 +705,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             yLong += ar.yVel << 8;
             ar.y = yLong >> 16;
             ar.ySub = yLong & 0xFFFF;
-
-            // ROM uses collision_flags $47 and the normal TouchResponse box:
-            // player x_pos-8, y_pos-(y_radius-3), width $10, height 2*(y_radius-3),
-            // object Touch_Sizes index 7 (6x6). See sonic3k.asm:20643-20710,
-            // 20755-20757, 35719-35721, 35746.
-            if (attractedRingOverlapsPlayerTouchBox(ar, player)) {
-                player.addRings(1);
-                audioManager.playSfx(GameSound.RING);
-                // ROM AttractedRing_GiveRing keeps the same SST slot alive as
-                // loc_1A920 until Ani_RingSparkle deletes it
-                // (sonic3k.asm:35773-35790).
-                ar.collected = true;
-                ar.sparkleStartFrame = frameCounter;
-            }
+            // give-ring tested pre-move at top of loop (ROM list timing)
         }
     }
 
@@ -809,7 +808,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         // --- Shared spilled-ring spin owner ---
         // Per-ring lost-ring state is no longer snapshotted here: physics runs in the
         // object exec loop and each LostRingObjectInstance round-trips via the generic
-        // field capture + LostRingRewindCodec (Task 4.1). Only the small GLOBAL spin
+        // field capture + LostRingObjectInstance generic recreate. Only the small GLOBAL spin
         // (Ring_spill_anim_counter/accum/frame) is captured, via SpillAnimationState.
         int[] spin = lostRings.spillAnimation.snapshot();
 
@@ -860,7 +859,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
         // --- Shared spilled-ring spin owner ---
         // Only the GLOBAL spin is restored here; the spilled rings themselves are
-        // dynamic objects recreated via LostRingRewindCodec (Task 4.1). The legacy
+        // dynamic objects recreated via LostRingObjectInstance generic recreate. The legacy
         // per-ring ringPool restore is retired with the per-ring physics loop.
         lostRings.spillAnimation.restore(new int[] {
                 snap.spillAnimCounter(), snap.spillAnimAccum(), snap.spillAnimFrame() });

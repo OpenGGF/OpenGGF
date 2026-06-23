@@ -8,6 +8,9 @@ import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -51,7 +54,7 @@ import java.util.List;
  * keep the object -&gt; events dependency testable.
  */
 public final class CnzMinibossTopInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SolidObjectProvider, SolidObjectListener {
+        implements TouchResponseProvider, SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // ---- Routine indices (CNZMinibossTop_Index, sonic3k.asm:145011) ----
     /** Routine 0 — Obj_CNZMinibossTopInit (sonic3k.asm:145018). */
@@ -140,6 +143,18 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         this.mappingFrame = FRAME_TOP_WAIT;
         Arrays.fill(diagnosticBranchHistoryFrame, -1);
         Arrays.fill(diagnosticBranchHistoryBranch, "none");
+    }
+
+    @Override
+    public CnzMinibossTopInstance recreateForRewind(RewindRecreateContext ctx) {
+        CnzMinibossInstance parent = RewindRecreateObjectLinks.nearestLiveObject(
+                ctx, CnzMinibossInstance.class);
+        if (parent == null) {
+            return null;
+        }
+        CnzMinibossTopInstance top = new CnzMinibossTopInstance(ctx.spawn());
+        top.attachBossForTest(parent);
+        return top;
     }
 
     /**

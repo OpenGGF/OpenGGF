@@ -7,6 +7,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateDefaultArgsRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -27,7 +29,8 @@ import java.util.logging.Logger;
  *   <li><b>AWAIT_ACT_TRANSITION</b> — polls until endOfLevelFlag is set, then self-destructs</li>
  * </ol>
  */
-public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance {
+public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
+        implements SpawnCoordinateDefaultArgsRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(S3kBossDefeatSignpostFlow.class.getName());
 
     private enum Phase { WAIT_FADE, SPAWN_SIGNPOST, AWAIT_RESULTS, AWAIT_ACT_TRANSITION }
@@ -56,7 +59,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance {
     private final int signpostX;
     // Non-final: apparentAct/cleanupAction are not derivable from the carried
     // ObjectSpawn (only getX()/getY() are captured -> signpostX/0). The rewind
-    // codec passes placeholders (0, CleanupAction.NONE) and the
+    // recreate hook passes placeholders (0, CleanupAction.NONE) and the
     // GenericFieldCapturer reapplies these captured values after recreate.
     private int apparentAct;
     private CleanupAction cleanupAction;
@@ -72,12 +75,16 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance {
      * @param cleanupAction action to run after spawning the signpost (e.g. palette restore)
      */
     public S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction) {
-        super(null, "S3kBossDefeatSignpostFlow");
+        super(new ObjectSpawn(signpostX, 0, 0, 0, 0, false, 0), "S3kBossDefeatSignpostFlow");
         this.signpostX = signpostX;
         this.apparentAct = apparentAct;
         this.cleanupAction = cleanupAction == null ? CleanupAction.NONE : cleanupAction;
         this.phase = Phase.WAIT_FADE;
         this.timer = FADE_TIMER;
+    }
+
+    private S3kBossDefeatSignpostFlow() {
+        this(0, 0, CleanupAction.NONE);
     }
 
     @Override

@@ -5,7 +5,10 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SubpixelMotion;
@@ -20,7 +23,8 @@ import java.util.List;
  * at the fixed door coordinates used by {@code Map_MHZKnuxDoor}; movement is
  * driven by the parent button's switch bits in the following routines.
  */
-public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance implements SolidObjectProvider {
+public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
+        implements SolidObjectProvider, RewindRecreatable {
     private static final int INITIAL_X = 0x0390;
     private static final int INITIAL_Y = 0x0620;
     private static final int PRIORITY = 1;
@@ -30,7 +34,7 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance imple
     private static final int AUTO_RAISE_MIN_Y_DISTANCE = 0x60;
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x1B, 0x20, 0x20);
 
-    private final Mhz1CutsceneButtonInstance parent;
+    private Mhz1CutsceneButtonInstance parent;
     private final SubpixelMotion.State motion = new SubpixelMotion.State(INITIAL_X, INITIAL_Y, 0, 0, 0, 0);
     private State state = State.IDLE;
     private int waitTimer;
@@ -39,6 +43,12 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance imple
         super(new ObjectSpawn(INITIAL_X, INITIAL_Y, parent.getSpawn().objectId(), 0, 0, false, 0),
                 "MHZ1CutsceneDoor");
         this.parent = parent;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Mhz1CutsceneButtonInstance liveParent = findNearestLiveButton(ctx);
+        return liveParent == null ? null : new Mhz1CutsceneDoorInstance(liveParent);
     }
 
     @Override
@@ -114,6 +124,31 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance imple
         parent.setDoorMoving(true);
         motion.yVel = parent.isDoorLowered() ? SLIDE_SPEED : -SLIDE_SPEED;
         waitTimer = SLIDE_WAIT;
+    }
+
+    private static Mhz1CutsceneButtonInstance findNearestLiveButton(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        Mhz1CutsceneButtonInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (!(object instanceof Mhz1CutsceneButtonInstance candidate) || candidate.isDestroyed()) {
+                continue;
+            }
+            if (spawn == null) {
+                return candidate;
+            }
+            long dx = candidate.getX() - spawn.x();
+            long dy = candidate.getY() - spawn.y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+        return best;
     }
 
     @Override

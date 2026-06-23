@@ -8,6 +8,8 @@ import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 
 import java.util.Arrays;
 import java.util.List;
@@ -17,7 +19,8 @@ import java.util.List;
  * {@code loc_76574}: fade the full normal palette to white, then fade back
  * down to the target palette copied by the weather-machine destruction code.
  */
-public final class MhzEndBossPaletteFadeController extends AbstractObjectInstance {
+public final class MhzEndBossPaletteFadeController extends AbstractObjectInstance
+        implements RewindRecreatable {
     private static final int PALETTE_LINES = 4;
     private static final int COLORS_PER_LINE = 16;
     private static final int DEFAULT_DELAY = 3;
@@ -31,6 +34,10 @@ public final class MhzEndBossPaletteFadeController extends AbstractObjectInstanc
     private int step;
     private boolean fadingToTarget;
 
+    private MhzEndBossPaletteFadeController() {
+        this(new byte[0][], true, 0);
+    }
+
     public MhzEndBossPaletteFadeController(byte[][] targetLines) {
         this(targetLines, true, DEFAULT_DELAY);
     }
@@ -40,6 +47,11 @@ public final class MhzEndBossPaletteFadeController extends AbstractObjectInstanc
         this.targetLines = cloneLines(targetLines);
         this.fadeBackToTarget = fadeBackToTarget;
         this.delay = delay;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MhzEndBossPaletteFadeController(new byte[0][], true, 0);
     }
 
     @Override

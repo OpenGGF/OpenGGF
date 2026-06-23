@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -38,7 +39,7 @@ import java.util.List;
  * ROM reference: docs/s1disasm/_incObj/6A Saws and Pizza Cutters.asm
  */
 public class Sonic1SawObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnRewindRecreatable {
 
     // ---- Collision ----
     // obColType for active saws: $A2 = HURT($80) | size index $22

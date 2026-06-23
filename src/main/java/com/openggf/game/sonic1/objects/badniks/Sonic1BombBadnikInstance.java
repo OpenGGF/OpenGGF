@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -62,7 +63,7 @@ import java.util.List;
  * </ul>
  */
 public class Sonic1BombBadnikInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
 
     // --- Collision ---
     // From disassembly: move.b #$9A,obColType(a0)
@@ -147,7 +148,7 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
 
     public Sonic1BombBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Bomb");
-        
+
         this.currentX = spawn.x();
         this.currentY = spawn.y();
         this.xVelocity = 0;

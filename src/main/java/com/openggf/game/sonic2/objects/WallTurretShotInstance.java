@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
@@ -36,7 +37,7 @@ import java.util.logging.Logger;
  * Initial mapping_frame = 3 (set by parent: move.b #3,mapping_frame(a1)).
  */
 public class WallTurretShotInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(WallTurretShotInstance.class.getName());
 
     // From ObjB8_SubObjData2: priority=3, width_pixels=4, collision_flags=$98
@@ -59,6 +60,11 @@ public class WallTurretShotInstance extends AbstractObjectInstance
     private int animTimer;
     private int animIndex;
     private int mappingFrame; // 3 or 4 (projectile art frames from shared mapping set)
+
+    private WallTurretShotInstance() {
+        this(new ObjectSpawn(0, 0, Sonic2ObjectIds.PROJECTILE, 0x8E, 0, false, 0),
+                0, 0, 0, 0);
+    }
 
     public WallTurretShotInstance(ObjectSpawn parentSpawn, int startX, int startY,
                                   int xVel, int yVel) {

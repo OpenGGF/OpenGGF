@@ -6,10 +6,13 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -44,7 +47,7 @@ import java.util.List;
  * <h3>Deletion:</h3>
  * Uses {@code Sprite_CheckDeleteTouchXY} (both X and Y bounds check).
  */
-public final class BuggernautBabyInstance extends AbstractObjectInstance {
+public final class BuggernautBabyInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // --- Chase physics ---
 
@@ -109,6 +112,45 @@ public final class BuggernautBabyInstance extends AbstractObjectInstance {
         // ObjDat3_Buggernaught_Baby: mapping_frame = 3
         this.mappingFrame = 3;
         this.animIndex = 0;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+            return null;
+        }
+        ObjectManager objectManager = ctx.objectServices().objectManager();
+        BuggernautBadnikInstance liveParent =
+                findNearestLiveParentForRewind(objectManager, ctx.spawn());
+        if (liveParent == null) {
+            return null;
+        }
+        ObjectSpawn capturedSpawn = ctx.spawn();
+        return BuggernautBadnikInstance.recreateBabyForRewind(
+                capturedSpawn, capturedSpawn.x(), capturedSpawn.y(), liveParent);
+    }
+
+    private static BuggernautBadnikInstance findNearestLiveParentForRewind(
+            ObjectManager objectManager,
+            ObjectSpawn spawn) {
+        if (objectManager == null || spawn == null) {
+            return null;
+        }
+        BuggernautBadnikInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (!(instance instanceof BuggernautBadnikInstance parent) || parent.isDestroyed()) {
+                continue;
+            }
+            long dx = parent.getX() - spawn.x();
+            long dy = parent.getY() - spawn.y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = parent;
+            }
+        }
+        return best;
     }
 
     @Override

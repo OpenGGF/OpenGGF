@@ -37,6 +37,16 @@ public interface PowerUpObject {
     }
 
     /**
+     * Returns whether this power-up is an invincibility-stars visual.
+     * The rewind player-bound restore path uses this shared marker so game-specific
+     * stars can consume the captured pending entry without shared code importing
+     * concrete game packages.
+     */
+    default boolean isInvincibilityStars() {
+        return false;
+    }
+
+    /**
      * Called after a rewind restore relinks or respawns this power-up visual.
      * Implementations with transient renderer/DPLC caches should invalidate
      * them so the next draw uploads art for the restored animation frame.

@@ -219,7 +219,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
                     entry -> object.getClass().getName().equals(entry.className())
                             && entry.playerOwner() == shield.getPlayer());
         }
-        if (object instanceof InvincibilityStarsObjectInstance) {
+        if (object instanceof PowerUpObject powerUp && powerUp.isInvincibilityStars()) {
             return objectManager.consumePendingPlayerBoundEntry(
                     InvincibilityStarsObjectInstance.class);
         }
@@ -234,7 +234,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         if (object instanceof ShieldObjectInstance) {
             return featureSet.shieldObjectFixedSlotIndex();
         }
-        if (object instanceof InvincibilityStarsObjectInstance) {
+        if (object instanceof PowerUpObject powerUp && powerUp.isInvincibilityStars()) {
             return featureSet.invincibilityStarsFixedSlotIndex();
         }
         return -1;

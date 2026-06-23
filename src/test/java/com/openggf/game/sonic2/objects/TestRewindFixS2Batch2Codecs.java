@@ -2,60 +2,50 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
+import com.openggf.game.sonic2.objects.bosses.ARZBossEyes;
 import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic2ObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-2 S2 object that
- * was previously dropped on a held-rewind restore.
+ * keeps the current rewind path for every batch-2 S2 object that was
+ * previously dropped on a held-rewind restore.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
+ * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
  * session. Full session round-trip is handled by the rewind coverage guard.
  */
 class TestRewindFixS2Batch2Codecs {
 
-    private static Set<String> codecClassNames() {
-        Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = new Sonic2ObjectRegistry().dynamicRewindCodecs();
-        for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
-            names.add(codec.className());
-        }
-        return names;
-    }
-
     @Test
-    void registersCodecsForBatch2S2Objects() {
-        Set<String> names = codecClassNames();
-
-        List<String> required = List.of(
-                ARZBossArrow.class.getName(),
-                ARZBossPillar.class.getName(),
-                GrounderRockProjectile.class.getName(),
-                GrounderWallInstance.class.getName(),
-                HtzFireProjectileObjectInstance.class.getName(),
-                HtzGroundFireObjectInstance.class.getName(),
+    void batch2S2ObjectsUseCurrentRewindPaths() {
+        List<Class<?>> phase2Deleted = List.of(
+                ARZBossArrow.class,
+                ARZBossPillar.class,
+                GrounderRockProjectile.class,
+                GrounderWallInstance.class,
                 // EHZBossSpike / EHZBossWheel codecs intentionally REMOVED:
                 // construction-spawned children re-established by boss reconstruction
                 // (see TestBossChildNoDoubleSpawnParity / KNOWN_DISCREPANCIES).
-                BalkiryJetObjectInstance.class.getName(),
-                ArrowProjectileInstance.class.getName());
-
-        for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+                BalkiryJetObjectInstance.class,
+                HtzFireProjectileObjectInstance.class,
+                HtzGroundFireObjectInstance.class,
+                ArrowProjectileInstance.class);
+        for (Class<?> type : phase2Deleted) {
+            assertTrue(RewindRecreatable.class.isAssignableFrom(type),
+                    type.getName() + " must restore through RewindRecreatable generic recreate");
         }
+
+        assertTrue(RewindRecreatable.class.isAssignableFrom(ARZBossArrow.class),
+                "ARZBossArrow must restore through RewindRecreatable graph relink");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(ARZBossEyes.class),
+                "ARZBossEyes must support generic recreate for the ARZ arrow graph");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(ARZBossPillar.class),
+                "ARZBossPillar must keep its RewindRecreatable generic recreate path");
     }
 }

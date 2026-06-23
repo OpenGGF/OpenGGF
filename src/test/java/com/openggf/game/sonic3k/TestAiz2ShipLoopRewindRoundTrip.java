@@ -35,15 +35,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * bombing, the small boss craft) reaches its exit and releases the camera lock.
  *
  * <p>Pre-fix, a rewind restore dropped the {@code AizBattleshipInstance} (it had no rewind
- * codec) while the {@code battleshipSpawned} guard stayed {@code true} and
+ * recreate path) while the {@code battleshipSpawned} guard stayed {@code true} and
  * {@code battleshipAutoScrollActive} stayed {@code true}. With no driver object left to end
  * the loop, the camera was force-locked forever — a softlock.
  *
  * <h2>The fix (already implemented on this branch; this test only proves it)</h2>
  * <ul>
- *   <li><b>Fix A:</b> {@code Sonic3kObjectRegistry.DYNAMIC_REWIND_CODECS} now has a codec
- *       for {@link AizBattleshipInstance} (and {@code AizBossSmallInstance}), so the
- *       object-manager rewind restore recreates it from the captured snapshot entry.</li>
+ *   <li><b>Fix A:</b> {@link AizBattleshipInstance} has a Phase-2 generic recreate path, so
+ *       the object-manager rewind restore recreates it from the captured snapshot entry.</li>
  *   <li><b>Fix B:</b> {@code Sonic3kAIZEvents.reconcileSequenceAfterRewindRestore()} (run as
  *       a post-restore callback) releases the camera lock and clears the stuck guard if the
  *       sequence-driving object is absent after a restore — a defense-in-depth backstop.</li>
@@ -61,8 +60,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *   <li>Diverge by removing the battleship from the live object manager (mimicking the bug's
  *       drop).</li>
  *   <li>{@code restore()}.</li>
- *   <li>Assert the codec recreated exactly one live battleship (Fix A), the spawned guard is
- *       consistent with that live object (Fix B/consistency), and the camera lock is not left
+ *   <li>Assert rewind recreate restored exactly one live battleship (Fix A), the spawned guard
+ *       is consistent with that live object (Fix B/consistency), and the camera lock is not left
  *       orphaned.</li>
  * </ol>
  *
@@ -134,14 +133,14 @@ class TestAiz2ShipLoopRewindRoundTrip {
         assertEquals(0, countLiveBattleships(objectManager),
                 "Diverge step must remove the battleship from the live object manager");
 
-        // 5. Restore the captured state. Fix A recreates the battleship from its codec;
+        // 5. Restore the captured state. Fix A recreates the battleship from generic recreate;
         //    Fix B's post-restore reconcile runs as part of restore().
         registry.restore(snapA);
 
-        // 6a. Fix A: the codec recreated exactly one live battleship.
+        // 6a. Fix A: rewind recreate restored exactly one live battleship.
         List<AizBattleshipInstance> restored = liveBattleships(objectManager);
         assertEquals(1, restored.size(),
-                "Fix A: object-manager rewind codec must recreate exactly one live "
+                "Fix A: object-manager rewind restore must recreate exactly one live "
                         + "AizBattleshipInstance on restore (pre-fix: zero — the ship was dropped)");
         AizBattleshipInstance restoredShip = restored.get(0);
         assertFalse(restoredShip.isDestroyed(),

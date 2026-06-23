@@ -9,6 +9,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
@@ -309,7 +311,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
     }
 
     static final class SideDrillChild extends AbstractObjectInstance
-            implements TouchResponseProvider, TouchResponseListener {
+            implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
         private static final int RENDER_HALF_WIDTH = 0x08;
         private static final int RENDER_HALF_HEIGHT = 0x08;
         private static final int PRIORITY_BUCKET = 5;
@@ -321,7 +323,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
         private int xSubpixel;
         private int ySubpixel;
         // Un-final so the generic field capturer reapplies it after a rewind
-        // recreate (the codec recovers it from spawn.renderFlags()).
+        // recreate (the hook recovers it from spawn.renderFlags()).
         private boolean facingLeft;
         private boolean initialized;
         private boolean arcing;
@@ -338,6 +340,16 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
             this.currentX = x;
             this.currentY = y;
             this.facingLeft = facingLeft;
+        }
+
+        SideDrillChild(int x, int y, int ignoredSubtype, boolean facingLeft) {
+            this(x, y, facingLeft);
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            return new SideDrillChild(spawn.x(), spawn.y(), spawn.renderFlags() == 0);
         }
 
         @Override

@@ -14,6 +14,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SplashObjectInstance;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -1495,12 +1497,17 @@ public class HczMinibossInstance extends AbstractBossInstance {
         }
     }
 
-    private final class RocketTouchChild extends AbstractObjectInstance implements TouchResponseProvider {
+    private final class RocketTouchChild extends AbstractObjectInstance
+            implements TouchResponseProvider, RewindRecreatable {
         // Non-final so the generic rewind field capturer can reapply the captured
-        // spawn-derived values after the codec recreates this child.
+        // spawn-derived values after the recreate hook rebuilds this child.
         private int rocketIndex;
         private int objectId;
         private int layoutIndex;
+
+        private RocketTouchChild() {
+            super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "HCZMinibossRocketTouch");
+        }
 
         private RocketTouchChild(int rocketIndex, int objectId, int layoutIndex) {
             super(new ObjectSpawn(
@@ -1515,6 +1522,42 @@ public class HczMinibossInstance extends AbstractBossInstance {
             this.rocketIndex = rocketIndex;
             this.objectId = objectId;
             this.layoutIndex = layoutIndex;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null
+                    || ctx.spawn() == null) {
+                return null;
+            }
+            HczMinibossInstance parent = null;
+            for (var object : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (object instanceof HczMinibossInstance candidate) {
+                    parent = candidate;
+                    break;
+                }
+            }
+            if (parent == null) {
+                return null;
+            }
+
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            int capturedRocketIndex = capturedSpawn.subtype() / 2;
+            RocketState[] parentRockets = parent.rockets();
+            if (capturedRocketIndex < 0 || capturedRocketIndex >= parentRockets.length) {
+                return null;
+            }
+
+            RocketTouchChild child = parent.new RocketTouchChild(
+                    capturedRocketIndex,
+                    capturedSpawn.objectId(),
+                    capturedSpawn.layoutIndex());
+            if (parent.rocketTouchChildren == null
+                    || parent.rocketTouchChildren.length != parentRockets.length) {
+                parent.rocketTouchChildren = new RocketTouchChild[parentRockets.length];
+            }
+            parent.rocketTouchChildren[capturedRocketIndex] = child;
+            return child;
         }
 
         @Override

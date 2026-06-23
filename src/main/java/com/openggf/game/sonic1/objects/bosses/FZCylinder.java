@@ -4,9 +4,14 @@ import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.LevelManager;
+import com.openggf.game.rewind.GenericFieldCapturer;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -35,7 +40,7 @@ import java.util.List;
  *
  * SolidObject params: d1=$2B, d2=$60, d3=$61
  */
-public class FZCylinder extends AbstractBossChild implements SolidObjectProvider {
+public class FZCylinder extends AbstractBossChild implements SolidObjectProvider, RewindRecreatable {
 
     // Position data from EggmanCylinder_PosData
     private static final int[][] CYLINDER_POS = {
@@ -52,7 +57,7 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
 
     // Un-finaled for rewind: subtype is NOT spawn-derivable (AbstractBossChild's ctor
     // hardcodes ObjectSpawn subtype 0), so the generic field capturer reapplies the
-    // captured per-cylinder values after the codec recreates with placeholder subtype 0.
+    // captured per-cylinder values after the recreate hook uses placeholder subtype 0.
     private int subtype;      // 0, 2, 4, or 6
     private boolean isBottom;  // subtypes 0-2 are bottom, 4-6 are top
     private int baseX;
@@ -65,6 +70,10 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
     private boolean drivesBossPosition; // ROM: objoff_30 < 0 branch drives boss X/Y
     private int currentFrame;
 
+
+    FZCylinder(Sonic1FZBossInstance parent) {
+        this(parent, 0);
+    }
 
     public FZCylinder(Sonic1FZBossInstance parent, int subtype) {
         super(parent, "FZ Cylinder " + subtype, 3, Sonic1ObjectIds.EGGMAN_CYLINDER);
@@ -84,6 +93,46 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
         this.active = false;
         this.drivesBossPosition = false;
         this.currentFrame = 0;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic1FZBossInstance boss = firstLiveFzBoss(ctx);
+        if (boss == null) {
+            return null;
+        }
+        // FZ has one boss group; this preserves the deleted explicit restore path's
+        // first-live parent matching while keeping the relink local to FZ.
+        FZCylinder restored = new FZCylinder(boss);
+        seedCapturedScalars(restored, ctx);
+        boss.adoptCylinderForRewind(restored);
+        return restored;
+    }
+
+    int subtypeForRewind() {
+        return subtype;
+    }
+
+    private static void seedCapturedScalars(FZCylinder restored, RewindRecreateContext ctx) {
+        if (ctx == null || ctx.state() == null || ctx.state().compactGenericState() == null) {
+            return;
+        }
+        GenericFieldCapturer.restoreObjectSubclassScalarsCompact(
+                restored, ctx.state().compactGenericState());
+    }
+
+    private static Sonic1FZBossInstance firstLiveFzBoss(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null
+                || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectManager objectManager = ctx.objectServices().objectManager();
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof Sonic1FZBossInstance boss && !boss.isDestroyed()) {
+                return boss;
+            }
+        }
+        return null;
     }
 
     /**

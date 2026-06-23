@@ -12,6 +12,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -50,7 +52,7 @@ import java.util.logging.Logger;
  * <b>Art:</b> ArtNem_LavaCup, palette line 3, single 32x16 frame.
  */
 public class ConveyorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(ConveyorObjectInstance.class.getName());
 
@@ -290,6 +292,11 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
             return new ConveyorObjectInstance(spawn, "Conveyor", extra.baseX(), extra.baseY());
         }
         return new ConveyorObjectInstance(spawn, "Conveyor");
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return recreateForRewind(ctx.spawn(), ctx.state());
     }
 
     @Override

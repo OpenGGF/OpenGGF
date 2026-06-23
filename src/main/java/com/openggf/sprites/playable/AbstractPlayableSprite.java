@@ -1194,32 +1194,96 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         }
                         shield = false;
                         shieldType = null;
-                        return;
-                }
-
-                PowerUpObject liveShield = resolveLiveShieldObjectAfterRewindRestore();
-                if (liveShield != null) {
-                        shieldObject = liveShield;
-                        if (invincibleFrames > 0) {
-                                shieldObject.setVisible(false);
+                } else {
+                        PowerUpObject liveShield = resolveLiveShieldObjectAfterRewindRestore();
+                        if (liveShield != null) {
+                                shieldObject = liveShield;
+                                if (invincibleFrames > 0) {
+                                        shieldObject.setVisible(false);
+                                }
+                                shieldObject.refreshArtAfterRewindRestore();
+                        } else {
+                                if (shieldObject != null && !shieldObject.isDestroyed()) {
+                                        shieldObject.destroy();
+                                }
+                                shieldObject = null;
+                                if (powerUpSpawner != null) {
+                                        shieldObject = powerUpSpawner.spawnShield(this, shieldType);
+                                        if (shieldObject != null && invincibleFrames > 0) {
+                                                shieldObject.setVisible(false);
+                                        }
+                                        if (shieldObject != null) {
+                                                shieldObject.refreshArtAfterRewindRestore();
+                                        }
+                                }
                         }
-                        shieldObject.refreshArtAfterRewindRestore();
-                        return;
                 }
 
-                if (shieldObject != null && !shieldObject.isDestroyed()) {
-                        shieldObject.destroy();
-                }
-                shieldObject = null;
-                if (powerUpSpawner != null) {
-                        shieldObject = powerUpSpawner.spawnShield(this, shieldType);
-                        if (shieldObject != null && invincibleFrames > 0) {
-                                shieldObject.setVisible(false);
+                refreshInvincibilityStarsAfterRewindRestore();
+                refreshPersistentInstaShieldAfterRewindRestore();
+        }
+
+        private void refreshInvincibilityStarsAfterRewindRestore() {
+                if (invincibleFrames <= 0) {
+                        if (invincibilityObject != null) {
+                                invincibilityObject.destroy();
+                                invincibilityObject = null;
                         }
                         if (shieldObject != null) {
-                                shieldObject.refreshArtAfterRewindRestore();
+                                shieldObject.setVisible(true);
+                        }
+                        return;
+                }
+
+                PowerUpObject liveStars = resolveLiveInvincibilityObjectAfterRewindRestore();
+                if (liveStars != null) {
+                        invincibilityObject = liveStars;
+                        invincibilityObject.refreshArtAfterRewindRestore();
+                } else {
+                        if (invincibilityObject != null && !invincibilityObject.isDestroyed()) {
+                                invincibilityObject.destroy();
+                        }
+                        invincibilityObject = null;
+                        if (powerUpSpawner != null) {
+                                invincibilityObject = powerUpSpawner.spawnInvincibilityStars(this);
+                                if (invincibilityObject != null) {
+                                        invincibilityObject.refreshArtAfterRewindRestore();
+                                }
                         }
                 }
+
+                if (shieldObject != null) {
+                        shieldObject.setVisible(false);
+                }
+        }
+
+        private void refreshPersistentInstaShieldAfterRewindRestore() {
+                if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null) {
+                        return;
+                }
+                if (instaShieldObject == null || instaShieldObject.isDestroyed()) {
+                        instaShieldObject = powerUpSpawner.createInstaShield(this);
+                }
+                if (instaShieldObject == null) {
+                        return;
+                }
+
+                ObjectManager objectManager = currentObjectManagerIfAvailable();
+                if (objectManager != null && isObjectManagerLivePowerUp(objectManager, instaShieldObject)) {
+                        instaShieldRegistered = true;
+                        instaShieldObject.invalidateDplcCache();
+                        return;
+                }
+
+                powerUpSpawner.registerObject(instaShieldObject);
+                instaShieldRegistered = true;
+                instaShieldObject.invalidateDplcCache();
+        }
+
+        private boolean hasPersistentInstaShieldAbility() {
+                return physicsFeatureSet != null
+                                && physicsFeatureSet.instaShieldEnabled()
+                                && getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD;
         }
 
         private PowerUpObject resolveLiveShieldObjectAfterRewindRestore() {
@@ -1235,6 +1299,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         if (object instanceof PowerUpObject candidate && isMatchingLiveShield(candidate)) {
                                 return candidate;
                         }
+                }
+                return null;
+        }
+
+        private PowerUpObject resolveLiveInvincibilityObjectAfterRewindRestore() {
+                ObjectManager objectManager = currentObjectManagerIfAvailable();
+                if (invincibilityObject != null
+                                && !invincibilityObject.isDestroyed()
+                                && (objectManager == null
+                                                || isObjectManagerLivePowerUp(objectManager, invincibilityObject))) {
+                        return invincibilityObject;
                 }
                 return null;
         }

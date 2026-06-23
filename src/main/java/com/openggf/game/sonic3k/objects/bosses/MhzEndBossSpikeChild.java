@@ -7,6 +7,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -21,7 +24,8 @@ import java.util.List;
  * only while parent {@code $38} bit 6 is set, and alternate active frames via
  * {@code V_int_run_count} parity with nonzero subtype inverted.
  */
-public final class MhzEndBossSpikeChild extends AbstractObjectInstance implements TouchResponseProvider {
+public final class MhzEndBossSpikeChild extends AbstractObjectInstance
+        implements TouchResponseProvider, RewindRecreatable {
     private static final int ACTIVE_COLLISION_FLAGS = 0x8B;
     private static final int DASH_PHASE_FLAG_OFFSET = 0x38;
     private static final int DASH_PHASE_FLAG = 0x40;
@@ -39,6 +43,10 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance implement
     private int y;
     private int collisionFlags;
 
+    private MhzEndBossSpikeChild() {
+        this(placeholderParentForRewindProbe(), 0, 0, 0);
+    }
+
     public MhzEndBossSpikeChild(MhzEndBossInstance parent, int subtype, int xOffset, int yOffset) {
         super(new ObjectSpawn(
                         parent.getX() + xOffset,
@@ -54,6 +62,24 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance implement
         this.xOffset = xOffset;
         this.yOffset = yOffset;
         refreshFromParent();
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        MhzEndBossInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                ctx, MhzEndBossInstance.class);
+        return liveParent != null ? new MhzEndBossSpikeChild(liveParent, 0, 0, 0) : null;
+    }
+
+    private static MhzEndBossInstance placeholderParentForRewindProbe() {
+        return new MhzEndBossInstance(new ObjectSpawn(
+                -0xC0,
+                0,
+                Sonic3kObjectIds.MHZ_END_BOSS,
+                0,
+                0,
+                false,
+                0));
     }
 
     @Override

@@ -610,8 +610,11 @@ final class ObjectTouchResponseController {
                     || profile.continuousCallbacks()
                     || !overlappingSet.contains(instance);
             if (shouldTrigger) {
+                // Pass region.x() so applyHurt uses the matched spike's X for bounce direction,
+                // matching ROM HurtSonic.checkDirection: cmp.w obX(a2),d0 where a2 = child slot
+                // (docs/s1disasm/_incObj/Sonic ReactToItem.asm:402-405).
                 TouchResponseResult result = new TouchResponseResult(
-                        sizeIndex, width, height, category, region.shieldReactionFlags());
+                        sizeIndex, width, height, category, region.shieldReactionFlags(), region.x());
                 TouchResponseListener listener = instance instanceof TouchResponseListener casted ? casted : null;
                 if (isSidekick) {
                     handleTouchResponseSidekick(player, instance, listener, result, profile);
@@ -1075,7 +1078,12 @@ final class ObjectTouchResponseController {
             LOGGER.fine(() -> "Touch hurt by: " + className + " (ID: 0x" + Integer.toHexString(objectId) + ")");
         }
 
-        int sourceX = instance != null ? instance.getX() : player.getCentreX();
+        // For multi-region providers (e.g., spiked pole helix), use the matched region's X
+        // rather than the parent instance X. ROM uses the individual child slot's obX(a2)
+        // for the hurt-direction comparison (docs/s1disasm/_incObj/Sonic ReactToItem.asm:402-405).
+        int sourceX = (result != null && result.hasRegionX())
+                ? result.regionX()
+                : instance != null ? instance.getX() : player.getCentreX();
         boolean spikeHit = instance != null && instance.getSpawn().objectId() == 0x36;
 
         // S3K shield_reaction bit 4: fire shield blocks fire damage

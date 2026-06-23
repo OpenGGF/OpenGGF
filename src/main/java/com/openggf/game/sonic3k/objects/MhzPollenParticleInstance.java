@@ -6,6 +6,8 @@ import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -17,7 +19,7 @@ import java.util.List;
  *
  * <p>ROM: {@code Obj_MHZ_Pollen}, {@code loc_3DBE0}, {@code loc_3DC18}.
  */
-public class MhzPollenParticleInstance extends AbstractObjectInstance {
+public class MhzPollenParticleInstance extends AbstractObjectInstance implements RewindRecreatable {
     public enum ArtMode {
         POLLEN,
         BIG_LEAF
@@ -39,6 +41,10 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance {
     private int mappingFrame;
     private int animFrameTimer;
     private boolean releasedCounter;
+
+    MhzPollenParticleInstance() {
+        this(0, 0, 0, 0, 0, 0, ArtMode.POLLEN);
+    }
 
     public MhzPollenParticleInstance(
             int x,
@@ -68,6 +74,13 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance {
         this.preserveInitialAngleOnFloat = preserveInitialAngleOnFloat;
         this.routine = Routine.RISING;
         this.animFrameTimer = 0;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn();
+        return new MhzPollenParticleInstance(
+                spawn.x(), spawn.y(), 0, 0, 0, 0, ArtMode.POLLEN);
     }
 
     @Override

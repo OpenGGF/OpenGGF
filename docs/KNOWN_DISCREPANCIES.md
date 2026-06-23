@@ -1238,9 +1238,10 @@ at the very instances that get the captured state), and avoids the double-spawn 
 would cause.
 
 **Principle:** Construction-spawned children do **not** need (and must not have) a
-`DYNAMIC_REWIND_CODECS` entry — adoption restores them. Only children spawned from
-**update/attack routines** (no construction counterpart to adopt) need codecs. Construction
-children remain absent from `DYNAMIC_REWIND_CODECS`; their `#recreate` keys stay in the coverage
+`DYNAMIC_REWIND_CODECS` entry — adoption restores them. Children spawned from
+**update/attack routines** (no construction counterpart to adopt) need an explicit restore path,
+preferably graph-tested `RewindRecreatable` generic recreate; use a codec only when the graph path
+cannot model the runtime owner. Construction children remain absent from `DYNAMIC_REWIND_CODECS`; their `#recreate` keys stay in the coverage
 baseline because the static `RewindCoverageAnalyzer` is codec-based and cannot see the adoption
 path (it documents such no-codec-but-correctly-restored classes as acceptable `#recreate`
 over-approximations). Verified by `TestBossChildNoDoubleSpawnParity` (count parity) and
@@ -1282,9 +1283,10 @@ The MTZ/Mecha cases are guarded statically by `TestBossChildNoDoubleSpawnParity`
 (`mtzBossConstructionChildrenHaveNoCodecs`, `mechaSonicConstructionChildrenHaveNoCodecs`):
 those construction children must never gain a codec.
 
-**Children with codecs (routine-spawned, NOT construction):**
+**Routine-spawned children with explicit restore decisions (NOT construction):**
 
-- `Sonic2DeathEggRobotInstance$BombChild` — spawned from attack routine `fireBombs()`
+- `Sonic2DeathEggRobotInstance$BombChild` — spawned from attack routine `fireBombs()`; restores
+  through graph-tested `RewindRecreatable` generic recreate with nearest live Death Egg Robot relink
 - `Sonic2DeathEggRobotInstance$ForearmChild` — no codec (construction-spawned, same as above;
   plus `isFront` is a final field; baseline carries `#finalScalar#isFront` and `#recreate`)
 - `Sonic2DeathEggRobotInstance$SensorChild` — no codec (spawned from update targeting routine;

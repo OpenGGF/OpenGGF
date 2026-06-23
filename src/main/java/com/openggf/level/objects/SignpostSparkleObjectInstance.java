@@ -12,7 +12,8 @@ import java.util.List;
  * Uses ring sparkle animation frames.
  * Self-destructs after animation completes.
  */
-public class SignpostSparkleObjectInstance extends AbstractObjectInstance {
+public class SignpostSparkleObjectInstance extends AbstractObjectInstance
+        implements ZeroScalarArgsRewindRecreatable {
 
     // Animation timing
     private static final int FRAME_DELAY = 4; // Frames between animation steps

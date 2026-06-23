@@ -16,6 +16,7 @@ import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -143,7 +144,7 @@ public class HCZWaterDropObjectInstance extends AbstractObjectInstance {
      * </ol>
      */
     private static class WaterDropChild extends AbstractObjectInstance
-            implements TouchResponseProvider, TouchResponseListener {
+            implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
 
         // State machine values matching ROM routine field
         private static final int STATE_FORMING = 0;   // routine = 0: animating, no movement

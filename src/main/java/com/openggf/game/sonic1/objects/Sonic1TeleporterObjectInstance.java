@@ -9,6 +9,7 @@ import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -37,7 +38,7 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/72 Teleporter.asm
  */
-public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance {
+public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     // ---- Trigger detection constants ----
     // From disassembly: cmpi.w #$10,d0 (X range check)

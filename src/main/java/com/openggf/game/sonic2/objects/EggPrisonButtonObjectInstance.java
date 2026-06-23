@@ -9,6 +9,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnNullableReferenceRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
@@ -28,7 +29,8 @@ import java.util.List;
  * Behavior: Depresses 8 pixels when player lands on it, triggers parent
  */
 public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener,
+        SpawnNullableReferenceRewindRecreatable {
 
     // ROM constants from s2.asm
     private static final int BUTTON_HALF_WIDTH = 0x1B;  // 27 pixels
@@ -41,6 +43,10 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
     private int currentY;              // Current Y position (depresses when triggered)
     private boolean triggered;         // Has button been pressed?
     private EggPrisonObjectInstance parent; // Parent capsule to notify
+
+    public EggPrisonButtonObjectInstance(ObjectSpawn spawn) {
+        this(spawn, null);
+    }
 
     /**
      * Create button instance attached to parent capsule.

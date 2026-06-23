@@ -6,6 +6,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
@@ -40,7 +41,7 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/5D Fan.asm
  */
-public class Sonic1FanObjectInstance extends AbstractObjectInstance {
+public class Sonic1FanObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     // From disassembly: move.b #4,obPriority(a0)
     private static final int PRIORITY = 4;

@@ -5,7 +5,10 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -14,7 +17,8 @@ import java.util.List;
 /**
  * MHZ miniboss flame child spawned by {@code ChildObjDat_75E84} / {@code loc_757C0}.
  */
-final class MhzMinibossFlameInstance extends AbstractObjectInstance implements TouchResponseProvider {
+final class MhzMinibossFlameInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, RewindRecreatable {
     private static final int COLLISION_FLAGS = 0x9A;
     private static final int COLLISION_PROPERTY = 0x16;
     private static final int[] RAW_MAPPING_FRAME = {
@@ -49,7 +53,7 @@ final class MhzMinibossFlameInstance extends AbstractObjectInstance implements T
             { 0x0B, 0x1C, 0x01, 0x1C }
     };
 
-    private final MhzMinibossInstance parent;
+    private MhzMinibossInstance parent;
     // Non-final so the generic field capturer reapplies it after a rewind
     // recreate (childIndex 0/1 is not spawn-derivable: both flames share subtype 0).
     private int childIndex;
@@ -59,11 +63,24 @@ final class MhzMinibossFlameInstance extends AbstractObjectInstance implements T
     private int priorityBucket;
 
     MhzMinibossFlameInstance(MhzMinibossInstance parent, int childIndex) {
-        super(new ObjectSpawn(parent.getX(), parent.getY(), Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0),
-                "MHZMinibossFlame");
+        this(new ObjectSpawn(parent.getX(), parent.getY(), Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0),
+                parent, childIndex);
+    }
+
+    MhzMinibossFlameInstance(ObjectSpawn spawn, MhzMinibossInstance parent, int childIndex) {
+        super(spawn, "MHZMinibossFlame");
         this.parent = parent;
         this.childIndex = childIndex & 1;
         refreshFromParent();
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        MhzMinibossInstance liveParent = findNearestLiveParentForRewind(ctx);
+        if (liveParent == null) {
+            return null;
+        }
+        return new MhzMinibossFlameInstance(ctx.spawn(), liveParent, 0);
     }
 
     @Override
@@ -125,5 +142,30 @@ final class MhzMinibossFlameInstance extends AbstractObjectInstance implements T
     @Override
     public int getPriorityBucket() {
         return priorityBucket;
+    }
+
+    private static MhzMinibossInstance findNearestLiveParentForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        MhzMinibossInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (!(instance instanceof MhzMinibossInstance candidate) || candidate.isDestroyed()) {
+                continue;
+            }
+            if (spawn == null) {
+                return candidate;
+            }
+            long dx = candidate.getX() - spawn.x();
+            long dy = candidate.getY() - spawn.y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+        return best;
     }
 }

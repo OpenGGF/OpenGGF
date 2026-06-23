@@ -311,6 +311,15 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
         }
     }
 
+    boolean hasLiveBallForRewind() {
+        return ball != null && !ball.isDestroyed();
+    }
+
+    void adoptBallForRewind(Sonic1SeesawBallObjectInstance restoredBall) {
+        ball = restoredBall;
+        ballSpawned = true;
+    }
+
     // ---- SolidObjectProvider ----
 
     @Override
@@ -340,7 +349,14 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getSlopeBaseline() {
-        return COLLISION_HEIGHT;
+        // ROM See_Slope (docs/s1disasm/_incObj/5E SLZ Seesaw.asm:67) lands the
+        // player via SlopeObject, which uses ABSOLUTE slope values:
+        // SlopeObject (sub PlatformObject.asm:150-152) computes the surface as
+        // d0 = obY(a0) - heightmapByte with no baseline subtraction. Returning a
+        // non-zero baseline pushes the sampled surface down by that amount,
+        // delaying the landing by ~1 frame (SLZ3 trace f718). Match the sibling
+        // SlopeObject user (Sonic1CollapsingLedgeObjectInstance) and return 0.
+        return 0;
     }
 
     @Override

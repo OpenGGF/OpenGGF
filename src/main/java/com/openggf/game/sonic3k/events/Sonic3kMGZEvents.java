@@ -1837,7 +1837,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
      * Rewind recreate factory for a single MGZ2 level-collapse solid. The solid's
      * two functional-interface constructor args (scroll supplier + delete supplier)
      * are bound to this live event manager and cannot be reconstructed from the
-     * captured {@link ObjectSpawn} alone, so the dynamic rewind codec relinks
+     * captured {@link ObjectSpawn} alone, so the recreate hook relinks
      * through here. anchorX/baseY come from the spawn; the column index is recovered
      * from anchorX. The recreated solid is re-registered into the (transient)
      * tracking array so the manager's per-frame updates and SCREEN_EVENT_MOVE_BG

@@ -33,7 +33,7 @@ import java.util.List;
  * Index 8: X=-3, Y=-3
  * </pre>
  */
-public class GrounderRockProjectile extends AbstractObjectInstance {
+public class GrounderRockProjectile extends AbstractObjectInstance implements GrounderZeroIndexChildRewindRecreatable {
 
     private static final int GRAVITY = 0x38; // 0.21875 pixels/frame (from ObjectMoveAndFall)
 
@@ -83,6 +83,10 @@ public class GrounderRockProjectile extends AbstractObjectInstance {
         this.xVelocity = vel[0];
         this.yVelocity = vel[1];
         this.mappingFrame = ROCK_FRAMES[this.rockIndex];
+    }
+
+    private GrounderRockProjectile() {
+        this(0, 0, 0, null);
     }
 
     private static ObjectSpawn createRockSpawn(int x, int y) {

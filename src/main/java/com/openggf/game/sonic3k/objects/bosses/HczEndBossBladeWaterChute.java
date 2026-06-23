@@ -4,8 +4,12 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -54,7 +58,7 @@ import java.util.logging.Logger;
  * {@code mapping_frame, delay} bytes and end with {@code $F4} (end+callback).
  * The scripts use Map_HCZEndBoss frames showing water column segments.
  */
-public class HczEndBossBladeWaterChute extends AbstractBossChild {
+public class HczEndBossBladeWaterChute extends AbstractBossChild implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(HczEndBossBladeWaterChute.class.getName());
 
     // =========================================================================
@@ -115,7 +119,7 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild {
     // =========================================================================
     private final HczEndBossInstance boss;
     // Non-final so the generic field capturer reapplies it after a rewind
-    // recreate (see hczEndBossChildCodec in Sonic3kObjectRegistry).
+    // recreate through the HCZ end-boss restore path.
     private int slotIndex;               // 0-4 (subtype / 2)
 
     private int state;
@@ -160,6 +164,21 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild {
         this.animComplete = false;
 
         updateDynamicSpawn();
+    }
+
+    private HczEndBossBladeWaterChute(ObjectSpawn spawn, HczEndBossInstance boss, int ignored) {
+        this(boss, spawn.x(), 0);
+    }
+
+    @Override
+    public HczEndBossBladeWaterChute recreateForRewind(RewindRecreateContext ctx) {
+        HczEndBossInstance restoredBoss = HczEndBossRewindLinks.nearestBoss(ctx);
+        if (restoredBoss == null || ctx.spawn() == null) {
+            return null;
+        }
+        return ObjectConstructionContext.construct(
+                ctx.objectServices(),
+                () -> new HczEndBossBladeWaterChute(restoredBoss, ctx.spawn().x(), 0));
     }
 
     // =========================================================================

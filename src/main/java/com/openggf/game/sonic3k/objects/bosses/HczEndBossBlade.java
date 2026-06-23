@@ -7,6 +7,9 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ExplosionObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -52,7 +55,7 @@ import java.util.logging.Logger;
  *
  * <p>Collision when flying: collision_flags = 0 (visual only; blade does not hurt player).
  */
-public class HczEndBossBlade extends AbstractBossChild implements TouchResponseProvider {
+public class HczEndBossBlade extends AbstractBossChild implements TouchResponseProvider, RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(HczEndBossBlade.class.getName());
 
     // =========================================================================
@@ -188,6 +191,16 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
         this.yVel = 0;
         this.waitTimer = -1;
         this.mappingFrame = BLADE_FRAME_A;
+    }
+
+    private HczEndBossBlade(ObjectSpawn spawn, HczEndBossInstance boss, int ignored) {
+        this(boss, 0, 0, 0);
+    }
+
+    @Override
+    public HczEndBossBlade recreateForRewind(RewindRecreateContext ctx) {
+        HczEndBossInstance restoredBoss = HczEndBossRewindLinks.nearestBoss(ctx);
+        return restoredBoss == null ? null : new HczEndBossBlade(restoredBoss, 0, 0, 0);
     }
 
     // =========================================================================

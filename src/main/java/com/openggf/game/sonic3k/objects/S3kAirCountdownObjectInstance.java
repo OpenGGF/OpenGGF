@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NullableSpawnCoordinateZeroScalarArgsRewindRecreatable;
 
 import java.util.List;
 
@@ -16,7 +17,8 @@ import java.util.List;
  * dynamic SST, but {@code AirCountdown_MakeItem} allocates these children via
  * the normal dynamic {@code AllocateObject} scan (sonic3k.asm:33591-33610).
  */
-public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance {
+public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
+        implements NullableSpawnCoordinateZeroScalarArgsRewindRecreatable {
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_RISE = 0x02;
     private static final int ROUTINE_CHECK_WATER = 0x04;
@@ -35,8 +37,8 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance 
     };
 
     private int routine;
-    // Non-final so the generic field capturer reapplies it after a rewind
-    // recreate (this object's spawn is null, so the codec passes placeholders).
+    // Non-final so the generic field capturer reapplies it after generic
+    // rewind recreate supplies placeholder constructor values.
     private int subtype;
     private int x;
     private int y;

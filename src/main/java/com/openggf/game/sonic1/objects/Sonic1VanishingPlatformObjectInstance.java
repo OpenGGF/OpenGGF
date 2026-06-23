@@ -13,6 +13,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
@@ -48,7 +49,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/6C SBZ Vanishing Platforms.asm
  */
 public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // From disassembly: move.b #$10,obActWid(a0)
     private static final int HALF_WIDTH = 0x10;

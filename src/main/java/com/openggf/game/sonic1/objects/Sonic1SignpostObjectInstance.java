@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -38,7 +39,8 @@ import java.util.logging.Logger;
  *   <li>Anim 3 (.sonic): frame 4 at delay $F (static Sonic)</li>
  * </ul>
  */
-public class Sonic1SignpostObjectInstance extends AbstractObjectInstance {
+public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1SignpostObjectInstance.class.getName());
 
     // Routine states matching disassembly Sign_Index offsets

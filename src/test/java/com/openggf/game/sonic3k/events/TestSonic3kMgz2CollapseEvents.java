@@ -7,8 +7,15 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.level.AbstractLevel;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
@@ -19,6 +26,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.LevelGeometry;
 import com.openggf.level.LevelTilemapManager;
 import com.openggf.level.SolidTile;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
@@ -187,6 +195,51 @@ class TestSonic3kMgz2CollapseEvents {
     }
 
     @Test
+    void collapseSolidsRestoreThroughGenericRecreateWithoutExplicitCodec() throws Exception {
+        ObjectManager objectManager = installObjectManager();
+        Sonic3kMGZEvents events = activeMgzEvents();
+        events.requestLevelCollapse();
+
+        for (int frame = 0; frame < 0x14; frame++) {
+            events.update(1, frame);
+        }
+        ArrayList<Mgz2LevelCollapseSolidInstance> capturedSolids = liveCollapseSolids(objectManager);
+        assertEquals(20, capturedSolids.size(),
+                "precondition: collapse startup should create exactly the 20 invisible solid carriers");
+        RewindIdentityTable captureTable = objectManager.captureIdentityContext().requireIdentityTable();
+        ObjectRefId firstCapturedId = captureTable.idFor(capturedSolids.getFirst());
+        assertNotNull(firstCapturedId,
+                "ObjectManager capture identity table must register dynamic MGZ2 collapse solids");
+
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objectManager.rewindSnapshottable());
+        var snapshot = registry.capture();
+
+        for (Mgz2LevelCollapseSolidInstance solid : capturedSolids) {
+            objectManager.removeDynamicObject(solid);
+        }
+        objectManager.createDynamicObject(() -> new Mgz2LevelCollapseSolidInstance(
+                0x4000, 0x0600, () -> 0x40, () -> false));
+        assertEquals(1, liveCollapseSolids(objectManager).size(),
+                "diverge step should leave one unrelated live collapse solid before restore");
+
+        registry.restore(snapshot);
+
+        ArrayList<Mgz2LevelCollapseSolidInstance> restoredSolids = liveCollapseSolids(objectManager);
+        assertEquals(20, restoredSolids.size(),
+                "restore must recreate the captured collapse solids exactly once, not drop or double them");
+        assertTrue(restoredSolids.stream().allMatch(solid -> solid.isSolidFor(null)),
+                "restored collapse solids should remain solid while the MGZ collapse delete state is false");
+        RewindIdentityTable restoredTable = objectManager.captureIdentityContext().requireIdentityTable();
+        assertTrue(restoredSolids.stream().anyMatch(solid -> firstCapturedId.equals(restoredTable.idFor(solid))),
+                "restored collapse solids should retain their captured dynamic rewind identities");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Mgz2LevelCollapseSolidInstance.class.getName()),
+                "Mgz2LevelCollapseSolidInstance must restore through RewindRecreatable genericRecreate, "
+                        + "not a handwritten S3K dynamic codec");
+    }
+
+    @Test
     void collapseFinishKeepsVScrollOverrideForFinalRenderFrameOnly() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
@@ -278,6 +331,40 @@ class TestSonic3kMgz2CollapseEvents {
 
         assertEquals(0, override[0],
                 "per-column VScroll overrides are deltas; columns outside the collapsing floor must not inherit absolute camera scroll");
+    }
+
+    private static Sonic3kMGZEvents activeMgzEvents() {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        manager.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
+        Sonic3kMGZEvents events = manager.getMgzEvents();
+        assertNotNull(events, "MGZ events should be installed for MGZ Act 2");
+        return events;
+    }
+
+    private static ObjectManager installObjectManager() throws NoSuchFieldException, IllegalAccessException {
+        ObjectManager objectManager = new ObjectManager(
+                java.util.List.of(),
+                new Sonic3kObjectRegistry(),
+                0,
+                null,
+                null,
+                GameServices.graphics(),
+                GameServices.camera(),
+                TestEnvironment.objectServices());
+        objectManager.reset(GameServices.camera().getX());
+
+        Field field = GameServices.level().getClass().getDeclaredField("objectManager");
+        field.setAccessible(true);
+        field.set(GameServices.level(), objectManager);
+        return objectManager;
+    }
+
+    private static ArrayList<Mgz2LevelCollapseSolidInstance> liveCollapseSolids(ObjectManager objectManager) {
+        return objectManager.getActiveObjects().stream()
+                .filter(object -> object.getClass() == Mgz2LevelCollapseSolidInstance.class && !object.isDestroyed())
+                .map(Mgz2LevelCollapseSolidInstance.class::cast)
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
     }
 
     private static void assertCleared(Map map, int startX, int startY, int width, int height) {

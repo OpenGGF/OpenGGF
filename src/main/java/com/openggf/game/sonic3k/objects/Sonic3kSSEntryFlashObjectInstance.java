@@ -5,8 +5,11 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -33,7 +36,7 @@ import java.util.logging.Logger;
  * <p>
  * Reference: docs/skdisasm/sonic3k.asm lines 128330-128423
  */
-public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance {
+public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSSEntryFlashObjectInstance.class.getName());
 
     // AniRaw_SSEntryFlash: dc.b 0, 0, 0, 1, 2, 3|$40, 3, 2, 1, 0, $F4
@@ -52,7 +55,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance {
     private static final int POST_ANIM_WAIT = 0x20;
 
     private enum State { ANIMATING, WAITING, DONE }
-    private final Sonic3kSSEntryRingObjectInstance parentRing;
+    private Sonic3kSSEntryRingObjectInstance parentRing;
 
     private State state = State.ANIMATING;
     private int animIndex = 0;
@@ -69,6 +72,39 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance {
             int x, int y) {
         super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "SSEntryFlash");
         this.parentRing = parentRing;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic3kSSEntryRingObjectInstance ring = nearestLiveParentRing(ctx);
+        if (ring == null || ctx.spawn() == null) {
+            return null;
+        }
+        return new Sonic3kSSEntryFlashObjectInstance(ring, ctx.spawn().x(), ctx.spawn().y());
+    }
+
+    private static Sonic3kSSEntryRingObjectInstance nearestLiveParentRing(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null
+                || ctx.spawn() == null) {
+            return null;
+        }
+        int targetX = ctx.spawn().x();
+        int targetY = ctx.spawn().y();
+        Sonic3kSSEntryRingObjectInstance nearest = null;
+        long nearestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (instance instanceof Sonic3kSSEntryRingObjectInstance ring && !ring.isDestroyed()) {
+                ObjectSpawn ringSpawn = ring.getSpawn();
+                long dx = (long) ringSpawn.x() - targetX;
+                long dy = (long) ringSpawn.y() - targetY;
+                long distance = dx * dx + dy * dy;
+                if (distance < nearestDistance) {
+                    nearest = ring;
+                    nearestDistance = distance;
+                }
+            }
+        }
+        return nearest;
     }
 
     @Override

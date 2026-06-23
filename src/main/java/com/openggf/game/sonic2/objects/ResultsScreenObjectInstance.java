@@ -10,6 +10,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.ZeroScalarArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -27,7 +28,8 @@ import java.util.logging.Logger;
  * 3. WAIT: Brief pause after tally
  * 4. TRANSITION: Load next level
  */
-public class ResultsScreenObjectInstance extends AbstractResultsScreen {
+public class ResultsScreenObjectInstance extends AbstractResultsScreen
+        implements ZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(ResultsScreenObjectInstance.class.getName());
 
     // Time bonus table from s2.asm (TimeBonuses), indexed by (seconds / 15)
@@ -46,7 +48,7 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen {
     private int perfectBonusRemaining;
 
     // Input data. Non-final so GenericFieldCapturer captures them and restoreObjectRewindState
-    // reapplies them after the rewind codec recreates this screen with placeholder ctor args
+    // reapplies them after rewind recreate rebuilds this screen with placeholder ctor args
     // (these gameplay-derived values are not encoded in the ObjectSpawn).
     private int elapsedTimeSeconds;
     private int ringCount;

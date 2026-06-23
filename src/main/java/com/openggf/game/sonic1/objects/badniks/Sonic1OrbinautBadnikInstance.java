@@ -13,9 +13,12 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
@@ -190,6 +193,15 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
         }
     }
 
+    void adoptSpikeForRewind(OrbSpikeObjectInstance restoredSpike) {
+        if (spikes == null) {
+            spikes = new ArrayList<>(4);
+        }
+        spikes.removeIf(spike -> spike == null || spike.isDestroyed() || spike.parent != this);
+        spikes.remove(restoredSpike);
+        spikes.add(restoredSpike);
+    }
+
     @Override
     protected int getCollisionSizeIndex() {
         return COLLISION_SIZE_INDEX;
@@ -224,6 +236,8 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
                     objectManager.removeDynamicObject(spike);
                 }
             }
+            spikes.clear();
+            activeSpikes = 0;
         }
     }
 
@@ -255,7 +269,7 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
     }
 
     private static final class OrbSpikeObjectInstance extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, RewindRecreatable {
         private static final int SPIKE_RENDER_HALF_WIDTH = 16 / 2;
         private static final int ASSUMED_RENDER_HALF_HEIGHT = 32;
 
@@ -270,6 +284,16 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
         /** Subpixel accumulators (xSub / ySub) for ROM-accurate 16:8 fixed-point integration. */
         private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
 
+        private OrbSpikeObjectInstance() {
+            super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "OrbinautSpike");
+            this.parent = null;
+            this.angle = 0;
+            this.x = 0;
+            this.y = 0;
+            this.launched = false;
+            this.xVelocity = 0;
+        }
+
         OrbSpikeObjectInstance(Sonic1OrbinautBadnikInstance parent, int startAngle) {
             super(new ObjectSpawn(parent.currentX, parent.currentY, parent.spawn.objectId(), 0, 0, false, 0),
                     "OrbinautSpike");
@@ -279,6 +303,45 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
             this.y = parent.currentY;
             this.launched = false;
             this.xVelocity = 0;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            Sonic1OrbinautBadnikInstance restoredParent = nearestLiveOrbinautParentForRewind(ctx);
+            if (restoredParent == null) {
+                return null;
+            }
+            OrbSpikeObjectInstance restored = new OrbSpikeObjectInstance(restoredParent, 0);
+            restoredParent.adoptSpikeForRewind(restored);
+            return restored;
+        }
+
+        private static Sonic1OrbinautBadnikInstance nearestLiveOrbinautParentForRewind(
+                RewindRecreateContext ctx) {
+            ObjectServices services = ctx.objectServices();
+            ObjectManager objectManager = services != null ? services.objectManager() : null;
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            if (objectManager == null) {
+                return null;
+            }
+            Sonic1OrbinautBadnikInstance best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (var object : objectManager.getActiveObjects()) {
+                if (!(object instanceof Sonic1OrbinautBadnikInstance orbinaut) || orbinaut.isDestroyed()) {
+                    continue;
+                }
+                if (capturedSpawn == null) {
+                    return orbinaut;
+                }
+                long dx = orbinaut.getX() - capturedSpawn.x();
+                long dy = orbinaut.getY() - capturedSpawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = orbinaut;
+                }
+            }
+            return best;
         }
 
         @Override
@@ -328,10 +391,15 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
                 return;
             }
 
-            // Orbit around parent with radius 16.
-            double radians = (angle & 0xFF) * (Math.PI * 2.0 / 256.0);
-            x = parent.currentX + (int) Math.round(Math.cos(radians) * 16.0);
-            y = parent.currentY + (int) Math.round(Math.sin(radians) * 16.0);
+            // ROM Orb_CircleSpikeball: CalcSine on obAngle, then asr.w #4 for both
+            // components to give radius-16 orbit (docs/s1disasm/_incObj/60 Badnik -
+            // Orbinaut.asm:181-191). Using integer lookup matches ROM's truncating
+            // arithmetic shift exactly; floating-point Math.round rounds 254>>4=15.875
+            // up to 16 and places the spike 1px too low, causing a premature hurt hit.
+            int sinVal = TrigLookupTable.sinHex(angle); // d0 = CalcSine sine output
+            int cosVal = TrigLookupTable.cosHex(angle); // d1 = CalcSine cosine output
+            x = parent.currentX + (cosVal >> 4);        // obX + (d1 asr #4)
+            y = parent.currentY + (sinVal >> 4);        // obY + (d0 asr #4)
             angle = (angle + parent.getAngleStep()) & 0xFF;
         }
 

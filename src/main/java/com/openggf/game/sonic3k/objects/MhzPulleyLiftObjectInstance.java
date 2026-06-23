@@ -8,8 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
@@ -26,7 +25,7 @@ import java.util.List;
  * uses MHZ level PLC art ({@code Map_MHZPulleyLift / ArtTile_MHZMisc+$DD}).
  */
 public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements SpawnRewindRecreatable {
     private static final int LEFT_HANDLE_X_OFFSET = -0x32;
     private static final int RIGHT_HANDLE_X_OFFSET = 0x32;
     private static final int LEFT_INITIAL_HANDLE_OFFSET = 0x34;
@@ -73,15 +72,10 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
      * {@inheritDoc}
      *
      * <p>Self-contained: rebuilds from the captured spawn (the same path the deleted
-     * {@code exactSpawnCodec(MhzPulleyLiftObjectInstance.class, MhzPulleyLiftObjectInstance::new)}
-     * used). The object's own scalar fields are reapplied by the standard scalar-restore
+     * dynamic restore path used). The object's own scalar fields are reapplied by the standard scalar-restore
      * pass; the {@code final} handle structs are re-initialised to their defaults exactly
-     * as the codec did (Phase-2 codec-deletion batch 2).
+     * as the deleted explicit restore path did (Phase-2 codec-deletion batch 2).
      */
-    @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new MhzPulleyLiftObjectInstance(ctx.spawn());
-    }
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {

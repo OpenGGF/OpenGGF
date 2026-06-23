@@ -7,6 +7,7 @@ import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.SpawnCoordinateSubtypeDefaultArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
@@ -20,7 +21,8 @@ import java.util.List;
  * The first same-frame update consumes Pow_Main, then later updates perform the icon rise
  * and apply the monitor effect at the apex.
  */
-public final class Sonic1MonitorPowerUpObjectInstance extends AbstractMonitorObjectInstance {
+public final class Sonic1MonitorPowerUpObjectInstance extends AbstractMonitorObjectInstance
+        implements SpawnCoordinateSubtypeDefaultArgsRewindRecreatable {
     private static final int ICON_FRAME_OFFSET = 2;
 
     private final int subtype;
@@ -29,6 +31,10 @@ public final class Sonic1MonitorPowerUpObjectInstance extends AbstractMonitorObj
         super(new ObjectSpawn(x, y, Sonic1ObjectIds.POWER_UP, subtype, 0, false, 0), "PowerUp");
         this.subtype = subtype & 0xFF;
         startIconRise(y, player);
+    }
+
+    private Sonic1MonitorPowerUpObjectInstance() {
+        this(0, 0, 0, null);
     }
 
     @Override

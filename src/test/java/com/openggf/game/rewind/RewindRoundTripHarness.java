@@ -1,27 +1,41 @@
 package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameId;
+import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance;
+import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
+import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
+import com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance;
+import com.openggf.game.sonic3k.objects.MhzMinibossInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectRegistry;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.boss.AbstractBossChild;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -64,6 +78,11 @@ public final class RewindRoundTripHarness {
     /** Representative spawn used by the class sweep when no specific ID is known. */
     private static final ObjectSpawn PROBE_SPAWN =
             new ObjectSpawn(0x100, 0x100, 1, 0, 0, false, 0);
+
+    private static final SonicConfigurationService DEFAULT_CONFIGURATION =
+            createDefaultConfiguration();
+    private static final ObjectRenderManager INERT_RENDER_MANAGER =
+            new ObjectRenderManager(new InertObjectArtProvider());
 
     /** Binary class name of the inner ArticulatedChild (not ForearmChild). */
     private static final String ARTICULATED_CHILD_CLASS =
@@ -256,6 +275,16 @@ public final class RewindRoundTripHarness {
             public ObjectManager objectManager() {
                 return holder[0];
             }
+
+            @Override
+            public SonicConfigurationService configuration() {
+                return DEFAULT_CONFIGURATION;
+            }
+
+            @Override
+            public ObjectRenderManager renderManager() {
+                return INERT_RENDER_MANAGER;
+            }
         };
         AbstractObjectInstance inst = ObjectConstructionContext.construct(stub, () -> new MinimalStubObject(spawn));
         om.addDynamicObject(inst);
@@ -336,16 +365,15 @@ public final class RewindRoundTripHarness {
      * Probes the given class through the REAL ObjectManager + RewindRegistry
      * capture→restore round-trip.
      *
-     * <p>Only classes with a registered dynamic rewind codec (in the shared or
-     * game-specific registry) are tested via the dynamic round-trip path. Classes
-     * WITHOUT a codec are classified as {@code Unprobed("no dynamic recreate path")}
-     * because dropping them on restore is correct (expected) behaviour for the current
-     * codebase. Placed-object recreation (which does not require a codec) is tested by
-     * the keystone boss-child test in {@code TestEveryObjectRewindRoundTrip}.
+     * <p>Only classes with a dynamic recreate path are tested via the dynamic
+     * round-trip path. Classes without a recreate path are classified as
+     * {@code Unprobed("no dynamic recreate path")} because dropping them on restore is
+     * correct (expected) behaviour for the current codebase. Placed-object recreation
+     * (which does not require a dynamic recreate path) is tested by the keystone
+     * boss-child test in {@code TestEveryObjectRewindRoundTrip}.
      *
-     * <p>Construction is attempted using the same four strategies as
-     * {@code RewindRoundTripProbe}: zero-arg, {@code (ObjectSpawn)},
-     * {@code (ObjectSpawn, String)}, and {@code (ObjectSpawn, ObjectServices)}.
+     * <p>Construction is attempted through the supported headless probe strategies
+     * exposed by {@link #constructHeadless(Class, StubObjectServices)}.
      * Classes requiring ROM access during construction are returned as
      * {@code Unprobed}.
      *
@@ -392,6 +420,16 @@ public final class RewindRoundTripHarness {
             public Camera camera() {
                 return camera;
             }
+
+            @Override
+            public SonicConfigurationService configuration() {
+                return DEFAULT_CONFIGURATION;
+            }
+
+            @Override
+            public ObjectRenderManager renderManager() {
+                return INERT_RENDER_MANAGER;
+            }
         };
 
         GameId gameId = inferGameIdFromFqn(fqn);
@@ -432,12 +470,26 @@ public final class RewindRoundTripHarness {
         try {
             snap = rr.capture();
         } catch (Throwable t) {
-            return new RoundTripSweepResult.Unprobed("capture threw: " + describeThrowable(t));
+            String description = describeThrowable(t);
+            if (isUnregisteredObjectReferenceCapture(description)) {
+                RoundTripSweepResult retried =
+                        tryRoundTripWithSeededParent(fqn, cls, gameId, beforeFields);
+                if (retried != null) {
+                    return retried;
+                }
+            }
+            return new RoundTripSweepResult.Unprobed("capture threw: " + description);
         }
         try {
             rr.restore(snap);
         } catch (Throwable t) {
-            return new RoundTripSweepResult.Unprobed("restore threw: " + describeThrowable(t));
+            String description = describeThrowable(t);
+            RoundTripSweepResult retried =
+                    tryRoundTripWithSeededParent(fqn, cls, gameId, beforeFields);
+            if (retried != null) {
+                return retried;
+            }
+            return new RoundTripSweepResult.Unprobed("restore threw: " + description);
         }
 
         // 7. Check count (no double-spawn, no drop).
@@ -464,7 +516,7 @@ public final class RewindRoundTripHarness {
             boolean recreateReturnedNullInIsolation =
                     beforeForClass > 0 && afterForClass == 0 && afterCounts.isEmpty();
             if (recreateReturnedNullInIsolation) {
-                // The codec's recreate() returned null because it scanned getActiveObjects()
+                // The recreate hook returned null because it scanned getActiveObjects()
                 // for a live parent that is not present in the isolated harness ObjectManager.
                 // Retry with a seeded parent: build a fresh ObjectManager with a stub parent
                 // of the known type, then redo the round-trip.
@@ -520,32 +572,34 @@ public final class RewindRoundTripHarness {
             public Camera camera() {
                 return camera;
             }
+
+            @Override
+            public SonicConfigurationService configuration() {
+                return DEFAULT_CONFIGURATION;
+            }
+
+            @Override
+            public ObjectRenderManager renderManager() {
+                return INERT_RENDER_MANAGER;
+            }
         };
     }
 
+    private static SonicConfigurationService createDefaultConfiguration() {
+        SonicConfigurationService config =
+                SonicConfigurationService.createStandalone(Path.of("target", "rewind-harness-config"));
+        config.resetToDefaults();
+        return config;
+    }
+
     /**
-     * Returns true if the given FQN has a registered dynamic rewind codec in
-     * the shared codecs or in any of the three per-game registries.
+     * Returns true if the given FQN has a dynamic recreate path.
      *
-     * <p>Objects without a codec are correctly dropped on restore (they have no
-     * dynamic recreate path). Testing them would always produce a count-mismatch,
-     * so they are excluded from the dynamic sweep.
+     * <p>Objects without a recreate path are correctly dropped on restore.
+     * Testing them would always produce a count-mismatch, so they are excluded
+     * from the dynamic sweep.
      */
     private static boolean hasRegisteredCodec(String fqn) {
-        // Shared game-agnostic codecs
-        for (DynamicObjectRewindCodec c : ObjectRewindDynamicCodecs.sharedCodecs()) {
-            if (fqn.equals(c.className())) return true;
-        }
-        // Per-game registries
-        for (ObjectRegistry reg : new ObjectRegistry[]{
-                new Sonic1ObjectRegistry(),
-                new Sonic2ObjectRegistry(),
-                new Sonic3kObjectRegistry()}) {
-            for (DynamicObjectRewindCodec c : reg.dynamicRewindCodecs()) {
-                if (fqn.equals(c.className())) return true;
-            }
-        }
-        // Phase-2 Path 1: RewindRecreatable -- genericRecreate handles these directly.
         try {
             Class<?> cls = Class.forName(fqn);
             if (com.openggf.level.objects.RewindRecreatable.class.isAssignableFrom(cls)) {
@@ -561,6 +615,90 @@ public final class RewindRoundTripHarness {
             case S1 -> new Sonic1ObjectRegistry();
             case S2 -> new Sonic2ObjectRegistry();
             case S3K -> new Sonic3kObjectRegistry();
+        };
+    }
+
+    private static ObjectRegistry registryForSeededParent(GameId gameId, String parentFqn) {
+        if (gameId == GameId.S3K && usesExactS3kSeededParentFactory(parentFqn)) {
+            Sonic3kObjectRegistry delegate = new Sonic3kObjectRegistry();
+            return new ObjectRegistry() {
+                @Override
+                public ObjectInstance create(ObjectSpawn spawn) {
+                    ObjectInstance exact = createExactS3kSeededParent(parentFqn, spawn);
+                    if (exact != null) {
+                        return exact;
+                    }
+                    return delegate.create(spawn);
+                }
+
+                @Override
+                public void reportCoverage(List<ObjectSpawn> spawns) {
+                    delegate.reportCoverage(spawns);
+                }
+
+                @Override
+                public String getPrimaryName(int objectId) {
+                    return delegate.getPrimaryName(objectId);
+                }
+
+                @Override
+                public com.openggf.level.objects.ObjectSlotLayout objectSlotLayout() {
+                    return delegate.objectSlotLayout();
+                }
+
+                @Override
+                public com.openggf.level.objects.ObjectWindowingStrategy objectWindowingStrategy() {
+                    return delegate.objectWindowingStrategy();
+                }
+
+                @Override
+                public List<String> getAliases(int objectId) {
+                    return delegate.getAliases(objectId);
+                }
+            };
+        }
+        return registryFor(gameId);
+    }
+
+    private static boolean usesExactS3kSeededParentFactory(String parentFqn) {
+        return switch (parentFqn) {
+            case "com.openggf.game.sonic3k.objects.CnzMinibossInstance",
+                 "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance",
+                 "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance",
+                 "com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance",
+                 "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance",
+                 "com.openggf.game.sonic3k.objects.MhzMinibossInstance" -> true;
+            default -> false;
+        };
+    }
+
+    private static ObjectInstance createExactS3kSeededParent(String parentFqn, ObjectSpawn spawn) {
+        return switch (parentFqn) {
+            case "com.openggf.game.sonic3k.objects.CnzMinibossInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.CNZ_MINIBOSS
+                            ? new CnzMinibossInstance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.DRAGONFLY
+                            ? new DragonflyBadnikInstance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance" ->
+                    spawn.objectId() == Sonic3kObjectIds.CUTSCENE_KNUCKLES
+                            ? new CutsceneKnucklesMhz2Instance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON
+                            ? new Mhz1CutsceneButtonInstance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES
+                            ? new Mhz1CutsceneKnucklesInstance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.MhzMinibossInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.MHZ_MINIBOSS
+                            ? new MhzMinibossInstance(spawn)
+                            : null;
+            default -> null;
         };
     }
 
@@ -583,9 +721,8 @@ public final class RewindRoundTripHarness {
     }
 
     /**
-     * Attempts to construct an {@code AbstractObjectInstance} headlessly using the
-     * four probe-compatible constructor signatures (zero-arg, {@code (ObjectSpawn)},
-     * {@code (ObjectSpawn, String)}, {@code (ObjectSpawn, ObjectServices)}).
+     * Attempts to construct an {@code AbstractObjectInstance} headlessly using
+     * the supported probe-compatible constructor signatures.
      *
      * <p>This is the shared construction entry point. {@link RewindRoundTripProbe}
      * in the coverage package delegates here to avoid duplicating the strategy logic.
@@ -603,7 +740,7 @@ public final class RewindRoundTripHarness {
     }
 
     /**
-     * Tries to construct an {@code AbstractObjectInstance} headlessly using four
+     * Tries to construct an {@code AbstractObjectInstance} headlessly using
      * progressively-complex constructor signatures.
      */
     private static AbstractObjectInstance tryConstruct(
@@ -663,11 +800,85 @@ public final class RewindRoundTripHarness {
             }
         }
 
-        // Strategy 6: (ObjectSpawn, AbstractObjectInstance-subtype) — parent-child pattern.
-        // Scan for a 2-parameter constructor whose second parameter is a concrete
-        // AbstractObjectInstance subclass (a live parent reference). Build a stub parent of
-        // that type headlessly (using strategies 1-2 only to avoid recursion), then
-        // construct the child with (PROBE_SPAWN, stubParent).
+        // Strategy 6: (ObjectSpawn, ObjectServices, int) — points popups and similar
+        // dynamic display objects whose score/frame value is restored from scalar state.
+        Constructor<? extends AbstractObjectInstance> ctor5 =
+                findCtor(cls, ObjectSpawn.class, ObjectServices.class, int.class);
+        if (ctor5 != null) {
+            try {
+                return ObjectConstructionContext.construct(stub,
+                        () -> invokeWith(ctor5, PROBE_SPAWN, stub, 100));
+            } catch (Throwable ignored) {
+            }
+        }
+
+        if (RewindRecreatable.class.isAssignableFrom(cls)) {
+            // Strategy 7: (ObjectSpawn, int) — generic-recreate object with one
+            // scalar placeholder constructor value, e.g. zone-dependent data id.
+            Constructor<? extends AbstractObjectInstance> spawnIntCtor =
+                    findCtor(cls, ObjectSpawn.class, int.class);
+            if (spawnIntCtor != null) {
+                try {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(spawnIntCtor, PROBE_SPAWN, 0));
+                } catch (Throwable ignored) {
+                }
+            }
+
+            // Strategy 8: (int, int) — primitive-only coordinate generic-recreate object.
+            Constructor<? extends AbstractObjectInstance> intIntCtor =
+                    findCtor(cls, int.class, int.class);
+            if (intIntCtor != null) {
+                try {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(intIntCtor, PROBE_SPAWN.x(), PROBE_SPAWN.y()));
+                } catch (Throwable ignored) {
+                }
+            }
+
+            // Strategy 9: (int, int, int) — primitive-only generic-recreate object.
+            Constructor<? extends AbstractObjectInstance> ctor6 =
+                    findCtor(cls, int.class, int.class, int.class);
+            if (ctor6 != null) {
+                try {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor6, PROBE_SPAWN.x(), PROBE_SPAWN.y(), 0));
+                } catch (Throwable ignored) {
+                }
+            }
+
+            // Strategy 10: (int, int, int, int) — primitive-only generic-recreate object.
+            Constructor<? extends AbstractObjectInstance> ctor7 =
+                    findCtor(cls, int.class, int.class, int.class, int.class);
+            if (ctor7 != null) {
+                try {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor7, PROBE_SPAWN.x(), PROBE_SPAWN.y(), 0, 0));
+                } catch (Throwable ignored) {
+                }
+            }
+
+            // Strategy 11: (int, int, int, boolean) — primitive-only generic-recreate object.
+            Constructor<? extends AbstractObjectInstance> ctor8 =
+                    findCtor(cls, int.class, int.class, int.class, boolean.class);
+            if (ctor8 != null) {
+                try {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor8, PROBE_SPAWN.x(), PROBE_SPAWN.y(),
+                                    PROBE_SPAWN.subtype(), false));
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+
+        // Strategy 11: parent-child patterns. Scan for constructors with a
+        // concrete AbstractObjectInstance parent parameter, including
+        // (ObjectSpawn, ParentType), (ParentType), (ParentType, String),
+        // (ParentType, int, int), (ParentType, AbstractObjectInstance, int, int),
+        // (ObjectSpawn, int, int, ParentType), (ObjectSpawn, ParentType, int),
+        // and (ObjectSpawn, ParentType, int, int, int). Build a stub parent of that type
+        // headlessly (using simple strategies only to avoid recursion), then
+        // construct the child with the matching placeholder arguments.
         AbstractObjectInstance constructedWithParent = tryConstructWithInferredParent(cls, stub);
         if (constructedWithParent != null) {
             return constructedWithParent;
@@ -677,7 +888,15 @@ public final class RewindRoundTripHarness {
                 "No probe-compatible constructor found for " + cls.getName()
                         + " (tried zero-arg, (ObjectSpawn), (ObjectSpawn,String),"
                         + " (ObjectSpawn,ObjectServices), (ObjectSpawn,boolean),"
-                        + " (ObjectSpawn,ParentType))");
+                        + " (ObjectSpawn,ObjectServices,int),"
+                        + " (ObjectSpawn,int), (int,int), (int,int,int),"
+                        + " (int,int,int,int), (int,int,int,boolean),"
+                        + " (ObjectSpawn,ParentType), (ParentType),"
+                        + " (ParentType,String), (ParentType,int,int),"
+                        + " (ParentType,AbstractObjectInstance,int,int),"
+                        + " (ObjectSpawn,int,int,ParentType),"
+                        + " (ObjectSpawn,ParentType,int),"
+                        + " (ObjectSpawn,ParentType,int,int,int))");
     }
 
     /**
@@ -699,6 +918,19 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.CnzMinibossInstance");
         m.put("com.openggf.game.sonic3k.objects.CnzMinibossTopInstance",
                 "com.openggf.game.sonic3k.objects.CnzMinibossInstance");
+        // S3K Buggernaut baby — parent: BuggernautBadnikInstance (placed, objectId 0x95).
+        // BuggernautBadnikInstance spawns its baby lazily from update(), so a placed
+        // parent does not pollute the ObjectManager at reset time.
+        m.put("com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance",
+                "com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance");
+        // S3K transient-parent badnik children — parents are placed badniks whose
+        // constructors do not spawn these children; update routines do.
+        m.put("com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance$OrbinautOrbInstance",
+                "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild",
+                "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance$OrbitingPointInstance",
+                "com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance");
         // S3K GumballMachine exit trigger — parent: GumballMachineObjectInstance (placed, objectId 0x86)
         m.put("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ExitTriggerChild",
                 "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance");
@@ -726,6 +958,36 @@ public final class RewindRoundTripHarness {
         // CNZ boss ctor does not spawn the electric ball (spawned during boss sequence only).
         m.put("com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall",
                 "com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance");
+        // S2 HTZ boss children — parent: Sonic2HTZBossInstance (placed, objectId 0x52).
+        // HTZ boss ctor does not spawn these children; boss routines emit them later.
+        m.put("com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower",
+                "com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance");
+        m.put("com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall",
+                "com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance");
+        // S3K AIZ falling-log splash — parent is the inner falling log body, not
+        // the placed outer controller. It is seeded dynamically and is itself rewindable.
+        m.put("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild",
+                "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild");
+        // S3K badnik children — parents are placed badniks whose constructors do
+        // not spawn these children; their update routines do.
+        m.put("com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild",
+                "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild",
+                "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",
+                "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance");
+        // S3K MHZ cutscene/miniboss children. The parent object IDs are zone-set
+        // dependent, so registryForSeededParent supplies exact parent factories.
+        m.put("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
+                "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance");
+        m.put("com.openggf.game.sonic3k.objects.Mhz1CutsceneDoorInstance",
+                "com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance");
+        m.put("com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper",
+                "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance");
+        m.put("com.openggf.game.sonic3k.objects.MhzMinibossFlameInstance",
+                "com.openggf.game.sonic3k.objects.MhzMinibossInstance");
+        m.put("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance",
+                "com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance");
         // NOTE: BalkiryBadnikInstance OMITTED: its ctor calls spawnJetChild() immediately,
         // which would add a BalkiryJetObjectInstance to the OM before we add our probe child,
         // causing a double-jet on restore. BalkiryJetObjectInstance stays parent-dependent.
@@ -733,6 +995,11 @@ public final class RewindRoundTripHarness {
         // (CPZBossContainer, CPZBossFlame, CPZBossPipe, CPZBossPump, CPZBossRobotnik)
         // immediately, polluting the OM before the probe adds its single child.
         // All 5 CPZ boss components stay parent-dependent (honest ceiling: need live session).
+        // S3K MHZ Robotnik ship flame — parent is itself RewindRecreatable and can be
+        // seeded dynamically. Do not use PARENT_SPAWN_OBJECT_IDS here: S3K object id
+        // 0x93 is zone-set dependent and needs runtime zone context to create via registry.
+        m.put("com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance");
         PARENT_SEED_TABLE = Map.copyOf(m);
     }
 
@@ -746,21 +1013,47 @@ public final class RewindRoundTripHarness {
      * <p>If a parent FQN is NOT in this table, it is added as a dynamic object
      * (requires the parent to have its own dynamic rewind codec to survive restore).
      */
-    private static final Map<String, Integer> PARENT_SPAWN_OBJECT_IDS = Map.of(
+    private static final Map<String, Integer> PARENT_SPAWN_OBJECT_IDS = Map.ofEntries(
             // CnzMinibossInstance: Sonic3kObjectIds.CNZ_MINIBOSS = 0xA6
-            "com.openggf.game.sonic3k.objects.CnzMinibossInstance", 0xA6,
+            Map.entry("com.openggf.game.sonic3k.objects.CnzMinibossInstance", 0xA6),
+            // BuggernautBadnikInstance: Sonic3kObjectIds.BUGGERNAUT = 0x95 (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance", 0x95),
+            // StarPointerBadnikInstance: Sonic3kObjectIds.STAR_POINTER = 0xAE (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance", 0xAE),
+            // RibotBadnikInstance: Sonic3kObjectIds.RIBOT = 0xBF (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance", 0xBF),
+            // OrbinautBadnikInstance: Sonic3kObjectIds.ORBINAUT = 0xC0 (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance", 0xC0),
             // GumballMachineObjectInstance: Sonic3kObjectIds.GUMBALL_MACHINE = 0x86
-            "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", 0x86,
+            Map.entry("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", 0x86),
             // AizSpikedLogObjectInstance: Sonic3kObjectIds.AIZ_SPIKED_LOG = 0x2E
-            "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance", 0x2E,
+            Map.entry("com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance", 0x2E),
             // TurtloidBadnikInstance: Sonic2ObjectIds.TURTLOID = 0x9A (lazy child spawn)
-            "com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance", 0x9A,
+            Map.entry("com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance", 0x9A),
             // BuzzerBadnikInstance: Sonic2ObjectIds.BUZZER = 0x4B (lazy child spawn)
-            "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance", 0x4B,
+            Map.entry("com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance", 0x4B),
             // Sonic2ARZBossInstance: Sonic2ObjectIds.ARZ_BOSS = 0x89 (no ctor child spawn)
-            "com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance", 0x89,
+            Map.entry("com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance", 0x89),
             // Sonic2CNZBossInstance: Sonic2ObjectIds.CNZ_BOSS = 0x51 (no ctor child spawn)
-            "com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance", 0x51
+            Map.entry("com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance", 0x51),
+            // Sonic2HTZBossInstance: Sonic2ObjectIds.HTZ_BOSS = 0x52 (no ctor child spawn)
+            Map.entry("com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance", 0x52),
+            // DragonflyBadnikInstance: Sonic3kObjectIds.DRAGONFLY = 0x8E (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance", 0x8E),
+            // TurboSpikerBadnikInstance: Sonic3kObjectIds.TURBO_SPIKER = 0x96 (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance", 0x96),
+            // SpikerBadnikInstance: Sonic3kObjectIds.SPIKER = 0x9C (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance", 0x9C),
+            // CutsceneKnucklesMhz2Instance: Sonic3kObjectIds.CUTSCENE_KNUCKLES = 0x82
+            Map.entry("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance", 0x82),
+            // Mhz1CutsceneButtonInstance: Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON = 0xA9
+            Map.entry("com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance", 0xA9),
+            // Mhz1CutsceneKnucklesInstance: Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES = 0xA8
+            Map.entry("com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance", 0xA8),
+            // MhzMinibossInstance: Sonic3kObjectIds.MHZ_MINIBOSS = 0x92
+            Map.entry("com.openggf.game.sonic3k.objects.MhzMinibossInstance", 0x92),
+            // Sonic3kSSEntryRingObjectInstance: Sonic3kObjectIds.SS_ENTRY_RING = 0x85
+            Map.entry("com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance", 0x85)
             // Omitted: BalkiryBadnikInstance (spawns jet in ctor — would pollute OM)
             // Omitted: Sonic2CPZBossInstance (spawns 5 children in ctor — would pollute OM)
     );
@@ -812,8 +1105,10 @@ public final class RewindRoundTripHarness {
         StubObjectServices stub = new StubObjectServices() {
             @Override public ObjectManager objectManager() { return holder[0]; }
             @Override public Camera camera() { return camera; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
         };
-        ObjectRegistry registry = registryFor(gameId);
+        ObjectRegistry registry = registryForSeededParent(gameId, parentFqn);
 
         // The parent's objectId is looked up from PARENT_SPAWN_OBJECT_IDS so the registry
         // creates it via its normal factory. Fall back to dynamic (no-codec) add if not found.
@@ -906,8 +1201,13 @@ public final class RewindRoundTripHarness {
 
     /**
      * Attempts to construct a child of {@code cls} by finding a constructor of the form
-     * {@code (ObjectSpawn, ParentType)} where {@code ParentType} is assignment-compatible
-     * with {@code liveParent}, then invoking it directly with the live parent instance.
+     * {@code (ObjectSpawn, ParentType)}, {@code (ParentType)},
+     * {@code (ParentType, String)}, {@code (ParentType, int, int)},
+     * {@code (ParentType, AbstractObjectInstance, int, int)},
+     * {@code (ObjectSpawn, int, int, ParentType)}, {@code (ObjectSpawn, ParentType, int)},
+     * or {@code (ObjectSpawn, ParentType, int, int, int)} where {@code ParentType} is
+     * assignment-compatible with {@code liveParent}, then invoking it directly with the
+     * live parent instance.
      *
      * <p>This avoids the double-spawn side-effect that occurs when strategy 6 builds a
      * NEW stub parent inside the seeded ObjectManager (triggering the parent's own
@@ -925,16 +1225,76 @@ public final class RewindRoundTripHarness {
         if (liveParent == null) return null;
         for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
             Class<?>[] params = rawCtor.getParameterTypes();
-            if (params.length != 2) continue;
-            if (params[0] != ObjectSpawn.class) continue;
-            if (!params[1].isAssignableFrom(liveParent.getClass())) continue;
+            boolean spawnAndParent = params.length == 2
+                    && params[0] == ObjectSpawn.class
+                    && params[1].isAssignableFrom(liveParent.getClass());
+            boolean parentOnly = params.length == 1
+                    && params[0].isAssignableFrom(liveParent.getClass());
+            boolean parentString = params.length == 2
+                    && params[0].isAssignableFrom(liveParent.getClass())
+                    && params[1] == String.class;
+            boolean parentIntInt = params.length == 3
+                    && params[0].isAssignableFrom(liveParent.getClass())
+                    && params[1] == int.class
+                    && params[2] == int.class;
+            boolean parentAnchorIntInt = params.length == 4
+                    && params[0].isAssignableFrom(liveParent.getClass())
+                    && params[1].isAssignableFrom(liveParent.getClass())
+                    && params[2] == int.class
+                    && params[3] == int.class;
+            boolean spawnIntIntParent = params.length == 4
+                    && params[0] == ObjectSpawn.class
+                    && params[1] == int.class
+                    && params[2] == int.class
+                    && params[3].isAssignableFrom(liveParent.getClass());
+            boolean spawnParentInt = params.length == 3
+                    && params[0] == ObjectSpawn.class
+                    && params[1].isAssignableFrom(liveParent.getClass())
+                    && params[2] == int.class;
+            boolean spawnParentIntIntInt = params.length == 5
+                    && params[0] == ObjectSpawn.class
+                    && params[1].isAssignableFrom(liveParent.getClass())
+                    && params[2] == int.class
+                    && params[3] == int.class
+                    && params[4] == int.class;
+            if (!spawnAndParent && !parentOnly && !parentString && !parentIntInt
+                    && !parentAnchorIntInt && !spawnIntIntParent
+                    && !spawnParentInt && !spawnParentIntIntInt) continue;
             Constructor<? extends AbstractObjectInstance> ctor =
                     (Constructor<? extends AbstractObjectInstance>) rawCtor;
             ctor.setAccessible(true);
             final AbstractObjectInstance parent = liveParent;
             try {
+                if (spawnAndParent) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, parent));
+                }
+                if (parentString) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, parent, "probe"));
+                }
+                if (parentIntInt) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, parent, 0, 0));
+                }
+                if (parentAnchorIntInt) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, parent, parent, 0, 0));
+                }
+                if (spawnIntIntParent) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, PROBE_SPAWN.x(), PROBE_SPAWN.y(), parent));
+                }
+                if (spawnParentInt) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, parent, 0));
+                }
+                if (spawnParentIntIntInt) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, parent, 0, PROBE_SPAWN.x(), PROBE_SPAWN.y()));
+                }
                 return ObjectConstructionContext.construct(stub,
-                        () -> invokeWith(ctor, PROBE_SPAWN, parent));
+                        () -> invokeWith(ctor, parent));
             } catch (Throwable ignored) {
             }
         }
@@ -943,11 +1303,17 @@ public final class RewindRoundTripHarness {
 
     /**
      * Strategy 6: attempts to construct a child that requires a live parent reference
-     * as its second constructor parameter.
+     * as one of its constructor parameters.
      *
-     * <p>Scans declared constructors for a 2-parameter signature
-     * {@code (ObjectSpawn, ParentType)} where {@code ParentType} is a concrete,
-     * non-abstract {@link AbstractObjectInstance} subclass. When found:
+     * <p>Scans declared constructors for {@code (ObjectSpawn, ParentType)},
+     * {@code (ParentType)}, {@code (ParentType, String)},
+     * {@code (ParentType, int, int)},
+     * {@code (ParentType, AbstractObjectInstance, int, int)},
+     * {@code (ObjectSpawn, int, int, ParentType)},
+     * {@code (ObjectSpawn, ParentType, int)}, or
+     * {@code (ObjectSpawn, ParentType, int, int, int)} where {@code ParentType} is
+     * a concrete, non-abstract
+     * {@link AbstractObjectInstance} subclass. When found:
      * <ol>
      *   <li>Build a stub parent of {@code ParentType} headlessly using strategy 2
      *       ({@code (ObjectSpawn)}) or strategy 1 (zero-arg) — no recursion into
@@ -965,15 +1331,40 @@ public final class RewindRoundTripHarness {
             StubObjectServices stub) {
         for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
             Class<?>[] params = rawCtor.getParameterTypes();
-            if (params.length != 2) continue;
-            if (params[0] != ObjectSpawn.class) continue;
-            Class<?> secondType = params[1];
-            if (!AbstractObjectInstance.class.isAssignableFrom(secondType)) continue;
-            if (Modifier.isAbstract(secondType.getModifiers())) continue;
-            // Found (ObjectSpawn, ConcreteParentType). Try to build a stub parent.
+            boolean spawnAndParent = params.length == 2 && params[0] == ObjectSpawn.class;
+            boolean parentOnly = params.length == 1;
+            boolean parentString = params.length == 2 && params[1] == String.class;
+            boolean parentIntInt = params.length == 3
+                    && params[1] == int.class
+                    && params[2] == int.class;
+            boolean parentAnchorIntInt = params.length == 4
+                    && AbstractObjectInstance.class.isAssignableFrom(params[1])
+                    && params[2] == int.class
+                    && params[3] == int.class;
+            boolean spawnIntIntParent = params.length == 4
+                    && params[0] == ObjectSpawn.class
+                    && params[1] == int.class
+                    && params[2] == int.class;
+            boolean spawnParentInt = params.length == 3
+                    && params[0] == ObjectSpawn.class
+                    && params[2] == int.class;
+            boolean spawnParentIntIntInt = params.length == 5
+                    && params[0] == ObjectSpawn.class
+                    && params[2] == int.class
+                    && params[3] == int.class
+                    && params[4] == int.class;
+            if (!spawnAndParent && !parentOnly && !parentString && !parentIntInt
+                    && !parentAnchorIntInt && !spawnIntIntParent
+                    && !spawnParentInt && !spawnParentIntIntInt) continue;
+            Class<?> parentType = (spawnIntIntParent || spawnParentIntIntInt)
+                    ? (spawnIntIntParent ? params[3] : params[1])
+                    : (spawnAndParent || spawnParentInt ? params[1] : params[0]);
+            if (!AbstractObjectInstance.class.isAssignableFrom(parentType)) continue;
+            if (Modifier.isAbstract(parentType.getModifiers())) continue;
+            // Found parent-bearing constructor. Try to build a stub parent.
             @SuppressWarnings("unchecked")
             Class<? extends AbstractObjectInstance> parentCls =
-                    (Class<? extends AbstractObjectInstance>) secondType;
+                    (Class<? extends AbstractObjectInstance>) parentType;
             AbstractObjectInstance stubParent = tryConstructParentHeadless(parentCls, stub);
             if (stubParent == null) continue;
             @SuppressWarnings("unchecked")
@@ -982,8 +1373,36 @@ public final class RewindRoundTripHarness {
             ctor.setAccessible(true);
             try {
                 final AbstractObjectInstance finalParent = stubParent;
+                if (spawnAndParent) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, finalParent));
+                }
+                if (parentString) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, finalParent, "probe"));
+                }
+                if (parentIntInt) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, finalParent, 0, 0));
+                }
+                if (parentAnchorIntInt) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, finalParent, finalParent, 0, 0));
+                }
+                if (spawnIntIntParent) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, PROBE_SPAWN.x(), PROBE_SPAWN.y(), finalParent));
+                }
+                if (spawnParentInt) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, finalParent, 0));
+                }
+                if (spawnParentIntIntInt) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, finalParent, 0, PROBE_SPAWN.x(), PROBE_SPAWN.y()));
+                }
                 return ObjectConstructionContext.construct(stub,
-                        () -> invokeWith(ctor, PROBE_SPAWN, finalParent));
+                        () -> invokeWith(ctor, finalParent));
             } catch (Throwable ignored) {
             }
         }
@@ -1124,6 +1543,11 @@ public final class RewindRoundTripHarness {
         return root.getClass().getSimpleName() + (msg != null ? ": " + msg : "");
     }
 
+    private static boolean isUnregisteredObjectReferenceCapture(String description) {
+        return description != null
+                && description.contains("RewindIdentityTable has no registered id for object reference");
+    }
+
     /**
      * Minimal no-op {@link AbstractObjectInstance} used by {@link #spawnDynamic(ObjectSpawn)}.
      * Does not render, update, or consume any services beyond what the base class requires.
@@ -1136,6 +1560,68 @@ public final class RewindRoundTripHarness {
         @Override
         public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) {
             // no-op
+        }
+    }
+
+    private static final class InertObjectArtProvider implements ObjectArtProvider {
+        @Override
+        public void loadArtForZone(int zoneIndex) {
+            // no-op
+        }
+
+        @Override
+        public PatternSpriteRenderer getRenderer(String key) {
+            return null;
+        }
+
+        @Override
+        public ObjectSpriteSheet getSheet(String key) {
+            return null;
+        }
+
+        @Override
+        public SpriteAnimationSet getAnimations(String key) {
+            return null;
+        }
+
+        @Override
+        public int getZoneData(String key, int zoneIndex) {
+            return -1;
+        }
+
+        @Override
+        public Pattern[] getHudDigitPatterns() {
+            return new Pattern[0];
+        }
+
+        @Override
+        public Pattern[] getHudTextPatterns() {
+            return new Pattern[0];
+        }
+
+        @Override
+        public Pattern[] getHudLivesPatterns() {
+            return new Pattern[0];
+        }
+
+        @Override
+        public Pattern[] getHudLivesNumbers() {
+            return new Pattern[0];
+        }
+
+        @Override
+        public List<String> getRendererKeys() {
+            return List.of();
+        }
+
+        @Override
+        public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) {
+            return baseIndex;
+        }
+
+        @Override
+        public boolean isReady() {
+            return true;
         }
     }
 }

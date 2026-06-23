@@ -21,6 +21,7 @@ import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider.TouchRegion;
 import com.openggf.level.objects.TouchResponseResult;
@@ -1300,7 +1301,8 @@ public final class IczEndBossInstance extends AbstractBossInstance implements Mu
         }
     }
 
-    private static final class IczEndBossRobotnikEscapeShip extends AbstractObjectInstance {
+    private static final class IczEndBossRobotnikEscapeShip extends AbstractObjectInstance
+            implements SpawnCoordinateRewindRecreatable {
         private static final int ESCAPE_FRAME = 0x0A;
         private static final int HEAD_FRAME_ANGRY = 3;
         private static final int HEAD_Y_OFFSET = -0x1C;
@@ -1314,6 +1316,10 @@ public final class IczEndBossInstance extends AbstractBossInstance implements Mu
         private int y;
         private int timer = ESCAPE_TIME;
         private boolean flyingRight;
+
+        private IczEndBossRobotnikEscapeShip() {
+            this(0, 0);
+        }
 
         private IczEndBossRobotnikEscapeShip(int x, int y) {
             super(new ObjectSpawn(x, y, Sonic3kObjectIds.ICZ_END_BOSS, 0, 0, false, y),

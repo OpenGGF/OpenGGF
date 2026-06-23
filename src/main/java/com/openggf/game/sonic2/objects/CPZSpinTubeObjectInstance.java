@@ -318,9 +318,27 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
 
         int objX = spawn.x();
         int objY = spawn.y();
-        // ROM uses center-based coordinates (x_pos, y_pos)
-        int playerX = player.getCentreX();
-        int playerY = player.getCentreY();
+        // ROM uses center-based coordinates (x_pos, y_pos).
+        //
+        // Position basis matches ROM slot ordering of Obj1E_Main (s2.asm:48447-
+        // 48457). ROM reads x_pos(a1)/y_pos(a1) live when the tube object runs in
+        // slot order:
+        //   - A FREE player (not yet tube-controlled) is moved by its own player
+        //     routine (slot 0/1) earlier in the frame, so the capturing tube reads
+        //     its POST-move position -> use the current centre.
+        //   - A player already mid-traversal of another tube (obj_control=$81)
+        //     has its position written by the OWNING tube object. When the
+        //     capturing tube has the lower object slot, it runs BEFORE the owning
+        //     tube and therefore reads the player's position from BEFORE this
+        //     frame's owning-tube step -> use the frame-start (pre-physics) centre.
+        // Without this, the engine's capturing tube reads the owner's already-
+        // advanced position and captures one frame early, double-stepping the CPU
+        // sidekick (CPZ2 f2888 tails_x -16 vs ROM -8). Using the frame-start centre
+        // for an already-controlled player defers that capture to the ROM frame.
+        boolean midTraversal = player.isObjectControlled()
+                && player.isObjectControlSuppressesMovement();
+        int playerX = midTraversal ? player.getPrePhysicsCentreX() : player.getCentreX();
+        int playerY = midTraversal ? player.getPrePhysicsCentreY() : player.getCentreY();
 
         // Check X range: player must be within collisionDistance of object
         int dx = playerX - objX;
@@ -441,11 +459,11 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         int nextX = cs.path[2] + objX;
         int nextY = cs.path[3] + objY;
 
-        // Set player state for tube traversal
-        // ROM: move.b #$81,obj_control(a1) - locks player to object control
-        // This disables normal physics - the tube controls the player completely
+        // Set player state for tube traversal.
+        // ROM: move.b #$81,obj_control(a1) - player-local object control.
+        // This suppresses normal physics while leaving global Control_Locked
+        // untouched so Ctrl_1_Logical keeps refreshing during traversal.
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
         player.setRolling(true);
         // ROM: move.b #AniIDSonAni_Roll,anim(a1) - force roll animation.
         // Must be set explicitly because resolveAnimationId() returns null while
@@ -717,10 +735,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         int y = player.getCentreY() & 0x7FF;
         player.setCentreY((short) y);
 
-        // Restore player control with cooldown to prevent immediate re-capture
+        // Restore player-local object control with cooldown to prevent immediate re-capture.
         // ROM: clr.b obj_control(a1)
         player.releaseFromObjectControl(frameCounter);
-        player.setControlLocked(false);
 
         // ROM (loc_227A6) does NOT set spindash_flag/pinball_mode on exit; it only
         // clears obj_control and plays the spindash-release sound. The player leaves

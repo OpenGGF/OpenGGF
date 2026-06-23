@@ -3,9 +3,12 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.PlayableEntity;
 
+import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -35,7 +38,8 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/88 Ending Sequence Emeralds.asm
  */
-public class Sonic1EndingEmeraldsObjectInstance extends AbstractObjectInstance {
+public class Sonic1EndingEmeraldsObjectInstance extends AbstractObjectInstance
+        implements SpawnCoordinateZeroPairRewindRecreatable {
 
     // ========================================================================
     // ROM Constants
@@ -88,6 +92,11 @@ public class Sonic1EndingEmeraldsObjectInstance extends AbstractObjectInstance {
         this.frameId = frame;
         this.currentX = centerX;
         this.currentY = centerY;
+    }
+
+    @Override
+    public ObjectSpawn getSpawn() {
+        return new ObjectSpawn(currentX, currentY, Sonic1ObjectIds.END_CHAOS, 0, 0, false, 0);
     }
 
     private void ensureRenderer() {

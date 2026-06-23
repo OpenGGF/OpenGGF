@@ -4,6 +4,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateSubtypeDefaultArgsRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -16,7 +17,8 @@ import java.util.List;
  * AIZ miniboss missile-impact flame burst child (ROM: loc_68D88).
  * Uses boss-explosion style frames with staggered subtype-based start delay.
  */
-public class AizMinibossImpactFlameChild extends AbstractObjectInstance implements TouchResponseProvider {
+public class AizMinibossImpactFlameChild extends AbstractObjectInstance
+        implements TouchResponseProvider, SpawnCoordinateSubtypeDefaultArgsRewindRecreatable {
     private static final int COLLISION_FLAGS = 0x97;
     // byte_6916F
     private static final int[] FRAMES = {0, 0, 1, 2, 3, 4};
@@ -25,7 +27,7 @@ public class AizMinibossImpactFlameChild extends AbstractObjectInstance implemen
     private final int worldX;
     private final int worldY;
     // hazardous is non-final so the rewind field capturer reapplies it after the
-    // codec recreates the impact flame from its spawn (placeholder false).
+    // recreate hook rebuilds the impact flame from its spawn (placeholder false).
     private boolean hazardous;
 
     private int delayTimer;

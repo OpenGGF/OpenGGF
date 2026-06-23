@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -17,7 +19,7 @@ import java.util.List;
  * ROM Reference: s2.asm Obj5D (ROUTINE_DRIPPER = 0x0A)
  * Shows liquid dripping animation as pump operates.
  */
-public class CPZBossDripper extends AbstractObjectInstance {
+public class CPZBossDripper extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int SUB_INIT = 0;
     private static final int SUB_MAIN = 2;
@@ -50,6 +52,17 @@ public class CPZBossDripper extends AbstractObjectInstance {
         this.timer = 0x0F;
         this.timer4 = 0;
         this.animationState = new ObjectAnimationState(CPZBossAnimations.getDripperAnimations(), anim, mappingFrame);
+    }
+
+    private CPZBossDripper(ObjectSpawn spawn) {
+        this(spawn, null, null);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2CPZBossInstance boss = CpzBossRewindLinks.nearestBoss(ctx);
+        CPZBossPipe pipe = CpzBossRewindLinks.nearestPipe(ctx);
+        return pipe == null ? null : new CPZBossDripper(ctx.spawn(), boss, pipe);
     }
 
     @Override

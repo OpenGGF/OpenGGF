@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -37,7 +38,7 @@ import java.util.logging.Logger;
  * Collision type $52: SPECIAL category (0x40), size index 0x12 (8x16 from center).
  */
 public class Sonic1GiantRingObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(Sonic1GiantRingObjectInstance.class.getName());
 

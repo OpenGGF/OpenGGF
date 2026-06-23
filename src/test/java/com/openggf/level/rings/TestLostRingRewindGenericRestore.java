@@ -22,13 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Stage 4.1 — proves {@code LostRingObjectInstance} (Obj37 spilled rings) survive a
- * rewind seek via {@code LostRingRewindCodec}: the restore path clears
- * {@code dynamicObjects} and recreates each captured ring through the codec, so
- * without a registered codec the rings would be diagnostic-only and the restored set
- * would be empty.
+ * Proves {@code LostRingObjectInstance} (Obj37 spilled rings) survive a rewind
+ * seek through the generic {@code RewindRecreatable} path: the restore path
+ * clears {@code dynamicObjects} and recreates each captured ring from its
+ * captured dynamic entry.
  */
-class TestLostRingRewindCodec {
+class TestLostRingRewindGenericRestore {
 
     @BeforeEach
     void setUp() {
@@ -114,7 +113,7 @@ class TestLostRingRewindCodec {
         assertFalse(before.equals(
                 positionsOf(manager.activeObjectsOfType(LostRingObjectInstance.class))));
 
-        // Restore must clear dynamicObjects and recreate each ring via the codec.
+        // Restore must clear dynamicObjects and recreate each ring via generic recreate.
         snap.restore(snapshot);
 
         List<int[]> after =

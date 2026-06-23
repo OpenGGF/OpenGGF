@@ -1,9 +1,5 @@
 package com.openggf.game.rewind.coverage;
 
-import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
-import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
-import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -11,10 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -46,21 +39,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @Tag("rewind-probe")
 class TestRewindRoundTripProbe {
 
-    /** Collects codec class names from all three per-game registries. */
-    private static Set<String> allGameCodecClassNames() {
-        return Stream.of(
-                new Sonic1ObjectRegistry().dynamicRewindCodecs(),
-                new Sonic2ObjectRegistry().dynamicRewindCodecs(),
-                new Sonic3kObjectRegistry().dynamicRewindCodecs()
-        ).flatMap(List::stream)
-         .map(DynamicObjectRewindCodec::className)
-         .collect(Collectors.toUnmodifiableSet());
-    }
-
     @Test
     void probeReturnsNonEmptyResults() {
         RewindRoundTripProbe probe = new RewindRoundTripProbe();
-        RewindRoundTripProbe.ProbeReport report = probe.run(allGameCodecClassNames());
+        RewindRoundTripProbe.ProbeReport report = probe.run(Set.of());
 
         assertNotNull(report, "probe must return a non-null report");
         assertTrue(report.totalClasses() > 0,
@@ -74,7 +56,7 @@ class TestRewindRoundTripProbe {
     @Test
     void probeReportIsWrittenToDisk() throws IOException {
         RewindRoundTripProbe probe = new RewindRoundTripProbe();
-        RewindRoundTripProbe.ProbeReport report = probe.run(allGameCodecClassNames());
+        RewindRoundTripProbe.ProbeReport report = probe.run(Set.of());
 
         Path outDir = Paths.get("docs/rewind");
         Files.createDirectories(outDir);
@@ -91,7 +73,7 @@ class TestRewindRoundTripProbe {
     @Test
     void probeCoverageIsHonestlyReported() {
         RewindRoundTripProbe probe = new RewindRoundTripProbe();
-        RewindRoundTripProbe.ProbeReport report = probe.run(allGameCodecClassNames());
+        RewindRoundTripProbe.ProbeReport report = probe.run(Set.of());
 
         // Skipped count + probed count must equal total
         assertEquals(report.totalClasses(), report.probed() + report.skipped(),
@@ -113,7 +95,7 @@ class TestRewindRoundTripProbe {
     @Test
     void realGapRecordsHaveFieldDetails() {
         RewindRoundTripProbe probe = new RewindRoundTripProbe();
-        RewindRoundTripProbe.ProbeReport report = probe.run(allGameCodecClassNames());
+        RewindRoundTripProbe.ProbeReport report = probe.run(Set.of());
 
         for (RewindRoundTripProbe.GapRecord gap : report.realGaps()) {
             assertFalse(gap.className().isBlank(),

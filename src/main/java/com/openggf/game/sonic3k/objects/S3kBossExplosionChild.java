@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -21,7 +22,7 @@ import java.util.List;
  *   dc.b 0,0, 0,1, 1,1, 2,2, 3,3, 4,4, 5,4, $F4
  * $F4 = end (calls Go_Delete_Sprite via $34 callback).
  */
-public class S3kBossExplosionChild extends AbstractObjectInstance {
+public class S3kBossExplosionChild extends AbstractObjectInstance implements SpawnCoordinateRewindRecreatable {
     // ROM: (delay, frame) pairs from AniRaw_BossExplosion
     // delay N = show frame for N+1 ticks
     private static final int[][] ANIM_PAIRS = {
@@ -36,6 +37,10 @@ public class S3kBossExplosionChild extends AbstractObjectInstance {
 
     private int pairIndex;
     private int delayCounter;
+
+    S3kBossExplosionChild() {
+        this(0, 0);
+    }
 
     public S3kBossExplosionChild(int x, int y) {
         super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "S3kBossExplosion");

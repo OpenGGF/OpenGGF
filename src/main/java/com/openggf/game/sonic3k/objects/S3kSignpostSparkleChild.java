@@ -4,8 +4,9 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.rings.RingManager;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -13,7 +14,7 @@ import java.util.logging.Logger;
 /**
  * Short-lived sparkle effect spawned by the S3K signpost during its fall.
  */
-public class S3kSignpostSparkleChild extends AbstractObjectInstance {
+public class S3kSignpostSparkleChild extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(S3kSignpostSparkleChild.class.getName());
 
@@ -29,6 +30,10 @@ public class S3kSignpostSparkleChild extends AbstractObjectInstance {
         super(null, "S3kSignpostSparkle");
         this.worldX = x;
         this.worldY = y;
+    }
+
+    public S3kSignpostSparkleChild(ObjectSpawn spawn) {
+        this(spawn != null ? spawn.x() : 0, spawn != null ? spawn.y() : 0);
     }
 
     @Override

@@ -1213,6 +1213,16 @@ final class ObjectSolidContactController {
             return null;
         }
 
+        // For multi-piece riding objects, track the riding piece re-seat Y so it can
+        // be restored after sibling pieces run. In ROM, each piece occupies a separate
+        // slot; earlier-slot non-riding pieces may apply SolidObject Y snaps for
+        // overlapping X ranges, but the ridden piece (later slot) runs last and
+        // overrides them. Mirror that order: run sibling contacts, then restore the
+        // riding re-seat as the authoritative final Y.
+        // docs/s1disasm/_incObj/5B SLZ Staircase.asm:72-96 (Stair_Solid / SolidObject)
+        int ridingCentreYToRestore = Integer.MIN_VALUE;
+        SolidContact ridingContactResult = null;
+
         if (instance == ridingObject) {
             // ROM Obj70 (MTZ Cog) allocates one SST slot per tooth and runs each
             // slot's SolidObject independently in ascending allocation order
@@ -1251,6 +1261,10 @@ final class ObjectSolidContactController {
             // on the currently ridden piece, later sibling pieces of the same logical
             // object must still get a chance to apply side/top/bottom collision.
             // Returning early here skips the "next block in the staircase" wall hit.
+            ridingContactResult = ridingContact;
+            if (ridingContact != null && !player.getAir()) {
+                ridingCentreYToRestore = player.getCentreY();
+            }
         }
 
         if (provider.skipsCpuSidekickWhenRenderFlagOffScreen()
@@ -1281,7 +1295,11 @@ final class ObjectSolidContactController {
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
             }
-            if (result.standing()) {
+            if (result.standing() && ridingCentreYToRestore == Integer.MIN_VALUE) {
+                // Only update riding state from the sibling pass when there is no
+                // pre-existing ride from processInlineRidingObject. When the player
+                // is already riding one piece, the ridden piece's re-seat is the
+                // authoritative result (see ridingCentreYToRestore restore below).
                 putRidingState(player, instance, result.ridingX(), result.ridingY(), result.pieceIndex());
                 setObjectStandingBit(player, instance, result.pieceIndex());
                 // Fresh multi-piece landing: latch so the same-frame
@@ -1290,6 +1308,16 @@ final class ObjectSolidContactController {
                 markStandingBitEstablishedThisFrame(player, instance, result.pieceIndex());
                 clearGroundWallSuppressionForNormalSolidSupport(player, instance);
                 inlineSupportedPlayers.add(player);
+            }
+            // Restore riding piece Y after sibling-piece contacts. Non-riding sibling
+            // pieces may have applied Solid_Landed Y snaps for overlapping X ranges.
+            // In ROM each piece is a separate slot; the ridden piece runs LAST in slot
+            // order and its MvSonicOnPtfm / SolidObject call overwrites earlier snaps.
+            // docs/s1disasm/_incObj/5B SLZ Staircase.asm:72-96 (Stair_Solid / SolidObject)
+            if (ridingCentreYToRestore != Integer.MIN_VALUE) {
+                int newY = ridingCentreYToRestore - (player.getHeight() / 2);
+                player.setY((short) newY);
+                return ridingContactResult;
             }
             return result.aggregateContact();
         }
@@ -1495,7 +1523,20 @@ final class ObjectSolidContactController {
         // current solid, not the narrower Solid_Landed top-landing width.
         int ridingHalfWidth = halfWidth;
 
-        int boundsX = currentX + params.offsetX();
+        // ROM ExitPlatform (S1 Obj18 routine 4, docs/s1disasm/_incObj/18 Platforms.asm:74-87)
+        // runs BEFORE Plat_Move, so its walk-off bounds check observes the
+        // platform's PRE-move x_pos (docs/s1disasm/_incObj/sub ExitPlatform.asm:20-27).
+        // The rider is then carried by the post-move delta via MvSonicOnPtfm2.
+        // Using the post-move currentX here drops a rider one frame early when the
+        // platform moves under him (s1_syz2 trace f6845: SonicX 0x211C, platform
+        // pre-move 0x20FD -> relX 0x3F stays; post-move 0x20FB -> relX 0x41 exits).
+        // Objects whose solid helper runs before their body move opt in via
+        // usesPreUpdatePositionForSolidContact(); the carry delta below is
+        // unchanged because it is still measured against the same pre-move ridingX.
+        int boundsRefX = provider.usesPreUpdatePositionForSolidContact(player)
+                ? ridingX
+                : currentX;
+        int boundsX = boundsRefX + params.offsetX();
         int relX = player.getCentreX() - boundsX + ridingHalfWidth;
         int stickyX = 0;
         int minRelX = -stickyX;
@@ -1567,6 +1608,38 @@ final class ObjectSolidContactController {
         }
 
         ridingStates.remove(player);
+        if (solidProfile.carriesAirborneRiderAfterExitPlatform()
+                && provider.carriesRiderOnHorizontalMove(player)) {
+            // ROM S1 Obj18 routine 4 (Plat_Action2) calls ExitPlatform first --
+            // which clears the on-object bit when the rider walks past the
+            // pre-move edge -- but STILL runs Plat_Move then unconditionally
+            // MvSonicOnPtfm2 (docs/s1disasm/_incObj/18 Platforms.asm:74-87;
+            // sub MvSonicOnPtfm.asm:18-41). MvSonicOnPtfm2 does not test the
+            // on-object bit, so the rider receives one final post-move carry on
+            // the exit frame. Without it the rider keeps the full self-movement
+            // for that frame and ends 1px right of ROM (s1_syz2 f6846: ROM x
+            // 0x211F vs un-carried 0x2120).
+            int exitDeltaX = currentX - ridingX;
+            if (exitDeltaX != 0) {
+                player.shiftX(exitDeltaX);
+            }
+            // MvSonicOnPtfm2 also re-seats the rider's Y unconditionally on the
+            // exit frame: obY(rider) = platform_Y - 9 - obHeight (sub MvSonicOnPtfm
+            // .asm:20-36). When the platform moved vertically on the exit frame
+            // (e.g. Obj18 Plat_Nudge bob), skipping this leaves the rider one px
+            // off ROM, holding the pre-move surface Y. S1 SYZ3 f3476: ROM seats the
+            // rider to the platform's post-nudge Y=0x02DD -> centre 0x02C1, the
+            // engine kept the pre-nudge centre 0x02C0. The sloped-exit re-seat
+            // below (sampleSlopeOnRideExit) covers the slope case; this covers the
+            // flat MvSonicOnPtfm2 path used by Obj18/52/59 (which all opt into
+            // carriesAirborneRiderAfterExitPlatform).
+            if (!(provider.sampleSlopeOnRideExit(player) && instance instanceof SlopedSolidProvider)) {
+                int exitCentreY = currentY + params.offsetY()
+                        - params.groundHalfHeight() - player.getYRadius();
+                int exitNewY = exitCentreY - (player.getHeight() / 2);
+                player.setY((short) exitNewY);
+            }
+        }
         if (provider.sampleSlopeOnRideExit(player) && instance instanceof SlopedSolidProvider sloped) {
             int slopeAnchorX = currentX + params.offsetX();
             int slopeY = sampleSlopeY(player, slopeAnchorX, params.halfWidth(), sloped);
@@ -2359,7 +2432,15 @@ final class ObjectSolidContactController {
             }
             int anchorX = pieceX + params.offsetX();
             int anchorY = pieceY + params.offsetY();
-            int halfHeight = player.getAir() ? params.airHalfHeight() : params.groundHalfHeight();
+            // ROM SolidObject (S1 sub SolidObject.asm:170-176; S2 s2.asm:35158-35169)
+            // always uses d2 (object top half-height = airHalfHeight) in Solid_ChkCollision
+            // for the Y overlap window, regardless of whether Sonic is grounded or airborne.
+            // The grounded path uses d3 (groundHalfHeight) only inside MvSonicOnPtfm /
+            // MvSonicOnPtfm2 (the continued-ride re-seat), not for fresh-contact detection.
+            // Using groundHalfHeight here inflates maxTop by 1, giving distY one more than
+            // ROM (engine distY=4 vs ROM distY=3 for the staircase), causing a 1px downward
+            // snap. Use airHalfHeight for all non-riding-piece fresh contacts.
+            int halfHeight = params.airHalfHeight();
             SlopedSolidRoutineAdapter slopedAdapter = null;
             byte[] slopeData = null;
             if (instance instanceof SlopedSolidProvider sloped) {
@@ -2876,9 +2957,21 @@ final class ObjectSolidContactController {
                     return null;
                 }
             }
-            boolean rejectsZeroDistanceTopLanding = distY == 0
+            // ROM PlatformObject detects a NEW landing against the same entry
+            // surface it later snaps to (obY-8 for Obj18), while continued riding
+            // uses MvSonicOnPtfm2's obY-9. Some objects model the riding surface in
+            // getSolidParams (so distY is computed against obY-9) and recover the
+            // entry surface only through getTopLandingSnapAdjustment, which fixes the
+            // landing POSITION but not the detection TIMING. Apply that same offset
+            // to the detection band for new landings (sticky=false) so the detect
+            // surface matches the snap surface; riding (sticky=true) is unchanged.
+            int detectionDistY = distY;
+            if (!sticky) {
+                detectionDistY = distY + getTopLandingSnapAdjustment(instance, player);
+            }
+            boolean rejectsZeroDistanceTopLanding = detectionDistY == 0
                     && rejectsZeroDistanceTopSolidLanding(instance);
-            if (distY < 0 || distY >= 0x10 || rejectsZeroDistanceTopLanding) {
+            if (detectionDistY < 0 || detectionDistY >= 0x10 || rejectsZeroDistanceTopLanding) {
                 if (rejectsZeroDistanceTopLanding) {
                     notifyZeroDistanceTopSolidLandingRejected(instance, player);
                 }

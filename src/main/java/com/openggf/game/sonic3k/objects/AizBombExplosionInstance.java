@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -22,7 +23,8 @@ import java.util.List;
  * sprites after they spawn. ROM parity here is the per-wrap X correction via
  * {@code Level_repeat_offset}.
  */
-public class AizBombExplosionInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public class AizBombExplosionInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, SpawnCoordinateZeroPairRewindRecreatable {
 
     private static final int COLLISION_FLAGS = 0x8B;
     private static final int[][][] ANIM_SCRIPTS = {
@@ -34,7 +36,7 @@ public class AizBombExplosionInstance extends AbstractObjectInstance implements 
     private int posX;
     private final int posY;
     // animIndex/initialDelay are non-final so the rewind field capturer reapplies
-    // them after the codec recreates the fragment from its spawn (placeholders 0).
+    // them after spawn-coordinate recreate uses placeholders 0.
     private int animIndex;
     private int initialDelay;
 

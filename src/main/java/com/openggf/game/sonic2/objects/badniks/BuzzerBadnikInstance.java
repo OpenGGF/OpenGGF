@@ -7,8 +7,11 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -249,7 +252,7 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance {
         renderer.drawFrameIndex(animFrame, currentX, currentY, !facingLeft, false);
     }
 
-    private static final class BuzzerFlameChild extends AbstractObjectInstance {
+    private static final class BuzzerFlameChild extends AbstractObjectInstance implements RewindRecreatable {
         private final BuzzerBadnikInstance parent;
         private final int parentSlotIndex;
         private int currentX;
@@ -265,6 +268,63 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance {
             this.currentY = parent.currentY;
             this.facingLeft = parent.facingLeft;
             this.animFrame = 3;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+                return null;
+            }
+            ObjectManager objectManager = ctx.objectServices().objectManager();
+            if (objectManager == null) {
+                return null;
+            }
+            BuzzerBadnikInstance liveParent = null;
+            if (ctx.state() != null
+                    && ctx.state().objectSubclassExtra()
+                    instanceof PerObjectRewindSnapshot.BuzzerFlameRewindExtra extra) {
+                liveParent = findLiveParentBySlotForRewind(objectManager, extra.parentSlotIndex());
+            }
+            if (liveParent == null) {
+                liveParent = findNearestLiveParentForRewind(objectManager, ctx.spawn());
+            }
+            return liveParent == null ? null : new BuzzerFlameChild(ctx.spawn(), liveParent);
+        }
+
+        private static BuzzerBadnikInstance findLiveParentBySlotForRewind(
+                ObjectManager objectManager,
+                int parentSlotIndex) {
+            for (ObjectInstance instance : objectManager.getActiveObjects()) {
+                if (instance instanceof BuzzerBadnikInstance buzzer
+                        && !buzzer.isDestroyed()
+                        && buzzer.getSlotIndex() == parentSlotIndex) {
+                    return buzzer;
+                }
+            }
+            return null;
+        }
+
+        private static BuzzerBadnikInstance findNearestLiveParentForRewind(
+                ObjectManager objectManager,
+                ObjectSpawn spawn) {
+            if (spawn == null) {
+                return null;
+            }
+            BuzzerBadnikInstance best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance instance : objectManager.getActiveObjects()) {
+                if (!(instance instanceof BuzzerBadnikInstance buzzer) || buzzer.isDestroyed()) {
+                    continue;
+                }
+                long dx = buzzer.getX() - spawn.x();
+                long dy = buzzer.getY() - spawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = buzzer;
+                }
+            }
+            return best;
         }
 
         @Override

@@ -8,6 +8,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -20,7 +22,7 @@ import java.util.List;
  * Moves with configurable velocity and optional gravity.
  */
 public class BadnikProjectileInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     public enum ProjectileType {
         BUZZER_STINGER,
@@ -71,6 +73,10 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
     private int cluckerAnimTimer; // Clucker shot animation timer (counts down from duration)
     private int cluckerAnimIndex; // Clucker shot animation index (0-7, cycles through 8 frames)
     private boolean loadSubObjectInitPending;
+
+    private BadnikProjectileInstance(ObjectSpawn spawn) {
+        this(spawn, ProjectileType.BUZZER_STINGER, spawn.x(), spawn.y(), 0, 0, false, false);
+    }
 
     /**
      * Create a new projectile.
@@ -164,6 +170,27 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
             int fixedFrame) {
         this(spawn, type, x, y, xVel, yVel, gravity, hFlip, initialDelay);
         this.fixedFrame = fixedFrame;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn();
+        if (ctx.state().objectSubclassExtra()
+                instanceof PerObjectRewindSnapshot.BadnikProjectileRewindExtra extra) {
+            return new BadnikProjectileInstance(
+                    spawn,
+                    ProjectileType.valueOf(extra.projectileType()),
+                    extra.currentX(),
+                    extra.currentY(),
+                    extra.xVelocity(),
+                    extra.yVelocity(),
+                    extra.applyGravity(),
+                    extra.hFlip(),
+                    extra.initialDelay(),
+                    extra.fixedFrame());
+        }
+        // Synthetic generic-recreate probes may not carry subclass extras.
+        return new BadnikProjectileInstance(spawn);
     }
 
     /**

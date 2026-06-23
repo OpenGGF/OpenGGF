@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -18,7 +19,7 @@ import java.util.List;
  * objects while this child makes the production object graph explicit.
  */
 public final class CnzMinibossCoilInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
     private static final int CLOSED_COLLISION_FLAGS = 0x1A;
     private static final int CLOSED_COLLISION_PROPERTY = 0x70;
     private static final int OPEN_COLLISION_FLAGS = 0xA9;

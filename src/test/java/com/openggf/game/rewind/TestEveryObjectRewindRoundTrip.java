@@ -2,12 +2,8 @@ package com.openggf.game.rewind;
 
 import com.openggf.game.GameId;
 import com.openggf.game.rewind.coverage.ObjectClasspathScan;
-import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
-import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
-import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,8 +15,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -254,17 +248,4 @@ public class TestEveryObjectRewindRoundTrip {
                         + ". Shrink UNPROBED_ALLOWANCE or make objects headlessly constructable.");
     }
 
-    // =========================================================================
-    // Helpers
-    // =========================================================================
-
-    private static Set<String> allGameCodecClassNames() {
-        return Stream.of(
-                new Sonic1ObjectRegistry().dynamicRewindCodecs(),
-                new Sonic2ObjectRegistry().dynamicRewindCodecs(),
-                new Sonic3kObjectRegistry().dynamicRewindCodecs()
-        ).flatMap(List::stream)
-         .map(DynamicObjectRewindCodec::className)
-         .collect(Collectors.toUnmodifiableSet());
-    }
 }

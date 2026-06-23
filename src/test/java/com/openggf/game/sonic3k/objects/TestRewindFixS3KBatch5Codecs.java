@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
@@ -12,23 +13,19 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link Sonic3kObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-5 S3K object that
- * was previously dropped on a held-rewind restore: the full MHZ end-boss family
- * (boss, capsule, palette fade, arena helper, and every parent-relinked child)
- * plus the CNZ bumper/cannon/cylinder traversal objects and the CNZ lights-flash
- * child.
+ * Verifies that every batch-5 S3K object that was previously dropped on a
+ * held-rewind restore still exposes a dynamic rewind recreate path: either a
+ * registered codec or the Phase-2 {@link RewindRecreatable} generic path.
  *
  * <p>Batch 5 has no accept-drop objects: each listed class is genuinely
  * recreated on restore (gameplay-critical hazards/structures or persistent
@@ -36,21 +33,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * transient-cosmetic drops to exclude here.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
+ * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
  * session. Full session round-trip is handled by the rewind coverage guard.
  */
 class TestRewindFixS3KBatch5Codecs {
 
     private static Set<String> codecClassNames() {
-        Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = new Sonic3kObjectRegistry().dynamicRewindCodecs();
-        for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
+        return DeletedDynamicRewindCodecs.classNames();
+    }
+
+    private static boolean hasDynamicRecreatePath(String className, Set<String> codecNames) {
+        if (codecNames.contains(className)) {
+            return true;
         }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
-            names.add(codec.className());
+        try {
+            return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
         }
-        return names;
     }
 
     @Test
@@ -79,8 +79,22 @@ class TestRewindFixS3KBatch5Codecs {
                 MhzEndBossDefeatFragmentChild.class.getName());
 
         for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+            assertTrue(hasDynamicRecreatePath(name, names),
+                    "missing rewind recreate path for " + name);
         }
+        assertFalse(names.contains(MhzEndBossArenaHelperInstance.class.getName()),
+                "MhzEndBossArenaHelperInstance must use the RewindRecreatable generic path, not an explicit codec");
+        assertFalse(names.contains(MhzEndBossRobotnikHeadChild.class.getName()),
+                "MhzEndBossRobotnikHeadChild must use the RewindRecreatable generic path, not an explicit codec");
+        assertFalse(names.contains(MhzEndBossSpikeChild.class.getName()),
+                "MhzEndBossSpikeChild must use the RewindRecreatable generic path, not an explicit codec");
+        assertFalse(names.contains(MhzEndBossVisualChild.class.getName()),
+                "MhzEndBossVisualChild must use the RewindRecreatable generic path, not an explicit codec");
+        assertFalse(names.contains(MhzEndBossWeatherMachineChild.class.getName()),
+                "MhzEndBossWeatherMachineChild must use the RewindRecreatable generic path, not an explicit codec");
+        assertFalse(names.contains(MhzEndBossWeatherVisualChild.class.getName()),
+                "MhzEndBossWeatherVisualChild must use the RewindRecreatable generic path, not an explicit codec");
+        assertFalse(names.contains(MhzEndBossHitProxyChild.class.getName()),
+                "MhzEndBossHitProxyChild must use the RewindRecreatable generic path, not an explicit codec");
     }
 }

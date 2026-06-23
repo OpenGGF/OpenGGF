@@ -285,6 +285,7 @@ public record PerObjectRewindSnapshot(
             int lastInteractObjectId,
             int diagnosticS3kInteractWord,
             int normalFrameCount,
+            int approachFrameCount,
             int sidekickCount,
             int normalPushingGraceFrames,
             boolean suppressNextAirbornePushFollowSteering,

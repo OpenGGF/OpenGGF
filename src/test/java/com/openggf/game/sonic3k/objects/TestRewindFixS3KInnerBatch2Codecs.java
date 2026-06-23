@@ -1,19 +1,19 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic3kObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-inner2 nested-class
- * child that was previously dropped on a held-rewind restore.
+ * now exposes either a dynamic rewind recreate codec or the generic
+ * {@code RewindRecreatable} path for every batch-inner2 nested-class child that
+ * was previously dropped on a held-rewind restore.
  *
  * <p>These are static/non-static nested children (MGZ miniboss spire/arm, gumball
  * exit trigger, MGZ stone chip, MHZ1/MHZ2 cutscene helpers, HCZ miniboss rocket
@@ -24,41 +24,47 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * capturer reapplies them after recreate.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
+ * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
  * session. Full session round-trip coverage is enforced by the rewind coverage
  * guard ({@code TestRewindCoverageGuard}).
  */
 class TestRewindFixS3KInnerBatch2Codecs {
 
     private static Set<String> codecClassNames() {
-        Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = new Sonic3kObjectRegistry().dynamicRewindCodecs();
-        for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
-            names.add(codec.className());
-        }
-        return names;
+        return DeletedDynamicRewindCodecs.classNames();
     }
 
     @Test
     void registersCodecsForBatchInner2S3KChildren() {
         Set<String> names = codecClassNames();
 
-        List<String> required = List.of(
+        List<String> required = List.of();
+
+        for (String name : required) {
+            assertTrue(names.contains(name),
+                    "missing rewind recreate codec for " + name);
+        }
+    }
+
+    @Test
+    void migratedInner2ChildrenUseGenericRecreateInsteadOfExplicitCodecs() throws Exception {
+        Set<String> names = codecClassNames();
+
+        List<String> genericRecreateClasses = List.of(
                 "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild",
-                "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
                 "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ExitTriggerChild",
                 "com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance$HeadTriggerStoneChipChild",
                 "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper",
                 "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
                 "com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild",
+                "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
                 "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild");
 
-        for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+        for (String className : genericRecreateClasses) {
+            assertFalse(names.contains(className),
+                    className + " must restore through RewindRecreatable generic recreate");
+            assertTrue(com.openggf.level.objects.RewindRecreatable.class.isAssignableFrom(Class.forName(className)),
+                    className + " must opt into generic recreate");
         }
     }
 }

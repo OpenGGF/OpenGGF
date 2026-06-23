@@ -3,62 +3,42 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.CPZBossDripper;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic2ObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-5 S2 object that
- * was previously dropped on a held-rewind restore.
+ * reflects the current batch-5 S2 dynamic rewind codec inventory.
  *
- * <p>Batch-5 adds parent/sibling-relink codecs for the CPZ-boss Dripper and
- * PipeSegment, the HTZ Rexon head, and the Egg-prison button, plus exact-spawn
- * codecs for the destroyed Egg-prison body, the ARZ leaf particle, and the
- * act-results screen. All seven are gameplay-relevant (boss progression, solid
- * bodies, hazard/score state, score tally + level-transition flow), so none are
- * accept-drop.
+ * <p>The original batch-5 codecs for CPZ-boss Dripper/PipeSegment, Rexon head,
+ * Egg-prison button, destroyed Egg-prison body, ARZ leaf particle, and act
+ * results have been deleted in favour of graph-tested or self-contained
+ * {@code RewindRecreatable} generic recreate paths.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
+ * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
  * session. Full session round-trip is handled by the rewind coverage guard.
  */
 class TestRewindFixS2Batch5Codecs {
 
-    private static Set<String> codecClassNames() {
-        Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = new Sonic2ObjectRegistry().dynamicRewindCodecs();
-        for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
-        }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
-            names.add(codec.className());
-        }
-        return names;
-    }
-
     @Test
-    void registersCodecsForBatch5S2Objects() {
-        Set<String> names = codecClassNames();
+    void batch5S2ObjectsKeepGenericRecreateCoverage() {
+        List<Class<?>> deleted = List.of(
+                CPZBossDripper.class,
+                CPZBossPipeSegment.class,
+                RexonHeadObjectInstance.class,
+                EggPrisonButtonObjectInstance.class,
+                LeafParticleObjectInstance.class,
+                DestroyedEggPrisonObjectInstance.class,
+                ResultsScreenObjectInstance.class);
 
-        List<String> required = List.of(
-                CPZBossDripper.class.getName(),
-                CPZBossPipeSegment.class.getName(),
-                RexonHeadObjectInstance.class.getName(),
-                DestroyedEggPrisonObjectInstance.class.getName(),
-                EggPrisonButtonObjectInstance.class.getName(),
-                LeafParticleObjectInstance.class.getName(),
-                ResultsScreenObjectInstance.class.getName());
-
-        for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+        for (Class<?> type : deleted) {
+            assertTrue(RewindRecreatable.class.isAssignableFrom(type),
+                    type.getName() + " must restore through RewindRecreatable generic recreate");
         }
     }
 }

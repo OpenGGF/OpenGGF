@@ -346,6 +346,16 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance {
         childComponents.add(wreckingBall);
     }
 
+    void adoptWreckingBallForRewind(GHZBossWreckingBall ball) {
+        wreckingBall = ball;
+        childComponents.removeIf(component ->
+                component instanceof GHZBossWreckingBall existing
+                        && (existing != ball || existing.isDestroyed()));
+        if (ball != null && !childComponents.contains(ball)) {
+            childComponents.add(ball);
+        }
+    }
+
     @Override
     public int getPriorityBucket() {
         return 3; // ROM: obPriority = 3

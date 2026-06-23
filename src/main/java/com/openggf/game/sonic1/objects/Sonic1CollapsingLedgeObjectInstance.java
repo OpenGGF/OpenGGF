@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -48,7 +49,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/1A Collapsing Ledge (part 1).asm
  */
 public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable {
 
     // From disassembly: move.w #$30,d1 (half-width for platform collision)
     private static final int PLATFORM_HALF_WIDTH = 0x30;
@@ -375,6 +376,37 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isTopSolidOnly() {
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM PlatformObject/Plat_NoXCheck_AltY (docs/s1disasm/sonic.lst 0x7B00-0x7B0A):
+        //   sub.w d1,d0            ; d0 = platform_top - sonic_bottom_edge
+        //   bhi.w  Plat_Exit       ; exit if d0 > 0 (Sonic above platform)
+        //   cmpi.w #-16,d0
+        //   blo.w  Plat_Exit       ; UNSIGNED lower vs $FFF0 -> also exits when d0 = 0
+        // The blo (unsigned) comparison makes the exact-touch case d0 = 0 (engine
+        // distY == 0) a NON-landing: the landing band is d0 in [-16,-1] (strict
+        // penetration), not [-16,0]. Verified by BizHawk capture of the GHZ1
+        // collapsing-ledge landing (BK2 3361 d0=0 keeps falling; BK2 3362 d0=-9
+        // lands) — engine was landing one frame early at the touch frame.
+        return true;
+    }
+
+    @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // ROM Ledge_ChkTouch passes #96/2 (= 0x30) directly as SlopeObject's d1
+        // (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:31-33),
+        // and SlopeObject does the X-range check on that d1 with no narrowing
+        // (docs/s1disasm/_incObj/sub PlatformObject.asm:133-139). PLATFORM_HALF_WIDTH
+        // (0x30) is therefore already the standable top-landing width and must not
+        // receive the generic SolidObjectFull +$B narrowing (which would shrink it
+        // to 0x25). Without this, a player falling onto the ledge near its left/right
+        // edge lands several frames late: s1_ghz1 f2790 (Sonic at relX=2 within the
+        // ledge) was rejected as out-of-width until relX=12 at f2793, so the engine
+        // overshot the landing by 3 frames. Matches the sibling collapsing FLOOR
+        // (Sonic1CollapsingFloorObjectInstance) which opts in for the same reason.
         return true;
     }
 

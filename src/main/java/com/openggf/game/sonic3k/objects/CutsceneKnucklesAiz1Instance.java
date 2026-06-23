@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -40,7 +41,7 @@ import java.util.logging.Logger;
  *  10  (0x0A) - Laugh: animate laugh for 0x3F frames, then start exit walk
  *  12  (0x0C) - Exit: walk offscreen, unlock controls, spawn title card, delete self
  */
-public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance {
+public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(CutsceneKnucklesAiz1Instance.class.getName());
 

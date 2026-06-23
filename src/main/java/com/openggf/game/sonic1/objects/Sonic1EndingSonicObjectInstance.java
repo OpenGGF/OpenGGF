@@ -2,10 +2,13 @@ package com.openggf.game.sonic1.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -35,7 +38,8 @@ import java.util.logging.Logger;
  * </pre>
  * Reference: docs/s1disasm/_incObj/87 Ending Sequence Sonic.asm
  */
-public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance {
+public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance
+        implements SpawnCoordinateRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1EndingSonicObjectInstance.class.getName());
 
     // ========================================================================
@@ -96,15 +100,24 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance {
 
     /** Reference to the spawned emerald master for radius checking. */
     private Sonic1EndingEmeraldsObjectInstance emeraldMaster;
-    // Un-final so an exactSpawnCodec recreate does not leave an un-restorable final
+    // Un-final so generic recreate does not leave an un-restorable final
     // reference; children are re-spawned via the emeraldsSpawned latch and the ending
     // sequence tolerates stale/empty child refs (advances on timers/anim commands).
     private List<Sonic1EndingEmeraldsObjectInstance> emeralds = new ArrayList<>(6);
+
+    public Sonic1EndingSonicObjectInstance() {
+        this(0, 0);
+    }
 
     public Sonic1EndingSonicObjectInstance(int x, int y) {
         super(null, "EndSonic");
         this.currentX = x;
         this.currentY = y;
+    }
+
+    @Override
+    public ObjectSpawn getSpawn() {
+        return new ObjectSpawn(currentX, currentY, Sonic1ObjectIds.END_SONIC, 0, 0, false, 0);
     }
 
     private void ensureRenderer() {

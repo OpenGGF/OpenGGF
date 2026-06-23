@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.PatrolMovementHelper;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -38,7 +39,7 @@ import java.util.List;
  *   <li>6 (Moto_Delete): Cleanup</li>
  * </ul>
  */
-public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance {
+public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
 
     // From disassembly: obColType = $C (enemy, collision size index $C)
     private static final int COLLISION_SIZE_INDEX = 0x0C;

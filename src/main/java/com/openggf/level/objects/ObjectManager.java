@@ -55,7 +55,6 @@ import java.util.Map;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
@@ -64,11 +63,6 @@ public class ObjectManager {
     private static final int BUCKET_COUNT = RenderPriority.MAX - RenderPriority.MIN + 1;
     static final int ANIM_ROLL = 0x02;
     static final int ANIM_SPINDASH = 0x09;
-    private static final List<DynamicObjectRewindCodec> TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS =
-            new CopyOnWriteArrayList<>();
-    private static final List<DynamicObjectRewindCodec> SHARED_REWIND_DYNAMIC_OBJECT_CODECS =
-            ObjectRewindDynamicCodecs.sharedCodecs();
-
     private final ObjectPlacementController placement;
     private final ObjectRegistry registry;
     private final GraphicsManager graphicsManager;
@@ -150,7 +144,7 @@ public class ObjectManager {
     private final Map<ObjectSpawn, int[]> reservedChildSlots = new IdentityHashMap<>();
 
     // Rewind: captured DynamicObjectEntry payloads for player-bound dynamics
-    // (Shield, Stars) that are NOT recreated by the codec on restore. The
+    // (Shield, Stars) that are NOT recreated by generic dynamic restore. The
     // post-restore callback in
     // AbstractPlayableSprite#refreshPowerUpObjectsAfterRewindRestore relinks a
     // live matching shield when one exists, otherwise re-spawns via the power-up
@@ -191,10 +185,10 @@ public class ObjectManager {
     // reconstructed during restore. The reconstructed parent wires its back-references
     // (childComponents, named child fields) to THESE instances; the step-4 dynamic-object
     // reconciliation loop then adopts each one in place — registering it at its captured slot
-    // and applying its EXACT captured state — instead of recreating a duplicate via a codec.
+    // and applying its EXACT captured state — instead of recreating a duplicate via generic restore.
     // This gives exact-state fidelity for construction children while keeping the parent's
     // back-references valid (they point at the very instances the loop restores onto), and
-    // avoids the double-spawn that a codec recreate would cause. Cleared at the start and end
+    // avoids the double-spawn that generic recreate would cause. Cleared at the start and end
     // of each restore so it never leaks instances across passes.
     private final List<AbstractObjectInstance> rewindReconstructionChildren = new ArrayList<>();
     private boolean rewindReconstructionChildCapture;
@@ -739,6 +733,7 @@ public class ObjectManager {
                     if (spawn != null) {
                         freeAllReservedChildSlots(spawn);
                         placement.clearStayActive(spawn);
+                        resetRespawnStateForOffscreenSelfDelete(instance, spawn);
                         dispatchDestroyRemoveFromActive(instance, spawn);
                         removeActiveObject(spawn);
                     } else {
@@ -781,6 +776,7 @@ public class ObjectManager {
                 if (inst.isDestroyed()) {
                     inst.onUnload();
                     placement.clearStayActive(spawn);
+                    resetRespawnStateForOffscreenSelfDelete(inst, spawn);
                     dispatchDestroyRemoveFromActive(inst, spawn);
                     removeActiveObject(spawn);
                     objectsRemoved = true;
@@ -795,6 +791,7 @@ public class ObjectManager {
                 if (inst.isDestroyed()) {
                     inst.onUnload();
                     placement.clearStayActive(spawn);
+                    resetRespawnStateForOffscreenSelfDelete(inst, spawn);
                     dispatchDestroyRemoveFromActive(inst, spawn);
                     removeActiveObject(spawn);
                     objectsRemoved = true;
@@ -892,6 +889,7 @@ public class ObjectManager {
                     if (spawn != null) {
                         freeAllReservedChildSlots(spawn);
                         placement.clearStayActive(spawn);
+                        resetRespawnStateForOffscreenSelfDelete(instance, spawn);
                         dispatchDestroyRemoveFromActive(instance, spawn);
                         removeActiveObject(spawn);
                     } else {
@@ -939,6 +937,7 @@ public class ObjectManager {
                 if (inst.isDestroyed()) {
                     inst.onUnload();
                     placement.clearStayActive(spawn);
+                    resetRespawnStateForOffscreenSelfDelete(inst, spawn);
                     dispatchDestroyRemoveFromActive(inst, spawn);
                     removeActiveObject(spawn);
                     objectsRemoved = true;
@@ -954,6 +953,7 @@ public class ObjectManager {
                 if (inst.isDestroyed()) {
                     inst.onUnload();
                     placement.clearStayActive(spawn);
+                    resetRespawnStateForOffscreenSelfDelete(inst, spawn);
                     dispatchDestroyRemoveFromActive(inst, spawn);
                     removeActiveObject(spawn);
                     objectsRemoved = true;
@@ -1759,7 +1759,7 @@ public class ObjectManager {
      * <p>
      * The ring is added to {@link #dynamicObjects} (NOT {@code activeObjects}):
      * rewind capture restores {@code dynamicObjects} entries through the
-     * {@code LostRingRewindCodec} dynamic recreate path (Stage 4.1), whereas
+     * {@code LostRingObjectInstance} generic recreate path, whereas
      * {@code activeObjects} entries are restored through the placement registry —
      * a lost ring placed in {@code activeObjects} would be recreated by the wrong
      * path. {@code execOrder} is wired only when same-frame execution is needed.
@@ -2605,6 +2605,40 @@ public class ObjectManager {
         }
     }
 
+    /**
+     * Mirror of the S1 {@code RememberState}/{@code Cat_Despawn} respawn-table
+     * bit-7 clear for objects that delete themselves off-screen instead of
+     * routing through {@link #unloadCounterBasedOutOfRange}.
+     * <p>
+     * Some S1 objects own their {@code out_of_range} tail (they set
+     * {@link ObjectInstance#usesCustomOutOfRangeCheck()} with a no-op
+     * {@link ObjectInstance#isCustomOutOfRange(int)}) and instead call
+     * {@code setDestroyedByOffscreen()} from their own routine — e.g. the
+     * Caterkiller, whose {@code Cat_Despawn} (docs/s1disasm/_incObj/78 Badnik -
+     * Caterkiller.asm:139-148) runs after its fragment-entry check and clears
+     * {@code bit 7} of its {@code v_objstate} entry so the placement cursor
+     * re-spawns it when the player returns. Those self-deletes reach the
+     * destroyed-removal path, which previously only called
+     * {@code clearStayActive} and left the counter bit latched, so the badnik
+     * never respawned. Reset the placement counter exactly as the
+     * out_of_range path does, but only for off-screen self-deletes
+     * ({@code destroyedRespawnable}); player kills keep the bit set and must
+     * not respawn.
+     */
+    private void resetRespawnStateForOffscreenSelfDelete(ObjectInstance instance, ObjectSpawn spawn) {
+        if (spawn == null
+                || !placement.isCounterBasedRespawn()
+                || !instance.isDestroyedRespawnable()
+                || !instance.clearsRespawnStateOnCounterBasedOutOfRange()) {
+            return;
+        }
+        placement.clearCounterForSpawn(spawn);
+        // ROM parity: bit 7 is cleared but the cursor may still sit between this
+        // spawn's entry and the window edge, so keep it dormant until ObjPosLoad
+        // reprocesses it (matches unloadCounterBasedOutOfRange).
+        placement.markDormant(spawn);
+    }
+
     private boolean unloadCounterBasedOutOfRange(ObjectInstance instance, ObjectSpawn spawn,
             int expectedSlotIndex, int cameraX) {
         ObjectSpawn positionSpawn = spawn != null ? spawn : instance.getSpawn();
@@ -3160,8 +3194,8 @@ public class ObjectManager {
      * restore (Track C). Other subsystems should do the same.
      *
      * <p>ObjectPlacementController-managed objects are restored through their original spawn.
-     * Non-ObjectPlacementController dynamic objects are restored when their class has a registered
-     * {@link DynamicObjectRewindCodec}; unsupported entries remain diagnostic-only.
+     * Non-ObjectPlacementController dynamic objects are restored when their class implements
+     * {@link RewindRecreatable}; unsupported entries remain diagnostic-only.
      */
     public com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot> rewindSnapshottable() {
         return new com.openggf.game.rewind.RewindSnapshottable<>() {
@@ -3266,7 +3300,7 @@ public class ObjectManager {
             @Override
             public void restore(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot s) {
                 // The restore is TWO-PHASE so object-reference resolution is order-independent.
-                //   Phase 1 recreates (reuse / adopt / codec / genericRecreate / registry) every
+                //   Phase 1 recreates (reuse / adopt / genericRecreate / registry) every
                 //           captured object — active and dynamic — and registers each under its
                 //           captured ObjectRefId in a fresh restore identity table, WITHOUT yet
                 //           applying any field blob.
@@ -3278,7 +3312,7 @@ public class ObjectManager {
                 // instance (or threw). See TestTwoPhaseRestoreOrdering.
                 //
                 // The restore table registers the live players (unchanged across a restore) plus
-                // every restored object; it is the resolution table phase 2 hands to the codecs.
+                // every restored object; it is the resolution table phase 2 hands to restore.
                 com.openggf.game.rewind.identity.RewindIdentityTable restoreTable =
                         new com.openggf.game.rewind.identity.RewindIdentityTable();
                 registerPlayersInto(restoreTable);
@@ -3405,7 +3439,7 @@ public class ObjectManager {
                 // 5. PHASE 1 (dynamic objects): recreate each captured dynamic object and register
                 //    its captured id, still deferring field-blob application to phase 2.
                 // Stop routing further child spawns into the reconstruction-children scratch:
-                // any spawns triggered below (e.g. by a codec's recreate) are normal restore
+                // any spawns triggered below (e.g. by a recreate hook) are normal restore
                 // wiring, not reconstruction side effects to be adopted.
                 rewindReconstructionChildCapture = false;
                 for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry
@@ -3414,7 +3448,7 @@ public class ObjectManager {
                     // already created and back-references. Adopting it in place gives exact
                     // captured state AND keeps the parent's child reference valid, with no
                     // double-spawn. Routine-spawned children (no construction counterpart) fall
-                    // back to the codec recreate path.
+                    // back to the generic recreate path.
                     AbstractObjectInstance adopted = adoptRewindReconstructionChild(entry.className());
                     ObjectInstance inst = adopted != null ? adopted : recreateDynamicObject(entry);
                     if (inst instanceof AbstractObjectInstance aoi) {
@@ -3440,6 +3474,7 @@ public class ObjectManager {
                             assignRewindObjectId(aoi, aoi.getSpawn());
                         }
                         dynamicObjects.add(aoi);
+                        activeObjectsCacheDirty = true;
                         int execIdx = execIndexForSlot(aoi.getSlotIndex());
                         if (execIdx >= 0 && execIdx < execOrder.length) {
                             execOrder[execIdx] = aoi;
@@ -3772,7 +3807,7 @@ public class ObjectManager {
     }
 
     static boolean isRewindRestorableDynamicObject(ObjectInstance inst, ObjectRegistry registry) {
-        return rewindDynamicObjectCodecFor(inst, registry).isPresent();
+        return inst instanceof RewindRecreatable;
     }
 
     ObjectServices objectServicesForRewind() {
@@ -3792,7 +3827,7 @@ public class ObjectManager {
      * Enqueues a captured {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry}
      * for a player-bound dynamic class whose post-restore re-spawn happens
      * after object-manager restore (currently Shield + Stars). Called by the
-     * codec's recreate path.
+     * recreate path.
      */
     void enqueuePendingPlayerBoundEntry(Class<?> baseType,
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
@@ -3849,70 +3884,12 @@ public class ObjectManager {
         return null;
     }
 
-    static void registerRewindDynamicObjectCodecForTest(DynamicObjectRewindCodec codec) {
-        TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS.add(codec);
-    }
-
-    static void clearRewindDynamicObjectCodecsForTest() {
-        TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS.clear();
-    }
-
-    private static Optional<DynamicObjectRewindCodec> rewindDynamicObjectCodecFor(
-            ObjectInstance inst, ObjectRegistry registry) {
-        for (DynamicObjectRewindCodec codec : TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS) {
-            if (codec.supports(inst)) {
-                return Optional.of(codec);
-            }
-        }
-        for (DynamicObjectRewindCodec codec : SHARED_REWIND_DYNAMIC_OBJECT_CODECS) {
-            if (codec.supports(inst)) {
-                return Optional.of(codec);
-            }
-        }
-        for (DynamicObjectRewindCodec codec : registryDynamicRewindCodecs(registry)) {
-            if (codec.supports(inst)) {
-                return Optional.of(codec);
-            }
-        }
-        return Optional.empty();
-    }
-
-    private static Optional<DynamicObjectRewindCodec> rewindDynamicObjectCodecForClassName(
-            String className, ObjectRegistry registry) {
-        for (DynamicObjectRewindCodec codec : TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS) {
-            if (codec.className().equals(className)) {
-                return Optional.of(codec);
-            }
-        }
-        for (DynamicObjectRewindCodec codec : SHARED_REWIND_DYNAMIC_OBJECT_CODECS) {
-            if (codec.className().equals(className)) {
-                return Optional.of(codec);
-            }
-        }
-        for (DynamicObjectRewindCodec codec : registryDynamicRewindCodecs(registry)) {
-            if (codec.className().equals(className)) {
-                return Optional.of(codec);
-            }
-        }
-        return Optional.empty();
-    }
-
-    private static List<DynamicObjectRewindCodec> registryDynamicRewindCodecs(ObjectRegistry registry) {
-        return registry == null ? List.of() : registry.dynamicRewindCodecs();
-    }
-
     private ObjectInstance recreateDynamicObject(
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
         DynamicObjectRecreateContext context = new DynamicObjectRecreateContext(this);
-        Optional<DynamicObjectRewindCodec> codec =
-                rewindDynamicObjectCodecForClassName(entry.className(), registry);
-        if (codec.isPresent()) {
-            return codec.get().recreate(context, entry);
-        }
-        // Phase-2 generic recreate (Task 4): opt-in fallback for classes that explicitly
-        // implement RewindRecreatable but have no registered codec. Classes without a codec
-        // AND without RewindRecreatable still drop on restore (unchanged behavior); broadly
-        // routing every codec-less class through genericRecreate is Task 6's job.
+        // Phase-2 generic recreate: only classes that explicitly implement
+        // RewindRecreatable opt into dynamic restore. Unsupported dynamic classes
+        // still drop on restore and remain visible in coverage diagnostics.
         if (isRewindRecreatableClassName(entry.className())) {
             return ObjectRewindDynamicCodecs.genericRecreate(entry, context);
         }
@@ -3960,7 +3937,7 @@ public class ObjectManager {
      * {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry} with
      * the same logical child the parent re-spawned. Returns {@code null} when no construction
      * child of that class is pending (e.g. routine-spawned children, which fall back to the
-     * codec recreate path).
+     * generic recreate path).
      */
     private AbstractObjectInstance adoptRewindReconstructionChild(String className) {
         if (className == null) {

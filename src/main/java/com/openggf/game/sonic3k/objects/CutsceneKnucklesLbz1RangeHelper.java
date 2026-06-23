@@ -5,6 +5,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -17,7 +19,7 @@ import java.util.List;
  * <p>ROM reference: {@code loc_627C6}, with player box
  * {@code word_62822 = -$40,+$80,-$30,+$60}.
  */
-public final class CutsceneKnucklesLbz1RangeHelper extends AbstractObjectInstance {
+public final class CutsceneKnucklesLbz1RangeHelper extends AbstractObjectInstance implements RewindRecreatable {
     private static final int LEFT = -0x40;
     private static final int RIGHT = 0x80;
     private static final int TOP = -0x30;
@@ -32,6 +34,22 @@ public final class CutsceneKnucklesLbz1RangeHelper extends AbstractObjectInstanc
         this.parent = parent;
         this.x = x;
         this.y = y;
+    }
+
+    CutsceneKnucklesLbz1RangeHelper(ObjectSpawn spawn) {
+        this(null, spawn != null ? spawn.x() : 0, spawn != null ? spawn.y() : 0);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        CutsceneKnucklesLbz1Instance liveParent = CutsceneKnucklesLbz1RewindLinks.singleLiveParent(ctx);
+        if (liveParent == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        int capturedX = spawn != null ? spawn.x() : x;
+        int capturedY = spawn != null ? spawn.y() : y;
+        return new CutsceneKnucklesLbz1RangeHelper(liveParent, capturedX, capturedY);
     }
 
     @Override

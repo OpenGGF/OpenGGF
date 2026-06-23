@@ -9,9 +9,9 @@ import java.util.List;
  *
  * <p>Used by {@code TestGenericRecreate} to prove that the production
  * {@code ObjectManager} capture→restore path reaches
- * {@link ObjectRewindDynamicCodecs#genericRecreate} for a class that has NO registered
- * {@link DynamicObjectRewindCodec}. The class is a top-level type (not an inner class)
- * so {@code Class.forName(entry.className())} in {@code genericRecreate} resolves it.
+ * {@link ObjectRewindDynamicCodecs#genericRecreate} for a class without a registered
+ * per-object restore hook. The class is a top-level type (not an inner class) so
+ * {@code Class.forName(entry.className())} in {@code genericRecreate} resolves it.
  *
  * <p>It carries a single mutable {@code marker} scalar so the test can assert that
  * the recreated instance is non-null and the correct type after a real restore.

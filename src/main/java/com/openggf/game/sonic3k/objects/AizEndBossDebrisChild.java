@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -20,7 +21,8 @@ import java.util.List;
  * <p>ROM attributes: word_47B68 — priority $180 (bucket 3), size $10x$10.
  * Inherits art_tile from parent (ArtTile_AIZEndBoss, priority=1).
  */
-public class AizEndBossDebrisChild extends AbstractObjectInstance {
+public class AizEndBossDebrisChild extends AbstractObjectInstance
+        implements SpawnCoordinateZeroScalarArgsRewindRecreatable {
 
     // ROM: Obj_VelocityIndex entries 0-5, used with Set_IndexedVelocity d0=0
     // Each child's subtype (0,2,4,6,8,$A) indexes as subtype*2 bytes
@@ -50,7 +52,7 @@ public class AizEndBossDebrisChild extends AbstractObjectInstance {
     private static final int GRAVITY = 0x38;
 
     // mappingFrame/xVel are non-final so the rewind field capturer reapplies them
-    // after the codec recreates the debris from its spawn (placeholder index 0).
+    // after spawn-coordinate recreate uses placeholder index 0.
     private int mappingFrame;
     private int xVel;  // 8:8 fixed-point
     private int yVel;        // 8:8 fixed-point, modified by gravity each frame

@@ -5,6 +5,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -20,7 +21,8 @@ import java.util.List;
  *
  * Uses ObjectMoveAndFall for gravity. Deleted when Y >= 0x6F0.
  */
-public class MCZFallingDebrisInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public class MCZFallingDebrisInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, SpawnCoordinateZeroScalarArgsRewindRecreatable {
 
     // ROM: ObjectMoveAndFall adds $38 to y_vel, then subi.w #$28,y_vel(a0)
     // sub2_y_pos at SST offset $12 aliases y_vel. Net gravity = $38 - $28 = $10
@@ -31,8 +33,8 @@ public class MCZFallingDebrisInstance extends AbstractObjectInstance implements 
     private static final int FRAME_STONE = 0x0D; // Map_obj57_014C: 2x2 rock
     private static final int FRAME_SPIKE = 0x14; // Map_obj57_01C2: 1x4 stalactite
 
-    // Non-final so GenericFieldCapturer captures/restores it across held rewind: the codec
-    // recreates with a placeholder (false) and the captured stone/spike value is reapplied
+    // Non-final so GenericFieldCapturer captures/restores it across held rewind: the
+    // recreate hook uses a placeholder (false) and the captured stone/spike value is reapplied
     // on restore (the ObjectSpawn carries no spike bit, so it is not spawn-derivable).
     private boolean isSpike;
     private int posX;
@@ -48,6 +50,10 @@ public class MCZFallingDebrisInstance extends AbstractObjectInstance implements 
         this.yFixed = y << 16;
         this.yVel = 0;
         updateDynamicSpawn(posX, posY);
+    }
+
+    MCZFallingDebrisInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), false);
     }
 
     @Override

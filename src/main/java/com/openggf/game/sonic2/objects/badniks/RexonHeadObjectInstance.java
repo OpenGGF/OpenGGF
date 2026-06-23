@@ -9,6 +9,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -31,7 +33,7 @@ import java.util.List;
  * - DEATH_DROP: Fall off screen if parent body destroyed
  */
 public class RexonHeadObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable {
 
     // Collision size from disassembly (first 4 heads: 0x0B, last head: 0x8B with HURT flag)
     private static final int COLLISION_SIZE_NORMAL = 0x0B;
@@ -121,8 +123,8 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
     }
     private final RexonBadnikInstance parent;
     // headIndex/headNumber/xFlip are non-final so GenericFieldCapturer captures them and
-    // restoreObjectRewindState reapplies them after the rewind codec recreates this head
-    // (the codec passes placeholders; these values are not derivable from the ObjectSpawn).
+    // restoreObjectRewindState reapplies them after the rewind recreate hook rebuilds this head
+    // (the hook passes placeholders; these values are not derivable from the ObjectSpawn).
     private int headIndex;  // 0, 2, 4, 6, or 8
     private int headNumber; // 0-4 for array indexing
     private boolean xFlip;
@@ -179,10 +181,37 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         // Initialize phase from byte_374BE based on head number (s2.asm:73866-73868)
         this.oscillationPhase = INITIAL_PHASES[headNumber];
         this.phaseDirection = 1;  // Start incrementing (objoff_38 = 1)
-        this.oscillationFrameCounter = 0;
+        // Obj97_Init seeds objoff_39 with the head number, not 0
+        // (s2.asm:74316-74318: d0 = objoff_2E >> 1 = headNumber, then
+        // move.b d0,objoff_39). The phase/oscillation update only runs on the
+        // frame where (objoff_39 + 1) & 3 == 0 (Obj97_Normal, s2.asm:74407-74414),
+        // so each head advances its part of the wave on a different frame of the
+        // 4-frame cycle. Seeding every head at 0 collapsed that stagger and left
+        // the wave a couple of pixels off; in HTZ2 that nudged the attackable tip
+        // head just outside Sonic's 16x16 touch band, so the rolling kill bounce
+        // the ROM lands (Touch_KillEnemy "big bounce" neg.w y_vel, s2.asm:85385)
+        // was missed (HTZ2 trace f1078: y_speed should flip +0568 -> -0568).
+        this.oscillationFrameCounter = headNumber;
         this.projectileTimer = PROJECTILE_INITIAL_DELAY;
         this.destroyed = false;
         this.linkedHead = null;
+    }
+
+    private RexonHeadObjectInstance() {
+        this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), null, 0, 0, 0, false);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        RexonBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestRexon(ctx);
+        ObjectSpawn spawn = ctx.spawn();
+        if (parent == null) {
+            return null;
+        }
+        RexonHeadObjectInstance head =
+                new RexonHeadObjectInstance(spawn, parent, spawn.x(), spawn.y(), 0, false);
+        parent.attachHeadForRewind(head);
+        return head;
     }
 
     /**
@@ -195,6 +224,10 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
      */
     public void setLinkedHead(RexonHeadObjectInstance head) {
         this.linkedHead = head;
+    }
+
+    int rewindHeadIndex() {
+        return headIndex;
     }
 
     @Override

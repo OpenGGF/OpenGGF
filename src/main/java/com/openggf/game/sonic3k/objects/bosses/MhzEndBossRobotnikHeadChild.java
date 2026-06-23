@@ -7,6 +7,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -19,7 +22,7 @@ import java.util.List;
  * frames 0/1/2/3, inherits child priority, and deletes when parent {@code $38}
  * bit 5 is set during the post-capsule ship handoff.
  */
-public final class MhzEndBossRobotnikHeadChild extends AbstractObjectInstance {
+public final class MhzEndBossRobotnikHeadChild extends AbstractObjectInstance implements RewindRecreatable {
     private static final int Y_OFFSET = -0x1C;
     private static final int PARENT_FLAGS_OFFSET = 0x38;
     private static final int DELETE_WHEN_PARENT_FLAG = 0x20;
@@ -37,12 +40,34 @@ public final class MhzEndBossRobotnikHeadChild extends AbstractObjectInstance {
     private int rawMappingFrame;
     private int mappingFrame;
 
+    private MhzEndBossRobotnikHeadChild() {
+        this(placeholderParentForRewindProbe());
+    }
+
     public MhzEndBossRobotnikHeadChild(MhzEndBossInstance parent) {
         super(new ObjectSpawn(parent.getX(), parent.getY() + Y_OFFSET,
                         Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0),
                 "MHZEndBossRobotnikHead");
         this.parent = parent;
         refreshFromParent();
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        MhzEndBossInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                ctx, MhzEndBossInstance.class);
+        return liveParent != null ? new MhzEndBossRobotnikHeadChild(liveParent) : null;
+    }
+
+    private static MhzEndBossInstance placeholderParentForRewindProbe() {
+        return new MhzEndBossInstance(new ObjectSpawn(
+                -0xC0,
+                0,
+                Sonic3kObjectIds.MHZ_END_BOSS,
+                0,
+                0,
+                false,
+                0));
     }
 
     @Override

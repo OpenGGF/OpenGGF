@@ -8,6 +8,9 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -514,7 +517,8 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
      *           $FA terminator advances to State3).
      * - State3: Clears player pushing flag, deletes itself.
      */
-    static class BarrierWall extends AbstractObjectInstance implements SolidObjectProvider {
+    static class BarrierWall extends AbstractObjectInstance
+            implements SolidObjectProvider, RewindRecreatable {
 
         private static final int WALL_STATE_SOLID = 0;
         private static final int WALL_STATE_OPENING = 2;
@@ -524,9 +528,8 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
         private static final int[] OPENING_FRAMES = { 0, 1, 2, 3 };
         private static final int OPENING_ANIM_SPEED = 1;
 
-        // Un-final for rewind: GenericFieldCapturer skips final scalars; the
-        // parent-relink codec reconstructs via the (x,y) ctor and the capturer
-        // reapplies wallX/wallY on restore (dezBarrierWallCodec).
+        // Un-final for rewind: GenericFieldCapturer reapplies wallX/wallY
+        // after RewindRecreatable reconstructs from the captured spawn.
         private int wallX;
         private int wallY;
         private int wallState;
@@ -536,6 +539,10 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
         private int openingFrameIndex;
         private int openingAnimTimer;
 
+        BarrierWall() {
+            this(0, 0);
+        }
+
         BarrierWall(int x, int y) {
             super(new ObjectSpawn(x, y, 0xC6, 0xA8, 0, false, 0), "DEZ Barrier Wall");
             this.wallX = x;
@@ -544,6 +551,14 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
             this.eggmanRunning = false;
             this.openingFrameIndex = 0;
             this.openingAnimTimer = OPENING_ANIM_SPEED;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            BarrierWall wall = new BarrierWall(spawn.x(), spawn.y());
+            Sonic2DEZEggmanInstance.relinkBarrierWallAfterRewind(ctx, wall);
+            return wall;
         }
 
         /** Called by parent Eggman when he starts running */
@@ -644,6 +659,18 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
                     ? OPENING_FRAMES[Math.min(openingFrameIndex, OPENING_FRAMES.length - 1)]
                     : 0;
             renderer.drawFrameIndex(frame, wallX, wallY, false, false);
+        }
+    }
+
+    private static void relinkBarrierWallAfterRewind(RewindRecreateContext ctx, BarrierWall wall) {
+        if (ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return;
+        }
+        for (ObjectInstance obj : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (obj instanceof Sonic2DEZEggmanInstance parent) {
+                parent.barrierWall = wall;
+                return;
+            }
         }
     }
 }

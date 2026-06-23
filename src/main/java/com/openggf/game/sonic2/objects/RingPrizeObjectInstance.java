@@ -5,6 +5,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NullableSpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -28,7 +29,8 @@ import java.util.List;
  * <b>Key insight:</b> ObjDC does NOT use collision detection. Rings are awarded
  * automatically when displayDelay expires.
  */
-public class RingPrizeObjectInstance extends AbstractObjectInstance {
+public class RingPrizeObjectInstance extends AbstractObjectInstance
+        implements NullableSpawnCoordinateZeroScalarArgsRewindRecreatable {
 
     // State machine constants (from s2.asm ObjDC state routines)
     private static final int STATE_SPIRAL = 0;    // Moving toward center (ObjDC_Main)
@@ -43,7 +45,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
     private int currentY;      // 16.16 fixed point Y
     // Un-final: not spawn-derivable (cage center, distinct from spawn position) and not
     // captured by GenericFieldCapturer when final. Reapplied by restoreObjectRewindState
-    // after the exactSpawnCodec recreates with placeholder 0 (mirrors BombPrizeObjectInstance).
+    // after recreate uses placeholder 0 (mirrors BombPrizeObjectInstance).
     private int machineX; // Machine center X
     private int machineY; // Machine center Y
 
@@ -88,6 +90,10 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
         this.machineY = machineY;
         this.displayDelay = displayDelay;
         this.prizeCounter = prizeCounter;
+    }
+
+    RingPrizeObjectInstance(int x, int y, int ignoredSubtype, boolean ignoredFlag) {
+        this(x, y, x, y, 0, new int[]{0});
     }
 
     @Override

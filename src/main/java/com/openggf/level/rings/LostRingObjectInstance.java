@@ -14,6 +14,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 
 import java.util.List;
@@ -40,7 +42,7 @@ import java.util.List;
  * listener path.
  */
 public class LostRingObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     /** ROM Obj37 collision_flags while uncollected: $40 SPECIAL + size index $07. */
     public static final int LOST_RING_COLLISION_FLAGS = 0x47;
@@ -71,7 +73,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * GLOBAL state shared across every live spilled ring (not per-ring), captured and
      * restored once via {@link SpillAnimationState#snapshot()}/{@link SpillAnimationState#restore(int[])}
      * by the ring-manager snapshot — so it is excluded from per-ring rewind capture and
-     * re-injected by the spawner / {@code LostRingRewindCodec} on recreate.
+     * re-injected by the spawner or generic recreate hook.
      */
     @RewindTransient(reason = "global shared spin owner; captured once via ring-manager snapshot, re-injected on recreate")
     private SpillAnimationState spillAnimation;
@@ -132,6 +134,16 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     /** Inject the shared spill-spin owner (frame source for rendering). */
     public void setSpillAnimation(SpillAnimationState spillAnimation) {
         this.spillAnimation = spillAnimation;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        LostRingObjectInstance ring = create(ctx.spawn());
+        ring.setServices(ctx.objectServices());
+        if (ctx.objectServices() != null && ctx.objectServices().ringManager() != null) {
+            ring.setSpillAnimation(ctx.objectServices().ringManager().getSpillAnimationState());
+        }
+        return ring;
     }
 
     // ── ROM per-ring physics step ─────────────────────────────────────────────

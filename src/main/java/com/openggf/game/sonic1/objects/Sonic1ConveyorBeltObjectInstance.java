@@ -4,6 +4,7 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
 
@@ -39,7 +40,7 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/68 Conveyor Belt.asm
  */
-public class Sonic1ConveyorBeltObjectInstance extends AbstractObjectInstance {
+public class Sonic1ConveyorBeltObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     /** Belt speed in pixels/frame, signed. From subtype upper nibble via ext.w/asr.w #4. */
     private final int convSpeed;

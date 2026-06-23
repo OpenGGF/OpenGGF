@@ -28,7 +28,8 @@ import java.util.List;
  *   <li>Walking or flying depending on animal type</li>
  * </ul>
  */
-public class EggPrisonAnimalInstance extends AbstractObjectInstance {
+public class EggPrisonAnimalInstance extends AbstractObjectInstance
+        implements SpawnTrailingZeroIntsRewindRecreatable {
     // Physics constants from s2.asm
     private static final int GRAVITY = 0x38;        // Standard gravity
     private static final int FLY_GRAVITY = 0x18;    // Reduced gravity for flying animals
@@ -89,6 +90,10 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance {
         this.groundYVelocity = definition.yVel();
         this.xVelocity = 0;
         this.yVelocity = 0;
+    }
+
+    EggPrisonAnimalInstance(ObjectSpawn spawn) {
+        this(spawn, 0, 0);
     }
 
     @Override

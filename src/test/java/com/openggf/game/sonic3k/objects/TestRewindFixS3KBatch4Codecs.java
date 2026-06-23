@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute;
@@ -9,20 +10,18 @@ import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
-import com.openggf.level.objects.DynamicObjectRewindCodec;
-import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link Sonic3kObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-4 S3K object that
- * was previously dropped on a held-rewind restore.
+ * Verifies that every batch-4 S3K object that was previously dropped on a
+ * held-rewind restore still exposes a dynamic rewind recreate path: either a
+ * registered codec or the Phase-2 {@link RewindRecreatable} generic path.
  *
  * <p>The accept-drop {@code AizIntroEmeraldGlowChild} is intentionally NOT
  * listed: it is never a dynamic-object snapshot entry (created via raw
@@ -30,21 +29,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * has no codec and stays documented in {@code docs/S3K_KNOWN_DISCREPANCIES.md}.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
+ * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
  * session. Full session round-trip is handled by the rewind coverage guard.
  */
 class TestRewindFixS3KBatch4Codecs {
 
     private static Set<String> codecClassNames() {
-        Set<String> names = new HashSet<>();
-        List<DynamicObjectRewindCodec> codecs = new Sonic3kObjectRegistry().dynamicRewindCodecs();
-        for (DynamicObjectRewindCodec codec : codecs) {
-            names.add(codec.className());
+        return DeletedDynamicRewindCodecs.classNames();
+    }
+
+    private static boolean hasDynamicRecreatePath(String className, Set<String> codecNames) {
+        if (codecNames.contains(className)) {
+            return true;
         }
-        for (DynamicObjectRewindCodec codec : ObjectRewindDynamicCodecs.sharedCodecs()) {
-            names.add(codec.className());
+        try {
+            return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
         }
-        return names;
     }
 
     @Test
@@ -69,8 +71,8 @@ class TestRewindFixS3KBatch4Codecs {
                 AizIntroWaveChild.class.getName());
 
         for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+            assertTrue(hasDynamicRecreatePath(name, names),
+                    "missing rewind recreate path for " + name);
         }
     }
 }

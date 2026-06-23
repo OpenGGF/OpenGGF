@@ -4,6 +4,9 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -35,7 +38,7 @@ import java.util.logging.Logger;
  * <p>Animation frames (Map_HCZEndBoss indices 2–5): fast spin cycles frames 2,3,4,5
  * at increasing speeds as the routine changes.
  */
-public class HczEndBossTurbine extends AbstractBossChild implements TouchResponseProvider {
+public class HczEndBossTurbine extends AbstractBossChild implements TouchResponseProvider, RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(HczEndBossTurbine.class.getName());
 
     // =========================================================================
@@ -111,6 +114,20 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
         this.animFrame = 0;
         this.animCounter = 0;
         this.animSpeed = ANIM_SPEED_ACTIVE;
+    }
+
+    private HczEndBossTurbine(ObjectSpawn spawn, HczEndBossInstance boss, int ignored) {
+        this(boss, 0, 0x24);
+    }
+
+    @Override
+    public HczEndBossTurbine recreateForRewind(RewindRecreateContext ctx) {
+        HczEndBossInstance restoredBoss = HczEndBossRewindLinks.nearestBoss(ctx);
+        return restoredBoss == null ? null : new HczEndBossTurbine(restoredBoss, 0, 0x24);
+    }
+
+    void attachWaterColumnForRewind(HczEndBossWaterColumn restoredWaterColumn) {
+        this.waterColumn = restoredWaterColumn;
     }
 
     // =========================================================================

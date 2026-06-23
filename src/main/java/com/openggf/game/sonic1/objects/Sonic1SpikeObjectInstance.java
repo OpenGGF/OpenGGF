@@ -18,6 +18,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -46,7 +47,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/36 Spikes.asm
  */
 public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // Spik_Var table: frame index and actWidth per visual type (high nybble)
     // From disassembly: dc.b frame, width pairs

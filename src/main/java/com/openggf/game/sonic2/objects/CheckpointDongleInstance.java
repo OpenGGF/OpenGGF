@@ -1,10 +1,15 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
@@ -22,11 +27,14 @@ import java.util.List;
  * - sin * $C00 >> 16 = Y offset
  * </p>
  */
-public class CheckpointDongleInstance extends AbstractObjectInstance {
+public class CheckpointDongleInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int INITIAL_LIFETIME = 0x20;
     private static final int ANGLE_DECREMENT = 0x10;
     private static final int SWING_RADIUS = 0x0C00;
     private static final int DONGLE_FRAME = 2; // Mapping frame for dongle
+    @RewindTransient(reason = "Structural parent link; relinked to the live S2 checkpoint "
+            + "with matching captured center on rewind recreate. Scalar orbit state is "
+            + "reapplied by the generic field capturer.")
     private final CheckpointObjectInstance parent;
     private final int centerX;
     private final int centerY;
@@ -48,6 +56,33 @@ public class CheckpointDongleInstance extends AbstractObjectInstance {
 
     private static ObjectSpawn createDummySpawn(CheckpointObjectInstance parent) {
         return new ObjectSpawn(parent.getCenterX(), parent.getCenterY(), 0x79, 0, 0, false, 0);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+            return null;
+        }
+        CheckpointObjectInstance liveParent =
+                findLiveParentForRewind(ctx.objectServices().objectManager(), ctx.spawn());
+        return liveParent == null ? null : new CheckpointDongleInstance(liveParent);
+    }
+
+    static CheckpointObjectInstance findLiveParentForRewind(
+            ObjectManager objectManager,
+            ObjectSpawn childSpawn) {
+        if (objectManager == null || childSpawn == null) {
+            return null;
+        }
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (instance instanceof CheckpointObjectInstance checkpoint
+                    && !checkpoint.isDestroyed()
+                    && checkpoint.getCenterX() == childSpawn.x()
+                    && checkpoint.getCenterY() == childSpawn.y()) {
+                return checkpoint;
+            }
+        }
+        return null;
     }
 
     @Override

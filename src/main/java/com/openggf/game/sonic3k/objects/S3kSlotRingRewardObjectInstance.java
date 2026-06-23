@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 
 import java.util.List;
 
@@ -17,7 +19,7 @@ import java.util.List;
  * center each frame (1/16th of remaining distance), and when its timer expires it awards one
  * bonus-stage ring and deletes itself.
  */
-public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstance {
+public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int EXPIRY_FRAMES = 0x1A;
     private static final int SPARKLE_FRAMES = 8;  // approximate sparkle duration (ROM routine 1)
@@ -39,6 +41,17 @@ public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstanc
     public S3kSlotRingRewardObjectInstance(ObjectSpawn spawn, S3kSlotStageController controller) {
         super(spawn, "S3kSlotRingReward");
         this.controller = controller;
+    }
+
+    private S3kSlotRingRewardObjectInstance(ObjectSpawn spawn) {
+        this(spawn, null);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        S3kSlotStageController controller =
+                S3kSlotRewindSupport.resolveSlotStageController(ctx.objectServices());
+        return controller != null ? new S3kSlotRingRewardObjectInstance(ctx.spawn(), controller) : null;
     }
 
     /** Activates without position tracking (backward-compatible; position stays at spawn). */

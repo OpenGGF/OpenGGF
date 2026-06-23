@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -36,7 +37,7 @@ import java.util.List;
  * - 16 pieces: 8 pairs of 3x4 tiles forming a tall vertical beam spanning Y -$70 to $90.
  */
 public class VerticalLaserObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {
 
     // From ObjB7_SubObjData: priority = 4, width_pixels = $18
     private static final int PRIORITY = 4;
@@ -54,6 +55,10 @@ public class VerticalLaserObjectInstance extends AbstractObjectInstance
     private int timer;              // objoff_2A - countdown timer
     private boolean visibleToggle;  // objoff_2B bit 0 - alternates each frame
     private boolean initialized;    // First frame is Init (routine 0), skip render
+
+    private VerticalLaserObjectInstance() {
+        this(new ObjectSpawn(0, 0, Sonic2ObjectIds.VERTICAL_LASER, 0x72, 0, false, 0), 0, 0);
+    }
 
     public VerticalLaserObjectInstance(ObjectSpawn parentSpawn, int x, int y) {
         super(createLaserSpawn(parentSpawn, x, y), "VerticalLaser");

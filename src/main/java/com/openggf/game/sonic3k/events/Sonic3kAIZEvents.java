@@ -1603,14 +1603,14 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * <p>The one-shot spawn guards ({@code minibossSpawned}, {@code battleshipSpawned},
      * {@code endBossSpawned}) and the auto-scroll camera lock are reflectively captured
      * by the AIZ event sidecar, but the dynamic objects they gate are recreated by the
-     * object-manager rewind codecs. If a sequence-driving object failed to be recreated,
+     * object-manager rewind restore path. If a sequence-driving object failed to be recreated,
      * a restore can leave an impossible state: a guard marked spawned with no live object,
      * or {@code battleshipAutoScrollActive} true with no battleship/small-boss left to
      * call {@link #onBattleshipComplete()}/{@link #onBossSmallComplete()} — which would
      * force-lock the camera every frame forever (softlock).
      *
      * <p>This is a live-object predicate, not a zone/frame/route carve-out: with the
-     * codecs in place the driver objects are present and nothing here fires. It is a
+     * restore paths in place the driver objects are present and nothing here fires. It is a
      * defense-in-depth backstop guaranteeing the camera lock is never left orphaned.
      */
     public void reconcileSequenceAfterRewindRestore() {

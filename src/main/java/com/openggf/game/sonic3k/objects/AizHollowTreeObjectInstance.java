@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -358,12 +359,17 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
      * Obj_AIZ1TreeRevealControl parity shim.
      * Tracks the Events_fg_4 counter used by AIZ terrain reveal scripting.
      */
-    // Package-private (not private) so Sonic3kObjectRegistry can name the type
-    // for its rewind exactSpawnCodec; the parent only spawns this control shim on
-    // the one-shot first-capture transition, so a held rewind must recreate it.
-    static final class AizTreeRevealControlObjectInstance extends AbstractObjectInstance {
+    // Package-private so session-level rewind tests can name the type directly.
+    // The parent only spawns this control shim on the one-shot first-capture
+    // transition, so a held rewind must recreate it.
+    static final class AizTreeRevealControlObjectInstance extends AbstractObjectInstance
+            implements SpawnCoordinateRewindRecreatable {
         // Mirrors object RAM word $2E (with low byte at $2F used for odd/even gating).
         private int timer2EWord;
+
+        private AizTreeRevealControlObjectInstance() {
+            this(0, 0);
+        }
 
         AizTreeRevealControlObjectInstance(int x, int y) {
             super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "AIZ1TreeRevealControl");

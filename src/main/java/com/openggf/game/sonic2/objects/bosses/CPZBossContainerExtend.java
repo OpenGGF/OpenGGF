@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -18,7 +20,7 @@ import java.util.List;
  * ROM Reference: s2.asm Obj5D (ROUTINE_CONTAINER routineSecondary 6)
  * Extends from container and eventually becomes gunk.
  */
-public class CPZBossContainerExtend extends AbstractObjectInstance {
+public class CPZBossContainerExtend extends AbstractObjectInstance implements RewindRecreatable {
     private final Sonic2CPZBossInstance mainBoss;
     private final CPZBossContainer container;
 
@@ -41,6 +43,19 @@ public class CPZBossContainerExtend extends AbstractObjectInstance {
         this.anim = 0;
         this.mappingFrame = -1; // Don't render until animation starts
         this.animationState = new ObjectAnimationState(CPZBossAnimations.getDripperAnimations(), anim, mappingFrame);
+    }
+
+    private CPZBossContainerExtend(ObjectSpawn spawn) {
+        this(spawn, null, null);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2CPZBossInstance boss = CpzBossRewindLinks.nearestBoss(ctx);
+        CPZBossContainer parentContainer = CpzBossRewindLinks.nearestContainer(ctx);
+        return boss == null || parentContainer == null
+                ? null
+                : new CPZBossContainerExtend(ctx.spawn(), boss, parentContainer);
     }
 
     @Override

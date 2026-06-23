@@ -9,6 +9,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -45,7 +46,7 @@ import java.util.List;
  *   <li>Frame 3 (.shut2): body mouth shut + tail vFlipped</li>
  * </ul>
  */
-public class Sonic1JawsBadnikInstance extends AbstractBadnikInstance {
+public class Sonic1JawsBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
 
     // From disassembly: move.b #$A,obColType(a0) (enemy, collision size index $A)
     private static final int COLLISION_SIZE_INDEX = 0x0A;

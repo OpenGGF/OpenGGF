@@ -4,16 +4,20 @@ import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.GrounderRockProjectile;
 import com.openggf.game.sonic2.objects.GrounderWallInstance;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.PatrolMovementHelper;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -46,7 +50,7 @@ import java.util.List;
  *   <li>Walking: Frames 2,3,4, duration 3</li>
  * </ul>
  */
-public class GrounderBadnikInstance extends AbstractBadnikInstance {
+public class GrounderBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
 
     // Touch collision size index from subObjData. Obj8D_SubObjData (s2.asm:73505)
     //   subObjData Obj8D_MapUnc_36CF0, make_art_tile(...), 1<<level_fg, 5, $10, 2
@@ -122,6 +126,13 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance {
         // Initial facing from render_flags
         boolean xFlip = (spawn.renderFlags() & 0x01) != 0;
         this.facingLeft = !xFlip;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn();
+        return new GrounderBadnikInstance(
+                spawn, spawn.objectId() == Sonic2ObjectIds.GROUNDER_IN_WALL2);
     }
 
     /**

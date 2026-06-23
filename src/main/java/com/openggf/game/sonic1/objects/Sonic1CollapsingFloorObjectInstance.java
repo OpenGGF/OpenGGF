@@ -19,6 +19,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -59,7 +60,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/53 Collapsing Floors.asm
  */
 public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRomZoneRewindRecreatable {
 
     // From disassembly: move.w #$20,d1 (half-width for PlatformObject)
     private static final int PLATFORM_HALF_WIDTH = 0x20;
@@ -453,14 +454,46 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        // PlatformObject uses half-width for platform checks.
-        // Half-height of 8 models PlatformObject's subq.w #8,d0 (surface 8px above center).
+        // PLATFORM_HALF_HEIGHT (9) models the continued-riding surface obY-9 from
+        // CFlo_WalkOff -> MvSonicOnPtfm2 (subi.w #9,d0). The first landing instead
+        // uses CFlo_ChkTouch -> PlatformObject's obY-8 surface, recovered via
+        // getTopLandingSnapAdjustment().
         return new SolidObjectParams(PLATFORM_HALF_WIDTH, PLATFORM_HALF_HEIGHT, PLATFORM_HALF_HEIGHT);
     }
 
     @Override
     public boolean isTopSolidOnly() {
         return true;
+    }
+
+    @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // CFlo_ChkTouch passes #64/2 directly as PlatformObject's d1
+        // (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:184-185),
+        // so the collision half-width is already the standable width and must not
+        // receive the generic SolidObjectFull +$B narrowing.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM PlatformObject/Plat_NoXCheck_AltY gates the land band with an
+        // UNSIGNED cmpi.w #-16,d0 / blo (docs/s1disasm/_incObj/sub PlatformObject.asm:51-52),
+        // which rejects the exact-touch case d0 = 0: the standable band is
+        // d0 in [-16,-1] (strict penetration). Combined with the obY-8 detection
+        // offset below, this lands on the same frame as ROM.
+        return true;
+    }
+
+    @Override
+    public int getTopLandingSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
+        // PlatformObject builds its entry surface from obY-8 and snaps via
+        // add.w d0,d2 / addq.w #3,d2 (docs/s1disasm/_incObj/sub PlatformObject.asm:37-65),
+        // while continued riding uses CFlo_WalkOff -> MvSonicOnPtfm2's obY-9 surface
+        // (modeled by PLATFORM_HALF_HEIGHT = 9). This -1 recovers the obY-8 surface
+        // for the first landing snap and, via the controller's detection-band offset,
+        // makes the engine land on ROM's frame rather than one frame late.
+        return -1;
     }
 
     @Override

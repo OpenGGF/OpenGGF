@@ -15,6 +15,9 @@ import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -32,7 +35,7 @@ import java.util.List;
  * {@code $38} bit 2 when the child is destroyed.
  */
 public final class MhzEndBossWeatherMachineChild extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable {
     private static final int X_OFFSET = 0x11;
     private static final int Y_OFFSET = -0x51;
     private static final int COLLISION_FLAGS = 0x11;
@@ -55,6 +58,10 @@ public final class MhzEndBossWeatherMachineChild extends AbstractObjectInstance
     private int weatherSoundTimer;
     private int destructionWaitTimer;
 
+    private MhzEndBossWeatherMachineChild() {
+        this(placeholderParentForRewindProbe());
+    }
+
     public MhzEndBossWeatherMachineChild(MhzEndBossInstance parent) {
         super(new ObjectSpawn(
                         parent.getX() + X_OFFSET,
@@ -67,6 +74,24 @@ public final class MhzEndBossWeatherMachineChild extends AbstractObjectInstance
                 "MHZEndBossWeatherMachine");
         this.parent = parent;
         refreshFromParent();
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        MhzEndBossInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                ctx, MhzEndBossInstance.class);
+        return liveParent != null ? new MhzEndBossWeatherMachineChild(liveParent) : null;
+    }
+
+    private static MhzEndBossInstance placeholderParentForRewindProbe() {
+        return new MhzEndBossInstance(new ObjectSpawn(
+                -0xC0,
+                0,
+                Sonic3kObjectIds.MHZ_END_BOSS,
+                0,
+                0,
+                false,
+                0));
     }
 
     @Override

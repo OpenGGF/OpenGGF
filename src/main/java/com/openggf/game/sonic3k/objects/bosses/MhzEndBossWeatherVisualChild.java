@@ -7,6 +7,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -20,7 +23,7 @@ import java.util.List;
  * {@code byte_769B6/byte_769C1}; the spark quartet starts at the ROM
  * {@code word_7672E} offsets and uses {@code byte_769CE}.
  */
-public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance {
+public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance implements RewindRecreatable {
     private static final int PRIORITY_BUCKET = 3; // priority $180
     private static final int ANIMATED_PART_RENDER_HALF_WIDTH = 0x10;
     private static final int ANIMATED_PART_RENDER_HALF_HEIGHT = 0x10;
@@ -54,7 +57,7 @@ public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance {
 
     /**
      * Bit 0 of {@code rawYWord} encodes the {@code spark} discriminator so a
-     * rewind codec can re-derive it from the captured spawn (which round-trips
+     * rewind recreate can re-derive it from the captured spawn (which round-trips
      * through {@link #buildSpawnAt}). {@code subtype} round-trips as the spawn's
      * subtype field. The high {@code rawFlags()} bits ({@code 0xF000}) are
      * untouched.
@@ -73,13 +76,17 @@ public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance {
      * Rewind-restore entry: re-derives {@code subtype} and {@code spark} from the
      * captured spawn and routes through the correct static factory so the
      * construction-time branch matches the original instance. The live parent is
-     * relinked by the codec.
+     * relinked by object-reference restore.
      */
     public static MhzEndBossWeatherVisualChild forRewindRecreate(
             MhzEndBossWeatherMachineChild parent, ObjectSpawn spawn) {
         int subtype = spawn.subtype();
         boolean spark = (spawn.rawYWord() & SPARK_SPAWN_BIT) != 0;
         return spark ? spark(parent, subtype) : animatedPart(parent, subtype);
+    }
+
+    private MhzEndBossWeatherVisualChild() {
+        this(placeholderWeatherMachineForRewindProbe(), 0, false);
     }
 
     private MhzEndBossWeatherVisualChild(MhzEndBossWeatherMachineChild parent, int subtype, boolean spark) {
@@ -97,6 +104,24 @@ public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance {
         this.spark = spark;
         this.mappingFrame = spark ? SPARK_FRAMES[0] : 5;
         refreshPosition();
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        MhzEndBossWeatherMachineChild liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                ctx, MhzEndBossWeatherMachineChild.class);
+        return liveParent != null ? forRewindRecreate(liveParent, ctx.spawn()) : null;
+    }
+
+    private static MhzEndBossWeatherMachineChild placeholderWeatherMachineForRewindProbe() {
+        return new MhzEndBossWeatherMachineChild(new MhzEndBossInstance(new ObjectSpawn(
+                -0xC0,
+                0,
+                Sonic3kObjectIds.MHZ_END_BOSS,
+                0,
+                0,
+                false,
+                0)));
     }
 
     private static int initialX(MhzEndBossWeatherMachineChild parent, int subtype, boolean spark) {

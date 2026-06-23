@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRenderFlipRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -28,7 +29,7 @@ import java.util.List;
  * </ul>
  */
 public class SteamPuffObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnRenderFlipRewindRecreatable {
 
     // ROM: move.b #$18,width_pixels(a1) at loc_2674C (s2.asm line 52111).
     // In the ROM this width feeds the MarkObjGone off-screen culling test. The
@@ -54,6 +55,10 @@ public class SteamPuffObjectInstance extends AbstractObjectInstance
     private int mappingFrame;
     private int frameDuration;
     private int collisionFlags;
+
+    private SteamPuffObjectInstance() {
+        this(0, 0, false);
+    }
 
     /**
      * Create a steam puff at the given world position.

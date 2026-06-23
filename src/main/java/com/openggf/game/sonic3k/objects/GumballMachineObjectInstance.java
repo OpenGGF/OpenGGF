@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -996,7 +997,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
      * <b>CRITICAL:</b> This is how the bonus stage ends. Without it, the player
      * is stuck in the gumball stage permanently.
      */
-    static class ExitTriggerChild extends AbstractObjectInstance {
+    static class ExitTriggerChild extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
         // ROM: Exit trigger detection range
         private static final int EXIT_X_MIN = -0x100;

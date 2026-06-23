@@ -20,6 +20,7 @@ import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -38,7 +39,7 @@ import java.util.List;
  * arena setup, weather-machine gate, alternating dash loop, final defeat,
  * capsule handoff, and Robotnik ship escape onto the shared boss path.
  */
-public final class MhzEndBossInstance extends AbstractBossInstance {
+public final class MhzEndBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
     private static final int HIT_COUNT = 9;
     private static final int COLLISION_SIZE = 0x0F;
     private static final int INITIAL_X_OFFSET = 0xC0;

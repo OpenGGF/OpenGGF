@@ -10,6 +10,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
@@ -1494,7 +1496,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance {
      * {@code getCollisionFlags()} polled every frame (no already-hit latch).
      */
     public static class MTZBossLaser extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, RewindRecreatable {
 
         /** ROM: Obj54_Laser_Init move.w #-$400,d0 (s2.asm:67625) — base x velocity. */
         private static final int LASER_SPEED = 0x400;
@@ -1509,8 +1511,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance {
         private int currentY;
         // Un-final for rewind: GenericFieldCapturer skips final scalars and xVel
         // is NOT spawn-derivable (getSpawn() reports current position, not firing
-        // direction). The parent-relink codec passes a placeholder and the capturer
-        // reapplies xVel on restore (mtzBossLaserCodec).
+        // direction). The parent-relink recreate hook passes a placeholder and the
+        // capturer reapplies xVel on restore.
         private int xVel; // 8.8 fixed point
         private boolean firstUpdate = true;
 
@@ -1532,6 +1534,18 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance {
             // NOTE: the ROM PlaySound SndID_LaserBurst is in Init, but objects must not
             // call services() during construction (TestNoServicesInObjectConstructors),
             // so the SFX is emitted on the first update() below instead.
+        }
+
+        MTZBossLaser() {
+            this(null, 0, 0, false);
+        }
+
+        @Override
+        public MTZBossLaser recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            int x = spawn == null ? 0 : spawn.x();
+            int y = spawn == null ? 0 : spawn.y();
+            return new MTZBossLaser(null, x, y, false);
         }
 
         @Override

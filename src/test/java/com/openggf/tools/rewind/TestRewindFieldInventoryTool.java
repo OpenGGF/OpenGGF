@@ -186,4 +186,5 @@ class TestRewindFieldInventoryTool {
         assertTrue(out.contains("coverage:"), "must include a coverage summary line");
         assertTrue(out.contains("gaps"), "must report gap count");
     }
+
 }

@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ZeroScalarArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -26,7 +27,8 @@ import java.util.List;
  * <p>The tree is fixed at screen Y = $69 (VDP $E9 - $80 = 105 pixels from
  * camera top) and deletes itself when the camera passes $4880.
  */
-public class AizBgTreeInstance extends AbstractObjectInstance {
+public class AizBgTreeInstance extends AbstractObjectInstance
+        implements ZeroScalarArgsRewindRecreatable {
 
     /** Initial screen-relative X offset. ROM VDP X $1C0 → screen $1C0-$80 = $140 (right edge). */
     private static final int INITIAL_X_OFFSET = 0x1C0 - 0x80; // 320 = right edge of screen
@@ -39,7 +41,7 @@ public class AizBgTreeInstance extends AbstractObjectInstance {
 
     /** Smooth scroll X value at spawn time (baseline for parallax delta).
      *  Non-final so the generic rewind field capturer reapplies it after a
-     *  codec-driven recreate (the codec passes a placeholder). */
+     *  generic rewind recreate supplies a placeholder. */
     private int spawnSmoothScrollX;
 
     /** Current screen-relative X position, updated each frame. */
@@ -53,6 +55,10 @@ public class AizBgTreeInstance extends AbstractObjectInstance {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "AIZ2BGTree");
         this.spawnSmoothScrollX = spawnSmoothScrollX;
         this.screenX = INITIAL_X_OFFSET; // starts hidden (>= INITIAL_X_OFFSET)
+    }
+
+    AizBgTreeInstance(ObjectSpawn spawn) {
+        this(0);
     }
 
     @Override

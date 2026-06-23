@@ -9,6 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -31,7 +32,7 @@ import java.util.List;
  * </ul>
  */
 public class SpikyBlockSpikeInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnRewindRecreatable {
 
     // From disassembly: Obj68_CollisionFlags (s2.asm line 53386-53390)
     // Direction 0=Up ($84), 1=Right ($A6), 2=Down ($84), 3=Left ($A6)
@@ -52,9 +53,11 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
     // From disassembly: move.b #4,priority(a1)
     private static final int PRIORITY = 4;
 
-    // Initial position (spikearoundblock_initial_x_pos / initial_y_pos)
-    private final int initialX;
-    private final int initialY;
+    // Initial position (spikearoundblock_initial_x_pos / initial_y_pos).
+    // Non-final for rewind: the dynamic spawn tracks currentX/currentY, so the
+    // original anchor must be restored from captured scalar state.
+    private int initialX;
+    private int initialY;
 
     // Current position
     private int currentX;
@@ -88,6 +91,10 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
         this.currentY = initialY;
         this.direction = direction & 3;
         this.position = position;
+    }
+
+    private SpikyBlockSpikeInstance(ObjectSpawn spawn) {
+        this(spawn, "SpikyBlock-Spike", 0, 0);
     }
 
     @Override

@@ -8,6 +8,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -29,7 +31,7 @@ import java.util.List;
  * SubObjData: priority 5, width 8, collision 0.
  * Animation: Ani_obj9C = { 1, 8, 9, $FF }
  */
-public class BalkiryJetObjectInstance extends AbstractObjectInstance {
+public class BalkiryJetObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     // Animation from Ani_obj9C: dc.b 1, 8, 9, $FF
     private static final int ANIM_SPEED = 1; // Animate every 2 frames (speed+1)
     private static final int FRAME_A = 8; // Map_obj9C_0084: 2x1 tiles
@@ -45,6 +47,16 @@ public class BalkiryJetObjectInstance extends AbstractObjectInstance {
         this.parent = parent;
         this.animFrame = FRAME_A;
         this.animTimer = 0;
+    }
+
+    private BalkiryJetObjectInstance() {
+        this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), null);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        BalkiryBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestBalkiry(ctx);
+        return parent != null ? new BalkiryJetObjectInstance(ctx.spawn(), parent) : null;
     }
 
     @Override

@@ -7,6 +7,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -19,7 +22,7 @@ import java.util.List;
  * parent position through {@code sub_7675C}; the first layer also promotes to
  * high-priority art when parent {@code $38} bit 3 is set.
  */
-public final class MhzEndBossVisualChild extends AbstractObjectInstance {
+public final class MhzEndBossVisualChild extends AbstractObjectInstance implements RewindRecreatable {
     private static final int ARENA_ANCHORED_FLAG_OFFSET = 0x38;
     private static final int ARENA_ANCHORED_FLAG = 0x08;
     private static final int CHILD_DRAW_SPRITE2_DELETE_FLAG = 0x10;
@@ -35,6 +38,10 @@ public final class MhzEndBossVisualChild extends AbstractObjectInstance {
     private int y;
     private boolean highPriority;
 
+    private MhzEndBossVisualChild() {
+        this(placeholderParentForRewindProbe(), 0, 0, false);
+    }
+
     public MhzEndBossVisualChild(
             MhzEndBossInstance parent,
             int mappingFrame,
@@ -47,6 +54,24 @@ public final class MhzEndBossVisualChild extends AbstractObjectInstance {
         this.priorityBucket = priorityBucket;
         this.promoteOnArenaAnchor = promoteOnArenaAnchor;
         refreshFromParent();
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        MhzEndBossInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                ctx, MhzEndBossInstance.class);
+        return liveParent != null ? new MhzEndBossVisualChild(liveParent, 0, 0, false) : null;
+    }
+
+    private static MhzEndBossInstance placeholderParentForRewindProbe() {
+        return new MhzEndBossInstance(new ObjectSpawn(
+                -0xC0,
+                0,
+                Sonic3kObjectIds.MHZ_END_BOSS,
+                0,
+                0,
+                false,
+                0));
     }
 
     @Override

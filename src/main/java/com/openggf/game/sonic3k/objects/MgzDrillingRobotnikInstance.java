@@ -19,6 +19,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
@@ -72,7 +73,7 @@ import java.util.logging.Logger;
  *       2 (hurt face) / 3 (defeated), at offset (0, -$1C) from the pod.</li>
  * </ol>
  */
-public class MgzDrillingRobotnikInstance extends AbstractBossInstance {
+public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(MgzDrillingRobotnikInstance.class.getName());
 
     /** ROM: Obj_MGZ2DrillingRobotnik $2E(a0) = 2*60 — initial wait frames. */
@@ -363,6 +364,10 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance {
     private final int[] fallingDebrisVx = new int[10];
     private final int[] fallingDebrisVy = new int[10];
     private final boolean[] fallingDebrisAlive = new boolean[10];
+    public MgzDrillingRobotnikInstance(ObjectSpawn spawn) {
+        this(spawn, false);
+    }
+
     public MgzDrillingRobotnikInstance(ObjectSpawn spawn, boolean flipX) {
         super(spawn, "MGZ2DrillingRobotnik");
         this.flipX = flipX;

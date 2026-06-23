@@ -1,6 +1,5 @@
 package com.openggf.game.sonic2.objects.bosses;
 import com.openggf.game.PlayableEntity;
-import com.openggf.level.objects.ExplosionObjectInstance;
 
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.level.objects.boss.BossExplosionObjectInstance;
@@ -9,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -19,7 +19,8 @@ import java.util.List;
  * ROM Reference: s2.asm Obj5D (ROUTINE_FALLING_PARTS = 0x14)
  * Explodes after timer, then falls with gravity.
  */
-public class CPZBossFallingPart extends AbstractObjectInstance {
+public class CPZBossFallingPart extends AbstractObjectInstance
+        implements SpawnTrailingZeroIntsRewindRecreatable {
 
     private static final int GRAVITY = 0x38;
     private static final int FLOOR_Y = 0x580;
@@ -51,6 +52,10 @@ public class CPZBossFallingPart extends AbstractObjectInstance {
         this.timer = timer;
         this.timer2 = 0;
         this.exploded = false;
+    }
+
+    private CPZBossFallingPart(ObjectSpawn spawn) {
+        this(spawn, 0, 0, 0);
     }
 
     @Override

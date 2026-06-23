@@ -911,7 +911,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
             // state by the step-4 dynamic-object reconciliation loop, which reuses the
             // instances spawned here. We still register the construction child (so the boss
             // back-reference points at a managed instance the reconciliation can adopt), but
-            // mark it as a restore-reconstruction child so the codec loop adopts it in place
+            // mark it as a restore-reconstruction child so the restore loop adopts it in place
             // instead of recreating a duplicate. See ObjectManager.restore() step 4.
             if (om != null) {
                 if (ObjectConstructionContext.isRewindActiveRestore()) {

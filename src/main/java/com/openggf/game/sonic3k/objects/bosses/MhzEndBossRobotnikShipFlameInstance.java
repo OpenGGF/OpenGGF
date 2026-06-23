@@ -2,10 +2,13 @@ package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -13,7 +16,8 @@ import java.util.List;
 /**
  * ROM {@code Child1_MakeRoboShipFlame} for the MHZ end-boss escape craft.
  */
-public final class MhzEndBossRobotnikShipFlameInstance extends AbstractObjectInstance {
+public final class MhzEndBossRobotnikShipFlameInstance extends AbstractObjectInstance
+        implements RewindRecreatable {
     private static final int OBJECT_ID = 0;
     private static final int X_OFFSET = 0x1E;
     private static final int Y_OFFSET = 0;
@@ -24,14 +28,37 @@ public final class MhzEndBossRobotnikShipFlameInstance extends AbstractObjectIns
     private static final int RENDER_HALF_WIDTH = 0x08;
     private static final int RENDER_HALF_HEIGHT = 0x04;
 
-    private final MhzEndBossInstance parent;
+    private MhzEndBossInstance parent;
     private boolean visibleThisFrame;
     private boolean flipX;
+
+    private MhzEndBossRobotnikShipFlameInstance() {
+        this(placeholderParentForFlameSpawn(new ObjectSpawn(0, 0, OBJECT_ID, 0, 0, false, 0)));
+    }
 
     public MhzEndBossRobotnikShipFlameInstance(MhzEndBossInstance parent) {
         super(new ObjectSpawn(parent.getX() + X_OFFSET, parent.getY() + Y_OFFSET,
                 OBJECT_ID, 0, 0, false, 0), "MHZEndBossRobotnikShipFlame");
         this.parent = parent;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MhzEndBossRobotnikShipFlameInstance(placeholderParentForFlameSpawn(ctx.spawn()));
+    }
+
+    private static MhzEndBossInstance placeholderParentForFlameSpawn(ObjectSpawn flameSpawn) {
+        ObjectSpawn spawn = flameSpawn != null
+                ? flameSpawn
+                : new ObjectSpawn(0, 0, OBJECT_ID, 0, 0, false, 0);
+        return new MhzEndBossInstance(new ObjectSpawn(
+                spawn.x() - X_OFFSET - 0xC0,
+                spawn.y() - Y_OFFSET,
+                Sonic3kObjectIds.MHZ_END_BOSS,
+                0,
+                0,
+                false,
+                spawn.layoutIndex()));
     }
 
     @Override

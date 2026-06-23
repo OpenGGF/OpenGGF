@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -41,7 +42,7 @@ import java.util.List;
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/58 Big Spiked Ball.asm
  */
 public class Sonic1BigSpikedBallObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnRewindRecreatable {
 
     // From disassembly: move.b #$86,obColType(a0) — HURT ($80) + size 6
     private static final int COLLISION_TYPE = 0x86;

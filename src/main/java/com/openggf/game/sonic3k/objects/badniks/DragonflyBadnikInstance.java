@@ -4,7 +4,10 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.SwingMotion;
@@ -300,7 +303,8 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
-    public static final class LinkedBodyChild extends AbstractObjectInstance implements TouchResponseProvider {
+    public static final class LinkedBodyChild extends AbstractObjectInstance
+            implements TouchResponseProvider, RewindRecreatable {
         private static final int PHASE_FOLLOW_PARENT_OFFSET = 0;
         private static final int PHASE_RETURN_TO_PARENT_Y = 1;
         private static final int PHASE_WAIT_FOR_PARENT_TO_REACH_OPPOSITE_OFFSET = 2;
@@ -308,10 +312,10 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
         private static final int RENDER_HALF_WIDTH = 0x04;
         private static final int RENDER_HALF_HEIGHT = 0x04;
 
-        private final DragonflyBadnikInstance parent;
-        private final AbstractObjectInstance followAnchor;
+        private DragonflyBadnikInstance parent;
+        private AbstractObjectInstance followAnchor;
         // Un-final so the generic field capturer reapplies the captured values
-        // after a rewind recreate (the codec passes spawn-derived placeholders).
+        // after a rewind recreate with spawn-derived placeholders.
         private int subtype;
         private int segmentIndex;
         private int childX;
@@ -325,6 +329,10 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
         private boolean horizontalDirectionPositive;
         private boolean verticalRenderFlip = true;
         private boolean setupFrame = true;
+
+        private LinkedBodyChild() {
+            this(new DragonflyBadnikInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)), 0, 0);
+        }
 
         LinkedBodyChild(DragonflyBadnikInstance parent, int subtype, int segmentIndex) {
             this(parent, parent, subtype, segmentIndex);
@@ -342,6 +350,18 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
             this.childDy = LINKED_CHILD_Y_OFFSETS[segmentIndex];
             this.childY = parent.getY();
             this.countdown = subtype;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            DragonflyBadnikInstance liveParent = findLiveDragonflyParent(ctx);
+            if (liveParent == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            int restoredSubtype = spawn != null ? spawn.subtype() : 0;
+            int restoredSegmentIndex = restoredSubtype >> 1;
+            return new LinkedBodyChild(liveParent, liveParent, restoredSubtype, restoredSegmentIndex);
         }
 
         @Override
@@ -473,6 +493,18 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
                 int frame = subtype == 0x0C ? 6 : 5;
                 renderer.drawFrameIndexForcedPriority(frame, getX(), getY(), false, verticalRenderFlip, -1, true);
             }
+        }
+
+        private static DragonflyBadnikInstance findLiveDragonflyParent(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (instance instanceof DragonflyBadnikInstance dragonfly && !dragonfly.isDestroyed()) {
+                    return dragonfly;
+                }
+            }
+            return null;
         }
     }
 }
