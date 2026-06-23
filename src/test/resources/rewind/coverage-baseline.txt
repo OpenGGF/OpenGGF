@@ -90,11 +90,6 @@ com.openggf.game.sonic2.objects.BridgeObjectInstance#finalScalar#highPriority
 com.openggf.game.sonic2.objects.BridgeObjectInstance#finalScalar#logCount
 com.openggf.game.sonic2.objects.BridgeObjectInstance#finalScalar#r
 com.openggf.game.sonic2.objects.BridgeObjectInstance#recreate
-com.openggf.game.sonic2.objects.BridgeStakeObjectInstance#recreate
-com.openggf.game.sonic2.objects.ButtonObjectInstance#finalScalar#adjustedY
-com.openggf.game.sonic2.objects.ButtonObjectInstance#finalScalar#switchId
-com.openggf.game.sonic2.objects.ButtonObjectInstance#finalScalar#triggerBit
-com.openggf.game.sonic2.objects.ButtonObjectInstance#recreate
 com.openggf.game.sonic2.objects.CNZBigBlockObjectInstance#finalScalar#b
 com.openggf.game.sonic2.objects.CNZBigBlockObjectInstance#finalScalar#g
 com.openggf.game.sonic2.objects.CNZBigBlockObjectInstance#finalScalar#halfHeight
@@ -139,8 +134,6 @@ com.openggf.game.sonic2.objects.CheckpointObjectInstance#finalScalar#r
 com.openggf.game.sonic2.objects.CheckpointObjectInstance#recreate
 com.openggf.game.sonic2.objects.CheckpointStarInstance#finalScalar#centerX
 com.openggf.game.sonic2.objects.CheckpointStarInstance#finalScalar#centerY
-com.openggf.game.sonic2.objects.CluckerBaseObjectInstance#finalScalar#xFlipped
-com.openggf.game.sonic2.objects.CluckerBaseObjectInstance#recreate
 com.openggf.game.sonic2.objects.CogObjectInstance#finalScalar#baseX
 com.openggf.game.sonic2.objects.CogObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.CogObjectInstance#finalScalar#ccw
@@ -162,7 +155,6 @@ com.openggf.game.sonic2.objects.ConveyorObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.ConveyorObjectInstance#finalScalar#xFlip
 com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance#finalScalar#positionX
 com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance#finalScalar#positionY
-com.openggf.game.sonic2.objects.EHZWaterfallObjectInstance#recreate
 com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.EggPrisonObjectInstance#recreate
 com.openggf.game.sonic2.objects.ElevatorObjectInstance#finalScalar#b
@@ -174,11 +166,6 @@ com.openggf.game.sonic2.objects.ElevatorObjectInstance#finalScalar#r
 com.openggf.game.sonic2.objects.ElevatorObjectInstance#recreate
 com.openggf.game.sonic2.objects.FallingPillarObjectInstance#finalScalar#isChild
 com.openggf.game.sonic2.objects.FallingPillarObjectInstance#recreate
-com.openggf.game.sonic2.objects.FanObjectInstance#finalScalar#alwaysOn
-com.openggf.game.sonic2.objects.FanObjectInstance#finalScalar#isVertical
-com.openggf.game.sonic2.objects.FanObjectInstance#finalScalar#reverseDirection
-com.openggf.game.sonic2.objects.FanObjectInstance#finalScalar#xFlipped
-com.openggf.game.sonic2.objects.FanObjectInstance#recreate
 com.openggf.game.sonic2.objects.FlipperObjectInstance#finalScalar#b
 com.openggf.game.sonic2.objects.FlipperObjectInstance#finalScalar#g
 com.openggf.game.sonic2.objects.FlipperObjectInstance#finalScalar#halfHeight
@@ -245,9 +232,6 @@ com.openggf.game.sonic2.objects.LauncherSpringObjectInstance#finalScalar#halfWid
 com.openggf.game.sonic2.objects.LauncherSpringObjectInstance#finalScalar#highPriority
 com.openggf.game.sonic2.objects.LauncherSpringObjectInstance#finalScalar#r
 com.openggf.game.sonic2.objects.LauncherSpringObjectInstance#recreate
-com.openggf.game.sonic2.objects.LavaMarkerObjectInstance#finalScalar#collisionFlags
-com.openggf.game.sonic2.objects.LavaMarkerObjectInstance#finalScalar#subtypeIndex
-com.openggf.game.sonic2.objects.LavaMarkerObjectInstance#recreate
 com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance#finalScalar#collisionHalfHeight
 com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance#finalScalar#collisionHalfWidth
 com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance#recreate

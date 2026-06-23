@@ -5,6 +5,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -26,10 +28,15 @@ import java.util.List;
  * </ul>
  * No collision/physics (pure scenery).
  */
-public class BridgeStakeObjectInstance extends AbstractObjectInstance {
+public class BridgeStakeObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     public BridgeStakeObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
+    }
+
+    @Override
+    public BridgeStakeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BridgeStakeObjectInstance(ctx.spawn(), getName());
     }
 
     @Override
@@ -75,4 +82,3 @@ public class BridgeStakeObjectInstance extends AbstractObjectInstance {
         renderer.drawFrameIndex(frame, spawn.x(), spawn.y(), hFlip, vFlip);
     }
 }
-

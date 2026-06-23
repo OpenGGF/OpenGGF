@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -42,7 +44,7 @@ import java.util.List;
  * </ul>
  */
 public class ButtonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // ROM: move.w #$1B,d1 - solid object half-width
     private static final int HALF_WIDTH = 0x1B;
@@ -67,11 +69,11 @@ public class ButtonObjectInstance extends AbstractObjectInstance
     private static final int FRAME_PRESSED = 1;
 
     // Subtype-derived state
-    private final int switchId;    // subtype & 0x0F: index into ButtonVine_Trigger array
-    private final int triggerBit;  // 0 or 7: which bit to set/clear in the trigger byte
+    private int switchId;    // subtype & 0x0F: index into ButtonVine_Trigger array
+    private int triggerBit;  // 0 or 7: which bit to set/clear in the trigger byte
 
     // Adjusted Y position (after init offset)
-    private final int adjustedY;
+    private int adjustedY;
 
     // Standing detection via SolidObjectListener callback
     private boolean contactStanding;
@@ -94,6 +96,11 @@ public class ButtonObjectInstance extends AbstractObjectInstance
 
         // ROM: addq.w #4,y_pos(a0)
         this.adjustedY = spawn.y() + INIT_Y_OFFSET;
+    }
+
+    @Override
+    public ButtonObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new ButtonObjectInstance(ctx.spawn());
     }
 
     @Override

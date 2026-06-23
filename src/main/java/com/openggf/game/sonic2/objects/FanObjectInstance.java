@@ -10,6 +10,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -29,7 +31,7 @@ import java.util.ArrayList;
  * <p>
  * Render flag bit 0 controls X-flip for horizontal fans.
  */
-public class FanObjectInstance extends AbstractObjectInstance {
+public class FanObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // Timer durations (in frames)
     private static final int ACTIVE_DURATION = 0xB4;  // 180 frames
@@ -38,10 +40,10 @@ public class FanObjectInstance extends AbstractObjectInstance {
     // Number of mapping frames per variant
     private static final int MAPPING_FRAME_COUNT = 11;
 
-    private final boolean isVertical;
-    private final boolean reverseDirection;
-    private final boolean alwaysOn;
-    private final boolean xFlipped;
+    private boolean isVertical;
+    private boolean reverseDirection;
+    private boolean alwaysOn;
+    private boolean xFlipped;
 
     // Timer state machine
     // NOTE: 'spinUp' maps to objoff_32 != 0 in the disassembly.
@@ -74,6 +76,11 @@ public class FanObjectInstance extends AbstractObjectInstance {
         this.spinUp = false;
         this.accumulator = 0;
         this.animFrameDuration = 0;
+    }
+
+    @Override
+    public FanObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new FanObjectInstance(ctx.spawn(), getName());
     }
 
     @Override
