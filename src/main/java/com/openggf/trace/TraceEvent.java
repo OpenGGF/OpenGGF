@@ -23,7 +23,7 @@ public sealed interface TraceEvent {
         implements TraceEvent {}
 
     record ObjectNear(int frame, String character, int slot, String objectType, short x, short y,
-                      String routine, String status)
+                      String routine, String status, String objFrame)
         implements TraceEvent {}
 
     /**
@@ -563,7 +563,9 @@ public sealed interface TraceEvent {
                     parseHexShort(node, "x"),
                     parseHexShort(node, "y"),
                     node.has("routine") ? node.get("routine").asText() : "",
-                    node.has("status") ? node.get("status").asText() : ""
+                    node.has("status") ? node.get("status").asText() : "",
+                    // obj_frame is a v3.5+ optional field; older traces omit it.
+                    node.has("obj_frame") ? node.get("obj_frame").asText() : ""
                 );
                 case "s1_obj64_state" -> new S1Obj64State(
                     frame,

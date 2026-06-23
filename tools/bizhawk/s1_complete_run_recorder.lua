@@ -25,6 +25,11 @@
 -- RNG-frontier diagnostics. CSV schema is unchanged.
 -- v3.4 changes: add s1_obj64_state aux events for LZ air-bubble maker
 -- frontier diagnostics. CSV schema is unchanged.
+-- v3.5 changes: (1) emit metadata.source_bk2 so the shared _movies/ BK2 resolver
+-- finds the movie (previously omitted -> AbstractTraceReplayTest silently SKIPPED
+-- the regenerated trace). (2) add obj_frame (obFrame / OFF_ANIM_FRAME_DISP 0x1A)
+-- to object_near events for object-tilt/anim-phase diagnosis (e.g. SLZ seesaw
+-- Obj5E tilt mapping frame). Both are diagnostic-only; CSV schema is unchanged.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -282,12 +287,16 @@ local function write_metadata()
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.4",\n')
+    meta_file:write('  "lua_script_version": "3.5",\n')
     meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
-    meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame"],\n')
+    meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame"],\n')
     meta_file:write('  "rom_checksum": "",\n')
-    meta_file:write('  "notes": ""\n')
+    meta_file:write('  "notes": "",\n')
+    -- The complete-run recorder always plays the shared complete-run BK2. Emit
+    -- source_bk2 so AbstractTraceReplayTest's _movies/ resolver finds it; without
+    -- it the regenerated trace silently SKIPS (no BK2 -> Assumptions.assumeTrue).
+    meta_file:write('  "source_bk2": "s1-complete-run.bk2"\n')
     meta_file:write("}\n")
     meta_file:close()
     print(string.format("Metadata written. Zone: %s Act %d, Trace frames: %d",
@@ -390,10 +399,14 @@ local function scan_objects(player_x, player_y)
             if dx <= OBJECT_PROXIMITY and dy <= OBJECT_PROXIMITY then
                 local obj_status = mainmemory.read_u8(addr + OFF_STATUS)
                 local obj_routine = mainmemory.read_u8(addr + OFF_ROUTINE)
+                -- obj_frame = obFrame / OFF_ANIM_FRAME_DISP (0x1A). For tilt/anim
+                -- objects (e.g. SLZ seesaw Obj5E) this is the mapping/tilt frame,
+                -- needed to compare object-anim-phase against the engine.
+                local obj_frame = mainmemory.read_u8(addr + OFF_ANIM_FRAME_DISP)
                 write_aux(string.format(
                     '{"frame":%d,"vfc":%d,"event":"object_near","slot":%d,"type":"0x%02X",'
-                    .. '"x":"0x%04X","y":"0x%04X","routine":"0x%02X","status":"0x%02X"}',
-                    trace_frame, vfc, slot, obj_id, obj_x, obj_y, obj_routine, obj_status))
+                    .. '"x":"0x%04X","y":"0x%04X","routine":"0x%02X","status":"0x%02X","obj_frame":"0x%02X"}',
+                    trace_frame, vfc, slot, obj_id, obj_x, obj_y, obj_routine, obj_status, obj_frame))
             end
         end
 
