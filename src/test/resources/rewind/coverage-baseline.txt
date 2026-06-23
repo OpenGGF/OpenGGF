@@ -137,7 +137,6 @@ com.openggf.game.sonic2.objects.RivetObjectInstance#recreate
 com.openggf.game.sonic2.objects.SeesawObjectInstance#recreate
 com.openggf.game.sonic2.objects.SidewaysPformObjectInstance#recreate
 com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance$SmallMetalPformChildInstance#finalScalar#xFlipped
-com.openggf.game.sonic2.objects.SmashableGroundObjectInstance#recreate
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance#recreate
 com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#accel
 com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#destX
@@ -157,8 +156,6 @@ com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#finalScalar#zoneC
 com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#objectRef#displayChild
 com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#recreate
 com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance$SwingingPlatformDisplayChild#recreate
-com.openggf.game.sonic2.objects.TiltingPlatformObjectInstance#finalScalar#behaviorType
-com.openggf.game.sonic2.objects.TiltingPlatformObjectInstance#recreate
 com.openggf.game.sonic2.objects.TornadoObjectInstance#finalScalar#subtype
 com.openggf.game.sonic2.objects.TornadoObjectInstance#objectRef#thrusterFollowerChild
 com.openggf.game.sonic2.objects.TornadoObjectInstance#recreate

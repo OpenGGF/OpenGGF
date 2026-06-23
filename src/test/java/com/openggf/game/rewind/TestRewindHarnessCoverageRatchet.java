@@ -244,8 +244,8 @@ public class TestRewindHarnessCoverageRatchet {
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 309 after S2 mechanism-tail objects moved to generic recreate.
-    static final int RATCHET_FLOOR = 309;
+    // 2026-06-24: raised to 311 after S2 fragment-parent objects moved to generic recreate.
+    static final int RATCHET_FLOOR = 311;
 
     @BeforeEach
     void initHeadless() {

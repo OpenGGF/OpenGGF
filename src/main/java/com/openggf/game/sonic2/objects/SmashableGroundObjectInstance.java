@@ -33,7 +33,7 @@ import java.util.logging.Logger;
  * - Uses level patterns (ArtTile_ArtKos_LevelArt), not dedicated object art
  */
 public class SmashableGroundObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(SmashableGroundObjectInstance.class.getName());
 
@@ -104,6 +104,11 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         this.mappingFrame = FRAME_BY_STATE[stateIndex];
         this.broken = false;
         this.savedChainCounter = 0;
+    }
+
+    @Override
+    public SmashableGroundObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SmashableGroundObjectInstance(ctx.spawn(), "SmashableGround");
     }
 
     private void ensureInitialized() {
