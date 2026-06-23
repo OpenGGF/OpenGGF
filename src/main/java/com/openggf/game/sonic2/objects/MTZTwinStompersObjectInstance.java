@@ -12,6 +12,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -50,7 +52,7 @@ import java.util.List;
  * The extension modifies y_pos relative to base position.
  */
 public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final boolean DEBUG_VIEW_ENABLED = staticDebugViewEnabled();
     private static final DebugOverlayManager OVERLAY_MANAGER = staticDebugOverlay();
@@ -100,22 +102,22 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
     ));
 
     // Properties for this instance
-    private final int widthPixels;
-    private final int collisionYRadius;
-    private final int maxTravel;       // objoff_3C
-    private final int mappingFrame;
-    private final boolean xFlip;
+    private int widthPixels;
+    private int collisionYRadius;
+    private int maxTravel;             // objoff_3C
+    private int mappingFrame;
+    private boolean xFlip;
 
     // Explicit y_radius for large variant (s2.asm:52235)
-    private final int renderYRadius;
+    private int renderYRadius;
 
     // Position tracking
-    private final int baseX;           // objoff_34
-    private final int baseY;           // objoff_30
+    private int baseX;                 // objoff_34
+    private int baseY;                 // objoff_30
     private int currentY;
 
     // State machine (mode 1 behavior)
-    private final int moveMode;        // subtype & 0x0F
+    private int moveMode;              // subtype & 0x0F
     private boolean extending;         // objoff_38: false=retracting, true=extending
     private int extension;             // objoff_3A: current extension amount (0 to maxTravel)
     private int timer;                 // objoff_36: countdown timer
@@ -169,6 +171,11 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
         }
 
         updateDynamicSpawn(baseX, currentY);
+    }
+
+    @Override
+    public MTZTwinStompersObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MTZTwinStompersObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

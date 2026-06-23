@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -56,7 +58,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(MCZDrawbridgeObjectInstance.class.getName());
 
@@ -95,12 +97,12 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
     private static final int DOWN_X_OFFSET = 0x48;
 
     // State variables
-    private final int switchId;           // ButtonVine trigger ID (0-15)
-    private final int originalX;          // Original spawn X position (objoff_30)
-    private final int originalY;          // Original spawn Y position (objoff_32)
-    private final int direction;          // Movement direction: -0x100 (left) or +0x100 (right) (objoff_34)
-    private final boolean xFlipped;       // X-flip status flag
-    private final boolean yFlipped;       // Y-flip status flag
+    private int switchId;                 // ButtonVine trigger ID (0-15)
+    private int originalX;                // Original spawn X position (objoff_30)
+    private int originalY;                // Original spawn Y position (objoff_32)
+    private int direction;                // Movement direction: -0x100 (left) or +0x100 (right) (objoff_34)
+    private boolean xFlipped;             // X-flip status flag
+    private boolean yFlipped;             // Y-flip status flag
 
     // Angle as 16-bit word (only high byte used for rotation)
     // ROM: angle(a0) is a word but rotation logic treats it as byte
@@ -163,6 +165,11 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
 
         // Calculate initial segment positions
         updateSegmentPositions();
+    }
+
+    @Override
+    public MCZDrawbridgeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MCZDrawbridgeObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

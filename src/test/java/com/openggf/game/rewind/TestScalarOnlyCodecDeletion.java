@@ -1089,13 +1089,31 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic2.objects.HTZLiftObjectInstance",
                     GameId.S2),
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.LargeRotPformObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.LateralCannonObjectInstance",
                     GameId.S2),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance",
                     GameId.S2),
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MCZBrickObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MCZBridgeObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MCZDrawbridgeObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.MTZSpringWallObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MTZTwinStompersObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.RisingLavaObjectInstance",
                     GameId.S2),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.SlidingSpikesObjectInstance",
@@ -1116,7 +1134,13 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic2.objects.VineSwitchObjectInstance",
                     GameId.S2),
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.VPropellerObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.WFZShipFireObjectInstance",
                     GameId.S2));
 
     private static final List<MutableFieldCoverageCandidate> S2_TRIGGER_MOTION_SCALAR_RECREATE_MUTABLE_FIELDS =
@@ -1131,14 +1155,34 @@ public class TestScalarOnlyCodecDeletion {
                             "com.openggf.game.sonic2.objects.HTZLiftObjectInstance",
                             "baseX", "baseY", "flippedX"),
                     new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.LargeRotPformObjectInstance",
+                            "baseX", "baseY", "widthPixels", "yRadius", "mappingFrame",
+                            "isIndent", "mirrorMotion", "rotateMotion", "priority"),
+                    new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic2.objects.LateralCannonObjectInstance",
                             "x", "y", "phaseMask"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance",
                             "collisionHalfWidth", "collisionHalfHeight"),
                     new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MCZBrickObjectInstance",
+                            "mode", "initialX", "initialY", "chainCount", "speed"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MCZBridgeObjectInstance",
+                            "switchId"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MCZDrawbridgeObjectInstance",
+                            "switchId", "originalX", "originalY", "direction", "xFlipped", "yFlipped"),
+                    new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic2.objects.MTZSpringWallObjectInstance",
                             "yRadius", "xFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MTZTwinStompersObjectInstance",
+                            "widthPixels", "collisionYRadius", "maxTravel", "mappingFrame", "xFlip",
+                            "renderYRadius", "baseX", "baseY", "moveMode"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.RisingLavaObjectInstance",
+                            "subtype", "widthPixels", "baseY", "baseX"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic2.objects.SlidingSpikesObjectInstance",
                             "baseX", "hFlip"),
@@ -1158,9 +1202,15 @@ public class TestScalarOnlyCodecDeletion {
                             "com.openggf.game.sonic2.objects.VineSwitchObjectInstance",
                             "switchId"),
                     new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.VPropellerObjectInstance",
+                            "currentX", "currentY", "collisionFlags", "yFlipped"),
+                    new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance",
                             "halfWidth", "halfHeight", "r", "g", "b", "highPriority",
-                            "triggerHalfHeight", "xFlipped"));
+                            "triggerHalfHeight", "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.WFZShipFireObjectInstance",
+                            "initialX", "currentY"));
 
     private static final List<MutableFieldCoverageCandidate> S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS =
             List.of(

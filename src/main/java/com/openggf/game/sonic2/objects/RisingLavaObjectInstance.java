@@ -7,6 +7,8 @@ import com.openggf.game.sonic2.runtime.HtzRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -47,7 +49,7 @@ import static org.lwjgl.opengl.GL11.GL_TRIANGLE_FAN;
  * @see HtzRuntimeState#cameraBgYOffset() For earthquake Y offset
  */
 public class RisingLavaObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SlopedSolidProvider, SolidObjectListener {
+        implements SolidObjectProvider, SlopedSolidProvider, SolidObjectListener, RewindRecreatable {
 
     // ========================================================================
     // ROM Constants - Width table from Obj30_Widths (line 49042)
@@ -120,10 +122,10 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     // Instance State
     // ========================================================================
 
-    private final int subtype;
-    private final int widthPixels;
-    private final int baseY;
-    private final int baseX;
+    private int subtype;
+    private int widthPixels;
+    private int baseY;
+    private int baseX;
     private boolean routeEnabled;
     private boolean routeChecked;
     private int currentY;
@@ -144,6 +146,11 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
         this.widthPixels = SUBTYPE_WIDTHS[widthIndex];
 
         updateDynamicSpawn(baseX, currentY);
+    }
+
+    @Override
+    public RisingLavaObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new RisingLavaObjectInstance(ctx.spawn(), getName());
     }
 
     /**

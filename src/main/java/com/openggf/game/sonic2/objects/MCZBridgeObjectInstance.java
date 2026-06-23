@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -42,7 +44,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class MCZBridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(MCZBridgeObjectInstance.class.getName());
 
@@ -64,7 +66,7 @@ public class MCZBridgeObjectInstance extends AbstractObjectInstance
     private static final int WIDTH_PIXELS = 0x80;
 
     // State variables
-    private final int switchId;         // ButtonVine trigger ID
+    private int switchId;               // ButtonVine trigger ID
     private int mappingFrame;           // Current display frame (0-4)
     private int animId;                 // 0 = close anim, 1 = open anim
     private int frameIndex;             // Index into current frame array
@@ -89,6 +91,11 @@ public class MCZBridgeObjectInstance extends AbstractObjectInstance
         LOGGER.fine(() -> String.format(
                 "MCZBridge init: pos=(%d,%d), switchId=%d",
                 spawn.x(), spawn.y(), switchId));
+    }
+
+    @Override
+    public MCZBridgeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MCZBridgeObjectInstance(ctx.spawn(), getName());
     }
 
     @Override
