@@ -144,6 +144,13 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-23 - S1 MZ3 complete-run regenerated at recorder v3.4 for object_near aux (frontier UNCHANGED f2079 / 1123 errors)
+
+- Branch/worktree: `bugfix/ai-s1-mz3-f2079` off `origin/develop` 48108c98e (worktree `.worktrees/slz3-f718`).
+- The committed MZ3 trace was a stale recorder v3.2 recording with NO `aux_state.jsonl` (only metadata.json + physics.csv.gz). Regenerated with `tools/bizhawk/s1_complete_run_recorder.lua` v3.4 (`S1_STOP_AT_FRAME=65000`, s1.gen, fast-headless) so the trace now carries per-frame `object_near` aux (ROM per-object x/y/routine/status near the player). This is DIAGNOSTIC context only — `compareObjectNearEvents()` stays default-false, so object_near is rendered in the report context window but does NOT define new divergences (comparison-only invariant preserved). NO engine change in this commit.
+- Frontier VERIFIED UNCHANGED: first divergence still f2079 `y_speed` exp=-02C8 act=-03C8, total 1123 errors — identical to the v3.2 trace (same BK2/ROM -> same physics; the regen only adds aux). The new metadata required a manual `source_bk2: "s1-complete-run.bk2"` field (the v3.4 recorder does not emit it; the shared `_movies/` BK2 resolver needs it, matching the already-regenerated lz2_completerun trace) or the test silently SKIPS.
+- New diagnostic value (impossible without this regen): the ROM Batbrain (Obj 0x55, slot 74) trajectory now confirms the f2079 root quantitatively. ROM Batbrain hangs at y=0x048C (f2029-2053), drops ~1px/frame f2054-2062 to y=0x0494, then LOCKS flight-Y at 0x0494 and flies right; it is destroyed (slot 74 -> ObjID 0x27 explosion + 0x28 points) at f2079 by Sonic's bounce. The engine Batbrain locks flight-Y at 0x0491 -- **3px too high** (not 1px as first estimated) -- so its bottom edge (0x0499) misses the player's top edge (0x049A) and the React_BadnikHit +0x100 slowFromBelow bounce never fires. Engine drop stops 3px short of ROM (locks after ~5px descent vs ROM's 8px). Next: diagnose the engine Batbrain drop-stop (`Sonic1BatbrainBadnikInstance` distToTarget<0x10 / captured targetY / drop start) against this ROM trajectory.
+
 ## 2026-06-23 - S1 Seesaw used a non-zero slope baseline so SlopeObject landing fired 1 frame late; SLZ3 f718 -> f745 (1073 -> 916)
 
 - Branch/worktree: `bugfix/ai-s1-slz3-f718` off `origin/develop` 0b0fb8ac7 (worktree `.worktrees/slz3-f718`).
