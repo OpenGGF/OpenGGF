@@ -280,6 +280,8 @@ Highlights:
 
 - Riding off a vertically-bobbing moving platform (Obj18 / Obj52 moving block / Obj59 elevator) now re-seats the rider's Y to the platform's moved surface on the walk-off frame (ROM's unconditional `MvSonicOnPtfm2`), completing the exit-frame fidelity the earlier X-carry fix began — so the rider tracks a bobbing platform's last frame instead of holding the pre-move Y (SYZ3 trace frontier f3476 -> f6065; gated to the three platform routines that call MvSonicOnPtfm2, GHZ2 + SYZ2 stay green).
 
+- Trace-workflow documentation now captures the BizHawk live-diagnostic capture technique (the fast self-exiting headless lua trio — `emu.limitframerate(false)` + `client.speedmode(6400)` + `client.invisibleemulation(true)` — the `tools/bizhawk/diag_template_fast.lua` template, the NLua read-count crash workaround, and the simple-named `s1.gen`/`s2.gen`/`s3k.gen` ROM-arg fix) in the `trace-replay-bug-fixing` skill, plus a new lead-orchestrator runbook documenting the continuous multi-agent trace-advancing loop (survey → assign → net-positive gate → verify → merge → reassign) and its shared-worktree hygiene rules.
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)
