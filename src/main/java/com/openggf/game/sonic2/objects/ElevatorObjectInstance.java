@@ -43,7 +43,7 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm ObjD5 (CNZ Elevator), lines 58376-58498
  */
 public class ElevatorObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // State constants (from disassembly routine offsets)
     private static final int STATE_WAIT_FOR_CONTACT = 0;
@@ -84,6 +84,11 @@ public class ElevatorObjectInstance extends BoxObjectInstance
         // Use platform half-width for debug box, cyan color
         super(spawn, name, HALF_WIDTH, PLATFORM_HEIGHT, 0.2f, 0.8f, 0.8f, false);
         init();
+    }
+
+    @Override
+    public ElevatorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new ElevatorObjectInstance(ctx.spawn(), getName());
     }
 
     private void init() {

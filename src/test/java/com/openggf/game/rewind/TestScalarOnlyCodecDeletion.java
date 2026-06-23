@@ -1027,6 +1027,18 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S2),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.SpringObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.BreakableBlockObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CNZBigBlockObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CNZRectBlocksObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.ElevatorObjectInstance",
                     GameId.S2));
 
     private static final List<MutableFieldCoverageCandidate> S2_BOX_SOLID_SCALAR_RECREATE_MUTABLE_FIELDS =
@@ -1051,7 +1063,20 @@ public class TestScalarOnlyCodecDeletion {
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic2.objects.SpringObjectInstance",
                             "halfWidth", "halfHeight", "r", "g", "b", "highPriority",
-                            "redSpring", "idleAnimId", "triggeredAnimId"));
+                            "redSpring", "idleAnimId", "triggeredAnimId"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.BreakableBlockObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.CNZBigBlockObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority",
+                            "targetX", "targetY", "moveType"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.CNZRectBlocksObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority", "baseX", "baseY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.ElevatorObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority"));
 
     private static final List<MutableFieldCoverageCandidate> S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS =
             List.of(

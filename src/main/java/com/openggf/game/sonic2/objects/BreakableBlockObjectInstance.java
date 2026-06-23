@@ -31,7 +31,7 @@ import java.util.logging.Logger;
  * - Plays SLOW_SMASH sound effect (0xCB)
  */
 public class BreakableBlockObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(BreakableBlockObjectInstance.class.getName());
 
@@ -71,7 +71,7 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
     private static final int FRAME_INTACT = 0;
     private static final int FRAME_FRAGMENT_BASE = 1;  // Fragments use frames 1-4 (legacy fallback)
 
-    private final int halfWidth;
+    private int halfWidth;
     private boolean broken;
     private boolean initialized;
 
@@ -79,6 +79,11 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         super(spawn, name, resolveHalfWidth(), HALF_HEIGHT, 0.6f, 0.6f, 0.8f, false);
         this.halfWidth = resolveHalfWidth();
         this.broken = false;
+    }
+
+    @Override
+    public BreakableBlockObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BreakableBlockObjectInstance(ctx.spawn(), getName());
     }
 
     private void ensureInitialized() {
