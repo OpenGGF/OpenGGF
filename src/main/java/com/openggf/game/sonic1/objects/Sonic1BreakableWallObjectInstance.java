@@ -208,27 +208,30 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
         // From disassembly: move.w smash_speed(a0),obVelX(a1)
         player.setXSpeed((short) impactSpeed);
 
-        // From disassembly (lines 53-59):
-        //   addq.w  #4,obX(a1)              ; always add 4 first
+        // From disassembly (lines 57-64):
+        //   addq.w  #4,obX(a1)              ; always add 4 first (INTEGER word only, obSubX unchanged)
         //   lea     (Smash_FragSpd1).l,a4   ; default = RIGHT fragments
         //   move.w  obX(a0),d0              ; d0 = wall X
         //   cmp.w   obX(a1),d0              ; compare wallX with (sonicX+4)
         //   blo.s   .smash                  ; if wallX < sonicX+4, keep FragSpd1 (RIGHT)
-        //   subq.w  #8,obX(a1)              ; else subtract 8 (net -4)
+        //   subq.w  #4*2,obX(a1)            ; else subtract 8 (net -4, INTEGER word only, obSubX unchanged)
         //   lea     (Smash_FragSpd2).l,a4   ; use FragSpd2 (LEFT)
+        //
+        // ROM `addq.w/subq.w` modify only obX (the integer pixel word); obSubX is left intact.
+        // Use shiftX(delta) which matches this: shiftX adds to the pixel integer only,
+        // preserving the sub-pixel fraction (per AbstractSprite.shiftX JavaDoc).
         int wallX = spawn.x();
         int sonicX = player.getCentreX();
-        int adjustedSonicX = sonicX + 4; // addq.w #4 applied first
 
         int[][] fragSpeeds;
-        if (wallX < adjustedSonicX) {
-            // Sonic is to the RIGHT of wall: keep +4 adjustment, fragments scatter right
+        if (wallX < sonicX + 4) {
+            // Sonic is to the RIGHT of wall: net +4 (addq.w #4, no subq)
             fragSpeeds = FRAG_SPD_RIGHT;
-            player.setCentreX((short) adjustedSonicX);
+            player.shiftX(4);   // addq.w #4,obX(a1) — integer only, sub-pixel preserved
         } else {
-            // Sonic is to the LEFT of wall: net -4 adjustment, fragments scatter left
+            // Sonic is to the LEFT of wall: net -4 (addq.w #4 then subq.w #8)
             fragSpeeds = FRAG_SPD_LEFT;
-            player.setCentreX((short) (adjustedSonicX - 8));
+            player.shiftX(-4);  // net of addq.w #4 + subq.w #8 — integer only, sub-pixel preserved
         }
 
         // From disassembly: move.w obVelX(a1),obInertia(a1)

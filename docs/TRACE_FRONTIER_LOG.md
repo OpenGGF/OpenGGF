@@ -16,7 +16,7 @@ branch-local measurements.
 | Current blocking field | Movement downstream of Tails CPU: earliest current table target is OOZ f1782 Tails `tails_x`/`tails_x_speed` after preserving the ROM-visible S2 Obj36 negative-inertia riding push bridge |
 | Current owner hypothesis | Status-only sidekick lifetime/marker/on-object/airborne-zero-x-speed facing mismatches, first-landing CPU mirror/interact refresh lag, held-only Ctrl2 diagnostic latches, stationary released push-bit tails, and grounded push-bit-only tails are trace-framework noise when kinematics and pressed edges match; current sweep has moved the active S2 Tails CPU/status cluster into movement frontiers, and OOZ now points at the next real post-bypass movement delta |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain and tightening trace context output defaults |
-| Last frontier move | S2 OOZ1 level-select `f1779 -> f1782` by lowering the Obj36 riding push bridge only after SolidObject response flips CPU Tails to negative ground speed |
+| Last frontier move | S1 GHZ3 `f2693 -> f4650` by fixing SmashableWall smash x-adjust to use `shiftX` (integer-only, sub-pixel preserved) instead of `setCentreX` (clears sub-pixel) |
 
 ### Active queue
 
@@ -152,6 +152,14 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 - Fix: after `checkpointAll()` sets `playerStanding` in `Sonic1PlatformObjectInstance.update`, added a post-checkpoint guard: `if (moveType == 0x03 && timer == 0 && playerStanding) { timer = FALL_STAND_DELAY; }`. This mirrors `.type03`'s first-time-standing detection on the landing frame. Object-local to Obj 18.
 - Regression sweep (full S1 sweep, vs develop baseline including cherry-picked Orbinaut fix): GHZ2 GREEN, SYZ2 GREEN, all other S1 frontiers unchanged: GHZ3 f2693, LZ1 f5745, LZ2 f1068, LZ3 f6517, MZ1 f2089, MZ2 f2819, MZ3 f2079, SBZ1 f2268, SBZ2 f1395, SLZ1 f933, SLZ2 f1493, SLZ3 f718, SYZ1 f816, SYZ3 f6065. Unit tests: TestSolidRoutineProfiles 13/0, TestSonic1SpringObjectInstance 2/0, TestOrbinautBadnikInstance 6/0 — all pass.
 - Note: this fix was developed in worktree `ghz1-advance` which was based on `origin/develop` 88a4be974 (before `f9fac6f25` Orbinaut fix). Without cherry-picking the Orbinaut fix first, the timer fix caused SLZ2 to regress from f1493 to f1016: the earlier platform fall timing changed Sonic's trajectory so he hit the Orbinaut spike 4 frames early (a pre-existing spike-orbit 1px Y offset that the Orbinaut fix addresses). Cherry-picking the Orbinaut fix into the branch first restored the correct behavior.
+
+## 2026-06-23 - S1 SmashableWall setCentreX cleared sub-pixel on smash; GHZ3 f2693 -> f4650 (477 -> 363)
+
+- Branch/worktree: `bugfix/ai-s1-ghz3-advance` off `origin/develop` (HEAD 8e3aefaaf).
+- **`s1_ghz3` frontier advanced f2693 -> f4650 (477 -> 363 errors).** First error before fix: f2693 `x` exp=0x083C act=0x083B (1px too left). After: f4650 `x_speed` mismatch (next root, unrelated to this fix).
+- Root: `Sonic1BreakableWallObjectInstance.smashWall` (lines 227/231 before fix) called `player.setCentreX((short) value)` to apply the ±4px x adjustment after smashing. ROM's equivalent (`docs/s1disasm/_incObj/3C GHZ, SLZ Smashable Wall.asm` lines 57-64) uses `addq.w #4,obX(a1)` and `subq.w #8,obX(a1)` which modify ONLY the integer pixel word at `obX`, leaving `obSubX` (the sub-pixel word) intact. `setCentreX` clears the sub-pixel to 0. At f2691 (the smash frame), Sonic's sub-pixel was 0x1200 after the SolidObject snap (preserved correctly by the engine's `player.move` snap path). After the ROM-path `addq.w #4` the sub stays 0x1200, but the engine's `setCentreX` zeroed it to 0x0000. The accumulated sub-pixel difference meant that at f2693, Sonic's carry bit didn't fire (engine sub 0xF200+0x7600=no-carry, vs ROM sub 0x8E00+0x7600=carry), leaving the integer x 1px short.
+- Fix: replaced `player.setCentreX(...)` with `player.shiftX(±4)` — `AbstractSprite.shiftX` adds to the integer pixel word only, sub-pixel preserved, exactly matching ROM `addq.w #4,obX(a1)` / `subq.w #8,obX(a1)`. Object-local to Obj 0x3C.
+- Regression sweep (S1 broad sweep, vs develop baseline): GHZ1 GREEN, GHZ2 GREEN, SYZ2 GREEN. SLZ2 f1493/277 (unchanged). All other S1 frontiers: LZ1 f5745, LZ2 f1068, LZ3 f6517, MZ1 f2089, MZ2 f2819, MZ3 f2079, SBZ1 f2268, SBZ2 f1395, SLZ1 f933, SLZ2 f1493, SLZ3 f718, SYZ1 f816, SYZ3 f6065 — all byte-identical. Unit tests: `TestSonic1BreakableWallObjectInstance` 2/0 pass.
 
 ## 2026-06-23 - S1 Orbinaut satellite orbit used float Math.round instead of ROM CalcSine integer shift; SLZ2 f1016 -> f1493
 
