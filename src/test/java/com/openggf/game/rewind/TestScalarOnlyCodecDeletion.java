@@ -1242,6 +1242,21 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S2),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.badniks.SpikerBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.SpinyBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.SpinyOnWallBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.WFZStickBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.WFZUnknownBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.WhispBadnikInstance",
                     GameId.S2));
 
     private static final List<MutableFieldCoverageCandidate> S2_BADNIK_SCALAR_RECREATE_MUTABLE_FIELDS =

@@ -10,6 +10,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -30,7 +32,7 @@ import java.util.List;
  * - Frame 5: Attack pose
  * - Frames 6-7: Spike projectile
  */
-public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance {
+public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B;
 
     // Movement constants
@@ -103,6 +105,11 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance {
         this.ySubpixel = 0;
         // Preserve spawn's render_flags for initial facing direction (x_flip bit)
         this.facingLeft = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public SpinyOnWallBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SpinyOnWallBadnikInstance(ctx.spawn());
     }
 
     @Override

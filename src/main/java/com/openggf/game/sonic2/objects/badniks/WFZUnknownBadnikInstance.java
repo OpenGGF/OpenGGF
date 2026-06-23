@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -18,7 +20,7 @@ import java.util.List;
  * ArtTile_ArtNem_Unknown ($03FA, same tile base as WFZ hook), priority 4,
  * width $0C, and collision_flags $09.
  */
-public class WFZUnknownBadnikInstance extends AbstractBadnikInstance {
+public class WFZUnknownBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x09;
     private static final int WIDTH_PIXELS = 0x0C;
 
@@ -27,6 +29,11 @@ public class WFZUnknownBadnikInstance extends AbstractBadnikInstance {
         this.currentX = spawn.x();
         this.currentY = spawn.y();
         this.animFrame = 0;
+    }
+
+    @Override
+    public WFZUnknownBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new WFZUnknownBadnikInstance(ctx.spawn());
     }
 
     @Override
