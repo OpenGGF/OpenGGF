@@ -8,6 +8,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -30,7 +32,7 @@ import java.util.logging.Logger;
  * After firing, anim continues with frame 4, then changes to anim 1 (frame 5 looping).
  * On cooldown expiry, resets to anim 0.
  */
-public class HtzFireShooterObjectInstance extends AbstractObjectInstance {
+public class HtzFireShooterObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(HtzFireShooterObjectInstance.class.getName());
 
@@ -46,10 +48,10 @@ public class HtzFireShooterObjectInstance extends AbstractObjectInstance {
         COOLDOWN    // Routine 6: timer countdown before restart
     }
 
-    private final int currentX;
-    private final int currentY;
-    private final int projectileVel;  // Velocity for spawned projectiles (8.8 format)
-    private final int reloadTime;     // Frames between fire cycles
+    private int currentX;
+    private int currentY;
+    private int projectileVel;  // Velocity for spawned projectiles (8.8 format)
+    private int reloadTime;     // Frames between fire cycles
 
     private State state;
     private int animFrame;
@@ -84,6 +86,11 @@ public class HtzFireShooterObjectInstance extends AbstractObjectInstance {
         this.cooldownTimer = reloadTime;
         this.hasFired = false;
         this.animSequenceIndex = 0;
+    }
+
+    @Override
+    public HtzFireShooterObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HtzFireShooterObjectInstance(ctx.spawn());
     }
 
     @Override

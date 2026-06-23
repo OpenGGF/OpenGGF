@@ -98,11 +98,6 @@ com.openggf.game.sonic2.objects.FallingPillarObjectInstance#recreate
 com.openggf.game.sonic2.objects.FlipperObjectInstance#finalScalar#idleAnimId
 com.openggf.game.sonic2.objects.FlipperObjectInstance#recreate
 com.openggf.game.sonic2.objects.GrabObjectInstance#recreate
-com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance#finalScalar#currentX
-com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance#finalScalar#currentY
-com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance#finalScalar#projectileVel
-com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance#finalScalar#reloadTime
-com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance#recreate
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#finalScalar#renderXFlip
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#finalScalar#renderYFlip
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#finalScalar#reverseAnim
@@ -143,7 +138,6 @@ com.openggf.game.sonic2.objects.RivetObjectInstance#objectRef#lastNativeMainPlay
 com.openggf.game.sonic2.objects.RivetObjectInstance#recreate
 com.openggf.game.sonic2.objects.SeesawObjectInstance#recreate
 com.openggf.game.sonic2.objects.SidewaysPformObjectInstance#recreate
-com.openggf.game.sonic2.objects.SignpostObjectInstance#recreate
 com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance$SmallMetalPformChildInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance#recreate
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance#recreate
@@ -156,8 +150,6 @@ com.openggf.game.sonic2.objects.SpikyBlockObjectInstance#recreate
 com.openggf.game.sonic2.objects.SpiralObjectInstance#recreate
 com.openggf.game.sonic2.objects.SpringboardObjectInstance#recreate
 com.openggf.game.sonic2.objects.SteamPuffObjectInstance#finalScalar#xFlipped
-com.openggf.game.sonic2.objects.SteamSpringObjectInstance#finalScalar#baseY
-com.openggf.game.sonic2.objects.SteamSpringObjectInstance#recreate
 com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate
 com.openggf.game.sonic2.objects.SwingingPformObjectInstance#recreate
 com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#finalScalar#baseX
@@ -174,10 +166,8 @@ com.openggf.game.sonic2.objects.TiltingPlatformObjectInstance#recreate
 com.openggf.game.sonic2.objects.TornadoObjectInstance#finalScalar#subtype
 com.openggf.game.sonic2.objects.TornadoObjectInstance#objectRef#thrusterFollowerChild
 com.openggf.game.sonic2.objects.TornadoObjectInstance#recreate
-com.openggf.game.sonic2.objects.TornadoSmokeObjectInstance#recreate
 com.openggf.game.sonic2.objects.VerticalLaserObjectInstance#finalScalar#posX
 com.openggf.game.sonic2.objects.VerticalLaserObjectInstance#finalScalar#posY
-com.openggf.game.sonic2.objects.WFZWheelObjectInstance#recreate
 com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild#recreate
 com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance#finalScalar#type
