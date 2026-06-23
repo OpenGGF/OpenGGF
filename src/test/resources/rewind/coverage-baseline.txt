@@ -1,6 +1,3 @@
-com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance#finalScalar#pointsValue
-com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance#finalScalar#subtype
-com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance$WallFragmentInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance#finalScalar#hFlip
 com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance#finalScalar#pieceIndex

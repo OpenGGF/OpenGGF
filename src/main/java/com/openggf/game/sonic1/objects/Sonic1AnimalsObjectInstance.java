@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -29,7 +30,7 @@ import java.util.List;
  *   <li>Subtype 0x0A-0x14: ending animals ("Anml_Ending" subtype path)</li>
  * </ul>
  */
-public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
+public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int OBJECT_FALL_GRAVITY = 0x38;
     private static final int FLIGHT_GRAVITY = 0x18;
     private static final int FLOOR_CHECK_HEIGHT = 12;
@@ -95,8 +96,8 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
 
     private PatternSpriteRenderer zoneAnimalRenderer;
     private PatternSpriteRenderer endingAnimalRenderer;
-    private final int subtype;
-    private final int pointsValue;
+    private int subtype;
+    private int pointsValue;
 
     private int currentX;
     private int currentY;

@@ -755,6 +755,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S1_SCALAR_SPAWN_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance",
                     GameId.S1),
             new CodecDeletionCandidate(
@@ -874,6 +877,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<MutableFieldCoverageCandidate> S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS =
             List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance",
+                            "pointsValue", "subtype"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance",
                             "flipped", "moveType", "origX", "origY", "speed"),
