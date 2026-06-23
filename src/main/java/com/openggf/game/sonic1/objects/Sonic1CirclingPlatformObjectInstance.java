@@ -12,6 +12,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -40,7 +41,7 @@ import java.util.List;
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/5A SLZ Circling Platform.asm
  */
 public class Sonic1CirclingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // From disassembly: move.b #$18,obActWid(a0)
     private static final int HALF_WIDTH = 0x18;
@@ -60,17 +61,17 @@ public class Sonic1CirclingPlatformObjectInstance extends AbstractObjectInstance
     private static final int OSC_Y_OFFSET = 0x24; // v_oscillate+$26 = oscillator 9 value high byte
 
     // Saved original positions (circ_origX = objoff_32, circ_origY = objoff_30)
-    private final int origX;
-    private final int origY;
+    private int origX;
+    private int origY;
 
     // Current dynamic position
     private int x;
     private int y;
 
     // Subtype configuration
-    private final boolean negateBoth;   // Bit 0: negate both offsets
-    private final boolean rotated;      // Bit 1: negate X, exchange X/Y
-    private final boolean type04;       // Bits 2-3: type04 additionally negates X
+    private boolean negateBoth;   // Bit 0: negate both offsets
+    private boolean rotated;      // Bit 1: negate X, exchange X/Y
+    private boolean type04;       // Bits 2-3: type04 additionally negates X
 
     public Sonic1CirclingPlatformObjectInstance(ObjectSpawn spawn) {
         super(spawn, "CirclingPlatform");

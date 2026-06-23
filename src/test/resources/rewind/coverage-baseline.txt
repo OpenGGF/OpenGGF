@@ -2,12 +2,6 @@ com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance#finalScalar#pointsVa
 com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance#finalScalar#subtype
 com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance$WallFragmentInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance#finalScalar#negateBoth
-com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance#finalScalar#origX
-com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance#finalScalar#origY
-com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance#finalScalar#rotated
-com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance#finalScalar#type04
-com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance#finalScalar#hFlip
 com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance#finalScalar#pieceIndex
 com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance#finalScalar#priority
@@ -32,8 +26,6 @@ com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#reflec
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#finalScalar#switchIndex
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance#finalScalar#centerX
-com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance#finalScalar#centerY
 com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance#finalScalar#baseX
 com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance#finalScalar#invertOscillation

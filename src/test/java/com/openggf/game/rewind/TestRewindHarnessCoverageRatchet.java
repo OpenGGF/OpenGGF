@@ -227,12 +227,14 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-23: raised to 224 after S1 Bumper and Running Disc moved to
  *       spawn-based generic recreate, while Bubbles and Teleporter shed stale
  *       scalar baselines.</li>
+ *   <li>2026-06-23: raised to 225 after S1 Circling Platform moved to
+ *       spawn-based generic recreate and shed its final scalar baseline.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 224;
+    static final int RATCHET_FLOOR = 225;
 
     @BeforeEach
     void initHeadless() {

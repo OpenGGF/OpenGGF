@@ -843,6 +843,9 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic1.objects.Sonic1ChainedStomperObjectInstance",
                     GameId.S1),
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance",
                     GameId.S1),
             new CodecDeletionCandidate(
@@ -961,6 +964,9 @@ public class TestScalarOnlyCodecDeletion {
                             "blockActiveWidth", "blockFrame", "ceilingY", "chainBaseY",
                             "maxFallDistance", "origY", "spikesHaveCollision"),
                     new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance",
+                            "negateBoth", "origX", "origY", "rotated", "type04"),
+                    new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance",
                             "subtype"),
                     new MutableFieldCoverageCandidate(
@@ -997,6 +1003,9 @@ public class TestScalarOnlyCodecDeletion {
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance",
                             "baseX", "baseY", "chainCount"),
+                    new MutableFieldCoverageCandidate(
+                            Sonic1LamppostTwirlInstance.class.getName(),
+                            "centerX", "centerY"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance",
                             "currentX", "currentY"),
