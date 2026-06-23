@@ -15,6 +15,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -548,12 +550,13 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
      *   <li>Falls via ObjectFall when delay reaches 0</li>
      * </ul>
      */
-    public static class CollapsingFloorFragmentInstance extends AbstractFallingFragment {
+    public static class CollapsingFloorFragmentInstance extends AbstractFallingFragment
+            implements RewindRecreatable {
 
-        private final int smashFrameIndex;
-        private final int pieceIndex;
-        private final boolean hFlip;
-        private final String artKey;
+        private int smashFrameIndex;
+        private int pieceIndex;
+        private boolean hFlip;
+        private String artKey;
 
         public CollapsingFloorFragmentInstance(int parentX, int parentY,
                                                int smashFrameIndex, int pieceIndex,
@@ -564,6 +567,13 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
             this.pieceIndex = pieceIndex;
             this.hFlip = hFlip;
             this.artKey = artKey;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            return new CollapsingFloorFragmentInstance(
+                    spawn.x(), spawn.y(), 0, 0, 0, false, ObjectArtKeys.MZ_COLLAPSING_FLOOR);
         }
 
         @Override

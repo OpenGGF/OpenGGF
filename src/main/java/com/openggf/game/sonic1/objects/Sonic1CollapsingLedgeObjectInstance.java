@@ -11,6 +11,8 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
@@ -488,11 +490,12 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
      * - ledge_timedelay = delay from CFlo_Data1
      * - Falls via ObjectFall when delay reaches 0
      */
-    public static class CollapsingLedgeFragmentInstance extends AbstractFallingFragment {
+    public static class CollapsingLedgeFragmentInstance extends AbstractFallingFragment
+            implements RewindRecreatable {
 
-        private final int smashFrameIndex;
-        private final int pieceIndex;
-        private final boolean hFlip;
+        private int smashFrameIndex;
+        private int pieceIndex;
+        private boolean hFlip;
 
         public CollapsingLedgeFragmentInstance(int parentX, int parentY,
                                                int smashFrameIndex, int pieceIndex,
@@ -502,6 +505,12 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
             this.smashFrameIndex = smashFrameIndex;
             this.pieceIndex = pieceIndex;
             this.hFlip = (renderFlags & 0x01) != 0;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            return new CollapsingLedgeFragmentInstance(spawn.x(), spawn.y(), 0, 0, 0, 0);
         }
 
         @Override

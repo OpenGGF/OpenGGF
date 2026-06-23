@@ -875,6 +875,14 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic1.objects.badniks.Sonic1NewtronBadnikInstance",
                     GameId.S1));
 
+    private static final List<CodecDeletionCandidate> S1_COLLAPSING_FRAGMENT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance",
+                    GameId.S1));
+
     private static final List<MutableFieldCoverageCandidate> S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS =
             List.of(
                     new MutableFieldCoverageCandidate(
@@ -983,6 +991,12 @@ public class TestScalarOnlyCodecDeletion {
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance",
                             "mappingFrame", "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance",
+                            "artKey", "hFlip", "pieceIndex", "smashFrameIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance",
+                            "hFlip", "pieceIndex", "smashFrameIndex"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance",
                             "type"),
@@ -5351,6 +5365,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 scalar spawn generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1CollapsingFragmentsImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_COLLAPSING_FRAGMENT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 collapsing fragment coverage");
+        }
+    }
+
+    @Test
+    void s1CollapsingFragmentsHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_COLLAPSING_FRAGMENT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 collapsing fragment generic recreate, not a dynamic codec");
         }
     }
 
