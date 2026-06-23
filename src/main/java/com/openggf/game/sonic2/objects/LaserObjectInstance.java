@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import com.openggf.debug.DebugColor;
@@ -40,7 +42,7 @@ import java.util.List;
  * SubObjData: mappings=ObjB9_MapUnc_3BB18, art_tile=make_art_tile(ArtTile_ArtNem_WfzHrzntlLazer,2,1),
  * render_flags=level_fg, priority=1, width=$60, collision=0.
  */
-public class LaserObjectInstance extends AbstractObjectInstance {
+public class LaserObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     /**
      * Horizontal velocity when firing.
@@ -79,6 +81,11 @@ public class LaserObjectInstance extends AbstractObjectInstance {
         // data and advances routine to 2. We skip straight to routine 2 since the engine
         // handles art setup separately.
         this.routine = 2;
+    }
+
+    @Override
+    public LaserObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new LaserObjectInstance(ctx.spawn());
     }
 
     @Override

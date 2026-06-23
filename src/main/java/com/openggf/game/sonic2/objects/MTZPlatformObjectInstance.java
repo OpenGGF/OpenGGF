@@ -14,6 +14,8 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -52,7 +54,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class MTZPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(MTZPlatformObjectInstance.class.getName());
 
@@ -94,6 +96,11 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
     public MTZPlatformObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         init();
+    }
+
+    @Override
+    public MTZPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MTZPlatformObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

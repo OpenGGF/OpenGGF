@@ -113,8 +113,6 @@ com.openggf.game.sonic2.objects.CNZRectBlocksObjectInstance#finalScalar#halfWidt
 com.openggf.game.sonic2.objects.CNZRectBlocksObjectInstance#finalScalar#highPriority
 com.openggf.game.sonic2.objects.CNZRectBlocksObjectInstance#finalScalar#r
 com.openggf.game.sonic2.objects.CNZRectBlocksObjectInstance#recreate
-com.openggf.game.sonic2.objects.CPZPlatformObjectInstance#recreate
-com.openggf.game.sonic2.objects.CPZPylonObjectInstance#recreate
 com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance#finalScalar#collisionDistance
 com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance#recreate
 com.openggf.game.sonic2.objects.CPZStaircaseObjectInstance#finalScalar#baseX
@@ -215,7 +213,6 @@ com.openggf.game.sonic2.objects.LargeRotPformObjectInstance#finalScalar#rotateMo
 com.openggf.game.sonic2.objects.LargeRotPformObjectInstance#finalScalar#widthPixels
 com.openggf.game.sonic2.objects.LargeRotPformObjectInstance#finalScalar#yRadius
 com.openggf.game.sonic2.objects.LargeRotPformObjectInstance#recreate
-com.openggf.game.sonic2.objects.LaserObjectInstance#recreate
 com.openggf.game.sonic2.objects.LateralCannonObjectInstance#finalScalar#phaseMask
 com.openggf.game.sonic2.objects.LateralCannonObjectInstance#finalScalar#x
 com.openggf.game.sonic2.objects.LateralCannonObjectInstance#finalScalar#y
@@ -255,14 +252,12 @@ com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#finalScalar#xFlip
 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#finalScalar#yFlip
 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#recreate
-com.openggf.game.sonic2.objects.MTZLavaBubbleObjectInstance#recreate
 com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance#finalScalar#standalone
 com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance#finalScalar#x
 com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance#finalScalar#xFlip
 com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance#finalScalar#y
 com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance#recreate
 com.openggf.game.sonic2.objects.MTZLongPlatformObjectInstance#recreate
-com.openggf.game.sonic2.objects.MTZPlatformObjectInstance#recreate
 com.openggf.game.sonic2.objects.MTZSpinTubeObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.MTZSpinTubeObjectInstance#recreate
 com.openggf.game.sonic2.objects.MTZSpringWallObjectInstance#finalScalar#xFlip
@@ -429,7 +424,6 @@ com.openggf.game.sonic2.objects.WFZShipFireObjectInstance#finalScalar#currentY
 com.openggf.game.sonic2.objects.WFZShipFireObjectInstance#finalScalar#initialX
 com.openggf.game.sonic2.objects.WFZShipFireObjectInstance#recreate
 com.openggf.game.sonic2.objects.WFZWheelObjectInstance#recreate
-com.openggf.game.sonic2.objects.WallTurretObjectInstance#recreate
 com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild#recreate
 com.openggf.game.sonic2.objects.badniks.AsteronBadnikInstance#recreate

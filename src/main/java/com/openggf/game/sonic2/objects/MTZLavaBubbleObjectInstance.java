@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
@@ -47,7 +49,7 @@ import java.util.List;
  * operand byte, NOT a frame loop-back. So script 2 ($FD,3) runs anim 3 and
  * script 3 ($FD,2) runs anim 2, alternating between the two.
  */
-public class MTZLavaBubbleObjectInstance extends AbstractObjectInstance {
+public class MTZLavaBubbleObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // Animation scripts from Ani_obj71 (s2.asm lines 24028-24040)
     private static final SpriteAnimationSet ANIMATIONS;
@@ -93,6 +95,11 @@ public class MTZLavaBubbleObjectInstance extends AbstractObjectInstance {
         // move.b subtype(a0),d0 / andi.w #$F0,d0 / lsr.b #4,d0 / move.b d0,anim(a0)
         int animId = (spawn.subtype() >> 4) & 0x0F;
         this.animationState = new ObjectAnimationState(ANIMATIONS, animId, 0);
+    }
+
+    @Override
+    public MTZLavaBubbleObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MTZLavaBubbleObjectInstance(ctx.spawn());
     }
 
     @Override

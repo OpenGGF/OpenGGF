@@ -948,6 +948,26 @@ public class TestScalarOnlyCodecDeletion {
                             "com.openggf.game.sonic2.objects.LavaMarkerObjectInstance",
                             "collisionFlags", "subtypeIndex"));
 
+    private static final List<CodecDeletionCandidate> S2_PLATFORM_VISUAL_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CPZPylonObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.LaserObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.WallTurretObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MTZLavaBubbleObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CPZPlatformObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MTZPlatformObjectInstance",
+                    GameId.S2));
+
     private static final List<MutableFieldCoverageCandidate> S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS =
             List.of(
                     new MutableFieldCoverageCandidate(
@@ -5558,6 +5578,35 @@ public class TestScalarOnlyCodecDeletion {
                     throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
                 }
             }
+        }
+    }
+
+    @Test
+    void s2PlatformVisualRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_PLATFORM_VISUAL_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 platform/visual coverage");
+        }
+    }
+
+    @Test
+    void s2PlatformVisualRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_PLATFORM_VISUAL_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 platform/visual generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2PlatformVisualRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_PLATFORM_VISUAL_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
         }
     }
 
