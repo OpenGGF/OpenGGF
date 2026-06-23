@@ -58,7 +58,14 @@ public final class TraceEventFormatter {
                         near.objectType(),
                         near.x() & 0xFFFF,
                         near.y() & 0xFFFF);
-                yield near.routine().isEmpty() ? base : base + " rtn=" + stripHexPrefix(near.routine());
+                if (!near.routine().isEmpty()) {
+                    base = base + " rtn=" + stripHexPrefix(near.routine());
+                }
+                // obj_frame (v3.5+) is the object's tilt/anim mapping frame; only
+                // render when the trace carries it (empty on older recordings).
+                yield (near.objFrame() == null || near.objFrame().isEmpty())
+                        ? base
+                        : base + " frm=" + stripHexPrefix(near.objFrame());
             }
             case TraceEvent.ModeChange mode ->
                     String.format("%smode %s %d->%d",

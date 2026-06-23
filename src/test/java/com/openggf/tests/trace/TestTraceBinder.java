@@ -1518,7 +1518,7 @@ public class TestTraceBinder {
 
         binder.compareObjectNear(1217,
             java.util.List.of(new TraceEvent.ObjectNear(
-                1217, "sonic", 72, "0x5F", (short) 0x0960, (short) 0x03D0, "0x02", "0x00")),
+                1217, "sonic", 72, "0x5F", (short) 0x0960, (short) 0x03D0, "0x02", "0x00", "")),
             java.util.List.of(new EngineNearbyObject(
                 74, 0x5F, "Bomb", 0x0960, 0x03D0, 0x0960, 0x03D0, true,
                 0x9A, 0x9A, 0x0960, 0x03D0, false, false, true)));
