@@ -125,6 +125,24 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
             storedPlayerYVel = player.getYSpeed();
         }
 
+        // See_Slope2 (routine 4): when a player is standing, ROM runs See_ChkSide
+        // (which sets see_frame from the player's CURRENT x, then falls into
+        // See_ChgFrame) -- all inside ExecuteObjects, AFTER the player slot has
+        // moved (docs/s1disasm/_incObj/5E SLZ Seesaw.asm:71-118). The engine runs
+        // S1 objects after player physics (objectsExecuteAfterPlayerPhysics=true),
+        // so this update() already observes Sonic's post-move x. Computing the
+        // tilt target HERE -- immediately before See_ChgFrame -- keeps the
+        // ChkSide->ChgFrame order atomic and post-move, matching ROM. Previously
+        // the target was latched in onSolidContact (which runs during the player's
+        // solid pass, BEFORE this update), so See_ChgFrame advanced obFrame using
+        // the PREVIOUS frame's target -> the tilt flip lagged ROM by a frame
+        // (SLZ3 f745: ROM flips obFrame 2->1 when the rocking player crosses
+        // within 8px of centre; the engine flipped a frame late, re-seating the
+        // rider on the wrong slope). See_ChkSide only runs while standing.
+        if (player != null && playerStanding) {
+            targetFrame = calculateTargetAngle(player);
+        }
+
         // Animate mapping frame toward target (See_ChgFrame)
         updateMappingFrame(targetFrame);
     }
@@ -142,13 +160,13 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Player is standing on seesaw - track it
-        // From See_Slope2: bsr.w See_ChkSide
+        // Player is standing on seesaw - track it. The See_ChkSide tilt-target
+        // computation is deferred to update() (which runs after player physics)
+        // so it observes Sonic's post-move x and stays atomic with See_ChgFrame,
+        // matching ROM See_Slope2 ordering. onSolidContact only maintains the
+        // standing bit here (it fires during the player's solid pass, before the
+        // post-physics object update).
         playerStanding = true;
-
-        // Calculate which side the player is on (See_ChkSide)
-        int targetAngle = calculateTargetAngle(player);
-        targetFrame = targetAngle;
     }
 
     /**
