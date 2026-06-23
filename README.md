@@ -284,6 +284,8 @@ Highlights:
 
 - The S1 Orbinaut satellite spikeball now computes its orbital offset with ROM-faithful integer arithmetic — `CalcSine` then `asr.w #4` (a truncating shift) — instead of floating-point `Math.round`, which rounded `254>>4 = 15.875` up to 16 and placed the spike 1px too low, triggering a premature hurt hit (SLZ2 trace frontier f1016 -> f1493; Orbinaut-only, SYZ2 + GHZ2 stay green, S3K Orbinaut unit byte-identical).
 
+- The S1 type-03 falling platform now starts its 30-frame fall timer on the same frame the player lands, matching ROM's `Plat_Solid` -> `PlatformObject` (which sets the standing bit) -> `Plat_Action` `.type03` (which reads that just-set bit) same-frame ordering; the engine had read the previous frame's standing state and started the countdown one frame late, holding Sonic 1px high. **This greens the GHZ1 complete-run trace — the third fully passing S1 complete-run trace replay** (GHZ1 trace frontier f3246 -> 0 errors; GHZ2 + SYZ2 stay green, SLZ2 unchanged at f1493, no regressions across the S1 sweep).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)

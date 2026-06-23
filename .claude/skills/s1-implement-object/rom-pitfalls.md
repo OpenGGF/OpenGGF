@@ -59,3 +59,37 @@ games.
 player touch-box top edge 4 frames before ROM's contact).
 
 ---
+
+## P2 — Landing-frame standing bit: read it AFTER the solid-contact checkpoint, not before
+
+**Symptom.** An object behaviour gated on "the player *just* started standing
+on me this frame" fires one frame late: a fall/collapse/launch timer starts a
+frame late, the object moves a frame late, and a rider is held ~1 px off ROM
+for the divergence window.
+
+**Root cause.** ROM resolves solid contact and the object's reaction to that
+contact **within the same frame**. `Plat_Solid` (routine 2) calls
+`PlatformObject`, which sets the standing bit (`bset #3,obStatus`) and bumps
+the routine, then *falls through* to `Plat_Action` → the subtype handler,
+which reads that **just-set** standing bit on the same frame (e.g. `.type03`
+writes `move.w #30,objoff_3A` to start the fall timer). A naive engine port
+runs its per-object "react to standing" logic (`moveFallOnStand()`) **before**
+`checkpointAll()` commits the new standing state, so it reads the *previous*
+frame's `playerStanding=false` and misses the same-frame trigger.
+
+**What to check.** Any object routine that reacts to "player is now standing
+on me" on the contact frame (collapse timers, fall delays, conveyor engage,
+switch trip) must read the standing/push flag **after** the solid-contact
+checkpoint inside `update()`, not from the pre-checkpoint snapshot. Add a
+post-`checkpointAll()` guard keyed on the freshly-committed standing bit.
+
+**ROM citation.** `docs/s1disasm/_incObj/18 Platforms.asm:201-216`
+(`Plat_Action` `.type03` reads the standing bit set by `PlatformObject` in
+`Plat_Solid` the same frame).
+
+**Cross-game note.** S2 and S3K `SolidObject`/`PlatformObject` set the standing
+bit during the same-frame solid pass that precedes the object's action handler;
+the same "read standing after the checkpoint" rule applies.
+
+**Originating commit.** See `bugfix/ai-s1-ghz1-advance` (GHZ1 f3246 -> GREEN;
+type-03 platform fall timer started one frame late, holding Sonic 1 px high).
