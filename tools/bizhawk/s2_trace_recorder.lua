@@ -63,6 +63,15 @@
 -- TailsCPU_Normal.
 -- v9.9-s2 changes: add metadata.rng_seed for one-time replay bootstrap and
 -- RNG-frontier diagnostics. CSV and aux schemas are unchanged.
+-- v9.10-s2 changes: RECORDER HYGIENE ONLY (no schema/data change; existing
+-- traces stay valid). Reliable movie-end self-exit so EmuHawk never runs away
+-- past the movie: a hard FRAME_CAP backstop (movie.length()+64 else 2,000,000)
+-- guarantees the while-true loop terminates even if every movie-end signal
+-- fails, and a guarded post-loop block re-issues client.exit() (a no-op on some
+-- BizHawk builds) then client.pause() so EmuHawk idles at 0% CPU instead of
+-- free-running. (S2 already writes a SINGLE output dir, so it has at most one
+-- brief load-time cmd window -- no per-segment mkdir spam to fix here, unlike
+-- the multi-segment S1/S3K complete-run recorders.) Mirrors S1 recorder v3.6.
 --
 -- v9.3-s2: traces from this recorder version onward are bootstrap-comparable
 -- against the post-universal-title-card engine (ADR-1, design spec 2026-05-15)
@@ -70,7 +79,7 @@
 -- (see v9.3-s2 change note above for context).
 -- The bootstrap-comparator eligibility is derived from this version string by
 -- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
-local LUA_SCRIPT_VERSION = "9.9-s2"
+local LUA_SCRIPT_VERSION = "9.10-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -1291,8 +1300,32 @@ end
 print(string.format("S2 Trace Recorder v" .. LUA_SCRIPT_VERSION .. " loaded. Profile=%s. TargetSegment=%d. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...",
     TRACE_PROFILE, TARGET_GAMEPLAY_SEGMENT))
 
+-- v9.10 hard safety net: even if every movie-end signal fails (movie.length()==0,
+-- mode never reports FINISHED, game never leaves 0x0C), the loop must not run
+-- forever. Cap at the movie length (+ margin) when known, else a large absolute
+-- bound. This is the backstop that prevents the runaway EmuHawk.
+local function absolute_frame_cap()
+    local len = movie.isloaded() and movie.length() or 0
+    if BK2_FRAME_COUNT ~= nil and BK2_FRAME_COUNT > len then
+        len = BK2_FRAME_COUNT
+    end
+    if len > 0 then
+        return len + 64  -- a few frames past the movie to let finalisation land
+    end
+    return 2000000       -- far beyond any S2 level-select / complete route BK2
+end
+local FRAME_CAP = absolute_frame_cap()
+
 while true do
     on_frame_end()
+
+    -- Backstop: force-finish if we somehow blew past the movie/cap without any
+    -- normal stop signal firing.
+    if not finished and emu.framecount() >= FRAME_CAP then
+        print(string.format(
+            "Frame cap %d reached without a movie-end signal; finalising and exiting.", FRAME_CAP))
+        finished = true
+    end
 
     -- If recording is done, finalise files and exit from INSIDE the loop.
     -- Code after the loop may never execute because client.exit() kills
@@ -1311,9 +1344,6 @@ while true do
             print(string.format("Trace finalised: %s act %d, %d frames.",
                 start_zone_name, apparent_act_for(start_rom_zone_id, start_act) + 1, trace_frame))
         end
-        if HEADLESS then
-            client.exit()
-        end
         break
     end
 
@@ -1324,4 +1354,20 @@ while true do
     end
 
     emu.frameadvance()
+end
+
+-- v9.10 reliable termination: client.exit() is a no-op on some BizHawk builds
+-- (the "kept running past the movie" symptom). All files are already
+-- flushed/closed above, so it is safe to call client.exit() repeatedly (with an
+-- emu.frameadvance() yield so a working exit takes effect), then client.pause()
+-- as a last resort so EmuHawk idles at 0% CPU instead of free-running into a
+-- multi-GB runaway -- the host launcher's process-kill/tasklist check then reaps
+-- it cleanly.
+if HEADLESS then
+    for _ = 1, 8 do
+        client.exit()
+        if client.ispaused() then client.unpause() end
+        emu.frameadvance()
+    end
+    client.pause()
 end
