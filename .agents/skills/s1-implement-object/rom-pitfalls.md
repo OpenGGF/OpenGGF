@@ -180,3 +180,34 @@ the ROM `SolidObject` call site's d2 value.
 (SLZ1 f933 → f2872; staircase piece fresh-landing 1px low when grounded).
 
 ---
+
+---
+
+## P5 — SynchroAnimate global counter: objects read v_ani0_frame from BEFORE the current frame's SynchroAnimate call
+
+**Symptom.** An object whose animation or harmfulness is gated on `v_ani0_frame` (the global sync counter) fires one tick early at multiples of 12 gfc — e.g. a spike marks itself harmful when ROM would have it harmless, causing a spurious HURT one trace-frame early.
+
+**Root cause.** Two layered bugs under one class:
+
+1. *Per-object unseeded counter:* Any per-object `animCounter` initialized to 0 at construction diverges from the shared `v_ani0_frame` whenever the object streams in mid-level (the real `v_ani0_frame` has been ticking since level start). Always derive `v_ani0_frame` from `levelManager.getFrameCounter() + 1` (= current gfc), not from a per-object accumulator. See also SBZ Electrocuter pattern (`v_framecount` source).
+
+2. *Off-by-one: ExecuteObjects runs before SynchroAnimate:* ROM `Level_MainLoop` (sonic.asm:2980) order is:
+   ```
+   addq.w #1,(v_framecount).w   ; gfc++ at top of loop (line 2984)
+   jsr ExecuteObjects            ; objects READ v_ani0_frame (line 2988)
+   jsr SynchroAnimate            ; UPDATES v_ani0_frame (line 3010)
+   ```
+   At loop gfc=N, objects read `v_ani0_frame` set by iteration N-1's `SynchroAnimate`. `SynchroAnimate` ticks on calls 1, 13, 25, … (underflow branch `bpl`: initial `v_ani0_time=0` underflows to 0xFF on call 1). After N-1 calls, tick count = `ceil((N-1)/12) = (N+10)/12` (integer division). The correct formula is:
+   ```java
+   animCounter = (-((gfc + ANIM_FRAME_DURATION - 2) / ANIM_FRAME_DURATION)) & 0x07;
+   //           = (-((gfc + 10) / 12)) & 7   for ANIM_FRAME_DURATION=12
+   ```
+   Using `(gfc + 11) / 12` (the naive "after N calls") overshoots by 1 tick at every multiple of 12.
+
+**What to check.** Any object that reads `(v_ani0_frame).w` in `Hel_RotateSpikes` or similar:
+- Derive from `levelManager.getFrameCounter() + 1` (never from a per-object counter or a constructor-seeded value).
+- Use `(gfc + 10) / 12` not `(gfc + 11) / 12` for the tick count.
+
+**ROM citation.** `docs/s1disasm/_incObj/17 GHZ Spiked Pole Helix.asm:95-105` (`Hel_RotateSpikes`: `move.b (v_ani0_frame).w,d0`). `SynchroAnimate`: `docs/s1disasm/sonic.asm:3111-3119` (bpl branch on underflow; reload to 11). `Level_MainLoop` order: `docs/s1disasm/sonic.asm:2984-3010`.
+
+**Originating commits.** `bugfix/ai-s1-ghz3-f4650` (f4650 -> f5043, unseeded counter); `bugfix/ai-s1-ghz3-f5043` (f5043 -> f6464, off-by-one formula).

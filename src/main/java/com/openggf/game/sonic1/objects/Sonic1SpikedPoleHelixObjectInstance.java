@@ -77,8 +77,18 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
 
     // v_ani0_frame is ROM's GLOBAL sync counter 0, ticked by SynchroAnimate every 12 gfc ticks.
     // It is NOT a per-object counter. ROM initialises v_ani0_time=0 and v_ani0_frame=0 at level
-    // start; SynchroAnimate fires at gfc=1,13,25,..., so after gfc=N:
-    //   v_ani0_frame(N) = (-ceilDiv(N, 12)) & 7   where ceilDiv(N,12) = (N+11)/12
+    // start (clearRAM v_timingandscreenvariables, sonic.asm:2725).
+    //
+    // ROM Level_MainLoop order (sonic.asm:2980-3010):
+    //   addq.w #1,(v_framecount).w   ; gfc increments at top of loop (line 2984)
+    //   ExecuteObjects               ; objects run here; read v_ani0_frame (line 2988)
+    //   SynchroAnimate               ; updates v_ani0_frame AFTER objects (line 3010)
+    //
+    // So at loop iteration gfc=N, objects read v_ani0_frame = value after (N-1) SynchroAnimate
+    // calls. SynchroAnimate (sonic.asm:3115-3119): subq.b #1 → bpl to skip (fires when result
+    // goes negative, i.e., time=0→0xFF); reloads to 11; decrements v_ani0_frame mod 8.
+    // Fires at calls 1, 13, 25, ..., giving ceil((N-1)/12) = (N-1+11)/12 = (N+10)/12 ticks.
+    //   v_ani0_frame(N) = (-((N+10)/12)) & 7   (integer division)
     //
     // A per-object counter unseeded from the trace will diverge whenever the helix streams
     // in mid-level (its animCounter starts at 0 regardless of the actual gfc). Fix: compute
@@ -173,22 +183,16 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
         }
 
         // Derive v_ani0_frame from the trace-seeded level frame counter (gfc).
-        // ROM SynchroAnimate (docs/s1disasm/sonic.asm:3111-3119):
-        //   subq.b #1,(v_ani0_time).w   ; decrement timer (init=0, resets to 11 on underflow)
-        //   bpl.s .skip                  ; skip tick if non-negative
-        //   move.b #12-1,(v_ani0_time).w ; reload 11
-        //   subq.b #1,(v_ani0_frame).w  ; decrement frame
-        //   andi.b #7,(v_ani0_frame).w  ; wrap 0-7
-        //
-        // v_ani0_time init=0 → underflows on gfc=1 → first tick at gfc=1, then every 12.
-        // Ticks after gfc=N: ceil(N/12) = (N+11)/12 (integer division).
-        // v_ani0_frame(N) = (-((N+11)/12)) & 7
+        // ROM ExecuteObjects runs before SynchroAnimate (sonic.asm:2988 vs 3010), so objects
+        // at loop iteration gfc=N read v_ani0_frame from after (N-1) SynchroAnimate calls:
+        //   animCounter = (-((gfc + ANIM_FRAME_DURATION - 2) / ANIM_FRAME_DURATION)) & 7
+        //               = (-((N+10) / 12)) & 7   (integer division)
         //
         // levelManager.getFrameCounter()+1 = current gfc (pre-increment, same as Electrocuter).
         LevelManager levelManager = services().levelManager();
         if (levelManager != null) {
             int gfc = levelManager.getFrameCounter() + 1;
-            animCounter = (-(( gfc + ANIM_FRAME_DURATION - 1) / ANIM_FRAME_DURATION)) & 0x07;
+            animCounter = (-(( gfc + ANIM_FRAME_DURATION - 2) / ANIM_FRAME_DURATION)) & 0x07;
         }
 
         updateSpikeFrames();
@@ -277,7 +281,6 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
         if (harmfulCount == 0) {
             return null;
         }
-
         TouchRegion[] regions = new TouchRegion[harmfulCount];
         int idx = 0;
         for (int i = 0; i < spikeCount; i++) {
