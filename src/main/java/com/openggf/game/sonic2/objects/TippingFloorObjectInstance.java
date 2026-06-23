@@ -6,6 +6,8 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.*;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -27,7 +29,7 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm lines 45379-45485 (Obj0B code)
  */
 public class TippingFloorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // Animation IDs
     private static final int ANIM_FORWARD = 0;  // Frames 0->1->2->3->4
@@ -43,8 +45,8 @@ public class TippingFloorObjectInstance extends AbstractObjectInstance
     private int mappingFrame = 0;
 
     // Timing from subtype
-    private final int delay;           // Sync delay with global frame counter
-    private final int durationInitial; // Duration between animation toggles
+    private int delay;           // Sync delay with global frame counter
+    private int durationInitial; // Duration between animation toggles
     private int durationCurrent;       // Current countdown
 
     // Animation direction: 0 = forward (0->4), 1 = reverse (4->0)
@@ -62,6 +64,11 @@ public class TippingFloorObjectInstance extends AbstractObjectInstance
         int durationValue = ((spawn.subtype() >> 4) & 0x0F) + 0x10;
         this.durationInitial = durationValue - 1;  // ROM subtracts 1 before storing
         this.durationCurrent = durationValue - 1;
+    }
+
+    @Override
+    public TippingFloorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new TippingFloorObjectInstance(ctx.spawn(), getName());
     }
 
     private void ensureInitialized() {

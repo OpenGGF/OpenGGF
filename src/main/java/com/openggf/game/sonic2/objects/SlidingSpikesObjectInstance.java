@@ -14,6 +14,8 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -42,7 +44,7 @@ import java.util.List;
  * - Y distance: |player_y - object_y + 0x10| < 0x20
  */
 public class SlidingSpikesObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final boolean DEBUG_VIEW_ENABLED = staticDebugViewEnabled();
     private static final DebugOverlayManager OVERLAY_MANAGER = staticDebugOverlay();
@@ -66,12 +68,12 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
             ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     // State
-    private final int baseX;
+    private int baseX;
     private int currentX;
     private int slidingRemainingMovement = 0;
     private int currentSubtype;  // 0 = waiting, 2 = sliding
     // Orientation from spawn render_flags
-    private final boolean hFlip;
+    private boolean hFlip;
 
     // Sprite mapping for this object (single frame with 6 pieces)
     // From docs/s2disasm/mappings/sprite/obj76.asm
@@ -104,6 +106,11 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
         // subtype starts at 0 (waiting mode)
         this.currentSubtype = spawn.subtype() & 0x0F;  // Lower nibble only per disassembly
+    }
+
+    @Override
+    public SlidingSpikesObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SlidingSpikesObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

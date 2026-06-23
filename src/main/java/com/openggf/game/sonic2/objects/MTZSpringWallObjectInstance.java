@@ -9,6 +9,8 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -43,7 +45,7 @@ import java.util.List;
  * </ul>
  */
 public class MTZSpringWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // From disassembly: move.w #$13,d1
     private static final int SOLID_HALF_WIDTH = 0x13;
@@ -61,8 +63,8 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
     // Same lock duration as standard springs
     private static final int MOVE_LOCK_FRAMES = SpringBounceHelper.CONTROL_LOCK_FRAMES;
 
-    private final int yRadius;
-    private final boolean xFlip;
+    private int yRadius;
+    private boolean xFlip;
 
     public MTZSpringWallObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -75,6 +77,11 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
 
         // status(a0) bit 0 = x_flip from level placement
         this.xFlip = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public MTZSpringWallObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MTZSpringWallObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

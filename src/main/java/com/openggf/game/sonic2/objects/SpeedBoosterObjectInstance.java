@@ -8,6 +8,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -19,7 +21,7 @@ import java.util.List;
  * Yellow arrow pads that boost Sonic's horizontal velocity when he runs over them.
  * Based on obj1B.asm from the Sonic 2 disassembly.
  */
-public class SpeedBoosterObjectInstance extends AbstractObjectInstance {
+public class SpeedBoosterObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // Boost speed values from ROM (Obj1B_BoosterSpeeds)
     private static final int FAST_SPEED = 0x1000;
@@ -32,7 +34,7 @@ public class SpeedBoosterObjectInstance extends AbstractObjectInstance {
     private static final int MOVE_LOCK_FRAMES = 0x0F;
 
     // The boost speed for this instance (determined by subtype)
-    private final int boostSpeed;
+    private int boostSpeed;
 
     // Current mapping frame for rendering (toggles for blinking)
     private int mappingFrame = 0;
@@ -41,6 +43,11 @@ public class SpeedBoosterObjectInstance extends AbstractObjectInstance {
         super(spawn, name);
         // ROM: bit 1 of subtype selects speed (0=fast/$1000, 2=slow/$A00)
         this.boostSpeed = (spawn.subtype() & 0x02) == 0 ? FAST_SPEED : SLOW_SPEED;
+    }
+
+    @Override
+    public SpeedBoosterObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SpeedBoosterObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

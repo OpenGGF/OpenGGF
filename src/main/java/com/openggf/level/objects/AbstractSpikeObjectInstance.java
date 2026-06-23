@@ -33,8 +33,8 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
     protected static final int SPIKE_RETRACT_MAX = 0x2000;
     protected static final int SPIKE_RETRACT_DELAY = 60;
 
-    protected final int baseX;
-    protected final int baseY;
+    protected int baseX;
+    protected int baseY;
     protected int currentX;
     protected int currentY;
     protected int retractOffset;

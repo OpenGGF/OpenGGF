@@ -1089,7 +1089,31 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic2.objects.HTZLiftObjectInstance",
                     GameId.S2),
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.LateralCannonObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MTZSpringWallObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SlidingSpikesObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SpeedBoosterObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SpikeObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.StomperObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.TippingFloorObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.VineSwitchObjectInstance",
                     GameId.S2),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance",
@@ -1107,8 +1131,32 @@ public class TestScalarOnlyCodecDeletion {
                             "com.openggf.game.sonic2.objects.HTZLiftObjectInstance",
                             "baseX", "baseY", "flippedX"),
                     new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.LateralCannonObjectInstance",
+                            "x", "y", "phaseMask"),
+                    new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance",
                             "collisionHalfWidth", "collisionHalfHeight"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MTZSpringWallObjectInstance",
+                            "yRadius", "xFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SlidingSpikesObjectInstance",
+                            "baseX", "hFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SpeedBoosterObjectInstance",
+                            "boostSpeed"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SpikeObjectInstance",
+                            "baseX", "baseY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.StomperObjectInstance",
+                            "baseY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.TippingFloorObjectInstance",
+                            "delay", "durationInitial"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.VineSwitchObjectInstance",
+                            "switchId"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance",
                             "halfWidth", "halfHeight", "r", "g", "b", "highPriority",
