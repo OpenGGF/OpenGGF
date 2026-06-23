@@ -230,6 +230,24 @@ class TestEngine {
     }
 
     @Test
+    void resolveFramebufferDimensionsAfterWindowResizePrefersActualFramebufferPixels() {
+        Engine.FramebufferDimensions dimensions =
+                Engine.resolveFramebufferDimensionsAfterWindowResize(800, 448, 1600, 896);
+
+        assertEquals(1600, dimensions.width());
+        assertEquals(896, dimensions.height());
+    }
+
+    @Test
+    void resolveFramebufferDimensionsAfterWindowResizeFallsBackWhenFramebufferUnavailable() {
+        Engine.FramebufferDimensions dimensions =
+                Engine.resolveFramebufferDimensionsAfterWindowResize(800, 448, 0, 0);
+
+        assertEquals(800, dimensions.width());
+        assertEquals(448, dimensions.height());
+    }
+
+    @Test
     void failedMasterTitleLaunchRollsBackHostLaunchCachesAfterSessionOverridesClear() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
