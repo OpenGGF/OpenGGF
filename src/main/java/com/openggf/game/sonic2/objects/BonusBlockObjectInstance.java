@@ -9,6 +9,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -86,7 +88,7 @@ import java.util.List;
  * @see HexBumperObjectInstance Hex bumper with 4-direction quantized physics
  */
 public class BonusBlockObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
     // ========================================================================
     // ROM Constants
@@ -215,6 +217,11 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
     public BonusBlockObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         initOrientation();
+    }
+
+    @Override
+    public BonusBlockObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BonusBlockObjectInstance(ctx.spawn(), getName());
     }
 
     /**
@@ -640,4 +647,3 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
         return hitCount;
     }
 }
-

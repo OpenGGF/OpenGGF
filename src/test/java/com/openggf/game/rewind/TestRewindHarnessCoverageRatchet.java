@@ -235,12 +235,14 @@ public class TestRewindHarnessCoverageRatchet {
  *       generic recreate and shed its final scalar baseline.</li>
  *   <li>2026-06-23: raised to 229 after S2 Arrow Shooter and Barrier moved to
  *       name-preserving generic recreate and shed stale recreate baselines.</li>
+ *   <li>2026-06-23: raised to 234 after S2 CNZ bumper/block/cloud/bubble-generator
+ *       objects moved to generic recreate and shed stale scalar/recreate baselines.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 229;
+    static final int RATCHET_FLOOR = 234;
 
     @BeforeEach
     void initHeadless() {

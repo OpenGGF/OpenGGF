@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -35,7 +37,7 @@ import java.util.List;
  * SubObjData: mappings=ObjB3_MapUnc_3B32C, art_tile=ArtTile_ArtNem_Clouds (palette 2),
  * render_flags=level_fg, priority=6, width=$30, collision=0.
  */
-public class CloudObjectInstance extends AbstractObjectInstance {
+public class CloudObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // Velocity lookup table indexed by (subtype - 0x5E) / 2
     // From disassembly: word_3B30C
@@ -46,8 +48,8 @@ public class CloudObjectInstance extends AbstractObjectInstance {
     // From disassembly: subi.b #$5E,d0
     private static final int SUBTYPE_BASE = 0x5E;
 
-    private final int xVelocity;
-    private final int mappingFrame;
+    private int xVelocity;
+    private int mappingFrame;
     private final SubpixelMotion.State motionState;
 
     public CloudObjectInstance(ObjectSpawn spawn) {
@@ -68,6 +70,11 @@ public class CloudObjectInstance extends AbstractObjectInstance {
             this.mappingFrame = 0;
         }
         this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, this.xVelocity, 0);
+    }
+
+    @Override
+    public CloudObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CloudObjectInstance(ctx.spawn());
     }
 
     @Override

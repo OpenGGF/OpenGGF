@@ -69,7 +69,6 @@ com.openggf.game.sonic2.objects.BlueBallsObjectInstance#finalScalar#initialY
 com.openggf.game.sonic2.objects.BlueBallsObjectInstance#finalScalar#siblingCount
 com.openggf.game.sonic2.objects.BlueBallsObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.BlueBallsObjectInstance#recreate
-com.openggf.game.sonic2.objects.BonusBlockObjectInstance#recreate
 com.openggf.game.sonic2.objects.BreakableBlockObjectInstance#finalScalar#b
 com.openggf.game.sonic2.objects.BreakableBlockObjectInstance#finalScalar#g
 com.openggf.game.sonic2.objects.BreakableBlockObjectInstance#finalScalar#halfHeight
@@ -92,8 +91,6 @@ com.openggf.game.sonic2.objects.BridgeObjectInstance#finalScalar#logCount
 com.openggf.game.sonic2.objects.BridgeObjectInstance#finalScalar#r
 com.openggf.game.sonic2.objects.BridgeObjectInstance#recreate
 com.openggf.game.sonic2.objects.BridgeStakeObjectInstance#recreate
-com.openggf.game.sonic2.objects.BubbleGeneratorObjectInstance#recreate
-com.openggf.game.sonic2.objects.BumperObjectInstance#recreate
 com.openggf.game.sonic2.objects.ButtonObjectInstance#finalScalar#adjustedY
 com.openggf.game.sonic2.objects.ButtonObjectInstance#finalScalar#switchId
 com.openggf.game.sonic2.objects.ButtonObjectInstance#finalScalar#triggerBit
@@ -142,9 +139,6 @@ com.openggf.game.sonic2.objects.CheckpointObjectInstance#finalScalar#r
 com.openggf.game.sonic2.objects.CheckpointObjectInstance#recreate
 com.openggf.game.sonic2.objects.CheckpointStarInstance#finalScalar#centerX
 com.openggf.game.sonic2.objects.CheckpointStarInstance#finalScalar#centerY
-com.openggf.game.sonic2.objects.CloudObjectInstance#finalScalar#mappingFrame
-com.openggf.game.sonic2.objects.CloudObjectInstance#finalScalar#xVelocity
-com.openggf.game.sonic2.objects.CloudObjectInstance#recreate
 com.openggf.game.sonic2.objects.CluckerBaseObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.CluckerBaseObjectInstance#recreate
 com.openggf.game.sonic2.objects.CogObjectInstance#finalScalar#baseX
@@ -213,7 +207,6 @@ com.openggf.game.sonic2.objects.HTZLiftObjectInstance#finalScalar#baseX
 com.openggf.game.sonic2.objects.HTZLiftObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.HTZLiftObjectInstance#finalScalar#flippedX
 com.openggf.game.sonic2.objects.HTZLiftObjectInstance#recreate
-com.openggf.game.sonic2.objects.HexBumperObjectInstance#recreate
 com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance#finalScalar#currentX
 com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance#finalScalar#currentY
 com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance#finalScalar#projectileVel
