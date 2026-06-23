@@ -144,6 +144,16 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-23 - S1 Seesaw used a non-zero slope baseline so SlopeObject landing fired 1 frame late; SLZ3 f718 -> f745 (1073 -> 916)
+
+- Branch/worktree: `bugfix/ai-s1-slz3-f718` off `origin/develop` 0b0fb8ac7 (worktree `.worktrees/slz3-f718`).
+- Command: `mvn test "-Dtest=TestS1Slz3CompleteRunTraceReplay" -DfailIfNoTests=false "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- First error before fix: f718 `y_speed` exp=0x0000 act=0x0610. ROM: rolling Sonic falling at y_speed=0x05D8 (f717) lands on the SLZ Seesaw (Obj 5E) at f718 — `y_speed` snaps to 0, `air` 1->0, `status` bit 3 set (on object), `g_speed = x_speed = -0168`. Engine kept falling (`y_speed=0x0610`, airborne) and only landed at f719 (one frame late).
+- Root: `Sonic1SeesawObjectInstance.getSlopeBaseline()` returned `COLLISION_HEIGHT` (8). ROM `See_Slope` (routine 2, `docs/s1disasm/_incObj/5E SLZ Seesaw.asm:67`) lands the player via `SlopeObject`, which uses ABSOLUTE slope values: `d0 = obY(a0) - heightmapByte` with no baseline subtraction (`docs/s1disasm/_incObj/sub PlatformObject.asm:150-152`, then `Plat_NoXCheck_AltY`). The engine's `resolveSlopedContact` computes `baseY = anchorY - (slopeSample - slopeBaseline)`, so a baseline of 8 placed the sampled top surface 8px LOWER (larger Y) than ROM's `obY - slopeSample`. The falling player therefore had to drop ~8px further before the engine registered the top-solid landing, delaying it by one frame at the trace's fall speed.
+- Fix: `getSlopeBaseline()` returns 0, citing the ROM absolute-slope semantics and matching the sibling `SlopeObject` user `Sonic1CollapsingLedgeObjectInstance` (which already returns 0 for the same reason). Object-local to Obj 5E (SLZ-only). The riding re-seat path (`sampleSlopeY`) is already baseline-independent, so continued-ride Y is unchanged.
+- After: SLZ3 f718 -> f745, 1073 -> 916 errors. New frontier f745 `y` exp=0x02D8 act=0x02DB (3px): a single-frame seesaw-tilt re-seat phase blip (f743/f744 match, f745 ROM re-seats the rider up 3px one frame before the engine, both agree again at f746; same blip recurs at f756). The next substantial divergence is f786 (`y_speed`/`air`, a deeper player-physics root). Both new roots are NOT this baseline bug.
+- Regression sweep (vs develop baseline, A/B by temporarily reverting the single-line edit): SLZ1 f2872 (164 errors) and SLZ2 f1714 (215 errors) byte-identical with and without the fix; GHZ1, GHZ2, SYZ2 stay GREEN. Unit tests pass: `TestSonic1LargeGrassyPlatformObjectInstance` 3/0, `TestSeesawBallGraphRewind` 6/0, `TestS1SlzBossSpikeballGraphRewind` 5/0, `TestCollisionLogic` 1/0.
+
 ## 2026-06-23 - S1 type-03 platform fall timer missed the landing frame; GHZ1 f3246 -> GREEN (255 -> 0)
 
 - Branch/worktree: `bugfix/ai-s1-ghz1-advance` off `origin/develop` 88a4be974; cherry-picked Orbinaut CalcSine fix (f9fac6f25) first to restore SLZ2 to its correct develop baseline before the platform fix.
