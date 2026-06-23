@@ -26,7 +26,7 @@ import java.util.List;
  * alternating VBlank frames, and fires a stinger via {@code AllocateObjectAfterCurrent}.
  * The init routine also spawns an exhaust flame child (routine 4) in the next slot.
  */
-public class BuzzerBadnikInstance extends AbstractBadnikInstance {
+public class BuzzerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0A; // collision_flags = $0A
     private static final int X_VEL = 0x100;
     private static final int MOVE_TIMER_INIT = 0x100;
@@ -64,6 +64,11 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance {
         this.shotTimer = 0;
         this.shootingDisabled = false;
         this.initPending = true;
+    }
+
+    @Override
+    public BuzzerBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BuzzerBadnikInstance(ctx.spawn());
     }
 
     @Override

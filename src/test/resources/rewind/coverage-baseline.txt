@@ -118,8 +118,6 @@ com.openggf.game.sonic2.objects.MTZLongPlatformObjectInstance#recreate
 com.openggf.game.sonic2.objects.MTZSpinTubeObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.MTZSpinTubeObjectInstance#recreate
 com.openggf.game.sonic2.objects.MonitorContentsObjectInstance#finalScalar#subtype
-com.openggf.game.sonic2.objects.MonitorObjectInstance#finalScalar#type
-com.openggf.game.sonic2.objects.MonitorObjectInstance#recreate
 com.openggf.game.sonic2.objects.MovingVineObjectInstance#finalScalar#buttonSwitchId
 com.openggf.game.sonic2.objects.MovingVineObjectInstance#finalScalar#buttonVineMode
 com.openggf.game.sonic2.objects.MovingVineObjectInstance#finalScalar#initialY
@@ -146,9 +144,7 @@ com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#destX
 com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#homeX
 com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#recreate
-com.openggf.game.sonic2.objects.SpikyBlockObjectInstance#recreate
 com.openggf.game.sonic2.objects.SpiralObjectInstance#recreate
-com.openggf.game.sonic2.objects.SpringboardObjectInstance#recreate
 com.openggf.game.sonic2.objects.SteamPuffObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate
 com.openggf.game.sonic2.objects.SwingingPformObjectInstance#recreate
@@ -172,7 +168,6 @@ com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild#recreate
 com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance#finalScalar#type
 com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance#recreate
-com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild#finalScalar#parentSlotIndex
 com.openggf.game.sonic2.objects.badniks.CrawlBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#objectRef#pendingGrabPlayer
