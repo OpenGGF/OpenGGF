@@ -144,6 +144,14 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-23 - S1 Orbinaut satellite orbit used float Math.round instead of ROM CalcSine integer shift; SLZ2 f1016 -> f1493
+
+- Branch: `bugfix/ai-s1-syz-slz-advance` off `develop` 326de21ad.
+- **`s1_slz2` advanced f1016 -> f1493, errors 221 -> 277 (different cascade, higher total but later first-error).** First error before: f1016 `g_speed` exp=0x0295 act=0x0000 (hurt bounce; engine took early HURT from Orbinaut spike). After: f1493 `x` 1px on slope (a separate downstream frontier).
+- Root: `OrbSpikeObjectInstance.update` computed orbital position with `Math.round(Math.cos(radians) * 16.0)`. ROM `Orb_CircleSpikeball` (`docs/s1disasm/_incObj/60 Badnik - Orbinaut.asm:181-191`) calls `jsr CalcSine` (d0=sine, d1=cosine; range -0x100..0x100) then `asr.w #4,d1` / `add.w obX(a1),d1` for X, same for sine/Y. The arithmetic right shift truncates: sine=0xFE=254, `254 >> 4 = 15`; floating-point: `Math.round(254.0/256.0 * 16.0) = Math.round(15.875) = 16`. At SLZ2 f1016, spike Y was ROM 0x00B7 vs engine 0x00B8 (1px low). Player touch-box top at 0x00BC; spike bottom ROM 0x00B7+4=0x00BB (misses), engine 0x00B8+4=0x00BC (boundary hit → HURT fires 4 frames early). In ROM, Sonic wasn't hurt until f1020 after moving into the spike.
+- Fix: replace float trig with `TrigLookupTable.sinHex(angle) >> 4` and `TrigLookupTable.cosHex(angle) >> 4` in `OrbSpikeObjectInstance.update` (`Sonic1OrbinautBadnikInstance.java`). Added `TrigLookupTable` import.
+- Regression sweep (vs develop baseline, first-error frame + count): SYZ2 stays GREEN; GHZ2 stays GREEN. All LZ/SBZ frontiers unchanged: LZ1 f5745/2185, LZ2 f1068/2150, LZ3 f6517/1726, SBZ1 f2268/805, SBZ2 f1395/1000. Unit tests: `TestSonic1CaterkillerBodyChaining` 6/0, `CollisionSystemTest` 54/0, `TestSolidRoutineProfiles` 13/0, `TestSonic1SpringObjectInstance` 2/0, `TestOrbinautBadnikInstance` (S3K) 6/0.
+
 ## 2026-06-23 - S1 platform walk-off frame missing the MvSonicOnPtfm2 Y re-seat; SYZ3 f3476 -> f6065 (485 -> 483), SYZ2 -> GREEN
 
 - Branch/worktree context: `bugfix/ai-syz3-advance` off `develop` d8589639d.

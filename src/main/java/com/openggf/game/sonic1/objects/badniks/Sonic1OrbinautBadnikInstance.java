@@ -18,6 +18,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
@@ -390,10 +391,15 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
                 return;
             }
 
-            // Orbit around parent with radius 16.
-            double radians = (angle & 0xFF) * (Math.PI * 2.0 / 256.0);
-            x = parent.currentX + (int) Math.round(Math.cos(radians) * 16.0);
-            y = parent.currentY + (int) Math.round(Math.sin(radians) * 16.0);
+            // ROM Orb_CircleSpikeball: CalcSine on obAngle, then asr.w #4 for both
+            // components to give radius-16 orbit (docs/s1disasm/_incObj/60 Badnik -
+            // Orbinaut.asm:181-191). Using integer lookup matches ROM's truncating
+            // arithmetic shift exactly; floating-point Math.round rounds 254>>4=15.875
+            // up to 16 and places the spike 1px too low, causing a premature hurt hit.
+            int sinVal = TrigLookupTable.sinHex(angle); // d0 = CalcSine sine output
+            int cosVal = TrigLookupTable.cosHex(angle); // d1 = CalcSine cosine output
+            x = parent.currentX + (cosVal >> 4);        // obX + (d1 asr #4)
+            y = parent.currentY + (sinVal >> 4);        // obY + (d0 asr #4)
             angle = (angle + parent.getAngleStep()) & 0xFF;
         }
 
