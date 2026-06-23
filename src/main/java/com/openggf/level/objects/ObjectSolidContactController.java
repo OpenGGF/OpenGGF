@@ -1213,6 +1213,16 @@ final class ObjectSolidContactController {
             return null;
         }
 
+        // For multi-piece riding objects, track the riding piece re-seat Y so it can
+        // be restored after sibling pieces run. In ROM, each piece occupies a separate
+        // slot; earlier-slot non-riding pieces may apply SolidObject Y snaps for
+        // overlapping X ranges, but the ridden piece (later slot) runs last and
+        // overrides them. Mirror that order: run sibling contacts, then restore the
+        // riding re-seat as the authoritative final Y.
+        // docs/s1disasm/_incObj/5B SLZ Staircase.asm:72-96 (Stair_Solid / SolidObject)
+        int ridingCentreYToRestore = Integer.MIN_VALUE;
+        SolidContact ridingContactResult = null;
+
         if (instance == ridingObject) {
             // ROM Obj70 (MTZ Cog) allocates one SST slot per tooth and runs each
             // slot's SolidObject independently in ascending allocation order
@@ -1251,6 +1261,10 @@ final class ObjectSolidContactController {
             // on the currently ridden piece, later sibling pieces of the same logical
             // object must still get a chance to apply side/top/bottom collision.
             // Returning early here skips the "next block in the staircase" wall hit.
+            ridingContactResult = ridingContact;
+            if (ridingContact != null && !player.getAir()) {
+                ridingCentreYToRestore = player.getCentreY();
+            }
         }
 
         if (provider.skipsCpuSidekickWhenRenderFlagOffScreen()
@@ -1281,7 +1295,11 @@ final class ObjectSolidContactController {
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
             }
-            if (result.standing()) {
+            if (result.standing() && ridingCentreYToRestore == Integer.MIN_VALUE) {
+                // Only update riding state from the sibling pass when there is no
+                // pre-existing ride from processInlineRidingObject. When the player
+                // is already riding one piece, the ridden piece's re-seat is the
+                // authoritative result (see ridingCentreYToRestore restore below).
                 putRidingState(player, instance, result.ridingX(), result.ridingY(), result.pieceIndex());
                 setObjectStandingBit(player, instance, result.pieceIndex());
                 // Fresh multi-piece landing: latch so the same-frame
@@ -1290,6 +1308,16 @@ final class ObjectSolidContactController {
                 markStandingBitEstablishedThisFrame(player, instance, result.pieceIndex());
                 clearGroundWallSuppressionForNormalSolidSupport(player, instance);
                 inlineSupportedPlayers.add(player);
+            }
+            // Restore riding piece Y after sibling-piece contacts. Non-riding sibling
+            // pieces may have applied Solid_Landed Y snaps for overlapping X ranges.
+            // In ROM each piece is a separate slot; the ridden piece runs LAST in slot
+            // order and its MvSonicOnPtfm / SolidObject call overwrites earlier snaps.
+            // docs/s1disasm/_incObj/5B SLZ Staircase.asm:72-96 (Stair_Solid / SolidObject)
+            if (ridingCentreYToRestore != Integer.MIN_VALUE) {
+                int newY = ridingCentreYToRestore - (player.getHeight() / 2);
+                player.setY((short) newY);
+                return ridingContactResult;
             }
             return result.aggregateContact();
         }
@@ -2404,7 +2432,15 @@ final class ObjectSolidContactController {
             }
             int anchorX = pieceX + params.offsetX();
             int anchorY = pieceY + params.offsetY();
-            int halfHeight = player.getAir() ? params.airHalfHeight() : params.groundHalfHeight();
+            // ROM SolidObject (S1 sub SolidObject.asm:170-176; S2 s2.asm:35158-35169)
+            // always uses d2 (object top half-height = airHalfHeight) in Solid_ChkCollision
+            // for the Y overlap window, regardless of whether Sonic is grounded or airborne.
+            // The grounded path uses d3 (groundHalfHeight) only inside MvSonicOnPtfm /
+            // MvSonicOnPtfm2 (the continued-ride re-seat), not for fresh-contact detection.
+            // Using groundHalfHeight here inflates maxTop by 1, giving distY one more than
+            // ROM (engine distY=4 vs ROM distY=3 for the staircase), causing a 1px downward
+            // snap. Use airHalfHeight for all non-riding-piece fresh contacts.
+            int halfHeight = params.airHalfHeight();
             SlopedSolidRoutineAdapter slopedAdapter = null;
             byte[] slopeData = null;
             if (instance instanceof SlopedSolidProvider sloped) {

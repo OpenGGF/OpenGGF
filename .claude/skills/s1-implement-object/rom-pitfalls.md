@@ -93,3 +93,90 @@ the same "read standing after the checkpoint" rule applies.
 
 **Originating commit.** See `bugfix/ai-s1-ghz1-advance` (GHZ1 f3246 -> GREEN;
 type-03 platform fall timer started one frame late, holding Sonic 1 px high).
+
+---
+
+## P3 — Triggered countdown timer: ROM does not decrement on the same frame it sets the timer
+
+**Symptom.** A timer-driven state machine transitions (or a child spawns) exactly
+1 frame earlier than ROM. The timer value matches ROM when observed right after the
+trigger event, but the transition fires too soon.
+
+**Root cause.** ROM timer-setting code branches to `locret_XXXX` (rts) immediately
+after writing the timer value — the decrement path is only entered on the *following*
+frame when the timer is already non-zero. Naive engine code does:
+
+```java
+if (timer == 0) {
+    if (contact) { timer = DELAY; }  // set
+}
+if (timer > 0) { timer--; /* ... */ }  // BUG: decrement fires on same frame
+```
+
+That collapses ROM's two-frame path into one, advancing every subsequent timer tick
+by 1.
+
+**What to check.** Whenever a ROM object reads a timer with `tst.w`/`beq.s` and
+jumps to a common decrement label (`loc_10FC0`, etc.) only when non-zero: the `beq`
+means "skip decrement if zero, fall through to rts". The set path (`move.w #N, timer`)
+must `return` immediately in the engine — do NOT also run the decrement block in the
+same `update()` call.
+
+**ROM citation.** `docs/s1disasm/_incObj/5B SLZ Staircase.asm:104-119`
+(`Stair_Type00`): timer check / set / rts, then the decrement at `loc_10FC0` is only
+reached when entering non-zero. Same pattern in `Stair_Type02` at asm:122-137.
+Equivalent bomb-fuse pattern: `docs/s1disasm/_incObj/3B Bomb.asm` (SLB bomb fuse
+`skipsSameFrameUpdateAfterSpawn`; commit `bugfix/ai-slz1-advance`).
+
+**Cross-game note.** The same tst/beq-over-decrement pattern appears in S2 and S3K
+timer-driven objects. Verify every new object's timer-set path falls through to rts
+*without* running the decrement in the same dispatch.
+
+**Originating commit.** `bugfix/ai-s1-slz1-staircase`
+(SLZ1 f933 → f2872; Staircase timer decremented 1 tick early on trigger frame).
+
+---
+
+## P4 — SolidObject Y contact window uses airHalfHeight (d2), not groundHalfHeight (d3)
+
+**Symptom.** When a grounded player rides a multi-piece solid object and then walks
+onto an adjacent piece, the fresh-landing snap seats the player 1px too low (engine
+`newCentreY = ROM_y - 1`). The error appears on the piece-transition frame and every
+fresh-landing frame where the player is grounded.
+
+**Root cause.** ROM `SolidObject_cont` / `Solid_ChkCollision` always uses d2 (the
+input top half-height, i.e. `airHalfHeight`) for the Y bounding-box calculation:
+
+```asm
+move.b  obHeight(a1), d3   ; d3 = Sonic's y_radius
+ext.w   d3
+add.w   d3, d2             ; d2 = airHalfHeight + y_radius  (maxTop)
+```
+
+The engine's `processMultiPieceCollision` was using `groundHalfHeight` for grounded
+players, inflating `maxTop` by 1. That makes `distY = relY = 3` in ROM become
+`distY = 4` in the engine, and the snap formula `newCentreY = playerCentreY - distY + 3`
+produces `- 4 + 3 = -1` offset rather than `-3 + 3 = 0`.
+
+The `groundHalfHeight` (d3) is only used by `MvSonicOnPtfm` / `MvSonicOnPtfm2` for
+the *continued-ride re-seat*, not for the initial bounding-box Y test.
+
+**What to check.** For any `MultiPieceSolidProvider` object, `processMultiPieceCollision`
+uses `params.airHalfHeight()` for the Y window. This is handled generically in the
+engine — no per-object override needed. But if you are implementing a new
+multi-piece object and observe a 1px grounded seat error on piece transitions, confirm
+that `SolidObjectParams.airHalfHeight()` carries the correct top half-height from
+the ROM `SolidObject` call site's d2 value.
+
+**ROM citation.** `docs/s1disasm/_incObj/sub SolidObject.asm:170-176`
+(S1 `Solid_ChkCollision` Y window: `add.w d3,d2` where d2=airHalfHeight).
+`docs/s2disasm/s2.asm:35361-35373` (S2 `SolidObject_cont` Y window: same convention).
+
+**Cross-game note.** All three games (S1, S2, S3K) use d2 = airHalfHeight for the
+`SolidObject` Y detection window. The engine fix is in the shared
+`ObjectSolidContactController.processMultiPieceCollision` and applies universally.
+
+**Originating commit.** `bugfix/ai-s1-slz1-staircase`
+(SLZ1 f933 → f2872; staircase piece fresh-landing 1px low when grounded).
+
+---

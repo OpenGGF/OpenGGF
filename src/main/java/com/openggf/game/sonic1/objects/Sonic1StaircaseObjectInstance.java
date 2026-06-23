@@ -228,33 +228,38 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
      * Type 0 (Stair_Type00): Wait for player contact on TOP, 30-frame countdown.
      * <pre>
      *   tst.w   objoff_34(a0)        ; timer active?
-     *   bne.s   loc_10FC0            ; yes, decrement
+     *   bne.s   loc_10FC0            ; yes, branch to decrement
      *   cmpi.b  #1,objoff_36(a0)     ; player standing on top?
      *   bne.s   locret_10FBE         ; no, return
      *   move.w  #$1E,objoff_34(a0)   ; start 30-frame timer
+     *                                ; falls through to locret_10FBE (rts) — NO decrement
      *
-     * loc_10FC0:
+     * loc_10FC0:                     ; only reached when timer was already active
      *   subq.w  #1,objoff_34(a0)
      *   bne.s   locret_10FBE
      *   addq.b  #1,obSubtype(a0)     ; advance to type 1
      * </pre>
+     * ROM parity: when the timer is first set (timer was 0 and contact is detected),
+     * the routine returns immediately WITHOUT decrementing. Decrement only runs on
+     * subsequent frames where the timer was already non-zero (docs/s1disasm/_incObj/5B
+     * SLZ Staircase.asm:104-119).
      */
     private void updateType00(boolean touchTop) {
         if (timer == 0) {
             if (touchTop) {
-                // From disassembly: cmpi.b #1,objoff_36(a0)
-                // objoff_36 is set to 1 when player stands on a piece (bit 3 of obStatus)
+                // cmpi.b #1,objoff_36(a0) — player on top; set timer and return
+                // move.w #$1E,objoff_34(a0) + falls through to rts (loc_10FBE)
                 timer = TOP_CONTACT_DELAY;
+                return; // ROM: timer set on this frame, no decrement until next frame
             }
+            return; // No contact and no active timer; nothing to do
         }
-        if (timer > 0) {
-            timer--;
-            if (timer == 0) {
-                // addq.b #1,obSubtype(a0)
-                state++;
-            }
+        // loc_10FC0: timer was already active — decrement it
+        timer--;
+        if (timer == 0) {
+            // addq.b #1,obSubtype(a0)
+            state++;
         }
-        // Reset contact flag each frame
         playerOnTop = false;
     }
 
@@ -316,31 +321,38 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
      *   move.b  d0,(a1)+            ; piece 3
      * </pre>
      */
+    /**
+     * ROM parity: when the timer is first set (timer was 0 and bottom contact detected),
+     * the routine returns immediately WITHOUT decrementing (docs/s1disasm/_incObj/5B
+     * SLZ Staircase.asm:122-137; move.w #$3C + falls through to locret_10FDE rts).
+     */
     private void updateType02(boolean touchBottom) {
         if (timer == 0) {
             if (touchBottom) {
                 // tst.b objoff_36(a0) / bpl.s — trigger on negative d4 (bottom contact)
+                // move.w #$3C,objoff_34(a0) + falls through to locret_10FDE (rts)
                 timer = BOTTOM_CONTACT_DELAY;
+                return; // ROM: timer set on this frame, no decrement until next frame
             }
+            return; // No contact and no active timer; nothing to do
         }
-        if (timer > 0) {
-            timer--;
-            if (timer == 0) {
-                // addq.b #1,obSubtype(a0)
-                state++;
-                // Clear oscillation offsets when transitioning
-                for (int i = 0; i < NUM_PIECES; i++) {
-                    yOffsets[i] = 0;
-                }
-            } else {
-                // Oscillation pattern: checkerboard toggling every 4 frames
-                // lsr.b #2,d0 / andi.b #1,d0
-                int baseBit = (timer >> 2) & 1;
-                yOffsets[0] = baseBit;
-                yOffsets[1] = baseBit ^ 1;
-                yOffsets[2] = baseBit;
-                yOffsets[3] = baseBit ^ 1;
+        // loc_10FE0: timer was already active — decrement it
+        timer--;
+        if (timer == 0) {
+            // addq.b #1,obSubtype(a0)
+            state++;
+            // Clear oscillation offsets when transitioning
+            for (int i = 0; i < NUM_PIECES; i++) {
+                yOffsets[i] = 0;
             }
+        } else {
+            // Oscillation pattern: checkerboard toggling every 4 frames
+            // lsr.b #2,d0 / andi.b #1,d0
+            int baseBit = (timer >> 2) & 1;
+            yOffsets[0] = baseBit;
+            yOffsets[1] = baseBit ^ 1;
+            yOffsets[2] = baseBit;
+            yOffsets[3] = baseBit ^ 1;
         }
         playerBelow = false;
     }
