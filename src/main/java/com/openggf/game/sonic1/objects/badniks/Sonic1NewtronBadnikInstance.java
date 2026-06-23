@@ -99,7 +99,7 @@ public class Sonic1NewtronBadnikInstance extends AbstractBadnikInstance implemen
     private static final int STATE_SPEED = 3;
     private static final int STATE_TYPE01 = 4;
 
-    private final boolean isType1;         // true if subtype != 0 (missile-firing variant)
+    private boolean isType1;               // true if subtype != 0 (missile-firing variant)
     private int secondaryState;
     private int fallVelocity;              // obVelY during falling phase
     /** Subpixel accumulators (xSub / ySub) for ROM-accurate 16:8 fixed-point integration. */

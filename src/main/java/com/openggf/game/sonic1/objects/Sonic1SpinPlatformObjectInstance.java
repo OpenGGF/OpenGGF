@@ -83,13 +83,13 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
             0x23, 0x22, 0x21, 0
     };
 
-    private final boolean isSpinner;
+    private boolean isSpinner;
 
     // Timer state
     // spin_timer = objoff_30: countdown until next animation toggle
     // spin_timelen = objoff_32: reload value for timer
     private int spinTimer;
-    private final int spinTimelen;
+    private int spinTimelen;
 
     // Animation state
     // obAnim: current animation index
@@ -102,7 +102,7 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
 
     // Spinner-specific: frame counter mask for periodic triggering
     // objoff_36: mask applied to v_framecount to gate trigger
-    private final int frameCounterMask;
+    private int frameCounterMask;
     // objoff_34: trigger flag (set when frame counter matches, cleared on timer expiry)
     private boolean spinnerTriggered;
 

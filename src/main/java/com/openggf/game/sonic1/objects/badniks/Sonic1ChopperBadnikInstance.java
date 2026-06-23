@@ -61,7 +61,7 @@ public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance implemen
     private static final int ANIM_SPEED_FAST = 3 + 1;   // 4 ticks per frame
     private static final int ANIM_SPEED_STILL = 7 + 1;  // 8 ticks per frame
 
-    private final int origY;          // chop_origY (objoff_30): saved spawn Y position
+    private int origY;                // chop_origY (objoff_30): saved spawn Y position
     private int yVelocity;            // obVelY: current vertical velocity (subpixels)
     /** Subpixel accumulators (xSub / ySub) for ROM-accurate 16:8 fixed-point integration. */
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);

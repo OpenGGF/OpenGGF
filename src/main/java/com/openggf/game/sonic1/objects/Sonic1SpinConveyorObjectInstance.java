@@ -92,7 +92,7 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
 
     private enum Mode { SPAWNER, PLATFORM }
 
-    private final Mode mode;
+    private Mode mode;
 
     // Current position (updated by movement for platforms)
     private int x;

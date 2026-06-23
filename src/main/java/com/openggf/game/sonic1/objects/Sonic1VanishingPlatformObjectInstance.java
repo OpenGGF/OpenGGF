@@ -85,11 +85,11 @@ public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstanc
     // vanp_timer (objoff_30): countdown timer
     private int timer;
     // vanp_timelen (objoff_32): base timer length
-    private final int timerLength;
+    private int timerLength;
     // objoff_36: phase offset for frame counter trigger
-    private final int phaseOffset;
+    private int phaseOffset;
     // objoff_38: mask for frame counter trigger
-    private final int phaseMask;
+    private int phaseMask;
 
     // ---- State machine ----
 

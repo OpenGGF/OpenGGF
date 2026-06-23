@@ -823,6 +823,27 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S1),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1SpringObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SpinConveyorObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1StaircaseObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1ChopperBadnikInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1JawsBadnikInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1NewtronBadnikInstance",
                     GameId.S1));
 
     private static final List<MutableFieldCoverageCandidate> S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS =
@@ -898,7 +919,28 @@ public class TestScalarOnlyCodecDeletion {
                             "actWidth", "baseX", "baseY", "frameIndex", "movementType"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1SpringObjectInstance",
-                            "springType", "strength", "yellow"));
+                            "springType", "strength", "yellow"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SpinConveyorObjectInstance",
+                            "mode"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance",
+                            "frameCounterMask", "isSpinner", "spinTimelen"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1StaircaseObjectInstance",
+                            "baseX", "baseY", "xFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance",
+                            "phaseMask", "phaseOffset", "timerLength"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1ChopperBadnikInstance",
+                            "origY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1JawsBadnikInstance",
+                            "turnTimeDelay"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1NewtronBadnikInstance",
+                            "isType1"));
 
     private static final List<CodecDeletionCandidate> SEESAW_BALL_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
