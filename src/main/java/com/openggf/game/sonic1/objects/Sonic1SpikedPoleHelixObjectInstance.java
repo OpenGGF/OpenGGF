@@ -16,6 +16,7 @@ import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.LevelManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -74,9 +75,17 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
     // Parent spike index (the one at the original spawn X position)
     private final int parentIndex;
 
-    // v_ani0_frame: local counter replicating global sync animation counter 0
-    // Decrements every ANIM_FRAME_DURATION frames, wraps at FRAME_COUNT (AND #7)
-    private int animTimer = ANIM_FRAME_DURATION - 1;
+    // v_ani0_frame is ROM's GLOBAL sync counter 0, ticked by SynchroAnimate every 12 gfc ticks.
+    // It is NOT a per-object counter. ROM initialises v_ani0_time=0 and v_ani0_frame=0 at level
+    // start; SynchroAnimate fires at gfc=1,13,25,..., so after gfc=N:
+    //   v_ani0_frame(N) = (-ceilDiv(N, 12)) & 7   where ceilDiv(N,12) = (N+11)/12
+    //
+    // A per-object counter unseeded from the trace will diverge whenever the helix streams
+    // in mid-level (its animCounter starts at 0 regardless of the actual gfc). Fix: compute
+    // v_ani0_frame directly from levelManager.getFrameCounter()+1 (= current gfc) each frame,
+    // matching the Electrocuter fix pattern (SBZ1 f1925, commit in CHANGELOG.md).
+    //
+    // animCounter holds the per-frame derived value; no longer needs per-object timer state.
     private int animCounter = 0;
 
     private static TouchResponseProfile hurtProfile(boolean multiRegionSource,
@@ -163,13 +172,23 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Replicate v_ani0_frame timing: decrement counter every ANIM_FRAME_DURATION frames
-        // Disasm (SynchroAnimate): subq.b #1,(v_ani0_time).w / bpl.s .nochange
-        //   move.b #$0B,(v_ani0_time).w / subq.b #1,(v_ani0_frame).w
-        animTimer--;
-        if (animTimer < 0) {
-            animTimer = ANIM_FRAME_DURATION - 1;
-            animCounter = (animCounter - 1) & 0x07;
+        // Derive v_ani0_frame from the trace-seeded level frame counter (gfc).
+        // ROM SynchroAnimate (docs/s1disasm/sonic.asm:3111-3119):
+        //   subq.b #1,(v_ani0_time).w   ; decrement timer (init=0, resets to 11 on underflow)
+        //   bpl.s .skip                  ; skip tick if non-negative
+        //   move.b #12-1,(v_ani0_time).w ; reload 11
+        //   subq.b #1,(v_ani0_frame).w  ; decrement frame
+        //   andi.b #7,(v_ani0_frame).w  ; wrap 0-7
+        //
+        // v_ani0_time init=0 → underflows on gfc=1 → first tick at gfc=1, then every 12.
+        // Ticks after gfc=N: ceil(N/12) = (N+11)/12 (integer division).
+        // v_ani0_frame(N) = (-((N+11)/12)) & 7
+        //
+        // levelManager.getFrameCounter()+1 = current gfc (pre-increment, same as Electrocuter).
+        LevelManager levelManager = services().levelManager();
+        if (levelManager != null) {
+            int gfc = levelManager.getFrameCounter() + 1;
+            animCounter = (-(( gfc + ANIM_FRAME_DURATION - 1) / ANIM_FRAME_DURATION)) & 0x07;
         }
 
         updateSpikeFrames();
