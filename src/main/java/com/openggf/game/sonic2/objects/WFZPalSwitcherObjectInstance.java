@@ -7,6 +7,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
@@ -45,7 +47,7 @@ import java.util.List;
  *   <li>Player crosses X from right to left AND Y is within range: apply reverse action</li>
  * </ul>
  */
-public class WFZPalSwitcherObjectInstance extends BoxObjectInstance {
+public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements RewindRecreatable {
 
     // Width lookup table from disassembly word_213AA (s2.asm:46534-46538)
     private static final int[] WIDTH_TABLE = {0x20, 0x40, 0x80, 0x100};
@@ -60,8 +62,8 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance {
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
 
-    private final int triggerHalfHeight;       // Y range (half-height) from WIDTH_TABLE
-    private final boolean xFlipped;            // x_flip from render_flags (determines toggle direction)
+    private int triggerHalfHeight;       // Y range (half-height) from WIDTH_TABLE
+    private boolean xFlipped;            // x_flip from render_flags (determines toggle direction)
 
     // Per-character crossing state (ROM: objoff_34 for Sonic, objoff_35 for Tails)
     private boolean sonicPastTrigger;
@@ -80,6 +82,11 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance {
 
         this.triggerHalfHeight = WIDTH_TABLE[spawn.subtype() & 0x03];
         this.xFlipped = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public WFZPalSwitcherObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new WFZPalSwitcherObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

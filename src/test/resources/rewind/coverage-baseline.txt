@@ -64,10 +64,6 @@ com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance#finalScalar#x
 com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance#finalScalar#y
 com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance#objectRef#lastNativeMainPlayer
 com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance#recreate
-com.openggf.game.sonic2.objects.CNZConveyorBeltObjectInstance#finalScalar#heightPixels
-com.openggf.game.sonic2.objects.CNZConveyorBeltObjectInstance#finalScalar#velocityX
-com.openggf.game.sonic2.objects.CNZConveyorBeltObjectInstance#finalScalar#widthPixels
-com.openggf.game.sonic2.objects.CNZConveyorBeltObjectInstance#recreate
 com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance#finalScalar#collisionDistance
 com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance#recreate
 com.openggf.game.sonic2.objects.CheckpointDongleInstance#finalScalar#centerX
@@ -101,14 +97,7 @@ com.openggf.game.sonic2.objects.FallingPillarObjectInstance#finalScalar#isChild
 com.openggf.game.sonic2.objects.FallingPillarObjectInstance#recreate
 com.openggf.game.sonic2.objects.FlipperObjectInstance#finalScalar#idleAnimId
 com.openggf.game.sonic2.objects.FlipperObjectInstance#recreate
-com.openggf.game.sonic2.objects.FloorSpikeObjectInstance#finalScalar#initialX
-com.openggf.game.sonic2.objects.FloorSpikeObjectInstance#finalScalar#initialY
-com.openggf.game.sonic2.objects.FloorSpikeObjectInstance#recreate
 com.openggf.game.sonic2.objects.GrabObjectInstance#recreate
-com.openggf.game.sonic2.objects.HTZLiftObjectInstance#finalScalar#baseX
-com.openggf.game.sonic2.objects.HTZLiftObjectInstance#finalScalar#baseY
-com.openggf.game.sonic2.objects.HTZLiftObjectInstance#finalScalar#flippedX
-com.openggf.game.sonic2.objects.HTZLiftObjectInstance#recreate
 com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance#finalScalar#currentX
 com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance#finalScalar#currentY
 com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance#finalScalar#projectileVel
@@ -134,9 +123,6 @@ com.openggf.game.sonic2.objects.LauncherBallObjectInstance#finalScalar#reverseAn
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#finalScalar#startFrame
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#recreate
 com.openggf.game.sonic2.objects.LauncherSpringObjectInstance#recreate
-com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance#finalScalar#collisionHalfHeight
-com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance#finalScalar#collisionHalfWidth
-com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance#recreate
 com.openggf.game.sonic2.objects.MCZBrickObjectInstance#finalScalar#chainCount
 com.openggf.game.sonic2.objects.MCZBrickObjectInstance#finalScalar#initialX
 com.openggf.game.sonic2.objects.MCZBrickObjectInstance#finalScalar#initialY
@@ -258,9 +244,6 @@ com.openggf.game.sonic2.objects.VerticalLaserObjectInstance#finalScalar#posX
 com.openggf.game.sonic2.objects.VerticalLaserObjectInstance#finalScalar#posY
 com.openggf.game.sonic2.objects.VineSwitchObjectInstance#finalScalar#switchId
 com.openggf.game.sonic2.objects.VineSwitchObjectInstance#recreate
-com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance#finalScalar#triggerHalfHeight
-com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance#finalScalar#xFlipped
-com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance#recreate
 com.openggf.game.sonic2.objects.WFZShipFireObjectInstance#finalScalar#currentY
 com.openggf.game.sonic2.objects.WFZShipFireObjectInstance#finalScalar#initialX
 com.openggf.game.sonic2.objects.WFZShipFireObjectInstance#recreate

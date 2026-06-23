@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -31,7 +33,7 @@ import java.util.List;
  * </ul>
  */
 public class FloorSpikeObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     // From disassembly: move.b #$84,collision_flags(a0)
     // Top nibble $8 = harmful/spike, bottom nibble $4 = size index
@@ -56,8 +58,8 @@ public class FloorSpikeObjectInstance extends AbstractObjectInstance
     private static final int WIDTH_PIXELS = 4;
 
     // Initial position (floorspike_initial_x_pos / floorspike_initial_y_pos)
-    private final int initialX;
-    private final int initialY;
+    private int initialX;
+    private int initialY;
 
     // Current position (updated each frame from offset)
     private int currentX;
@@ -81,6 +83,11 @@ public class FloorSpikeObjectInstance extends AbstractObjectInstance
         this.initialY = spawn.y();
         this.currentX = initialX;
         this.currentY = initialY;
+    }
+
+    @Override
+    public FloorSpikeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new FloorSpikeObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

@@ -6,6 +6,8 @@ import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -25,7 +27,7 @@ import java.util.List;
  * - Spawns 4 LeafParticleObjectInstance children at player position
  * - 16-frame cooldown prevents rapid re-triggering
  */
-public class LeavesGeneratorObjectInstance extends AbstractObjectInstance {
+public class LeavesGeneratorObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // Minimum speed required to trigger leaves (0x200 in either axis)
     private static final int MIN_TRIGGER_SPEED = 0x200;
@@ -51,8 +53,8 @@ public class LeavesGeneratorObjectInstance extends AbstractObjectInstance {
             {0x80, 0x80}     // Leaf 3: bottom-right
     };
 
-    private final int collisionHalfWidth;
-    private final int collisionHalfHeight;
+    private int collisionHalfWidth;
+    private int collisionHalfHeight;
     // Cooldown timer to prevent rapid re-triggering
     private int cooldownTimer = 0;
 
@@ -66,6 +68,11 @@ public class LeavesGeneratorObjectInstance extends AbstractObjectInstance {
         }
         this.collisionHalfWidth = COLLISION_SIZES[subtype][0];
         this.collisionHalfHeight = COLLISION_SIZES[subtype][1];
+    }
+
+    @Override
+    public LeavesGeneratorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new LeavesGeneratorObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

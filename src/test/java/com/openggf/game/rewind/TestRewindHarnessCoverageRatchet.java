@@ -244,8 +244,8 @@ public class TestRewindHarnessCoverageRatchet {
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-23: raised to 264 after S2 box-solid tail objects moved to generic recreate.
-    static final int RATCHET_FLOOR = 264;
+    // 2026-06-23: raised to 269 after S2 trigger/motion scalar objects moved to generic recreate.
+    static final int RATCHET_FLOOR = 269;
 
     @BeforeEach
     void initHeadless() {
