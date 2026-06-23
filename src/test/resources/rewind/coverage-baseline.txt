@@ -75,9 +75,6 @@ com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#or
 com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance#finalScalar#zoneIndex
 com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance#finalScalar#facingRight
 com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance#finalScalar#spitDelay
-com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance$Fireball#finalScalar#movingRight
-com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance$Fireball#finalScalar#velX
-com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance$Fireball#recreate
 com.openggf.game.sonic1.objects.Sonic1GirderBlockObjectInstance#finalScalar#origX
 com.openggf.game.sonic1.objects.Sonic1GirderBlockObjectInstance#finalScalar#origY
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#blockFrame
