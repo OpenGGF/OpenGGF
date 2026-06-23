@@ -30,6 +30,14 @@
 -- the regenerated trace). (2) add obj_frame (obFrame / OFF_ANIM_FRAME_DISP 0x1A)
 -- to object_near events for object-tilt/anim-phase diagnosis (e.g. SLZ seesaw
 -- Obj5E tilt mapping frame). Both are diagnostic-only; CSV schema is unchanged.
+-- v3.6 changes: RECORDER HYGIENE ONLY (no schema/data change; v3.5 traces stay
+-- valid). (1) No more per-segment cmd-window flashes: all per-act output subdirs
+-- are pre-created in a SINGLE os.execute at load (the only shell-out), and the
+-- per-segment os.execute("mkdir") is removed. (2) Reliable movie-end self-exit:
+-- the run now stops at min(S1_STOP_AT_FRAME, movie_end) and exits even when
+-- client.exit() is a no-op on this BizHawk build (the loop terminates the lua and
+-- a guarded post-loop fallback re-tries exit), so EmuHawk no longer runs away
+-- after the movie finishes. metadata.lua_script_version reports "3.6".
 ------------------------------------------------------------------------------
 
 -----------------
@@ -146,6 +154,44 @@ local ZONE_NAMES = {
     [6] = "endz",  -- Ending Zone
     [7] = "ss",    -- Special Stage
 }
+
+-- v3.6 directory hygiene: pre-create every per-act segment dir in ONE shell-out
+-- at load so the per-segment os.execute("mkdir") (which flashed a cmd window for
+-- each zone) is gone. Defined here (after ZONE_NAMES / BASE_OUTPUT_DIR) so the
+-- frame loop's ensure_segment_dir() reference resolves to this local.
+local function precreate_segment_dirs()
+    -- Strip any trailing slash before quoting: a trailing "\" inside a cmd-quoted
+    -- path escapes the closing quote (`"trace_output\"` is malformed).
+    local function quote_dir(p)
+        local win = (p:gsub("/", "\\"))      -- parens: keep only the string, drop gsub's count
+        win = (win:gsub("\\+$", ""))         -- drop trailing backslashes
+        return "\"" .. win .. "\""
+    end
+    local quoted = { quote_dir(BASE_OUTPUT_DIR) }
+    for _, zname in pairs(ZONE_NAMES) do
+        for act = 1, 3 do
+            quoted[#quoted + 1] = quote_dir(BASE_OUTPUT_DIR .. zname .. tostring(act))
+        end
+    end
+    -- Windows mkdir takes multiple paths; 2>NUL swallows "already exists".
+    -- One brief cmd window for the whole run.
+    os.execute("mkdir " .. table.concat(quoted, " ") .. " 2>NUL")
+end
+
+-- Shell-free fallback for an UNKNOWN zone id whose dir was not pre-created
+-- (start_zone_name = "unknown_XX"). Probes via a temp file; only shells out if
+-- the dir genuinely does not exist, so the normal known-zone path never spawns a
+-- console.
+local function ensure_segment_dir(dir)
+    local probe_path = dir .. ".oggf_dir_probe"
+    local probe = io.open(probe_path, "w")
+    if probe then
+        probe:close()
+        os.remove(probe_path)
+        return  -- dir exists (pre-created); no shell-out.
+    end
+    os.execute("mkdir \"" .. (dir:gsub("/", "\\")) .. "\" 2>NUL")
+end
 
 -- Snapshot interval (frames between full state snapshots in aux file)
 local SNAPSHOT_INTERVAL = 60
@@ -287,7 +333,7 @@ local function write_metadata()
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.5",\n')
+    meta_file:write('  "lua_script_version": "3.6",\n')
     meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
     meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame"],\n')
@@ -540,11 +586,18 @@ end
 local function on_frame_end()
     local game_mode = mainmemory.read_u8(ADDR_GAME_MODE)
 
-    -- MULTI-SEGMENT: stop the whole pass when the movie ends (or an optional
-    -- S1_STOP_AT_FRAME test limit is reached). Finalise any open segment first.
+    -- MULTI-SEGMENT: stop the whole pass at min(S1_STOP_AT_FRAME, movie_end).
+    -- v3.6: the movie-end / FINISHED checks are NO LONGER gated on `started`, so
+    -- the pass also terminates if the movie ends before gameplay is ever detected
+    -- (previously such a run -- or one where S1_STOP_AT_FRAME was unset and
+    -- movie.length() under-reported -- looped forever past the movie, leaving
+    -- EmuHawk running away). Whichever of the stop bounds is reached first wins.
     local stop_at = tonumber(os.getenv("S1_STOP_AT_FRAME") or "0")
-    local movie_done = started and movie.isloaded() and emu.framecount() >= movie.length()
-    local stop_reached = started and stop_at > 0 and emu.framecount() >= stop_at
+    local frame_now = emu.framecount()
+    local movie_len = movie.isloaded() and movie.length() or 0
+    local movie_done = (movie_len > 0 and frame_now >= movie_len)
+        or (movie.isloaded() and movie.mode() == "FINISHED")
+    local stop_reached = stop_at > 0 and frame_now >= stop_at
     if stop_reached or movie_done then
         if started then
             if physics_file then physics_file:flush() end
@@ -583,8 +636,13 @@ local function on_frame_end()
             trace_frame = 0
 
             -- MULTI-SEGMENT: per-act output dir, e.g. trace_output/ghz1/ (zone name + 1-based act).
+            -- v3.6: the directory was pre-created at load (precreate_segment_dirs), so
+            -- NO per-segment os.execute("mkdir") here -- that popped a cmd-window for
+            -- every zone segment. ensure_segment_dir is a no-op shell-free fallback that
+            -- only fires (one shell-out) for an unexpected/unknown zone id not covered
+            -- by the pre-created set.
             OUTPUT_DIR = BASE_OUTPUT_DIR .. start_zone_name .. tostring(start_act + 1) .. "/"
-            os.execute("mkdir \"" .. OUTPUT_DIR:gsub("/", "\\") .. "\" 2>NUL")
+            ensure_segment_dir(OUTPUT_DIR)
 
             open_files()
             -- Write metadata immediately so it exists even if the process is killed
@@ -749,8 +807,10 @@ local function on_frame_end()
     trace_frame = trace_frame + 1
 end
 
--- Create output directory at load time (avoids cmd.exe pause during gameplay)
-os.execute("mkdir \"" .. OUTPUT_DIR .. "\" 2>NUL")
+-- v3.6: All segment dirs are pre-created at load by precreate_segment_dirs()
+-- (defined just after ZONE_NAMES). This single load-time shell-out replaces the
+-- old per-segment os.execute("mkdir") that flashed one cmd window per zone.
+precreate_segment_dirs()
 
 -- Run at maximum speed in headless mode.
 -- emu.limitframerate(false) removes the 60fps cap.
@@ -773,10 +833,37 @@ end
 -- The onframeend callback pattern doesn't work because callbacks stop
 -- firing when BizHawk pauses, and client.exit() can kill the process
 -- before file I/O completes.
-print("S1 Trace Recorder v3.0 loaded. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...")
+print("S1 Trace Recorder v3.6 loaded. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...")
+
+-- v3.6 hard safety net: even if every movie-end signal fails (movie.length()==0,
+-- mode never reports FINISHED, S1_STOP_AT_FRAME unset), the loop must not run
+-- forever. Cap at the movie length (+ a small margin) when known, else a large
+-- absolute bound. This is the backstop that prevents the runaway EmuHawk.
+local function absolute_frame_cap()
+    local len = movie.isloaded() and movie.length() or 0
+    if len > 0 then
+        return len + 64  -- a few frames past the movie to let finalisation land
+    end
+    return 2000000       -- ~9h of frames; far beyond any S1 complete-run BK2
+end
+local FRAME_CAP = absolute_frame_cap()
 
 while true do
     on_frame_end()
+
+    -- Backstop: force-finish if we somehow blew past the movie/cap without any
+    -- normal stop signal firing.
+    if not finished and emu.framecount() >= FRAME_CAP then
+        print(string.format(
+            "Frame cap %d reached without a movie-end signal; finalising and exiting.", FRAME_CAP))
+        if started then
+            if physics_file then physics_file:flush() end
+            write_metadata()
+            close_files()
+            started = false
+        end
+        finished = true
+    end
 
     -- If recording is done, finalise files and exit from INSIDE the loop.
     -- Code after the loop may never execute because client.exit() kills
@@ -786,9 +873,6 @@ while true do
         -- (write_metadata + close_files) at movie-end, so do NOT re-finalise here
         -- (start_*/trace_frame are reset and would corrupt the last segment's metadata).
         print("All segments recorded. Exiting.")
-        if HEADLESS then
-            client.exit()
-        end
         break
     end
 
@@ -799,4 +883,22 @@ while true do
     end
 
     emu.frameadvance()
+end
+
+-- v3.6 reliable termination: client.exit() is a no-op on some BizHawk builds
+-- (the recorded "kept running" symptom). All files are already flushed/closed by
+-- the finalisation above, so it is safe to (a) call client.exit(), then (b) if it
+-- returns at all, keep advancing while re-issuing exit and pausing -- so EmuHawk
+-- stops chewing CPU/RAM even where the first exit did nothing. emu.frameadvance()
+-- yields control back to the host so a working exit can take effect.
+if HEADLESS then
+    for _ = 1, 8 do
+        client.exit()
+        if client.ispaused() then client.unpause() end
+        emu.frameadvance()
+    end
+    -- Last resort if the build truly ignores client.exit(): pause so EmuHawk idles
+    -- (0% CPU) instead of free-running the movie. The host launcher's process kill
+    -- / tasklist check then reaps it without a multi-GB runaway.
+    client.pause()
 end
