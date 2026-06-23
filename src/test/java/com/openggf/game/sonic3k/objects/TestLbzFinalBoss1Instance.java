@@ -53,6 +53,10 @@ class TestLbzFinalBoss1Instance {
         assertEquals(2, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.LASER_HEAD).size());
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ORBITING_POD).size());
         assertEquals(2, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.GUN_POD).size());
+        assertEquals(-1, firstBossChild(boss, LbzFinalBoss1Instance.ChildKind.TURRET_SEGMENT).paletteOverrideForTest(),
+                "ObjDat3_736D8/736E4 use make_art_tile(ArtTile_LBZFinalBoss1,1,1); keep platform/turret art on line 1");
+        assertEquals(0, firstBossChild(boss, LbzFinalBoss1Instance.ChildKind.GUN_POD).paletteOverrideForTest(),
+                "word_736F0 uses make_art_tile(ArtTile_LBZFinalBoss1,0,1) for the thruster/gun pods");
         // ROM: boss music arrives through Obj_Song_Fade_Transition, not a direct play.
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.MUSIC_FADE).size());
         assertTrue(services.musicIds.isEmpty(),
@@ -96,6 +100,19 @@ class TestLbzFinalBoss1Instance {
         assertTrue(boss.isLaserFiringNotchSet(), "frame $04 sets $38 bit3 so routine $04 can reposition");
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.MUZZLE_LASER).size(),
                 "matching direction at the firing notch creates loc_7321A muzzle child");
+        LbzFinalBoss1Instance.MuzzleLaserChild muzzle = assertInstanceOf(
+                LbzFinalBoss1Instance.MuzzleLaserChild.class,
+                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.MUZZLE_LASER).get(0));
+        assertEquals(0, muzzle.paletteOverrideForTest(),
+                "word_73704 uses make_art_tile(ArtTile_LBZFinalBoss1,0,1) for the muzzle/laser");
+
+        for (int frame = 4; frame < 120
+                && boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.LASER_TRAIL).isEmpty(); frame++) {
+            muzzle.update(frame, null);
+        }
+        assertTrue(muzzle.isFiredForTest(), "muzzle should reach loc_732BA and fire the beam");
+        assertEquals(0, firstBossChild(boss, LbzFinalBoss1Instance.ChildKind.LASER_TRAIL).paletteOverrideForTest(),
+                "word_7370C is the beam trail child and must match the laser palette");
 
         // Step 0 -> 1: frame $04 with table bit7 set — notch strobes but the
         // direction mismatch (sub_733FC d2 == 0) spawns no muzzle.
@@ -381,6 +398,13 @@ class TestLbzFinalBoss1Instance {
                 0x44A0, 0x0780, OBJ_LBZ_FINAL_BOSS_1, 0, 0, false, 0));
         boss.setServices(services);
         return boss;
+    }
+
+    private static LbzFinalBoss1Instance.BossChild firstBossChild(
+            LbzFinalBoss1Instance boss,
+            LbzFinalBoss1Instance.ChildKind kind) {
+        return assertInstanceOf(LbzFinalBoss1Instance.BossChild.class,
+                boss.childrenOfKindForTest(kind).stream().findFirst().orElseThrow());
     }
 
     private static final class HarnessServices extends StubObjectServices {

@@ -69,6 +69,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private static final int COLLISION_FLAGS = 0x0F;
     private static final int BODY_FRAME = 0x0C;
     private static final int DEFEAT_FRAME = 5;
+    /** ROM word_736F0/word_73704: make_art_tile(ArtTile_LBZFinalBoss1,0,1). */
+    private static final int LASER_AND_THRUSTER_PALETTE_LINE = 0;
     private static final int ACTIVATION_TIMER = 0x7F;
     private static final int HIT_INVULNERABILITY = 0x20;
     private static final int HIT_RECOIL_WAIT = 0x0F;
@@ -1059,8 +1061,16 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             }
             PatternSpriteRenderer renderer = getRenderer(renderArtKey());
             if (renderer != null && renderer.isReady()) {
-                renderer.drawFrameIndex(mappingFrame, getX(), getY(), hFlip, vFlip);
+                renderer.drawFrameIndex(mappingFrame, getX(), getY(), hFlip, vFlip, paletteOverride());
             }
+        }
+
+        protected int paletteOverride() {
+            return -1;
+        }
+
+        public int paletteOverrideForTest() {
+            return paletteOverride();
         }
 
         @Override
@@ -1429,6 +1439,11 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         public int getCollisionProperty() {
             return 0;
         }
+
+        @Override
+        protected int paletteOverride() {
+            return LASER_AND_THRUSTER_PALETTE_LINE;
+        }
     }
 
     /** Beam trail (loc_7333A): four 1-frame anim steps, then delete. */
@@ -1455,6 +1470,11 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 return;
             }
             mappingFrame = frames[animIndex];
+        }
+
+        @Override
+        protected int paletteOverride() {
+            return LASER_AND_THRUSTER_PALETTE_LINE;
         }
     }
 
@@ -1577,6 +1597,11 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         @Override
         public int getShieldReactionFlags() {
             return SHIELD_REACTION_FIRE;
+        }
+
+        @Override
+        protected int paletteOverride() {
+            return LASER_AND_THRUSTER_PALETTE_LINE;
         }
 
         @Override
