@@ -288,6 +288,8 @@ Highlights:
 
 - The S1 GHZ/SLZ smashable wall now applies its post-smash ±4px horizontal nudge to the player with a pixel-integer-only shift (matching ROM `Smash_Solid`'s `addq.w #4`/`subq.w #8` word writes to `obX`, which leave `obSubX` untouched) instead of a centre-set that zeroed the sub-pixel — preserving the sub-pixel fraction so the following frame's position carry fires as ROM does (GHZ3 trace frontier f2693 -> f4650; smashable-wall-only, GHZ1 + GHZ2 + SYZ2 stay green, SLZ2 unchanged).
 
+- The S1 GHZ spiked-pole helix now derives its rotation phase from the shared trace-seeded global animation counter (`v_ani0_frame`, ROM `Hel_RotateSpikes` reads `move.b (v_ani0_frame).w,d0` and a spike is harmful only when `(v_ani0_frame + hel_frame) & 7 == 0`) instead of a per-object counter initialised at stream-in, which had drifted out of phase and made a spike harmful when ROM's was safe — spuriously hurting the player and flinging Sonic hard left instead of running right (GHZ3 trace frontier f4650 -> f5043; same frame-counter-source class as the SBZ Electrocuter fix, helix-only, GHZ1 + GHZ2 + SYZ2 stay green).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)
