@@ -16,6 +16,7 @@ import com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance;
 import com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance;
+import com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1RingFlashObjectInstance;
@@ -681,6 +682,7 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(Sonic1EndingSonicObjectInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> S1_GRASS_FIRE_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1LargeGrassyPlatformObjectInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(Sonic1GrassFireObjectInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> S1_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
@@ -899,6 +901,9 @@ public class TestScalarOnlyCodecDeletion {
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1GirderBlockObjectInstance",
                             "origX", "origY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance",
+                            "baseX", "baseY", "invertOscillation", "mappingFrame", "moveType", "platformWidth"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1LZConveyorObjectInstance",
                             "mode"),

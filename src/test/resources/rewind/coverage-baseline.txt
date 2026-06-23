@@ -26,13 +26,6 @@ com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#reflec
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#finalScalar#switchIndex
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance#finalScalar#baseX
-com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance#finalScalar#baseY
-com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance#finalScalar#invertOscillation
-com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance#finalScalar#mappingFrame
-com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance#finalScalar#moveType
-com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance#finalScalar#platformWidth
-com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1LavaGeyserMakerObjectInstance#finalScalar#subtype
 com.openggf.game.sonic1.objects.Sonic1LavaGeyserMakerObjectInstance#finalScalar#timerReload
 com.openggf.game.sonic1.objects.Sonic1LavaGeyserMakerObjectInstance#recreate
