@@ -666,8 +666,6 @@ com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$ExhaustPuff#finalScalar#currentFrame
-com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$ExhaustPuff#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ForearmChild#finalScalar#isFront

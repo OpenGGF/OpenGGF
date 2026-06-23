@@ -220,12 +220,14 @@ public class TestRewindHarnessCoverageRatchet {
  *       family and AizBattleship headlessly verified.</li>
  *   <li>2026-06-23: raised to 220 after HTZ boss smoke particles moved to
  *       spawn-based generic recreate and joined the HTZ graph restore proof.</li>
+ *   <li>2026-06-23: raised to 221 after DEZ Eggman exhaust puffs moved to
+ *       spawn-based generic recreate and shed their final scalar baseline.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 220;
+    static final int RATCHET_FLOOR = 221;
 
     @BeforeEach
     void initHeadless() {

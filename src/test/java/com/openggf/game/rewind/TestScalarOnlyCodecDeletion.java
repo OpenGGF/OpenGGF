@@ -725,6 +725,11 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$BombChild",
                     GameId.S2));
 
+    private static final List<CodecDeletionCandidate> S2_DEZ_EGGMAN_GRAPH_COVERED_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$ExhaustPuff",
+                    GameId.S2));
+
     private static final List<CodecDeletionCandidate> SEESAW_BALL_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1SeesawBallObjectInstance",
@@ -4965,6 +4970,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S2 DEZ bomb graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2DezEggmanGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_DEZ_EGGMAN_GRAPH_COVERED_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 DEZ Eggman graph coverage");
+        }
+    }
+
+    @Test
+    void s2DezEggmanGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_DEZ_EGGMAN_GRAPH_COVERED_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 DEZ Eggman graph generic recreate, not a dynamic codec");
         }
     }
 
