@@ -130,6 +130,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Modifier;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -174,6 +175,7 @@ public class TestScalarOnlyCodecDeletion {
             "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance");
 
     private record CodecDeletionCandidate(String fqn, GameId gameId) {}
+    private record MutableFieldCoverageCandidate(String fqn, String... fieldNames) {}
 
     private static final List<CodecDeletionCandidate> BATCH3_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
@@ -748,6 +750,41 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance",
                     GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_SCALAR_SPAWN_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1ButtonObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1ConveyorBeltObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1EdgeWallObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1ElectrocuterObjectInstance",
+                    GameId.S1));
+
+    private static final List<MutableFieldCoverageCandidate> S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance",
+                            "flipped", "moveType", "origX", "origY", "speed"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1ButtonObjectInstance",
+                            "adjustedY", "blockPressable", "flashMode", "switchBit", "switchIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1ConveyorBeltObjectInstance",
+                            "convSpeed", "convWidth"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1EdgeWallObjectInstance",
+                            "frameIndex", "solid"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1ElectrocuterObjectInstance",
+                            "frequencyMask"));
 
     private static final List<CodecDeletionCandidate> SEESAW_BALL_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
@@ -5043,6 +5080,41 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 runtime spawn generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1ScalarSpawnRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_SCALAR_SPAWN_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 scalar spawn coverage");
+        }
+    }
+
+    @Test
+    void s1ScalarSpawnRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_SCALAR_SPAWN_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 scalar spawn generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1ScalarSpawnRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
         }
     }
 

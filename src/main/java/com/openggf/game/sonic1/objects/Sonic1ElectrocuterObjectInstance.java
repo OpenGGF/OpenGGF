@@ -53,7 +53,7 @@ public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
     private static final int[] ZAP_SEQUENCE = {1, 1, 1, 2, 3, 3, 4, 4, 4, 5, 5, 5, 0};
 
     // The frequency mask derived from subtype: (subtype * $10) - 1
-    private final int frequencyMask;
+    private int frequencyMask;
 
     // Animation state
     private int animationId;        // 0 = idle, 1 = zap
