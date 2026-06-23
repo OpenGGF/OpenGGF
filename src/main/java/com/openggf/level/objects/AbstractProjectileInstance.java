@@ -24,9 +24,9 @@ public abstract class AbstractProjectileInstance extends AbstractObjectInstance
     protected int currentX;
     protected int currentY;
     protected final SubpixelMotion.State motionState;
-    protected final int gravity;
-    protected final int collisionSizeIndex;
-    protected final int offScreenMargin;
+    protected int gravity;
+    protected int collisionSizeIndex;
+    protected int offScreenMargin;
     protected boolean touchCollisionActive = true;
     protected boolean deferSameFrameUpdateAfterSpawn = false;
 
