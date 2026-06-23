@@ -286,6 +286,8 @@ Highlights:
 
 - The S1 type-03 falling platform now starts its 30-frame fall timer on the same frame the player lands, matching ROM's `Plat_Solid` -> `PlatformObject` (which sets the standing bit) -> `Plat_Action` `.type03` (which reads that just-set bit) same-frame ordering; the engine had read the previous frame's standing state and started the countdown one frame late, holding Sonic 1px high. **This greens the GHZ1 complete-run trace — the third fully passing S1 complete-run trace replay** (GHZ1 trace frontier f3246 -> 0 errors; GHZ2 + SYZ2 stay green, SLZ2 unchanged at f1493, no regressions across the S1 sweep).
 
+- The S1 GHZ/SLZ smashable wall now applies its post-smash ±4px horizontal nudge to the player with a pixel-integer-only shift (matching ROM `Smash_Solid`'s `addq.w #4`/`subq.w #8` word writes to `obX`, which leave `obSubX` untouched) instead of a centre-set that zeroed the sub-pixel — preserving the sub-pixel fraction so the following frame's position carry fires as ROM does (GHZ3 trace frontier f2693 -> f4650; smashable-wall-only, GHZ1 + GHZ2 + SYZ2 stay green, SLZ2 unchanged).
+
 For details, see [`CHANGELOG.md`](CHANGELOG.md); for trace frontier movements and evidence, see [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md); for the previous verbose v0.6 merge ledger, see [`docs/changelog/v0.6-prerelease-detailed.md`](docs/changelog/v0.6-prerelease-detailed.md).
 
 ### v0.5.20260411 (Released 2026-04-11)
