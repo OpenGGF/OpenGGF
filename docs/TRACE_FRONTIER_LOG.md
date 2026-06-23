@@ -144,6 +144,16 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-23 - S1 Seesaw tilt target computed post-player (atomic ChkSide->ChgFrame); SLZ3 f745 -> f814
+
+- Branch/worktree: `bugfix/ai-s1-slz3-f745` off `origin/develop` 55a2f5b16 (worktree `.worktrees/slz3-f718`).
+- Command: `mvn test "-Dtest=com.openggf.tests.trace.s1.TestS1Slz3CompleteRunTraceReplay" -DfailIfNoTests=false "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- First error before fix: f745 `y` exp=0x02D8 act=0x02DB (3px); also f756 (re-seat blip) and f786 (`y_speed` -0738, spikeball launch). Root diagnosed with the v3.5 `object_near` `obj_frame` aux (this session's recorder extension): the ROM seesaw (Obj 5E, slot 70) flips its tilt mapping frame `obj_frame` 0x02->0x01 at f745 (player rocking within 8px of centre x=0x740 -> See_ChkSide sets flat), while the engine flipped at f747 -- 2 frames late.
+- Root: the engine latched the tilt target (`See_ChkSide`) in `onSolidContact`, which fires during the player's solid pass (BEFORE the post-physics object update), while `See_ChgFrame` (obFrame advance) ran in `update()`. Since `update()` runs after `onSolidContact` within the frame, See_ChgFrame advanced obFrame toward the PREVIOUS frame's target -> the tilt flip lagged a frame. ROM `See_Slope2` (routine 4, `docs/s1disasm/_incObj/5E SLZ Seesaw.asm:71-118`) runs `See_ChkSide` then falls straight into `See_ChgFrame`, both inside ExecuteObjects AFTER the player slot moved (atomic, post-move x). The trace had NO `x` divergence (engine and ROM player x identical every frame), so the only defect was WHEN the engine read the player x for the tilt decision.
+- Fix: compute `calculateTargetAngle` (See_ChkSide) inside `update()` immediately before `updateMappingFrame` (See_ChgFrame), gated on the standing bit (still maintained by `onSolidContact`). S1 runs objects after player physics (`objectsExecuteAfterPlayerPhysics=true`), so `update()` observes Sonic's post-move x; this keeps the ROM ChkSide->ChgFrame order atomic and post-move. Object-local to Obj 5E.
+- After: SLZ3 f745 -> f814. Resolved the f745/f756 tilt re-seat blips AND the f786 spikeball-launch cascade (all three gone from the error list). New frontier f814 `y_speed` exp=-0A80 act=0x0000 / `air` 1 vs 0 = a deeper spikeball launch divergence (ROM springs Sonic up ~10.5px, engine doesn't yet). Error count 916 -> 1024 (longer new cascade past a +69-frame-advanced frontier).
+- Regression sweep: SLZ1 (f2872, 164 err) and SLZ2 (f1714, 215 err) BYTE-IDENTICAL; MZ3 (f2079, 1123 err) unchanged; GHZ1/GHZ2/SYZ2/SBZ3 stay GREEN. Object-local (seesaw only), so no shared-code cross-game sweep needed. Unit tests pass: `TestSeesawBallGraphRewind` 6/0, `TestS1SlzBossSpikeballGraphRewind` 5/0, `TestSonic1LargeGrassyPlatformObjectInstance` 3/0, `TestCollisionLogic` 1/0.
+
 ## 2026-06-23 - S1 MZ3 complete-run regenerated at recorder v3.4 for object_near aux (frontier UNCHANGED f2079 / 1123 errors)
 
 - Branch/worktree: `bugfix/ai-s1-mz3-f2079` off `origin/develop` 48108c98e (worktree `.worktrees/slz3-f718`).
