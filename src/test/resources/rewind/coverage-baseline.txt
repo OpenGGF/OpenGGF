@@ -3,7 +3,6 @@ com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFl
 com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance#finalScalar#priority
 com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance#finalScalar#x
 com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance#finalScalar#baseY
-com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#blockFrame
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#fullSubtype
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#isTall

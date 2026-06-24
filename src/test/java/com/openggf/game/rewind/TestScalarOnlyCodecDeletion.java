@@ -11,6 +11,7 @@ import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance;
@@ -2265,6 +2266,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.IczMinibossPostBossPaletteController",
                     GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S1_EGG_PRISON_BUTTON_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic1EggPrisonButtonObjectInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> S2_EGG_PRISON_BUTTON_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(EggPrisonObjectInstance.class.getName(), GameId.S2),
@@ -7974,6 +7978,39 @@ public class TestScalarOnlyCodecDeletion {
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S1 Egg Prison button graph batch: placed button/body back-reference relink
+    // =====================================================================
+
+    @Test
+    void s1EggPrisonButtonGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_EGG_PRISON_BUTTON_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 Egg Prison button graph batch");
+        }
+    }
+
+    @Test
+    void s1EggPrisonButtonGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_EGG_PRISON_BUTTON_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 Egg Prison button graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1EggPrisonButtonGraphClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_EGG_PRISON_BUTTON_GRAPH_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via S1 Egg Prison button graph recreate; got: "
                             + result);
         }
     }

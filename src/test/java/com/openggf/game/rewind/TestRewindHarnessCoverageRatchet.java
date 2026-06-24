@@ -405,13 +405,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       to graph-tested generic recreate.</li>
  *   <li>2026-06-24: raised to 526 after S1 collapsing floor/ledge fragments
  *       gained spawn-based generic recreate coverage.</li>
+ *   <li>2026-06-24: raised to 527 after S1 Egg Prison buttons gained
+ *       graph-tested generic recreate coverage with parent relinking.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 526 after S1 collapsing floor/ledge fragments moved to generic recreate.
-    static final int RATCHET_FLOOR = 526;
+    // 2026-06-24: raised to 527 after S1 Egg Prison buttons moved to graph-tested generic recreate.
+    static final int RATCHET_FLOOR = 527;
 
     @BeforeEach
     void initHeadless() {
