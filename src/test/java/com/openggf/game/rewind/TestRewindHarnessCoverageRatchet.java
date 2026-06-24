@@ -372,13 +372,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       moved to spawn-encoded generic recreate.</li>
  *   <li>2026-06-24: raised to 497 after the S3K MHZ miniboss tree chip
  *       moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 498 after the S3K MHZ2 leaf particle
+ *       moved to spawn-encoded generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 497 after S3K MHZ miniboss tree chip moved to generic recreate.
-    static final int RATCHET_FLOOR = 497;
+    // 2026-06-24: raised to 498 after S3K MHZ2 leaf particle moved to generic recreate.
+    static final int RATCHET_FLOOR = 498;
 
     @BeforeEach
     void initHeadless() {

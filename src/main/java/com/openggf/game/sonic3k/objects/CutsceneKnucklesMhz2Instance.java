@@ -439,17 +439,26 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
     private record LeafParticleSpec(int x, int y, int yVelocity) {
     }
 
-    private static final class Mhz2KnucklesLeafParticle extends AbstractObjectInstance {
+    private static final class Mhz2KnucklesLeafParticle extends AbstractObjectInstance
+            implements SpawnRewindRecreatable {
         private int x;
         private int y;
         private final int yVelocity;
 
         private Mhz2KnucklesLeafParticle(LeafParticleSpec spec) {
-            super(new ObjectSpawn(spec.x(), spec.y(), Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0),
+            super(new ObjectSpawn(spec.x(), spec.y(), Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0,
+                    false, spec.yVelocity()),
                     "MHZ2KnucklesLeaf");
             this.x = spec.x();
             this.y = spec.y();
             this.yVelocity = spec.yVelocity();
+        }
+
+        private Mhz2KnucklesLeafParticle(ObjectSpawn spawn) {
+            super(spawn, "MHZ2KnucklesLeaf");
+            this.x = spawn.x();
+            this.y = spawn.y();
+            this.yVelocity = (short) spawn.rawYWord();
         }
 
         @Override

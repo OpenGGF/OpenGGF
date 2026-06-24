@@ -327,7 +327,6 @@ com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance#objectRef#parentBu
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance#recreate
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1PeerInstance#recreate
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLeafParticle#finalScalar#yVelocity
-com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLeafParticle#recreate
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild#objectRef#player
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild#recreate
 com.openggf.game.sonic3k.objects.DoorObjectInstance#finalScalar#baseX
