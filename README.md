@@ -247,6 +247,7 @@ Highlights:
 - Release readiness work tightened policy hooks, trace/rewind invariants, object-service boundaries, ROM-only runtime asset rules, singleton lifecycle checks, architecture guards, and test quality gates.
 - Player-facing work includes S3K data select/save support, cross-game donation paths, ROM-derived master-title previews, the legal-disclaimer startup flow, display shader support, pause/HUD fixes, multi-sidekick behavior, and level-editor plumbing.
 - Sonic 1 horizontal camera scrolling now matches the shipped ROM's `FixBugs=0` behavior: the leftward camera move is uncapped while the rightward move keeps its per-frame cap (S2/S3K still cap both directions), gated by a per-game feature flag.
+- Sonic 1 Labyrinth Zone Act 3 conveyor platforms now stay loaded one extra chunk past the left camera edge, matching the ROM's act-3-specific `out_of_range` left-extension, so platforms persist when the player backtracks left.
 - Playable sprite slope rendering now keeps steep-slope walk frames synchronized with facing-dependent flip flags during slow turnarounds.
 - Sonic 2 multi-sidekick follow-up fixed Tails pausing after fly-in by clearing the approach timer before NORMAL follow, preventing a false Player 2 manual-control stall; chained sidekicks also use the root leader while a direct Sonic sidekick's delayed follow history warms.
 - Sonic 2 sidekick CPU parity now keeps ROM `Tails_control_counter` separate from the engine's multi-sidekick approach cadence, clearing the ARZ1 trace frontier and advancing the MTZ/HTZ/CNZ sidekick-counter cluster.
