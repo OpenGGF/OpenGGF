@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.objects.bosses;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.GameRng;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
@@ -89,6 +90,10 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     private FZPlasmaLauncher plasmaLauncher;
     private boolean childComponentsSpawned;
 
+    // True until the boss's first wait-state update runs. See updateWait() for the
+    // level-event ordering compensation this gates.
+    private boolean waitFirstFrame;
+
     // objoff_30: cylinder activation state (-1 = ready for new pair)
     private int cylinderState;
 
@@ -137,6 +142,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // ROM: move.w #-1,objoff_30(a0) — ready for first cylinder pair
         cylinderState = -1;
         activeCylinderCount = 0;
+        waitFirstFrame = true;
 
         damageCooldown = 0;
         seggAnim = Sonic1BossAnimations.ANIM_SEGG_STAND;
@@ -305,15 +311,46 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         }
     }
 
-    // === State 0: WAIT (loc_19E90) ===
-    // Wait for camera to reach boss_fz_x
+    // === State 0: WAIT (loc_19E90 / BossFinal_Eggman_Wait) ===
+    // Wait for camera to reach boss_fz_x. ROM advances out of wait when the PLC
+    // buffer is empty AND the camera has reached boss_fz_x. Our art pipeline loads
+    // synchronously, so the PLC buffer is always empty here and only the camera
+    // gate applies.
     private void updateWait() {
         Camera camera = services().camera();
         int camX = camera.getX() & 0xFFFF;
 
+        GameRng rng = services().rng();
+
+        // Compensate for the engine vs ROM level-event ordering. ROM runs
+        // DynamicLevelEvents AFTER ScrollHoriz inside DeformLayers
+        // (docs/s1disasm/_inc/DeformLayers (REV01).asm:16-18), so DLE_FZ_Boss
+        // observes the post-scroll camera and spawns Obj85 on the frame the camera
+        // first reaches boss_fz_x-$150. The engine runs level events BEFORE the
+        // camera scroll (LevelFrameStep step 4 vs step 5), so Sonic1SBZEvents
+        // .updateFZBoss observes the pre-scroll (previous-frame) camera and spawns
+        // the boss one frame later. That costs exactly one frame of the ROM
+        // BossFinal_Eggman_Wait sub-state, so v_random would be advanced one fewer
+        // time before the first cylinder-select draw. Replay the missing first
+        // wait-frame seed bump here so the wait-state v_random advance spans the
+        // ROM-correct number of frames.
+        if (waitFirstFrame) {
+            waitFirstFrame = false;
+            rng.setSeed(rng.getSeed() + 1);
+        }
+
         if (camX >= BOSS_FZ_X) {
             state.routineSecondary = STATE_CYLINDER_ATTACK;
         }
+
+        // ROM: loc_19EA2 — addq.l #1,(v_random).w runs EVERY frame the boss is in
+        // the wait sub-state (the fall-through tail of BossFinal_Eggman_Wait,
+        // reached whether or not the wait advances this frame). This deterministic
+        // per-frame advance of v_random through the boss-intro wait is what places
+        // the seed for the first BossFinal_Eggman_Crush RandomNumber draw
+        // (selectCylinderPair). _incObj/85,84,86 Boss - FZ Main, Cylinders, and
+        // Plasma Balls.asm:131-133.
+        rng.setSeed(rng.getSeed() + 1);
     }
 
     // === State 2: CYLINDER_ATTACK (loc_19EA8) ===
