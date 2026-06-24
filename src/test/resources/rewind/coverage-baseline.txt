@@ -208,7 +208,6 @@ com.openggf.game.sonic3k.objects.AizForegroundPlantInstance#finalScalar#mappingF
 com.openggf.game.sonic3k.objects.AizForegroundPlantInstance#finalScalar#origX
 com.openggf.game.sonic3k.objects.AizForegroundPlantInstance#finalScalar#origY
 com.openggf.game.sonic3k.objects.AizForegroundPlantInstance#finalScalar#scrollRate
-com.openggf.game.sonic3k.objects.AizForegroundPlantInstance#recreate
 com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance#finalScalar#currentX
 com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance#finalScalar#currentY
 com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance#finalScalar#phaseOffset
@@ -240,7 +239,6 @@ com.openggf.game.sonic3k.objects.AizShipBombInstance#finalScalar#initialWorldY
 com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AnimatedStillSpriteInstance#finalScalar#animDelay
-com.openggf.game.sonic3k.objects.AnimatedStillSpriteInstance#recreate
 com.openggf.game.sonic3k.objects.AutoSpinObjectInstance#finalScalar#groundOnly
 com.openggf.game.sonic3k.objects.AutoSpinObjectInstance#finalScalar#lockControls
 com.openggf.game.sonic3k.objects.AutoSpinObjectInstance#finalScalar#noSpinLock

@@ -89,6 +89,7 @@ import com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance;
 import com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.Aiz1TreeObjectInstance;
 import com.openggf.game.sonic3k.objects.Aiz1ZiplinePegObjectInstance;
+import com.openggf.game.sonic3k.objects.AizForegroundPlantInstance;
 import com.openggf.game.sonic3k.objects.AizIntroPlaneChild;
 import com.openggf.game.sonic3k.objects.AizIntroWaveChild;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -103,6 +104,7 @@ import com.openggf.game.sonic3k.objects.AizMinibossNapalmController;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.objects.AizShipBombInstance;
 import com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance;
+import com.openggf.game.sonic3k.objects.AnimatedStillSpriteInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance;
@@ -682,6 +684,10 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> AIZ1_STATIC_SCENERY_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(Aiz1TreeObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(Aiz1ZiplinePegObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_DECORATIVE_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(AizForegroundPlantInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AnimatedStillSpriteInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HczEndBossRobotnikShip.class.getName(), GameId.S3K),
@@ -5396,6 +5402,30 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through AIZ1 static scenery generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K decorative scalar batch: AIZ foreground plant and animated still sprite
+    // =====================================================================
+
+    @Test
+    void s3kDecorativeClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_DECORATIVE_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K decorative batch");
+        }
+    }
+
+    @Test
+    void s3kDecorativeClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_DECORATIVE_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K decorative generic recreate, "
                             + "not a dynamic codec");
         }
     }
