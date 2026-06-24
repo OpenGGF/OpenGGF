@@ -27,7 +27,7 @@ public final class CnzGiantWheelInstance extends AbstractObjectInstance implemen
     private static final int MAX_SPEED = 0x0F00;
 
     private final Map<PlayableEntity, Boolean> attachedPlayers = new IdentityHashMap<>();
-    private final boolean flipped;
+    private boolean flipped;
 
     public CnzGiantWheelInstance(ObjectSpawn spawn) {
         super(spawn, "CNZGiantWheel");

@@ -28,10 +28,10 @@ public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance impl
     private static final int BOUNCE_SPEED = 0x800;
     private static final int MOVE_LOCK_FRAMES = 15;
 
-    private final int halfWidth;
-    private final int fullWidth;
-    private final boolean launchLeft;
-    private final boolean launchDown;
+    private int halfWidth;
+    private int fullWidth;
+    private boolean launchLeft;
+    private boolean launchDown;
 
     public CnzTriangleBumperObjectInstance(ObjectSpawn spawn) {
         super(spawn, "CNZTriangleBumpers");

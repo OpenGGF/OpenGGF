@@ -56,9 +56,9 @@ public final class CnzVacuumTubeInstance extends AbstractObjectInstance implemen
     private static final int BOOST_SPEED = 0x1000;
     private static final int LIFT_ANIMATION_ID = 0x0F;
 
-    private final boolean liftMode;
-    private final boolean facingRight;
-    private final int configuredLiftFrames;
+    private boolean liftMode;
+    private boolean facingRight;
+    private int configuredLiftFrames;
     private final Map<AbstractPlayableSprite, Integer> activeLiftFrames = new IdentityHashMap<>();
     private int tunnelBoosterSfxCounter;
 

@@ -35,7 +35,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
     private static final int MIN_GROUND_SPEED_TO_STAY_ATTACHED = 0x118;
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0003;
 
-    private final boolean mirrored;
+    private boolean mirrored;
     private final Map<AbstractPlayableSprite, RiderState> riders = new IdentityHashMap<>();
 
     public CnzBarberPoleObjectInstance(ObjectSpawn spawn) {

@@ -48,9 +48,9 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
             0x61, 0x61, 0x61, 0x61, 0x5C, 0x5C, 0x5C, 0x5C, 0x5D, 0x5D, 0x5D, 0x5D
     };
 
-    private final int verticalOffset;
-    private final int verticalRange;
-    private final int verticalVelocity;
+    private int verticalOffset;
+    private int verticalRange;
+    private int verticalVelocity;
     private final Map<AbstractPlayableSprite, CageState> riders = new IdentityHashMap<>();
 
     /**

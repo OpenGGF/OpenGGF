@@ -49,16 +49,16 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance implements
     private static final int X_OSC_OFFSET = 0x0C;    // ROM Oscillating_table+$0E, minus control word.
     private static final int LIFT_OSC_OFFSET = 0x14; // ROM Oscillating_table+$16, minus control word.
 
-    private final int subtype;
-    private final boolean activeVariant;
-    private final boolean xFlipped;
-    private final int initialFrame;
-    private final int xWindowMin;
-    private final int xWindowMax;
-    private final int liftWindowMin;
-    private final int liftWindowMax;
-    private final int baseX;
-    private final int baseY;
+    private int subtype;
+    private boolean activeVariant;
+    private boolean xFlipped;
+    private int initialFrame;
+    private int xWindowMin;
+    private int xWindowMax;
+    private int liftWindowMin;
+    private int liftWindowMax;
+    private int baseX;
+    private int baseY;
     private int currentX;
     private int renderFrame;
 

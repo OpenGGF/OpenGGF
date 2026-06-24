@@ -55,7 +55,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     private static final int[] UNDERWATER_BUBBLER_CHILD_SUBTYPES = {0, 0, 1, 3};
     private static final int SNAPSHOT_BASE_Y_OFFSET = 0x32;
     private static final int SNAPSHOT_COLLISION_FLAGS_OFFSET = 0x28;
-    private final int subtype;
+    private int subtype;
     private int baseY;
     private int angle;
     private boolean popped;

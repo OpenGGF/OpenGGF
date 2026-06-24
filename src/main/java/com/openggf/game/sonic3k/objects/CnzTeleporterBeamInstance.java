@@ -54,8 +54,8 @@ public final class CnzTeleporterBeamInstance extends AbstractObjectInstance impl
      */
     private static final int DESTROY_COUNTER = 0x20;
 
-    private final int centreX;
-    private final int centreY;
+    private int centreX;
+    private int centreY;
     private int beamCounter;
 
     public CnzTeleporterBeamInstance(ObjectSpawn spawn) {

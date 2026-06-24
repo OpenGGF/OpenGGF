@@ -47,8 +47,8 @@ public final class CnzWaterLevelButtonInstance extends AbstractObjectInstance
     private static final int FRAME_UNPRESSED = 0;
     private static final int FRAME_PRESSED = 1;
 
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
 
     private boolean contactStanding;
     private boolean pressedForTest;
