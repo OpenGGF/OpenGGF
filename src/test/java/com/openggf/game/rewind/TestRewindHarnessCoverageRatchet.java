@@ -324,13 +324,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       generic recreate under object-manager coverage.</li>
  *   <li>2026-06-24: raised to 404 after the shared placeholder object fallback
  *       moved to generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 405 after the S2 Speed Launcher moved to
+ *       spawn/name-based generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 404 after shared placeholder restore moved to generic recreate.
-    static final int RATCHET_FLOOR = 404;
+    // 2026-06-24: raised to 405 after S2 Speed Launcher moved to generic recreate.
+    static final int RATCHET_FLOOR = 405;
 
     @BeforeEach
     void initHeadless() {

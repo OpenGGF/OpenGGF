@@ -9,6 +9,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -58,7 +60,7 @@ import java.util.Set;
  * </ul>
  */
 public class SpeedLauncherObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // ========================================================================
     // ROM Constants (s2.asm lines 80259-80373)
@@ -154,6 +156,11 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
         this.solidParams = new SolidObjectParams(
                 PLATFORM_HALF_WIDTH, PLATFORM_HALF_HEIGHT_AIR, PLATFORM_HALF_HEIGHT_GROUND);
+    }
+
+    @Override
+    public SpeedLauncherObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SpeedLauncherObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

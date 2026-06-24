@@ -110,7 +110,6 @@ com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#accel
 com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#destX
 com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#homeX
 com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#xFlipped
-com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#recreate
 com.openggf.game.sonic2.objects.SpiralObjectInstance#recreate
 com.openggf.game.sonic2.objects.SteamPuffObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate
