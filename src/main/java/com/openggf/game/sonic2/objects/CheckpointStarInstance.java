@@ -41,8 +41,8 @@ public class CheckpointStarInstance extends AbstractObjectInstance implements Re
             + "with matching captured center on rewind recreate. Scalar star state is "
             + "reapplied by the generic field capturer.")
     private final CheckpointObjectInstance parentCheckpoint; // Reference to parent for marking as used
-    private final int centerX; // objoff_30
-    private final int centerY; // objoff_32
+    private int centerX; // objoff_30
+    private int centerY; // objoff_32
     private int angle; // objoff_34 (starts at angleOffset, increments by 0xA)
     private int lifetime; // objoff_36
     private int animFrame; // anim_frame counter for animation cycling
