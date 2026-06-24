@@ -40,11 +40,11 @@ public class HCZBlockObjectInstance extends AbstractObjectInstance
             {0x40, 0x10}
     };
 
-    private final int x;
-    private final int y;
-    private final int mappingFrame;
-    private final int halfWidth;
-    private final int halfHeight;
+    private int x;
+    private int y;
+    private int mappingFrame;
+    private int halfWidth;
+    private int halfHeight;
 
     public HCZBlockObjectInstance(ObjectSpawn spawn) {
         super(spawn, "HCZBlock");

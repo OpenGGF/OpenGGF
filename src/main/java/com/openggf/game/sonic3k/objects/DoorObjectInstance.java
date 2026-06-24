@@ -58,17 +58,17 @@ public class DoorObjectInstance extends AbstractObjectInstance
     private static final int HORIZONTAL_TRIGGER_FAR = 0x100;
     private static final int HORIZONTAL_TRIGGER_HALF_WIDTH = 0x20;
 
-    private final boolean horizontal;
-    private final boolean xFlipped;
-    private final boolean yFlipped;
-    private final int baseX;
-    private final int baseY;
-    private final int halfWidth;
-    private final int halfHeight;
-    private final int priority;
+    private boolean horizontal;
+    private boolean xFlipped;
+    private boolean yFlipped;
+    private int baseX;
+    private int baseY;
+    private int halfWidth;
+    private int halfHeight;
+    private int priority;
     private final String artKey;
-    private final int triggerMin;
-    private final int triggerMax;
+    private int triggerMin;
+    private int triggerMax;
 
     private int slideOffset;
     private boolean playerInTriggerPreviousFrame;

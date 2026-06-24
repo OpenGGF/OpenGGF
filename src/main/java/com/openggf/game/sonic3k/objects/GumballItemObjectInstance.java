@@ -120,16 +120,16 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     private final SubpixelMotion.State motionState;
 
     /** Motion profile: static, gumball-ejected gravity, or pachinko float-up. */
-    private final MotionMode motionMode;
+    private MotionMode motionMode;
 
     /** Reward dispatch mode: direct gumball subtype table vs pachinko translated subtype table. */
-    private final RewardMode rewardMode;
+    private RewardMode rewardMode;
 
     /** Subtype determining reward behavior. */
-    private final int subtype;
+    private int subtype;
 
     /** Mapping frame for rendering. */
-    private final int mappingFrame;
+    private int mappingFrame;
 
 
     /** Set true when player touches this item; triggers deletion next frame. */

@@ -112,18 +112,18 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     // ===== Instance state =====
 
     private final ZoneConfig config;
-    private final int halfWidth;
-    private final int halfHeight;
-    private final int mappingFrame;
-    private final int moveType;
-    private final boolean xFlip;
+    private int halfWidth;
+    private int halfHeight;
+    private int mappingFrame;
+    private int moveType;
+    private boolean xFlip;
 
     private int x;
     private int y;
-    private final int baseX;  // objoff_30: saved X position
-    private final int baseY;  // objoff_34: saved Y position
-    private final int outOfRangeReferenceX; // objoff_44: saved deletion anchor
-    private final int outOfRangeLimit;      // objoff_42: deletion range
+    private int baseX;  // objoff_30: saved X position
+    private int baseY;  // objoff_34: saved Y position
+    private int outOfRangeReferenceX; // objoff_44: saved deletion anchor
+    private int outOfRangeLimit;      // objoff_42: deletion range
     // Stationary bob state (type 0) — sine-based vertical nudge when player stands
     private final PlatformBobHelper bobHelper = new PlatformBobHelper();
 
