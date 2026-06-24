@@ -248,6 +248,17 @@ public class Sonic1CirclingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
+        // ROM Circ_Platform (routine 2) runs PlatformObject before Circ_Types
+        // moves the platform (docs/s1disasm/_incObj/5A SLZ Circling Platform.asm:
+        // 28-34), so first-landing detection sees the pre-move surface — the same
+        // ExitPlatform-before-move order as Obj 18 (18 Platforms.asm:54-67). This
+        // is the 5th Obj 18 landing-family override; it fixes the continued-ride
+        // seat phase on the circling platform's descent (SLZ2 ride-seat frames).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
