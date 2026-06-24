@@ -31,16 +31,10 @@ com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#f
 com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#finalScalar#frame
 com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#finalScalar#originX
 com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#recreate
-com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance#finalScalar#posX
-com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance#finalScalar#origY
 com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance#recreate
-com.openggf.game.sonic1.objects.badniks.Sonic1MotobugSmokeInstance#finalScalar#facingLeft
-com.openggf.game.sonic1.objects.badniks.Sonic1MotobugSmokeInstance#finalScalar#posX
-com.openggf.game.sonic1.objects.badniks.Sonic1MotobugSmokeInstance#finalScalar#posY
-com.openggf.game.sonic1.objects.badniks.Sonic1MotobugSmokeInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1BossFireInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance#recreate

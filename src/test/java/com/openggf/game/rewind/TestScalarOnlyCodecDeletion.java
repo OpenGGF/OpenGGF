@@ -883,6 +883,23 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance",
                     GameId.S1));
 
+    private static final List<CodecDeletionCandidate> S1_EFFECT_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1MotobugSmokeInstance",
+                    GameId.S1));
+
+    private static final List<MutableFieldCoverageCandidate> S1_EFFECT_SCALAR_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance",
+                            "posX"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1MotobugSmokeInstance",
+                            "facingLeft", "posX", "posY"));
+
     private static final List<CodecDeletionCandidate> S2_SCALAR_NAMED_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.ArrowShooterObjectInstance",
@@ -5828,6 +5845,35 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
+    void s1EffectScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_EFFECT_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 effect scalar coverage");
+        }
+    }
+
+    @Test
+    void s1EffectScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_EFFECT_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 effect scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1EffectScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_EFFECT_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
     void s1CollapsingFragmentsImplementRewindRecreatable() {
         for (CodecDeletionCandidate candidate : S1_COLLAPSING_FRAGMENT_RECREATE_CLASSES) {
             Class<?> cls = loadClass(candidate.fqn());
@@ -6356,6 +6402,23 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s1ScalarSpawnRecreateFieldsAreMutableForCompactRestore() {
         for (MutableFieldCoverageCandidate candidate : S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s1EffectScalarRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S1_EFFECT_SCALAR_RECREATE_MUTABLE_FIELDS) {
             Class<?> cls = loadClass(candidate.fqn());
             for (String fieldName : candidate.fieldNames()) {
                 try {
