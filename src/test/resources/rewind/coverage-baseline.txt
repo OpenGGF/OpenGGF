@@ -276,9 +276,7 @@ com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance#objectRef#spawnedFlash
 com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance#recreate
 com.openggf.game.sonic3k.objects.CnzBalloonInstance#finalScalar#subtype
-com.openggf.game.sonic3k.objects.CnzBalloonInstance#recreate
 com.openggf.game.sonic3k.objects.CnzBarberPoleObjectInstance#finalScalar#mirrored
-com.openggf.game.sonic3k.objects.CnzBarberPoleObjectInstance#recreate
 com.openggf.game.sonic3k.objects.CnzBumperObjectInstance#finalScalar#initialAngle
 com.openggf.game.sonic3k.objects.CnzBumperObjectInstance#finalScalar#originX
 com.openggf.game.sonic3k.objects.CnzBumperObjectInstance#finalScalar#originY
@@ -311,11 +309,9 @@ com.openggf.game.sonic3k.objects.CnzHoverFanInstance#finalScalar#xFlipped
 com.openggf.game.sonic3k.objects.CnzHoverFanInstance#finalScalar#xWindowMax
 com.openggf.game.sonic3k.objects.CnzHoverFanInstance#finalScalar#xWindowMin
 com.openggf.game.sonic3k.objects.CnzHoverFanInstance#recreate
-com.openggf.game.sonic3k.objects.CnzLightBulbInstance#recreate
 com.openggf.game.sonic3k.objects.CnzMinibossDebrisChild#finalScalar#gravity
 com.openggf.game.sonic3k.objects.CnzMinibossDebrisChild#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.CnzMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.CnzRisingPlatformInstance#recreate
 com.openggf.game.sonic3k.objects.CnzSpiralTubeInstance#recreate
 com.openggf.game.sonic3k.objects.CnzTeleporterBeamInstance#finalScalar#centreX
 com.openggf.game.sonic3k.objects.CnzTeleporterBeamInstance#finalScalar#centreY

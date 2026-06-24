@@ -7,6 +7,8 @@ import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -17,7 +19,7 @@ import java.util.List;
  * <p>The ROM uses frame 0 normally, then latches frame 1 once water exists and
  * {@code Water_level} is above the bulb's {@code y_pos}.
  */
-public final class CnzLightBulbInstance extends AbstractObjectInstance {
+public final class CnzLightBulbInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int FRAME_NORMAL = 0;
     private static final int FRAME_SUBMERGED = 1;
 
@@ -26,6 +28,11 @@ public final class CnzLightBulbInstance extends AbstractObjectInstance {
 
     public CnzLightBulbInstance(ObjectSpawn spawn) {
         super(spawn, "CNZLightBulb");
+    }
+
+    @Override
+    public CnzLightBulbInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzLightBulbInstance(ctx.spawn());
     }
 
     @Override

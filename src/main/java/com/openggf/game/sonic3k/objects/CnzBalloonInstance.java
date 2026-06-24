@@ -8,6 +8,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.RomObjectSnapshot;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchResponseListener;
@@ -38,7 +40,7 @@ import java.util.List;
  * the balloon color variant, matching the SonLVL CNZ definition.
  */
 public final class CnzBalloonInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
     private static final int COLLISION_FLAGS = 0xC0 | 0x17;
     private static final int WIDTH_HALF = 0x10;
@@ -69,6 +71,11 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         super(spawn, "CNZBalloon");
         this.subtype = spawn.subtype();
         this.baseY = spawn.y();
+    }
+
+    @Override
+    public CnzBalloonInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzBalloonInstance(ctx.spawn());
     }
 
     @Override

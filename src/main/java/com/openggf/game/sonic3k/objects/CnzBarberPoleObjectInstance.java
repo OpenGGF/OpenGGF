@@ -7,6 +7,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -26,7 +28,7 @@ import java.util.Map;
  * {@code GetSineCosine}.
  */
 public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
-        implements RomObjectCodePointerProvider {
+        implements RomObjectCodePointerProvider, RewindRecreatable {
 
     private static final int TRACK_LIMIT = 0xA0;
     private static final int TRACK_FRACTION_MASK = 0xFFFF;
@@ -39,6 +41,11 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
     public CnzBarberPoleObjectInstance(ObjectSpawn spawn) {
         super(spawn, "CNZBarberPoleSprite");
         this.mirrored = spawn.subtype() != 0;
+    }
+
+    @Override
+    public CnzBarberPoleObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzBarberPoleObjectInstance(ctx.spawn());
     }
 
     @Override

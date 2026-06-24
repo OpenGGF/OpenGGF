@@ -287,13 +287,16 @@ public class TestRewindHarnessCoverageRatchet {
  *       moved to generic recreate under object-manager coverage.</li>
  *   <li>2026-06-24: raised to 353 after S3K hidden monitor, sinking mud, and
  *       SS-entry ring restores moved to generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 357 after S3K CNZ balloon, rising platform,
+ *       light bulb, and barber pole restores moved to generic recreate under
+ *       object-manager coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 353 after S3K utility objects moved to generic recreate.
-    static final int RATCHET_FLOOR = 353;
+    // 2026-06-24: raised to 357 after S3K CNZ local mechanics moved to generic recreate.
+    static final int RATCHET_FLOOR = 357;
 
     @BeforeEach
     void initHeadless() {
