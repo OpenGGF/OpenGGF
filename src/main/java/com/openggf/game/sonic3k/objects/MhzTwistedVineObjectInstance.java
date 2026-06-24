@@ -7,6 +7,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
@@ -24,7 +26,7 @@ import java.util.Set;
  * lower/upper vine entry windows and RideObject_SetRide side effects from
  * {@code sub_3DCD0/sub_3DE80}.
  */
-public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance {
+public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int LOWER_RIGHT_ENTRY_MIN_DX = -0x40;
     private static final int LOWER_RIGHT_ENTRY_MAX_DX = -0x30;
     private static final int LOWER_RIGHT_ENTRY_Y_BIAS = 0x30;
@@ -51,6 +53,11 @@ public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance {
     public MhzTwistedVineObjectInstance(ObjectSpawn spawn) {
         super(spawn, "MHZTwistedVine");
         this.upperVariant = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public MhzTwistedVineObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MhzTwistedVineObjectInstance(ctx.spawn());
     }
 
     @Override

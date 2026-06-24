@@ -468,7 +468,6 @@ com.openggf.game.sonic3k.objects.HCZSpinningColumnObjectInstance#finalScalar#xFl
 com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance#finalScalar#objectFlippedX
 com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance#finalScalar#reverseEntry
 com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance#finalScalar#subtype
-com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnInterval
 com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnY
@@ -693,7 +692,6 @@ com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance#finalScalar#captu
 com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance#finalScalar#centerX
 com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance#finalScalar#centerY
 com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance#finalScalar#flipped
-com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance#finalScalar#anchorX
 com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.Mgz2PostBossPaletteFadeController#recreate
@@ -752,7 +750,6 @@ com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzSwingBarVerticalObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance#finalScalar#upperVariant
-com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance#recreate
@@ -796,7 +793,6 @@ com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild#finalScalar#centerX
 com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild#finalScalar#centerY
 com.openggf.game.sonic3k.objects.Sonic3kTwistedRampObjectInstance#finalScalar#facingLeft
-com.openggf.game.sonic3k.objects.Sonic3kTwistedRampObjectInstance#recreate
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#negativeSubtype
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#segmentCount
@@ -809,7 +805,6 @@ com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment#recr
 com.openggf.game.sonic3k.objects.UpdraftObjectInstance#finalScalar#innerRange
 com.openggf.game.sonic3k.objects.UpdraftObjectInstance#finalScalar#negativeSubtype
 com.openggf.game.sonic3k.objects.UpdraftObjectInstance#finalScalar#outerRange
-com.openggf.game.sonic3k.objects.UpdraftObjectInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance#finalScalar#priorityBucket

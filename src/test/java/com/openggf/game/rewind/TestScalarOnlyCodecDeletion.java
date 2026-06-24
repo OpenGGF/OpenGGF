@@ -131,6 +131,7 @@ import com.openggf.game.sonic3k.objects.HCZBlockObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZConveyorSpikeObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZLargeFanObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZSpinningColumnObjectInstance;
+import com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZWaterSplashObjectInstance;
 import com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance;
 import com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance;
@@ -140,7 +141,9 @@ import com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance;
 import com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance;
+import com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance;
 import com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance;
+import com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance;
 import com.openggf.game.sonic3k.objects.PachinkoBumperObjectInstance;
 import com.openggf.game.sonic3k.objects.PachinkoMagnetOrbObjectInstance;
 import com.openggf.game.sonic3k.objects.PachinkoPlatformObjectInstance;
@@ -157,8 +160,10 @@ import com.openggf.game.sonic3k.objects.Sonic3kSpikeObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild;
 import com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild;
+import com.openggf.game.sonic3k.objects.Sonic3kTwistedRampObjectInstance;
 import com.openggf.game.sonic3k.objects.SinkingMudObjectInstance;
 import com.openggf.game.sonic3k.objects.StillSpriteInstance;
+import com.openggf.game.sonic3k.objects.UpdraftObjectInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
@@ -792,6 +797,13 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(PachinkoMagnetOrbObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(PachinkoPlatformObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(PachinkoTriangleBumperObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_CONTROLLER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic3kTwistedRampObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(UpdraftObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HCZTwistingLoopObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(MGZTwistingLoopObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(MhzTwistedVineObjectInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HczEndBossRobotnikShip.class.getName(), GameId.S3K),
@@ -5864,6 +5876,39 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kPachinkoStandaloneClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_PACHINKO_STANDALONE_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K controller batch: invisible/route controller object-manager restores
+    // =====================================================================
+
+    @Test
+    void s3kControllerClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CONTROLLER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K controller batch");
+        }
+    }
+
+    @Test
+    void s3kControllerClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CONTROLLER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K controller generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kControllerClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CONTROLLER_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()
