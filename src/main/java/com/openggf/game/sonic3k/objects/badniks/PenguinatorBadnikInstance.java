@@ -388,8 +388,8 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
     private static final class PenguinatorSnowdustInstance extends AbstractObjectInstance
             implements SpawnRewindRecreatable {
         private static final int PRIORITY_BUCKET = 5;
-        private final int x;
-        private final int y;
+        private int x;
+        private int y;
         private int frameIndex;
         private int frameTimer;
         private int mappingFrame;

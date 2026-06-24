@@ -294,8 +294,8 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
         private static final int RENDER_HALF_WIDTH = 0x08;
         private static final int RENDER_HALF_HEIGHT = 0x08;
 
-        private final boolean bigLeaf;
-        private final boolean hFlip;
+        private boolean bigLeaf;
+        private boolean hFlip;
         private int x;
         private int y;
         private int xSubpixel;

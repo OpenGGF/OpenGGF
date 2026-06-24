@@ -426,9 +426,9 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
         private static final int VISUAL_FRAME = 6;
 
         private final transient RibotActiveChild parent;
-        private final int visualIndex;
-        private final int originX;
-        private final int originY;
+        private int visualIndex;
+        private int originX;
+        private int originY;
         private int currentX;
         private int currentY;
 

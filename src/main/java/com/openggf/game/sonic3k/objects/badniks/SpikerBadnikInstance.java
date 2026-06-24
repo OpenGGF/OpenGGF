@@ -288,7 +288,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
             ATTACK
         }
         private final SpikerBadnikInstance parent;
-        private final boolean leftSide;
+        private boolean leftSide;
 
         private State state = State.WAIT_FOR_OPEN;
         private int mappingFrame = IDLE_FRAME;

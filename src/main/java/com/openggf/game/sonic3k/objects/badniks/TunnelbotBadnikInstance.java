@@ -795,8 +795,8 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     private final class TunnelbotArm extends AbstractObjectInstance
             implements TouchResponseProvider, TouchResponseAttackable {
 
-        private final int xOffset;
-        private final int yOffset;
+        private int xOffset;
+        private int yOffset;
         private int armX;
         private int armY;
 
@@ -887,7 +887,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         private int yVelocity;
         private int xSubpixel;
         private int ySubpixel;
-        private final int frame;
+        private int frame;
         private int lifetime;
 
         TunnelbotDebris(ObjectSpawn ownerSpawn, int x, int y, int frame) {

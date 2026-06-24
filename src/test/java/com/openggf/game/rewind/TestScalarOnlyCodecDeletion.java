@@ -746,6 +746,39 @@ public class TestScalarOnlyCodecDeletion {
                             "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerAnimatedParticle",
                             "priorityBucket"));
 
+    private static final List<MutableFieldCoverageCandidate> BATCH145_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$BreathDebrisChild",
+                            "bigLeaf", "hFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance$PenguinatorSnowdustInstance",
+                            "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild",
+                            "originX", "originY", "visualIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterCoverChild",
+                            "xOffset", "yOffset"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild",
+                            "verticalFlipShot", "xOffset", "yOffset"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild",
+                            "leftSide"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm",
+                            "xOffset", "yOffset"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotDebris",
+                            "frame"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance",
+                            "hiddenVariant", "turnResetTimer"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerAnimatedParticle",
+                            "currentX", "currentY", "frameDelay", "playSound"));
+
     private static final List<CodecDeletionCandidate> BATCH31_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(BombPrizeObjectInstance.class.getName(), GameId.S2));
 
@@ -4113,6 +4146,23 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void batch144S3kBadnikInheritedConstructorScalarsAreMutableForCompactRestore() {
         for (MutableFieldCoverageCandidate candidate : BATCH144_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch145S3kBadnikChildConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH145_MUTABLE_FIELDS) {
             Class<?> cls = loadClass(candidate.fqn());
             for (String fieldName : candidate.fieldNames()) {
                 try {

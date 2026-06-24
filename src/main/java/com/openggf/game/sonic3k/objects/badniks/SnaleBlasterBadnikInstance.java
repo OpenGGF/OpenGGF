@@ -266,9 +266,9 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance 
         }
 
         private final transient SnaleBlasterBadnikInstance parent;
-        private final int xOffset;
-        private final int yOffset;
-        private final boolean verticalFlipShot;
+        private int xOffset;
+        private int yOffset;
+        private boolean verticalFlipShot;
         private State state = State.WAIT_PARENT;
         private int currentX;
         private int currentY;
@@ -403,8 +403,8 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance 
         }
 
         private final transient SnaleBlasterBadnikInstance parent;
-        private final int xOffset;
-        private final int yOffset;
+        private int xOffset;
+        private int yOffset;
         private State state = State.WAIT_PARENT;
         private int currentX;
         private int currentY;

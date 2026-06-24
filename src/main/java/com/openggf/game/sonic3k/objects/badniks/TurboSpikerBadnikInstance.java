@@ -87,8 +87,8 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     private record TargetSelection(AbstractPlayableSprite player, int distance) {
     }
 
-    private final boolean hiddenVariant;
-    private final int turnResetTimer;
+    private boolean hiddenVariant;
+    private int turnResetTimer;
 
     private State state;
     private State resumeState;
@@ -604,12 +604,12 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
     private static class TurboSpikerAnimatedParticle extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
-        private final int currentX;
-        private final int currentY;
+        private int currentX;
+        private int currentY;
         private final int[] frames;
-        private final int frameDelay;
+        private int frameDelay;
         private int priorityBucket;
-        private final boolean playSound;
+        private boolean playSound;
 
         private int frameIndex;
         private int frameTimer;
