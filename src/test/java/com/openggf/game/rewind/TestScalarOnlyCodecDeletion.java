@@ -1661,6 +1661,9 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic2.objects.MovingVineObjectInstance",
                     GameId.S2),
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.RivetObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.PointPokeyObjectInstance",
                     GameId.S2));
 
