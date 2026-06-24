@@ -13,6 +13,8 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SubpixelMotion;
@@ -39,7 +41,7 @@ import java.util.List;
  * until {@code ObjCheckCeilingDist} reports impact.
  */
 public class IczStalagtiteObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, TouchResponseProvider {
+        implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN;
     private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_STALAGTITE;
@@ -88,6 +90,11 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
         super(spawn, "ICZStalagtite");
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+    }
+
+    @Override
+    public IczStalagtiteObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczStalagtiteObjectInstance(ctx.spawn());
     }
 
     @Override

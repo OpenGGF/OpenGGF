@@ -555,7 +555,6 @@ com.openggf.game.sonic3k.objects.IczMinibossPostBossPaletteController#recreate
 com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance#finalScalar#spawnY
-com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#segmentCount
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#y
@@ -569,7 +568,6 @@ com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#recreate
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance#finalScalar#startsNextLevel
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance#finalScalar#variant
-com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowPileDebris#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowPileDebris#recreate
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#finalScalar#mappingFrame
@@ -580,7 +578,6 @@ com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance#finalScalar#yVel
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance#recreate
 com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance$StalagtiteDebris#finalScalar#gravity
 com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance$StalagtiteDebris#recreate
 com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#anchorX
@@ -589,7 +586,6 @@ com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#r
 com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#spawnY
 com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#xFlip
-com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#x

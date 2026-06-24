@@ -13,6 +13,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -29,7 +31,7 @@ import java.util.List;
  * and spawns two pieces, {@code $10} launches Sonic, spawns four pieces, and
  * optionally starts LBZ when bit 7 is set, {@code $18} is the snowdust emitter.
  */
-public class IczSnowPileObjectInstance extends AbstractObjectInstance {
+public class IczSnowPileObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_SNOW_PILE;
     private static final int DRAW_PALETTE = 2;
     private static final int PRIORITY_BUCKET = 1; // ObjDat3 priority $80.
@@ -99,6 +101,11 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
         this.variant = (spawn.subtype() & 0x7F);
         this.startsNextLevel = (spawn.subtype() & 0x80) != 0;
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public IczSnowPileObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczSnowPileObjectInstance(ctx.spawn());
     }
 
     @Override

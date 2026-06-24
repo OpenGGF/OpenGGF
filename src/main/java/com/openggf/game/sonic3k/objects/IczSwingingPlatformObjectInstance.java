@@ -9,6 +9,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -30,7 +32,7 @@ import java.util.List;
  * from the chain and slide after the early-swing release threshold.
  */
 public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider, SolidObjectListener {
+        implements MultiPieceSolidProvider, SolidObjectListener, RewindRecreatable {
 
     private enum Phase { IDLE, SWING_PENDING, SWINGING, FALLING, SLIDING, STOPPED }
 
@@ -108,6 +110,11 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
         this.x = spawn.x();
         this.y = spawn.y();
         updateChainPositions();
+    }
+
+    @Override
+    public IczSwingingPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczSwingingPlatformObjectInstance(ctx.spawn());
     }
 
     @Override
