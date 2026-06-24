@@ -360,6 +360,24 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM See_Slope (routine 2) lands the falling player via SlopeObject,
+        // which falls into Plat_NoXCheck_AltY (docs/s1disasm/_incObj/sub
+        // PlatformObject.asm:128-152,52-66). That landing band is gated by the
+        // UNSIGNED `cmpi.w #-16,d0 / blo` test, so the exact-touch case d0=0
+        // (player bottom flush with the slope surface) is REJECTED — the standable
+        // band is d0 in [-16,-1] (strict penetration), the same gate Obj 18 and the
+        // SLZ circling platform use. Without this, a player falling onto the seesaw
+        // was caught one frame early on the flush-contact frame (SLZ3 f1416: a
+        // rolling-jump Sonic falls onto the seesaw — ROM keeps him airborne at
+        // f1416 and lands him at f1417 when he penetrates, the engine seated him at
+        // f1416). The seesaw surface comes from the heightmap (obY - heightByte) in
+        // both the landing (SlopeObject) and continued-ride (SlopeObject_AssumeStoodOn)
+        // paths, so no obY-8 vs obY-9 detect/ride split is needed (unlike Obj 18).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
