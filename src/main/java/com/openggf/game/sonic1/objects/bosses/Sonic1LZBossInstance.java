@@ -5,6 +5,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -31,7 +32,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  *  12: COOLDOWN      — Timer countdown, then high-speed escape
  *  14: CAMERA_EXPAND — Expand right camera boundary, delete when off-screen
  */
-public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance {
+public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implements SpawnRewindRecreatable {
 
     // State constants (routineSecondary, incremented by 2 matching ROM)
     private static final int STATE_ENTRY = 0;

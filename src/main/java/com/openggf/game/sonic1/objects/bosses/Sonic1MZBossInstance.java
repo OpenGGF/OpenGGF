@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -30,7 +31,8 @@ import java.util.List;
  * MZ boss uses loc_1833E (direct fixed-point → display copy).
  * Sine is only applied as VELOCITY during descent via CalcSine >> 2.
  */
-public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance {
+public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
+        implements SpawnConstructionContextRewindRecreatable {
 
     // State machine constants (routineSecondary values)
     private static final int STATE_DESCENT = 0;

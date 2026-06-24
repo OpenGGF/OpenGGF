@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -48,7 +49,7 @@ import java.util.logging.Logger;
  */
 public class Sonic1FalseFloorInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener,
-        Sonic1ScrapEggmanInstance.Disintegratable {
+        Sonic1ScrapEggmanInstance.Disintegratable, SpawnRewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(Sonic1FalseFloorInstance.class.getName());
 

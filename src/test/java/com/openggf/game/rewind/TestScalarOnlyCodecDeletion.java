@@ -1127,6 +1127,17 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorFragment",
                     GameId.S1));
 
+    private static final List<CodecDeletionCandidate> S1_BOSS_CONTROLLER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1LZBossInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1MZBossInstance",
+                    GameId.S1));
+
     private static final List<CodecDeletionCandidate> S1_EFFECT_SCALAR_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance",
@@ -7139,6 +7150,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s1FalseFloorFragmentRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S1_FALSE_FLOOR_FRAGMENT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1BossControllersImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_CONTROLLER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 boss controller coverage");
+        }
+    }
+
+    @Test
+    void s1BossControllersHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_CONTROLLER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 boss controller generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1BossControllersRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_CONTROLLER_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()
