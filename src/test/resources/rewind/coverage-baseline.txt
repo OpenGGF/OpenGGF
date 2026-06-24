@@ -823,8 +823,6 @@ com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlaster
 com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance#finalScalar#priorityBucket
-com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance$SparkleLightningWarningChild#recreate
-com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance$SparkleProjectileChild#recreate
 com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance#finalScalar#priorityBucket

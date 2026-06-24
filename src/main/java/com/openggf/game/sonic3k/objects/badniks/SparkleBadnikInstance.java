@@ -207,7 +207,8 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
         }
     }
 
-    private static final class SparkleLightningWarningChild extends SparkleHazardChild {
+    private static final class SparkleLightningWarningChild extends SparkleHazardChild
+            implements SpawnRewindRecreatable {
         private static final int COLLISION_FLAGS = 0xAB;
         private static final int PRIORITY_BUCKET = 4;
         private static final int Y_OFFSET = 0x34;
@@ -224,6 +225,12 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
             super(spawn, "SparkleLightningWarning");
             currentX = parent.getX();
             currentY = parent.getY() + (parent.warningBelowParent() ? Y_OFFSET : -Y_OFFSET);
+        }
+
+        private SparkleLightningWarningChild(ObjectSpawn spawn) {
+            super(spawn, "SparkleLightningWarning");
+            this.currentX = spawn.x();
+            this.currentY = spawn.y();
         }
 
         @Override
@@ -280,7 +287,8 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
         }
     }
 
-    private static final class SparkleProjectileChild extends SparkleHazardChild {
+    private static final class SparkleProjectileChild extends SparkleHazardChild
+            implements SpawnRewindRecreatable {
         private static final int COLLISION_FLAGS = 0x98;
         private static final int PRIORITY_BUCKET = 5;
         private static final int INITIAL_SPEED = 0x600;
@@ -306,6 +314,12 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
             this.currentY = parent.getY();
             this.yVelocity = parent.isFiringDown() ? INITIAL_SPEED : -INITIAL_SPEED;
             this.xVelocity = right ? INITIAL_SPEED : -INITIAL_SPEED;
+        }
+
+        private SparkleProjectileChild(ObjectSpawn spawn) {
+            super(spawn, "SparkleProjectile");
+            this.currentX = spawn.x();
+            this.currentY = spawn.y();
         }
 
         @Override
