@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -35,7 +36,7 @@ import java.util.List;
  * player using a subtype-selected speed. Four child points orbit the body, then
  * launch horizontally after the parent passes the player.
  */
-public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance {
+public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
     // ObjDat_StarPointer: collision_flags = $0B.
     private static final int COLLISION_SIZE_INDEX = 0x0B;

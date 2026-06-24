@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -30,7 +31,7 @@ import java.util.List;
  * downward legs ({@code 0}), side legs ({@code 2}), or a single top appendage
  * ({@code >= 4}). Children use the ROM hurt collision byte {@code $97}.
  */
-public final class RibotBadnikInstance extends AbstractS3kBadnikInstance {
+public final class RibotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_Ribot collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_Ribot priority $280.
     private static final int ANIM_DELAY = 7;              // byte_8C626 / byte_8C62C.

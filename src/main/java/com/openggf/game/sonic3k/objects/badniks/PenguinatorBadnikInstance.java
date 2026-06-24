@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -21,7 +22,7 @@ import java.util.List;
  * The badnik accelerates in place while animating, hops forward, lands into a
  * belly slide, emits snow dust every four slide frames, then brakes and flips.
  */
-public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance {
+public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x1A; // ObjSlot_Penguinator collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjSlot_Penguinator priority $280.
 

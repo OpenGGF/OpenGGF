@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects.badniks;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -28,7 +29,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * {@code $0A} (ENEMY, size $0A) when retracted — player can defeat by attacking.
  * {@code $86} (HURT, size $06) when spikes extended (frame 2) — damages player on contact.
  */
-public final class PoindexterBadnikInstance extends AbstractS3kBadnikInstance {
+public final class PoindexterBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
     // From disassembly: collision_flags values
     // move.b #$A,collision_flags(a0)          ; default: enemy, size $0A

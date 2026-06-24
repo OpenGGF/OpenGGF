@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -21,7 +22,7 @@ import java.util.List;
  * This implementation preserves the key gameplay behavior: alternating wait/active
  * cycles, subtype-driven vertical stepping, player-facing checks, and coconut throws.
  */
-public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance {
+public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_MonkeyDude flags $0B
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_MonkeyDude priority $280
 

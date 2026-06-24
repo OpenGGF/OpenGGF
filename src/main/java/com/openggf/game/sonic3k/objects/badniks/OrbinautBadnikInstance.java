@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -31,7 +32,7 @@ import java.util.List;
  * returns a nonzero branch result. Four child orbs orbit as hurt-category
  * hazards.
  */
-public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance {
+public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_Orbinaut collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_Orbinaut priority $280.
     private static final int X_SPEED = 0x80;              // loc_8C662: move.w #-$80,d1.

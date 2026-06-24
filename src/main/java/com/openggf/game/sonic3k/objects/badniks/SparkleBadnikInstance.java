@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -27,7 +28,7 @@ import java.util.List;
  * $80 pixels, then alternates firing lightning vertically up/down while
  * releasing two diagonal spark children.
  */
-public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
+public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B;
     private static final int PRIORITY_BUCKET = 5;
     private static final int ACTIVATION_RANGE = 0x80;

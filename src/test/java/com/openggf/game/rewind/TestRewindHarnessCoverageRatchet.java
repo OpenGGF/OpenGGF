@@ -348,13 +348,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       to spawn-based generic recreate.</li>
  *   <li>2026-06-24: raised to 441 after six more S3K standalone badnik parents
  *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 449 after eight more S3K standalone badnik parents
+ *       moved to spawn-based generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 441 after more S3K badnik parents moved to generic recreate.
-    static final int RATCHET_FLOOR = 441;
+    // 2026-06-24: raised to 449 after more S3K badnik parents moved to generic recreate.
+    static final int RATCHET_FLOOR = 449;
 
     @BeforeEach
     void initHeadless() {
