@@ -722,13 +722,25 @@ public class ObjectManager {
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
 
-                // ROM parity: each object checks out_of_range at the start of its
-                // routine during ExecuteObjects. Freeing the slot here (not in a
-                // batch pre-pass) ensures child allocations from higher slots see
-                // the correct set of available slots.
+                // ROM parity: most S1 objects check out_of_range at the START of
+                // their routine during ExecuteObjects (static scenery / fixed
+                // anchors), so the pre-execute check on the previous frame's
+                // position matches ROM. Freeing the slot here (not in a batch
+                // pre-pass) ensures child allocations from higher slots see the
+                // correct set of available slots.
+                //
+                // Objects that move then check out_of_range at the END of their
+                // routine (RememberState-after-SpeedToPos badniks) opt out via
+                // checksOutOfRangeAfterRoutine(); for them the check runs
+                // post-execute below, on the moved position, matching ROM
+                // (docs/s1disasm/_incObj/sub RememberState.asm:9). Checking such
+                // an object before its routine runs unloaded it one frame late
+                // (S1 LZ2 Jaws f196 -> f1068 slot cascade).
                 ObjectSpawn spawn = instanceToSpawn.get(instance);
-                if (unloadCounterBasedOutOfRange(instance, spawn,
-                        slotIndexForExec(currentExecSlot), cameraX)) {
+                boolean checksOutOfRangeAfter = instance.checksOutOfRangeAfterRoutine();
+                if (!checksOutOfRangeAfter
+                        && unloadCounterBasedOutOfRange(instance, spawn,
+                                slotIndexForExec(currentExecSlot), cameraX)) {
                     execOrder[currentExecSlot] = null;
                     objectsRemoved = true;
                     continue;
@@ -736,6 +748,15 @@ public class ObjectManager {
 
                 executeObjectWithSolidContext(
                         instance, player, sidekicks, inlineSolidResolution, solidPostMovement);
+
+                if (checksOutOfRangeAfter
+                        && !instance.isDestroyed()
+                        && unloadCounterBasedOutOfRange(instance, spawn,
+                                slotIndexForExec(currentExecSlot), cameraX)) {
+                    execOrder[currentExecSlot] = null;
+                    objectsRemoved = true;
+                    continue;
+                }
 
                 if (instance.isDestroyed()) {
                     int slotIndex = slotIndexForExec(currentExecSlot);
