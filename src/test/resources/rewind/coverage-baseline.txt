@@ -169,7 +169,6 @@ com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance#finalScalar#reverse
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance#finalScalar#settledAngle
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance#finalScalar#xFlip
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance#recreate
-com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance$FallingBridgeSegment#recreate
 com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance#recreate
 com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance#finalScalar#phaseOffset

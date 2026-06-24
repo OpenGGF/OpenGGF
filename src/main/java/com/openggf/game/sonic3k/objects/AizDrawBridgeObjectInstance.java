@@ -14,6 +14,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -244,17 +245,25 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private static final class FallingBridgeSegment extends AbstractObjectInstance {
+    private static final class FallingBridgeSegment extends AbstractObjectInstance implements SpawnRewindRecreatable {
         private int x;
         private int y;
         private int delay;
         private final SubpixelMotion.State motion;
 
         private FallingBridgeSegment(int x, int y, int delay) {
-            super(new ObjectSpawn(x, y, 0x32, 0, 0, false, 0), "AIZDrawBridgeSegment");
+            super(new ObjectSpawn(x, y, 0x32, 0, 0, false, delay), "AIZDrawBridgeSegment");
             this.x = x;
             this.y = y;
             this.delay = delay;
+            this.motion = new SubpixelMotion.State(x, y, 0, 0, 0, 0);
+        }
+
+        private FallingBridgeSegment(ObjectSpawn spawn) {
+            super(spawn, "AIZDrawBridgeSegment");
+            this.x = spawn.x();
+            this.y = spawn.y();
+            this.delay = spawn.rawYWord();
             this.motion = new SubpixelMotion.State(x, y, 0, 0, 0, 0);
         }
 

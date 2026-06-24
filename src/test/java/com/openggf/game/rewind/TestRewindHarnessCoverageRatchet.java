@@ -376,13 +376,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       moved to spawn-encoded generic recreate.</li>
  *   <li>2026-06-24: raised to 499 after the S3K ICZ freezer frost puff
  *       moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 500 after the S3K AIZ draw-bridge falling segment
+ *       moved to spawn-encoded generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 499 after S3K ICZ freezer frost puff moved to generic recreate.
-    static final int RATCHET_FLOOR = 499;
+    // 2026-06-24: raised to 500 after S3K AIZ draw-bridge falling segment moved to generic recreate.
+    static final int RATCHET_FLOOR = 500;
 
     @BeforeEach
     void initHeadless() {
