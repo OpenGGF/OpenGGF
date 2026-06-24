@@ -27,7 +27,7 @@ import java.util.List;
  * mapping frame and emits the falling log chips used during the trunk break
  * animation.
  */
-public final class MhzMinibossTreeInstance extends AbstractObjectInstance {
+public final class MhzMinibossTreeInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int BOSS_TREE_FRAME_OFFSET = 0x42;
     private static final int DEFAULT_MAPPING_FRAME = 5;
     private static final int PRIORITY_BUCKET = 7; // ObjDat_MHZMinibossTree priority $380

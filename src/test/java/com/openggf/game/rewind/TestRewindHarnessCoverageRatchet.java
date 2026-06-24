@@ -389,13 +389,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       recreate.</li>
  *   <li>2026-06-24: raised to 513 after the S3K LBZ miniboss box controllers
  *       moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 516 after MHZ tree/ship mechanisms and MGZ
+ *       end-boss debris moved to spawn-encoded generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 513 after S3K LBZ miniboss boxes moved to generic recreate.
-    static final int RATCHET_FLOOR = 513;
+    // 2026-06-24: raised to 516 after MHZ tree/ship mechanisms and MGZ end-boss debris moved to generic recreate.
+    static final int RATCHET_FLOOR = 516;
 
     @BeforeEach
     void initHeadless() {

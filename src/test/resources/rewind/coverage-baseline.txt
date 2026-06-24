@@ -613,7 +613,6 @@ com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#finalScalar#flipX
 com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#finalScalar#index
 com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#finalScalar#xVel
 com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#finalScalar#yVel
-com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingDebrisChild#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$DefeatFragmentChild#finalScalar#mappingFrame
@@ -631,7 +630,6 @@ com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MhzMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance$MhzMinibossTreeChipInstance#finalScalar#bounceEnabled
 com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance#finalScalar#animationPhaseOffset
 com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance#finalScalar#baseX
@@ -648,7 +646,6 @@ com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#finalScalar#f
 com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#finalScalar#vFlip
 com.openggf.game.sonic3k.objects.MhzShipPropellerInstance#finalScalar#propellerIndex
-com.openggf.game.sonic3k.objects.MhzShipPropellerInstance#recreate
 com.openggf.game.sonic3k.objects.MhzShipSequenceControllerInstance#finalScalar#initialShipMotion
 com.openggf.game.sonic3k.objects.MhzShipSequenceControllerInstance#finalScalar#initialSwingSpeed
 com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance#objectRef#capturedPlayer

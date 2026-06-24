@@ -2121,6 +2121,17 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_MHZ_MGZ_MECHANISM_BATCH108_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzShipPropellerInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(S3kSignpostStubChild.class.getName(), GameId.S3K));
 
@@ -7586,6 +7597,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kLbzMechanismBatch107ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_LBZ_MECHANISM_BATCH107_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kMhzMgzMechanismBatch108ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MGZ_MECHANISM_BATCH108_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K batch 108");
+        }
+    }
+
+    @Test
+    void s3kMhzMgzMechanismBatch108ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MGZ_MECHANISM_BATCH108_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K batch 108 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMhzMgzMechanismBatch108ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MGZ_MECHANISM_BATCH108_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()
