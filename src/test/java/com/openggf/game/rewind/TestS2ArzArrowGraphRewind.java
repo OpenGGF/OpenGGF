@@ -181,10 +181,15 @@ class TestS2ArzArrowGraphRewind {
 
     @Test
     void arrowAndEyesUseGenericGraphRecreateWithoutExplicitS2Codec() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic2ARZBossInstance.class),
+                "Sonic2ARZBossInstance must support generic RewindRecreatable recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(ARZBossArrow.class),
                 "ARZBossArrow must restore through RewindRecreatable graph recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(ARZBossEyes.class),
                 "ARZBossEyes must support generic RewindRecreatable recreate");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic2ARZBossInstance.class.getName()),
+                "Sonic2ARZBossInstance must not have an explicit S2 dynamic rewind codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ARZBossArrow.class.getName()),
                 "ARZBossArrow must not have an explicit S2 dynamic rewind codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ARZBossEyes.class.getName()),

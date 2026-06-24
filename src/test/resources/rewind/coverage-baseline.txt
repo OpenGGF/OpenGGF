@@ -115,7 +115,6 @@ com.openggf.game.sonic2.objects.NutObjectInstance#recreate
 com.openggf.game.sonic2.objects.OOZLauncherObjectInstance#finalScalar#isVertical
 com.openggf.game.sonic2.objects.OOZLauncherObjectInstance#recreate
 com.openggf.game.sonic2.objects.OOZLauncherObjectInstance$LauncherFragmentInstance#recreate
-com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance#recreate
 com.openggf.game.sonic2.objects.PointPokeyObjectInstance#recreate
 com.openggf.game.sonic2.objects.RisingPillarObjectInstance$RisingPillarDebrisInstance#recreate
 com.openggf.game.sonic2.objects.RivetObjectInstance#objectRef#lastNativeMainPlayer
@@ -149,7 +148,6 @@ com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance#finalScalar#typ
 com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#objectRef#pendingGrabPlayer
 com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance#finalScalar#vFlip
-com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance#recreate

@@ -257,13 +257,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       to generic recreate under seesaw ball graph coverage.</li>
  *   <li>2026-06-24: raised to 328 after S2 Egg Prison parent restore moved
  *       to generic recreate under button graph coverage.</li>
+ *   <li>2026-06-24: raised to 330 after S2 ARZ boss and OOZ popping-platform
+ *       parents moved to generic recreate under graph coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 328 after S2 Egg Prison parent restore moved to generic recreate.
-    static final int RATCHET_FLOOR = 328;
+    // 2026-06-24: raised to 330 after S2 ARZ/OOZ graph parents moved to generic recreate.
+    static final int RATCHET_FLOOR = 330;
 
     @BeforeEach
     void initHeadless() {

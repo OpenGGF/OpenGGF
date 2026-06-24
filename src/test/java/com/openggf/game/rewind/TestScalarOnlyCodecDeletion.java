@@ -38,6 +38,7 @@ import com.openggf.game.sonic2.objects.ConveyorObjectInstance;
 import com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance;
 import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.game.sonic2.objects.OOZBurnerFlameObjectInstance;
+import com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance;
 import com.openggf.game.sonic2.objects.PointsObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
@@ -1632,9 +1633,11 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(EggPrisonButtonObjectInstance.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> S2_OOZ_BURNER_FLAME_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(OOZPoppingPlatformObjectInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(OOZBurnerFlameObjectInstance.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> S2_ARZ_ARROW_GRAPH_SUPPORT = List.of(
+            new CodecDeletionCandidate(Sonic2ARZBossInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(ARZBossArrow.class.getName(), GameId.S2),
             new CodecDeletionCandidate(ARZBossEyes.class.getName(), GameId.S2));
 
