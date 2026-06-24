@@ -252,6 +252,15 @@ public class Sonic1SeesawBallObjectInstance extends AbstractObjectInstance
 
         // addq.b #2,obRoutine(a0) — enter flying state
         state = State.FLYING;
+
+        // bra.s See_SpikeFall (docs/s1disasm/_incObj/5E SLZ Seesaw.asm:168-169):
+        // See_MoveSpike falls straight through to See_SpikeFall on the SAME
+        // object tick, so the ball already applies its launch ObjectFall step(s)
+        // (and the ascending double-gravity past the apex) on the launch frame.
+        // Returning here instead left the ball stationary for one frame, so the
+        // whole flight — and the landing that springs the standing player — lagged
+        // ROM by ~2 ObjectFall steps (SLZ3 f814: ROM springs at f814, engine f816).
+        updateFlying();
     }
 
     /**

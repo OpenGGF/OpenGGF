@@ -322,7 +322,16 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
         final boolean flipped = (spawn.renderFlags() & 0x01) != 0;
 
         if (services().objectManager() != null) {
-            ball = spawnFreeChild(() -> new Sonic1SeesawBallObjectInstance(
+            // ROM See_Main uses FindNextFreeObj (docs/s1disasm/_incObj/5E SLZ
+            // Seesaw.asm:38), which allocates the spikeball a slot AFTER the
+            // seesaw. ExecuteObjects then runs the seesaw first, so the ball's
+            // See_MoveSpike reads the seesaw's see_frame (objoff_3A) that the
+            // seesaw already updated this frame via See_Slope2/See_ChgFrame.
+            // Using spawnFreeChild (FindFreeObj, lowest free slot) put the ball
+            // at a LOWER slot than the seesaw, so it launched off the previous
+            // frame's target -> the spring that launches the standing player
+            // fired one frame late (SLZ3 f814).
+            ball = spawnChild(() -> new Sonic1SeesawBallObjectInstance(
                     this, spawn.x(), spawn.y(), flipped));
         } else {
             ball = new Sonic1SeesawBallObjectInstance(this, spawn.x(), spawn.y(), flipped);
