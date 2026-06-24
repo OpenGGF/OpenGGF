@@ -10,6 +10,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
@@ -42,7 +44,7 @@ import java.util.logging.Logger;
  * <p>
  * Disassembly reference: s2.asm lines 52943-53215 (Obj67), misc/obj67.asm (path data)
  */
-public class MTZSpinTubeObjectInstance extends AbstractObjectInstance {
+public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(MTZSpinTubeObjectInstance.class.getName());
 
     // Path traversal speed (0x1000 in ROM at loc_27368/loc_27374)
@@ -158,6 +160,11 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance {
         // ROM: btst #status.npc.x_flip,status(a0) - render_flags bit 0
         this.xFlipped = (spawn.renderFlags() & 0x1) != 0;
         this.animationState = new ObjectAnimationState(ANIMATIONS, 0, 0);
+    }
+
+    @Override
+    public MTZSpinTubeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MTZSpinTubeObjectInstance(ctx.spawn());
     }
 
     @Override

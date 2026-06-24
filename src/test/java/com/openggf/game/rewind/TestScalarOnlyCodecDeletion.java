@@ -668,6 +668,10 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance", GameId.S2));
 
+    private static final List<CodecDeletionCandidate> S2_MTZ_SPIN_TUBE_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MTZSpinTubeObjectInstance", GameId.S2));
+
     private static final List<CodecDeletionCandidate> CPZ_GRAPH_BATCH_A_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(CPZBossContainer.class.getName(), GameId.S2),
             new CodecDeletionCandidate(CPZBossFlame.class.getName(), GameId.S2),
@@ -5335,6 +5339,37 @@ public class TestScalarOnlyCodecDeletion {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn() + " should round-trip through Speed Launcher generic recreate");
+        }
+    }
+
+    // =====================================================================
+    // S2 MTZ Spin Tube generic recreate
+    // =====================================================================
+
+    @Test
+    void s2MtzSpinTubeClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_MTZ_SPIN_TUBE_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after MTZ Spin Tube coverage");
+        }
+    }
+
+    @Test
+    void s2MtzSpinTubeClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_MTZ_SPIN_TUBE_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through MTZ Spin Tube generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2MtzSpinTubeClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : S2_MTZ_SPIN_TUBE_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through MTZ Spin Tube generic recreate");
         }
     }
 

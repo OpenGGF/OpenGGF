@@ -10,6 +10,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 
 - **S1 runtime spawn-recreate rewind coverage:** Bubbles, bumpers, running discs, and teleporters now rely on spawn-based generic rewind recreate without stale final-scalar or frame-local reference coverage gaps.
 - **Shared placeholder rewind coverage:** Unmapped placeholder objects now restore through generic rewind recreate, keeping fallback object probes from dropping across rewind.
+- **Sonic 2 MTZ Spin Tube rewind coverage:** MTZ spin tube transport objects now restore through generic rewind recreate while compact restore preserves per-player tube traversal state.
 - **Sonic 2 Speed Launcher rewind coverage:** WFZ speed launcher objects now restore through generic rewind recreate, preserving their spawn-derived launcher state without a private restore path.
 - **S1 scalar spawn-recreate rewind coverage:** Big spiked balls, buttons, conveyors, edge walls, and electrocuters now restore constructor-derived scalars through generic spawn recreate instead of stale final-scalar baselines.
 - **S1 hazard/platform spawn-recreate rewind coverage:** Fans, flamethrowers, gargoyles, girder blocks, LZ conveyors, and labyrinth blocks now restore spawn-derived scalar state through generic spawn recreate without stale final-scalar coverage gaps.

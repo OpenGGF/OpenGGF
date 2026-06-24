@@ -326,13 +326,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       moved to generic recreate under object-manager coverage.</li>
  *   <li>2026-06-24: raised to 405 after the S2 Speed Launcher moved to
  *       spawn/name-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 406 after the S2 MTZ Spin Tube moved to
+ *       spawn-based generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 405 after S2 Speed Launcher moved to generic recreate.
-    static final int RATCHET_FLOOR = 405;
+    // 2026-06-24: raised to 406 after S2 MTZ Spin Tube moved to generic recreate.
+    static final int RATCHET_FLOOR = 406;
 
     @BeforeEach
     void initHeadless() {
