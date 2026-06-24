@@ -115,11 +115,6 @@ com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScal
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScalar#vortexX
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScalar#vortexY
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#recreate
-com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#hasBottomDecoration
-com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#spawnY
-com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#subtype
-com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#xFlip
-com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#yFlip
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration#recreate
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance#objectRef#lastCaptureCloud
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance#recreate
@@ -134,9 +129,6 @@ com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#subtypeZ
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#vFlip
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance#finalScalar#spawnX
-com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance#finalScalar#spawnY
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#segmentCount
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#y
@@ -154,7 +146,6 @@ com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#recr
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance#recreate
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance#finalScalar#xVel
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance#finalScalar#yVel
-com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#x

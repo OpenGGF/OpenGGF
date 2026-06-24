@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K ICZ platform-hazard scalar rewind cleanup:** crushing-column, path-follow-platform, and stalagtite constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K ICZ ice-object scalar rewind cleanup:** breakable-wall, harmful-ice, ice-block, and ice-cube constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K HCZ2 cutscene-button scalar rewind cleanup:** cutscene-button constructor coordinates now compact-restore without stale coverage-baseline keys.
 - **S3K HCZ twisting-loop scalar rewind cleanup:** twisting-loop constructor scalars now compact-restore without stale coverage-baseline keys.

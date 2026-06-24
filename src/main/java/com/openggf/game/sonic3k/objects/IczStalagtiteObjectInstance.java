@@ -82,7 +82,7 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
         LANDED
     }
 
-    private final boolean hFlip;
+    private boolean hFlip;
     private final SubpixelMotion.State motion;
     private Phase phase = Phase.WAITING;
     private int timer;

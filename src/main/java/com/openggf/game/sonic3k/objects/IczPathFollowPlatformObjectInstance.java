@@ -83,9 +83,9 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     private static final int REVEALED_SPRING_X = 0x5D5A;
     private static final int REVEALED_SPRING_Y = 0x027A;
 
-    private final int spawnX;
-    private final int spawnY;
-    private final boolean hFlip;
+    private int spawnX;
+    private int spawnY;
+    private boolean hFlip;
 
     private Phase phase;
     private int x;

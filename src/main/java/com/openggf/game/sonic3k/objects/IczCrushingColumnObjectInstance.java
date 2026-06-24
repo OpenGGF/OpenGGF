@@ -70,11 +70,11 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
     private static final int ROUTINE_RETURN_DOWN = 0x16;
     private static final int ROUTINE_WAIT_CLEAR_TO_RETURN_UP = 0x18;
 
-    private final int spawnY;
-    private final int subtype;
-    private final boolean xFlip;
-    private final boolean yFlip;
-    private final boolean hasBottomDecoration;
+    private int spawnY;
+    private int subtype;
+    private boolean xFlip;
+    private boolean yFlip;
+    private boolean hasBottomDecoration;
 
     private int x;
     private int y;
