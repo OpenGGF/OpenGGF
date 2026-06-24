@@ -24,7 +24,7 @@ public final class CnzEggCapsuleInstance extends AbstractS3kUprightEggCapsuleIns
         CNZ_END_BOSS_SEQUENCE
     }
 
-    private final CompletionContinuation completionContinuation;
+    private CompletionContinuation completionContinuation;
     private boolean resultsCompleteNotified;
 
     public CnzEggCapsuleInstance(ObjectSpawn spawn) {

@@ -73,7 +73,7 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance {
      */
     private static final int KOSM_QUEUE_DRAIN_FRAMES = 1;
 
-    private final int centreY;
+    private int centreY;
 
     private boolean armed;
     private boolean paletteLine2Patched;

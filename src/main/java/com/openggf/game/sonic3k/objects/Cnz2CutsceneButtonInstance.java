@@ -37,9 +37,9 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance {
     private static final int WATER_FLASH_SUBTYPE = 4;
     private static final int VACUUM_TUBE_SUBTYPE = 6;
 
-    private final int x;
-    private final int y;
-    private final int subtype;
+    private int x;
+    private int y;
+    private int subtype;
     private boolean pressed;
     private CnzLightsFlashChildInstance spawnedFlash;
 

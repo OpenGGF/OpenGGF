@@ -376,8 +376,8 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         private int y;
         private int xSubpixel;
         private int ySubpixel;
-        private final int xVelocity;
-        private final int yVelocity;
+        private int xVelocity;
+        private int yVelocity;
         private int mappingFrame = FIRST_FRAME;
         private int animFrameTimer = ANIM_DELAY;
 
