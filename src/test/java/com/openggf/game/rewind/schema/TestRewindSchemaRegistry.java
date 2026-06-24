@@ -4,6 +4,7 @@ import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance;
+import com.openggf.game.sonic2.objects.SidewaysPformObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance;
 import org.junit.jupiter.api.AfterEach;
@@ -104,6 +105,17 @@ class TestRewindSchemaRegistry {
         assertPolicy(schema, "children", RewindFieldPolicy.CAPTURED);
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "MCZ rotating-platform compact schema must not fall back: "
+                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesSidewaysPlatformLink() {
+        RewindClassSchema schema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(SidewaysPformObjectInstance.class);
+
+        assertPolicy(schema, "linkedPlatform", RewindFieldPolicy.CAPTURED);
+        assertTrue(schema.unsupportedFields().isEmpty(),
+                "Sideways platform compact schema must capture the sibling link without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 

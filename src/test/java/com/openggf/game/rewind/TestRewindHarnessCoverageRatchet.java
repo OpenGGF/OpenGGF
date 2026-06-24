@@ -413,13 +413,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       coverage and removed their stale player-cache/recreate gaps.</li>
  *   <li>2026-06-24: raised to 530 after S2 MCZ rotating platforms gained
  *       graph-tested generic recreate coverage with child-list relinking.</li>
+ *   <li>2026-06-24: raised to 531 after S2 Sideways platform pairs gained
+ *       graph-tested generic recreate coverage with sibling relinking.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 530 after S2 MCZ RotPforms graph restore coverage.
-    static final int RATCHET_FLOOR = 530;
+    // 2026-06-24: raised to 531 after S2 Sideways platform graph restore coverage.
+    static final int RATCHET_FLOOR = 531;
 
     @BeforeEach
     void initHeadless() {
