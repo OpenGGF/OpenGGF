@@ -62,11 +62,6 @@ com.openggf.game.sonic2.objects.LauncherBallObjectInstance#finalScalar#reverseAn
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#finalScalar#startFrame
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#recreate
 com.openggf.game.sonic2.objects.LauncherSpringObjectInstance#recreate
-com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#finalScalar#baseX
-com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#finalScalar#baseY
-com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#finalScalar#xFlip
-com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#finalScalar#yFlip
-com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#recreate
 com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance#finalScalar#standalone
 com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance#finalScalar#x
 com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance#finalScalar#xFlip

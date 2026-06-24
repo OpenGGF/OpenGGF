@@ -3,6 +3,7 @@ package com.openggf.game.rewind.schema;
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance;
 import org.junit.jupiter.api.AfterEach;
@@ -93,6 +94,17 @@ class TestRewindSchemaRegistry {
 
         assertPolicy(cannonSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(pulleySchema, "grabbedPlayers", RewindFieldPolicy.CAPTURED);
+    }
+
+    @Test
+    void exactDefaultObjectPolicyOverridesFinalStructuralListFallback() {
+        RewindClassSchema schema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(MCZRotPformsObjectInstance.class);
+
+        assertPolicy(schema, "children", RewindFieldPolicy.CAPTURED);
+        assertTrue(schema.unsupportedFields().isEmpty(),
+                "MCZ rotating-platform compact schema must not fall back: "
+                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {

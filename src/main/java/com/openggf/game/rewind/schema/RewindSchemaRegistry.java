@@ -95,6 +95,10 @@ public final class RewindSchemaRegistry {
             }
             for (Field field : sortedDeclaredFields(cls)) {
                 RewindFieldPolicy configuredPolicy = DefaultObjectRewindPolicies.policyFor(field);
+                if (configuredPolicy == RewindFieldPolicy.TRANSIENT
+                        || configuredPolicy == RewindFieldPolicy.DEFERRED) {
+                    continue;
+                }
                 if (!GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(field)
                         && configuredPolicy != RewindFieldPolicy.CAPTURED
                         && !isObjectRefFieldAllowedInSchema(field, configuredPolicy)) {
