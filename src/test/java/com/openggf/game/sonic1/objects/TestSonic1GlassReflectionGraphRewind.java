@@ -2,6 +2,7 @@ package com.openggf.game.sonic1.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
@@ -30,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic1GlassReflectionGraphRewind {
 
@@ -124,6 +127,100 @@ class TestSonic1GlassReflectionGraphRewind {
         assertEquals(isTall(NEAR_GLASS), readBoolean(reflection, "isTall"));
     }
 
+    @Test
+    void glassBlockAndReflectionRestoreFreshWithoutDropsDoublesOrStaleReferences() {
+        Harness harness = Harness.create(List.of());
+        ObjectManager objectManager = harness.objectManager();
+        Sonic1GlassBlockObjectInstance beforeParent = objectManager.createDynamicObject(
+                () -> new Sonic1GlassBlockObjectInstance(NEAR_GLASS));
+        Sonic1GlassReflectionInstance beforeReflection = objectManager.createDynamicObject(
+                () -> new Sonic1GlassReflectionInstance(
+                        NEAR_GLASS, beforeParent, reflectedSubtype(NEAR_GLASS), isTall(NEAR_GLASS)));
+        writeObject(beforeParent, "reflectionChild", beforeReflection);
+        writeInt(beforeParent, "x", 0x0220);
+        writeInt(beforeParent, "y", 0x0140);
+        writeInt(beforeParent, "baseY", 0x01E0);
+        writeInt(beforeParent, "glassDist", 0xA0);
+        writeInt(beforeReflection, "x", 0x0220);
+        writeInt(beforeReflection, "y", 0x0150);
+        writeInt(beforeReflection, "baseY", 0x01E0);
+        writeInt(beforeReflection, "glassDist", 0x90);
+
+        ObjectRefId parentId = objectId(objectManager, beforeParent);
+        ObjectRefId reflectionId = objectId(objectManager, beforeReflection);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+        objectManager.removeDynamicObject(beforeReflection);
+        objectManager.removeDynamicObject(beforeParent);
+        Sonic1GlassBlockObjectInstance replacementParent = objectManager.createDynamicObject(
+                () -> new Sonic1GlassBlockObjectInstance(FAR_GLASS));
+        Sonic1GlassReflectionInstance replacementReflection = objectManager.createDynamicObject(
+                () -> new Sonic1GlassReflectionInstance(
+                        FAR_GLASS, replacementParent, reflectedSubtype(FAR_GLASS), isTall(FAR_GLASS)));
+        writeObject(replacementParent, "reflectionChild", replacementReflection);
+
+        rewindRegistry.restore(snapshot);
+
+        assertEquals(1, liveGlassBlocks(objectManager).size(),
+                "restore must keep exactly the captured glass block");
+        assertEquals(1, liveReflections(objectManager).size(),
+                "restore must keep exactly the captured reflection");
+        Sonic1GlassBlockObjectInstance restoredParent =
+                assertInstanceOf(Sonic1GlassBlockObjectInstance.class,
+                        objectWithId(objectManager, parentId));
+        Sonic1GlassReflectionInstance restoredReflection =
+                assertInstanceOf(Sonic1GlassReflectionInstance.class,
+                        objectWithId(objectManager, reflectionId));
+        assertNotSame(beforeParent, restoredParent, "restore must recreate the removed glass block");
+        assertNotSame(beforeReflection, restoredReflection, "restore must recreate the removed reflection");
+        assertNotSame(replacementParent, restoredParent, "restore must drop unrelated post-snapshot parents");
+        assertNotSame(replacementReflection, restoredReflection,
+                "restore must drop unrelated post-snapshot reflections");
+        assertSame(restoredReflection, readObject(restoredParent, "reflectionChild"),
+                "parent reflectionChild must point to the restored reflection");
+        assertSame(restoredParent, readObject(restoredReflection, "parent"),
+                "reflection parent must point to the restored glass block");
+        assertEquals(0x0220, readInt(restoredParent, "x"), "parent x scalar must restore exactly");
+        assertEquals(0x0140, readInt(restoredParent, "y"), "parent y scalar must restore exactly");
+        assertEquals(0x01E0, readInt(restoredParent, "baseY"), "parent baseY scalar must restore exactly");
+        assertEquals(0xA0, readInt(restoredParent, "glassDist"),
+                "parent glassDist scalar must restore exactly");
+        assertEquals(0x0220, readInt(restoredReflection, "x"), "reflection x scalar must restore exactly");
+        assertEquals(0x0150, readInt(restoredReflection, "y"), "reflection y scalar must restore exactly");
+        assertEquals(0x01E0, readInt(restoredReflection, "baseY"),
+                "reflection baseY scalar must restore exactly");
+        assertEquals(0x90, readInt(restoredReflection, "glassDist"),
+                "reflection glassDist scalar must restore exactly");
+    }
+
+    @Test
+    void glassBlockReflectionBackrefStillRequiresRewindIdentity() {
+        Harness harness = Harness.create(List.of());
+        ObjectManager objectManager = harness.objectManager();
+        Sonic1GlassBlockObjectInstance parent = objectManager.createDynamicObject(
+                () -> new Sonic1GlassBlockObjectInstance(NEAR_GLASS));
+        Sonic1GlassReflectionInstance unmanagedReflection =
+                new Sonic1GlassReflectionInstance(
+                        NEAR_GLASS, parent, reflectedSubtype(NEAR_GLASS), isTall(NEAR_GLASS));
+        writeObject(parent, "reflectionChild", unmanagedReflection);
+
+        IllegalStateException thrown = assertThrows(
+                IllegalStateException.class,
+                () -> registryFor(objectManager).capture(),
+                "required glass reflection backrefs must fail loudly when the target has no rewind identity");
+        assertTrue(thrown.getMessage().contains("no registered id for object reference"));
+    }
+
+    @Test
+    void glassBlockAndReflectionUseGenericRecreateWithoutExplicitDynamicCodecs() {
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic1GlassBlockObjectInstance.class.getName()),
+                "glass block must restore through generic recreate, not a dynamic codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic1GlassReflectionInstance.class.getName()),
+                "glass reflection must restore through generic recreate, not a dynamic codec");
+    }
+
     private static ObjectInstance genericRecreate(ObjectManager objectManager, ObjectSpawn spawn) {
         PerObjectRewindSnapshot state = new PerObjectRewindSnapshot(
                 false, false, false, 0, 0, 0, 0, false, 0, false, false, 0, -1, null, null, null);
@@ -171,25 +268,42 @@ class TestSonic1GlassReflectionGraphRewind {
         return id;
     }
 
+    private static ObjectInstance objectWithId(ObjectManager objectManager, ObjectRefId id) {
+        List<ObjectInstance> matches = objectManager.getActiveObjects().stream()
+                .filter(object -> id.equals(objectManager.captureIdentityContext().requireIdentityTable().idFor(object)))
+                .toList();
+        assertEquals(1, matches.size(), "expected one live object for rewind id " + id);
+        return matches.getFirst();
+    }
+
     private static Sonic1GlassBlockObjectInstance liveParentAt(ObjectManager objectManager, int x) {
-        List<Sonic1GlassBlockObjectInstance> matches = objectManager.getActiveObjects().stream()
-                .filter(object -> object instanceof Sonic1GlassBlockObjectInstance)
-                .map(Sonic1GlassBlockObjectInstance.class::cast)
-                .filter(object -> !object.isDestroyed())
+        List<Sonic1GlassBlockObjectInstance> matches = liveGlassBlocks(objectManager).stream()
                 .filter(object -> object.getX() == x)
                 .toList();
         assertEquals(1, matches.size(), "expected one live glass block at X " + x);
         return matches.getFirst();
     }
 
+    private static List<Sonic1GlassBlockObjectInstance> liveGlassBlocks(ObjectManager objectManager) {
+        return objectManager.getActiveObjects().stream()
+                .filter(object -> object instanceof Sonic1GlassBlockObjectInstance)
+                .map(Sonic1GlassBlockObjectInstance.class::cast)
+                .filter(object -> !object.isDestroyed())
+                .toList();
+    }
+
     private static Sonic1GlassReflectionInstance onlyReflection(ObjectManager objectManager) {
-        List<Sonic1GlassReflectionInstance> reflections = objectManager.getActiveObjects().stream()
+        List<Sonic1GlassReflectionInstance> reflections = liveReflections(objectManager);
+        assertEquals(1, reflections.size(), "expected exactly one live glass reflection");
+        return reflections.getFirst();
+    }
+
+    private static List<Sonic1GlassReflectionInstance> liveReflections(ObjectManager objectManager) {
+        return objectManager.getActiveObjects().stream()
                 .filter(object -> object.getClass() == Sonic1GlassReflectionInstance.class)
                 .map(Sonic1GlassReflectionInstance.class::cast)
                 .filter(object -> !object.isDestroyed())
                 .toList();
-        assertEquals(1, reflections.size(), "expected exactly one live glass reflection");
-        return reflections.getFirst();
     }
 
     private static int readInt(Object target, String fieldName) {
@@ -219,6 +333,14 @@ class TestSonic1GlassReflectionGraphRewind {
     private static void writeInt(Object target, String fieldName, int value) {
         try {
             findField(target.getClass(), fieldName).setInt(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static void writeObject(Object target, String fieldName, Object value) {
+        try {
+            findField(target.getClass(), fieldName).set(target, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
         }

@@ -9,7 +9,6 @@ com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#block
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#fullSubtype
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#isTall
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#moveType
-com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#isTall
 com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#reflectSubtype
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#finalScalar#switchIndex

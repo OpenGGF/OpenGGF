@@ -13,6 +13,7 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance;
 import com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance;
@@ -890,6 +891,7 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(Sonic3kStarPostBonusStarChild.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> S1_MZ_GLASS_REFLECTION_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1GlassBlockObjectInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(Sonic1GlassReflectionInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> S1_RING_FLASH_GRAPH_DELETED_CODECS = List.of(
