@@ -16,6 +16,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -28,7 +29,8 @@ import java.util.List;
  * <p>ROM reference: {@code CutsceneKnux_LBZ1} and helpers
  * {@code loc_627C6}, {@code loc_6282A}, {@code loc_6285A}.
  */
-public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance {
+public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final int INITIAL_MAPPING_FRAME = 0x16;
     private static final int STAND_MAPPING_FRAME = 0x1C;
     private static final int CAMERA_MIN_Y = 0x00A0;

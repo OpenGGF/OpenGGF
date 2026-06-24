@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -20,7 +21,8 @@ import java.util.List;
  *
  * <p>ROM reference: {@code CutsceneKnux_CNZ2B}.
  */
-public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance {
+public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final int TRIGGER_X = 0x4728;
     private static final int WALK_RIGHT_STOP_X = 0x4760;
     private static final int PRE_JUMP_WAIT = 0x1F;

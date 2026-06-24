@@ -19,6 +19,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
@@ -34,7 +35,8 @@ import java.util.List;
  * X=$3D0, takes player control, runs the press animation timing, and lifts the
  * players through the leaf-blower handoff.
  */
-public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance {
+public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_CAMERA_LOCK = 0x02;
     private static final int ROUTINE_WAIT_GROUNDED = 0x04;
