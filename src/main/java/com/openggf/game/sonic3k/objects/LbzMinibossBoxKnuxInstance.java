@@ -14,6 +14,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ import java.util.List;
  * five wall explosions at {@code y=$A20}, the Knuckles box-chunk swap, and the
  * end-sign handoff once the camera descends past {@code $A7C}.
  */
-public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance {
+public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     /** ROM word_8CF70 row 1: activation camera range (yMin,yMax,xMin,xMax). */
     private static final int RANGE_Y_MIN = 0x7B6;
     private static final int RANGE_Y_MAX = 0x9C0;

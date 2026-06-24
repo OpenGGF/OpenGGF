@@ -537,8 +537,6 @@ com.openggf.game.sonic3k.objects.LbzFlameThrowerFlameInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.LbzFlameThrowerFlameInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.LbzFlameThrowerObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.LbzFlameThrowerObjectInstance#finalScalar#subtype
-com.openggf.game.sonic3k.objects.LbzMinibossBoxInstance#recreate
-com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance#recreate
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#objectRef#knucklesFightParent
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance#finalScalar#baseY

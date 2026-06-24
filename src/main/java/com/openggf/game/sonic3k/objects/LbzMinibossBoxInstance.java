@@ -15,6 +15,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -29,7 +30,7 @@ import java.util.List;
  * the fight: it locks the camera, hosts the closed box pieces, fades to the
  * miniboss music, and spawns {@code Obj_LBZMiniboss} once the player walks in.
  */
-public final class LbzMinibossBoxInstance extends AbstractObjectInstance {
+public final class LbzMinibossBoxInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int CAMERA_MIN_X = 0x3C00;
     private static final int CAMERA_MAX_X = 0x3EA0;
     private static final int CAMERA_LOCKED_MIN_X = 0x3DA0;
