@@ -35,7 +35,7 @@ import java.util.logging.Logger;
  * - ARZ: 8 fragments, uses level art tiles (0x55, 0x59, 0xA3, 0xA7)
  */
 public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(CollapsingPlatformObjectInstance.class.getName());
 
@@ -182,6 +182,12 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         this.hFlip = (spawn.renderFlags() & 1) != 0;
         this.vFlip = (spawn.renderFlags() & 2) != 0;
         initZoneConfig();
+    }
+
+    @Override
+    public CollapsingPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new CollapsingPlatformObjectInstance(ctx.spawn(), getName()));
     }
 
     @Override

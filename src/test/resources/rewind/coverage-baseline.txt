@@ -59,7 +59,6 @@ com.openggf.game.sonic2.objects.CogObjectInstance#recreate
 com.openggf.game.sonic2.objects.CogObjectInstance$CogSlotChildInstance#recreate
 com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance#finalScalar#vFlip
-com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance#recreate
 com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$CollapsingPlatformFragmentInstance#finalScalar#fragmentIndex
 com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$CollapsingPlatformFragmentInstance#finalScalar#hFlip
 com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$CollapsingPlatformFragmentInstance#finalScalar#pieceOffsetX

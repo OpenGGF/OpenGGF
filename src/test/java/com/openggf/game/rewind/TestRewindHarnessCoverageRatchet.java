@@ -330,13 +330,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       spawn-based generic recreate.</li>
  *   <li>2026-06-24: raised to 407 after the S2 MTZ Long Platform moved to
  *       spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 408 after the S2 collapsing-platform parent moved
+ *       to spawn/name-based generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 407 after S2 MTZ Long Platform moved to generic recreate.
-    static final int RATCHET_FLOOR = 407;
+    // 2026-06-24: raised to 408 after S2 collapsing-platform parent moved to generic recreate.
+    static final int RATCHET_FLOOR = 408;
 
     @BeforeEach
     void initHeadless() {
