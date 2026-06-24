@@ -41,8 +41,8 @@ public class SolBadnikInstance extends AbstractBadnikInstance implements RewindR
     private static final SpriteAnimationSet BODY_ANIMATIONS = createBodyAnimations();
     private static final SpriteAnimationSet FIREBALL_ANIMATIONS = createFireballAnimations();
 
-    private final boolean xFlip;
-    private final int orbitDirection;
+    private boolean xFlip;
+    private int orbitDirection;
     private final ObjectAnimationState bodyAnimation;
     private final ObjectAnimationState afterAnimation;
     private final List<SolFireballObjectInstance> fireballs = new ArrayList<>();

@@ -259,7 +259,7 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance implements Rewi
 
     private static final class BuzzerFlameChild extends AbstractObjectInstance implements RewindRecreatable {
         private final BuzzerBadnikInstance parent;
-        private final int parentSlotIndex;
+        private int parentSlotIndex;
         private int currentX;
         private int currentY;
         private boolean facingLeft;
@@ -417,6 +417,7 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance implements Rewi
                 currentY = extra.currentY();
                 facingLeft = extra.facingLeft();
                 animFrame = extra.animFrame();
+                parentSlotIndex = extra.parentSlotIndex();
             }
         }
     }

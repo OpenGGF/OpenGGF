@@ -37,6 +37,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S2 badnik parent graph rewind coverage:** Balkiry, Rexon, Shellcracker, Slicer, and Sol parent badniks now rebuild through generic rewind recreate under graph/session restore coverage.
 - **S2 Turtloid graph rewind coverage:** Turtloid parents now rebuild through generic rewind recreate while the badnik graph harness proves rider and jet children relink to restored parents without drops or duplicates.
 - **S2 Aquis graph rewind coverage:** Aquis parents and private wing children now rebuild through generic rewind recreate while the badnik graph harness proves restored wing links point at restored parents.
+- **S2 badnik graph coverage cleanup:** Buzzer flame children and Sol parent badniks now replay their remaining constructor-derived rewind scalars through restored mutable state, removing stale final-scalar coverage baselines.
 - **S2 misc scalar rewind coverage:** HTZ fire shooters, signposts, steam springs, tornado smoke, and WFZ wheels now rebuild through generic rewind recreate without stale constructor-scalar baselines.
 - **S2 mechanism-tail rewind coverage:** Monitors, spiky blocks, springboards, and Buzzer bodies now rebuild through generic rewind recreate without stale constructor-scalar baselines.
 - **S2 fragment-parent rewind coverage:** Smashable ground and WFZ tilting-platform parent objects now rebuild through generic rewind recreate without stale constructor-scalar baselines.
