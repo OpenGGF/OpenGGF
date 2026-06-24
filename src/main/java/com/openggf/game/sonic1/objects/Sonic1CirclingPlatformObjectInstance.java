@@ -45,8 +45,11 @@ public class Sonic1CirclingPlatformObjectInstance extends AbstractObjectInstance
     // From disassembly: move.b #$18,obActWid(a0)
     private static final int HALF_WIDTH = 0x18;
 
-    // Platform surface height (thin platform)
-    private static final int HALF_HEIGHT = 0x08;
+    // Platform surface height. ROM Circ_Action continued-ride seats the rider via
+    // MvSonicOnPtfm2 (obY-9, docs/s1disasm/_incObj/sub MvSonicOnPtfm.asm:18-41),
+    // so the riding surface half-height is 9 (matching Obj 18). The first-landing
+    // PlatformObject detect (obY-8) is recovered via getTopLandingSnapAdjustment.
+    private static final int HALF_HEIGHT = 9;
 
     // From disassembly: move.b #4,obPriority(a0)
     private static final int PRIORITY = 4;
@@ -207,6 +210,41 @@ public class Sonic1CirclingPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         return true;
+    }
+
+    @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // ROM Circ_Platform (routine 2) passes obActWid (= $18) directly as
+        // PlatformObject's d1 (docs/s1disasm/_incObj/5A SLZ Circling
+        // Platform.asm:31-34), so the full collision half-width is the standable
+        // landing width and must NOT receive the generic SolidObject "-$B"
+        // narrowing. Without this, the top-landing X window shrank from $18 to
+        // $0D, so a player arcing onto the platform near its inner edge was not
+        // caught until he had moved several pixels further in — landing a few
+        // frames late (SLZ2 f3332: a rolling-jump Sonic lands on the circling
+        // platform; ROM catches him at relX=8 / f3332, the engine's narrowed
+        // window rejected him until relX=12 / f3335). Same as Obj 18
+        // (Sonic1PlatformObjectInstance), whose Plat_Solid also passes obActWid
+        // straight to PlatformObject.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM PlatformObject gates the land band with an UNSIGNED cmpi.w #-16,d0 /
+        // blo, rejecting the exact-touch case d0=0 (standable band is d0 in
+        // [-16,-1], strict penetration). Same as Obj 18; without it the engine
+        // caught a frame early (SLZ2 f3331 vs ROM f3332).
+        return true;
+    }
+
+    @Override
+    public int getTopLandingSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
+        // PlatformObject builds its first-landing entry surface from obY-8, while
+        // continued riding (Circ_Action -> MvSonicOnPtfm2) uses obY-9. With
+        // HALF_HEIGHT=9 modelling the obY-9 ride surface, this -1 recovers the
+        // obY-8 first-landing detect/snap. Same as Obj 18.
+        return -1;
     }
 
     @Override
