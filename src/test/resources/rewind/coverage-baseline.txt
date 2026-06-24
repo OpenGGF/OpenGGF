@@ -108,13 +108,8 @@ com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance#finalScalar#facingLeft
 com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance$HandLauncherArmChild#recreate
-com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnInterval
-com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnX
-com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnY
 com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance$WaterRushBlockChild#recreate
-com.openggf.game.sonic3k.objects.HCZWaterSplashObjectInstance#finalScalar#x
-com.openggf.game.sonic3k.objects.HCZWaterSplashObjectInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance#finalScalar#isHorizontal
 com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSplashChild#finalScalar#x
 com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSplashChild#finalScalar#y

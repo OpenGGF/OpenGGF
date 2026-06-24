@@ -4,6 +4,7 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 - **S3K HCZ twisting-loop scalar rewind cleanup:** twisting-loop constructor scalars now compact-restore without stale coverage-baseline keys.
+- **S3K HCZ water-effect scalar rewind cleanup:** water-drop and water-splash constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K HCZ spinning-column scalar rewind cleanup:** spinning-column constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K button scalar rewind cleanup:** button constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K MGZ swinging spike-ball scalar rewind cleanup:** spike-ball constructor scalars now compact-restore without stale coverage-baseline keys.

@@ -36,8 +36,8 @@ public class HCZWaterSplashObjectInstance extends AbstractObjectInstance impleme
     /** width_pixels = $28 (40 pixels) */
     private static final int WIDTH_PIXELS = 0x28;
 
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
 
     // ROM: anim_frame_timer starts at 0 (object RAM zeroed), so first subq underflows
     // to -1 and the frame advances immediately on the first tick.

@@ -73,10 +73,10 @@ public class HCZWaterDropObjectInstance extends AbstractObjectInstance implement
     /** ROM: cmpi.b #5,anim(a2) — push animation ID */
     private static final int PUSH_ANIM_ID = 5;
 
-    private final int spawnX;
-    private final int spawnY;
+    private int spawnX;
+    private int spawnY;
     /** Spawn interval = subtype * 4 frames (sonic3k.asm:75161-75162) */
-    private final int spawnInterval;
+    private int spawnInterval;
 
     private int spawnTimer;
 
