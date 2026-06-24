@@ -118,6 +118,15 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private static final short DEFAULT_FAST_SCROLL_CAP = 16;
 	private short fastScrollCap = DEFAULT_FAST_SCROLL_CAP;
 
+	// ROM S1 (FixBugs=0): the leftward horizontal camera move is UNCAPPED — only the
+	// rightward move caps at fastScrollCap. The leftward cap is gated behind
+	// `if FixBugs` (FixBugs=0 in the shipped ROM), so SH_MoveCameraLeft runs straight
+	// to .moveLeft and adds the full (possibly >16px) offset
+	// (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:59-99). S2 (s2.asm:18102-
+	// 18105) and S3K (sonic3k.asm:38403-38406) cap BOTH directions, so this stays
+	// false for them. Set per-game from PhysicsFeatureSet.uncappedLeftwardHorizontalScroll.
+	private boolean uncappedLeftwardHorizontalScroll = false;
+
 	// ROM: Fast_V_scroll_flag. Moving solids request this for the current frame
 	// when the player is standing on them, so grounded vertical follow uses the
 	// fast cap even if the player's own ground speed is low.
@@ -394,7 +403,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		int deadzoneRight = DeadzoneGeometry.rightEdge(width);
 		if (focusedSpriteRealX < deadzoneLeft) {
 			short difference = (short) (focusedSpriteRealX - deadzoneLeft);
-			if (difference < -cameraStepCap) {
+			// ROM S1 leaves the leftward move uncapped (FixBugs=0); S2/S3K cap it.
+			if (!uncappedLeftwardHorizontalScroll && difference < -cameraStepCap) {
 				nextX -= cameraStepCap;
 			} else {
 				nextX += difference;
@@ -1143,6 +1153,16 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public void setFastScrollCap(int cap) {
 		this.fastScrollCap = (short) cap;
+	}
+
+	/**
+	 * Sets whether leftward horizontal camera scrolling is uncapped (ROM S1
+	 * FixBugs=0 behavior). When true, the per-frame cap applies only to rightward
+	 * scrolling. Set per-game from
+	 * {@link PhysicsFeatureSet#uncappedLeftwardHorizontalScroll()}.
+	 */
+	public void setUncappedLeftwardScroll(boolean uncapped) {
+		this.uncappedLeftwardHorizontalScroll = uncapped;
 	}
 
 	/** Returns the current fast vertical scroll cap in pixels/frame. */

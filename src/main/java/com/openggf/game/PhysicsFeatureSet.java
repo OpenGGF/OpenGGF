@@ -156,6 +156,16 @@ public record PhysicsFeatureSet(
          *  S1/S2: 16 (0x10) pixels/frame (s2.asm:18190 ".doScroll_fast").
          *  S3K:   24 (0x18) pixels/frame (sonic3k.asm:loc_1C1B0; s2.asm:18189 "S3K uses 24 instead of 16"). */
         int fastScrollCap,
+        /** Whether leftward horizontal camera scrolling is UNCAPPED (no per-frame
+         *  pixel limit), while rightward scrolling is still capped at fastScrollCap.
+         *  S1: true -- {@code ScrollHoriz.SH_MoveCameraLeft} caps the left move only
+         *  under {@code if FixBugs} (FixBugs=0 in the shipped ROM, sonic.asm:20), so
+         *  the left branch runs straight to {@code .moveLeft} and adds the full
+         *  (possibly &gt;16px) offset; the right branch (SH_MoveCameraRight) always
+         *  caps at 16 (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:59-99).
+         *  S2: false -- both directions cap at 16 (s2.asm:18102-18105 .scrollLeft).
+         *  S3K: false -- both directions cap at $18 (sonic3k.asm:38403-38406). */
+        boolean uncappedLeftwardHorizontalScroll,
         /** Whether the boss/special-enemy hit bounce also negates ground velocity.
          *  S3K: true for the {@code boss_hitcount2} path in Touch_Enemy
          *  (sonic3k.asm:20913-20915 negates x_vel, y_vel, and ground_vel).
@@ -1142,6 +1152,7 @@ public record PhysicsFeatureSet(
                     source.airLeftWallHitContinuesIntoCeilingSeparation(),
                     source.fullSolidBottomOverlapUsesCurrentYRadiusOnly(),
                     source.fastScrollCap(),
+                    source.uncappedLeftwardHorizontalScroll(),
                     source.bossHitNegatesGroundSpeed(),
                     source.stageRingsUseObjectTouchCollection(),
                     source.stageRingSweepUsesRawCameraWindow(),
@@ -1209,7 +1220,9 @@ public record PhysicsFeatureSet(
             null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S1 wall response sets push unconditionally (s1disasm/_incObj/01 Sonic.asm:551-568) */,
             false /* animationChangeClearsPush: S1 clear is FixBugs-only (s1disasm/_incObj/01 Sonic.asm:2055-2065) */, false,
             false /* slopeResistStartsFromRest: S1 Sonic_SlopeResist returns on zero inertia (s1disasm/_incObj/01 Sonic.asm:1043-1044) */,
-            false, false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2, false, true, false,
+            false, false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2,
+            true /* uncappedLeftwardHorizontalScroll: S1 ScrollHoriz left move is uncapped (FixBugs=0); docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:84-90 */,
+            false, true, false,
             SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE,
             false /* sidekickFollowNudgeBlockedByObjectControlBit0: S1 has no Tails CPU */,
             false /* sidekickDelayedJumpPressUsesHistoryEdge: S1 has no Tails CPU */,
@@ -1270,7 +1283,9 @@ public record PhysicsFeatureSet(
             true /* pinballLandingPreservesPinballMode: S2 Sonic_ResetOnFloor / Tails_ResetOnFloor never clear pinball_mode (s2.asm:37770-37771,40625-40626) — both branch to Part3 on pinball_mode, and Part3 only clears in_air/pushing/rolljumping/jumping */,
             false, false, false, false,
             true /* fullSolidBottomOverlapUsesCurrentYRadiusOnly: S2 SolidObject_cont uses the player's CURRENT y_radius symmetrically on both halves of the underside box (d2 = obHeight/2 + y_radius(a1); bottom boundary d4 = 2*d2), s2.asm:35355-35367. This matches S1 (s1disasm/_incObj/sub SolidObject.asm:109-119). Only S3K loc_1DFD6 (sonic3k.asm:41422-41436) substitutes default_y_radius for the bottom extra term, giving the taller asymmetric box — so S3K stays false. Previously false here gave Sonic a 5px-too-tall underside box that triggered a phantom Stomper (Obj2A) ceiling hit during a MCZ rolling jump (y_radius 0x0E vs standing 0x13), zeroing y_speed at MCZ1 trace frame 2005 where ROM never collides. */,
-            FAST_SCROLL_CAP_S2, false, false, false,
+            FAST_SCROLL_CAP_S2,
+            false /* uncappedLeftwardHorizontalScroll: S2 caps both directions at 16 (s2.asm:18102-18105) */,
+            false, false, false,
             SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE,
             false /* sidekickFollowNudgeBlockedByObjectControlBit0: S2 TailsCPU_Normal has no object_control bit-0 gate on FollowLeft/FollowRight nudge (s2.asm:38952-38975) */,
             false /* sidekickDelayedJumpPressUsesHistoryEdge: preserve S2 delayed low-byte press replay baseline */,
@@ -1333,7 +1348,9 @@ public record PhysicsFeatureSet(
             false, true,
             true /* pinballLandingPreservesRoll: S3K Player_TouchFloor_Check_Spindash skips the roll-clear body while spin_dash_flag is set (sonic3k.asm:24325-24327) */,
             true /* pinballLandingPreservesPinballMode: S3K Player_TouchFloor_Check_Spindash leaves spin_dash_flag set while AutoSpin tunnel control is active */,
-            true, true, true, true, false, FAST_SCROLL_CAP_S3K, true, false, true,
+            true, true, true, true, false, FAST_SCROLL_CAP_S3K,
+            false /* uncappedLeftwardHorizontalScroll: S3K caps both directions at $18 (sonic3k.asm:38403-38406) */,
+            true, false, true,
             SIDEKICK_FOLLOW_SNAP_S3K, SIDEKICK_DESPAWN_X_S3K, SIDEKICK_FOLLOW_LEAD_OFFSET_S3K,
             true /* sidekickFollowNudgeBlockedByObjectControlBit0: S3K loc_13E0A/loc_13E34 test object_control bit 0 before nudging x_pos (sonic3k.asm:26722-26724,26739-26741) */,
             true /* sidekickDelayedJumpPressUsesHistoryEdge: HCZ f2893/f2894 shows held A/B/C carried while low-byte jump press clears on the next delayed sample */,

@@ -144,6 +144,16 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-24 - S1 leftward horizontal camera scroll uncapped (FixBugs=0); SYZ1 f816 -> f2338 (360 -> 359), MZ1 cascade 204 -> 169
+
+- Branch/worktree: `bugfix/ai-s1-syz1-floatingblock` off `origin/develop` 778efd727 (worktree `.worktrees/batbrain`).
+- Command: `mvn test -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Syz1CompleteRunTraceReplay" "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- First error before fix: f816 `camera_x` exp=0x0193 act=0x0194 (1px). Reclassified from the assigned "FloatingBlock riding miss": Sonic's x/x_speed match ROM every frame (the bounce off the LR spring @0218 to +0x1000 fires correctly in the engine). The 1px is pure horizontal-camera-scroll. At f816 Sonic rode a leftward FloatingBlock (x 0234->0223), so the camera needed to move -17px left in one frame (01A4 -> 0193); the engine capped it at -16 -> 0194.
+- Root: S1 ScrollHoriz caps the RIGHTward camera move at 16 (SH_MoveCameraRight, unconditional) but the LEFTward cap (SH_MoveCameraLeft) is gated `if FixBugs`, and the shipped ROM has FixBugs=0 (docs/s1disasm/sonic.asm:20), so SH_MoveCameraLeft falls straight to .moveLeft and adds the full (possibly >16px) offset uncapped (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:59-99). Cross-game: S2 caps both directions at 16 (s2.asm:18102-18105 .scrollLeft), S3K caps both at $18 (sonic3k.asm:38403-38406). So this is an S1-only divergence; the engine's shared `Camera.computeNextHorizontalCameraX` capped both.
+- Fix: `PhysicsFeatureSet.uncappedLeftwardHorizontalScroll` (true for SONIC_1, false for SONIC_2/SONIC_3K), plumbed to `Camera.setUncappedLeftwardScroll` from `LevelManager` next to the existing fastScrollCap wiring; gates ONLY the leftward branch in `computeNextHorizontalCameraX`.
+- After: SYZ1 f816 -> f2338 (360 -> 359 errors; ~1522-frame advance). New frontier f2338 `x_speed` exp=0x0000 act=-0200 is an unrelated physics root. Bonus: S1 MZ1 (f2101 frontier from the merged camera-boundary fix) cascade 204 -> 169 errors (same first-error frame) — MZ1 also has fast-leftward camera moments.
+- Regression sweep (with-fix vs no-fix baseline on 778efd727, first-error frame + count): GHZ1 GREEN, GHZ2 GREEN. All other S1 complete-runs BYTE-IDENTICAL: LZ1 f5745/662, LZ2 f1068/1616, LZ3 f7952/1778, GHZ3 f6464/271, MZ2 f2819/1116, MZ3 f2079/1123, SBZ1 f3971/560, SBZ2 f1395/1000, SLZ1 f2872/164, SLZ2 f2552/137, SLZ3 f814/1024, SYZ3 f6065/483, FZ f713/155. Cross-game shared-Camera/PhysicsFeatureSet check: S2 EHZ1 PASS, S3K AIZ f1095/4309 byte-identical. Units: `TestPhysicsProfile`, `TestPhysicsProfileRegression`, `TestCamera`, `TestCameraRewindSnapshot`, `TestLookScrollDelay`, `TestCollisionModel` (97 tests) PASS.
+
 ## 2026-06-24 - S1 conveyor platform survives its spawn frame before lazy baseX init; LZ1 f5745 camera_y -> 1px y (2214 -> 662)
 
 - Branch/worktree: `bugfix/ai-s1-conveyor-fidelity` off `origin/develop` dae1bf67f (worktree `.worktrees/conveyor`).
