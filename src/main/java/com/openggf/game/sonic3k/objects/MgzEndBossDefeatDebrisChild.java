@@ -32,12 +32,12 @@ public class MgzEndBossDefeatDebrisChild extends AbstractObjectInstance implemen
     private static final int SUBPIXEL_SHIFT = 8;
     private static final int OFFSCREEN_MARGIN = 0x40;
 
-    private final int index;
-    private final boolean flipX;
+    private int index;
+    private boolean flipX;
     private int xFixed;
     private int yFixed;
-    private final int xVel;
-    private final int yVel;
+    private int xVel;
+    private int yVel;
 
     public MgzEndBossDefeatDebrisChild(int parentX, int parentY, int index, boolean flipX) {
         this(spawnFor(parentX, parentY, index, flipX));

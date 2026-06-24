@@ -55,10 +55,10 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         boolean compensateReleaseHandoff;
     }
 
-    private final int centerX;
-    private final int centerY;
-    private final int captureThreshold;
-    private final boolean flipped;
+    private int centerX;
+    private int centerY;
+    private int captureThreshold;
+    private boolean flipped;
     private final PlayerState player1 = new PlayerState();
     private final PlayerState player2 = new PlayerState();
 

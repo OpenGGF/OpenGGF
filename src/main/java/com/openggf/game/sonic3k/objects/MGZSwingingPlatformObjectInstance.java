@@ -52,10 +52,10 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
     // ROM: move.b height_pixels(a0),d3; addq.w #1,d3 -> $0C + 1 = $0D
     private static final int SOLID_HALF_HEIGHT = 0x0D;
 
-    private final int pivotX;
-    private final int pivotY;
-    private final int pivotFrame; // ROM: child mapping_frame (1 default, 0 if y-flip)
-    private final int angleStep;  // +1 or -1
+    private int pivotX;
+    private int pivotY;
+    private int pivotFrame; // ROM: child mapping_frame (1 default, 0 if y-flip)
+    private int angleStep;  // +1 or -1
 
     private final int[] linkX = new int[LINK_COUNT];
     private final int[] linkY = new int[LINK_COUNT];
