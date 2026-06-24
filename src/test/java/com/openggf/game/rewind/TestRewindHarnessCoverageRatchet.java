@@ -415,13 +415,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       graph-tested generic recreate coverage with child-list relinking.</li>
  *   <li>2026-06-24: raised to 531 after S2 Sideways platform pairs gained
  *       graph-tested generic recreate coverage with sibling relinking.</li>
+ *   <li>2026-06-24: raised to 532 after S2 Falling Pillars gained
+ *       graph-tested generic recreate coverage with child relinking.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 531 after S2 Sideways platform graph restore coverage.
-    static final int RATCHET_FLOOR = 531;
+    // 2026-06-24: raised to 532 after S2 Falling Pillar graph restore coverage.
+    static final int RATCHET_FLOOR = 532;
 
     @BeforeEach
     void initHeadless() {

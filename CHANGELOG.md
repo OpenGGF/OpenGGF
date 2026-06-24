@@ -8,6 +8,7 @@ All notable changes to the OpenGGF project are documented in this file.
 
 The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability. Detailed per-frontier notes were moved out of this top-level changelog so it stays readable; see [docs/TRACE_FRONTIER_LOG.md](docs/TRACE_FRONTIER_LOG.md) for frame-by-frame trace evidence and [docs/changelog/v0.6-prerelease-detailed.md](docs/changelog/v0.6-prerelease-detailed.md) for the previous verbose merge ledger.
 
+- **S2 Falling Pillar graph rewind coverage:** ARZ falling pillars now restore through generic rewind recreate with captured lower-section child links and compact child-mode restore.
 - **S2 Sideways Platform graph rewind coverage:** CPZ/MCZ sideways platform pairs now restore through generic rewind recreate with captured sibling links and required identity checks.
 - **S2 MCZ rotating-platform graph rewind coverage:** MCZ rotating platforms now restore through generic rewind recreate with graph-tested parent child-list relinking and required child identity checks.
 - **S2 Rivet rewind coverage:** WFZ rivets now restore through generic rewind recreate while treating their fallback main-player cache as transient.
