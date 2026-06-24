@@ -661,8 +661,6 @@ com.openggf.game.sonic3k.objects.MhzShipSequenceControllerInstance#finalScalar#i
 com.openggf.game.sonic3k.objects.MhzShipSequenceControllerInstance#finalScalar#initialSwingSpeed
 com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance#objectRef#capturedPlayer
 com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance#recreate
-com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance#recreate
-com.openggf.game.sonic3k.objects.MhzSwingBarVerticalObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance#finalScalar#upperVariant
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild#recreate

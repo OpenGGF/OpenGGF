@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -23,7 +24,8 @@ import java.util.Map;
  * the route-critical grab window, hanging object-control state, and jump
  * release path for the horizontal bar.
  */
-public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectInstance {
+public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final int PRIORITY_BUCKET = 5;
     private static final int HALF_WIDTH = 0x20;
     private static final int HALF_HEIGHT = 4;

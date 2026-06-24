@@ -2080,6 +2080,14 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance$SparkleProjectileChild",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_MHZ_SWING_BAR_BATCH104_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzSwingBarVerticalObjectInstance",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(S3kSignpostStubChild.class.getName(), GameId.S3K));
 
@@ -7429,6 +7437,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kSparkleChildBatch103ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_SPARKLE_CHILD_BATCH103_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kMhzSwingBarBatch104ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_SWING_BAR_BATCH104_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K MHZ swing-bar batch 104");
+        }
+    }
+
+    @Test
+    void s3kMhzSwingBarBatch104ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_SWING_BAR_BATCH104_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MHZ swing-bar batch 104 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMhzSwingBarBatch104ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_SWING_BAR_BATCH104_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()
