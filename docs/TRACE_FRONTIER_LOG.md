@@ -144,6 +144,16 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-24 - S1 Lava Geyser head defers first Geyser_Action one frame after spawn; MZ2 f2819 -> f2823 (1116 -> 1043), MZ1 cascade 205 -> 169
+
+- Branch/worktree: `bugfix/ai-s1-mz2-geyser` off `origin/develop` 861f59dd3 (worktree `.worktrees/slots`).
+- Command: `mvn test -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Mz2CompleteRunTraceReplay" "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- First error before fix: f2819 `g_speed` exp=0x0018 act=0x0000 (ROM Sonic grounded+running; engine HURT-bounced air=1, x_speed=0x200, y_speed=-0x400). Sonic position byte-perfect through f2819 (x=0x0395,y=0x044C both); the GeyserMaker (Obj0x4C) is in OST slot 0x3E in both engine and ROM (materialization slot matches) — so the spurious touch is purely the lava wall falling ~1 frame early onto Sonic.
+- Root: ROM `Geyser_Index` is a `jmp` dispatch (docs/s1disasm/_incObj/"4C, 4D MZ Lava Geyser and Maker.asm":139): the Obj0x4D HEAD runs `Geyser_Main` (routine 0, init + addq.b #2,obRoutine, asm:157-167) on its spawn frame and RETURNS without running `Geyser_Action`; the gravity (addi.w #$18,obVelY) + SpeedToPos of `Geyser_Action` (routine 2, asm:235-242) run the NEXT frame. The engine's `update()` ran `ensureInitialized()` (Geyser_Main) and `updateHead()` (Geyser_Action) the same frame, so the lavafall column fell a frame early.
+- Fix: `ranGeyserMainThisFrame` one-shot in `Sonic1LavaGeyserObjectInstance` — run Geyser_Main init on the spawn frame, then return, deferring the head's first Geyser_Action to the next frame. THIRD piece is constructed already-initialized at routine 2 (acts immediately, ROM-correct higher-slot same-pass); BODY (routine 4) tracks the head — both unaffected.
+- After: MZ2 f2819 -> f2823 (1116 -> 1043). New frontier f2823 `x_speed` exp=0x0200 act=0x0000: the GeyserMaker's free-running eruption cadence materialises a few frames early (placement-materialization-frame issue, MTZ1-prime family) — NOT this object-local action-frame defer; deferred to the placement-spawn-frame determinism root. Bonus: MZ1 (f2101 frontier) cascade 205 -> 169 (same first-error frame).
+- Regression sweep (with-fix vs develop 861f59dd3, first-error frame + count): GHZ1 GREEN, GHZ2 GREEN, SYZ2 GREEN. All other S1 complete-runs BYTE-IDENTICAL: MZ3 f2079/1123, LZ1 f5745/662, LZ3 f7952/1778, SLZ1 f2872/164, SLZ2 f2552/137, SLZ3 f814/1024, SBZ1 f3971/560. Units: `TestSonic1LavaGeyserOutOfRange` (4/0) PASS.
+
 ## 2026-06-24 - S1 leftward horizontal camera scroll uncapped (FixBugs=0); SYZ1 f816 -> f2338 (360 -> 359), MZ1 cascade 204 -> 169
 
 - Branch/worktree: `bugfix/ai-s1-syz1-floatingblock` off `origin/develop` 778efd727 (worktree `.worktrees/batbrain`).
