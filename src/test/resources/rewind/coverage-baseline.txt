@@ -468,7 +468,6 @@ com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud#recreate
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrostPuff#finalScalar#originX
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrostPuff#finalScalar#originY
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrostPuff#finalScalar#verticalFlip
-com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrostPuff#recreate
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#objectRef#capturedPlayer
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#recreate
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$IceDebris#finalScalar#gravity

@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchActorContextPolicy;
@@ -562,7 +563,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
     }
 
-    private static final class FrostPuff extends AbstractObjectInstance {
+    private static final class FrostPuff extends AbstractObjectInstance implements SpawnRewindRecreatable {
         private static final int PRIORITY_BUCKET = 1;
         private static final int PALETTE = 2;
         private static final int SCRIPT_END_OFFSET = 0x48;
@@ -600,12 +601,23 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         private boolean drawThisFrame;
 
         private FrostPuff(int x, int y, boolean verticalFlip) {
-            super(new ObjectSpawn(x, y, OBJECT_ID, 0, 0, false, y), "ICZFreezerFrostPuff");
+            super(new ObjectSpawn(x, y, OBJECT_ID, 0, verticalFlip ? 0x2 : 0, false, y),
+                    "ICZFreezerFrostPuff");
             this.verticalFlip = verticalFlip;
             this.originX = x;
             this.originY = y + (verticalFlip ? 0x0C : -0x0C);
             this.x = x;
             this.y = y;
+        }
+
+        private FrostPuff(ObjectSpawn spawn) {
+            super(spawn, "ICZFreezerFrostPuff");
+            boolean verticalFlip = (spawn.renderFlags() & 0x2) != 0;
+            this.verticalFlip = verticalFlip;
+            this.originX = spawn.x();
+            this.originY = spawn.y() + (verticalFlip ? 0x0C : -0x0C);
+            this.x = spawn.x();
+            this.y = spawn.y();
         }
 
         @Override

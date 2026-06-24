@@ -18,6 +18,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S3K Turbo Spiker particle rewind coverage:** Shell-drip, water-splash, and shared animated particle effects now restore through spawn-encoded generic rewind recreate.
 - **S3K MHZ tree-chip rewind coverage:** MHZ miniboss tree chips now restore through spawn-encoded generic rewind recreate.
 - **S3K MHZ2 leaf-particle rewind coverage:** MHZ2 Knuckles cutscene leaf particles now restore through spawn-encoded generic rewind recreate.
+- **S3K ICZ frost-puff rewind coverage:** ICZ freezer frost puffs now restore through spawn-encoded generic rewind recreate.
 - **S3K HCZ/LBZ/MGZ object parent rewind coverage:** HCZ snake blocks and water walls, LBZ cup-elevator poles, flame children, player launchers, ride grapples, and MGZ moving/trigger platforms now restore through spawn-based generic rewind recreate.
 - **S3K LBZ/MGZ object parent rewind coverage:** LBZ exploding triggers, flame throwers, moving platforms, rolling drums, MGZ dash triggers, and MGZ/LBZ smashing pillars now restore through spawn-based generic rewind recreate.
 - **S1 runtime spawn-recreate rewind coverage:** Bubbles, bumpers, running discs, and teleporters now rely on spawn-based generic rewind recreate without stale final-scalar or frame-local reference coverage gaps.
