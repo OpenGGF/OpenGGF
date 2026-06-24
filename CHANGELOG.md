@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K HCZ conveyor scalar rewind cleanup:** HCZ conveyor belts, conveyor spikes, large fans, and snake blocks now compact-restore constructor scalars without stale coverage-baseline keys.
 - **S3K HCZ breakable-bar scalar rewind cleanup:** HCZ breakable bars and debris now compact-restore constructor scalars without stale coverage-baseline keys.
 - **S3K AIZ/LRZ mechanism scalar rewind cleanup:** draw bridges, emerald scatter objects, and AIZ/LRZ rocks now compact-restore constructor scalars without stale coverage-baseline keys.
 - **S3K shared mechanism scalar rewind cleanup:** doors, floating platforms, gumball items, and HCZ blocks now compact-restore constructor scalars without stale coverage-baseline keys.

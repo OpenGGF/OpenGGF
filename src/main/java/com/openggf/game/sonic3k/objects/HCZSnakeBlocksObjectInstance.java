@@ -65,9 +65,9 @@ public class HCZSnakeBlocksObjectInstance extends AbstractObjectInstance
     // ROM: cmpi.b #$80,d0 — angles below this are clamped, creating the corner wait.
     private static final int ANGLE_CLAMP_MIN = 0x80;
 
-    private final int baseX;
-    private final int baseY;
-    private final int direction; // +1 CW, -1 CCW (ROM: $40(a0))
+    private int baseX;
+    private int baseY;
+    private int direction; // +1 CW, -1 CCW (ROM: $40(a0))
     private int x;
     private int y;
     private int angle;   // ROM: angle(a0), 0x00-0xFF byte

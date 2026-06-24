@@ -85,9 +85,9 @@ public class HCZConveyorSpikeObjectInstance extends AbstractObjectInstance
         CURVE_LEFT
     }
 
-    private final int centerY;
-    private final int leftBound;
-    private final int rightBound;
+    private int centerY;
+    private int leftBound;
+    private int rightBound;
 
     private State state;
     private int angle;

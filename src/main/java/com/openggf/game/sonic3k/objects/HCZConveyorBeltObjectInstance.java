@@ -150,14 +150,14 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
     private final PlayerBeltState p2State = new PlayerBeltState();
 
     // ===== Instance fields =====
-    private final int objY;               // Object Y position
-    private final boolean flipped;        // status bit 0: 0=rightward, 1=leftward
-    private final int leftBound;          // $3C(a0): left X from table
-    private final int rightBound;         // $3E(a0): right X from table
-    private final int activeLeftBound;    // $40(a0): adjusted left X for detection
-    private final int activeRightBound;   // $42(a0): adjusted right X for detection
-    private final int rawSubtype;         // Full subtype byte for load-array indexing
-    private final int subtypeIndex;       // Low nibble used by the bounds table
+    private int objY;                     // Object Y position
+    private boolean flipped;              // status bit 0: 0=rightward, 1=leftward
+    private int leftBound;                // $3C(a0): left X from table
+    private int rightBound;               // $3E(a0): right X from table
+    private int activeLeftBound;          // $40(a0): adjusted left X for detection
+    private int activeRightBound;         // $42(a0): adjusted right X for detection
+    private int rawSubtype;               // Full subtype byte for load-array indexing
+    private int subtypeIndex;             // Low nibble used by the bounds table
     private boolean initialized = false;
 
     public HCZConveyorBeltObjectInstance(ObjectSpawn spawn) {

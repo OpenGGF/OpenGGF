@@ -45,7 +45,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
     private static final int PHASE_LOADING_ART = 1;
     private static final int PHASE_ACTIVE = 2;
 
-    private final int x;
+    private int x;
     private int y;
     private int phase;
     private int artWaitFramesRemaining;
