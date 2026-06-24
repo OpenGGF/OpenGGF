@@ -393,13 +393,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       end-boss debris moved to spawn-encoded generic recreate.</li>
  *   <li>2026-06-24: raised to 517 after S1 MZ glass blocks moved to
  *       spawn-based generic recreate with graph-tested reflection relinking.</li>
+ *   <li>2026-06-24: raised to 518 after S1 SBZ junction parents moved to
+ *       spawn-based generic recreate with graph-tested display-child relinking.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 517 after S1 MZ glass blocks moved to graph-tested generic recreate.
-    static final int RATCHET_FLOOR = 517;
+    // 2026-06-24: raised to 518 after S1 SBZ junction parents moved to graph-tested generic recreate.
+    static final int RATCHET_FLOOR = 518;
 
     @BeforeEach
     void initHeadless() {

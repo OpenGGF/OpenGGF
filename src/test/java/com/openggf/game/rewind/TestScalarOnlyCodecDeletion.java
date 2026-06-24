@@ -16,6 +16,7 @@ import com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance;
 import com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance;
 import com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
@@ -981,6 +982,7 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S1));
 
     private static final List<CodecDeletionCandidate> S1_JUNCTION_CHILD_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic1JunctionObjectInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance",
                     GameId.S1));

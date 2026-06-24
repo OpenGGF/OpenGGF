@@ -12,7 +12,6 @@ com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#moveT
 com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#isTall
 com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#reflectSubtype
 com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#finalScalar#switchIndex
-com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1LavaGeyserMakerObjectInstance#finalScalar#subtype
 com.openggf.game.sonic1.objects.Sonic1LavaGeyserMakerObjectInstance#finalScalar#timerReload
 com.openggf.game.sonic1.objects.Sonic1LavaGeyserMakerObjectInstance#recreate

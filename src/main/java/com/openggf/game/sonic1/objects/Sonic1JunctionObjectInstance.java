@@ -61,7 +61,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/66 Rotating Junction.asm
  */
 public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // ========================================================================
     // ROM Constants
