@@ -1828,6 +1828,23 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.BloominatorBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.BubblesBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.ButterdroidBadnikInstance",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(S3kSignpostStubChild.class.getName(), GameId.S3K));
 
@@ -6656,6 +6673,39 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K badnik child graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K badnik parent batch: standalone spawn-constructible badnik heads
+    // =====================================================================
+
+    @Test
+    void s3kBadnikParentClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K badnik parent coverage");
+        }
+    }
+
+    @Test
+    void s3kBadnikParentClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K badnik parent generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kBadnikParentClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
         }
     }
 

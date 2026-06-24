@@ -6,13 +6,14 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
  * S3K Obj $8C - Bloominator (AIZ).
  * Core routine mapping: Obj_Bloominator (sonic3k.asm loc_86D8A..loc_86E42).
  */
-public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance {
+public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x23; // ObjDat_Bloominator flags $23
     private static final int PRIORITY_BUCKET = 4;         // ObjDat_Bloominator priority $200
 

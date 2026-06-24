@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -60,7 +61,7 @@ import java.util.List;
  * X offset/velocity negated when parent faces right. Alternates mapping frames
  * 2 and 3 every tick. Shield bounce deflectable (bit 3).
  */
-public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
+public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
     // --- Constants from ObjDat_Blastoid ---
 
