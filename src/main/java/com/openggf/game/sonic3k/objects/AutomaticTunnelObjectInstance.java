@@ -9,6 +9,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -39,7 +41,7 @@ import java.util.logging.Logger;
  *   <li>State 4 (LAST_MOVE): 2-frame gravity exit, then release</li>
  * </ul>
  */
-public class AutomaticTunnelObjectInstance extends AbstractObjectInstance {
+public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AutomaticTunnelObjectInstance.class.getName());
 
     // =========================================================================
@@ -260,6 +262,11 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance {
         this.maintainVelocity = (subtype & 0x40) != 0;
         this.lbz2Mode = (subtype & 0x20) != 0;
         this.pathId = subtype & 0x1F;
+    }
+
+    @Override
+    public AutomaticTunnelObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AutomaticTunnelObjectInstance(ctx.spawn());
     }
 
     @Override

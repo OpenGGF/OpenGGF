@@ -10,6 +10,8 @@ import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -41,7 +43,7 @@ import java.util.logging.Logger;
  *   <li>Flipped: crossing R→L / bottom→top enables spin (-0x580 ground_vel)</li>
  * </ul>
  */
-public class AutoSpinObjectInstance extends BoxObjectInstance {
+public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(AutoSpinObjectInstance.class.getName());
 
@@ -94,6 +96,11 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
         this.snapToWall = (subtype & 0x40) != 0;
         this.lockControls = (subtype & 0x80) != 0;
         this.xFlipped = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public AutoSpinObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AutoSpinObjectInstance(ctx.spawn());
     }
 
     @Override

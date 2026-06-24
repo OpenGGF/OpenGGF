@@ -45,6 +45,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S3K ICZ ice-object rewind coverage:** ICZ breakable walls, harmful ice, ice blocks, and ice cubes now restore through generic rewind recreate under object-manager coverage.
 - **S3K HCZ mechanism rewind coverage:** HCZ blocks, conveyor spikes, large fans, spinning columns, and water splashes now restore through generic rewind recreate under object-manager coverage.
 - **S3K ICZ platform/hazard rewind coverage:** ICZ path-follow platforms, swinging platforms, stalagtites, and snow piles now restore through generic rewind recreate under object-manager coverage.
+- **S3K utility/motion rewind coverage:** Automatic tunnels, auto-spin triggers, bubblers, and doors now restore through generic rewind recreate under object-manager coverage.
 - **S2 scalar named-object rewind coverage:** Arrow shooters and one-way barriers now preserve registry object names while rebuilding through generic rewind recreate, raising the round-trip ratchet without explicit dynamic codecs.
 - **S2 CNZ scalar rewind coverage:** Round bumpers, hex bumpers, bonus blocks, bubble generators, and Sky Chase clouds now rebuild through generic rewind recreate, raising the round-trip ratchet without explicit dynamic codecs.
 - **S2 utility scalar rewind coverage:** Buttons, Clucker bases, fans, lava markers, bridge stakes, and EHZ waterfalls now rebuild through generic rewind recreate, tightening constructor-scalar baselines without explicit dynamic codecs.

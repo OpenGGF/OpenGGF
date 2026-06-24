@@ -9,6 +9,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -36,7 +38,7 @@ import java.util.List;
  * ROM reference: Obj_Door (sonic3k.asm:66036), loc_30FD2 (horizontal variant).
  */
 public class DoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final int VERTICAL_HEIGHT = 0x20;
     private static final int VERTICAL_PRIORITY = 3;
@@ -106,6 +108,11 @@ public class DoorObjectInstance extends AbstractObjectInstance
 
         this.slideOffset = 0;
         this.playerInTriggerPreviousFrame = false;
+    }
+
+    @Override
+    public DoorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new DoorObjectInstance(ctx.spawn());
     }
 
     private VerticalDoorVariant resolveVerticalVariant(int subtype) {

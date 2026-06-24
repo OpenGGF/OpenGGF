@@ -105,6 +105,9 @@ import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.objects.AizShipBombInstance;
 import com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance;
 import com.openggf.game.sonic3k.objects.AnimatedStillSpriteInstance;
+import com.openggf.game.sonic3k.objects.AutoSpinObjectInstance;
+import com.openggf.game.sonic3k.objects.AutomaticTunnelObjectInstance;
+import com.openggf.game.sonic3k.objects.BubblerObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzBalloonInstance;
 import com.openggf.game.sonic3k.objects.CnzBarberPoleObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzGiantWheelInstance;
@@ -121,6 +124,7 @@ import com.openggf.game.sonic3k.objects.CnzTrapDoorInstance;
 import com.openggf.game.sonic3k.objects.CnzTriangleBumperObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzVacuumTubeInstance;
 import com.openggf.game.sonic3k.objects.CnzWaterLevelButtonInstance;
+import com.openggf.game.sonic3k.objects.DoorObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZBlockObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZConveyorSpikeObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZLargeFanObjectInstance;
@@ -768,6 +772,12 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(IczSwingingPlatformObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(IczStalagtiteObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(IczSnowPileObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_UTILITY_MOTION_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(AutomaticTunnelObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AutoSpinObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(BubblerObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(DoorObjectInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HczEndBossRobotnikShip.class.getName(), GameId.S3K),
@@ -5774,6 +5784,39 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kIczPlatformHazardClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_ICZ_PLATFORM_HAZARD_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K utility/motion batch: top-level invisible/utility object-manager restores
+    // =====================================================================
+
+    @Test
+    void s3kUtilityMotionClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_UTILITY_MOTION_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K utility/motion batch");
+        }
+    }
+
+    @Test
+    void s3kUtilityMotionClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_UTILITY_MOTION_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K utility/motion generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kUtilityMotionClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_UTILITY_MOTION_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()
