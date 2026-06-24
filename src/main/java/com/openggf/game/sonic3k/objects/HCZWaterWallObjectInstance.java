@@ -107,7 +107,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     }
 
     // Instance state
-    private final boolean isHorizontal;
+    private boolean isHorizontal;
     private int x;
     private int y;
     private int timer;
@@ -827,7 +827,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         private int animId;
         private int animTimer;
         private int animFrame;
-        private final boolean useBubbleArt;
+        private boolean useBubbleArt;
         private int surfaceFrameCount;
 
         WaterWallSprayChild(int x, int y, int xVel, int yVel,
@@ -964,8 +964,8 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
 
         private static final int TOTAL_FRAMES = 8;
 
-        private final int x;
-        private final int y;
+        private int x;
+        private int y;
         private int animTimer = 3;
         private int totalFramesPlayed;
 
