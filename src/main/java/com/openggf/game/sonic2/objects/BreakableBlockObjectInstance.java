@@ -322,7 +322,7 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
      * Inner class for the fragment objects that fly apart when the block breaks.
      * These are simple falling objects with initial velocity that despawn when off-screen.
      */
-    public static class BreakableBlockFragmentInstance extends AbstractObjectInstance {
+    public static class BreakableBlockFragmentInstance extends AbstractObjectInstance implements RewindRecreatable {
 
         private static final int GRAVITY = 0x18;  // From disassembly: addi.w #$18,y_vel(a0)
 
@@ -335,7 +335,7 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         private final SpriteMappingPiece piece;
         private final PatternSpriteRenderer renderer;
         private final List<SpriteMappingPiece> pieceList;
-        private final int frameIndex;
+        private int frameIndex;
         private final ObjectRenderManager renderManager;
 
         public BreakableBlockFragmentInstance(int x, int y, int velX, int velY, SpriteMappingPiece piece,
@@ -368,6 +368,18 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
             this.pieceList = List.of();
             this.frameIndex = frameIndex;
             this.renderManager = renderManager;
+        }
+
+        public BreakableBlockFragmentInstance(int x, int y, int velX, int velY) {
+            this(x, y, velX, velY, 0, null);
+        }
+
+        @Override
+        public BreakableBlockFragmentInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectRenderManager manager = ctx.objectServices() != null
+                    ? ctx.objectServices().renderManager()
+                    : null;
+            return new BreakableBlockFragmentInstance(ctx.spawn().x(), ctx.spawn().y(), 0, 0, 0, manager);
         }
 
         @Override

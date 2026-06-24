@@ -10,6 +10,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 
 - **S2 MTZ long-platform cog graph rewind coverage:** MTZ long-platform cogs now restore through generic rewind recreate with child-parent relinking, standalone-mode preservation, and missing-parent drop coverage.
 - **S2 checkpoint child rewind cleanup:** Checkpoint dongle/star children now compact-restore their captured orbit centers without stale constructor-scalar coverage baselines.
+- **S2 breakable-block fragment rewind coverage:** Breakable-block fragments now restore through generic rewind recreate with compact-restored physics and frame state.
 - **S2 Swinging Platform graph rewind coverage:** OOZ/ARZ/MCZ swinging platforms now restore through generic rewind recreate with display-child relinking and compact configuration restore.
 - **S2 Cog graph rewind coverage:** MTZ cog parents now restore through generic rewind recreate with slot-child graph relinking and compact base/rotation restore.
 - **S2 Falling Pillar graph rewind coverage:** ARZ falling pillars now restore through generic rewind recreate with captured lower-section child links and compact child-mode restore.

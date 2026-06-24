@@ -421,13 +421,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       graph-tested generic recreate coverage with display-child relinking.</li>
     *   <li>2026-06-24: raised to 534 after S2 Cogs gained graph-tested generic
     *       recreate coverage with slot-child relinking.</li>
+    *   <li>2026-06-24: raised to 535 after S2 breakable-block fragments gained
+    *       graph-tested generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 534 after S2 Cog graph restore coverage.
-    static final int RATCHET_FLOOR = 534;
+    // 2026-06-24: raised to 535 after S2 breakable-block fragment restore coverage.
+    static final int RATCHET_FLOOR = 535;
 
     @BeforeEach
     void initHeadless() {
