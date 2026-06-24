@@ -21,7 +21,9 @@ import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1RingFlashObjectInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance;
+import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance;
+import com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance;
 import com.openggf.game.sonic1.objects.bosses.FZCylinder;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaBall;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher;
@@ -697,7 +699,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(Sonic1LargeGrassyPlatformObjectInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(Sonic1GrassFireObjectInstance.class.getName(), GameId.S1));
 
-    private static final List<CodecDeletionCandidate> S1_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
+    private static final List<CodecDeletionCandidate> S1_BADNIK_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1CaterkillerBadnikInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1OrbinautBadnikInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(Sonic1BombFuseInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(Sonic1CaterkillerBodyInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(
@@ -5464,19 +5468,19 @@ public class TestScalarOnlyCodecDeletion {
 
     @Test
     void s1BadnikChildGraphClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_BADNIK_CHILD_GRAPH_DELETED_CODECS) {
+        for (CodecDeletionCandidate candidate : S1_BADNIK_GRAPH_DELETED_CODECS) {
             Class<?> cls = loadClass(candidate.fqn());
             assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 badnik child graph batch");
+                    candidate.fqn() + " must implement RewindRecreatable after S1 badnik graph batch");
         }
     }
 
     @Test
     void s1BadnikChildGraphClassesHaveNoRegisteredS1Codec() {
-        for (CodecDeletionCandidate candidate : S1_BADNIK_CHILD_GRAPH_DELETED_CODECS) {
+        for (CodecDeletionCandidate candidate : S1_BADNIK_GRAPH_DELETED_CODECS) {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
-                            + " must restore through S1 badnik child graph generic recreate, not a dynamic codec");
+                            + " must restore through S1 badnik graph generic recreate, not a dynamic codec");
         }
     }
 

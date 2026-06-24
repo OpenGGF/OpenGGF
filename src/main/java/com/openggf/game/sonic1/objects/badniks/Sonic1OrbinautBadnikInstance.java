@@ -29,7 +29,7 @@ import java.util.List;
  * <p>
  * ROM reference: docs/s1disasm/_incObj/60 Orbinaut.asm
  */
-public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
+public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x0B;
 
@@ -74,6 +74,11 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
 
         this.activeSpikes = 0;
         this.initialized = false;
+    }
+
+    @Override
+    public Sonic1OrbinautBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1OrbinautBadnikInstance(ctx.spawn());
     }
 
     @Override

@@ -12,6 +12,8 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -59,7 +61,7 @@ import java.util.List;
  * </ul>
  */
 public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
-        implements CaterkillerParentState {
+        implements CaterkillerParentState, RewindRecreatable {
 
     // From disassembly: obColType = $B (enemy, collision size index $B)
     private static final int COLLISION_SIZE_INDEX = 0x0B;
@@ -179,6 +181,11 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
         this.renderOnScreen = true;
         this.bodyDeletionEarliestFrame = -1;
         this.ringBufferWriteIndex = 0;
+    }
+
+    @Override
+    public Sonic1CaterkillerBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1CaterkillerBadnikInstance(ctx.spawn());
     }
 
     @Override
