@@ -157,7 +157,6 @@ com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild#recre
 com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance#finalScalar#type
 com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild#finalScalar#parentSlotIndex
-com.openggf.game.sonic2.objects.badniks.CrawlBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#objectRef#pendingGrabPlayer
 com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance#recreate

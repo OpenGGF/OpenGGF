@@ -1251,6 +1251,9 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic2.objects.badniks.CrawltonBadnikInstance",
                     GameId.S2),
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.CrawlBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.badniks.FlasherBadnikInstance",
                     GameId.S2),
             new CodecDeletionCandidate(

@@ -10,6 +10,8 @@ import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -72,7 +74,7 @@ import java.util.List;
  *   <li>Frame 3: Impact (player in air)</li>
  * </ul>
  */
-public class CrawlBadnikInstance extends AbstractBadnikInstance implements TouchResponseListener {
+public class CrawlBadnikInstance extends AbstractBadnikInstance implements TouchResponseListener, RewindRecreatable {
 
     // ========================================================================
     // ROM Constants
@@ -163,6 +165,11 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
 
         // Set initial velocity based on facing direction
         xVelocity = facingLeft ? -WALK_VELOCITY : WALK_VELOCITY;
+    }
+
+    @Override
+    public CrawlBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CrawlBadnikInstance(ctx.spawn());
     }
 
     @Override
