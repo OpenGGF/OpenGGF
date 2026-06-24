@@ -93,7 +93,6 @@ com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance#finalScalar#x
 com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance#finalScalar#xFlip
 com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance#finalScalar#y
 com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance#recreate
-com.openggf.game.sonic2.objects.MTZLongPlatformObjectInstance#recreate
 com.openggf.game.sonic2.objects.MTZSpinTubeObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.MonitorContentsObjectInstance#finalScalar#subtype
 com.openggf.game.sonic2.objects.OOZLauncherObjectInstance#finalScalar#isVertical
