@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K HCZ/CGZ fan scalar rewind cleanup:** fan, platform, and bubble constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K gravity debris scalar rewind cleanup:** shared gravity-driven debris now compact-restores its constructor gravity without stale coverage-baseline keys.
 - **S3K CNZ scalar rewind cleanup:** CNZ cutscene buttons, cannon puffs, cylinders, teleporter/capsule helpers, and miniboss debris now compact-restore constructor scalars without stale coverage-baseline keys.
 - **S3K badnik child scalar rewind cleanup:** badnik debris, visual, launcher, arm, and TurboSpiker particle helpers now compact-restore constructor scalars without stale coverage-baseline keys.

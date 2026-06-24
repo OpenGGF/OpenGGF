@@ -114,15 +114,15 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
     private static final int PLAYER_FLIP_SPEED = 8;
 
     // ===== Configuration (from subtype) =====
-    private final int innerRange;      // $36(a0): inner detection range
-    private final int outerRange;      // $38(a0): outer detection range
-    private final boolean isUnderwater; // subtype bit 6
+    private int innerRange;            // $36(a0): inner detection range
+    private int outerRange;            // $38(a0): outer detection range
+    private boolean isUnderwater;      // subtype bit 6
     private int subtype;               // mutable: trigger mode clears bit 5, sets bit 4
 
     // ===== Instance state =====
     private int x;                     // current X position (may be updated by platform)
-    private final int y;               // Y position (fixed)
-    private final int originalX;       // $40(a0): stored for on-screen test
+    private int y;                     // Y position (fixed)
+    private int originalX;             // $40(a0): stored for on-screen test
 
     // Timer-toggle state
     private int timer;                 // $30(a0): countdown timer
@@ -534,10 +534,10 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
         // ROM: cmpi.w #-$30,d0 — above threshold
         private static final int ABOVE_THRESHOLD = -0x30;
         private final HCZCGZFanObjectInstance fanParent;
-        private final int maxSlideDistance;   // $3A(a0): max slide offset
-        private final boolean facingLeft;
-        private final int originalX;         // $40(a0): base X position
-        private final int y;                 // Y position (fixed, platform doesn't move vertically)
+        private int maxSlideDistance;         // $3A(a0): max slide offset
+        private boolean facingLeft;
+        private int originalX;                // $40(a0): base X position
+        private int y;                        // Y position (fixed, platform doesn't move vertically)
 
         private int x;
         private int slideOffset;             // $30(a0): current slide offset
@@ -694,9 +694,9 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
         // enough to reach any water surface in HCZ.
         private static final int MAX_LIFETIME = 120;
 
-        private final int x;
+        private int x;
         private int y;
-        private final int yVelocity;    // y_vel = -$800
+        private int yVelocity;          // y_vel = -$800
         private int lifetime;
 
         FanBubbleChild(ObjectSpawn spawn) {
