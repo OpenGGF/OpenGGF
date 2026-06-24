@@ -19,6 +19,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -34,7 +35,7 @@ import java.util.List;
  * vertical response before its inline {@code SolidObjectTop} call.
  */
 public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final String PLATFORM_ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS_MISC2;
     private static final String SUPPORT_ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;

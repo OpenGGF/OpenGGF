@@ -17,6 +17,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -30,7 +31,8 @@ import java.util.List;
  * The visible/solid pieces are child objects produced by
  * {@code CreateChild8_TreeListRepeated}; the root object only owns the cascade.
  */
-public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
+public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
 
     private static final int OBJECT_ID = 0xB3;
     private static final int NORMAL_SEGMENT_COUNT = 3;

@@ -461,7 +461,6 @@ com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#spa
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#subtype
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#xFlip
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#yFlip
-com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration#recreate
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance#finalScalar#verticalFlip
@@ -509,7 +508,6 @@ com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance#finalScalar
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#segmentCount
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$BreakDebris#finalScalar#gravity
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$BreakDebris#recreate
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#finalScalar#mappingFrame
@@ -540,7 +538,6 @@ com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#x
-com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#finalScalar#x
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#finalScalar#y
@@ -704,7 +701,6 @@ com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance#finalScalar#trigger
 com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance#finalScalar#triggerIndex
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance#finalScalar#mappingFrame
-com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#fragmentFrameIndex
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#pieceIndex
@@ -723,7 +719,6 @@ com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild#finalScalar#cente
 com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild#finalScalar#centerY
 com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance#finalScalar#cameraLockFlag
 com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance#finalScalar#checkpointIndex
-com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild#finalScalar#centerX
 com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild#finalScalar#centerY
 com.openggf.game.sonic3k.objects.Sonic3kTwistedRampObjectInstance#finalScalar#facingLeft
