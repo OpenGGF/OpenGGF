@@ -10,6 +10,8 @@ import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.objects.boss.BossChildComponent;
@@ -33,7 +35,7 @@ import java.util.function.Supplier;
  * - SUB8: Idle after fall (12 frames)
  * - SUBA: Flying off sequence (with tertiary sub-states)
  */
-public class Sonic2EHZBossInstance extends AbstractBossInstance {
+public class Sonic2EHZBossInstance extends AbstractBossInstance implements RewindRecreatable {
 
     // State machine constants
     private static final int SUB0_APPROACH_DIAGONAL = 0x00;
@@ -89,6 +91,11 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance {
 
     public Sonic2EHZBossInstance(ObjectSpawn spawn) {
         super(spawn, "EHZ Boss");
+    }
+
+    @Override
+    public Sonic2EHZBossInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic2EHZBossInstance(ctx.spawn());
     }
 
     @Override

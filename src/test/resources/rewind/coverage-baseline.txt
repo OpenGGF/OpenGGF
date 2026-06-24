@@ -149,7 +149,6 @@ com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#objectRef#pendingG
 com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance#finalScalar#vFlip
 com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild#recreate
@@ -158,8 +157,6 @@ com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ForearmChild#
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$HeadChild#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$JetChild#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$SensorChild#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2MCZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb#finalScalar#orbIndex

@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import org.junit.jupiter.api.AfterEach;
@@ -29,8 +30,10 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS2EhzBossGraphRewind {
 
@@ -83,6 +86,15 @@ class TestS2EhzBossGraphRewind {
         for (int i = 0; i < before.children().size(); i++) {
             assertNotSame(before.children().get(i), restored.children().get(i));
         }
+    }
+
+    @Test
+    void ehzBossParentUsesGenericRecreateWithoutExplicitS2Codec() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic2EHZBossInstance.class),
+                "Sonic2EHZBossInstance must restore through RewindRecreatable graph recreate");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic2EHZBossInstance.class.getName()),
+                "Sonic2EHZBossInstance must not keep an explicit S2 dynamic codec");
     }
 
     private record Harness(ObjectManager objectManager) {

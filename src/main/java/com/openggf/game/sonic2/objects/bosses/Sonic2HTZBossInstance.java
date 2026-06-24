@@ -7,6 +7,8 @@ import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -30,7 +32,7 @@ import java.util.List;
  * - SUB6: Descending and spawning lava balls
  * - SUB8: Defeated (explosion sequence)
  */
-public class Sonic2HTZBossInstance extends AbstractBossInstance {
+public class Sonic2HTZBossInstance extends AbstractBossInstance implements RewindRecreatable {
 
     // State machine constants (ROM: boss_routine values)
     private static final int SUB0_RISING = 0x00;
@@ -115,6 +117,11 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance {
 
     public Sonic2HTZBossInstance(ObjectSpawn spawn) {
         super(spawn, "HTZ Boss");
+    }
+
+    @Override
+    public Sonic2HTZBossInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic2HTZBossInstance(ctx.spawn());
     }
 
     @Override

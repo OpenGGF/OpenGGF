@@ -25,6 +25,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,10 +37,12 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS2CpzBossGraphRewind {
 
@@ -84,6 +87,15 @@ class TestS2CpzBossGraphRewind {
 
         assertAllReferencesPointAtRestoredGraph(restored);
         assertRestoredObjectsAreFresh(before, restored);
+    }
+
+    @Test
+    void cpzBossParentUsesGenericRecreateWithoutExplicitS2Codec() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic2CPZBossInstance.class),
+                "Sonic2CPZBossInstance must restore through RewindRecreatable graph recreate");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic2CPZBossInstance.class.getName()),
+                "Sonic2CPZBossInstance must not keep an explicit S2 dynamic codec");
     }
 
     @Test
