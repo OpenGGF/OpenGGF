@@ -83,6 +83,7 @@ import com.openggf.game.sonic3k.objects.AizEndBossInstance;
 import com.openggf.game.sonic3k.objects.AizEndBossPropellerChild;
 import com.openggf.game.sonic3k.objects.AizEndBossShipChild;
 import com.openggf.game.sonic3k.objects.AizEndBossSmokeChild;
+import com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance;
 import com.openggf.game.sonic3k.objects.AizIntroPlaneChild;
 import com.openggf.game.sonic3k.objects.AizIntroWaveChild;
@@ -657,6 +658,12 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S3K),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_DISAPPEARING_FLOOR_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizDisappearingFloorObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild",
                     GameId.S3K));
 
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
@@ -5277,6 +5284,30 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through AIZ falling-log graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ disappearing-floor graph batch: parent-linked border child
+    // =====================================================================
+
+    @Test
+    void aizDisappearingFloorGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_DISAPPEARING_FLOOR_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after AIZ disappearing-floor graph batch");
+        }
+    }
+
+    @Test
+    void aizDisappearingFloorGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_DISAPPEARING_FLOOR_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ disappearing-floor graph generic recreate, "
+                            + "not a dynamic codec");
         }
     }
 

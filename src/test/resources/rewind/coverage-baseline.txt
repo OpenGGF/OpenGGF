@@ -186,10 +186,8 @@ com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance#finalScalar#
 com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance#finalScalar#phaseOffset
 com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild#finalScalar#x
 com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild#finalScalar#y
-com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild#recreate
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance#finalScalar#cutsceneOverride
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance#finalScalar#pivotX
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance#finalScalar#pivotY

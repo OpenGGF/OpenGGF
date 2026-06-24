@@ -52,6 +52,7 @@ covered|com.openggf.game.sonic3k.objects.AizMinibossBodyChild|TestS3kAizMiniboss
 covered|com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild|TestS3kAizMinibossGraphRewind
 covered|com.openggf.game.sonic3k.objects.AizMinibossFlameChild|TestS3kAizMinibossGraphRewind
 covered|com.openggf.game.sonic3k.objects.AizMinibossNapalmController|TestS3kAizMinibossGraphRewind
+covered|com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild|com.openggf.game.sonic3k.objects.TestAizDisappearingFloorGraphRewind
 covered|com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade|TestS3kHczEndBossGraphRewind
 covered|com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash|TestS3kHczEndBossGraphRewind
 covered|com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute|TestS3kHczEndBossGraphRewind
