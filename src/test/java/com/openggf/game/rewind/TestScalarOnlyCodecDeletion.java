@@ -320,6 +320,11 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> BATCH10_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(ConveyorObjectInstance.class.getName(), GameId.S2));
 
+    private static final List<MutableFieldCoverageCandidate> BATCH10_MUTABLE_FIELDS =
+            List.of(new MutableFieldCoverageCandidate(
+                    ConveyorObjectInstance.class.getName(),
+                    "baseX", "baseY", "xFlip"));
+
     private static final List<CodecDeletionCandidate> BATCH11_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.AizBombExplosionInstance",
@@ -490,6 +495,11 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance",
                     GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH25_MUTABLE_FIELDS =
+            List.of(new MutableFieldCoverageCandidate(
+                    "com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance",
+                    "positionX", "positionY"));
 
     private static final List<CodecDeletionCandidate> BATCH26_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
@@ -2939,6 +2949,23 @@ public class TestScalarOnlyCodecDeletion {
                 "Conveyor generic recreate must preserve captured baseY, not derive it from spawn.y");
     }
 
+    @Test
+    void batch10ConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH10_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
     // =====================================================================
     // Batch 11: AIZ2 self-contained transient children - codecs deleted
     // =====================================================================
@@ -3656,6 +3683,23 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
+        }
+    }
+
+    @Test
+    void batch25ConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH25_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
         }
     }
 

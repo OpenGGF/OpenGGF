@@ -26,11 +26,6 @@ com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButt
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#recreate
 com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$CollapsingPlatformFragmentInstance#finalScalar#priority
 com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$CollapsingPlatformFragmentInstance#finalScalar#x
-com.openggf.game.sonic2.objects.ConveyorObjectInstance#finalScalar#baseX
-com.openggf.game.sonic2.objects.ConveyorObjectInstance#finalScalar#baseY
-com.openggf.game.sonic2.objects.ConveyorObjectInstance#finalScalar#xFlip
-com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance#finalScalar#positionX
-com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance#finalScalar#positionY
 com.openggf.game.sonic2.objects.FlipperObjectInstance#finalScalar#idleAnimId
 com.openggf.game.sonic2.objects.FlipperObjectInstance#recreate
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#finalScalar#renderXFlip
