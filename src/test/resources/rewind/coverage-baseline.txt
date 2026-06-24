@@ -312,11 +312,6 @@ com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorSub
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorX
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorY
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#finalScalar#halfWidth
-com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance#finalScalar#adjustedY
-com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance#finalScalar#toggleMode
-com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance#finalScalar#topSolid
-com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance#finalScalar#triggerBit
-com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance#finalScalar#triggerIndex
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#fragmentFrameIndex
