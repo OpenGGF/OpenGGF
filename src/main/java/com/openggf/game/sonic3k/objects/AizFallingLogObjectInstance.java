@@ -38,7 +38,7 @@ import java.util.logging.Logger;
  * loc_2B5D4 (spawner loop), loc_2B6A0 (log falling), loc_2B6BC (log at water),
  * loc_2B6D8 (solid + draw), loc_2B72C (splash animation).
  */
-public class AizFallingLogObjectInstance extends AbstractObjectInstance {
+public class AizFallingLogObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(AizFallingLogObjectInstance.class.getName());
 
@@ -84,6 +84,11 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
         // Phase offset: high nibble shifted left by max(periodIndex - 3, 0)
         int shift = Math.max(periodIndex - 3, 0);
         this.phaseOffset = ((subtype >> 4) & 0x0F) << shift;
+    }
+
+    @Override
+    public AizFallingLogObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizFallingLogObjectInstance(ctx.spawn());
     }
 
     /**

@@ -269,13 +269,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       to generic recreate and joined the standalone pass set.</li>
  *   <li>2026-06-24: raised to 337 after AIZ spiked-log parent graph restore moved
  *       to generic recreate and joined the standalone pass set.</li>
+ *   <li>2026-06-24: raised to 338 after AIZ falling-log parent restore moved
+ *       to generic recreate and joined the standalone pass set.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 337 after AIZ spiked-log parent restore moved to generic recreate.
-    static final int RATCHET_FLOOR = 337;
+    // 2026-06-24: raised to 338 after AIZ falling-log parent restore moved to generic recreate.
+    static final int RATCHET_FLOOR = 338;
 
     @BeforeEach
     void initHeadless() {

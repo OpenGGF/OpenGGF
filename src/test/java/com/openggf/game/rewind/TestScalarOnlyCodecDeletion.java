@@ -83,6 +83,7 @@ import com.openggf.game.sonic3k.objects.AizEndBossInstance;
 import com.openggf.game.sonic3k.objects.AizEndBossPropellerChild;
 import com.openggf.game.sonic3k.objects.AizEndBossShipChild;
 import com.openggf.game.sonic3k.objects.AizEndBossSmokeChild;
+import com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance;
 import com.openggf.game.sonic3k.objects.AizIntroPlaneChild;
 import com.openggf.game.sonic3k.objects.AizIntroWaveChild;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -650,6 +651,7 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S3K));
 
     private static final List<CodecDeletionCandidate> AIZ_FALLING_LOG_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizFallingLogObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild",
                     GameId.S3K),
