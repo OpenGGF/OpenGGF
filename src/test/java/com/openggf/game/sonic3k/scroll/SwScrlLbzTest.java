@@ -178,6 +178,30 @@ class SwScrlLbzTest {
     }
 
     @Test
+    void act2DeathEggForegroundVscrollFollowsLaunchCameraBeforeDetach() {
+        TestEnvironment.activeGameplayMode();
+        LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE);
+        state.setLaunchActive(true);
+        state.setFgAccum(0x0010_0000);
+        state.setBgAccum(0x0004_0000);
+        GameServices.zoneRuntimeRegistry().install(state);
+
+        SwScrlLbz handler = new SwScrlLbz();
+        int[] buffer = new int[VISIBLE_LINES];
+        handler.update(buffer, 0x4380, 0x0668, 8, 1);
+
+        assertEquals((short) 0x0668, handler.getVscrollFactorFG(),
+                "ROM LBZ2BGE_PlatformDetach seeds V_scroll_value from Camera_Y_pos_copy before "
+                        + "Events_bg+$16 detach scrolling begins");
+
+        state.setDetachScroll(5);
+        handler.update(buffer, 0x4380, 0x0668, 9, 1);
+
+        assertEquals((short) 0x066D, handler.getVscrollFactorFG(),
+                "Events_bg+$16 must layer on top of the camera-driven foreground scroll, not replace it");
+    }
+
+    @Test
     void act2DeathEggDeformUsesPersistentWrapLatchAndDeathEggRowCopy() {
         TestEnvironment.activeGameplayMode();
         LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE);

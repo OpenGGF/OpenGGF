@@ -143,6 +143,27 @@ class TestS3kResultsScreenObjectInstance {
         assertEquals(0x0800, services.camera.getMaxY() & 0xFFFF);
     }
 
+    @Test
+    void lbzActTwoExitHandsOffToDeathEggFallWithoutRestoringCameraBounds() throws Exception {
+        LbzExitRecordingServices services = new LbzExitRecordingServices();
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                services,
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 1));
+        results.setServices(services);
+
+        Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
+        onExitReady.setAccessible(true);
+        onExitReady.invoke(results);
+
+        verify(services.gameState).setEndOfLevelFlag(true);
+        assertEquals(0x4390, services.camera.getMinX() & 0xFFFF,
+                "LBZ2 final boss results must leave the boss camera lock for Obj_LBZFinalBoss1/Death Egg handoff");
+        assertEquals(0x4390, services.camera.getMaxX() & 0xFFFF,
+                "Restoring full level bounds here lets the generic camera path swallow the post-results fall sequence");
+        assertEquals(0x0668, services.camera.getMinY() & 0xFFFF);
+        assertEquals(0x0668, services.camera.getMaxY() & 0xFFFF);
+    }
+
     private static final class TransitionRecordingServices extends TestObjectServices {
         private final int zone;
         private final RecordingBridge bridge = new RecordingBridge();
@@ -269,6 +290,43 @@ class TestS3kResultsScreenObjectInstance {
         @Override
         public int romZoneId() {
             return 0x05;
+        }
+
+        @Override
+        public Camera camera() {
+            return camera;
+        }
+
+        @Override
+        public GameStateManager gameState() {
+            return gameState;
+        }
+
+        @Override
+        public Level currentLevel() {
+            return level;
+        }
+    }
+
+    private static final class LbzExitRecordingServices extends TestObjectServices {
+        private final Camera camera = new Camera();
+        private final GameStateManager gameState = mock(GameStateManager.class);
+        private final Level level = mock(Level.class);
+
+        private LbzExitRecordingServices() {
+            camera.setMinX((short) 0x4390);
+            camera.setMaxX((short) 0x4390);
+            camera.setMinY((short) 0x0668);
+            camera.setMaxY((short) 0x0668);
+            when(level.getMinX()).thenReturn(0);
+            when(level.getMaxX()).thenReturn(0x7000);
+            when(level.getMinY()).thenReturn(0);
+            when(level.getMaxY()).thenReturn(0x0800);
+        }
+
+        @Override
+        public int romZoneId() {
+            return 0x06;
         }
 
         @Override

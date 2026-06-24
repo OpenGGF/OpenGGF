@@ -546,7 +546,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // must remain in the victory pose (objectControlled) while the terrain
         // changes underneath. The seamless transition handler in executeActTransition
         // resets the player state after the layout reload, so they fall naturally.
-        if (!hasSeamlessTransition && shouldRestorePlayerControlsOnExit()) {
+        boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
+        if (!hasSeamlessTransition && !lbzAct2PostBossHandoff && shouldRestorePlayerControlsOnExit()) {
             for (PlayableEntity candidate : playerQuery()
                     .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
                 if (candidate instanceof AbstractPlayableSprite sprite) {
@@ -568,10 +569,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // Aiz2BossEndSequenceController manages camera bounds for the walk-right
         // sequence. Restoring full level bounds here would snap the camera back
         // to the pre-boss area (ROM: loc_694D4 uses Obj_IncLevEndXGradual).
-        var cam = services().camera();
-        cam.setFrozen(false);
         boolean iczAct2EndBossHandoff = zone == 0x05 && act == 1;
-        if (!aizAct1MinibossTitleHandoff && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
+        var cam = services().camera();
+        if (!lbzAct2PostBossHandoff) {
+            cam.setFrozen(false);
+        }
+        if (!aizAct1MinibossTitleHandoff
+                && !lbzAct2PostBossHandoff
+                && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
             if (level != null) {
                 if (!iczAct2EndBossHandoff) {

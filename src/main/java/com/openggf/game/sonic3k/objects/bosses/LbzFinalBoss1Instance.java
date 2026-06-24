@@ -36,6 +36,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.resources.CompressionType;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
+import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -92,6 +93,18 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private static final int[] FLASH_COLOR_INDICES = {4, 14};
     private static final int[] FLASH_NORMAL_WORDS = {0x0026, 0x0020};
     private static final int[] FLASH_WHITE_WORDS = {0x0EEE, 0x0EEE};
+    private static final ExternalPlayerFrame[] SONIC_LAUNCH_LOOK_FRAMES = {
+            new ExternalPlayerFrame(5, 0x55, Direction.RIGHT),
+            new ExternalPlayerFrame(0, 0x59, Direction.RIGHT),
+            new ExternalPlayerFrame(0, 0x5A, Direction.LEFT),
+            new ExternalPlayerFrame(1, 0x5A, Direction.LEFT)
+    };
+    private static final ExternalPlayerFrame[] SIDEKICK_LAUNCH_LOOK_FRAMES = {
+            new ExternalPlayerFrame(5, 0xC4, Direction.RIGHT),
+            new ExternalPlayerFrame(0, 0xBE, Direction.RIGHT),
+            new ExternalPlayerFrame(0, 0xBF, Direction.LEFT),
+            new ExternalPlayerFrame(1, 0xBF, Direction.LEFT)
+    };
 
     private int x;
     private int y;
@@ -126,6 +139,10 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private boolean bossExplosionPlcQueued;
     private boolean deathEggSmallArtQueued;
     private boolean cutsceneAnchorRegistered;
+    private int mainExternalFrameTimer = -1;
+    private int mainExternalFrameIndex;
+    private int sidekickExternalFrameTimer = -1;
+    private int sidekickExternalFrameIndex;
     private FinalePhase finalePhase = FinalePhase.NONE;
     private int finaleTimer = -1;
     private final List<SpawnRecord> spawned = new ArrayList<>();
@@ -465,9 +482,15 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             case POST_RESULTS_DELAY -> updatePostResultsDelay(player);
             case AUTOWALK -> updateAutoWalk(player);
             case WAIT_LAUNCH_MILESTONE_A -> updateWaitLaunchMilestoneA(player);
-            case LOOK_UP -> finalePhase = FinalePhase.WAIT_LAUNCH_MILESTONE_B;
-            case WAIT_LAUNCH_MILESTONE_B -> updateWaitLaunchMilestoneB();
-            case FINAL_FALL -> updateFinalFall(player);
+            case LOOK_UP -> {
+                updateExternalPlayerSprites(player);
+                finalePhase = FinalePhase.WAIT_LAUNCH_MILESTONE_B;
+            }
+            case WAIT_LAUNCH_MILESTONE_B -> updateWaitLaunchMilestoneB(player);
+            case FINAL_FALL -> {
+                updateExternalPlayerSprites(player);
+                updateFinalFall(player);
+            }
             case KNUCKLES_STUB, NONE -> {
                 // Stubbed/idle.
             }
@@ -589,7 +612,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         if (sprite.getAir()) {
             return;
         }
-        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+        ObjectControlState.none().applyTo(sprite);
         sprite.setControlLocked(true);
         int targetX = cameraX() + 0xA0;
         int dx = targetX - (sprite.getCentreX() & 0xFFFF);
@@ -604,9 +627,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         // ROM loc_72C3C: Stop_Object, face right, hold Up, spawn engine flames.
         sprite.setXSpeed((short) 0);
         sprite.setGSpeed((short) 0);
+        sprite.setDirection(Direction.RIGHT);
         sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
-        sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
-        sprite.setForcedAnimationId(Sonic3kAnimationIds.WAIT);
         spawnEngineFlamesOnce();
         finalePhase = FinalePhase.WAIT_LAUNCH_MILESTONE_A;
     }
@@ -622,13 +644,15 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
     }
 
-    private void updateWaitLaunchMilestoneB() {
+    private void updateWaitLaunchMilestoneB(PlayableEntity player) {
         if (!launchMilestoneB) {
+            updateExternalPlayerSprites(player);
             return;
         }
         if (services().zoneRuntimeState() instanceof LbzZoneRuntimeState lbz) {
             lbz.requestFinalFall();
         }
+        updateExternalPlayerSprites(player);
         finalePhase = FinalePhase.FINAL_FALL;
     }
 
@@ -643,10 +667,11 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     private void restorePlayerForLaunch(PlayableEntity player) {
         if (player instanceof AbstractPlayableSprite sprite) {
-            ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+            ObjectControlState.none().applyTo(sprite);
             sprite.setControlLocked(true);
             sprite.setForcedAnimationId(-1);
             sprite.setForcedInputMask(0);
+            sprite.setObjectMappingFrameControl(false);
         }
     }
 
@@ -699,15 +724,16 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         if (sprite == null) {
             return;
         }
-        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
         sprite.setControlLocked(true);
         sprite.setXSpeed((short) 0);
         sprite.setYSpeed((short) 0);
         sprite.setGSpeed((short) 0);
         sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
-        sprite.setAnimationId(Sonic3kAnimationIds.LOOK_UP);
-        sprite.setForcedAnimationId(Sonic3kAnimationIds.LOOK_UP);
-        sprite.forceAnimationRestart();
+        sprite.setForcedAnimationId(-1);
+        sprite.setAnimationFrameIndex(0);
+        sprite.setAnimationTick(0);
+        startExternalPlayerAnimation(sprite == mainPlayer());
     }
 
     /** ROM loc_72C68: P2 also freezes ($83) and plays the longer look-up script. */
@@ -721,6 +747,62 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 applyLookUpPose(sidekick);
             }
         }
+    }
+
+    private void startExternalPlayerAnimation(boolean main) {
+        if (main) {
+            mainExternalFrameTimer = -1;
+            mainExternalFrameIndex = 0;
+        } else {
+            sidekickExternalFrameTimer = -1;
+            sidekickExternalFrameIndex = 0;
+        }
+    }
+
+    private void updateExternalPlayerSprites(PlayableEntity player) {
+        if (player instanceof AbstractPlayableSprite sprite) {
+            ExternalAnimationState next = animateExternalPlayerSprite(
+                    sprite,
+                    SONIC_LAUNCH_LOOK_FRAMES,
+                    mainExternalFrameTimer,
+                    mainExternalFrameIndex);
+            mainExternalFrameTimer = next.timer();
+            mainExternalFrameIndex = next.index();
+        }
+        for (PlayableEntity candidate : services().playerQuery()
+                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (candidate == player) {
+                continue;
+            }
+            if (candidate instanceof AbstractPlayableSprite sidekick) {
+                ExternalAnimationState next = animateExternalPlayerSprite(
+                        sidekick,
+                        SIDEKICK_LAUNCH_LOOK_FRAMES,
+                        sidekickExternalFrameTimer,
+                        sidekickExternalFrameIndex);
+                sidekickExternalFrameTimer = next.timer();
+                sidekickExternalFrameIndex = next.index();
+            }
+        }
+    }
+
+    private static ExternalAnimationState animateExternalPlayerSprite(
+            AbstractPlayableSprite sprite,
+            ExternalPlayerFrame[] script,
+            int timer,
+            int index) {
+        sprite.setObjectMappingFrameControl(true);
+        if (timer > 0) {
+            return new ExternalAnimationState(timer - 1, index);
+        }
+        int scriptIndex = Math.min(index, script.length - 1);
+        ExternalPlayerFrame frame = script[scriptIndex];
+        sprite.setMappingFrame(frame.mappingFrame());
+        sprite.setDirection(frame.direction());
+        if (scriptIndex < script.length - 1) {
+            scriptIndex++;
+        }
+        return new ExternalAnimationState(frame.delay(), scriptIndex);
     }
 
     private void spawnEngineFlamesOnce() {
@@ -994,6 +1076,12 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     }
 
     private record SpawnRecord(ChildKind kind, Object child) {
+    }
+
+    private record ExternalPlayerFrame(int delay, int mappingFrame, Direction direction) {
+    }
+
+    private record ExternalAnimationState(int timer, int index) {
     }
 
     /**
@@ -1783,6 +1871,17 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             updateDynamicSpawn(getX(), getY());
         }
 
+        protected boolean spriteCheckDeleteXYKeepsAlive() {
+            int xAligned = getX() & 0xFF80;
+            int coarseBack = (boss.cameraX() - 0x80) & 0xFF80;
+            int xDistance = (xAligned - coarseBack) & 0xFFFF;
+            if (xDistance > 0x280) {
+                return false;
+            }
+            int yDistance = (getY() - boss.cameraY() + 0x80) & 0xFFFF;
+            return yDistance < 0x200;
+        }
+
         protected String renderArtKey() {
             return Sonic3kObjectArtKeys.LBZ2_DEATH_EGG_SMALL;
         }
@@ -1841,6 +1940,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 int oy = ((random >> 8) & 0x1F) - 0x10;
                 int explosionX = (x + ox) & 0xFFFF;
                 int explosionY = (y + oy) & 0xFFFF;
+                boss.services().playSfx(Sonic3kSfx.EXPLODE.id);
                 boss.recordChild(ChildKind.BOSS_EXPLOSION,
                         boss.spawnFreeChild(() -> new S3kBossExplosionChild(explosionX, explosionY)));
             }
@@ -1927,8 +2027,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             // MoveChkDel = MoveSprite (gravity $38) + delete out of range.
             moveSprite2();
             yVel += 0x38;
-            if (!isInRangeAt(x)) {
-                setDestroyedByOffscreen();
+            if (!spriteCheckDeleteXYKeepsAlive()) {
+                ObjectLifetimeOps.expireDynamic(this);
             }
         }
     }

@@ -5,6 +5,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance;
@@ -13,11 +14,13 @@ import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -340,6 +343,9 @@ class TestLbzFinalBoss1Instance {
 
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, player.getForcedInputMask(),
                 "autowalk should drive P1 toward camera.x+$A0 before flames spawn");
+        assertFalse(player.isObjectControlSuppressesMovement(),
+                "loc_72BBC restores player movement before Ctrl_1_locked forced autowalk; "
+                        + "movement suppression leaves Sonic running in place forever");
         assertEquals(LbzFinalBoss1Instance.FinalePhase.AUTOWALK, boss.getFinalePhase());
 
         player.setCentreX((short) 0x44A0);
@@ -347,6 +353,11 @@ class TestLbzFinalBoss1Instance {
 
         assertEquals(AbstractPlayableSprite.INPUT_UP, player.getForcedInputMask(),
                 "when P1 reaches the launch mark the cutscene stops and holds Up for look-up setup");
+        assertEquals(Direction.RIGHT, player.getDirection(),
+                "loc_72C3C clears Status_Facing so Sonic faces right/away before looking up");
+        assertFalse(player.getForcedAnimationId() == Sonic3kAnimationIds.LOOK_UP.id(),
+                "loc_72C3C only holds Up and clears facing; the visible turn-away pose comes from "
+                        + "Animate_ExternalPlayerSprite after milestone A");
         assertEquals(2, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ENGINE_FLAME).size(),
                 "FinalBoss1 finale step 5 spawns the two Death Egg engine flames");
         assertEquals(LbzFinalBoss1Instance.FinalePhase.WAIT_LAUNCH_MILESTONE_A, boss.getFinalePhase());
@@ -364,19 +375,46 @@ class TestLbzFinalBoss1Instance {
         boss.update(40, player);
 
         assertTrue(player.isObjectControlled(), "milestone A freezes P1 under object control for the look-up script");
-        assertEquals(Sonic3kAnimationIds.LOOK_UP.id(), player.getForcedAnimationId(),
-                "milestone A should switch P1 to the look-up cutscene animation");
+        assertEquals(-1, player.getForcedAnimationId(),
+                "loc_72C68 switches to external player sprite animation, not the regular LOOK_UP anim");
         assertEquals(LbzFinalBoss1Instance.FinalePhase.LOOK_UP, boss.getFinalePhase());
 
         boss.update(41, player);
 
+        assertTrue(player.isObjectMappingFrameControl(),
+                "Animate_ExternalPlayerSprite writes mapping_frame directly under object control");
+        assertEquals(0x55, player.getMappingFrame(),
+                "byte_7386A first Sonic frame is the turn-away/Death Egg look frame $55");
+        assertEquals(Direction.RIGHT, player.getDirection(),
+                "byte_7386A frame $55 leaves render_flags bit0 clear, so Sonic faces away/right first");
         assertEquals(LbzFinalBoss1Instance.FinalePhase.WAIT_LAUNCH_MILESTONE_B, boss.getFinalePhase());
 
         boss.signalLaunchMilestoneBForTest();
         boss.update(42, player);
 
         assertTrue(services.lbzState.consumeFinalFallRequested());
+        assertFalse(player.getAir(),
+                "loc_72CC6 only sets Events_fg_5; P1 stays in the external cutscene pose while the screen falls");
+        assertTrue(player.isObjectMappingFrameControl(),
+                "final fall must not release manual mapping control back to the regular player animation");
         assertEquals(LbzFinalBoss1Instance.FinalePhase.FINAL_FALL, boss.getFinalePhase());
+    }
+
+    @Test
+    void launchPadEngineFlamesPlayBossExplosionSfx() {
+        HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
+        LbzFinalBoss1Instance boss = newBoss(services);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x44A0, (short) 0x0740);
+        boss.update(0, null);
+        boss.forceSonicFinalePhaseForTest(LbzFinalBoss1Instance.FinalePhase.AUTOWALK);
+
+        boss.update(30, player);
+        AbstractObjectInstance flame = (AbstractObjectInstance) boss.childrenOfKindForTest(
+                LbzFinalBoss1Instance.ChildKind.ENGINE_FLAME).get(0);
+        flame.update(31, player);
+
+        assertTrue(services.sfxIds.contains(Sonic3kSfx.EXPLODE.id),
+                "sub_83E84 creates Obj_BossExplosion1, whose init routine plays sfx_Explode");
     }
 
     @Test
@@ -393,11 +431,42 @@ class TestLbzFinalBoss1Instance {
         assertTrue(boss.isDestroyed());
     }
 
+    @Test
+    void deathEggExplosionDebrisUsesSpriteCheckDeleteXYNotXOnlyRange() throws Exception {
+        HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
+        LbzFinalBoss1Instance boss = newBoss(services);
+        boss.update(0, null);
+        AbstractObjectInstance debris = newDeathEggExplosionDebrisForTest(
+                boss,
+                services.camera.getX() + 0x20,
+                services.camera.getY() + 0x180,
+                7);
+
+        debris.update(0, null);
+
+        assertTrue(debris.isDestroyed(),
+                "loc_72E54 switches to MoveChkDel, which calls Sprite_CheckDeleteXY; "
+                        + "Y-offscreen debris must delete instead of wrapping forever while X remains in range");
+    }
+
     private static LbzFinalBoss1Instance newBoss(HarnessServices services) {
         LbzFinalBoss1Instance boss = new LbzFinalBoss1Instance(new ObjectSpawn(
                 0x44A0, 0x0780, OBJ_LBZ_FINAL_BOSS_1, 0, 0, false, 0));
         boss.setServices(services);
         return boss;
+    }
+
+    private static AbstractObjectInstance newDeathEggExplosionDebrisForTest(
+            LbzFinalBoss1Instance boss,
+            int x,
+            int y,
+            int frame)
+            throws Exception {
+        Class<?> cls = Class.forName(
+                "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$DeathEggExplosionDebrisChild");
+        Constructor<?> ctor = cls.getDeclaredConstructor(LbzFinalBoss1Instance.class, int.class, int.class, int.class);
+        ctor.setAccessible(true);
+        return (AbstractObjectInstance) ctor.newInstance(boss, x, y, frame);
     }
 
     private static LbzFinalBoss1Instance.BossChild firstBossChild(
@@ -412,6 +481,7 @@ class TestLbzFinalBoss1Instance {
         private final LbzZoneRuntimeState lbzState;
         private final GameStateManager gameState = new GameStateManager();
         private final List<Integer> musicIds = new ArrayList<>();
+        private final List<Integer> sfxIds = new ArrayList<>();
         private final int levelMusicId = 0x17;
         private boolean transitionRequested;
 
@@ -448,6 +518,11 @@ class TestLbzFinalBoss1Instance {
         @Override
         public void playMusic(int musicId) {
             musicIds.add(musicId);
+        }
+
+        @Override
+        public void playSfx(int soundId) {
+            sfxIds.add(soundId);
         }
 
         @Override

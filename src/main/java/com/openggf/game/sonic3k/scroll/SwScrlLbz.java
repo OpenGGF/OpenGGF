@@ -266,6 +266,11 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             }
         }
         composer.setVscrollFactorBG((short) bgY);
+        // ROM LBZ2BGE_PlatformDetach writes Camera_Y_pos_copy into
+        // V_scroll_value before layering Events_bg+$16 on top. The launch
+        // camera starts moving before the detach counter begins, so the
+        // foreground pad must follow Camera_Y_pos immediately.
+        composer.setVscrollFactorFG((short) cameraY);
 
         int cameraXFixed = fixedFromWord(cameraX);
         buildDeathEggUpperGradient(cameraXFixed);
