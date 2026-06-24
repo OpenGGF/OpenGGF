@@ -191,6 +191,15 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 - After: LZ3 f7952 -> f8499 (1778 -> 1525). New f8499 root is `g_speed` exp=0 act=-0x12 on an airborne bounce (stand=0x2A, x frozen 0x0C60) ~250px below any conveyor — unrelated.
 - SBZ1 f3971 is NOT a conveyor root: the spin conveyors are ~250px above Sonic and there are ZERO objects within 56px of him at the divergence; ROM stops his airborne x_speed (0x0165->0) via a TERRAIN wall the engine misses. Out of scope for this task.
 - Regression sweep (per-class surefire .txt, full S1): only LZ3 changed. GHZ1/GHZ2/SYZ2/SBZ3 GREEN; LZ1 f5745/662, LZ2 f1068/1616, SBZ1 f3971/560, SBZ2 f1395/1000, MZ1 f2089/205, MZ2 f2819/1116, MZ3 f2079/1123, SLZ1 f2872/164, SLZ2 f2552/137, SLZ3 f814/1024, SYZ1 f816/360, SYZ3 f6065/483, GHZ3 f6464/271 all byte-identical. Units + S3K keep-green 112/0.
+## 2026-06-24 - S1 SBZ Saw unloads off-screen (saw_origX anchor) instead of staying persistent; SBZ2 f1395 -> f1447 (1000 -> 977)
+
+- Branch/worktree: `bugfix/ai-s1-jaws-unload-phase` off `origin/develop` 778efd727 (worktree `.worktrees/rng`).
+- Command: `mvn test "-Dtest=com.openggf.tests.trace.s1.TestS1Sbz2CompleteRunTraceReplay" -DfailIfNoTests=false "-Ds1.rom.path=s1.gen" "-Dsurefire.argLine=-Xmx6g -Xshare:off"` (+ DebugS1Lz2BubblesOccupancyProbe trace.zone=5 trace.act=1).
+- Board-root correction: the prior "SBZ2 = frame-0 boss-arena placement (slot32 0x6E vs 0x26)" was a wrong-indices artifact (probe run with the wrong zone/act). With SBZ2 = engine zone=5 act=1 the frame-0 slot table matches ROM exactly.
+- Root (occupancy oracle): first object-table divergence f239 slot 0x61 — ROM Ring (0x25), engine SBZ Saw (0x6A). The engine RETAINED two off-screen Saws (`@0298,038B`/`@02A0,018B`, ~239px left of camera 0x387) that ROM unloaded, pushing the rings ROM placed in 0x61/0x62 down to 0x63/0x64. `Sonic1SawObjectInstance.isPersistent()` returned `!isDestroyed()` so the saw never unloaded; ROM `Saw_Action` ends with `out_of_range.s .delete, saw_origX(a0)` (`6A SBZ Saws and Pizza Cutters.asm:39`).
+- Fix: `isPersistent()`->false, `getOutOfRangeReferenceX()`->origX (saw_origX; ground saws update it to the moved obX at lines 338/400, pizza cutters keep the origin), `checksOutOfRangeAfterRoutine()`->true (ROM checks post-move). Object-local to Obj 0x6A.
+- After: SBZ2 f1395 -> f1447 (1000 -> 977); first object-table divergence f239 -> f350 (new root: ROM has Obj 0x78 animal/explosion in slot 0x63 the engine lacks). Regression sweep: SBZ1 f3971/560 byte-identical, GHZ1/GHZ2/SYZ2 GREEN, LZ2 f1068/1616, MZ2 f2819/1116, SLZ1 f2872/164 unchanged; CollisionSystemTest 54/0, TestSolidRoutineProfiles 13/0, TestRewindCoverageGuard 1/0, TestSonic1PlatformObjectInstanceRespawn 1/0.
+
 ## 2026-06-24 - S1 badnik out_of_range unload runs post-move (checksOutOfRangeAfterRoutine); LZ2 Jaws f196 unload fixed (object-table f196 -> f217; committed metric flat 1616/f1068)
 
 - Branch/worktree: `bugfix/ai-s1-jaws-unload-phase` off `origin/develop` 778efd727 (worktree `.worktrees/rng`).
