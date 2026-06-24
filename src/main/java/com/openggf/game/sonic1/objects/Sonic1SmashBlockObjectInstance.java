@@ -15,6 +15,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -282,8 +284,9 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
             final int velX = FRAGMENT_SPEEDS[i][0];
             final int velY = FRAGMENT_SPEEDS[i][1];
 
+            final int fragmentIndex = i;
             spawnFreeChild(() -> new SmashBlockFragmentInstance(
-                    blockX, blockY, velX, velY, piece, fRenderer));
+                    blockX, blockY, velX, velY, fragmentIndex, piece, fRenderer));
         }
 
         // From disassembly SmashObject .playsnd:
@@ -411,7 +414,7 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
      *     bpl.w   DeleteObject
      * </pre>
      */
-    static class SmashBlockFragmentInstance extends AbstractObjectInstance {
+    static class SmashBlockFragmentInstance extends AbstractObjectInstance implements RewindRecreatable {
 
         private int posX, posY;
         private int subX, subY;  // 8.8 fixed-point sub-pixel
@@ -419,9 +422,19 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
         private final SpriteMappingPiece piece;
         private final PatternSpriteRenderer renderer;
 
+        SmashBlockFragmentInstance(int x, int y, int velX, int velY) {
+            this(x, y, velX, velY, 0, null, null);
+        }
+
         SmashBlockFragmentInstance(int x, int y, int velX, int velY,
                                    SpriteMappingPiece piece, PatternSpriteRenderer renderer) {
-            super(new ObjectSpawn(x, y, 0x51, 0, 0, false, 0), "SmashBlockFragment");
+            this(x, y, velX, velY, 0, piece, renderer);
+        }
+
+        SmashBlockFragmentInstance(int x, int y, int velX, int velY,
+                                   int fragmentIndex,
+                                   SpriteMappingPiece piece, PatternSpriteRenderer renderer) {
+            super(new ObjectSpawn(x, y, 0x51, fragmentIndex & 0xFF, 0, false, 0), "SmashBlockFragment");
             this.posX = x;
             this.posY = y;
             this.subX = x << 8;
@@ -430,6 +443,20 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
             this.velY = velY;
             this.piece = piece;
             this.renderer = renderer;
+        }
+
+        @Override
+        public SmashBlockFragmentInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            int fragmentIndex = spawn.subtype() & 0xFF;
+            ObjectRenderManager renderManager = ctx.objectServices() == null ? null : ctx.objectServices().renderManager();
+            PatternSpriteRenderer restoredRenderer = renderManager == null
+                    ? null
+                    : renderManager.getRenderer(ObjectArtKeys.MZ_SMASH_BLOCK);
+            SpriteMappingPiece restoredPiece = fragmentPiece(
+                    renderManager, ObjectArtKeys.MZ_SMASH_BLOCK, fragmentIndex);
+            return new SmashBlockFragmentInstance(
+                    spawn.x(), spawn.y(), 0, 0, fragmentIndex, restoredPiece, restoredRenderer);
         }
 
         @Override
@@ -470,6 +497,25 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
         @Override
         public int getPriorityBucket() {
             return RenderPriority.clamp(PRIORITY);
+        }
+
+        private static SpriteMappingPiece fragmentPiece(
+                ObjectRenderManager renderManager,
+                String artKey,
+                int fragmentIndex) {
+            if (renderManager == null) {
+                return null;
+            }
+            ObjectSpriteSheet sheet = renderManager.getSheet(artKey);
+            if (sheet == null || FRAME_FRAGMENTS >= sheet.getFrameCount()) {
+                return null;
+            }
+            SpriteMappingFrame frame = sheet.getFrame(FRAME_FRAGMENTS);
+            if (frame == null || frame.pieces() == null
+                    || fragmentIndex < 0 || fragmentIndex >= frame.pieces().size()) {
+                return null;
+            }
+            return frame.pieces().get(fragmentIndex);
         }
     }
 }

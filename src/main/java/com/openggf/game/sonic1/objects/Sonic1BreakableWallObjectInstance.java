@@ -16,6 +16,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -283,8 +285,10 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
             final int velX = fragSpeeds[i][0];
             final int velY = fragSpeeds[i][1];
 
+            final int wallFrameIndex = frameIndex;
+            final int fragmentIndex = i;
             spawnFreeChild(() -> new WallFragmentInstance(
-                    wallX, wallY, velX, velY, piece, renderer));
+                    wallX, wallY, velX, velY, wallFrameIndex, fragmentIndex, piece, renderer));
         }
 
         // From disassembly: move.w #sfx_WallSmash,d0 / jmp (QueueSound2).l
@@ -338,7 +342,7 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
      *     bpl.w   DeleteObject
      * </pre>
      */
-    static class WallFragmentInstance extends AbstractObjectInstance {
+    static class WallFragmentInstance extends AbstractObjectInstance implements RewindRecreatable {
 
         private int posX, posY;
         private int subX, subY; // 8.8 fixed point sub-pixel
@@ -346,9 +350,20 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
         private final SpriteMappingPiece piece;
         private final PatternSpriteRenderer renderer;
 
+        WallFragmentInstance(int x, int y, int velX, int velY) {
+            this(x, y, velX, velY, 0, 0, null, null);
+        }
+
         WallFragmentInstance(int x, int y, int velX, int velY,
                              SpriteMappingPiece piece, PatternSpriteRenderer renderer) {
-            super(new ObjectSpawn(x, y, 0x3C, 0, 0, false, 0), "WallFragment");
+            this(x, y, velX, velY, 0, 0, piece, renderer);
+        }
+
+        WallFragmentInstance(int x, int y, int velX, int velY,
+                             int wallFrameIndex, int fragmentIndex,
+                             SpriteMappingPiece piece, PatternSpriteRenderer renderer) {
+            super(new ObjectSpawn(x, y, 0x3C, fragmentSubtype(wallFrameIndex, fragmentIndex),
+                    0, false, 0), "WallFragment");
             this.posX = x;
             this.posY = y;
             this.subX = x << 8;
@@ -357,6 +372,21 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
             this.velY = velY;
             this.piece = piece;
             this.renderer = renderer;
+        }
+
+        @Override
+        public WallFragmentInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            int wallFrameIndex = wallFrameIndex(spawn.subtype());
+            int fragmentIndex = fragmentIndex(spawn.subtype());
+            ObjectRenderManager renderManager = ctx.objectServices() == null ? null : ctx.objectServices().renderManager();
+            PatternSpriteRenderer restoredRenderer = renderManager == null
+                    ? null
+                    : renderManager.getRenderer(ObjectArtKeys.BREAKABLE_WALL);
+            SpriteMappingPiece restoredPiece = fragmentPiece(
+                    renderManager, ObjectArtKeys.BREAKABLE_WALL, wallFrameIndex, fragmentIndex);
+            return new WallFragmentInstance(
+                    spawn.x(), spawn.y(), 0, 0, wallFrameIndex, fragmentIndex, restoredPiece, restoredRenderer);
         }
 
         @Override
@@ -397,6 +427,38 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
         @Override
         public int getPriorityBucket() {
             return RenderPriority.clamp(PRIORITY);
+        }
+
+        private static int fragmentSubtype(int wallFrameIndex, int fragmentIndex) {
+            return ((wallFrameIndex & 0x0F) << 4) | (fragmentIndex & 0x0F);
+        }
+
+        private static int wallFrameIndex(int subtype) {
+            return (subtype >>> 4) & 0x0F;
+        }
+
+        private static int fragmentIndex(int subtype) {
+            return subtype & 0x0F;
+        }
+
+        private static SpriteMappingPiece fragmentPiece(
+                ObjectRenderManager renderManager,
+                String artKey,
+                int wallFrameIndex,
+                int fragmentIndex) {
+            if (renderManager == null) {
+                return null;
+            }
+            ObjectSpriteSheet sheet = renderManager.getSheet(artKey);
+            if (sheet == null || wallFrameIndex < 0 || wallFrameIndex >= sheet.getFrameCount()) {
+                return null;
+            }
+            SpriteMappingFrame frame = sheet.getFrame(wallFrameIndex);
+            if (frame == null || frame.pieces() == null
+                    || fragmentIndex < 0 || fragmentIndex >= frame.pieces().size()) {
+                return null;
+            }
+            return frame.pieces().get(fragmentIndex);
         }
     }
 }

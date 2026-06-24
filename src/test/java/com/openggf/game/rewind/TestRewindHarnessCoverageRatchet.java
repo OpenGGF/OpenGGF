@@ -399,13 +399,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       moved to graph-tested generic recreate.</li>
  *   <li>2026-06-24: raised to 521 after S1 MZ lava geyser maker/head/body/
  *       third-piece restore moved to graph-tested generic recreate.</li>
+ *   <li>2026-06-24: raised to 523 after S1 breakable-wall and smash-block
+ *       fragments moved to graph-tested generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 521 after S1 MZ lava geyser graph restore moved to generic recreate.
-    static final int RATCHET_FLOOR = 521;
+    // 2026-06-24: raised to 523 after S1 destruction fragments moved to generic recreate.
+    static final int RATCHET_FLOOR = 523;
 
     @BeforeEach
     void initHeadless() {
