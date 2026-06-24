@@ -19,6 +19,7 @@ import com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance;
 import com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1RingFlashObjectInstance;
@@ -986,6 +987,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance",
                     GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_LAVA_WALL_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic1LavaWallObjectInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> S1_RUNTIME_SPAWN_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
@@ -8099,6 +8103,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s1JunctionChildClassRoundTripsWithoutCodec() {
         for (CodecDeletionCandidate candidate : S1_JUNCTION_CHILD_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1LavaWallGraphClassImplementsRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_LAVA_WALL_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 lava wall graph coverage");
+        }
+    }
+
+    @Test
+    void s1LavaWallGraphClassHasNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_LAVA_WALL_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 lava wall graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1LavaWallGraphClassRoundTripsWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_LAVA_WALL_GRAPH_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

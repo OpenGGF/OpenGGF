@@ -7,7 +7,12 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -49,7 +54,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/4E Wall of Lava.asm
  */
 public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider {
+        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider, RewindRecreatable {
 
     // ========================================================================
     // Role enum
@@ -220,6 +225,41 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
         this.mainWall = parent;
         this.routine = 6; // LWall_Move
         this.displayFrame = TRAIL_FRAME;
+    }
+
+    @Override
+    public Sonic1LavaWallObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic1LavaWallObjectInstance restoredMain = restoredMainForTrail(ctx);
+        if (restoredMain != null) {
+            return new Sonic1LavaWallObjectInstance(ctx.spawn(), restoredMain);
+        }
+        return new Sonic1LavaWallObjectInstance(ctx.spawn());
+    }
+
+    private static Sonic1LavaWallObjectInstance restoredMainForTrail(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null) {
+            return null;
+        }
+        ObjectManager objectManager = ctx.objectManager();
+        if (objectManager == null) {
+            ObjectServices services = ctx.objectServices();
+            objectManager = services != null ? services.objectManager() : null;
+        }
+        if (objectManager == null) {
+            return null;
+        }
+        int expectedMainX = ctx.spawn().x() + TRAIL_X_OFFSET;
+        int expectedY = ctx.spawn().y();
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof Sonic1LavaWallObjectInstance wall
+                    && !wall.isDestroyed()
+                    && wall.role == Role.MAIN
+                    && wall.currentX == expectedMainX
+                    && wall.currentY == expectedY) {
+                return wall;
+            }
+        }
+        return null;
     }
 
     // ========================================================================

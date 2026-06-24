@@ -395,13 +395,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       spawn-based generic recreate with graph-tested reflection relinking.</li>
  *   <li>2026-06-24: raised to 518 after S1 SBZ junction parents moved to
  *       spawn-based generic recreate with graph-tested display-child relinking.</li>
+ *   <li>2026-06-24: raised to 519 after S1 MZ lava wall main/trail restore
+ *       moved to graph-tested generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 518 after S1 SBZ junction parents moved to graph-tested generic recreate.
-    static final int RATCHET_FLOOR = 518;
+    // 2026-06-24: raised to 519 after S1 MZ lava wall main/trail graph restore moved to generic recreate.
+    static final int RATCHET_FLOOR = 519;
 
     @BeforeEach
     void initHeadless() {
