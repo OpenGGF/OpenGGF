@@ -36,6 +36,7 @@ import com.openggf.game.sonic2.objects.CheckpointStarInstance;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.ConveyorObjectInstance;
 import com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance;
+import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.game.sonic2.objects.OOZBurnerFlameObjectInstance;
 import com.openggf.game.sonic2.objects.PointsObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
@@ -1627,6 +1628,7 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S3K));
 
     private static final List<CodecDeletionCandidate> S2_EGG_PRISON_BUTTON_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(EggPrisonObjectInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(EggPrisonButtonObjectInstance.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> S2_OOZ_BURNER_FLAME_GRAPH_DELETED_CODECS = List.of(

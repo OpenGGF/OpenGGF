@@ -80,8 +80,6 @@ com.openggf.game.sonic2.objects.ConveyorObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.ConveyorObjectInstance#finalScalar#xFlip
 com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance#finalScalar#positionX
 com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance#finalScalar#positionY
-com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance#finalScalar#baseY
-com.openggf.game.sonic2.objects.EggPrisonObjectInstance#recreate
 com.openggf.game.sonic2.objects.FallingPillarObjectInstance#finalScalar#isChild
 com.openggf.game.sonic2.objects.FallingPillarObjectInstance#recreate
 com.openggf.game.sonic2.objects.FlipperObjectInstance#finalScalar#idleAnimId

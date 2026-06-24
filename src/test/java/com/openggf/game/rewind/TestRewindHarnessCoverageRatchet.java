@@ -255,13 +255,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       parent restores moved to generic recreate under badnik graph coverage.</li>
  *   <li>2026-06-24: raised to 327 after S1 and S2 seesaw parent restores moved
  *       to generic recreate under seesaw ball graph coverage.</li>
+ *   <li>2026-06-24: raised to 328 after S2 Egg Prison parent restore moved
+ *       to generic recreate under button graph coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 327 after S1 and S2 seesaw parent restores moved to generic recreate.
-    static final int RATCHET_FLOOR = 327;
+    // 2026-06-24: raised to 328 after S2 Egg Prison parent restore moved to generic recreate.
+    static final int RATCHET_FLOOR = 328;
 
     @BeforeEach
     void initHeadless() {
