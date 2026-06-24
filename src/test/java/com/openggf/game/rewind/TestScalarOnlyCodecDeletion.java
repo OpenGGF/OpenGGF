@@ -679,6 +679,15 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.MTZSpinTubeObjectInstance", GameId.S2));
 
+    private static final List<CodecDeletionCandidate> S2_CPZ_SPIN_TUBE_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance", GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_CPZ_SPIN_TUBE_RECREATE_MUTABLE_FIELDS =
+            List.of(new MutableFieldCoverageCandidate(
+                    "com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance",
+                    "collisionDistance"));
+
     private static final List<CodecDeletionCandidate> S2_MTZ_LONG_PLATFORM_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.MTZLongPlatformObjectInstance", GameId.S2));
@@ -5869,6 +5878,54 @@ public class TestScalarOnlyCodecDeletion {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn() + " should round-trip through MTZ Spin Tube generic recreate");
+        }
+    }
+
+    // =====================================================================
+    // S2 CPZ Spin Tube generic recreate
+    // =====================================================================
+
+    @Test
+    void s2CpzSpinTubeClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_CPZ_SPIN_TUBE_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after CPZ Spin Tube coverage");
+        }
+    }
+
+    @Test
+    void s2CpzSpinTubeClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_CPZ_SPIN_TUBE_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through CPZ Spin Tube generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2CpzSpinTubeClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : S2_CPZ_SPIN_TUBE_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through CPZ Spin Tube generic recreate");
+        }
+    }
+
+    @Test
+    void s2CpzSpinTubeFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_CPZ_SPIN_TUBE_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
         }
     }
 

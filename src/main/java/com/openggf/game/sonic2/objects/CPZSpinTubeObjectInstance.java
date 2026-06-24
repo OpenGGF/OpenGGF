@@ -8,6 +8,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -24,7 +26,7 @@ import java.util.logging.Logger;
  * Players roll through entry paths (curved sections) and then through main
  * tube paths (level-specific routes).
  */
-public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
+public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(CPZSpinTubeObjectInstance.class.getName());
 
     // Fixed rolling speed through tube (0x800 in ROM)
@@ -204,7 +206,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
             new java.util.IdentityHashMap<>();
 
     // Collision distance for this tube instance
-    private final int collisionDistance;
+    private int collisionDistance;
 
     // Game timer second value (used for path variant selection)
     private int timerSecond = 0;
@@ -223,6 +225,11 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         } else {
             this.collisionDistance = COLLISION_DISTANCES[0];
         }
+    }
+
+    @Override
+    public CPZSpinTubeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CPZSpinTubeObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

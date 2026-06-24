@@ -423,13 +423,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       recreate coverage with slot-child relinking.</li>
     *   <li>2026-06-24: raised to 535 after S2 breakable-block fragments gained
     *       graph-tested generic recreate coverage.</li>
+    *   <li>2026-06-24: raised to 536 after S2 CPZ spin tubes gained generic
+    *       recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 535 after S2 breakable-block fragment restore coverage.
-    static final int RATCHET_FLOOR = 535;
+    // 2026-06-24: raised to 536 after S2 CPZ spin tube restore coverage.
+    static final int RATCHET_FLOOR = 536;
 
     @BeforeEach
     void initHeadless() {
