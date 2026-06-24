@@ -62,10 +62,10 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
 
-    private final int x;
-    private final int y;
-    private final boolean hFlip;
-    private final boolean verticalFlip;
+    private int x;
+    private int y;
+    private boolean hFlip;
+    private boolean verticalFlip;
 
     private boolean frostCycleActive;
     private boolean freezeJetActive;
@@ -282,9 +282,9 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         private static final int CAPTURE_MAX_Y = 0x50;
 
         private final IczFreezerObjectInstance parent;
-        private final int x;
-        private final int y;
-        private final boolean hFlip;
+        private int x;
+        private int y;
+        private boolean hFlip;
 
         private int captureDelay = CAPTURE_DELAY_FRAMES;
         private int offPhaseDelay;
@@ -589,9 +589,9 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
                 {0x38, 0x16, 0x0F}
         };
 
-        private final boolean verticalFlip;
-        private final int originX;
-        private final int originY;
+        private boolean verticalFlip;
+        private int originX;
+        private int originY;
         private int x;
         private int y;
         private int scriptOffset;
