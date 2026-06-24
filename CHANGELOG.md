@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K AIZ rewind scalar cleanup:** AIZ bridge, floor, falling-log, flipping-bridge, and bomb-explosion constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S2 launcher rewind cleanup:** Speed Launcher and Small Metal Platform child constructor scalars now compact-restore without stale final-scalar coverage-baseline keys.
 
 ### v0.6.prerelease (Current development snapshot)

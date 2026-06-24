@@ -56,10 +56,10 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
     private static final int PRIORITY = 5;
 
     // ===== Instance state =====
-    private final int x;
-    private final int y;
-    private final int periodMask;    // $32(a0)
-    private final int phaseOffset;   // $34(a0)
+    private int x;
+    private int y;
+    private int periodMask;    // $32(a0)
+    private int phaseOffset;   // $34(a0)
 
     private int animIndex;           // 0 = idle, 1 = cycle
     private int animStep;
@@ -194,8 +194,8 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
         private static final int HALF_HEIGHT_GROUND = 0x19;
         private static final int FRAME_DELAY = 3;
 
-        private final int x;
-        private final int y;
+        private int x;
+        private int y;
         private final AizDisappearingFloorObjectInstance parent;
         private int frame;
         private int timer;

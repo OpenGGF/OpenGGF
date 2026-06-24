@@ -84,14 +84,14 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
     }
 
     // ===== Instance fields =====
-    private final int x;
-    private final int y;
-    private final boolean hFlip;
+    private int x;
+    private int y;
+    private boolean hFlip;
     private final byte[] heightTable;
     private final byte[] negatedHeightTable;
-    private final int animPeriod;        // ROM: $25(a0) — timer reload value
-    private final int maxFrame;          // ROM: $37(a0) — wrap limit
-    private final int animDirection;     // ROM: $36(a0) — +1 or -1
+    private int animPeriod;        // ROM: $25(a0) — timer reload value
+    private int maxFrame;          // ROM: $37(a0) — wrap limit
+    private int animDirection;     // ROM: $36(a0) — +1 or -1
 
     private int animTimer;               // ROM: anim_frame_timer
     private final int[] segmentX = new int[SEGMENT_COUNT];

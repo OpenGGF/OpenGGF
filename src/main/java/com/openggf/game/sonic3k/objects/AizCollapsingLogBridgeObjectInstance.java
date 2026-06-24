@@ -63,15 +63,15 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         return drawBridgeBurnActive;
     }
 
-    private final boolean isFireBridge;
-    private final int halfWidth;
-    private final int subtypeBase;
-    private final int totalTimer;
-    private final boolean hFlip;
+    private boolean isFireBridge;
+    private int halfWidth;
+    private int subtypeBase;
+    private int totalTimer;
+    private boolean hFlip;
     private final String artKey;
 
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
     private int state = STATE_IDLE;
     private int collapseTimer;
     private boolean segmentsSpawned;
@@ -421,8 +421,8 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         private static final int FIRE_ANIM_LAST_FRAME = 7;
 
         private final String artKey;
-        private final boolean isFireVariant;
-        private final int fixedX;
+        private boolean isFireVariant;
+        private int fixedX;
         private int mappingFrame;
         private int delayTimer;
         private final SubpixelMotion.State motion;

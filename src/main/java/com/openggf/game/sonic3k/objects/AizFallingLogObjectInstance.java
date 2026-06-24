@@ -61,10 +61,10 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
     // past initial state, indicating dynamic level changes are active.
     private static final int EVENT_TRIGGER_ROUTINE_THRESHOLD = 2;
 
-    private final int timingMask;   // $32(a0): AND mask for Level_frame_counter
-    private final int phaseOffset;  // $34(a0): added to frame counter before masking
-    private final int spawnX;
-    private final int spawnY;
+    private int timingMask;   // $32(a0): AND mask for Level_frame_counter
+    private int phaseOffset;  // $34(a0): added to frame counter before masking
+    private int spawnX;
+    private int spawnY;
     private String logArtKey;
     private String splashArtKey;
     private boolean initialized;
