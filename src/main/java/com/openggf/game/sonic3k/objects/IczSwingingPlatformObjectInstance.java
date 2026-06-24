@@ -78,12 +78,12 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     private static final int SLIDE_ACCEL = 0x10;
     private static final int FALLING_Y_RADIUS = 0x10;
 
-    private final int spawnX;
-    private final int spawnY;
-    private final int anchorX;
-    private final int anchorY;
-    private final boolean xFlip;
-    private final boolean releaseOnSwing;
+    private int spawnX;
+    private int spawnY;
+    private int anchorX;
+    private int anchorY;
+    private boolean xFlip;
+    private boolean releaseOnSwing;
 
     private final int[] chainX = new int[CHAIN_LINK_COUNT];
     private final int[] chainY = new int[CHAIN_LINK_COUNT];

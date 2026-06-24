@@ -186,12 +186,6 @@ com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance#recreate
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance#finalScalar#xVel
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance#finalScalar#yVel
 com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#anchorX
-com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#anchorY
-com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#releaseOnSwing
-com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#spawnX
-com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#spawnY
-com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#xFlip
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#x

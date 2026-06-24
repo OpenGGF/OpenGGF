@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K ICZ swinging platform scalar rewind cleanup:** swinging-platform constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K LBZ moving platform scalar rewind cleanup:** moving-platform constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K MGZ trigger platform scalar rewind cleanup:** trigger platform constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K collapsing bridge child scalar rewind cleanup:** bridge fragments and MGZ stomp debris now compact-restore constructor scalars without stale coverage-baseline keys.
