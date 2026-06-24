@@ -45,7 +45,7 @@ public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance i
     private static final int MOVE_LOCK_FRAMES = 20;
     private static final int RELEASE_FLIP_SPEED = 4;
 
-    private final boolean upperVariant;
+    private boolean upperVariant;
     private final Set<AbstractPlayableSprite> activePlayers =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private String lastDecision = "init";

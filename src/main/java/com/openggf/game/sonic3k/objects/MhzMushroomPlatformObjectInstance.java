@@ -44,9 +44,9 @@ public final class MhzMushroomPlatformObjectInstance extends AbstractObjectInsta
             0x13, 0x12, 0x11, 0x10, 0x0F, 0x0E, 0x0D, 0x0C
     };
 
-    private final boolean fallingSubtype;
-    private final boolean hFlip;
-    private final boolean vFlip;
+    private boolean fallingSubtype;
+    private boolean hFlip;
+    private boolean vFlip;
     private final SubpixelMotion.State motion;
     private final ObjectAnimationState animationState;
     private boolean standingContact;

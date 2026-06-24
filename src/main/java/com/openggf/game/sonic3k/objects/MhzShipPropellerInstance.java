@@ -23,7 +23,7 @@ public class MhzShipPropellerInstance extends AbstractObjectInstance implements 
     private static final int[] ANIMATION_FRAMES = {5, 6, 7};
     private static final int ANIMATION_DELAY = 2;
 
-    private final int propellerIndex;
+    private int propellerIndex;
     private int animationIndex;
     private int animationTimer = ANIMATION_DELAY;
     private int mappingFrame = ANIMATION_FRAMES[0];

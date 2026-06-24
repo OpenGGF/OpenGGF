@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K MHZ mechanism scalar rewind cleanup:** curled vine, mushroom cap/catapult/platform, ship propeller, and twisted vine constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K MGZ swing/loop/debris scalar rewind cleanup:** swinging platform, twisting loop, and end-boss defeat debris constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K MGZ trigger/platform scalar rewind cleanup:** dash trigger, head trigger, head projectile, smashing pillar, and moving spike platform constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K LBZ mechanism scalar rewind cleanup:** player launcher, ride grapple, and rolling drum constructor scalars now compact-restore without stale coverage-baseline keys.

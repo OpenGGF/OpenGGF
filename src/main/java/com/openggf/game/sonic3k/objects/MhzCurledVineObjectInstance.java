@@ -44,7 +44,7 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
     private final Map<AbstractPlayableSprite, Integer> standingSegmentIndices = new IdentityHashMap<>();
     private final int[] segmentXs = new int[SEGMENT_COUNT];
     private final int[] segmentYs = new int[SEGMENT_COUNT];
-    private final boolean hFlip;
+    private boolean hFlip;
     private int curveState = INITIAL_CURVE_STATE;
     private int rangeWidth = INITIAL_RANGE_WIDTH;
 

@@ -110,11 +110,11 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
             -2, 0
     };
 
-    private final int baseX;
-    private final int baseY;
-    private final int animationPhaseOffset;
-    private final int priorityBucket;
-    private final boolean planePriority;
+    private int baseX;
+    private int baseY;
+    private int animationPhaseOffset;
+    private int priorityBucket;
+    private boolean planePriority;
     private final String artKey;
     private final ObjectAnimationState animationState;
     private final Map<AbstractPlayableSprite, Integer> previousYVelocities = new IdentityHashMap<>();

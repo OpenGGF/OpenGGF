@@ -49,9 +49,9 @@ public final class MhzMushroomCatapultObjectInstance extends AbstractObjectInsta
             0x0B, 0x0A, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04
     };
 
-    private final int baseX;
-    private final int baseY;
-    private final int childX;
+    private int baseX;
+    private int baseY;
+    private int childX;
     private final SubpixelMotion.State centerCapMotion;
     private final Set<PlayableEntity> parentRiders =
             Collections.newSetFromMap(new IdentityHashMap<>());
