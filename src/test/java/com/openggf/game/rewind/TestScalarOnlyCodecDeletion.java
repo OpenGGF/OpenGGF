@@ -67,6 +67,7 @@ import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2MCZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance;
 import com.openggf.game.sonic2.objects.GrounderRockProjectile;
 import com.openggf.game.sonic2.objects.GrounderWallInstance;
@@ -699,6 +700,10 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(Sonic2CPZBossInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(Sonic2EHZBossInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(Sonic2HTZBossInstance.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_BOSS_CONTROLLER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic2CNZBossInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(Sonic2MCZBossInstance.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> AIZ_MINIBOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(AizMinibossBodyChild.class.getName(), GameId.S3K),
@@ -6906,6 +6911,40 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kStageControllersRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_STAGE_CONTROLLER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S2 boss controller batch: scalar parent-controller recreate coverage
+    // =====================================================================
+
+    @Test
+    void s2BossControllersImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_BOSS_CONTROLLER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S2 boss controller coverage");
+        }
+    }
+
+    @Test
+    void s2BossControllersHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_BOSS_CONTROLLER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 boss controller generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2BossControllersRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_BOSS_CONTROLLER_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()
