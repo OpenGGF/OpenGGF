@@ -283,13 +283,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       still sprite restores moved to generic recreate under object-manager coverage.</li>
  *   <li>2026-06-24: raised to 348 after StillSprite and S3K spike restores
  *       moved to generic recreate under static hazard object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 350 after S3K button and path-swap marker restores
+ *       moved to generic recreate under object-manager coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 348 after S3K static hazard objects moved to generic recreate.
-    static final int RATCHET_FLOOR = 348;
+    // 2026-06-24: raised to 350 after S3K button/path-swap objects moved to generic recreate.
+    static final int RATCHET_FLOOR = 350;
 
     @BeforeEach
     void initHeadless() {

@@ -4,6 +4,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 
 import java.util.List;
 
@@ -16,10 +18,15 @@ import java.util.List;
  * a normal object slot for downstream allocation/RNG parity (docs/skdisasm/sonic3k.asm:
  * 39699-39720, 39740-39776).
  */
-public final class Sonic3kPathSwapObjectInstance extends AbstractObjectInstance {
+public final class Sonic3kPathSwapObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     public Sonic3kPathSwapObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PathSwap");
+    }
+
+    @Override
+    public Sonic3kPathSwapObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic3kPathSwapObjectInstance(ctx.spawn());
     }
 
     @Override
