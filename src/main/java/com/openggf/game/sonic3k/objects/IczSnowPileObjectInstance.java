@@ -87,9 +87,9 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
 
     private int x;
     private int y;
-    private final int variant;
-    private final boolean startsNextLevel;
-    private final boolean hFlip;
+    private int variant;
+    private boolean startsNextLevel;
+    private boolean hFlip;
     private boolean destroyedByTrigger;
     private int snowdustTimer;
     private int activeSnowdustCount;
@@ -348,7 +348,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
     public static final class SnowPileDebris extends AbstractObjectInstance
             implements SpawnTrailingZeroIntsRewindRecreatable {
         private final SubpixelMotion.State motion;
-        private final boolean hFlip;
+        private boolean hFlip;
 
         private SnowPileDebris(SnowPileDebrisSpec spec) {
             super(new ObjectSpawn(spec.x(), spec.y(), OBJECT_ID, spec.subtype(),

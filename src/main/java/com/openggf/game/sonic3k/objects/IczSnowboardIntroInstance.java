@@ -608,8 +608,8 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         private int y;
         private int xSub;
         private int ySub;
-        private final int xVel;
-        private final int yVel;
+        private int xVel;
+        private int yVel;
         private int frame;
 
         private SnowboardDustInstance(ObjectSpawn spawn, int x, int y, int xVel, int yVel) {

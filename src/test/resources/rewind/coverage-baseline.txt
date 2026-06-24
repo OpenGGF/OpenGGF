@@ -136,16 +136,10 @@ com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#finalSca
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#objectRef#previous
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#objectRef#root
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#recreate
-com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance#finalScalar#startsNextLevel
-com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance#finalScalar#variant
-com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowPileDebris#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#finalScalar#priorityBucket
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#recreate
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance#recreate
-com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance#finalScalar#xVel
-com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance#finalScalar#yVel
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance#finalScalar#x
