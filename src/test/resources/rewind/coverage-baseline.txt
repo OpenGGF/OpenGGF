@@ -18,12 +18,7 @@ com.openggf.game.sonic2.objects.OOZLauncherObjectInstance#finalScalar#isVertical
 com.openggf.game.sonic2.objects.OOZLauncherObjectInstance#recreate
 com.openggf.game.sonic2.objects.OOZLauncherObjectInstance$LauncherFragmentInstance#recreate
 com.openggf.game.sonic2.objects.RisingPillarObjectInstance$RisingPillarDebrisInstance#recreate
-com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance$SmallMetalPformChildInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance#recreate
-com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#accel
-com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#destX
-com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#homeX
-com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.SpiralObjectInstance#recreate
 com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate
 com.openggf.game.sonic2.objects.TornadoObjectInstance#finalScalar#subtype

@@ -208,7 +208,7 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance implem
         }
 
         private ChildState state;
-        private final boolean xFlipped;
+        private boolean xFlipped;
         private int yVelocity;       // 8.8 fixed-point (e.g., $100 = 1 pixel/frame)
         private int currentX;
         private int currentY;

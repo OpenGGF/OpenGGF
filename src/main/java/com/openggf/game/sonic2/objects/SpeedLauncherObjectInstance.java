@@ -105,15 +105,15 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     // Current X position (changes during movement)
     private int currentX;
     // Home X position (objoff_34 in ROM)
-    private final int homeX;
+    private int homeX;
     // Destination X position (objoff_32 in ROM)
-    private final int destX;
+    private int destX;
     // Current X velocity (8.8 fixed point)
     private int xVel;
     // Acceleration value (signed, direction-dependent) (objoff_30 in ROM)
-    private final int accel;
+    private int accel;
     // Whether the object has x_flip set
-    private final boolean xFlipped;
+    private boolean xFlipped;
     // Current state machine state (routine_secondary in ROM)
     private int state;
     // Sub-pixel X accumulator for ObjectMove

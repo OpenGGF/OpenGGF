@@ -571,6 +571,15 @@ public class TestScalarOnlyCodecDeletion {
                             "com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance",
                             "currentY", "role"));
 
+    private static final List<MutableFieldCoverageCandidate> BATCH135_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance",
+                            "accel", "destX", "homeX", "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance$SmallMetalPformChildInstance",
+                            "xFlipped"));
+
     private static final List<CodecDeletionCandidate> BATCH31_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(BombPrizeObjectInstance.class.getName(), GameId.S2));
 
@@ -3768,6 +3777,23 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void batch134S1GraphConstructorScalarsAreMutableForCompactRestore() {
         for (MutableFieldCoverageCandidate candidate : BATCH134_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch135S2LauncherConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH135_MUTABLE_FIELDS) {
             Class<?> cls = loadClass(candidate.fqn());
             for (String fieldName : candidate.fieldNames()) {
                 try {
