@@ -31,9 +31,9 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
     private static final int RANGE_TOP = -0x18;
     private static final int RANGE_BOTTOM = 0x30;
 
-    private final int x;
-    private final int y;
-    private final boolean cutsceneOverride;
+    private int x;
+    private int y;
+    private boolean cutsceneOverride;
     private boolean pressed;
 
     public S3kCutsceneButtonObjectInstance(ObjectSpawn spawn) {

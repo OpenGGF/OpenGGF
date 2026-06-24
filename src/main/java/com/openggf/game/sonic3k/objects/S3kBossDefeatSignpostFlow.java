@@ -56,7 +56,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
 
     private Phase phase;
     private int timer;
-    private final int signpostX;
+    private int signpostX;
     // Non-final: apparentAct/cleanupAction are not derivable from the carried
     // ObjectSpawn (only getX()/getY() are captured -> signpostX/0). The rewind
     // recreate hook passes placeholders (0, CleanupAction.NONE) and the

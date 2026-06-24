@@ -129,7 +129,7 @@ public final class MhzMinibossTreeInstance extends AbstractObjectInstance implem
         private static final int RENDER_HALF_HEIGHT = 0x14;
         private static final int COLLISION_FLAGS = 0x86;
         private final SubpixelMotion.State motion;
-        private final boolean bounceEnabled;
+        private boolean bounceEnabled;
         private int animationTimer = ANIMATION_DELAY;
         private int animationIndex;
         private int chipMappingFrame = ANIMATION_FRAMES[0];

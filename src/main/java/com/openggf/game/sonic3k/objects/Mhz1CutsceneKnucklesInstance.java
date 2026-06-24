@@ -55,8 +55,8 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
     private static final int POST_CUTSCENE_RESTART_Y = 0x056C;
     private static final int CUTSCENE_PALETTE_LINE = 1;
 
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
     private int workspaceRoutine = ROUTINE_INIT;
     private int timer;
     private boolean playerTwoStopperSpawned;

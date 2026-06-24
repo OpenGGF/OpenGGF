@@ -189,10 +189,7 @@ com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#objectRef#spawnedKnuckles
 com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#recreate
-com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#finalScalar#x
-com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.MhzMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance$MhzMinibossTreeChipInstance#finalScalar#bounceEnabled
 com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#objectRef#grabbedPlayer
 com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#objectRef#nativeP2GrabbedPlayer
 com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#recreate
@@ -201,12 +198,6 @@ com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance#recreate
-com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow#finalScalar#signpostX
-com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance#finalScalar#cutsceneOverride
-com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance#finalScalar#x
-com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#fragmentFrameIndex
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#pieceIndex
@@ -217,8 +208,6 @@ com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot#recreate
 com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild#finalScalar#centerX
 com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild#finalScalar#centerY
-com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance#finalScalar#cameraLockFlag
-com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance#finalScalar#checkpointIndex
 com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild#finalScalar#centerX
 com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild#finalScalar#centerY
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#baseY
@@ -275,6 +264,5 @@ com.openggf.level.objects.BoxObjectInstance#recreate
 com.openggf.level.objects.BreathingBubbleInstance#finalScalar#maxBubbleFrame
 com.openggf.level.objects.BreathingBubbleInstance#finalScalar#riseVelocity
 com.openggf.level.objects.BreathingBubbleInstance#recreate
-com.openggf.level.objects.SkidDustObjectInstance#finalScalar#facingLeft
 com.openggf.level.objects.SplashObjectInstance#finalScalar#facingLeft
 com.openggf.level.objects.SplashObjectInstance#recreate

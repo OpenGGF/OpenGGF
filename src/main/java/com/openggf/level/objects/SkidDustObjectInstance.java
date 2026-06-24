@@ -38,7 +38,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     private int animTimer;
     private int frameIndex;
     private int deleteRoutineDelay = -1;
-    private final boolean facingLeft;
+    private boolean facingLeft;
     private boolean dplcPreloaded = false;
 
     /**

@@ -137,8 +137,8 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     // ===== Instance state =====
 
     private final ZoneConfig config;
-    private final int mappingFrame;  // subtype selects intact variant
-    private final boolean hFlip;
+    private int mappingFrame;  // subtype selects intact variant
+    private boolean hFlip;
 
     private int x;
     private int y;
