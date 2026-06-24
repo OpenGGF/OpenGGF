@@ -32,11 +32,6 @@ com.openggf.game.sonic2.objects.CheckpointDongleInstance#finalScalar#centerX
 com.openggf.game.sonic2.objects.CheckpointDongleInstance#finalScalar#centerY
 com.openggf.game.sonic2.objects.CheckpointStarInstance#finalScalar#centerX
 com.openggf.game.sonic2.objects.CheckpointStarInstance#finalScalar#centerY
-com.openggf.game.sonic2.objects.CogObjectInstance#finalScalar#baseX
-com.openggf.game.sonic2.objects.CogObjectInstance#finalScalar#baseY
-com.openggf.game.sonic2.objects.CogObjectInstance#finalScalar#ccw
-com.openggf.game.sonic2.objects.CogObjectInstance#recreate
-com.openggf.game.sonic2.objects.CogObjectInstance$CogSlotChildInstance#recreate
 com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance#finalScalar#vFlip
 com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$CollapsingPlatformFragmentInstance#finalScalar#fragmentIndex
