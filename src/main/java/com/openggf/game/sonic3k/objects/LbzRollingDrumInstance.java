@@ -48,8 +48,8 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     // Obj_LBZRollingDrum installs loc_2C3CA in word 0 (sonic3k.asm:60585-60594).
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0002;
 
-    private final int leftBound;
-    private final int rightBound;
+    private int leftBound;
+    private int rightBound;
     private boolean p1Riding;
     private int fallbackP1Angle;
     private boolean p2Riding;

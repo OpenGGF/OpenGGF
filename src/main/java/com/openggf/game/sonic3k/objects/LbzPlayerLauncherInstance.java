@@ -28,8 +28,8 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
     private static final int MOVE_LOCK_FRAMES = 15;
     private static final int MIN_SKIP_LAUNCH_SPEED = 0x1000;
 
-    private final int launchSpeed;
-    private final boolean facingLeft;
+    private int launchSpeed;
+    private boolean facingLeft;
 
     private int p1Counter;
     private int p2Counter;

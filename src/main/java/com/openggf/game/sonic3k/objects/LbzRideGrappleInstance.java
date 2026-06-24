@@ -67,9 +67,9 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
     };
 
     private final SubpixelMotion.State motion;
-    private final int pathLeft;
-    private final int pathRight;
-    private final boolean ejectAtPathEnd;
+    private int pathLeft;
+    private int pathRight;
+    private boolean ejectAtPathEnd;
     private final PlayerState p1 = new PlayerState();
     private final PlayerState p2 = new PlayerState();
     private final int[] chainX = new int[CHAIN_POINT_COUNT];
