@@ -94,6 +94,7 @@ import com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameChild;
 import com.openggf.game.sonic3k.objects.AizMinibossInstance;
 import com.openggf.game.sonic3k.objects.AizMinibossNapalmController;
+import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.objects.AizShipBombInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
@@ -665,6 +666,9 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> AIZ_INTRO_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(AizIntroPlaneChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizIntroWaveChild.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_INTRO_PARENT_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizPlaneIntroInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> S2_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(GrounderRockProjectile.class.getName(), GameId.S2),
@@ -5313,6 +5317,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through AIZ intro graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void aizIntroParentClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_INTRO_PARENT_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ intro parent batch");
+        }
+    }
+
+    @Test
+    void aizIntroParentClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_INTRO_PARENT_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ intro parent generic recreate, not a dynamic codec");
         }
     }
 

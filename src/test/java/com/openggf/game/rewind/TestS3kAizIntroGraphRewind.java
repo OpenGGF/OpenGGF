@@ -20,6 +20,7 @@ import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kAizIntroGraphRewind {
     private static final int AIZ_INTRO_PARENT_TEST_ID = 0xF0;
@@ -90,6 +92,15 @@ class TestS3kAizIntroGraphRewind {
         assertSame(restored.parent(), AizPlaneIntroInstance.getActiveIntroInstance(),
                 "static active intro pointer must point at the restored live parent after restore");
         assertNoHelperObjectsBecameManagerDynamics(objectManager);
+    }
+
+    @Test
+    void aizIntroParentUsesGenericRecreateWithoutExplicitDynamicCodec() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(AizPlaneIntroInstance.class),
+                "AizPlaneIntroInstance must restore through RewindRecreatable graph recreate");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        AizPlaneIntroInstance.class.getName()),
+                "AizPlaneIntroInstance must not keep an explicit S3K dynamic rewind codec");
     }
 
     @Test
