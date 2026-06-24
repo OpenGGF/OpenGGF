@@ -737,6 +737,15 @@ public class TestScalarOnlyCodecDeletion {
                             "com.openggf.game.sonic3k.objects.HCZSnakeBlocksObjectInstance",
                             "baseX", "baseY", "direction"));
 
+    private static final List<MutableFieldCoverageCandidate> BATCH144_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.AbstractS3kBadnikInstance",
+                            "collisionSizeIndex", "priorityBucket", "planePriority"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerAnimatedParticle",
+                            "priorityBucket"));
+
     private static final List<CodecDeletionCandidate> BATCH31_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(BombPrizeObjectInstance.class.getName(), GameId.S2));
 
@@ -4087,6 +4096,23 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void batch143S3kHczConveyorMechanismConstructorScalarsAreMutableForCompactRestore() {
         for (MutableFieldCoverageCandidate candidate : BATCH143_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch144S3kBadnikInheritedConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH144_MUTABLE_FIELDS) {
             Class<?> cls = loadClass(candidate.fqn());
             for (String fieldName : candidate.fieldNames()) {
                 try {

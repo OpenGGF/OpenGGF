@@ -28,9 +28,9 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
         implements TouchResponseProvider, TouchResponseAttackable {
 
     private final String rendererKey;
-    private final int collisionSizeIndex;
-    private final int priorityBucket;
-    private final boolean planePriority;
+    private int collisionSizeIndex;
+    private int priorityBucket;
+    private boolean planePriority;
 
     protected int xSubpixel;
     protected int ySubpixel;

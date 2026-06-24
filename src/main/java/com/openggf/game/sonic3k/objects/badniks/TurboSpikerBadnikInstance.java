@@ -608,7 +608,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         private final int currentY;
         private final int[] frames;
         private final int frameDelay;
-        private final int priorityBucket;
+        private int priorityBucket;
         private final boolean playSound;
 
         private int frameIndex;
