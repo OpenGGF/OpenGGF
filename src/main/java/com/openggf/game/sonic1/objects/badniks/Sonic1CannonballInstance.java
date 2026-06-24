@@ -158,18 +158,21 @@ public class Sonic1CannonballInstance extends AbstractObjectInstance
      * </pre>
      */
     private void updateBounce() {
-        // ObjectFall: X += VelX, VelY += gravity, Y += VelY (gravity applied before move)
-        // Note: existing implementation applies gravity BEFORE the Y move, which differs
-        // from ROM's "use old velocity, then add gravity" order. Preserved here via
-        // manual pre-increment + moveSprite2 (no gravity inside the helper).
-        yVelocity += GRAVITY;
+        // ROM ObjectFall (_incObj/sub ObjectFall & SpeedToPos.asm:8-23): X moves with
+        // x_vel (no gravity), then Y moves with the OLD y_vel and gravity is added to
+        // y_vel afterwards (one-frame delayed gravity). The previous manual
+        // pre-increment applied gravity BEFORE the Y move, making the cannonball fall
+        // one gravity-step too fast each frame and arrive ~2 frames early / 12px off
+        // its bounce arc (SBZ1 f6081 cannonball hit 2 frames early).
+        // motion is a persistent field; its xSub/ySub accumulators carry across frames.
         motion.x = currentX;
         motion.y = currentY;
         motion.xVel = xVelocity;
         motion.yVel = yVelocity;
-        SubpixelMotion.moveSprite2(motion);
+        SubpixelMotion.objectFallXY(motion, GRAVITY);
         currentX = motion.x;
         currentY = motion.y;
+        yVelocity = (short) motion.yVel;
 
         // tst.w obVelY(a0) / bmi.s Cbal_ChkExplode (tests POST-gravity velocity)
         if (yVelocity >= 0) {
