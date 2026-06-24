@@ -659,7 +659,8 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance", GameId.S2),
             new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.ShellcrackerBadnikInstance", GameId.S2),
             new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance", GameId.S2),
-            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.SolBadnikInstance", GameId.S2));
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.SolBadnikInstance", GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance", GameId.S2));
 
     private static final List<CodecDeletionCandidate> CHECKPOINT_STARPOST_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(Sonic1LamppostTwirlInstance.class.getName(), GameId.S1),

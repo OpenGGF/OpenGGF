@@ -161,7 +161,6 @@ com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.SolBadnikInstance#finalScalar#orbitDirection
 com.openggf.game.sonic2.objects.badniks.SolBadnikInstance#finalScalar#xFlip
 com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance#finalScalar#vFlip
-com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance#recreate
