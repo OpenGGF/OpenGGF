@@ -10,6 +10,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -33,7 +35,7 @@ import java.util.List;
  * {@code $41}; subtype bit 1 chooses the spawn side.
  */
 public final class LbzAlarmObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
     private static final int COLLISION_FLAGS = 0xD7;
     private static final int COLLISION_SIZE_INDEX = 0x17;
@@ -61,6 +63,11 @@ public final class LbzAlarmObjectInstance extends AbstractObjectInstance
     public LbzAlarmObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LBZAlarm");
         this.subtype = spawn.subtype();
+    }
+
+    @Override
+    public LbzAlarmObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new LbzAlarmObjectInstance(ctx.spawn());
     }
 
     @Override

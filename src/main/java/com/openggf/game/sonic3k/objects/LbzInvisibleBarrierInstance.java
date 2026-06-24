@@ -5,6 +5,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 
@@ -20,7 +22,7 @@ import java.util.List;
  * itself once {@code Camera_X_pos} reaches {@code $3D80}.
  */
 public final class LbzInvisibleBarrierInstance extends AbstractObjectInstance
-        implements SolidObjectProvider {
+        implements SolidObjectProvider, RewindRecreatable {
     private static final int BARRIER_X = 0x3BC0;
     private static final int BARRIER_Y = 0x0100;
     private static final int RELEASE_CAMERA_X = 0x3D80;
@@ -29,6 +31,11 @@ public final class LbzInvisibleBarrierInstance extends AbstractObjectInstance
 
     public LbzInvisibleBarrierInstance(ObjectSpawn spawn) {
         super(spawn, "LBZ1InvisibleBarrier");
+    }
+
+    @Override
+    public LbzInvisibleBarrierInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new LbzInvisibleBarrierInstance(ctx.spawn());
     }
 
     @Override

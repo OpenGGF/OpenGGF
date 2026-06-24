@@ -5,6 +5,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 
 import java.util.List;
 
@@ -16,10 +18,15 @@ import java.util.List;
  * results object to finish. When results set {@code End_of_level_flag}, it
  * creates {@code loc_6D104}, the MGZ-to-CNZ palette fade controller.
  */
-public class Mgz2PostBossSequenceController extends AbstractObjectInstance {
+public class Mgz2PostBossSequenceController extends AbstractObjectInstance implements RewindRecreatable {
 
     public Mgz2PostBossSequenceController() {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "MGZ2PostBossSequence");
+    }
+
+    @Override
+    public Mgz2PostBossSequenceController recreateForRewind(RewindRecreateContext ctx) {
+        return new Mgz2PostBossSequenceController();
     }
 
     @Override

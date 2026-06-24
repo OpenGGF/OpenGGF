@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 
 import java.io.IOException;
 import java.util.List;
@@ -21,7 +23,7 @@ import java.util.logging.Logger;
  * {@code Pal_MGZFadeCNZ} to {@code Normal_palette_line_4}. After the final row
  * it runs {@code StartNewLevel #$300}, entering CNZ Act 1.
  */
-public class Mgz2PostBossPaletteFadeController extends AbstractObjectInstance {
+public class Mgz2PostBossPaletteFadeController extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(Mgz2PostBossPaletteFadeController.class.getName());
     private static final int PALETTE_LINE_4_INDEX = 3;
     private static final int[] STEP_DELAYS = {
@@ -34,6 +36,11 @@ public class Mgz2PostBossPaletteFadeController extends AbstractObjectInstance {
 
     public Mgz2PostBossPaletteFadeController() {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "MGZ2PostBossPaletteFade");
+    }
+
+    @Override
+    public Mgz2PostBossPaletteFadeController recreateForRewind(RewindRecreateContext ctx) {
+        return new Mgz2PostBossPaletteFadeController();
     }
 
     @Override

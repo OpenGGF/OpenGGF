@@ -6,6 +6,8 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -38,7 +40,7 @@ import java.util.List;
  * <p>
  * ROM reference: Obj_WaterDrop (sonic3k.asm:75145-75239).
  */
-public class HCZWaterDropObjectInstance extends AbstractObjectInstance {
+public class HCZWaterDropObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.HCZ_WATER_DROP;
 
@@ -84,6 +86,11 @@ public class HCZWaterDropObjectInstance extends AbstractObjectInstance {
         this.spawnY = spawn.y();
         int subtype = spawn.subtype() & 0xFF;
         this.spawnInterval = subtype * 4;
+    }
+
+    @Override
+    public HCZWaterDropObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HCZWaterDropObjectInstance(ctx.spawn());
     }
 
     @Override

@@ -70,6 +70,7 @@ import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance;
 import com.openggf.game.sonic2.objects.GrounderRockProjectile;
 import com.openggf.game.sonic2.objects.GrounderWallInstance;
+import com.openggf.game.sonic2.objects.NutObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance;
@@ -132,6 +133,7 @@ import com.openggf.game.sonic3k.objects.HCZConveyorSpikeObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZLargeFanObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZSpinningColumnObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance;
+import com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZWaterSplashObjectInstance;
 import com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance;
 import com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance;
@@ -142,8 +144,13 @@ import com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance;
 import com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance;
+import com.openggf.game.sonic3k.objects.LbzAlarmObjectInstance;
+import com.openggf.game.sonic3k.objects.LbzInvisibleBarrierInstance;
 import com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance;
+import com.openggf.game.sonic3k.objects.Mgz2PostBossPaletteFadeController;
+import com.openggf.game.sonic3k.objects.Mgz2PostBossSequenceController;
 import com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance;
+import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
 import com.openggf.game.sonic3k.objects.PachinkoBumperObjectInstance;
 import com.openggf.game.sonic3k.objects.PachinkoMagnetOrbObjectInstance;
 import com.openggf.game.sonic3k.objects.PachinkoPlatformObjectInstance;
@@ -804,6 +811,15 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(HCZTwistingLoopObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(MGZTwistingLoopObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(MhzTwistedVineObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> STANDALONE_CONTROLLER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(NutObjectInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(LbzInvisibleBarrierInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(LbzAlarmObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HCZWaterDropObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(MhzPollenSpawnerInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(Mgz2PostBossPaletteFadeController.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(Mgz2PostBossSequenceController.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HczEndBossRobotnikShip.class.getName(), GameId.S3K),
@@ -5909,6 +5925,39 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kControllerClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_CONTROLLER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // Standalone controller batch: no live object refs, object-manager restores covered
+    // =====================================================================
+
+    @Test
+    void standaloneControllerClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : STANDALONE_CONTROLLER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after standalone controller batch");
+        }
+    }
+
+    @Test
+    void standaloneControllerClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : STANDALONE_CONTROLLER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through standalone controller generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void standaloneControllerClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : STANDALONE_CONTROLLER_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

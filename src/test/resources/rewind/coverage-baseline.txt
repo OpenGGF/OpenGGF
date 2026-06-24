@@ -107,7 +107,6 @@ com.openggf.game.sonic2.objects.MovingVineObjectInstance#finalScalar#maxExtensio
 com.openggf.game.sonic2.objects.MovingVineObjectInstance#finalScalar#reversedMode
 com.openggf.game.sonic2.objects.MovingVineObjectInstance#finalScalar#variant
 com.openggf.game.sonic2.objects.MovingVineObjectInstance#recreate
-com.openggf.game.sonic2.objects.NutObjectInstance#recreate
 com.openggf.game.sonic2.objects.OOZLauncherObjectInstance#finalScalar#isVertical
 com.openggf.game.sonic2.objects.OOZLauncherObjectInstance#recreate
 com.openggf.game.sonic2.objects.OOZLauncherObjectInstance$LauncherFragmentInstance#recreate
@@ -471,7 +470,6 @@ com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance#finalScalar#subty
 com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnInterval
 com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnY
-com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance$WaterRushBlockChild#recreate
 com.openggf.game.sonic3k.objects.HCZWaterSplashObjectInstance#finalScalar#x
@@ -590,7 +588,6 @@ com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#r
 com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance#recreate
 com.openggf.game.sonic3k.objects.Lbz1RobotnikEventController#recreate
 com.openggf.game.sonic3k.objects.LbzAlarmObjectInstance#finalScalar#subtype
-com.openggf.game.sonic3k.objects.LbzAlarmObjectInstance#recreate
 com.openggf.game.sonic3k.objects.LbzCupElevatorInstance#finalScalar#flingAtEnd
 com.openggf.game.sonic3k.objects.LbzCupElevatorInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.LbzCupElevatorInstance#recreate
@@ -608,7 +605,6 @@ com.openggf.game.sonic3k.objects.LbzFlameThrowerFlameInstance#recreate
 com.openggf.game.sonic3k.objects.LbzFlameThrowerObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.LbzFlameThrowerObjectInstance#finalScalar#subtype
 com.openggf.game.sonic3k.objects.LbzFlameThrowerObjectInstance#recreate
-com.openggf.game.sonic3k.objects.LbzInvisibleBarrierInstance#recreate
 com.openggf.game.sonic3k.objects.LbzMinibossBoxInstance#recreate
 com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance#recreate
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#objectRef#knucklesFightParent
@@ -694,8 +690,6 @@ com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance#finalScalar#cente
 com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance#finalScalar#flipped
 com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance#finalScalar#anchorX
 com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance#finalScalar#baseY
-com.openggf.game.sonic3k.objects.Mgz2PostBossPaletteFadeController#recreate
-com.openggf.game.sonic3k.objects.Mgz2PostBossSequenceController#recreate
 com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#finalScalar#flipX
 com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#finalScalar#index
 com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#finalScalar#xVel
@@ -740,7 +734,6 @@ com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#finalScalar#f
 com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#finalScalar#vFlip
 com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#recreate
-com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance#recreate
 com.openggf.game.sonic3k.objects.MhzShipPropellerInstance#finalScalar#propellerIndex
 com.openggf.game.sonic3k.objects.MhzShipPropellerInstance#recreate
 com.openggf.game.sonic3k.objects.MhzShipSequenceControllerInstance#finalScalar#initialShipMotion

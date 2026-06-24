@@ -312,13 +312,17 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-24: raised to 393 after S3K twisted ramp, updraft,
  *       HCZ/MGZ twisting loop, and MHZ twisted vine controller restores moved
  *       to generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 400 after S2 MTZ nut plus S3K LBZ
+ *       barrier/alarm, HCZ water-drop, MHZ pollen, and MGZ post-boss
+ *       controller restores moved to generic recreate under object-manager
+ *       coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 393 after S3K controller objects moved to generic recreate.
-    static final int RATCHET_FLOOR = 393;
+    // 2026-06-24: raised to 400 after S2/S3K standalone controller restores moved to generic recreate.
+    static final int RATCHET_FLOOR = 400;
 
     @BeforeEach
     void initHeadless() {
