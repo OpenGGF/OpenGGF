@@ -1,7 +1,3 @@
-com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance#finalScalar#priority
-com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance#finalScalar#x
-com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance#finalScalar#priority
-com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance#finalScalar#x
 com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance#finalScalar#baseY
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#blockFrame
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#fullSubtype
@@ -24,8 +20,6 @@ com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#finalScalar#buttonX
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#finalScalar#buttonY
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#recreate
-com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$CollapsingPlatformFragmentInstance#finalScalar#priority
-com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$CollapsingPlatformFragmentInstance#finalScalar#x
 com.openggf.game.sonic2.objects.FlipperObjectInstance#finalScalar#idleAnimId
 com.openggf.game.sonic2.objects.FlipperObjectInstance#recreate
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#finalScalar#renderXFlip
@@ -232,8 +226,6 @@ com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#f
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#finalScalar#highPriority
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#finalScalar#pieceIndex
-com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#finalScalar#priority
-com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#finalScalar#x
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#recreate
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris#finalScalar#frameIndex
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris#finalScalar#gravity
@@ -607,8 +599,6 @@ com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance#finalSc
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#fragmentFrameIndex
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#pieceIndex
-com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#priority
-com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#x
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#recreate
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#finalScalar#type
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#objectRef#monitorContentsSlot

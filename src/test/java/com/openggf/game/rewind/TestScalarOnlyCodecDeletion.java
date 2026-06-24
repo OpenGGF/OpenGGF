@@ -719,7 +719,7 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<MutableFieldCoverageCandidate> S2_COLLAPSING_PLATFORM_FRAGMENT_RECREATE_MUTABLE_FIELDS =
             List.of(new MutableFieldCoverageCandidate(
                     "com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$CollapsingPlatformFragmentInstance",
-                    "fragmentIndex", "hFlip", "vFlip", "pieceOffsetX", "pieceOffsetY"));
+                    "fragmentIndex", "hFlip", "vFlip", "pieceOffsetX", "pieceOffsetY", "priority", "x"));
 
     private static final List<CodecDeletionCandidate> CPZ_GRAPH_BATCH_A_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(CPZBossContainer.class.getName(), GameId.S2),
@@ -1881,10 +1881,10 @@ public class TestScalarOnlyCodecDeletion {
                             "mappingFrame", "subtype"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance",
-                            "artKey", "hFlip", "pieceIndex", "smashFrameIndex"),
+                            "artKey", "hFlip", "pieceIndex", "priority", "smashFrameIndex", "x"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance",
-                            "hFlip", "pieceIndex", "smashFrameIndex"),
+                            "hFlip", "pieceIndex", "priority", "smashFrameIndex", "x"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance",
                             "type"),
@@ -8598,6 +8598,27 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via S1 collapsing fragment generic recreate; got: "
                             + result);
+        }
+    }
+
+    @Test
+    void s1CollapsingFragmentFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS) {
+            if (!candidate.fqn().contains("CollapsingFloorFragmentInstance")
+                    && !candidate.fqn().contains("CollapsingLedgeFragmentInstance")) {
+                continue;
+            }
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
         }
     }
 
