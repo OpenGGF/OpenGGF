@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -65,6 +66,8 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
     private static final int[] SHELL_DRIP_FRAMES = {5, 5, 5, 6, 7};
     private static final int[] WATER_SPLASH_FRAMES = {8, 9, 10, 11, 12, 13};
+    private static final int PARTICLE_KIND_SHELL_DRIP = 0;
+    private static final int PARTICLE_KIND_WATER_SPLASH = 1;
     private static final int[] WATER_SPLASH_OFFSETS_X = {4, -6, 6, -8, 8};
     private static final int[] WATER_SPLASH_OFFSETS_Y = {-8, 0, 0, 0, 0};
 
@@ -578,17 +581,28 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
     private static final class TurboSpikerShellDripParticle extends TurboSpikerAnimatedParticle {
         TurboSpikerShellDripParticle(int x, int y, ObjectSpawn ownerSpawn) {
-            super(ownerSpawn, "TurboSpikerShellDrip", x, y, SHELL_DRIP_FRAMES, 1, 5, false);
+            this(TurboSpikerAnimatedParticle.particleSpawn(
+                    ownerSpawn, x, y, PARTICLE_KIND_SHELL_DRIP, false));
+        }
+
+        private TurboSpikerShellDripParticle(ObjectSpawn spawn) {
+            super(spawn, "TurboSpikerShellDrip", spawn.x(), spawn.y(), SHELL_DRIP_FRAMES, 1, 5, false);
         }
     }
 
     private static final class TurboSpikerWaterSplashParticle extends TurboSpikerAnimatedParticle {
         TurboSpikerWaterSplashParticle(TurboSpikerBadnikInstance parent, int x, int y, boolean playSound) {
-            super(parent.getSpawn(), "TurboSpikerWaterSplash", x, y, WATER_SPLASH_FRAMES, 1, 4, playSound);
+            this(TurboSpikerAnimatedParticle.particleSpawn(
+                    parent.getSpawn(), x, y, PARTICLE_KIND_WATER_SPLASH, playSound));
+        }
+
+        private TurboSpikerWaterSplashParticle(ObjectSpawn spawn) {
+            super(spawn, "TurboSpikerWaterSplash", spawn.x(), spawn.y(), WATER_SPLASH_FRAMES, 1, 4,
+                    (spawn.renderFlags() & 1) != 0);
         }
     }
 
-    private static class TurboSpikerAnimatedParticle extends AbstractObjectInstance {
+    private static class TurboSpikerAnimatedParticle extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
         private final int currentX;
         private final int currentY;
@@ -602,6 +616,17 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         private int mappingFrame;
         private boolean soundPlayed;
 
+        private TurboSpikerAnimatedParticle(ObjectSpawn spawn) {
+            this(spawn,
+                    particleName(spawn),
+                    spawn.x(),
+                    spawn.y(),
+                    particleFrames(spawn),
+                    1,
+                    particlePriority(spawn),
+                    (spawn.renderFlags() & 1) != 0);
+        }
+
         TurboSpikerAnimatedParticle(ObjectSpawn ownerSpawn, String name, int x, int y,
                 int[] frames, int frameDelay, int priorityBucket, boolean playSound) {
             super(ownerSpawn, name);
@@ -612,6 +637,28 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
             this.priorityBucket = priorityBucket;
             this.mappingFrame = frames[0];
             this.playSound = playSound;
+        }
+
+        private static ObjectSpawn particleSpawn(ObjectSpawn ownerSpawn, int x, int y, int particleKind,
+                boolean playSound) {
+            int objectId = ownerSpawn == null ? 0 : ownerSpawn.objectId();
+            return new ObjectSpawn(x, y, objectId, particleKind, playSound ? 1 : 0, false, y);
+        }
+
+        private static String particleName(ObjectSpawn spawn) {
+            return (spawn.subtype() & 0xFF) == PARTICLE_KIND_WATER_SPLASH
+                    ? "TurboSpikerWaterSplash"
+                    : "TurboSpikerShellDrip";
+        }
+
+        private static int[] particleFrames(ObjectSpawn spawn) {
+            return (spawn.subtype() & 0xFF) == PARTICLE_KIND_WATER_SPLASH
+                    ? WATER_SPLASH_FRAMES
+                    : SHELL_DRIP_FRAMES;
+        }
+
+        private static int particlePriority(ObjectSpawn spawn) {
+            return (spawn.subtype() & 0xFF) == PARTICLE_KIND_WATER_SPLASH ? 4 : 5;
         }
 
         @Override

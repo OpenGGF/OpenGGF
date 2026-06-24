@@ -2041,6 +2041,17 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene$GeyserDebrisChild",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_TURBO_SPIKER_PARTICLE_BATCH98_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerAnimatedParticle",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellDripParticle",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterSplashParticle",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(S3kSignpostStubChild.class.getName(), GameId.S3K));
 
@@ -7216,6 +7227,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kParticleChildBatch97ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_PARTICLE_CHILD_BATCH97_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kTurboSpikerParticleBatch98ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_TURBO_SPIKER_PARTICLE_BATCH98_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Turbo Spiker batch 98");
+        }
+    }
+
+    @Test
+    void s3kTurboSpikerParticleBatch98ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_TURBO_SPIKER_PARTICLE_BATCH98_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Turbo Spiker particle batch 98 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kTurboSpikerParticleBatch98ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_TURBO_SPIKER_PARTICLE_BATCH98_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()
