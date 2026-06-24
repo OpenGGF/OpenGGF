@@ -326,13 +326,20 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null && objectManager.isAnyPlayerRiding(this)) {
             objectManager.clearRidingObject(player);
-            // ROM .notsolid2 does bclr #3,obStatus(a1): clearing the player's
-            // standing bit drops him into the air when no other support remains
+            // ROM .notsolid2 does bclr #3,obStatus(a1) + clr.b obSolid(a0): the
+            // platform fully releases the rider when it stops being solid
             // (docs/s1disasm/_incObj/69 SBZ Spinning Platforms and Trapdoors.asm:124-130).
-            // clearRidingObject only removes the ride record; queue the stale-support
-            // air transition so finalizeInlinePlayer sets air on the frame the
-            // spin platform stops supporting the rider.
-            objectManager.forceAirOnStaleObjectSupportLoss(player);
+            // It clears the on-object/standing bits but does NOT set Status_InAir —
+            // ROM's player only becomes airborne on the NEXT frame, when his own
+            // grounded floor check (which ran before the platform this frame, since
+            // Obj01 precedes the platform in ExecuteObjects) finds no floor. So
+            // release support (clearRidingObject + drop the SolidObject latch on THIS
+            // instance so finalizeInlinePlayer clears Status_OnObj) but let the
+            // player's next-frame grounded collision set air, rather than forcing it
+            // the same frame (which goes airborne one frame early — SBZ1 f5531).
+            if (player.getLatchedSolidObjectInstance() == this) {
+                player.setLatchedSolidObjectId(0);
+            }
         }
     }
 
