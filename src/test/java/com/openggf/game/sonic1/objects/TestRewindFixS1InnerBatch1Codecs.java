@@ -37,10 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * rewind restore (1 → 2) because boss reconstruction already re-adds it.
  * See {@code TestBossChildNoDoubleSpawnParity} and {@code docs/KNOWN_DISCREPANCIES.md}.
  *
- * <p>The other batch-inner1 child
- * ({@code Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance}) is intentionally
- * accept-drop (display-only, parent re-emits when {@code childInstance == null}), so it
- * is documented in {@code docs/KNOWN_DISCREPANCIES.md} and is NOT asserted here.
+ * <p>The SBZ rotating-junction display child now uses spawn-based generic recreate and
+ * is asserted by {@code TestScalarOnlyCodecDeletion}.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
  * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay

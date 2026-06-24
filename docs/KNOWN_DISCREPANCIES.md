@@ -1187,28 +1187,12 @@ registered per-game in `Sonic1ObjectRegistry`/`Sonic2ObjectRegistry`) and
 in `ObjectRewindDynamicCodecs.sharedCodecs()`; its non-final `worldX`/`worldY` are reapplied after
 recreate). S3K's signpost sparkle (`S3kSignpostSparkleChild`) is already codec'd separately.
 
-## Batch-inner1 Rewind: Inner-Class Children Re-Established By Parent
+## Batch-inner1 Rewind: Inner-Class Children
 
-Static nested children whose restored parent deterministically re-emits/re-positions them on the
-next update are intentionally **not** captured/recreated across a held-rewind boundary (no rewind
-codec; their `#recreate` key stays in `src/test/resources/rewind/coverage-baseline.txt`).
-
-- `com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance` (SBZ
-  Rotating Junction object 0x66, display-only `Jun_Display` backdrop child): a static nested class
-  spawned lazily by the parent via `childInstance = spawnFreeChild(() -> new
-  Sonic1JunctionChildInstance(spawn))` whenever `childInstance == null` (parent `update()`). It does
-  not implement `TouchResponseProvider` or `SolidObjectProvider`, owns no boss/cutscene state machine,
-  and its `update()` is empty (ROM `Jun_Display` routine 4 = display only) — it renders only the
-  full-circle backdrop sprite behind the disc, so dropping it loses a purely visual backdrop, never a
-  hazard or a ridable platform (the HURT/grab/solid behavior all lives on the parent). It is fully
-  parent-derived from `spawn` (no independent trajectory), so the parent re-emits it for free every
-  frame its `childInstance` reference is null. After a held rewind drops the child, the parent is
-  re-established via placed-object respawn (its ctor leaves `childInstance == null`), so the lazy
-  re-emit fires naturally. Accept-drop-as-baseline rather than registering a codec for a deterministically
-  re-emitted display-only child.
-
-Two batch-inner1 S1 inner-class children now have parent-relink rewind codecs in
-`Sonic1ObjectRegistry` and are restored on a backward seek:
+Batch-inner1 S1 inner-class children now use generic recreate or parent-relink rewind coverage and
+are restored on a backward seek:
+`Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance` (SBZ rotating-junction display child;
+spawn-based generic recreate),
 `Sonic1FalseFloorInstance$FalseFloorBlock` (SBZ2 boss collapsing-floor tile; un-finaled
 `currentX`/`currentY`/`blockIndex`, re-registered into the master's `childBlocks`),
 `Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance` (Orbinaut HURT satellite/projectile;

@@ -9,6 +9,7 @@ All notable changes to the OpenGGF project are documented in this file.
 The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability. Detailed per-frontier notes were moved out of this top-level changelog so it stays readable; see [docs/TRACE_FRONTIER_LOG.md](docs/TRACE_FRONTIER_LOG.md) for frame-by-frame trace evidence and [docs/changelog/v0.6-prerelease-detailed.md](docs/changelog/v0.6-prerelease-detailed.md) for the previous verbose merge ledger.
 
 - **S1 runtime spawn-recreate rewind coverage:** Bubbles, bumpers, running discs, and teleporters now rely on spawn-based generic rewind recreate without stale final-scalar or frame-local reference coverage gaps.
+- **S1 junction child rewind coverage:** The SBZ rotating-junction display child now restores through spawn-based generic rewind recreate instead of relying on an accept-drop baseline.
 - **Shared placeholder rewind coverage:** Unmapped placeholder objects now restore through generic rewind recreate, keeping fallback object probes from dropping across rewind.
 - **Sonic 2 collapsing-platform rewind coverage:** OOZ/MCZ/ARZ collapsing-platform parents now restore through generic rewind recreate while fragment children remain graph-scoped follow-up work.
 - **Sonic 2 MTZ Long Platform rewind coverage:** MTZ long platforms now restore through generic rewind recreate while compact restore preserves movement trigger and distance state.

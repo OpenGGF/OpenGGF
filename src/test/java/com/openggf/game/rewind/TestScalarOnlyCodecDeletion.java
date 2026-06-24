@@ -973,6 +973,11 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance$Fireball",
                     GameId.S1));
 
+    private static final List<CodecDeletionCandidate> S1_JUNCTION_CHILD_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance",
+                    GameId.S1));
+
     private static final List<CodecDeletionCandidate> S1_RUNTIME_SPAWN_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance",
@@ -6859,6 +6864,35 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 Gargoyle fireball graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1JunctionChildClassImplementsRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_JUNCTION_CHILD_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 junction child coverage");
+        }
+    }
+
+    @Test
+    void s1JunctionChildClassHasNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_JUNCTION_CHILD_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 junction child generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1JunctionChildClassRoundTripsWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_JUNCTION_CHILD_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
         }
     }
 
