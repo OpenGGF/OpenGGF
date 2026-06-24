@@ -9,6 +9,7 @@ All notable changes to the OpenGGF project are documented in this file.
 The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability. Detailed per-frontier notes were moved out of this top-level changelog so it stays readable; see [docs/TRACE_FRONTIER_LOG.md](docs/TRACE_FRONTIER_LOG.md) for frame-by-frame trace evidence and [docs/changelog/v0.6-prerelease-detailed.md](docs/changelog/v0.6-prerelease-detailed.md) for the previous verbose merge ledger.
 
 - **S1 runtime spawn-recreate rewind coverage:** Bubbles, bumpers, running discs, and teleporters now rely on spawn-based generic rewind recreate without stale final-scalar or frame-local reference coverage gaps.
+- **S3K stage-controller rewind coverage:** AIZ transition floor, CNZ capsule, HCZ2 wall, and ICZ post-boss palette controllers now restore through generic rewind recreate without stale recreate baselines.
 - **S1 boss controller rewind coverage:** False-floor, LZ boss, and MZ boss controllers now restore through generic rewind recreate without stale recreate baselines.
 - **S3K Knuckles cutscene rewind coverage:** AIZ2, CNZ2B, HCZ2, LBZ1, and MHZ2 Knuckles cutscene controllers now restore through spawn-based generic rewind recreate without stale recreate baselines.
 - **S3K standalone cutscene rewind coverage:** AIZ miniboss, MHZ1/SK intro, LBZ1 launch/Robotnik, and cutscene button controllers now restore through spawn-based generic rewind recreate without stale recreate baselines.

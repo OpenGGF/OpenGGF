@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.Level;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ZeroArgRewindRecreatable;
 
 import java.util.List;
 
@@ -18,7 +19,8 @@ import java.util.List;
  * runs a one-shot {@code Run_PalRotationScript} over
  * {@code Normal_palette_line_4+$02}: 10 colors, 10 rows, 8 frames per row.
  */
-public final class IczMinibossPostBossPaletteController extends AbstractObjectInstance {
+public final class IczMinibossPostBossPaletteController extends AbstractObjectInstance
+        implements ZeroArgRewindRecreatable {
     private static final int PALETTE_LINE = 3;
     private static final int START_COLOR = 1;
     private static final int FRAME_DELAY = 8;

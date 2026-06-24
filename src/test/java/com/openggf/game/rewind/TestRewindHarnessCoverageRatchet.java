@@ -340,13 +340,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       moved to spawn-based generic recreate.</li>
  *   <li>2026-06-24: raised to 424 after S1 false-floor, LZ boss, and MZ boss
  *       controllers moved to generic recreate.</li>
+ *   <li>2026-06-24: raised to 428 after S3K transition floor, CNZ capsule,
+ *       HCZ2 wall, and ICZ palette controllers moved to generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 424 after S1 boss controllers moved to generic recreate.
-    static final int RATCHET_FLOOR = 424;
+    // 2026-06-24: raised to 428 after S3K stage controllers moved to generic recreate.
+    static final int RATCHET_FLOOR = 428;
 
     @BeforeEach
     void initHeadless() {

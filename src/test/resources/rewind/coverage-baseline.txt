@@ -216,7 +216,6 @@ com.openggf.game.sonic3k.objects.AizRideVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizRockFragmentChild#finalScalar#gravity
 com.openggf.game.sonic3k.objects.AizShipBombInstance#finalScalar#initialWorldY
 com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance#finalScalar#baseY
-com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AnimatedStillSpriteInstance#finalScalar#animDelay
 com.openggf.game.sonic3k.objects.AutoSpinObjectInstance#finalScalar#groundOnly
 com.openggf.game.sonic3k.objects.AutoSpinObjectInstance#finalScalar#lockControls
@@ -271,7 +270,6 @@ com.openggf.game.sonic3k.objects.CnzCylinderInstance#objectRef#releasedJumpSolid
 com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance#finalScalar#centreX
 com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance#finalScalar#centreY
 com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance#finalScalar#completionContinuation
-com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance#recreate
 com.openggf.game.sonic3k.objects.CnzGiantWheelInstance#finalScalar#flipped
 com.openggf.game.sonic3k.objects.CnzHoverFanInstance#finalScalar#activeVariant
 com.openggf.game.sonic3k.objects.CnzHoverFanInstance#finalScalar#baseX
@@ -377,7 +375,6 @@ com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild#finalScalar#offsetFromMachine
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild#recreate
-com.openggf.game.sonic3k.objects.HCZ2WallObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZBlockObjectInstance#finalScalar#halfHeight
 com.openggf.game.sonic3k.objects.HCZBlockObjectInstance#finalScalar#halfWidth
 com.openggf.game.sonic3k.objects.HCZBlockObjectInstance#finalScalar#mappingFrame
@@ -515,7 +512,6 @@ com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#subtypeZ
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#vFlip
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.IczMinibossPostBossPaletteController#recreate
 com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance#finalScalar#spawnY
