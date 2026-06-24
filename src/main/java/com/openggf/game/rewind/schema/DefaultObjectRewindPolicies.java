@@ -115,6 +115,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance", "childInstance"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance", "fireChildren"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance", "walkerFire"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1LavaGeyserObjectInstance", "makerParent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1LavaGeyserObjectInstance", "parentGeyser"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance", "mainWall"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1BumperObjectInstance", "pendingTouchedPlayer"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance", "controlledPlayer"), RewindFieldPolicy.CAPTURED),
