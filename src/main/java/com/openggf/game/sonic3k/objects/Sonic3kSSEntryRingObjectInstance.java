@@ -11,6 +11,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -52,7 +54,7 @@ import java.util.logging.Logger;
  * <p>
  * Reference: docs/skdisasm/sonic3k.asm Obj_SSEntryRing (lines 128211-128530)
  */
-public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
+public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSSEntryRingObjectInstance.class.getName());
 
     // Collision extents from center (ROM: SSEntry_Range: dc.w -$18, $30, -$28, $50)
@@ -136,6 +138,11 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
         this.animTimer = 0;
         this.animIndex = 0;
         this.mappingFrame = FORMATION_FRAMES[0];
+    }
+
+    @Override
+    public Sonic3kSSEntryRingObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic3kSSEntryRingObjectInstance(ctx.spawn());
     }
 
     private void ensureInitialized() {

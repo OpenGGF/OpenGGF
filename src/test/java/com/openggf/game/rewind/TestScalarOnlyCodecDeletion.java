@@ -112,14 +112,17 @@ import com.openggf.game.sonic3k.objects.CnzMinibossTopInstance;
 import com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kSignpostStubChild;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
+import com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPathSwapObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kSpikeObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild;
 import com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild;
+import com.openggf.game.sonic3k.objects.SinkingMudObjectInstance;
 import com.openggf.game.sonic3k.objects.StillSpriteInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance;
@@ -700,6 +703,11 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> S3K_BUTTON_PATH_SWAP_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(Sonic3kButtonObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(Sonic3kPathSwapObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_UTILITY_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(S3kHiddenMonitorInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(SinkingMudObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(Sonic3kSSEntryRingObjectInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HczEndBossRobotnikShip.class.getName(), GameId.S3K),
@@ -5504,6 +5512,41 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kButtonPathSwapClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_BUTTON_PATH_SWAP_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K utility scalar batch: hidden monitor, sinking mud, and SS-entry ring
+    // =====================================================================
+
+    @Test
+    void s3kUtilityClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_UTILITY_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K utility batch");
+        }
+    }
+
+    @Test
+    void s3kUtilityClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_UTILITY_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K utility generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kUtilityClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_UTILITY_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

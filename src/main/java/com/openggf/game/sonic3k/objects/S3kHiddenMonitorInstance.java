@@ -8,6 +8,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -22,7 +24,7 @@ import java.util.logging.Logger;
  *
  * <p>Subtype encodes the monitor contents type.
  */
-public class S3kHiddenMonitorInstance extends AbstractObjectInstance {
+public class S3kHiddenMonitorInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(S3kHiddenMonitorInstance.class.getName());
 
     // Range check box: signpost position relative to THIS hidden monitor
@@ -41,6 +43,11 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance {
         this.monitorX = spawn.x();
         this.monitorY = spawn.y();
         this.monitorSubtype = spawn.subtype();
+    }
+
+    @Override
+    public S3kHiddenMonitorInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new S3kHiddenMonitorInstance(ctx.spawn());
     }
 
     @Override

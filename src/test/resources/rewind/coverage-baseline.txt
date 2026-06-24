@@ -800,9 +800,7 @@ com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance#recreate
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorSubtype
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorX
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorY
-com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#recreate
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#finalScalar#halfWidth
-com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance#finalScalar#adjustedY
 com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance#finalScalar#toggleMode
 com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance#finalScalar#topSolid
@@ -823,7 +821,6 @@ com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot#recreate
 com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance#finalScalar#bitIndex
 com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance#finalScalar#hiddenPalaceRoute
-com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance#finalScalar#redSpring
 com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild#finalScalar#centerX
