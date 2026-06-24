@@ -109,26 +109,26 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
 
     // ===== Instance state =====
 
-    private final int x;
-    private final int y;
-    private final int subtype;
-    private final boolean isHorizontal;
-    private final boolean nonDestructiveRelease;
-    private final int sizeIndex;
+    private int x;
+    private int y;
+    private int subtype;
+    private boolean isHorizontal;
+    private boolean nonDestructiveRelease;
+    private int sizeIndex;
 
     // From size table
-    private final int halfExtent;
-    private final int totalExtent;
-    private final int widthOrHeight;
-    private final int mappingFrame;
+    private int halfExtent;
+    private int totalExtent;
+    private int widthOrHeight;
+    private int mappingFrame;
 
     // Effective collision dimensions
-    private final int widthPixels;
-    private final int heightPixels;
+    private int widthPixels;
+    private int heightPixels;
 
     // Timer: counts down per frame while any player is captured
     private int breakTimer;
-    private final boolean hasTimer;
+    private boolean hasTimer;
 
     // Per-player capture state — ROM: $32/$33 (captured flag), $34/$35 (cooldown)
     private final boolean[] captured = new boolean[2];   // $32(a0), $33(a0)
@@ -607,7 +607,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
 
         private int currentX;
         private int currentY;
-        private final int debrisFrame;
+        private int debrisFrame;
         private int frameDelay;
         private final SubpixelMotion.State motionState;
 
