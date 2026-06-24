@@ -59,12 +59,12 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         private int horizontalDistance;
     }
 
-    private final int baseX;
-    private final int baseY;
-    private final boolean xFlipped;
+    private int baseX;
+    private int baseY;
+    private boolean xFlipped;
     private final RiderState[] riders = {new RiderState(), new RiderState()};
 
-    private final int motionMode;
+    private int motionMode;
     private int motionOffset;
     private int motionStep;
     private int currentX;

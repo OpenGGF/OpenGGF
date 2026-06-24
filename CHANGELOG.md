@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K HCZ spinning-column scalar rewind cleanup:** spinning-column constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K button scalar rewind cleanup:** button constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K MGZ swinging spike-ball scalar rewind cleanup:** spike-ball constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K ICZ swinging platform scalar rewind cleanup:** swinging-platform constructor scalars now compact-restore without stale coverage-baseline keys.
