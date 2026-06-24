@@ -104,12 +104,12 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
     }
 
     private final ZoneConfig config;
-    private final Mode mode;
-    private final int subtype;
-    private final boolean hFlip;
+    private Mode mode;
+    private int subtype;
+    private boolean hFlip;
     private int mappingFrame;
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
     private final int[][] effectiveVelTable;
 
     private boolean broken;
@@ -411,10 +411,10 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
 
         private int currentX;
         private int currentY;
-        private final int fragmentFrameIndex;
-        private final int pieceIndex;
+        private int fragmentFrameIndex;
+        private int pieceIndex;
         private final String artKey;
-        private final boolean hFlip;
+        private boolean hFlip;
         private final SubpixelMotion.State motionState;
 
         public CorkFloorFragment(int parentX, int parentY,

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K cork floor scalar rewind cleanup:** cork-floor and fragment constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K ICZ freezer scalar rewind cleanup:** freezer, capture-cloud, and frost-puff constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K HCZ/CGZ fan scalar rewind cleanup:** fan, platform, and bubble constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K gravity debris scalar rewind cleanup:** shared gravity-driven debris now compact-restores its constructor gravity without stale coverage-baseline keys.
