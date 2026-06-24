@@ -320,13 +320,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       moved to generic recreate under object-manager coverage.</li>
  *   <li>2026-06-24: raised to 402 after the S2 Moving Vine restore moved to
  *       generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 403 after the S2 Point Pokey restore moved to
+ *       generic recreate under object-manager coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 402 after S2 Moving Vine restore moved to generic recreate.
-    static final int RATCHET_FLOOR = 402;
+    // 2026-06-24: raised to 403 after S2 Point Pokey restore moved to generic recreate.
+    static final int RATCHET_FLOOR = 403;
 
     @BeforeEach
     void initHeadless() {

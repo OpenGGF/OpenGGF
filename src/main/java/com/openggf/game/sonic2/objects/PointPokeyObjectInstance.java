@@ -51,7 +51,7 @@ import java.util.logging.Logger;
  * <b>Disassembly Reference:</b> s2.asm ObjD6 (Point Pokey / CNZ Cage)
  */
 public class PointPokeyObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(PointPokeyObjectInstance.class.getName());
 
@@ -124,6 +124,11 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         // Use cyan color for debug box
         super(spawn, name, HALF_WIDTH, GROUND_HALF_HEIGHT, 0.2f, 0.8f, 0.8f, false);
         this.isLinkedMode = (spawn.subtype() & 0xFF) == 0x01;
+    }
+
+    @Override
+    public PointPokeyObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new PointPokeyObjectInstance(ctx.spawn(), "PointPokey");
     }
 
     @Override

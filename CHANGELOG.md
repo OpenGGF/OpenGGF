@@ -51,6 +51,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S2/S3K standalone controller rewind coverage:** MTZ nuts, LBZ barriers/alarms, HCZ water-drop spawners, MHZ pollen spawners, and MGZ post-boss controllers now restore through generic rewind recreate under object-manager coverage.
 - **S1 false-floor fragment rewind coverage:** SBZ2 false-floor falling fragments now rebuild through generic rewind recreate while object-manager coverage preserves captured motion and mapping state.
 - **S2 Moving Vine rewind coverage:** MCZ/WFZ moving vines now restore through generic rewind recreate while object-manager coverage preserves extension and grab-state scalars.
+- **S2 Point Pokey rewind coverage:** CNZ Point Pokey cages now restore through generic rewind recreate while object-manager coverage preserves occupied cage and prize-spawn state.
 - **S2 scalar named-object rewind coverage:** Arrow shooters and one-way barriers now preserve registry object names while rebuilding through generic rewind recreate, raising the round-trip ratchet without explicit dynamic codecs.
 - **S2 CNZ scalar rewind coverage:** Round bumpers, hex bumpers, bonus blocks, bubble generators, and Sky Chase clouds now rebuild through generic rewind recreate, raising the round-trip ratchet without explicit dynamic codecs.
 - **S2 utility scalar rewind coverage:** Buttons, Clucker bases, fans, lava markers, bridge stakes, and EHZ waterfalls now rebuild through generic rewind recreate, tightening constructor-scalar baselines without explicit dynamic codecs.
