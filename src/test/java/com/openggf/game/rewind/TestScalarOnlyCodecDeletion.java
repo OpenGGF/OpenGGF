@@ -2132,6 +2132,11 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_CORKEY_NOZZLE_GRAPH_BATCH109_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyNozzleChild",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(S3kSignpostStubChild.class.getName(), GameId.S3K));
 
@@ -7631,6 +7636,24 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
+        }
+    }
+
+    @Test
+    void s3kCorkeyNozzleGraphBatch109ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CORKEY_NOZZLE_GRAPH_BATCH109_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K batch 109");
+        }
+    }
+
+    @Test
+    void s3kCorkeyNozzleGraphBatch109ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CORKEY_NOZZLE_GRAPH_BATCH109_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Corkey nozzle graph generic recreate, not a dynamic codec");
         }
     }
 

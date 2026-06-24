@@ -734,7 +734,6 @@ com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$BreathDebrisChil
 com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance#finalScalar#priorityBucket
-com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyNozzleChild#recreate
 com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance#finalScalar#priorityBucket
