@@ -7,6 +7,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -32,7 +34,7 @@ import java.util.List;
  * - Body stays stationary as anchor after spawning heads
  */
 public class RexonBadnikInstance extends AbstractBadnikInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
     // Collision size from Obj94_SubObjData (s2.asm:74061)
     // Body has collision 0, not 0x0B - heads have their own collision
     private static final int COLLISION_SIZE_INDEX = 0x00;
@@ -78,6 +80,11 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
         this.facingLeft = !xFlipFlag;
         this.lastTargetX = 0;
         this.lastTargetDistance = 0;
+    }
+
+    @Override
+    public RexonBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new RexonBadnikInstance(ctx.spawn());
     }
 
     @Override

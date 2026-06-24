@@ -12,6 +12,8 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.PatrolMovementHelper;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import com.openggf.debug.DebugColor;
@@ -35,7 +37,7 @@ import java.util.List;
  *     Sub 2: Wait for claw to signal completion (objoff_2C flag)
  *     Sub 4: Wait 0x20 frames, then reset to walking
  */
-public class ShellcrackerBadnikInstance extends AbstractBadnikInstance {
+public class ShellcrackerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     // From Obj9F_SubObjData: collision_flags = $A (enemy, size index 10)
     private static final int COLLISION_SIZE_INDEX = 0x0A;
 
@@ -111,6 +113,11 @@ public class ShellcrackerBadnikInstance extends AbstractBadnikInstance {
         this.walkAnimIndex = 0;
         this.walkAnimTimer = WALK_ANIM_SPEED;
         this.clawDone = false;
+    }
+
+    @Override
+    public ShellcrackerBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new ShellcrackerBadnikInstance(ctx.spawn());
     }
 
     /**

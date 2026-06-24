@@ -42,6 +42,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -78,6 +79,9 @@ public final class RewindRoundTripHarness {
     /** Representative spawn used by the class sweep when no specific ID is known. */
     private static final ObjectSpawn PROBE_SPAWN =
             new ObjectSpawn(0x100, 0x100, 1, 0, 0, false, 0);
+
+    private static final Set<String> GRAPH_ONLY_ISOLATED_PROBE_CLASSES = Set.of(
+            "com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance");
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -386,6 +390,10 @@ public final class RewindRoundTripHarness {
         //    and is not useful for Phase 2 gate purposes.
         if (!hasRegisteredCodec(fqn)) {
             return new RoundTripSweepResult.Unprobed("no dynamic recreate path (no codec registered)");
+        }
+        if (GRAPH_ONLY_ISOLATED_PROBE_CLASSES.contains(fqn)) {
+            return new RoundTripSweepResult.Unprobed(
+                    "parent-dependent - recreate requires graph/session harness in isolation");
         }
 
         // 1. Resolve the class.

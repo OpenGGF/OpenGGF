@@ -34,6 +34,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S2 platform-mechanism scalar rewind coverage:** Large rotating platforms, MCZ bricks/bridges/drawbridges, MTZ twin stompers, HTZ rising lava, WFZ vertical propellers, and WFZ ship fire now rebuild through generic rewind recreate without stale constructor-scalar baselines.
 - **S2 top-level badnik scalar rewind coverage:** Asterons, Chop Chops, Cluckers, Coconuts, Crawltons, Flashers, Mashers, Nebulas, Octuses, Spikers, Spinies, wall Spinies, WFZ stick/unknown badniks, and Whisps now rebuild through generic rewind recreate without stale constructor-scalar baselines.
 - **S2 Crawl rewind coverage:** Crawl badniks now rebuild through generic rewind recreate without their stale recreate baseline.
+- **S2 badnik parent graph rewind coverage:** Balkiry, Rexon, Shellcracker, Slicer, and Sol parent badniks now rebuild through generic rewind recreate under graph/session restore coverage.
 - **S2 misc scalar rewind coverage:** HTZ fire shooters, signposts, steam springs, tornado smoke, and WFZ wheels now rebuild through generic rewind recreate without stale constructor-scalar baselines.
 - **S2 mechanism-tail rewind coverage:** Monitors, spiky blocks, springboards, and Buzzer bodies now rebuild through generic rewind recreate without stale constructor-scalar baselines.
 - **S2 fragment-parent rewind coverage:** Smashable ground and WFZ tilting-platform parent objects now rebuild through generic rewind recreate without stale constructor-scalar baselines.

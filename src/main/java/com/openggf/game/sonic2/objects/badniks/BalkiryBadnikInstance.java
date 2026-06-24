@@ -11,6 +11,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -35,7 +37,7 @@ import java.util.List;
  *   - loc_36776 (add Tornado_Velocity_X/Y to position)
  *   - Obj_DeleteBehindScreen
  */
-public class BalkiryBadnikInstance extends AbstractBadnikInstance {
+public class BalkiryBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     // From subObjData: collision = 8
     private static final int COLLISION_SIZE_INDEX = 0x08;
 
@@ -70,6 +72,11 @@ public class BalkiryBadnikInstance extends AbstractBadnikInstance {
 
         // ROM: ObjAC_Init falls through to loc_37ABE (jet spawn) in the same frame.
         spawnJetChild();
+    }
+
+    @Override
+    public BalkiryBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BalkiryBadnikInstance(ctx.spawn());
     }
 
     @Override

@@ -155,16 +155,11 @@ com.openggf.game.sonic2.objects.VerticalLaserObjectInstance#finalScalar#posY
 com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild#recreate
 com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance#finalScalar#type
-com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild#finalScalar#parentSlotIndex
 com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#objectRef#pendingGrabPlayer
 com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#recreate
-com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance#recreate
-com.openggf.game.sonic2.objects.badniks.ShellcrackerBadnikInstance#recreate
-com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.SolBadnikInstance#finalScalar#orbitDirection
 com.openggf.game.sonic2.objects.badniks.SolBadnikInstance#finalScalar#xFlip
-com.openggf.game.sonic2.objects.badniks.SolBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance#finalScalar#vFlip
 com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance#recreate

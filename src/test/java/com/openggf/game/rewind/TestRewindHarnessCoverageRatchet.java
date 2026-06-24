@@ -245,13 +245,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       generic recreate and shed its stale recreate baseline.</li>
  *   <li>2026-06-24: raised to 317 after S2 Crawl scalar restore moved to
  *       generic recreate and shed its stale recreate baseline.</li>
+ *   <li>2026-06-24: raised to 321 after S2 badnik parent graph restores moved
+ *       to generic recreate and shed stale recreate baselines.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 317 after S2 Crawl scalar restore moved to generic recreate.
-    static final int RATCHET_FLOOR = 317;
+    // 2026-06-24: raised to 321 after S2 badnik parent graph restores moved to generic recreate.
+    static final int RATCHET_FLOOR = 321;
 
     @BeforeEach
     void initHeadless() {

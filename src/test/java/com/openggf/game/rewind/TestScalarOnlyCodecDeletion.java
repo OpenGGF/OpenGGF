@@ -654,6 +654,13 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(SlicerPincerInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(SolFireballObjectInstance.class.getName(), GameId.S2));
 
+    private static final List<CodecDeletionCandidate> S2_BADNIK_PARENT_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance", GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance", GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.ShellcrackerBadnikInstance", GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance", GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.SolBadnikInstance", GameId.S2));
+
     private static final List<CodecDeletionCandidate> CHECKPOINT_STARPOST_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(Sonic1LamppostTwirlInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(CheckpointDongleInstance.class.getName(), GameId.S2),
@@ -5246,6 +5253,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S2 badnik child graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2BadnikParentGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_BADNIK_PARENT_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 badnik parent graph batch");
+        }
+    }
+
+    @Test
+    void s2BadnikParentGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_BADNIK_PARENT_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 badnik parent graph generic recreate, not a dynamic codec");
         }
     }
 

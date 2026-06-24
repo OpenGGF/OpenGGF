@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
@@ -25,7 +27,7 @@ import java.util.List;
  * orbit angle reaches 0x40 during the body animation frame 2.
  * Based on disassembly Obj95.
  */
-public class SolBadnikInstance extends AbstractBadnikInstance {
+public class SolBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     private enum State {
         WAIT_FOR_PLAYER, // Routine 2
         AFTER_FIRE       // Routine 4
@@ -59,6 +61,11 @@ public class SolBadnikInstance extends AbstractBadnikInstance {
         this.afterAnimation = new ObjectAnimationState(FIREBALL_ANIMATIONS, 0, 3);
         this.state = resolveInitialState(spawn.subtype());
         this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+    }
+
+    @Override
+    public SolBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SolBadnikInstance(ctx.spawn());
     }
 
     @Override
