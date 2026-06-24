@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -36,7 +37,7 @@ import java.util.Set;
  * animation-frame gated bounce response.
  */
 public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, SpawnRewindRecreatable {
     private static final int ANIM_IDLE = 0;
     private static final int ANIM_BOUNCE = 1;
     private static final int BOUNCE_MAPPING_FRAME = 3;

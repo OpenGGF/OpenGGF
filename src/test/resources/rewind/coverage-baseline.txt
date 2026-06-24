@@ -634,7 +634,6 @@ com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#recreate
 com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance$MhzMinibossTreeChipInstance#finalScalar#bounceEnabled
@@ -643,7 +642,6 @@ com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance#finalScalar#baseX
 com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance#finalScalar#priorityBucket
-com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance#finalScalar#baseX
 com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance#finalScalar#childX
@@ -654,7 +652,6 @@ com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#finalScalar#fallingSubtype
 com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#finalScalar#vFlip
-com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzShipPropellerInstance#finalScalar#propellerIndex
 com.openggf.game.sonic3k.objects.MhzShipPropellerInstance#recreate
 com.openggf.game.sonic3k.objects.MhzShipSequenceControllerInstance#finalScalar#initialShipMotion

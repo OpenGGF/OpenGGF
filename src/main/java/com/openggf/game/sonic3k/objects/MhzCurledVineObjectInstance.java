@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -25,7 +26,7 @@ import java.util.Map;
  * the generated segment surface.
  */
 public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
     private static final int INITIAL_CURVE_STATE = 0xFFF40000;
     private static final int INITIAL_RANGE_WIDTH = 0x40;
     private static final int DISPLAY_HALF_HEIGHT = 0x30;
