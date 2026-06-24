@@ -86,6 +86,7 @@ import com.openggf.game.sonic3k.objects.AizEndBossSmokeChild;
 import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance;
+import com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizIntroPlaneChild;
 import com.openggf.game.sonic3k.objects.AizIntroWaveChild;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -672,6 +673,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance$CollapsingLogSegment",
                     GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_FLIPPING_BRIDGE_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(AizFlippingBridgeObjectInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HczEndBossRobotnikShip.class.getName(), GameId.S3K),
@@ -5338,6 +5342,30 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through AIZ collapsing-log bridge graph generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ flipping bridge scalar batch: parent object
+    // =====================================================================
+
+    @Test
+    void aizFlippingBridgeClassImplementsRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_FLIPPING_BRIDGE_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after AIZ flipping-bridge batch");
+        }
+    }
+
+    @Test
+    void aizFlippingBridgeClassHasNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_FLIPPING_BRIDGE_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ flipping-bridge generic recreate, "
                             + "not a dynamic codec");
         }
     }

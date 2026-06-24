@@ -275,13 +275,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       to generic recreate under border-child graph coverage.</li>
  *   <li>2026-06-24: raised to 341 after AIZ collapsing-log bridge parent and
  *       segment restores moved to generic recreate under graph coverage.</li>
+ *   <li>2026-06-24: raised to 342 after AIZ flipping bridge restore moved
+ *       to generic recreate under object-manager coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 341 after AIZ collapsing-log bridge parent and segment moved to generic recreate.
-    static final int RATCHET_FLOOR = 341;
+    // 2026-06-24: raised to 342 after AIZ flipping bridge restore moved to generic recreate.
+    static final int RATCHET_FLOOR = 342;
 
     @BeforeEach
     void initHeadless() {

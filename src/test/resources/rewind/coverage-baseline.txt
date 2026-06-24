@@ -206,7 +206,6 @@ com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance#finalScalar#hFl
 com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance#finalScalar#maxFrame
 com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizForegroundPlantInstance#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.AizForegroundPlantInstance#finalScalar#origX
 com.openggf.game.sonic3k.objects.AizForegroundPlantInstance#finalScalar#origY
