@@ -32,9 +32,9 @@ public class IczIceBlockObjectInstance extends AbstractObjectInstance
 
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x1B, 0x10, 0x11);
 
-    private final int x;
-    private final int y;
-    private final boolean hFlip;
+    private int x;
+    private int y;
+    private boolean hFlip;
 
     public IczIceBlockObjectInstance(ObjectSpawn spawn) {
         super(spawn, "ICZIceBlock");

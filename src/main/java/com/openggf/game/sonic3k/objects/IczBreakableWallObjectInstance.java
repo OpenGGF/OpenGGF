@@ -63,9 +63,9 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
-    private final int x;
-    private final int y;
-    private final boolean hFlip;
+    private int x;
+    private int y;
+    private boolean hFlip;
     private boolean broken;
 
     public IczBreakableWallObjectInstance(ObjectSpawn spawn) {

@@ -115,9 +115,6 @@ com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScal
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScalar#vortexX
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScalar#vortexY
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#recreate
-com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance#finalScalar#x
-com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#hasBottomDecoration
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#spawnY
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#subtype
@@ -130,16 +127,6 @@ com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud#objectRef
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud#recreate
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#objectRef#capturedPlayer
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#recreate
-com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance#finalScalar#breakOnTouch
-com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance#finalScalar#x
-com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.IczIceBlockObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.IczIceBlockObjectInstance#finalScalar#x
-com.openggf.game.sonic3k.objects.IczIceBlockObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance#finalScalar#x
-com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#originalX
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#originalY

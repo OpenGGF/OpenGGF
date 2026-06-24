@@ -50,9 +50,9 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
     // loc_8B3D2: move.w #-$300,y_vel(a1).
     private static final int SHATTER_Y_SPEED = -0x300;
 
-    private final int x;
-    private final int y;
-    private final boolean hFlip;
+    private int x;
+    private int y;
+    private boolean hFlip;
     private boolean shattered;
 
     public IczIceCubeObjectInstance(ObjectSpawn spawn) {

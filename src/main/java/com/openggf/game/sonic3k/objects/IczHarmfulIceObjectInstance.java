@@ -57,10 +57,10 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
     private static final int BREAK_FRAME = 4;
     private static final int BREAK_COLLISION_FLAGS = 0xD7;
 
-    private final int x;
-    private final int y;
-    private final boolean hFlip;
-    private final boolean breakOnTouch;
+    private int x;
+    private int y;
+    private boolean hFlip;
+    private boolean breakOnTouch;
 
     private boolean broken;
 
