@@ -56,7 +56,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
     private static final int GRAVITY_REXON_FIREBALL = 0x80; // From disassembly $80 per frame
     private static final boolean ASTERON_HIGH_PRIORITY_SPRITE = true;
 
-    private final ProjectileType type;
+    private ProjectileType type;
     private int currentX;
     private int currentY;
     private int xVelocity; // In subpixels (8.8 fixed point)

@@ -14,6 +14,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S2 collapsing-platform fragment rewind coverage:** Collapsing-platform fragments now restore through generic rewind recreate with graph-tested identity preservation and compact-restored visual metadata.
 - **S2 conveyor/capsule scalar rewind cleanup:** MTZ conveyors and destroyed Egg Prison visuals now compact-restore constructor-derived position/flip scalars without stale coverage-baseline keys.
 - **Falling-fragment scalar rewind cleanup:** shared collapsing-floor/platform fragments now compact-restore constructor-derived position/priority scalars without stale coverage-baseline keys.
+- **S2 transient scalar rewind cleanup:** monitor contents, steam puffs, spin tubes, vertical lasers, badnik projectiles, and Spiker drills now compact-restore constructor scalars without stale coverage-baseline keys.
 - **S2 CPZ Spin Tube rewind coverage:** CPZ spin tubes now restore through generic rewind recreate while compact restore preserves constructor-derived collision distance and frame-timer state.
 - **S2 collapsing-platform parent rewind cleanup:** OOZ/MCZ/ARZ collapsing-platform parents now compact-restore captured flip flags without stale constructor-scalar coverage baselines.
 - **S2 Swinging Platform graph rewind coverage:** OOZ/ARZ/MCZ swinging platforms now restore through generic rewind recreate with display-child relinking and compact configuration restore.

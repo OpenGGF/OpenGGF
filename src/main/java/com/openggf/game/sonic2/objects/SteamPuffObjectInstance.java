@@ -51,7 +51,7 @@ public class SteamPuffObjectInstance extends AbstractObjectInstance
     // Category $80 (HURT) + size index $26
     private static final int COLLISION_FLAGS_ACTIVE = 0xA6;
 
-    private final boolean xFlipped;
+    private boolean xFlipped;
     private int mappingFrame;
     private int frameDuration;
     private int collisionFlags;

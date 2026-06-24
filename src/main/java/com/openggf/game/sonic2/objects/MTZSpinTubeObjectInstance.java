@@ -150,7 +150,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
     private final CharacterState sidekickCharState = new CharacterState();
 
     // Whether object is x-flipped (from render_flags bit 0)
-    private final boolean xFlipped;
+    private boolean xFlipped;
 
     // Animation state for the flash effect
     private final ObjectAnimationState animationState;

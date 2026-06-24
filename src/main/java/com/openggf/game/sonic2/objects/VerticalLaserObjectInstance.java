@@ -50,8 +50,8 @@ public class VerticalLaserObjectInstance extends AbstractObjectInstance
     private static final int LIFETIME_FRAMES = 0x20;
 
     // State
-    private final int posX;
-    private final int posY;
+    private int posX;
+    private int posY;
     private int timer;              // objoff_2A - countdown timer
     private boolean visibleToggle;  // objoff_2B bit 0 - alternates each frame
     private boolean initialized;    // First frame is Init (routine 0), skip render
