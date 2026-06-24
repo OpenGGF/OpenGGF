@@ -72,14 +72,7 @@ com.openggf.game.sonic3k.objects.CnzTeleporterInstance#recreate
 com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance#objectRef#corkFloor
 com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance#recreate
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance#recreate
-com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#finalScalar#fragmentFrameIndex
-com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#finalScalar#highPriority
-com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#finalScalar#pieceIndex
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#recreate
-com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris#finalScalar#frameIndex
-com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris#finalScalar#pieceIndex
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris#recreate
 com.openggf.game.sonic3k.objects.CorkFloorObjectInstance#recreate
 com.openggf.game.sonic3k.objects.CorkFloorObjectInstance$CorkFloorFragment#recreate

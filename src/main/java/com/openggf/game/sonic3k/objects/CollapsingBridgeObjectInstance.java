@@ -1014,11 +1014,11 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
      */
     public static class BridgeFragment extends AbstractFallingFragment {
 
-        private final int fragmentFrameIndex;
-        private final int pieceIndex;
+        private int fragmentFrameIndex;
+        private int pieceIndex;
         private final String artKey;
-        private final boolean hFlip;
-        private final boolean highPriority;
+        private boolean hFlip;
+        private boolean highPriority;
 
         public BridgeFragment(int parentX, int parentY,
                               int fragmentFrameIndex, int pieceIndex,
@@ -1059,10 +1059,10 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
      */
     public static class MgzStompDebris extends GravityDebrisChild {
 
-        private final int frameIndex;
-        private final int pieceIndex;
+        private int frameIndex;
+        private int pieceIndex;
         private final String artKey;
-        private final boolean hFlip;
+        private boolean hFlip;
 
         public MgzStompDebris(int parentX, int parentY,
                               int frameIndex, int pieceIndex,
