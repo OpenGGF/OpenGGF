@@ -641,7 +641,6 @@ com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance$MhzMinibossTreeChipInstance#finalScalar#bounceEnabled
-com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance$MhzMinibossTreeChipInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance#finalScalar#animationPhaseOffset
 com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance#finalScalar#baseX
 com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance#finalScalar#baseY
