@@ -553,16 +553,31 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
     public static class CollapsingFloorFragmentInstance extends AbstractFallingFragment
             implements RewindRecreatable {
 
+        private static final int PIECE_MASK = 0x0F;
+        private static final int FRAME_SHIFT = 4;
+        private static final int FRAME_MASK = 0x03;
+        private static final int ART_SHIFT = 6;
+        private static final int ART_MASK = 0x03;
+
         private int smashFrameIndex;
         private int pieceIndex;
         private boolean hFlip;
         private String artKey;
 
+        CollapsingFloorFragmentInstance(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(),
+                    smashFrameIndex(spawn),
+                    pieceIndex(spawn),
+                    spawn.rawYWord(),
+                    (spawn.renderFlags() & 0x01) != 0,
+                    artKey(spawn));
+        }
+
         public CollapsingFloorFragmentInstance(int parentX, int parentY,
                                                int smashFrameIndex, int pieceIndex,
                                                int delay, boolean hFlip, String artKey) {
-            super(new ObjectSpawn(parentX, parentY, Sonic1ObjectIds.COLLAPSING_FLOOR,
-                    0, 0, false, 0), "CFloFragment", delay, PRIORITY);
+            super(fragmentSpawn(parentX, parentY, smashFrameIndex, pieceIndex, delay, hFlip, artKey),
+                    "CFloFragment", delay, PRIORITY);
             this.smashFrameIndex = smashFrameIndex;
             this.pieceIndex = pieceIndex;
             this.hFlip = hFlip;
@@ -571,9 +586,7 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
 
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            ObjectSpawn spawn = ctx.spawn();
-            return new CollapsingFloorFragmentInstance(
-                    spawn.x(), spawn.y(), 0, 0, 0, false, ObjectArtKeys.MZ_COLLAPSING_FLOOR);
+            return new CollapsingFloorFragmentInstance(ctx.spawn());
         }
 
         @Override
@@ -587,6 +600,53 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
             }
 
             renderer.drawFramePieceByIndex(smashFrameIndex, pieceIndex, getX(), getY(), hFlip, false);
+        }
+
+        private static ObjectSpawn fragmentSpawn(
+                int x,
+                int y,
+                int smashFrameIndex,
+                int pieceIndex,
+                int delay,
+                boolean hFlip,
+                String artKey) {
+            return new ObjectSpawn(x, y, Sonic1ObjectIds.COLLAPSING_FLOOR,
+                    fragmentSubtype(smashFrameIndex, pieceIndex, artKey),
+                    hFlip ? 0x01 : 0,
+                    false,
+                    delay);
+        }
+
+        private static int fragmentSubtype(int smashFrameIndex, int pieceIndex, String artKey) {
+            return ((artCode(artKey) & ART_MASK) << ART_SHIFT)
+                    | ((smashFrameIndex & FRAME_MASK) << FRAME_SHIFT)
+                    | (pieceIndex & PIECE_MASK);
+        }
+
+        private static int smashFrameIndex(ObjectSpawn spawn) {
+            return (spawn.subtype() >> FRAME_SHIFT) & FRAME_MASK;
+        }
+
+        private static int pieceIndex(ObjectSpawn spawn) {
+            return spawn.subtype() & PIECE_MASK;
+        }
+
+        private static String artKey(ObjectSpawn spawn) {
+            return switch ((spawn.subtype() >> ART_SHIFT) & ART_MASK) {
+                case 1 -> ObjectArtKeys.SLZ_COLLAPSING_FLOOR;
+                case 2 -> ObjectArtKeys.SBZ_COLLAPSING_FLOOR;
+                default -> ObjectArtKeys.MZ_COLLAPSING_FLOOR;
+            };
+        }
+
+        private static int artCode(String artKey) {
+            if (ObjectArtKeys.SLZ_COLLAPSING_FLOOR.equals(artKey)) {
+                return 1;
+            }
+            if (ObjectArtKeys.SBZ_COLLAPSING_FLOOR.equals(artKey)) {
+                return 2;
+            }
+            return 0;
         }
     }
 }

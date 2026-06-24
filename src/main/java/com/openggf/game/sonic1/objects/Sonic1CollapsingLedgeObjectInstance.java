@@ -493,15 +493,27 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     public static class CollapsingLedgeFragmentInstance extends AbstractFallingFragment
             implements RewindRecreatable {
 
+        private static final int PIECE_MASK = 0x1F;
+        private static final int FRAME_SHIFT = 5;
+        private static final int FRAME_MASK = 0x03;
+
         private int smashFrameIndex;
         private int pieceIndex;
         private boolean hFlip;
 
+        CollapsingLedgeFragmentInstance(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(),
+                    smashFrameIndex(spawn),
+                    pieceIndex(spawn),
+                    spawn.rawYWord(),
+                    spawn.renderFlags());
+        }
+
         public CollapsingLedgeFragmentInstance(int parentX, int parentY,
                                                int smashFrameIndex, int pieceIndex,
                                                int delay, int renderFlags) {
-            super(new ObjectSpawn(parentX, parentY, Sonic1ObjectIds.COLLAPSING_LEDGE,
-                    0, renderFlags, false, 0), "LedgeFragment", delay, PRIORITY);
+            super(fragmentSpawn(parentX, parentY, smashFrameIndex, pieceIndex, delay, renderFlags),
+                    "LedgeFragment", delay, PRIORITY);
             this.smashFrameIndex = smashFrameIndex;
             this.pieceIndex = pieceIndex;
             this.hFlip = (renderFlags & 0x01) != 0;
@@ -509,8 +521,7 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
 
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            ObjectSpawn spawn = ctx.spawn();
-            return new CollapsingLedgeFragmentInstance(spawn.x(), spawn.y(), 0, 0, 0, 0);
+            return new CollapsingLedgeFragmentInstance(ctx.spawn());
         }
 
         @Override
@@ -522,6 +533,33 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
 
             // Render just this piece from the smash frame (inheriting parent's X-flip)
             renderer.drawFramePieceByIndex(smashFrameIndex, pieceIndex, getX(), getY(), hFlip, false);
+        }
+
+        private static ObjectSpawn fragmentSpawn(
+                int x,
+                int y,
+                int smashFrameIndex,
+                int pieceIndex,
+                int delay,
+                int renderFlags) {
+            return new ObjectSpawn(x, y, Sonic1ObjectIds.COLLAPSING_LEDGE,
+                    fragmentSubtype(smashFrameIndex, pieceIndex),
+                    renderFlags,
+                    false,
+                    delay);
+        }
+
+        private static int fragmentSubtype(int smashFrameIndex, int pieceIndex) {
+            return ((smashFrameIndex & FRAME_MASK) << FRAME_SHIFT)
+                    | (pieceIndex & PIECE_MASK);
+        }
+
+        private static int smashFrameIndex(ObjectSpawn spawn) {
+            return (spawn.subtype() >> FRAME_SHIFT) & FRAME_MASK;
+        }
+
+        private static int pieceIndex(ObjectSpawn spawn) {
+            return spawn.subtype() & PIECE_MASK;
         }
     }
 }

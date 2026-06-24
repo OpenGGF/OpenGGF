@@ -8301,6 +8301,17 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
+    void s1CollapsingFragmentsRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_COLLAPSING_FRAGMENT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via S1 collapsing fragment generic recreate; got: "
+                            + result);
+        }
+    }
+
+    @Test
     void s1DestructionFragmentsImplementRewindRecreatable() {
         for (CodecDeletionCandidate candidate : S1_DESTRUCTION_FRAGMENT_RECREATE_CLASSES) {
             Class<?> cls = loadClass(candidate.fqn());
