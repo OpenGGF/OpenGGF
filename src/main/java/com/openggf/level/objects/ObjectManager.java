@@ -199,6 +199,12 @@ public class ObjectManager {
     private final ObjectSolidContactController solidContacts;
     private final ObjectTouchResponseController touchResponses;
 
+    // Per-player centre Y captured at the start of the object exec pass
+    // (post-physics, before any object re-seats the player this frame). See
+    // captureExecStartPlayerCentreY / getPlayerCentreYAtExecStart.
+    private final java.util.Map<PlayableEntity, Integer> execStartPlayerCentreY =
+            new java.util.IdentityHashMap<>(2);
+
     private static final Comparator<ObjectInstance> RENDER_SLOT_DESCENDING = (a, b) -> {
         int slotA = a instanceof AbstractObjectInstance aoiA ? aoiA.getSlotIndex() : Integer.MAX_VALUE;
         int slotB = b instanceof AbstractObjectInstance aoiB ? aoiB.getSlotIndex() : Integer.MAX_VALUE;
@@ -544,6 +550,16 @@ public class ObjectManager {
         // before the exec loop. Do not consolidate without verifying both
         // call paths first.
         updateCameraBounds();
+        // Snapshot each player's centre Y at the start of the object exec pass
+        // (post-physics, before any object re-seats him this frame). ROM objects
+        // that re-position the player (e.g. the SLZ staircase ride-seat) run in
+        // their own slot; an object reading the player's position before that
+        // re-seat (because its slot is lower than the re-seating object) sees
+        // this pre-seat value. The engine folds the staircase into a lower slot
+        // than the fan, so the fan would otherwise read the already-seated Y.
+        // Objects that need ROM's "player position when my slot ran, before
+        // later-slot objects moved him" read this via getPlayerCentreYAtExecStart.
+        captureExecStartPlayerCentreY(player, activeSidekicks);
         SolidExecutionRegistry solidExecutionRegistry = objectServices.solidExecutionRegistry();
         solidExecutionRegistry.beginFrame(frameCounter, collectActivePlayers(player, activeSidekicks));
         boolean counterBased = placement.isCounterBasedRespawn();
@@ -2215,6 +2231,34 @@ public class ObjectManager {
      */
     public void removeFromActiveSpawns(ObjectSpawn spawn) {
         placement.removeFromActive(spawn);
+    }
+
+    private void captureExecStartPlayerCentreY(PlayableEntity player,
+            List<? extends PlayableEntity> sidekicks) {
+        execStartPlayerCentreY.clear();
+        if (player != null) {
+            execStartPlayerCentreY.put(player, (int) player.getCentreY());
+        }
+        for (PlayableEntity sidekick : sidekicks) {
+            if (sidekick != null) {
+                execStartPlayerCentreY.put(sidekick, (int) sidekick.getCentreY());
+            }
+        }
+    }
+
+    /**
+     * The player's centre Y at the start of this frame's object exec pass —
+     * post-physics, before any object re-seated him. Objects whose ROM slot runs
+     * before a player-re-seating object (e.g. the SLZ Fan reading Sonic's Y
+     * before the higher-slot staircase ride-seat lifts him) should read this
+     * instead of the live centre Y, so the engine's folded-into-a-lower-slot
+     * re-seating object does not feed them an already-updated position. Falls
+     * back to the live centre Y when no snapshot exists (player absent at
+     * exec-start, e.g. spawned mid-pass).
+     */
+    public int getPlayerCentreYAtExecStart(PlayableEntity player) {
+        Integer y = execStartPlayerCentreY.get(player);
+        return y != null ? y : (player != null ? player.getCentreY() : 0);
     }
 
     /** Is this player riding any object? */
