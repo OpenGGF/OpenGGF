@@ -98,16 +98,16 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private final int baseX;
-    private final int baseY;
+    private int baseX;
+    private int baseY;
     private int currentX;
     private int currentY;
-    private final ZoneVariant variant;
-    private final int sizeIndex;
-    private final int behaviorBits;
-    private final boolean knucklesOnly;
-    private final boolean knucklesOnlyStanding;
-    private final int displayFrame;
+    private ZoneVariant variant;
+    private int sizeIndex;
+    private int behaviorBits;
+    private boolean knucklesOnly;
+    private boolean knucklesOnlyStanding;
+    private int displayFrame;
 
     private boolean contactPushingActive;
     private int pushRateTimer;

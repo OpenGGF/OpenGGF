@@ -697,6 +697,19 @@ public class TestScalarOnlyCodecDeletion {
                             "com.openggf.game.sonic3k.objects.HCZBlockObjectInstance",
                             "halfHeight", "halfWidth", "mappingFrame", "x", "y"));
 
+    private static final List<MutableFieldCoverageCandidate> BATCH141_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance",
+                            "cutsceneOverride", "pivotX", "pivotY", "reverseVertical", "settledAngle", "xFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance",
+                            "mappingFrame"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance",
+                            "baseX", "baseY", "behaviorBits", "displayFrame", "knucklesOnly",
+                            "knucklesOnlyStanding", "sizeIndex", "variant"));
+
     private static final List<CodecDeletionCandidate> BATCH31_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(BombPrizeObjectInstance.class.getName(), GameId.S2));
 
@@ -3996,6 +4009,23 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void batch140S3kSharedMechanismConstructorScalarsAreMutableForCompactRestore() {
         for (MutableFieldCoverageCandidate candidate : BATCH140_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch141S3kAizLrzMechanismConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH141_MUTABLE_FIELDS) {
             Class<?> cls = loadClass(candidate.fqn());
             for (String fieldName : candidate.fieldNames()) {
                 try {

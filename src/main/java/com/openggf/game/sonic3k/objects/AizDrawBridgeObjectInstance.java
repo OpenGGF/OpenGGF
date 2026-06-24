@@ -41,12 +41,12 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     private static final int COLLAPSE_DELAY = 0x0E;
     private static final int[] FALL_DELAYS = {8, 0x10, 0x0C, 0x0E, 6, 0x0A, 4, 2, 8, 0x10, 0x0C, 0x0E, 6, 0x0A};
 
-    private final int pivotX;
-    private final int pivotY;
-    private final boolean xFlip;
-    private final boolean reverseVertical;
-    private final int settledAngle;
-    private final boolean cutsceneOverride;
+    private int pivotX;
+    private int pivotY;
+    private boolean xFlip;
+    private boolean reverseVertical;
+    private int settledAngle;
+    private boolean cutsceneOverride;
 
     private int currentX;
     private int currentY;

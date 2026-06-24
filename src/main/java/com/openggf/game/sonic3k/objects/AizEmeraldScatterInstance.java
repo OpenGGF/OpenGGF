@@ -103,7 +103,7 @@ public class AizEmeraldScatterInstance extends AbstractObjectInstance {
     private int yVel;
 
     /** Display frame index derived from subtype (0-6 for seven emerald colors). */
-    private final int mappingFrame;
+    private int mappingFrame;
 
     /** Current phase of this emerald's lifecycle. */
     private Phase phase;
