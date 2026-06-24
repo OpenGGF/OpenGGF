@@ -5,6 +5,8 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -22,7 +24,7 @@ import java.util.List;
  * Subtype 1 (interactive water skim) is handled separately by
  * {@link com.openggf.game.sonic3k.features.HCZWaterSkimHandler}.
  */
-public class HCZWaterSplashObjectInstance extends AbstractObjectInstance {
+public class HCZWaterSplashObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // ===== Animation constants (loc_38464, sonic3k.asm:75286-75311) =====
     /** Frame timer reset value: 8 ticks per animation step (sonic3k.asm:75290) */
@@ -46,6 +48,11 @@ public class HCZWaterSplashObjectInstance extends AbstractObjectInstance {
         super(spawn, "HCZWaterSplash");
         this.x = spawn.x();
         this.y = spawn.y();
+    }
+
+    @Override
+    public HCZWaterSplashObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HCZWaterSplashObjectInstance(ctx.spawn());
     }
 
     @Override

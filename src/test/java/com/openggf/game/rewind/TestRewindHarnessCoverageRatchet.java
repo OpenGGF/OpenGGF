@@ -297,13 +297,16 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-24: raised to 369 after S3K ICZ breakable wall,
  *       harmful ice, ice block, and ice cube restores moved to generic
  *       recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 374 after S3K HCZ block, conveyor spike,
+ *       large fan, spinning column, and water splash restores moved to
+ *       generic recreate under object-manager coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 369 after S3K ICZ ice objects moved to generic recreate.
-    static final int RATCHET_FLOOR = 369;
+    // 2026-06-24: raised to 374 after S3K HCZ mechanisms moved to generic recreate.
+    static final int RATCHET_FLOOR = 374;
 
     @BeforeEach
     void initHeadless() {

@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -25,7 +27,7 @@ import java.util.List;
  * ROM references: Obj_HCZBlock (sonic3k.asm:43233), byte_1F38A, Map_HCZBlock.
  */
 public class HCZBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.HCZ_BLOCK;
     private static final int PRIORITY = 5; // ROM: move.w #$280,priority(a0)
@@ -53,6 +55,11 @@ public class HCZBlockObjectInstance extends AbstractObjectInstance
         this.mappingFrame = sizeIndex;
         this.halfWidth = SIZE_TABLE[sizeIndex][0];
         this.halfHeight = SIZE_TABLE[sizeIndex][1];
+    }
+
+    @Override
+    public HCZBlockObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HCZBlockObjectInstance(ctx.spawn());
     }
 
     @Override
