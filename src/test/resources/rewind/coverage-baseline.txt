@@ -455,7 +455,6 @@ com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance#finalScalar#hFli
 com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance$IczBreakableWallDebris#finalScalar#gravity
-com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance$IczBreakableWallDebris#recreate
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#hasBottomDecoration
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#spawnY
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance#finalScalar#subtype
@@ -486,7 +485,6 @@ com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance$IceDebris#finalScalar#gravity
-com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance$IceDebris#recreate
 com.openggf.game.sonic3k.objects.IczIceBlockObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczIceBlockObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.IczIceBlockObjectInstance#finalScalar#y
@@ -494,7 +492,6 @@ com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance$IceCubeDebris#finalScalar#gravity
-com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance$IceCubeDebris#recreate
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#originalX
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#originalY
@@ -509,7 +506,6 @@ com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#segm
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$BreakDebris#finalScalar#gravity
-com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$BreakDebris#recreate
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#objectRef#previous
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#objectRef#root
@@ -528,7 +524,6 @@ com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance#recreate
 com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance$StalagtiteDebris#finalScalar#gravity
-com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance$StalagtiteDebris#recreate
 com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#anchorX
 com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#anchorY
 com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#releaseOnSwing

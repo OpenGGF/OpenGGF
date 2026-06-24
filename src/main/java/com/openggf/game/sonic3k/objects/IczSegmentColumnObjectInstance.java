@@ -18,6 +18,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -350,7 +351,8 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
         }
     }
 
-    public static final class BreakDebris extends GravityDebrisChild {
+    public static final class BreakDebris extends GravityDebrisChild
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
         private static final int GRAVITY = 0x38;
         private static final int[] RAW_ANIMATION_LOWER = {
@@ -370,6 +372,12 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
                     "ICZSegmentColumnDebris", spec.xVel(), spec.yVel(), GRAVITY);
             this.rawAnimation = spec.subtype() >= 8 ? RAW_ANIMATION_UPPER : RAW_ANIMATION_LOWER;
             this.mappingFrame = spec.initialMappingFrame();
+            this.animFrame = initialAnimFrame();
+        }
+
+        private BreakDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZSegmentColumnDebris", 0, 0, GRAVITY);
+            this.rawAnimation = (spawn.subtype() & 0xFF) >= 8 ? RAW_ANIMATION_UPPER : RAW_ANIMATION_LOWER;
             this.animFrame = initialAnimFrame();
         }
 

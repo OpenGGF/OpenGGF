@@ -17,6 +17,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -266,7 +267,8 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
     public record IceDebrisSpec(int subtype, int x, int y, int xVel, int yVel) {
     }
 
-    public static final class StalagtiteDebris extends GravityDebrisChild {
+    public static final class StalagtiteDebris extends GravityDebrisChild
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private static final int GRAVITY = 0x38;
         private static final int INITIAL_MAPPING_FRAME = 0x0F; // ObjDat3_8B286.
         private static final int[] RAW_ANIMATION_UPPER = {
@@ -286,6 +288,12 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
                     "ICZStalagtiteDebris", spec.xVel(), spec.yVel(), GRAVITY);
             // loc_8B230 switches from byte_8AB3E to byte_8AB46 when subtype >= 6.
             this.rawAnimation = spec.subtype() >= 6 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
+            this.animFrame = initialAnimFrame();
+        }
+
+        private StalagtiteDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZStalagtiteDebris", 0, 0, GRAVITY);
+            this.rawAnimation = (spawn.subtype() & 0xFF) >= 6 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
             this.animFrame = initialAnimFrame();
         }
 

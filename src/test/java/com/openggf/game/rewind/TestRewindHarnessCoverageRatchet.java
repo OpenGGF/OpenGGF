@@ -358,13 +358,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       moved to spawn-based generic recreate.</li>
  *   <li>2026-06-24: raised to 476 after five S3K ICZ/static object parents
  *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 481 after five S3K ICZ debris children
+ *       moved to spawn-based generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 476 after S3K ICZ/static object parents moved to generic recreate.
-    static final int RATCHET_FLOOR = 476;
+    // 2026-06-24: raised to 481 after S3K ICZ debris children moved to generic recreate.
+    static final int RATCHET_FLOOR = 481;
 
     @BeforeEach
     void initHeadless() {

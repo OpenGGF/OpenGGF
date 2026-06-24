@@ -27,6 +27,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.ArrayList;
@@ -256,7 +257,8 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
     public record IczBreakableWallDebrisSpec(int subtype, int x, int y, int xVel, int yVel) {
     }
 
-    public static final class IczBreakableWallDebris extends GravityDebrisChild {
+    public static final class IczBreakableWallDebris extends GravityDebrisChild
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private static final int GRAVITY = 0x70; // MoveSprite gravity.
         private static final int DELETE_TIMER = 0x5F; // loc_8A20C: move.w #$5F,$2E(a0).
         private static final int INITIAL_MAPPING_FRAME = 0x1C; // ObjDat3_8A41E.
@@ -271,6 +273,10 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
             super(new ObjectSpawn(spec.x(), spec.y(), Sonic3kObjectIds.ICZ_BREAKABLE_WALL,
                     spec.subtype(), 0, false, spec.y()),
                     "ICZBreakableWallDebris", spec.xVel(), spec.yVel(), GRAVITY);
+        }
+
+        private IczBreakableWallDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZBreakableWallDebris", 0, 0, GRAVITY);
         }
 
         @Override
