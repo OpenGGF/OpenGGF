@@ -61,7 +61,7 @@ import java.util.List;
  * 7. WFZRobotnik - fixed position, watches fight
  * 8. RobotnikPlatform - follows Robotnik Y+$26
  */
-public class Sonic2WFZBossInstance extends AbstractBossInstance {
+public class Sonic2WFZBossInstance extends AbstractBossInstance implements RewindRecreatable {
 
     // State machine routine constants (16 sub-routines, $00-$1E)
     private static final int ROUTINE_INIT = 0x00;
@@ -174,6 +174,11 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
 
     public Sonic2WFZBossInstance(ObjectSpawn spawn) {
         super(spawn, "WFZ Boss");
+    }
+
+    @Override
+    public Sonic2WFZBossInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic2WFZBossInstance(ctx.spawn());
     }
 
     @Override

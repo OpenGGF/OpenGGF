@@ -67,6 +67,7 @@ import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance;
 import com.openggf.game.sonic2.objects.GrounderRockProjectile;
 import com.openggf.game.sonic2.objects.GrounderWallInstance;
 import com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance;
@@ -754,6 +755,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnikPlatform",
                     GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_WFZ_BOSS_PARENT_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic2WFZBossInstance.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> S2_HTZ_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HTZBossFlamethrower.class.getName(), GameId.S2),
@@ -5572,6 +5576,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S2 WFZ boss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2WfzBossParentClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_WFZ_BOSS_PARENT_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 WFZ boss parent batch");
+        }
+    }
+
+    @Test
+    void s2WfzBossParentClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_WFZ_BOSS_PARENT_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 WFZ boss parent generic recreate, not a dynamic codec");
         }
     }
 
