@@ -68,7 +68,7 @@ public class Sonic3kTwistedRampObjectInstance extends AbstractObjectInstance imp
     private static final float DEBUG_B = 0.8f;
 
     /** true when renderFlags bit 0 is set (ramp faces left). */
-    private final boolean facingLeft;
+    private boolean facingLeft;
 
     public Sonic3kTwistedRampObjectInstance(ObjectSpawn spawn) {
         super(spawn, "TwistedRamp");

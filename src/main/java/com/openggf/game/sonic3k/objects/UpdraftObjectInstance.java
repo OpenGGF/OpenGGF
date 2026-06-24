@@ -36,9 +36,9 @@ public final class UpdraftObjectInstance extends AbstractObjectInstance implemen
     private static final int PLAYER_FLIP_SPEED = 8;
     private static final int ALTERNATE_UPDRAFT_ANIMATION = 0x0F;
 
-    private final int innerRange;
-    private final int outerRange;
-    private final boolean negativeSubtype;
+    private int innerRange;
+    private int outerRange;
+    private boolean negativeSubtype;
     private boolean carrierObjectLiftedThisUpdate;
 
     public UpdraftObjectInstance(ObjectSpawn spawn) {

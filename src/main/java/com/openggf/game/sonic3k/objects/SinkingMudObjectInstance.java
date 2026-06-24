@@ -47,7 +47,7 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
     private static final float DEBUG_G = 1.0f;
     private static final float DEBUG_B = 1.0f;
 
-    private final int halfWidth;
+    private int halfWidth;
     private final Map<PlayableEntity, Integer> rawSurfaceByPlayer = new IdentityHashMap<>();
     private final Map<PlayableEntity, Boolean> standingNextUpdate = new IdentityHashMap<>();
     private final Set<PlayableEntity> killedThisFrame =

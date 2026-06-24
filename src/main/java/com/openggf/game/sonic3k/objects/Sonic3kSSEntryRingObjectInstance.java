@@ -104,8 +104,8 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     }
 
     /** Subtype low bits are the bit index (0-31) into Collected_special_ring_array. */
-    private final int bitIndex;
-    private final boolean hiddenPalaceRoute;
+    private int bitIndex;
+    private boolean hiddenPalaceRoute;
 
     private State state;
     private boolean initialized;

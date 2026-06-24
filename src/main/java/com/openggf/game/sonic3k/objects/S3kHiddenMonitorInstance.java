@@ -33,9 +33,9 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance implements 
     private static final int RANGE_TOP = -0x80;
     private static final int RANGE_BOTTOM = 0xC0;
 
-    private final int monitorX;
-    private final int monitorY;
-    private final int monitorSubtype;
+    private int monitorX;
+    private int monitorY;
+    private int monitorSubtype;
     private boolean resolved;
 
     public S3kHiddenMonitorInstance(ObjectSpawn spawn) {

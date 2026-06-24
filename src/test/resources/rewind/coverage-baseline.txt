@@ -196,8 +196,6 @@ com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance$MhzMinibossTreeChipInst
 com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#objectRef#grabbedPlayer
 com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#objectRef#nativeP2GrabbedPlayer
 com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#recreate
-com.openggf.game.sonic3k.objects.MhzShipSequenceControllerInstance#finalScalar#initialShipMotion
-com.openggf.game.sonic3k.objects.MhzShipSequenceControllerInstance#finalScalar#initialSwingSpeed
 com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance#objectRef#capturedPlayer
 com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild#recreate
@@ -207,10 +205,6 @@ com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow#finalScalar#signpostX
 com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance#finalScalar#cutsceneOverride
 com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorSubtype
-com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorX
-com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorY
-com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#finalScalar#halfWidth
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#fragmentFrameIndex
@@ -221,16 +215,12 @@ com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#finalScalar#type
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#objectRef#monitorContentsSlot
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot#recreate
-com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance#finalScalar#bitIndex
-com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance#finalScalar#hiddenPalaceRoute
-com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance#finalScalar#redSpring
 com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild#finalScalar#centerX
 com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild#finalScalar#centerY
 com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance#finalScalar#cameraLockFlag
 com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance#finalScalar#checkpointIndex
 com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild#finalScalar#centerX
 com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild#finalScalar#centerY
-com.openggf.game.sonic3k.objects.Sonic3kTwistedRampObjectInstance#finalScalar#facingLeft
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#negativeSubtype
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#segmentCount
@@ -239,9 +229,6 @@ com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment#finalScalar#frameIndex
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment#finalScalar#highPri
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment#recreate
-com.openggf.game.sonic3k.objects.UpdraftObjectInstance#finalScalar#innerRange
-com.openggf.game.sonic3k.objects.UpdraftObjectInstance#finalScalar#negativeSubtype
-com.openggf.game.sonic3k.objects.UpdraftObjectInstance#finalScalar#outerRange
 com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$ArrowChild#recreate
 com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance#recreate

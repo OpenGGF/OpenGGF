@@ -90,7 +90,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     private static final int HORIZ_DETECT_Y = 0x18;
 
     private int springType;
-    private final boolean redSpring;
+    private boolean redSpring;
     private final ObjectAnimationState animationState;
     private int mappingFrame;
     private boolean initialized;

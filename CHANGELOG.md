@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K object scalar rewind cleanup:** ship controller, hidden monitor, sinking mud, SS entry ring, spring, twisted ramp, and updraft constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K badnik/cutscene scalar rewind cleanup:** Blastoid, Madmole, Monkey Dude, and MHZ2 Knuckles leaf-particle constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K MHZ mechanism scalar rewind cleanup:** curled vine, mushroom cap/catapult/platform, ship propeller, and twisted vine constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K MGZ swing/loop/debris scalar rewind cleanup:** swinging platform, twisting loop, and end-boss defeat debris constructor scalars now compact-restore without stale coverage-baseline keys.
