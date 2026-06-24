@@ -173,8 +173,8 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
     private int verticalOnlyOffscreenTicks;
 
     // Orientation from spawn render_flags (inherited by fragments per disassembly)
-    private final boolean hFlip;
-    private final boolean vFlip;
+    private boolean hFlip;
+    private boolean vFlip;
 
     public CollapsingPlatformObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
