@@ -13,6 +13,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -60,7 +62,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class SwingingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(SwingingPlatformObjectInstance.class.getName());
 
@@ -103,16 +105,16 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
     private static final LazyMappingHolder TRAP_MAPPINGS = new LazyMappingHolder();
 
     // Position state
-    private final int baseX;
-    private final int baseY;
+    private int baseX;
+    private int baseY;
     private int x;
     private int y;
 
     // Configuration
-    private final ZoneConfig zoneConfig;
-    private final BehaviorMode behaviorMode;
-    private final int chainCount;
-    private final boolean displayOnly;
+    private ZoneConfig zoneConfig;
+    private BehaviorMode behaviorMode;
+    private int chainCount;
+    private boolean displayOnly;
 
     // Chain link positions
     private final int[] chainX;
@@ -184,9 +186,15 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
                 baseX, baseY, subtype, chainCount, behaviorMode, zoneConfig));
     }
 
+    @Override
+    public SwingingPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SwingingPlatformObjectInstance(ctx.spawn(), getName());
+    }
+
     private ZoneConfig determineZoneConfig() {
-        if (services().currentLevel() != null) {
-            int zoneId = services().currentLevel().getZoneIndex();
+        var objectServices = tryServices();
+        if (objectServices != null && objectServices.currentLevel() != null) {
+            int zoneId = objectServices.currentLevel().getZoneIndex();
             if (zoneId == Sonic2ZoneConstants.ROM_ZONE_MCZ) {
                 return ZoneConfig.MCZ;
             } else if (zoneId == Sonic2ZoneConstants.ROM_ZONE_ARZ) {
@@ -246,6 +254,30 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
         displayChild = spawnChild(() -> new SwingingPlatformDisplayChild(this));
+    }
+
+    private void attachDisplayChildForRewind(SwingingPlatformDisplayChild child) {
+        displayChild = child;
+    }
+
+    private static SwingingPlatformObjectInstance nearestParentForRewind(RewindRecreateContext ctx) {
+        var objectManager = ctx.objectManager() != null
+                ? ctx.objectManager()
+                : ctx.objectServices().objectManager();
+        ObjectSpawn spawn = ctx.spawn();
+        return objectManager.getActiveObjects().stream()
+                .filter(SwingingPlatformObjectInstance.class::isInstance)
+                .map(SwingingPlatformObjectInstance.class::cast)
+                .filter(parent -> !parent.isDestroyed())
+                .min((a, b) -> Integer.compare(
+                        distanceFromChildSpawn(a, spawn),
+                        distanceFromChildSpawn(b, spawn)))
+                .orElse(null);
+    }
+
+    private static int distanceFromChildSpawn(SwingingPlatformObjectInstance parent, ObjectSpawn spawn) {
+        return Math.abs(parent.getOutOfRangeReferenceX() - spawn.x())
+                + Math.abs(parent.getY() - spawn.y());
     }
 
     /**
@@ -591,7 +623,7 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         ctx.drawLine(x, y - 4, x, y + 4, 1.0f, 0.0f, 0.0f);
     }
 
-    private static final class SwingingPlatformDisplayChild extends AbstractObjectInstance {
+    private static final class SwingingPlatformDisplayChild extends AbstractObjectInstance implements RewindRecreatable {
         private final SwingingPlatformObjectInstance parent;
         private int x;
         private int y;
@@ -608,6 +640,18 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
                     "SwingingPlatformDisplayChild");
             this.parent = parent;
             syncFromParent();
+        }
+
+        @Override
+        public SwingingPlatformDisplayChild recreateForRewind(RewindRecreateContext ctx) {
+            SwingingPlatformObjectInstance parent = nearestParentForRewind(ctx);
+            if (parent == null) {
+                throw new IllegalStateException(
+                        "Cannot recreate Swinging Platform display child without a live parent");
+            }
+            SwingingPlatformDisplayChild child = new SwingingPlatformDisplayChild(parent);
+            parent.attachDisplayChildForRewind(child);
+            return child;
         }
 
         private void syncFromParent() {

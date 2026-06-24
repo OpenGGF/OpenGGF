@@ -6,6 +6,7 @@ import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic2.objects.FallingPillarObjectInstance;
 import com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance;
 import com.openggf.game.sonic2.objects.SidewaysPformObjectInstance;
+import com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance;
 import org.junit.jupiter.api.AfterEach;
@@ -128,6 +129,17 @@ class TestRewindSchemaRegistry {
         assertPolicy(schema, "childInstance", RewindFieldPolicy.CAPTURED);
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "Falling Pillar compact schema must capture the child link without fallback: "
+                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesSwingingPlatformDisplayChildLink() {
+        RewindClassSchema schema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(SwingingPlatformObjectInstance.class);
+
+        assertPolicy(schema, "displayChild", RewindFieldPolicy.CAPTURED);
+        assertTrue(schema.unsupportedFields().isEmpty(),
+                "Swinging Platform compact schema must capture the display child link without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 

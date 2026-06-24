@@ -80,15 +80,6 @@ com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.SpiralObjectInstance#recreate
 com.openggf.game.sonic2.objects.SteamPuffObjectInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate
-com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#finalScalar#baseX
-com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#finalScalar#baseY
-com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#finalScalar#behaviorMode
-com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#finalScalar#chainCount
-com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#finalScalar#displayOnly
-com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#finalScalar#zoneConfig
-com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#objectRef#displayChild
-com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance#recreate
-com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance$SwingingPlatformDisplayChild#recreate
 com.openggf.game.sonic2.objects.TornadoObjectInstance#finalScalar#subtype
 com.openggf.game.sonic2.objects.TornadoObjectInstance#objectRef#thrusterFollowerChild
 com.openggf.game.sonic2.objects.TornadoObjectInstance#recreate
