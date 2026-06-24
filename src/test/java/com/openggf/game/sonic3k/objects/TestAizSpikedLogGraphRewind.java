@@ -153,6 +153,15 @@ class TestAizSpikedLogGraphRewind {
     }
 
     @Test
+    void spikedLogParentUsesGenericRecreateWithoutExplicitDynamicCodec() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(AizSpikedLogObjectInstance.class),
+                "AizSpikedLogObjectInstance must restore through RewindRecreatable graph recreate");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        AizSpikedLogObjectInstance.class.getName()),
+                "AizSpikedLogObjectInstance must not keep an explicit S3K dynamic rewind codec");
+    }
+
+    @Test
     void captureFailsForChildWhoseRequiredParentHasNoRewindIdentity() {
         Harness harness = Harness.create(new Sonic3kObjectRegistry(), List.of());
         ObjectManager objectManager = harness.objectManager();

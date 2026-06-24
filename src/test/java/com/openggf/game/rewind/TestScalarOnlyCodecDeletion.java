@@ -96,6 +96,7 @@ import com.openggf.game.sonic3k.objects.AizMinibossInstance;
 import com.openggf.game.sonic3k.objects.AizMinibossNapalmController;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.objects.AizShipBombInstance;
+import com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance;
@@ -643,6 +644,7 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(AizShipBombInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> AIZ_SPIKED_LOG_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizSpikedLogObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild",
                     GameId.S3K));

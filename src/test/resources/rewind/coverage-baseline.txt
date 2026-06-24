@@ -246,7 +246,6 @@ com.openggf.game.sonic3k.objects.AizRideVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizRockFragmentChild#finalScalar#gravity
 com.openggf.game.sonic3k.objects.AizShipBombInstance#finalScalar#initialWorldY
 com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance#finalScalar#baseY
-com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AnimatedStillSpriteInstance#finalScalar#animDelay
 com.openggf.game.sonic3k.objects.AnimatedStillSpriteInstance#recreate
