@@ -56,7 +56,7 @@ public final class LbzAlarmObjectInstance extends AbstractObjectInstance
             TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
             TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
-    private final int subtype;
+    private int subtype;
     private int alarmTimer;
     private int collisionProperty;
 

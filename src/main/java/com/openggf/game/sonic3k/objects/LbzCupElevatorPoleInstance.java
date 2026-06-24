@@ -21,8 +21,8 @@ public final class LbzCupElevatorPoleInstance extends AbstractObjectInstance imp
     private static final int SHORT_HEIGHT = 0x30;
     private static final int LONG_HEIGHT = 0x60;
 
-    private final int mappingFrame;
-    private final int halfHeight;
+    private int mappingFrame;
+    private int halfHeight;
 
     public LbzCupElevatorPoleInstance(ObjectSpawn spawn) {
         super(spawn, "LBZCupElevatorPole");

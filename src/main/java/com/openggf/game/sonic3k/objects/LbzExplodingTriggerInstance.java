@@ -44,7 +44,7 @@ public final class LbzExplodingTriggerInstance extends AbstractObjectInstance
     private static final int EXPLOSION_FINAL_MAPPING_FRAME = 5;
     private static final int PRIORITY_BUCKET = 5; // ROM priority(a0) = $280
 
-    private final int triggerIndex;
+    private int triggerIndex;
     private int collisionProperty;
     private boolean exploding;
     private int explosionFrame;

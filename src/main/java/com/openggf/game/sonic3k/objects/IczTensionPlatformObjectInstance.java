@@ -64,9 +64,9 @@ public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
     private static final int FAR_DISTANCE = 0x50;
     private static final int FAR_REBOUND_Y_VELOCITY = -0x0100;
 
-    private final int x;
-    private final int baseY;
-    private final boolean hFlip;
+    private int x;
+    private int baseY;
+    private boolean hFlip;
 
     private int y;
     private int ySub;

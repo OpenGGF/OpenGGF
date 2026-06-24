@@ -35,8 +35,8 @@ public final class LbzFlameThrowerObjectInstance extends AbstractObjectInstance
     private static final SolidObjectParams SOLID_PARAMS =
             new SolidObjectParams(SOLID_HALF_WIDTH, HEIGHT_PIXELS, SOLID_GROUND_HALF_HEIGHT);
 
-    private final int subtype;
-    private final boolean hFlip;
+    private int subtype;
+    private boolean hFlip;
 
     public LbzFlameThrowerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LBZFlameThrower");

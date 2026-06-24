@@ -44,9 +44,9 @@ public final class LbzFlameThrowerFlameInstance extends AbstractObjectInstance
             TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
             TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
-    private final int x;
-    private final int y;
-    private final boolean hFlip;
+    private int x;
+    private int y;
+    private boolean hFlip;
     private int animationIndex;
     private int animationTicks = ANIMATION_DELAY;
 
