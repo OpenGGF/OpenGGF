@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -25,7 +26,8 @@ import java.util.List;
  * plus {@code Ani_LBZFlameThrower}. The child animates the single ROM sequence
  * and uses {@code collision_flags=$9D} with fire-shield reaction bit 4 set.
  */
-public final class LbzFlameThrowerFlameInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public final class LbzFlameThrowerFlameInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, SpawnRewindRecreatable {
     private static final int COLLISION_FLAGS = 0x9D;
     private static final int SHIELD_REACTION_FIRE = 1 << 4;
     private static final int PRIORITY_BUCKET = 3; // sub_263AA: priority=$200

@@ -13,6 +13,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -33,7 +34,7 @@ import java.util.List;
  * direction: clear = moving right, set = moving left.
  */
 public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_MOVING_SPIKE_PLATFORM;
 

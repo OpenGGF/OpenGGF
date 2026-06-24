@@ -17,6 +17,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -39,7 +40,7 @@ import java.util.List;
  * and vertical variants.
  */
 public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_TRIGGER_PLATFORM;
     private static final int PRIORITY_BUCKET = 5; // ROM: priority = $280

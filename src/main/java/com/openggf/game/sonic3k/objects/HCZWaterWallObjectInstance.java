@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -34,7 +35,7 @@ import java.util.logging.Logger;
  * Mappings: Map_HCZWaterWall, Map_HCZWaterWallDebris.
  * Art: ArtKosM_HCZGeyserHorz (0x390C02), ArtKosM_HCZGeyserVert (0x391394).
  */
-public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
+public class HCZWaterWallObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(HCZWaterWallObjectInstance.class.getName());
 

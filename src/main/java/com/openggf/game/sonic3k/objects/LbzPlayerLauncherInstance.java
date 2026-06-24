@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
@@ -19,7 +20,7 @@ import java.util.List;
  *
  * <p>ROM reference: {@code Obj_LBZPlayerLauncher} (sonic3k.asm:51811-52039).
  */
-public final class LbzPlayerLauncherInstance extends AbstractObjectInstance {
+public final class LbzPlayerLauncherInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int FAST_LAUNCH_SPEED = 0x1000;
     private static final int SLOW_LAUNCH_SPEED = 0x0A00;
     private static final int DETECT_HALF_SIZE = 0x10;

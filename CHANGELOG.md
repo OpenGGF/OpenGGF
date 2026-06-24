@@ -8,6 +8,7 @@ All notable changes to the OpenGGF project are documented in this file.
 
 The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability. Detailed per-frontier notes were moved out of this top-level changelog so it stays readable; see [docs/TRACE_FRONTIER_LOG.md](docs/TRACE_FRONTIER_LOG.md) for frame-by-frame trace evidence and [docs/changelog/v0.6-prerelease-detailed.md](docs/changelog/v0.6-prerelease-detailed.md) for the previous verbose merge ledger.
 
+- **S3K HCZ/LBZ/MGZ object parent rewind coverage:** HCZ snake blocks and water walls, LBZ cup-elevator poles, flame children, player launchers, ride grapples, and MGZ moving/trigger platforms now restore through spawn-based generic rewind recreate.
 - **S3K LBZ/MGZ object parent rewind coverage:** LBZ exploding triggers, flame throwers, moving platforms, rolling drums, MGZ dash triggers, and MGZ/LBZ smashing pillars now restore through spawn-based generic rewind recreate.
 - **S1 runtime spawn-recreate rewind coverage:** Bubbles, bumpers, running discs, and teleporters now rely on spawn-based generic rewind recreate without stale final-scalar or frame-local reference coverage gaps.
 - **S3K badnik parent rewind coverage:** Monkey Dude, Orbinaut, Penguinator, Poindexter, Rhinobot, Ribot, Sparkle, and Star Pointer now restore through spawn-based generic rewind recreate while inherited constructor-scalar baselines remain explicit.
