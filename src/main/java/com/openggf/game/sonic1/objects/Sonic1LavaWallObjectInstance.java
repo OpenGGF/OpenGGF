@@ -159,13 +159,13 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
     // Instance State
     // ========================================================================
 
-    private final Role role;
+    private Role role;
 
     /** Current X position (updated during movement). */
     private int currentX;
 
     /** Current Y position (constant for this object). */
-    private final int currentY;
+    private int currentY;
 
     /** X velocity in subpixels (signed 16-bit). */
     private int velX;

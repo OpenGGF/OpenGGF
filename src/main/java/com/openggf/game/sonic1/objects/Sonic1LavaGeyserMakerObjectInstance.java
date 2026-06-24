@@ -91,10 +91,10 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance
     private int timer;
 
     /** Timer reload value (gmake_time / objoff_34). */
-    private final int timerReload;
+    private int timerReload;
 
     /** Object subtype (0 = geyser, != 0 = lavafall). */
-    private final int subtype;
+    private int subtype;
 
     /** Reference to parent push block (gmake_parent / objoff_3C), may be null. */
     private Sonic1PushBlockObjectInstance parentBlock;

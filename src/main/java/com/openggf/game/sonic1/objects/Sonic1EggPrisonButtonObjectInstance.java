@@ -50,7 +50,7 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
     private static final int FRAME_SWITCH_1 = 1;
     private static final int FRAME_SWITCH_2 = 3;
 
-    private final int baseY;
+    private int baseY;
     private int currentY;
     private boolean triggered;
     private Sonic1EggPrisonObjectInstance parent;

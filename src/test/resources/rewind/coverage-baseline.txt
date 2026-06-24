@@ -1,17 +1,3 @@
-com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance#finalScalar#baseY
-com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#blockFrame
-com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#fullSubtype
-com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#isTall
-com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#moveType
-com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#isTall
-com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#reflectSubtype
-com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance#finalScalar#switchIndex
-com.openggf.game.sonic1.objects.Sonic1LavaGeyserMakerObjectInstance#finalScalar#subtype
-com.openggf.game.sonic1.objects.Sonic1LavaGeyserMakerObjectInstance#finalScalar#timerReload
-com.openggf.game.sonic1.objects.Sonic1LavaGeyserObjectInstance#finalScalar#behindPriority
-com.openggf.game.sonic1.objects.Sonic1LavaGeyserObjectInstance#finalScalar#role
-com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance#finalScalar#currentY
-com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance#finalScalar#role
 com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance#finalScalar#origY

@@ -158,7 +158,7 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     private boolean switchReversed;
 
     /** Switch index from subtype (jun_switch). */
-    private final int switchIndex;
+    private int switchIndex;
 
     /** Frame animation timer (counts down from FRAME_TIMER_PERIOD). */
     private int frameTimer;

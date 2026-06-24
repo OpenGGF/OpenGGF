@@ -112,7 +112,7 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
     // Instance State
     // ========================================================================
 
-    private final Role role;
+    private Role role;
     /** Mutable subtype: cleared from 1→0 on head after creating lavafall third piece. */
     private int subtype;
 
@@ -161,7 +161,7 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
     private boolean pendingDelete;
 
     /** Whether this is the behind-priority third piece (lavafall). */
-    private final boolean behindPriority;
+    private boolean behindPriority;
 
     // ========================================================================
     // Constructors
