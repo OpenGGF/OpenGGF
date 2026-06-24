@@ -73,9 +73,9 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
     private enum State { IDLE, LAUNCHING }
 
-    private final int baseX;
-    private final int baseY;
-    private final boolean facingLeft;
+    private int baseX;
+    private int baseY;
+    private boolean facingLeft;
 
     private State state = State.IDLE;
     private int yOffset;

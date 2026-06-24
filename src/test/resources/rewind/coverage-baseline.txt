@@ -95,9 +95,6 @@ com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild#recr
 com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanBubbleChild#recreate
 com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild#recreate
-com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance#finalScalar#baseX
-com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance#finalScalar#baseY
-com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance#finalScalar#facingLeft
 com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance$HandLauncherArmChild#recreate
 com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance#recreate
@@ -114,11 +111,6 @@ com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud#objectRef
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud#recreate
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#objectRef#capturedPlayer
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#recreate
-com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#originalX
-com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#originalY
-com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#subtypeZero
-com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#vFlip
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#segmentCount
@@ -136,8 +128,6 @@ com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#f
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#finalScalar#x
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#finalScalar#y
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#recreate
-com.openggf.game.sonic3k.objects.LbzCupElevatorInstance#finalScalar#flingAtEnd
-com.openggf.game.sonic3k.objects.LbzCupElevatorInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.LbzCupElevatorInstance#recreate
 com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$AttachChild#recreate
 com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$BaseChild#recreate

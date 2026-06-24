@@ -64,8 +64,8 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance impleme
 
     private final PlayerState p1 = new PlayerState();
     private final PlayerState p2 = new PlayerState();
-    private final boolean hFlip;
-    private final boolean flingAtEnd;
+    private boolean hFlip;
+    private boolean flingAtEnd;
 
     private int x;
     private int y;

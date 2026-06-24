@@ -54,11 +54,11 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
 
-    private final boolean subtypeZero;
-    private final boolean hFlip;
-    private final boolean vFlip;
-    private final int originalX;
-    private final int originalY;
+    private boolean subtypeZero;
+    private boolean hFlip;
+    private boolean vFlip;
+    private int originalX;
+    private int originalY;
 
     private int x;
     private int y;
