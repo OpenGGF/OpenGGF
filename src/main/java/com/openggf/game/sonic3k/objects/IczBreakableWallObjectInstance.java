@@ -20,6 +20,8 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -40,7 +42,7 @@ import java.util.List;
  * trigger box from {@code word_8A2FC}.
  */
 public class IczBreakableWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN;
     private static final int PRIORITY_BUCKET = 5; // ObjDat priority $280.
@@ -70,6 +72,11 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
         this.x = spawn.x();
         this.y = spawn.y();
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public IczBreakableWallObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczBreakableWallObjectInstance(ctx.spawn());
     }
 
     @Override

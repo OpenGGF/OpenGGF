@@ -11,6 +11,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -31,7 +33,7 @@ import java.util.List;
  * {@code CreateChild1_Normal} ice debris pieces.
  */
 public class IczIceCubeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
     private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_ICE_CUBE;
@@ -57,6 +59,11 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
         this.x = spawn.x();
         this.y = spawn.y();
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public IczIceCubeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczIceCubeObjectInstance(ctx.spawn());
     }
 
     @Override

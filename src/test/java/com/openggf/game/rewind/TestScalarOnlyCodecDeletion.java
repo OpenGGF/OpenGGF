@@ -121,6 +121,10 @@ import com.openggf.game.sonic3k.objects.CnzTrapDoorInstance;
 import com.openggf.game.sonic3k.objects.CnzTriangleBumperObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzVacuumTubeInstance;
 import com.openggf.game.sonic3k.objects.CnzWaterLevelButtonInstance;
+import com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance;
+import com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance;
+import com.openggf.game.sonic3k.objects.IczIceBlockObjectInstance;
+import com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance;
 import com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kSignpostStubChild;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
@@ -736,6 +740,12 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(CnzTriangleBumperObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(CnzVacuumTubeInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(CnzWaterLevelButtonInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_ICZ_ICE_OBJECT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(IczBreakableWallObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(IczHarmfulIceObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(IczIceBlockObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(IczIceCubeObjectInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HczEndBossRobotnikShip.class.getName(), GameId.S3K),
@@ -5643,6 +5653,39 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kCnzMechanismClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_CNZ_MECHANISM_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K ICZ ice-object batch: top-level ice/wall object-manager restores
+    // =====================================================================
+
+    @Test
+    void s3kIczIceObjectClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_ICE_OBJECT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K ICZ ice-object batch");
+        }
+    }
+
+    @Test
+    void s3kIczIceObjectClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_ICE_OBJECT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K ICZ ice-object generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kIczIceObjectClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_ICE_OBJECT_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

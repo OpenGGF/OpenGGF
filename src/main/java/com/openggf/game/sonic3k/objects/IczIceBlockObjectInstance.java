@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -21,7 +23,8 @@ import java.util.List;
  * The block applies {@code ObjDat_ICZIceBlock} and runs {@code SolidObjectTop}
  * every frame with {@code d1=$1B}, {@code d2=$10}, {@code d3=$11}.
  */
-public class IczIceBlockObjectInstance extends AbstractObjectInstance implements SolidObjectProvider {
+public class IczIceBlockObjectInstance extends AbstractObjectInstance
+        implements RewindRecreatable, SolidObjectProvider {
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS_MISC2;
     private static final int PRIORITY_BUCKET = 5; // ObjDat_ICZIceBlock priority $280.
     private static final int MAPPING_FRAME = 0x1E;
@@ -38,6 +41,11 @@ public class IczIceBlockObjectInstance extends AbstractObjectInstance implements
         this.x = spawn.x();
         this.y = spawn.y();
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public IczIceBlockObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczIceBlockObjectInstance(ctx.spawn());
     }
 
     @Override

@@ -12,6 +12,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategory;
@@ -36,7 +38,7 @@ import java.util.List;
  * {@code loc_8B230} ice debris children and delete.
  */
 public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
     private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_HARMFUL_ICE;
@@ -67,6 +69,11 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
         this.y = spawn.y();
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
         this.breakOnTouch = (spawn.subtype() & 0xFF) != 0;
+    }
+
+    @Override
+    public IczHarmfulIceObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczHarmfulIceObjectInstance(ctx.spawn());
     }
 
     @Override
