@@ -2,11 +2,16 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -31,20 +36,21 @@ import java.util.List;
  * <p>
  * Disassembly Reference: s2.asm lines 52718-52741
  */
-public class MTZLongPlatformCogInstance extends AbstractObjectInstance {
+public class MTZLongPlatformCogInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // byte_26EBA: cog animation frame lookup (s2.asm line 52727)
     private static final int[] COG_FRAMES = {0, 0, 2, 2, 2, 1, 1, 1};
 
-    private final int x;
-    private final int y;
-    private final boolean xFlip;
+    private int x;
+    private int y;
+    private boolean xFlip;
 
     // Parent reference (null for standalone cogs)
+    @RewindTransient(reason = "Structural parent link; relinked to the matching live MTZ long-platform parent")
     private final MTZLongPlatformObjectInstance parent;
 
     // Whether this is a standalone cog (reads MTZ_Platform_Cog_X) vs child (reads parent)
-    private final boolean standalone;
+    private boolean standalone;
 
     private int mappingFrame;
 
@@ -73,6 +79,22 @@ public class MTZLongPlatformCogInstance extends AbstractObjectInstance {
         this.parent = null;
         this.standalone = true;
         this.mappingFrame = 0;
+    }
+
+    @Override
+    public MTZLongPlatformCogInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (isStandaloneCogSpawn(ctx.spawn())) {
+            return new MTZLongPlatformCogInstance(ctx.spawn());
+        }
+        MTZLongPlatformObjectInstance parent = findMatchingParent(ctx, ctx.spawn());
+        if (parent == null) {
+            return null;
+        }
+        return new MTZLongPlatformCogInstance(
+                ctx.spawn().x(),
+                ctx.spawn().y(),
+                expectedChildXFlip(parent.getSpawn()),
+                parent);
     }
 
     @Override
@@ -127,5 +149,49 @@ public class MTZLongPlatformCogInstance extends AbstractObjectInstance {
 
     private static ObjectSpawn createSpawn(int x, int y) {
         return new ObjectSpawn(x, y, 0x65, 0, 0, false, 0);
+    }
+
+    private static MTZLongPlatformObjectInstance findMatchingParent(
+            RewindRecreateContext ctx, ObjectSpawn childSpawn) {
+        ObjectManager objectManager = ctx.objectManager();
+        if (objectManager == null && ctx.objectServices() != null) {
+            objectManager = ctx.objectServices().objectManager();
+        }
+        if (objectManager == null) {
+            return null;
+        }
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof MTZLongPlatformObjectInstance candidate
+                    && !candidate.isDestroyed()
+                    && expectedChildX(candidate.getSpawn()) == childSpawn.x()
+                    && expectedChildY(candidate.getSpawn()) == childSpawn.y()) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isStandaloneCogSpawn(ObjectSpawn spawn) {
+        return propsIndex(spawn) == 2;
+    }
+
+    private static int propsIndex(ObjectSpawn spawn) {
+        return ((spawn.subtype() >> 2) & 0x1C) >> 2;
+    }
+
+    private static int expectedChildX(ObjectSpawn parentSpawn) {
+        int childX = parentSpawn.x() - 0x4C;
+        if ((parentSpawn.renderFlags() & 0x01) == 0) {
+            childX += 0x18;
+        }
+        return childX;
+    }
+
+    private static int expectedChildY(ObjectSpawn parentSpawn) {
+        return parentSpawn.y() + 0x14;
+    }
+
+    private static boolean expectedChildXFlip(ObjectSpawn parentSpawn) {
+        return (parentSpawn.renderFlags() & 0x01) == 0;
     }
 }
