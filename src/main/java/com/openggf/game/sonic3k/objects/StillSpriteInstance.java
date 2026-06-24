@@ -6,6 +6,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -19,7 +21,7 @@ import java.util.List;
  * <p>
  * ROM reference: sonic3k.asm lines 60199-60372
  */
-public class StillSpriteInstance extends AbstractObjectInstance {
+public class StillSpriteInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int MAX_SUBTYPE = 50;
 
@@ -44,6 +46,11 @@ public class StillSpriteInstance extends AbstractObjectInstance {
         } else {
             this.info = null;
         }
+    }
+
+    @Override
+    public StillSpriteInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new StillSpriteInstance(ctx.spawn());
     }
 
     @Override

@@ -826,7 +826,6 @@ com.openggf.game.sonic3k.objects.Sonic3kPathSwapObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance#finalScalar#bitIndex
 com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance#finalScalar#hiddenPalaceRoute
 com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance#recreate
-com.openggf.game.sonic3k.objects.Sonic3kSpikeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance#finalScalar#redSpring
 com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild#finalScalar#centerX
@@ -838,7 +837,6 @@ com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild#finalScalar#centerX
 com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild#finalScalar#centerY
 com.openggf.game.sonic3k.objects.Sonic3kTwistedRampObjectInstance#finalScalar#facingLeft
 com.openggf.game.sonic3k.objects.Sonic3kTwistedRampObjectInstance#recreate
-com.openggf.game.sonic3k.objects.StillSpriteInstance#recreate
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#negativeSubtype
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#segmentCount
