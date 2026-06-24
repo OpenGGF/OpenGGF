@@ -6,6 +6,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -30,7 +32,7 @@ import java.util.List;
  * player and drives the traversal without calling any helper that rewrites
  * collision radii.
  */
-public final class CnzSpiralTubeInstance extends AbstractObjectInstance {
+public final class CnzSpiralTubeInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int PHASE_DETECT = 0x00;
     private static final int PHASE_SWAY = 0x02;
     private static final int PHASE_DESCEND = 0x04;
@@ -54,6 +56,11 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance {
 
     public CnzSpiralTubeInstance(ObjectSpawn spawn) {
         super(spawn, "CNZSpiralTube");
+    }
+
+    @Override
+    public CnzSpiralTubeInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzSpiralTubeInstance(ctx.spawn());
     }
 
     @Override
