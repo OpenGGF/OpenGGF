@@ -250,11 +250,6 @@ com.openggf.game.sonic3k.objects.MGZSwingingPlatformObjectInstance#finalScalar#a
 com.openggf.game.sonic3k.objects.MGZSwingingPlatformObjectInstance#finalScalar#pivotFrame
 com.openggf.game.sonic3k.objects.MGZSwingingPlatformObjectInstance#finalScalar#pivotX
 com.openggf.game.sonic3k.objects.MGZSwingingPlatformObjectInstance#finalScalar#pivotY
-com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance#finalScalar#baseX
-com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance#finalScalar#baseY
-com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance#finalScalar#vFlip
-com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance#finalScalar#verticalMode
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance#recreate

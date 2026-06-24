@@ -48,11 +48,11 @@ public class MGZSwingingSpikeBallObjectInstance extends AbstractObjectInstance
     private static final int VERTICAL_SPEED_INIT = 0x0100;
     private static final int VERTICAL_SPEED_DELTA = 0x0010;
 
-    private final int baseX;
-    private final int baseY;
-    private final boolean verticalMode;
-    private final boolean hFlip;
-    private final boolean vFlip;
+    private int baseX;
+    private int baseY;
+    private boolean verticalMode;
+    private boolean hFlip;
+    private boolean vFlip;
 
     private final int[] linkX = new int[LINK_COUNT];
     private final int[] linkY = new int[LINK_COUNT];
