@@ -43,8 +43,8 @@ public class Hcz2CutsceneButtonInstance extends AbstractObjectInstance
     /** ROM: Level_trigger_array index 8 — read by tension bridge subtype $88. */
     private static final int TRIGGER_INDEX = 8;
 
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
     private boolean pressed;
 
     public Hcz2CutsceneButtonInstance(ObjectSpawn spawn) {

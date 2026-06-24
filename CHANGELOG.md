@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K HCZ2 cutscene-button scalar rewind cleanup:** cutscene-button constructor coordinates now compact-restore without stale coverage-baseline keys.
 - **S3K HCZ twisting-loop scalar rewind cleanup:** twisting-loop constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K HCZ water-effect scalar rewind cleanup:** water-drop and water-splash constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K HCZ water-wall scalar rewind cleanup:** water-wall and splash/spray child constructor scalars now compact-restore without stale coverage-baseline keys.
