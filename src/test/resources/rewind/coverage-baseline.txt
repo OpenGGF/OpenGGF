@@ -240,7 +240,6 @@ com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizMinibossCutsceneInstance#recreate
 com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild#finalScalar#worldX
 com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild#finalScalar#worldY
-com.openggf.game.sonic3k.objects.AizMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.AizPlaneIntroInstance#recreate
 com.openggf.game.sonic3k.objects.AizRideVineObjectInstance#finalScalar#subtype
 com.openggf.game.sonic3k.objects.AizRideVineObjectInstance#finalScalar#targetX

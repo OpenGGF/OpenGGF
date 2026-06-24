@@ -92,6 +92,7 @@ import com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild;
 import com.openggf.game.sonic3k.objects.AizMinibossBodyChild;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameChild;
+import com.openggf.game.sonic3k.objects.AizMinibossInstance;
 import com.openggf.game.sonic3k.objects.AizMinibossNapalmController;
 import com.openggf.game.sonic3k.objects.AizShipBombInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
@@ -623,6 +624,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(AizMinibossFlameChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizMinibossBarrelShotChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizMinibossBarrelShotFlareChild.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_MINIBOSS_PARENT_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizMinibossInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> AIZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(AizEndBossInstance.class.getName(), GameId.S3K),
@@ -5159,6 +5163,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through AIZ miniboss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void aizMinibossParentClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_MINIBOSS_PARENT_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ miniboss parent batch");
+        }
+    }
+
+    @Test
+    void aizMinibossParentClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_MINIBOSS_PARENT_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ miniboss parent generic recreate, not a dynamic codec");
         }
     }
 

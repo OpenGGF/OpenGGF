@@ -263,13 +263,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       to generic recreate and HTZ joined the standalone round-trip pass set.</li>
  *   <li>2026-06-24: raised to 334 after S1 FZ, GHZ, and SLZ boss graph parent
  *       restores moved to generic recreate and joined the standalone pass set.</li>
+ *   <li>2026-06-24: raised to 335 after AIZ miniboss parent graph restore moved
+ *       to generic recreate and joined the standalone pass set.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 334 after S1 boss graph parent restores moved to generic recreate.
-    static final int RATCHET_FLOOR = 334;
+    // 2026-06-24: raised to 335 after AIZ miniboss parent restore moved to generic recreate.
+    static final int RATCHET_FLOOR = 335;
 
     @BeforeEach
     void initHeadless() {
