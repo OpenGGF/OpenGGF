@@ -26,10 +26,6 @@ com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButt
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#recreate
 com.openggf.game.sonic2.objects.BreakableBlockObjectInstance$BreakableBlockFragmentInstance#finalScalar#frameIndex
 com.openggf.game.sonic2.objects.BreakableBlockObjectInstance$BreakableBlockFragmentInstance#recreate
-com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance#finalScalar#x
-com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance#finalScalar#y
-com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance#objectRef#lastNativeMainPlayer
-com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance#recreate
 com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance#finalScalar#collisionDistance
 com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance#recreate
 com.openggf.game.sonic2.objects.CheckpointDongleInstance#finalScalar#centerX

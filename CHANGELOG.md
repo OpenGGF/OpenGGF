@@ -8,6 +8,7 @@ All notable changes to the OpenGGF project are documented in this file.
 
 The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability. Detailed per-frontier notes were moved out of this top-level changelog so it stays readable; see [docs/TRACE_FRONTIER_LOG.md](docs/TRACE_FRONTIER_LOG.md) for frame-by-frame trace evidence and [docs/changelog/v0.6-prerelease-detailed.md](docs/changelog/v0.6-prerelease-detailed.md) for the previous verbose merge ledger.
 
+- **S2 Breakable Plating rewind coverage:** WFZ breakable plating now restores through generic rewind recreate, keeps fragment coordinates compact-restorable, and treats the fallback player cache as transient.
 - **S3K AIZ/HCZ/MGZ object parent rewind coverage:** AIZ ride vines and hollow-tree controllers, generic S3K breakable walls, HCZ breakable bars, and MGZ head triggers/swingers now restore through spawn-based generic rewind recreate.
 - **S3K ICZ/static object parent rewind coverage:** ICZ crushing columns, segmented columns, tension platforms, collapsing platforms, and S3K starposts now restore through spawn-based generic rewind recreate.
 - **S3K ICZ debris rewind coverage:** ICZ breakable-wall, harmful-ice, ice-cube, segmented-column, and stalagtite debris children now restore through spawn-based generic rewind recreate.

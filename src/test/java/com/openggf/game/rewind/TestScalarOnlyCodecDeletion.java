@@ -1632,6 +1632,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S2_MECHANISM_FRAGMENT_PARENT_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.SmashableGroundObjectInstance",
                     GameId.S2),
             new CodecDeletionCandidate(
@@ -1640,6 +1643,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<MutableFieldCoverageCandidate> S2_MECHANISM_FRAGMENT_PARENT_RECREATE_MUTABLE_FIELDS =
             List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance",
+                            "x", "y"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic2.objects.TiltingPlatformObjectInstance",
                             "behaviorType"));
