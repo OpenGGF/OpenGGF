@@ -11,6 +11,10 @@ final class Sonic2BadnikChildRewindLinks {
         return RewindRecreateObjectLinks.nearestLiveObject(ctx, BalkiryBadnikInstance.class);
     }
 
+    static AquisBadnikInstance nearestAquis(RewindRecreateContext ctx) {
+        return RewindRecreateObjectLinks.nearestLiveObject(ctx, AquisBadnikInstance.class);
+    }
+
     static RexonBadnikInstance nearestRexon(RewindRecreateContext ctx) {
         return RewindRecreateObjectLinks.nearestLiveObject(ctx, RexonBadnikInstance.class);
     }

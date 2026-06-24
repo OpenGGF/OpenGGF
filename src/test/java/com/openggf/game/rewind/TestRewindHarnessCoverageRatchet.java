@@ -249,13 +249,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       to generic recreate and shed stale recreate baselines.</li>
  *   <li>2026-06-24: raised to 322 after S2 Turtloid parent graph restore moved
  *       to generic recreate and shed its stale recreate baseline.</li>
+ *   <li>2026-06-24: raised to 323 after S2 Aquis parent graph restore moved to
+ *       generic recreate and its private wing moved under graph-covered parent-dependent restore.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 322 after S2 Turtloid parent graph restore moved to generic recreate.
-    static final int RATCHET_FLOOR = 322;
+    // 2026-06-24: raised to 323 after S2 Aquis parent graph restore moved to generic recreate.
+    static final int RATCHET_FLOOR = 323;
 
     @BeforeEach
     void initHeadless() {

@@ -649,12 +649,16 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(GrounderRockProjectile.class.getName(), GameId.S2),
             new CodecDeletionCandidate(GrounderWallInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(BalkiryJetObjectInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild",
+                    GameId.S2),
             new CodecDeletionCandidate(RexonHeadObjectInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(ShellcrackerClawInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(SlicerPincerInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(SolFireballObjectInstance.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> S2_BADNIK_PARENT_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance", GameId.S2),
             new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance", GameId.S2),
             new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance", GameId.S2),
             new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.ShellcrackerBadnikInstance", GameId.S2),

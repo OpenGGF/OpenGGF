@@ -9,6 +9,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
@@ -30,7 +32,7 @@ import java.util.List;
  * that follows the body.
  * Based on disassembly Obj50 (lines 60044-60310).
  */
-public class AquisBadnikInstance extends AbstractBadnikInstance {
+public class AquisBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
 
     private enum State {
         WAIT_FOR_SCREEN,  // routine_secondary 0: idle until on-screen
@@ -83,6 +85,11 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
         // Bug 1 fix: ROM Obj50_Init writes move.w #-$100, x_vel(a0) immediately
         // after the standard init block (s2.asm:60100).
         this.xVelocity = -0x100;
+    }
+
+    @Override
+    public AquisBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AquisBadnikInstance(ctx.spawn());
     }
 
     @Override
@@ -250,6 +257,11 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
         }
     }
 
+    private void attachWingForRewind(AquisWingChild wing) {
+        wingChild = wing;
+        wingSpawned = true;
+    }
+
     private void fireProjectile() {
         ObjectServices svc = tryServices();
         if (svc == null || svc.objectManager() == null) {
@@ -351,7 +363,7 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
         super.destroyBadnik(player);
     }
 
-    private static final class AquisWingChild extends AbstractObjectInstance {
+    private static final class AquisWingChild extends AbstractObjectInstance implements RewindRecreatable {
         @RewindTransient(reason = "ROM Obj50 wing keeps a parent SST pointer; object graph recreates it live")
         private final AquisBadnikInstance parent;
         private final ObjectAnimationState animationState;
@@ -366,6 +378,17 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
             this.wingX = spawn.x();
             this.wingY = spawn.y();
             this.wingFacingLeft = parent != null && parent.facingLeft;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            AquisBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestAquis(ctx);
+            if (parent == null) {
+                throw new IllegalStateException("Cannot recreate Aquis wing without a live Aquis parent");
+            }
+            AquisWingChild wing = new AquisWingChild(ctx.spawn(), parent);
+            parent.attachWingForRewind(wing);
+            return wing;
         }
 
         @Override

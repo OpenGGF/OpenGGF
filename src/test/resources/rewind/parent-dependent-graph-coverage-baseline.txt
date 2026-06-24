@@ -10,6 +10,7 @@ covered|com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFlo
 covered|com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance|com.openggf.game.sonic1.objects.TestSonic1GlassReflectionGraphRewind
 covered|com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance|TestCheckpointStarpostGraphRewind
 covered|com.openggf.game.sonic1.objects.Sonic1SeesawBallObjectInstance|TestSeesawBallGraphRewind
+covered|com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild|TestS2BadnikChildGraphRewind
 covered|com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance|TestS2BadnikChildGraphRewind
 covered|com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance|TestS2BadnikChildGraphRewind
 covered|com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance|TestS2BadnikChildGraphRewind
