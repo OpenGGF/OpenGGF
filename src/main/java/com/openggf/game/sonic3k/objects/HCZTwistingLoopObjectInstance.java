@@ -149,9 +149,9 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     // Instance state
     // =========================================================================
 
-    private final int subtype;
-    private final boolean reverseEntry;  // bit 7 of subtype
-    private final boolean objectFlippedX;  // ROM: status bit 0 from layout render_flags
+    private int subtype;
+    private boolean reverseEntry;  // bit 7 of subtype
+    private boolean objectFlippedX;  // ROM: status bit 0 from layout render_flags
     private final LoopDef loopDef;
     private final PlayerState p1State = new PlayerState();
     private final PlayerState p2State = new PlayerState();

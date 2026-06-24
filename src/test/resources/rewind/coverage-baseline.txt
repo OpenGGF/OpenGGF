@@ -108,9 +108,6 @@ com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance#finalScalar#facingLeft
 com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance$HandLauncherArmChild#recreate
-com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance#finalScalar#objectFlippedX
-com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance#finalScalar#reverseEntry
-com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance#finalScalar#subtype
 com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnInterval
 com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnY
