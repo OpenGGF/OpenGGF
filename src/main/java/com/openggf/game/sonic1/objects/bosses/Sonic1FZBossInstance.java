@@ -90,9 +90,11 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     private FZPlasmaLauncher plasmaLauncher;
     private boolean childComponentsSpawned;
 
-    // True until the boss's first wait-state update runs. See updateWait() for the
-    // level-event ordering compensation this gates.
-    private boolean waitFirstFrame;
+    // Camera X as of the previous frame's scroll. The FZ boss runs in ExecuteObjects
+    // (before DeformLayers/ScrollHoriz), so its wait-exit camera read sees the
+    // previous frame's camera; the engine's live camera.getX() is one frame ahead.
+    // Seeded to 0 so the wait never advances on the spawn frame before a real read.
+    private int previousFrameCamX;
 
     // objoff_30: cylinder activation state (-1 = ready for new pair)
     private int cylinderState;
@@ -142,7 +144,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // ROM: move.w #-1,objoff_30(a0) — ready for first cylinder pair
         cylinderState = -1;
         activeCylinderCount = 0;
-        waitFirstFrame = true;
+        previousFrameCamX = 0;
 
         damageCooldown = 0;
         seggAnim = Sonic1BossAnimations.ANIM_SEGG_STAND;
@@ -317,27 +319,17 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     // synchronously, so the PLC buffer is always empty here and only the camera
     // gate applies.
     private void updateWait() {
-        Camera camera = services().camera();
-        int camX = camera.getX() & 0xFFFF;
-
-        GameRng rng = services().rng();
-
-        // Compensate for the engine vs ROM level-event ordering. ROM runs
-        // DynamicLevelEvents AFTER ScrollHoriz inside DeformLayers
-        // (docs/s1disasm/_inc/DeformLayers (REV01).asm:16-18), so DLE_FZ_Boss
-        // observes the post-scroll camera and spawns Obj85 on the frame the camera
-        // first reaches boss_fz_x-$150. The engine runs level events BEFORE the
-        // camera scroll (LevelFrameStep step 4 vs step 5), so Sonic1SBZEvents
-        // .updateFZBoss observes the pre-scroll (previous-frame) camera and spawns
-        // the boss one frame later. That costs exactly one frame of the ROM
-        // BossFinal_Eggman_Wait sub-state, so v_random would be advanced one fewer
-        // time before the first cylinder-select draw. Replay the missing first
-        // wait-frame seed bump here so the wait-state v_random advance spans the
-        // ROM-correct number of frames.
-        if (waitFirstFrame) {
-            waitFirstFrame = false;
-            rng.setSeed(rng.getSeed() + 1);
-        }
+        // ROM BossFinal_Eggman_Wait reads (v_screenposx).w from inside ExecuteObjects,
+        // which runs BEFORE DeformLayers/ScrollHoriz in the level main loop
+        // (docs/s1disasm/sonic.asm Level loop: ExecuteObjects then DeformLayers;
+        // docs/s1disasm/_inc/DeformLayers (REV01).asm:16-18). So the boss sees the
+        // camera as left by the PREVIOUS frame's scroll. The engine runs the camera
+        // scroll (LevelFrameStep step 5) after object updates (step 2/3) but its
+        // camera.getX() during the boss update already reflects this frame's scroll,
+        // so reading it directly advances the boss one frame ahead of ROM. Compare
+        // against the previous-frame camera X to restore the ROM read ordering.
+        int camX = previousFrameCamX;
+        previousFrameCamX = services().camera().getX() & 0xFFFF;
 
         if (camX >= BOSS_FZ_X) {
             state.routineSecondary = STATE_CYLINDER_ATTACK;
@@ -349,7 +341,10 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // per-frame advance of v_random through the boss-intro wait is what places
         // the seed for the first BossFinal_Eggman_Crush RandomNumber draw
         // (selectCylinderPair). _incObj/85,84,86 Boss - FZ Main, Cylinders, and
-        // Plasma Balls.asm:131-133.
+        // Plasma Balls.asm:131-133. With the previous-frame camera read above, the
+        // wait spans the ROM-correct number of frames, so no separate seed
+        // compensation is needed.
+        GameRng rng = services().rng();
         rng.setSeed(rng.getSeed() + 1);
     }
 

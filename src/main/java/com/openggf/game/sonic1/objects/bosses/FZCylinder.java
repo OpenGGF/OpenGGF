@@ -67,6 +67,9 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
     private int direction;           // objoff_29: -1 = extending (bottom), +1 = extending (top), 0 = idle
     private int extensionFixed;      // objoff_3C: 32-bit fixed-point extension offset
     private boolean active;          // obRoutine >= 4
+    private boolean activationDeferred; // first-frame defer: ROM runs the routine-2
+                                        // Action body (objoff_3C=0) on the activation
+                                        // frame; extension starts the next frame.
     private boolean drivesBossPosition; // ROM: objoff_30 < 0 branch drives boss X/Y
     private int currentFrame;
 
@@ -91,6 +94,7 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
         this.direction = 0;
         this.extensionFixed = 0;
         this.active = false;
+        this.activationDeferred = false;
         this.drivesBossPosition = false;
         this.currentFrame = 0;
     }
@@ -142,6 +146,14 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
     public void activate(int dir) {
         this.direction = dir;
         this.active = true;
+        // ROM EggmanCylinder_Action (routine 2) sets objoff_29 then advances obRoutine
+        // to 4 on the SAME frame, but falls through to its loc_1A4EA body with
+        // objoff_3C still cleared to 0 (clr.l objoff_3C at _incObj/85,84,86 Boss - FZ
+        // Main, Cylinders, and Plasma Balls.asm:692) — so the activation frame seats
+        // the cylinder at its rest position and the first actual extension step
+        // (EggmanCylinder_Move / routine 4) does not run until the NEXT frame. Defer
+        // the engine's first extension step one frame to match that cadence.
+        this.activationDeferred = true;
         // ROM: The first selected cylinder gets objoff_30=-1 and drives parent X/Y.
         this.drivesBossPosition = dir < 0;
     }
@@ -151,9 +163,12 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!beginUpdate(frameCounter)) return;
 
-        if (!active) {
-            // ROM: Routine 2 — idle, clear extension
+        if (!active || activationDeferred) {
+            // ROM: Routine 2 (Action) — clear extension and seat at rest. On the
+            // activation frame the routine advances to 4 but still runs this body
+            // with objoff_3C = 0 (asm:692), so extension begins next frame.
             extensionFixed = 0;
+            activationDeferred = false;
         } else {
             // ROM: Routine 4 — extending/retracting
             if (isBottom) {
