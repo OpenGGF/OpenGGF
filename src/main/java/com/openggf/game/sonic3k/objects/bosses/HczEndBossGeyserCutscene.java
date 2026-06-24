@@ -11,6 +11,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.scroll.ZoneScrollHandler;
@@ -114,6 +115,17 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
             { 0x08, 0,  0x100, -0xA00},
             { 0x18, 0,  0x200, -0x800},
     };
+
+    private static ObjectSpawn createDebrisSpawn(int x, int y, int xVel, int yVel, int initialFrame) {
+        for (int i = 0; i < DEBRIS_TABLE.length; i++) {
+            int[] entry = DEBRIS_TABLE[i];
+            if (entry[2] == xVel && entry[3] == yVel
+                    && initialFrame == (DEBRIS_TABLE.length - 1) - i) {
+                return new ObjectSpawn(x, y, 0, i, 0, false, y);
+            }
+        }
+        return new ObjectSpawn(x, y, 0, initialFrame & 7, 0, false, y);
+    }
 
     // =========================================================================
     // Next level (ROM: StartNewLevel zone $0200 = MGZ Act 1)
@@ -456,7 +468,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
      * {@link Sonic3kObjectArtKeys#HCZ_GEYSER_DEBRIS} art key (same debris mapping
      * frames, compatible tile layout).
      */
-    static class GeyserDebrisChild extends AbstractObjectInstance {
+    static class GeyserDebrisChild extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
         private static final int GRAVITY = 0x38;        // ROM: addi.w #$38,y_vel
         private static final int SLOW_GRAVITY = 8;      // ROM: loc_301A8 addi.w #8,y_vel
@@ -471,9 +483,19 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         private boolean splashSpawned;
 
         GeyserDebrisChild(int x, int y, int xVel, int yVel, int initialFrame) {
-            super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "GeyserCutsceneDebris");
+            this(createDebrisSpawn(x, y, xVel, yVel, initialFrame));
+        }
+
+        private GeyserDebrisChild(ObjectSpawn spawn) {
+            super(spawn, "GeyserCutsceneDebris");
+            int tableIndex = spawn.subtype() & 7;
+            int[] entry = DEBRIS_TABLE[tableIndex];
+            int x = spawn.x();
+            int y = spawn.y();
+            int xVel = entry[2];
+            int yVel = entry[3];
             this.motion = new SubpixelMotion.State(x, y, 0, 0, xVel, yVel);
-            this.mappingFrame = initialFrame & 7;
+            this.mappingFrame = (DEBRIS_TABLE.length - 1) - tableIndex;
         }
 
         @Override

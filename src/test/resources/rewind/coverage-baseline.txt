@@ -252,7 +252,6 @@ com.openggf.game.sonic3k.objects.CnzBumperObjectInstance#finalScalar#reverseOrbi
 com.openggf.game.sonic3k.objects.CnzCannonInstance#objectRef#releasedPlayer
 com.openggf.game.sonic3k.objects.CnzCannonInstance$CannonLaunchPuff#finalScalar#xVelocity
 com.openggf.game.sonic3k.objects.CnzCannonInstance$CannonLaunchPuff#finalScalar#yVelocity
-com.openggf.game.sonic3k.objects.CnzCannonInstance$CannonLaunchPuff#recreate
 com.openggf.game.sonic3k.objects.CnzCylinderInstance#finalScalar#angleStep
 com.openggf.game.sonic3k.objects.CnzCylinderInstance#finalScalar#baseX
 com.openggf.game.sonic3k.objects.CnzCylinderInstance#finalScalar#baseY
@@ -514,7 +513,6 @@ com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#recr
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance#recreate
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance#finalScalar#xVel
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance#finalScalar#yVel
-com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance#recreate
 com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance$StalagtiteDebris#finalScalar#gravity
 com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance#finalScalar#anchorX
@@ -878,7 +876,6 @@ com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#objectRef#endCannon
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#recreate
 com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance#finalScalar#fixedX
 com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance#finalScalar#fixedY
-com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene$GeyserDebrisChild#recreate
 com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine#finalScalar#xOffset
 com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine#finalScalar#yOffset
 com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance#finalScalar#centreX

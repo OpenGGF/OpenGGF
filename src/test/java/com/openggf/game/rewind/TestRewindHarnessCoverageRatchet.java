@@ -366,13 +366,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       moved to spawn-based generic recreate.</li>
  *   <li>2026-06-24: raised to 490 after three S3K HCZ water-wall children
  *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 493 after three S3K particle child effects
+ *       moved to spawn-encoded generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 490 after S3K HCZ water-wall children moved to generic recreate.
-    static final int RATCHET_FLOOR = 490;
+    // 2026-06-24: raised to 493 after S3K particle child effects moved to generic recreate.
+    static final int RATCHET_FLOOR = 493;
 
     @BeforeEach
     void initHeadless() {

@@ -195,10 +195,8 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     }
 
     private void spawnLaunchPuff() {
-        int xOffsetVelocity = TrigLookupTable.cosHex(launchPuffAngle) << 3;
-        int yOffsetVelocity = TrigLookupTable.sinHex(launchPuffAngle) << 3;
-        spawnChild(() -> new CannonLaunchPuff(spawn.x(), spawn.y() - 0x18,
-                xOffsetVelocity, yOffsetVelocity));
+        int puffAngle = launchPuffAngle;
+        spawnChild(() -> new CannonLaunchPuff(spawn.x(), spawn.y() - 0x18, puffAngle));
     }
 
     private void advanceSpin(int frameCounter) {
@@ -368,7 +366,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         stateTimer = Math.max(0, frames);
     }
 
-    private static final class CannonLaunchPuff extends AbstractObjectInstance {
+    private static final class CannonLaunchPuff extends AbstractObjectInstance implements SpawnRewindRecreatable {
         private static final int PRIORITY = RenderPriority.MAX;
         private static final int FIRST_FRAME = 1;
         private static final int DELETE_FRAME = 5;
@@ -383,12 +381,16 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         private int mappingFrame = FIRST_FRAME;
         private int animFrameTimer = ANIM_DELAY;
 
-        private CannonLaunchPuff(int x, int y, int xVelocity, int yVelocity) {
-            super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "CNZCannonLaunchPuff");
-            this.x = x;
-            this.y = y;
-            this.xVelocity = xVelocity;
-            this.yVelocity = yVelocity;
+        private CannonLaunchPuff(int x, int y, int angle) {
+            this(new ObjectSpawn(x, y, 0, angle, 0, false, y));
+        }
+
+        private CannonLaunchPuff(ObjectSpawn spawn) {
+            super(spawn, "CNZCannonLaunchPuff");
+            this.x = spawn.x();
+            this.y = spawn.y();
+            this.xVelocity = TrigLookupTable.cosHex(spawn.subtype()) << 3;
+            this.yVelocity = TrigLookupTable.sinHex(spawn.subtype()) << 3;
         }
 
         @Override
