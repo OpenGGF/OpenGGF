@@ -1937,6 +1937,32 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_OBJECT_PARENT_BATCH91_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizRideVineObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.BreakableWallObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MGZSwingingPlatformObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(S3kSignpostStubChild.class.getName(), GameId.S3K));
 
@@ -6909,6 +6935,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kObjectParentBatch90ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH90_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch91ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH91_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K object parent batch 91");
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch91ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH91_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K object parent batch 91 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch91ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH91_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

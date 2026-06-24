@@ -12,6 +12,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 
@@ -30,7 +31,7 @@ import java.util.List;
  * Status bit 1 (y-flip) selects chain link visual (frame 0 vs frame 1).
  */
 public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_SWINGING_PLATFORM;
 

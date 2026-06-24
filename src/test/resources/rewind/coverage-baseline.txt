@@ -190,10 +190,8 @@ com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance#finalScalar#curr
 com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance#finalScalar#currentY
 com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance#finalScalar#phaseOffset
 com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance#finalScalar#segmentCount
-com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance#finalScalar#treeX
 com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance#finalScalar#treeY
-com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#xOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#yOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#recreate
@@ -210,7 +208,6 @@ com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild#finalScalar#worldX
 com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild#finalScalar#worldY
 com.openggf.game.sonic3k.objects.AizRideVineObjectInstance#finalScalar#subtype
 com.openggf.game.sonic3k.objects.AizRideVineObjectInstance#finalScalar#targetX
-com.openggf.game.sonic3k.objects.AizRideVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizRockFragmentChild#finalScalar#gravity
 com.openggf.game.sonic3k.objects.AizShipBombInstance#finalScalar#initialWorldY
 com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance#finalScalar#baseY
@@ -229,7 +226,6 @@ com.openggf.game.sonic3k.objects.AutomaticTunnelObjectInstance#finalScalar#subty
 com.openggf.game.sonic3k.objects.BreakableWallObjectInstance#finalScalar#triggerControlled
 com.openggf.game.sonic3k.objects.BreakableWallObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.BreakableWallObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.BreakableWallObjectInstance#recreate
 com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment#finalScalar#fragmentFrameIndex
 com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment#finalScalar#pieceIndex
 com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment#recreate
@@ -391,7 +387,6 @@ com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance#finalScalar#width
 com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance#finalScalar#widthPixels
 com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance$BreakableBarDebris#finalScalar#debrisFrame
 com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance$BreakableBarDebris#recreate
 com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance#finalScalar#innerRange
@@ -601,7 +596,6 @@ com.openggf.game.sonic3k.objects.MGZDashTriggerObjectInstance#finalScalar#facing
 com.openggf.game.sonic3k.objects.MGZDashTriggerObjectInstance#finalScalar#triggerIndex
 com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance#finalScalar#flipped
 com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance#finalScalar#triggerIndex
-com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZHeadTriggerProjectileInstance#finalScalar#worldY
 com.openggf.game.sonic3k.objects.MGZLBZSmashingPillarObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.MGZLBZSmashingPillarObjectInstance#finalScalar#targetDistance
@@ -617,13 +611,11 @@ com.openggf.game.sonic3k.objects.MGZSwingingPlatformObjectInstance#finalScalar#a
 com.openggf.game.sonic3k.objects.MGZSwingingPlatformObjectInstance#finalScalar#pivotFrame
 com.openggf.game.sonic3k.objects.MGZSwingingPlatformObjectInstance#finalScalar#pivotX
 com.openggf.game.sonic3k.objects.MGZSwingingPlatformObjectInstance#finalScalar#pivotY
-com.openggf.game.sonic3k.objects.MGZSwingingPlatformObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance#finalScalar#baseX
 com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance#finalScalar#vFlip
 com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance#finalScalar#verticalMode
-com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance#recreate

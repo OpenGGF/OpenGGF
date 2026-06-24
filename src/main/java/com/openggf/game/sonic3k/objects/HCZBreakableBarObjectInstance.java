@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -46,7 +47,7 @@ import java.util.logging.Logger;
  * loc_1EDB0 (vertical update), loc_1EF64 (horizontal update), sub_1EDEC (vertical capture),
  * sub_1EFA0 (horizontal capture), loc_1EEEC (vertical break), loc_1F09A (horizontal break).
  */
-public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
+public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(HCZBreakableBarObjectInstance.class.getName());
 

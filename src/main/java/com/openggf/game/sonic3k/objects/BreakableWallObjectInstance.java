@@ -25,6 +25,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
@@ -38,7 +39,7 @@ import java.util.logging.Logger;
  * Object 0x0D - Breakable Wall (Sonic 3 & Knuckles).
  */
 public class BreakableWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(BreakableWallObjectInstance.class.getName());
 
