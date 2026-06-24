@@ -87,6 +87,8 @@ import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance;
 import com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance;
+import com.openggf.game.sonic3k.objects.Aiz1TreeObjectInstance;
+import com.openggf.game.sonic3k.objects.Aiz1ZiplinePegObjectInstance;
 import com.openggf.game.sonic3k.objects.AizIntroPlaneChild;
 import com.openggf.game.sonic3k.objects.AizIntroWaveChild;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -676,6 +678,10 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> AIZ_FLIPPING_BRIDGE_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(AizFlippingBridgeObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ1_STATIC_SCENERY_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Aiz1TreeObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(Aiz1ZiplinePegObjectInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HczEndBossRobotnikShip.class.getName(), GameId.S3K),
@@ -5366,6 +5372,30 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through AIZ flipping-bridge generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ1 static scenery scalar batch: tree and zipline peg
+    // =====================================================================
+
+    @Test
+    void aiz1StaticSceneryClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ1_STATIC_SCENERY_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after AIZ1 static scenery batch");
+        }
+    }
+
+    @Test
+    void aiz1StaticSceneryClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ1_STATIC_SCENERY_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ1 static scenery generic recreate, "
                             + "not a dynamic codec");
         }
     }
