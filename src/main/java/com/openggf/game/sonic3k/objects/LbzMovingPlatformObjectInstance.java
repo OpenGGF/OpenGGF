@@ -56,13 +56,13 @@ public final class LbzMovingPlatformObjectInstance extends AbstractObjectInstanc
             {0x34, 0x36, 224 / 2, 0}
     };
 
-    private final int halfWidth;
-    private final int halfHeight;
-    private final int mappingFrame;
-    private final boolean hFlip;
-    private final int originalBaseX;
-    private final int baseY;
-    private final int liftDistance;
+    private int halfWidth;
+    private int halfHeight;
+    private int mappingFrame;
+    private boolean hFlip;
+    private int originalBaseX;
+    private int baseY;
+    private int liftDistance;
     private final PlatformBobHelper bobHelper = new PlatformBobHelper();
     private final SubpixelMotion.State fallMotion;
     private final List<PlayableEntity> standingPlayers = new ArrayList<>(2);

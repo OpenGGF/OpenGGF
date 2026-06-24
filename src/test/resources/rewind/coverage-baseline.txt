@@ -215,13 +215,6 @@ com.openggf.game.sonic3k.objects.LbzFlameThrowerObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.LbzFlameThrowerObjectInstance#finalScalar#subtype
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#objectRef#knucklesFightParent
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance#finalScalar#baseY
-com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance#finalScalar#halfHeight
-com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance#finalScalar#halfWidth
-com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance#finalScalar#liftDistance
-com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance#finalScalar#mappingFrame
-com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance#finalScalar#originalBaseX
 com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance#finalScalar#facingLeft
 com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance#finalScalar#launchSpeed
 com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild#finalScalar#baseX

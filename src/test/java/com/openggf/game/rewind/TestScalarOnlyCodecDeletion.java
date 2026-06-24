@@ -895,6 +895,13 @@ public class TestScalarOnlyCodecDeletion {
                             "direction", "frameIndex", "heightPixels", "mode",
                             "stepPerFrame", "totalFrames", "triggerIndex", "widthPixels"));
 
+    private static final List<MutableFieldCoverageCandidate> BATCH153_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance",
+                            "baseY", "hFlip", "halfHeight", "halfWidth",
+                            "liftDistance", "mappingFrame", "originalBaseX"));
+
     private static final List<CodecDeletionCandidate> BATCH31_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(BombPrizeObjectInstance.class.getName(), GameId.S2));
 
@@ -4398,6 +4405,23 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void batch152S3kMgzTriggerPlatformConstructorScalarsAreMutableForCompactRestore() {
         for (MutableFieldCoverageCandidate candidate : BATCH152_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch153S3kLbzMovingPlatformConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH153_MUTABLE_FIELDS) {
             Class<?> cls = loadClass(candidate.fqn());
             for (String fieldName : candidate.fieldNames()) {
                 try {
