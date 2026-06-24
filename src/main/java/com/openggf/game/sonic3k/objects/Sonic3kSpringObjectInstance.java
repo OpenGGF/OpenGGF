@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -54,7 +55,7 @@ import java.util.Set;
  * </ul>
  */
 public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable {
 
     // Subtype constants (shifted >> 3 & 0xE) - matches ROM Obj_Spring index
     private static final int TYPE_UP = 0;

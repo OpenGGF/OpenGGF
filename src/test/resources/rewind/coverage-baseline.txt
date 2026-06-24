@@ -293,7 +293,6 @@ com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance#recreate
 com.openggf.game.sonic3k.objects.CnzWireCageObjectInstance#finalScalar#verticalOffset
 com.openggf.game.sonic3k.objects.CnzWireCageObjectInstance#finalScalar#verticalRange
 com.openggf.game.sonic3k.objects.CnzWireCageObjectInstance#finalScalar#verticalVelocity
-com.openggf.game.sonic3k.objects.CnzWireCageObjectInstance#recreate
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#finalScalar#fragmentFrameIndex
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#finalScalar#hFlip
@@ -351,7 +350,6 @@ com.openggf.game.sonic3k.objects.GumballItemObjectInstance#finalScalar#mappingFr
 com.openggf.game.sonic3k.objects.GumballItemObjectInstance#finalScalar#motionMode
 com.openggf.game.sonic3k.objects.GumballItemObjectInstance#finalScalar#rewardMode
 com.openggf.game.sonic3k.objects.GumballItemObjectInstance#finalScalar#subtype
-com.openggf.game.sonic3k.objects.GumballItemObjectInstance#recreate
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$BodyOverlayChild#finalScalar#offsetFromMachine
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$BodyOverlayChild#recreate
@@ -645,7 +643,6 @@ com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance#finalScalar#priori
 com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance#finalScalar#baseX
 com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance#finalScalar#childX
-com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#objectRef#grabbedPlayer
 com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#objectRef#nativeP2GrabbedPlayer
 com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#recreate
@@ -691,7 +688,6 @@ com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlo
 com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance#finalScalar#bitIndex
 com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance#finalScalar#hiddenPalaceRoute
 com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance#finalScalar#redSpring
-com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild#finalScalar#centerX
 com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild#finalScalar#centerY
 com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance#finalScalar#cameraLockFlag

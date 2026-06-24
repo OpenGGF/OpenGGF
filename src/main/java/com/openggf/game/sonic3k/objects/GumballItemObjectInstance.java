@@ -10,6 +10,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -57,7 +58,7 @@ import java.util.logging.Logger;
  * ROM collision size: 0xD7 &amp; 0x3F = 0x17 (size index 23).
  */
 public class GumballItemObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(GumballItemObjectInstance.class.getName());
 

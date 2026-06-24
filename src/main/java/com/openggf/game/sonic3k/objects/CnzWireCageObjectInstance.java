@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -25,7 +26,7 @@ import java.util.Map;
  * player into object control and carries them around the cage rim using
  * {@code GetSineCosine}.
  */
-public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
+public final class CnzWireCageObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     private static final int COOLDOWN_AFTER_RELEASE = 0x10;
     private static final int MIN_SPEED_TO_CONTINUE = 0x300;

@@ -384,13 +384,16 @@ public class TestRewindHarnessCoverageRatchet {
  *       bars moved to spawn-encoded generic recreate.</li>
  *   <li>2026-06-24: raised to 507 after the S3K MHZ curled vine, mushroom cap,
  *       and mushroom platform moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 511 after S3K wire cage, gumball item, MHZ
+ *       mushroom catapult, and S3K springs moved to spawn-encoded generic
+ *       recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 507 after S3K MHZ mechanism objects moved to generic recreate.
-    static final int RATCHET_FLOOR = 507;
+    // 2026-06-24: raised to 511 after S3K mechanism objects moved to generic recreate.
+    static final int RATCHET_FLOOR = 511;
 
     @BeforeEach
     void initHeadless() {

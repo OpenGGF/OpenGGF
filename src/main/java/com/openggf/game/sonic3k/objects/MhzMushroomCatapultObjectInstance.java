@@ -10,6 +10,7 @@ import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SlopedSolidProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SubpixelMotion;
@@ -29,7 +30,7 @@ import java.util.Set;
  * object RAM $34.
  */
 public final class MhzMushroomCatapultObjectInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider, SlopedSolidProvider {
+        implements MultiPieceSolidProvider, SlopedSolidProvider, SpawnRewindRecreatable {
     private static final int HALF_WIDTH = 0x20;
     private static final int CHILD_X_OFFSET = 0x40;
     private static final int MAX_COMPRESSION = 0x18;
