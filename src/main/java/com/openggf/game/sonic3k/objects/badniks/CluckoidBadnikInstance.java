@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
@@ -288,7 +289,8 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
                 childBigLeaf));
     }
 
-    static final class BreathDebrisChild extends AbstractObjectInstance {
+    static final class BreathDebrisChild extends AbstractObjectInstance
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private static final int RENDER_HALF_WIDTH = 0x08;
         private static final int RENDER_HALF_HEIGHT = 0x08;
 
@@ -309,7 +311,8 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
 
         BreathDebrisChild(ObjectSpawn ownerSpawn, int x, int y, int xVelocity, int yVelocity,
                 int xAcceleration, boolean hFlip, boolean bigLeaf) {
-            super(ownerSpawn, "CluckoidBreathDebris");
+            super(new ObjectSpawn(x, y, ownerSpawn.objectId(), ownerSpawn.subtype(),
+                    (hFlip ? 1 : 0) | (bigLeaf ? 2 : 0), false, y), "CluckoidBreathDebris");
             this.x = x;
             this.y = y;
             this.xVelocity = xVelocity;
@@ -317,6 +320,14 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
             this.xAcceleration = xAcceleration;
             this.hFlip = hFlip;
             this.bigLeaf = bigLeaf;
+        }
+
+        BreathDebrisChild(ObjectSpawn spawn, int ignored) {
+            super(spawn, "CluckoidBreathDebris");
+            this.x = spawn.x();
+            this.y = spawn.y();
+            this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+            this.bigLeaf = (spawn.renderFlags() & 0x02) != 0;
         }
 
         @Override

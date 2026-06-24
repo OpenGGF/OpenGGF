@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -601,7 +602,8 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
      * ROM: sub_1F188 spawns children; loc_1EF3E handles debris update
      * (frame delay countdown, MoveSprite2 + gravity of 8/frame).
      */
-    public static class BreakableBarDebris extends AbstractObjectInstance {
+    public static class BreakableBarDebris extends AbstractObjectInstance
+            implements SpawnTrailingZeroIntsRewindRecreatable {
 
         private int currentX;
         private int currentY;
@@ -612,13 +614,22 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
         public BreakableBarDebris(int spawnX, int spawnY, int debrisFrame,
                                   int xVel, int yVel, int frameDelay) {
             super(new ObjectSpawn(spawnX, spawnY, Sonic3kObjectIds.HCZ_BREAKABLE_BAR,
-                    0, 0, false, 0), "BreakableBarDebris");
+                    debrisFrame, 0, false, 0), "BreakableBarDebris");
             this.currentX = spawnX;
             this.currentY = spawnY;
             this.debrisFrame = debrisFrame;
             this.frameDelay = frameDelay;
             this.motionState = new SubpixelMotion.State(
                     spawnX, spawnY, 0, 0, xVel, yVel);
+        }
+
+        private BreakableBarDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "BreakableBarDebris");
+            this.currentX = spawn.x();
+            this.currentY = spawn.y();
+            this.debrisFrame = spawn.subtype() & 0xFF;
+            this.frameDelay = 0;
+            this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
         }
 
         @Override

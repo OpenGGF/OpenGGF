@@ -385,7 +385,8 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
         }
     }
 
-    private static final class PenguinatorSnowdustInstance extends AbstractObjectInstance {
+    private static final class PenguinatorSnowdustInstance extends AbstractObjectInstance
+            implements SpawnRewindRecreatable {
         private static final int PRIORITY_BUCKET = 5;
         private final int x;
         private final int y;
@@ -397,6 +398,12 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
             super(ownerSpawn, "PenguinatorSnowdust");
             this.x = x;
             this.y = y;
+        }
+
+        private PenguinatorSnowdustInstance(ObjectSpawn spawn) {
+            super(spawn, "PenguinatorSnowdust");
+            this.x = spawn.x();
+            this.y = spawn.y();
         }
 
         @Override

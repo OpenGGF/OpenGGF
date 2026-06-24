@@ -387,7 +387,6 @@ com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance#finalScalar#width
 com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance$BreakableBarDebris#finalScalar#debrisFrame
-com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance$BreakableBarDebris#recreate
 com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance#finalScalar#innerRange
 com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance#finalScalar#isUnderwater
 com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance#finalScalar#originalX
@@ -755,7 +754,6 @@ com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance#finalScalar#prio
 com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$ArrowChild#recreate
 com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$BreathDebrisChild#finalScalar#bigLeaf
 com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$BreathDebrisChild#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$BreathDebrisChild#recreate
 com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance#finalScalar#priorityBucket
@@ -806,7 +804,6 @@ com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance#finalScalar#p
 com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance#finalScalar#priorityBucket
 com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance$PenguinatorSnowdustInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance$PenguinatorSnowdustInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance$PenguinatorSnowdustInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.PoindexterBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.PoindexterBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.PoindexterBadnikInstance#finalScalar#priorityBucket
