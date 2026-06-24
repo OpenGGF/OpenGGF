@@ -443,7 +443,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             implements SpawnRewindRecreatable {
         private int x;
         private int y;
-        private final int yVelocity;
+        private int yVelocity;
 
         private Mhz2KnucklesLeafParticle(LeafParticleSpec spec) {
             super(new ObjectSpawn(spec.x(), spec.y(), Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0,

@@ -108,7 +108,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance impl
     private enum State { DETECT, ATTACK }
 
     private State state = State.DETECT;
-    private final int triggerIndex; // subtype & 0x0F
+    private int triggerIndex; // subtype & 0x0F
 
     // Animate_RawMultiDelay state — unsigned byte timer (0-255).
     // The $F4 command handler clears anim_frame_timer to 0 (ROM: clr.b anim_frame_timer),

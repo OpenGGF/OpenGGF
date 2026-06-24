@@ -67,10 +67,10 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
     private static final int ARM_ANGLE_STEP = 2;
     private static final int HELD_COCONUT_Y_OFFSET = -8;
 
-    private final int activeStepCount;
-    private final int firstStepCount;
-    private final int treeAnchorX;
-    private final boolean initialFacingLeft;
+    private int activeStepCount;
+    private int firstStepCount;
+    private int treeAnchorX;
+    private boolean initialFacingLeft;
     private final int[] armSegmentX = new int[ARM_SEGMENT_COUNT];
     private final int[] armSegmentY = new int[ARM_SEGMENT_COUNT];
     private final int[] followerAngle = new int[ARM_FOLLOWER_COUNT];

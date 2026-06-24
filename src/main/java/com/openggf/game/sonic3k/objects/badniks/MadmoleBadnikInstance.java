@@ -78,7 +78,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private State state = State.BURIED;
-    private final int homeY;
+    private int homeY;
     private int timer;
     private int animFrame;
     private int animTimer;
