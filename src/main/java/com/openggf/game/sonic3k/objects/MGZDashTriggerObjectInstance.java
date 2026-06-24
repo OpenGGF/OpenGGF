@@ -85,9 +85,9 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
-    private final int triggerIndex;
+    private int triggerIndex;
     /** Trigger facing direction: false = bit 0 clear (right), true = bit 0 set (left). */
-    private final boolean facingLeft;
+    private boolean facingLeft;
 
     // ROM: $30(a0) -- arm timer countdown (0 = idle, 60 = freshly armed)
     private int armTimer;

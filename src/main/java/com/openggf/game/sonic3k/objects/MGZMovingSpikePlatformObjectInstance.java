@@ -62,8 +62,8 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
     private static final int ANIM_TIMER_RELOAD = 7;
     private static final int FRAME_MASK = 0x03;
 
-    private final int baseX;
-    private final int baseY;
+    private int baseX;
+    private int baseY;
 
     // ROM: $34(a0) direction byte — 0 = moving right, 1 = moving left.
     private int directionLeft;

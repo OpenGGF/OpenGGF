@@ -124,13 +124,13 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
 
     // ===== Per-instance state =====
 
-    private final int triggerIndex;
+    private int triggerIndex;
     /**
      * ROM status(a0) bit 0 (mirrored in ObjectSpawn.renderFlags bit 0).
      * When false, head watches the left side and fires left (ROM: $30 = $C0).
      * When true, head watches the right side and fires right (ROM: $30 = 0).
      */
-    private final boolean flipped;
+    private boolean flipped;
 
     // ROM: $34(a0). Permanent-destruction flag; survives respawn via Level_trigger_array.
     private boolean triggered;

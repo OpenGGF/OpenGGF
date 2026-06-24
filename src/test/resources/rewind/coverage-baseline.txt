@@ -166,15 +166,6 @@ com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance#finalScalar#closedOnly
 com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance#objectRef#overlayChild
 com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance#recreate
 com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance$OverlayChild#recreate
-com.openggf.game.sonic3k.objects.MGZDashTriggerObjectInstance#finalScalar#facingLeft
-com.openggf.game.sonic3k.objects.MGZDashTriggerObjectInstance#finalScalar#triggerIndex
-com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance#finalScalar#flipped
-com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance#finalScalar#triggerIndex
-com.openggf.game.sonic3k.objects.MGZHeadTriggerProjectileInstance#finalScalar#worldY
-com.openggf.game.sonic3k.objects.MGZLBZSmashingPillarObjectInstance#finalScalar#baseY
-com.openggf.game.sonic3k.objects.MGZLBZSmashingPillarObjectInstance#finalScalar#targetDistance
-com.openggf.game.sonic3k.objects.MGZMovingSpikePlatformObjectInstance#finalScalar#baseX
-com.openggf.game.sonic3k.objects.MGZMovingSpikePlatformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance#finalScalar#anchorX
 com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance#finalScalar#anchorY
 com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance#finalScalar#flipped

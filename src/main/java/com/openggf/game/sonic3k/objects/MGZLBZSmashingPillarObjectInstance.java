@@ -55,9 +55,9 @@ public class MGZLBZSmashingPillarObjectInstance extends AbstractObjectInstance
     // carry from subpixels into pixels matches the original add.l.
     private long displacementFixed;
     // ROM: $38(a0) = subtype * 8 = descent distance in whole pixels.
-    private final int targetDistance;
+    private int targetDistance;
     // ROM: $30(a0) = saved initial y_pos.
-    private final int baseY;
+    private int baseY;
     // ROM: y_vel(a0) - accumulates at +$80 per frame during descent.
     private int yVelocity;
     // ROM: $32(a0) - 0 while descending, non-zero during the pause/retract phase.
