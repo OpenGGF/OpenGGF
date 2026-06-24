@@ -116,9 +116,9 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
     }
 
     private final ZoneConfig config;
-    private final boolean triggerControlled;
-    private final int x;
-    private final int y;
+    private boolean triggerControlled;
+    private int x;
+    private int y;
     private int mappingFrame;
     private boolean broken;
 

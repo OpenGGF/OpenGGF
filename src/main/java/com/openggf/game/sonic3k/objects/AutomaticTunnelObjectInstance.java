@@ -246,11 +246,11 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
     // Instance state
     // =========================================================================
 
-    private final int subtype;
-    private final boolean reversePath;      // bit 7
-    private final boolean maintainVelocity; // bit 6
-    private final boolean lbz2Mode;         // bit 5
-    private final int pathId;               // bits 0-4
+    private int subtype;
+    private boolean reversePath;      // bit 7
+    private boolean maintainVelocity; // bit 6
+    private boolean lbz2Mode;         // bit 5
+    private int pathId;               // bits 0-4
 
     private final CharState p1State = new CharState();
     private final CharState p2State = new CharState();

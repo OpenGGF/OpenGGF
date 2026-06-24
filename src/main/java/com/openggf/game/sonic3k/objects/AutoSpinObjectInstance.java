@@ -66,12 +66,12 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
     private static final boolean DEBUG_VIEW_ENABLED = staticDebugViewEnabled();
     private static final DebugOverlayManager OVERLAY_MANAGER = staticDebugOverlay();
 
-    private final boolean verticalMode;     // subtype bit 2
-    private final boolean noSpinLock;       // subtype bit 4
-    private final boolean groundOnly;       // subtype bit 5
-    private final boolean snapToWall;       // subtype bit 6 (vertical only)
-    private final boolean lockControls;     // subtype bit 7
-    private final boolean xFlipped;         // render_flags bit 0
+    private boolean verticalMode;     // subtype bit 2
+    private boolean noSpinLock;       // subtype bit 4
+    private boolean groundOnly;       // subtype bit 5
+    private boolean snapToWall;       // subtype bit 6 (vertical only)
+    private boolean lockControls;     // subtype bit 7
+    private boolean xFlipped;         // render_flags bit 0
 
     // Per-character crossing state (matches objoff_34/objoff_35 in disassembly)
     private boolean sonicPastTrigger;

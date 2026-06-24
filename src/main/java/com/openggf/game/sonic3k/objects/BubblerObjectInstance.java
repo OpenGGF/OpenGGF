@@ -72,10 +72,10 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
             ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private int routine = ROUTINE_INIT;
-    private final boolean maker;
+    private boolean maker;
 
-    private final int originalX;
-    private final int originalY;
+    private int originalX;
+    private int originalY;
 
     private int x;
     private int y;

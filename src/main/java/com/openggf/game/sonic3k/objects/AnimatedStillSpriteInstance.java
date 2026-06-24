@@ -74,7 +74,7 @@ public class AnimatedStillSpriteInstance extends AbstractObjectInstance implemen
 
     private final SubtypeInfo info;
     private final int[] animFrames;
-    private final int animDelay;
+    private int animDelay;
 
     private int animScriptIndex;
     private int animTimer;
