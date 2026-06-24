@@ -104,7 +104,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     // State
     // ========================================================================
 
-    private final boolean isVertical;    // subtype == 0 → vertical (launch right)
+    private boolean isVertical;    // subtype == 0 → vertical (launch right)
     private boolean broken = false;
     private boolean launcherActive = false;
 

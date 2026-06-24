@@ -96,10 +96,10 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
     private final Map<AbstractPlayableSprite, Integer> playerCooldowns = new HashMap<>();
 
     // Object properties (computed from subtype at init)
-    private final boolean renderXFlip;
-    private final boolean renderYFlip;
-    private final boolean reverseAnim;    // objoff_3E: animation direction flag
-    private final int startFrame;         // objoff_3F: initial mapping frame
+    private boolean renderXFlip;
+    private boolean renderYFlip;
+    private boolean reverseAnim;    // objoff_3E: animation direction flag
+    private int startFrame;         // objoff_3F: initial mapping frame
 
     // Current animation state (shared between both characters, matches ROM behavior)
     private int mappingFrame;

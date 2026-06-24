@@ -67,7 +67,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
     private ObjectAnimationState animationState;
     private boolean animInitialized;
-    private final int idleAnimId;
+    private int idleAnimId;
     private int mappingFrame;
     // ROM parity: Obj86 has no global cooldown; each player is tracked
     // independently via objoff_36 (P1) / objoff_37 (P2) in s2.asm:57870-57879.
