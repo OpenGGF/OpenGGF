@@ -29,7 +29,11 @@ import com.openggf.game.sonic1.objects.bosses.FZPlasmaBall;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher;
 import com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall;
 import com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance;
+import com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance;
+import com.openggf.game.sonic1.objects.bosses.Sonic1GHZBossInstance;
+import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball;
+import com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance;
 import com.openggf.game.sonic2.objects.BombPrizeObjectInstance;
 import com.openggf.game.sonic2.objects.CheckpointDongleInstance;
 import com.openggf.game.sonic2.objects.CheckpointStarInstance;
@@ -690,6 +694,12 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S1_RING_FLASH_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(Sonic1RingFlashObjectInstance.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_BOSS_GRAPH_PARENT_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1FZBossInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1GHZBossInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1SLZBossInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1SYZBossInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> S1_FZ_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(FZCylinder.class.getName(), GameId.S1),
@@ -5383,6 +5393,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 ring flash graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 boss graph parent batch: boss roots whose graph harnesses cover child relinks
+    // =====================================================================
+
+    @Test
+    void s1BossGraphParentClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_GRAPH_PARENT_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 boss graph parent batch");
+        }
+    }
+
+    @Test
+    void s1BossGraphParentClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_GRAPH_PARENT_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 boss graph parent generic recreate, not a dynamic codec");
         }
     }
 

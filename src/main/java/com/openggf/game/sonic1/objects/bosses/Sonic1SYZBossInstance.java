@@ -5,6 +5,8 @@ import com.openggf.game.sonic1.audio.Sonic1Music;
 
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -26,7 +28,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  *  - Flame overlay (movement-driven)
  *  - Spike (child component with collision, extends below ship)
  */
-public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance {
+public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance implements RewindRecreatable {
 
     // State machine constants (routineSecondary, even-numbered to match ROM)
     private static final int STATE_APPROACH = 0;
@@ -102,6 +104,11 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance {
 
     public Sonic1SYZBossInstance(ObjectSpawn spawn) {
         super(spawn, "SYZ Boss");
+    }
+
+    @Override
+    public Sonic1SYZBossInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1SYZBossInstance(ctx.spawn());
     }
 
     @Override

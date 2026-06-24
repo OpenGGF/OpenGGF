@@ -9,6 +9,8 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -34,7 +36,7 @@ import java.util.List;
  *
  * Face, flame, and tube are rendered as overlays on the ship (not separate object instances).
  */
-public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance {
+public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implements RewindRecreatable {
 
     // State machine constants (routineSecondary values, matching ROM's even-numbered index)
     private static final int STATE_ENTRANCE = 0;
@@ -84,6 +86,11 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance {
 
     public Sonic1SLZBossInstance(ObjectSpawn spawn) {
         super(spawn, "SLZ Boss");
+    }
+
+    @Override
+    public Sonic1SLZBossInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1SLZBossInstance(ctx.spawn());
     }
 
     @Override

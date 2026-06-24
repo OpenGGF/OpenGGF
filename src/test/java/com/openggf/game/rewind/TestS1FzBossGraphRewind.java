@@ -164,6 +164,15 @@ class TestS1FzBossGraphRewind {
                 "FZPlasmaBall must not keep an explicit S1 dynamic rewind codec");
     }
 
+    @Test
+    void fzBossParentUsesGenericRecreateWithoutExplicitS1DynamicCodec() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1FZBossInstance.class),
+                "Sonic1FZBossInstance must restore through RewindRecreatable graph recreate");
+
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(Sonic1FZBossInstance.class.getName()),
+                "Sonic1FZBossInstance must not keep an explicit S1 dynamic rewind codec");
+    }
+
     private static ObjectInstance genericRecreate(
             ObjectManager objectManager,
             Class<? extends ObjectInstance> type,

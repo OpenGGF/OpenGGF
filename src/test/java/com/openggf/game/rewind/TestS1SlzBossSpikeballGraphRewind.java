@@ -182,6 +182,16 @@ class TestS1SlzBossSpikeballGraphRewind {
                 "SLZ boss spikeball must not keep an explicit S1 dynamic rewind codec");
     }
 
+    @Test
+    void slzBossParentUsesGenericRecreateWithoutExplicitS1DynamicCodec() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1SLZBossInstance.class),
+                "Sonic1SLZBossInstance must restore through RewindRecreatable graph recreate");
+
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic1SLZBossInstance.class.getName()),
+                "Sonic1SLZBossInstance must not keep an explicit S1 dynamic rewind codec");
+    }
+
     private static PerObjectRewindSnapshot capturedNonFragmentState() {
         Harness harness = Harness.create(List.of(BOSS_SPAWN, WRONG_SEESAW, TARGET_SEESAW));
         Sonic1SLZBossSpikeball spikeball = harness.objectManager().createDynamicObject(

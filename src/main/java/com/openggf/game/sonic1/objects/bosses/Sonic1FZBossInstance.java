@@ -11,6 +11,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -47,7 +49,7 @@ import java.util.List;
  * In our engine these are handled as rendering overlays within this class.
  */
 public class Sonic1FZBossInstance extends AbstractBossInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
     private static final SpriteAnimationSet SEGG_ANIMATIONS = Sonic1BossAnimations.getSEggAnimations();
 
     // State machine constants (objoff_34 values in the ROM)
@@ -119,6 +121,11 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
 
     public Sonic1FZBossInstance(ObjectSpawn spawn) {
         super(spawn, "FZ Boss");
+    }
+
+    @Override
+    public Sonic1FZBossInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1FZBossInstance(ctx.spawn());
     }
 
     @Override

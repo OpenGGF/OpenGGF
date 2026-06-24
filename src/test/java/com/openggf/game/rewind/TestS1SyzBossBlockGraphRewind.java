@@ -159,6 +159,15 @@ class TestS1SyzBossBlockGraphRewind {
                 "SYZ boss block must not keep an explicit S1 dynamic rewind codec");
     }
 
+    @Test
+    void syzBossParentUsesGenericRecreateWithoutExplicitS1DynamicCodec() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1SYZBossInstance.class),
+                "Sonic1SYZBossInstance must restore through RewindRecreatable graph recreate");
+
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(Sonic1SYZBossInstance.class.getName()),
+                "Sonic1SYZBossInstance must not keep an explicit S1 dynamic rewind codec");
+    }
+
     private static ObjectInstance genericRecreate(ObjectManager objectManager) {
         ObjectSpawn spawn = new ObjectSpawn(
                 0x2C90,

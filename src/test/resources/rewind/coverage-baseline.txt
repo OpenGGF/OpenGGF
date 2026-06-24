@@ -32,16 +32,12 @@ com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#r
 com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance#finalScalar#origY
-com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorFragment#finalScalar#currentX
 com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorFragment#finalScalar#mappingFrame
 com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorFragment#recreate
-com.openggf.game.sonic1.objects.bosses.Sonic1GHZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1LZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1MZBossInstance#recreate
-com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossInstance#recreate
-com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.SYZBossSpike#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#finalScalar#buttonX
