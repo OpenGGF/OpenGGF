@@ -249,6 +249,7 @@ Highlights:
 - Sonic 1 horizontal camera scrolling now matches the shipped ROM's `FixBugs=0` behavior: the leftward camera move is uncapped while the rightward move keeps its per-frame cap (S2/S3K still cap both directions), gated by a per-game feature flag.
 - Sonic 1 Labyrinth Zone Act 3 conveyor platforms now stay loaded one extra chunk past the left camera edge, matching the ROM's act-3-specific `out_of_range` left-extension, so platforms persist when the player backtracks left.
 - Sonic 1 Marble Zone lava geyser heads now defer their first movement action by one frame after spawning, matching the ROM's `Geyser_Index` routine-0 init-only spawn frame, so the lava column erupts on the correct frame.
+- Sonic 1 Spring Yard rollers are no longer collidable while still curled in their initial waiting state, matching the ROM's unset `obColType` until a roller activates, so the player passes a dormant roller unharmed.
 - Playable sprite slope rendering now keeps steep-slope walk frames synchronized with facing-dependent flip flags during slow turnarounds.
 - Sonic 2 multi-sidekick follow-up fixed Tails pausing after fly-in by clearing the approach timer before NORMAL follow, preventing a false Player 2 manual-control stall; chained sidekicks also use the root leader while a direct Sonic sidekick's delayed follow history warms.
 - Sonic 2 sidekick CPU parity now keeps ROM `Tails_control_counter` separate from the engine's multi-sidekick approach cadence, clearing the ARZ1 trace frontier and advancing the MTZ/HTZ/CNZ sidekick-counter cluster.
