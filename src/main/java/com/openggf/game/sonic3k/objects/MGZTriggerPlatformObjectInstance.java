@@ -58,14 +58,14 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         VERTICAL_MOVE
     }
 
-    private final int triggerIndex;
-    private final int frameIndex;
-    private final int widthPixels;
-    private final int heightPixels;
-    private final int totalFrames;
-    private final int stepPerFrame;
-    private final int direction;
-    private final Mode mode;
+    private int triggerIndex;
+    private int frameIndex;
+    private int widthPixels;
+    private int heightPixels;
+    private int totalFrames;
+    private int stepPerFrame;
+    private int direction;
+    private Mode mode;
 
     private int currentX;
     private int currentY;

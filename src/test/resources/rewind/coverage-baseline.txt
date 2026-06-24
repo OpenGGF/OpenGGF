@@ -271,14 +271,6 @@ com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance#finalScalar#
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance#recreate
-com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance#finalScalar#direction
-com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance#finalScalar#frameIndex
-com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance#finalScalar#heightPixels
-com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance#finalScalar#mode
-com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance#finalScalar#stepPerFrame
-com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance#finalScalar#totalFrames
-com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance#finalScalar#triggerIndex
-com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance#finalScalar#widthPixels
 com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance#finalScalar#captureThreshold
 com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance#finalScalar#centerX
 com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance#finalScalar#centerY
