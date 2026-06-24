@@ -986,7 +986,6 @@ com.openggf.level.objects.BoxObjectInstance#recreate
 com.openggf.level.objects.BreathingBubbleInstance#finalScalar#maxBubbleFrame
 com.openggf.level.objects.BreathingBubbleInstance#finalScalar#riseVelocity
 com.openggf.level.objects.BreathingBubbleInstance#recreate
-com.openggf.level.objects.PlaceholderObjectInstance#recreate
 com.openggf.level.objects.SkidDustObjectInstance#finalScalar#facingLeft
 com.openggf.level.objects.SplashObjectInstance#finalScalar#facingLeft
 com.openggf.level.objects.SplashObjectInstance#recreate

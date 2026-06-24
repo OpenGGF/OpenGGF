@@ -197,6 +197,7 @@ import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
 import com.openggf.level.objects.SkidDustObjectInstance;
@@ -659,6 +660,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> SHARED_SPARKLE_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(SignpostSparkleObjectInstance.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> SHARED_PLACEHOLDER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(PlaceholderObjectInstance.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> CPZ_GRAPH_BATCH_A_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(CPZBossContainer.class.getName(), GameId.S2),
@@ -5264,6 +5268,38 @@ public class TestScalarOnlyCodecDeletion {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn() + " should round-trip through generic recreate");
+        }
+    }
+
+    // =====================================================================
+    // Shared placeholder generic recreate: unmapped object fallback
+    // =====================================================================
+
+    @Test
+    void sharedPlaceholderClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : SHARED_PLACEHOLDER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after shared placeholder coverage");
+        }
+    }
+
+    @Test
+    void sharedPlaceholderClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : SHARED_PLACEHOLDER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through shared placeholder generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void sharedPlaceholderClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : SHARED_PLACEHOLDER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through shared placeholder generic recreate");
         }
     }
 
