@@ -83,6 +83,7 @@ import com.openggf.game.sonic3k.objects.AizEndBossInstance;
 import com.openggf.game.sonic3k.objects.AizEndBossPropellerChild;
 import com.openggf.game.sonic3k.objects.AizEndBossShipChild;
 import com.openggf.game.sonic3k.objects.AizEndBossSmokeChild;
+import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance;
 import com.openggf.game.sonic3k.objects.AizIntroPlaneChild;
@@ -664,6 +665,12 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(AizDisappearingFloorObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_COLLAPSING_LOG_BRIDGE_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizCollapsingLogBridgeObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance$CollapsingLogSegment",
                     GameId.S3K));
 
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
@@ -5307,6 +5314,30 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through AIZ disappearing-floor graph generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ collapsing-log bridge graph batch: parent and falling segment
+    // =====================================================================
+
+    @Test
+    void aizCollapsingLogBridgeGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_COLLAPSING_LOG_BRIDGE_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after AIZ collapsing-log bridge graph batch");
+        }
+    }
+
+    @Test
+    void aizCollapsingLogBridgeGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_COLLAPSING_LOG_BRIDGE_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ collapsing-log bridge graph generic recreate, "
                             + "not a dynamic codec");
         }
     }

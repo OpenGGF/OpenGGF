@@ -14,6 +14,8 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -31,7 +33,7 @@ import java.util.Set;
  * Object 0x2C - AIZ Collapsing Log Bridge (Sonic 3 & Knuckles).
  */
 public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final int STATE_IDLE = 0;
     private static final int STATE_COLLAPSING = 1;
@@ -102,6 +104,11 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
             this.artKey = Sonic3kObjectArtKeys.AIZ_COLLAPSING_LOG_BRIDGE;
             initSegments(NORMAL_FIRST_OFFSET, NORMAL_SEGMENT_SPACING);
         }
+    }
+
+    @Override
+    public AizCollapsingLogBridgeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizCollapsingLogBridgeObjectInstance(ctx.spawn());
     }
 
     private void initSegments(int firstOffset, int spacing) {
@@ -405,7 +412,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         return services().solidExecution().resolveSolidNowAll();
     }
 
-    public static class CollapsingLogSegment extends AbstractObjectInstance {
+    public static class CollapsingLogSegment extends AbstractObjectInstance implements RewindRecreatable {
 
         private static final int GRAVITY = 0x38;
         private static final int OFF_SCREEN_MARGIN = 128;
@@ -421,9 +428,13 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         private final SubpixelMotion.State motion;
         private int animFrameTimer = FIRE_ANIM_FRAME_DELAY;
 
+        public CollapsingLogSegment(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(), 0, 0, artKeyForSpawn(spawn), isFireVariantSpawn(spawn));
+        }
+
         public CollapsingLogSegment(int x, int y, int frame, int delay,
                                      String artKey, boolean isFireVariant) {
-            super(buildSpawnAt(x, y, Sonic3kObjectIds.AIZ_COLLAPSING_LOG_BRIDGE),
+            super(buildSpawnAt(x, y, Sonic3kObjectIds.AIZ_COLLAPSING_LOG_BRIDGE, isFireVariant),
                     "LogSegment");
             this.fixedX = x;
             this.motion = new SubpixelMotion.State(0, y, 0, 0, 0, 0);
@@ -433,8 +444,23 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
             this.isFireVariant = isFireVariant;
         }
 
-        private static ObjectSpawn buildSpawnAt(int x, int y, int objId) {
-            return new ObjectSpawn(x, y, objId, 0, 0, false, 0);
+        private static ObjectSpawn buildSpawnAt(int x, int y, int objId, boolean isFireVariant) {
+            return new ObjectSpawn(x, y, objId, isFireVariant ? 0x80 : 0, 0, false, 0);
+        }
+
+        @Override
+        public CollapsingLogSegment recreateForRewind(RewindRecreateContext ctx) {
+            return new CollapsingLogSegment(ctx.spawn());
+        }
+
+        private static boolean isFireVariantSpawn(ObjectSpawn spawn) {
+            return (spawn.subtype() & 0x80) != 0;
+        }
+
+        private static String artKeyForSpawn(ObjectSpawn spawn) {
+            return isFireVariantSpawn(spawn)
+                    ? Sonic3kObjectArtKeys.AIZ_DRAW_BRIDGE_FIRE
+                    : Sonic3kObjectArtKeys.AIZ_COLLAPSING_LOG_BRIDGE;
         }
 
         @Override

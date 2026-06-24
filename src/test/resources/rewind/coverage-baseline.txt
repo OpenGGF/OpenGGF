@@ -178,10 +178,8 @@ com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance#finalScala
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance#finalScalar#totalTimer
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance$CollapsingLogSegment#finalScalar#fixedX
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance$CollapsingLogSegment#finalScalar#isFireVariant
-com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance$CollapsingLogSegment#recreate
 com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance#finalScalar#periodMask
 com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance#finalScalar#phaseOffset
 com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance#finalScalar#x
