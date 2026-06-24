@@ -1149,6 +1149,11 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance$SmashBlockFragmentInstance",
                     GameId.S1));
 
+    private static final List<CodecDeletionCandidate> S1_SPIKED_BALL_CHAIN_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild",
+                    GameId.S1));
+
     private static final List<CodecDeletionCandidate> S1_FALSE_FLOOR_FRAGMENT_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorFragment",
@@ -8316,6 +8321,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s1DestructionFragmentsRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S1_DESTRUCTION_FRAGMENT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1SpikedBallChainChildrenImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_SPIKED_BALL_CHAIN_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 chain graph coverage");
+        }
+    }
+
+    @Test
+    void s1SpikedBallChainChildrenHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_SPIKED_BALL_CHAIN_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 chain graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1SpikedBallChainChildrenRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_SPIKED_BALL_CHAIN_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

@@ -17,10 +17,6 @@ com.openggf.game.sonic1.objects.Sonic1LavaGeyserObjectInstance#finalScalar#behin
 com.openggf.game.sonic1.objects.Sonic1LavaGeyserObjectInstance#finalScalar#role
 com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance#finalScalar#currentY
 com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance#finalScalar#role
-com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#finalScalar#collisionType
-com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#finalScalar#frame
-com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#finalScalar#originX
-com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance#finalScalar#origY

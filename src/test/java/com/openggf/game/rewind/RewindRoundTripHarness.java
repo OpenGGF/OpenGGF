@@ -5,6 +5,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameId;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -996,6 +997,9 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.MhzMinibossInstance");
         m.put("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance",
                 "com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance");
+        // S1 spiked-ball chain child — parent is placed Obj57 and spawns children lazily.
+        m.put("com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild",
+                "com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance");
         // NOTE: BalkiryBadnikInstance OMITTED: its ctor calls spawnJetChild() immediately,
         // which would add a BalkiryJetObjectInstance to the OM before we add our probe child,
         // causing a double-jet on restore. BalkiryJetObjectInstance stays parent-dependent.
@@ -1061,7 +1065,10 @@ public final class RewindRoundTripHarness {
             // MhzMinibossInstance: Sonic3kObjectIds.MHZ_MINIBOSS = 0x92
             Map.entry("com.openggf.game.sonic3k.objects.MhzMinibossInstance", 0x92),
             // Sonic3kSSEntryRingObjectInstance: Sonic3kObjectIds.SS_ENTRY_RING = 0x85
-            Map.entry("com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance", 0x85)
+            Map.entry("com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance", 0x85),
+            // Sonic1SpikedBallChainObjectInstance: Sonic1ObjectIds.SPIKED_BALL_CHAIN = 0x57
+            Map.entry("com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance",
+                    Sonic1ObjectIds.SPIKED_BALL_CHAIN)
             // Omitted: BalkiryBadnikInstance (spawns jet in ctor — would pollute OM)
             // Omitted: Sonic2CPZBossInstance (spawns 5 children in ctor — would pollute OM)
     );

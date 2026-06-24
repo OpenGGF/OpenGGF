@@ -401,13 +401,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       third-piece restore moved to graph-tested generic recreate.</li>
  *   <li>2026-06-24: raised to 523 after S1 breakable-wall and smash-block
  *       fragments moved to graph-tested generic recreate.</li>
+ *   <li>2026-06-24: raised to 524 after S1 spiked-ball chain children moved
+ *       to graph-tested generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 523 after S1 destruction fragments moved to generic recreate.
-    static final int RATCHET_FLOOR = 523;
+    // 2026-06-24: raised to 524 after S1 spiked-ball chain children moved to generic recreate.
+    static final int RATCHET_FLOOR = 524;
 
     @BeforeEach
     void initHeadless() {
