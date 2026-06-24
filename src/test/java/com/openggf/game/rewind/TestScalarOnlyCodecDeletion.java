@@ -1097,6 +1097,11 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance",
                     GameId.S1));
 
+    private static final List<CodecDeletionCandidate> S1_FALSE_FLOOR_FRAGMENT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorFragment",
+                    GameId.S1));
+
     private static final List<CodecDeletionCandidate> S1_EFFECT_SCALAR_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance",
@@ -6784,6 +6789,35 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 collapsing fragment generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1FalseFloorFragmentImplementsRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_FALSE_FLOOR_FRAGMENT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 false-floor fragment coverage");
+        }
+    }
+
+    @Test
+    void s1FalseFloorFragmentHasNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_FALSE_FLOOR_FRAGMENT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 false-floor fragment generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1FalseFloorFragmentRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_FALSE_FLOOR_FRAGMENT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
         }
     }
 
