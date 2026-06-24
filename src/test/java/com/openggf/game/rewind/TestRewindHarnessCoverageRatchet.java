@@ -318,13 +318,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       coverage.</li>
  *   <li>2026-06-24: raised to 401 after the S1 false-floor falling fragment
  *       moved to generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 402 after the S2 Moving Vine restore moved to
+ *       generic recreate under object-manager coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 401 after S1 false-floor fragment restore moved to generic recreate.
-    static final int RATCHET_FLOOR = 401;
+    // 2026-06-24: raised to 402 after S2 Moving Vine restore moved to generic recreate.
+    static final int RATCHET_FLOOR = 402;
 
     @BeforeEach
     void initHeadless() {

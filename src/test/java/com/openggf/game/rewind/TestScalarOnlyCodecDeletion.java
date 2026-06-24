@@ -1581,6 +1581,9 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S2),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.SwingingPformObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MovingVineObjectInstance",
                     GameId.S2));
 
     private static final List<MutableFieldCoverageCandidate> S2_INTERACTION_SCALAR_RECREATE_MUTABLE_FIELDS =
