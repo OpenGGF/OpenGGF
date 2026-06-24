@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -32,7 +34,7 @@ import java.util.List;
  * Subtype 0xFF: Seesaw without ball (ball not spawned).
  */
 public class SeesawObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, RewindRecreatable {
 
     /**
      * Slope data for tilted state (frame 0 or 2).
@@ -94,6 +96,11 @@ public class SeesawObjectInstance extends BoxObjectInstance
             currentAngle = 0;
             mappingFrame = 0;
         }
+    }
+
+    @Override
+    public SeesawObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SeesawObjectInstance(ctx.spawn(), "Seesaw");
     }
 
     @Override

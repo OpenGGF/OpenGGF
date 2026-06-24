@@ -7,6 +7,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -30,7 +32,7 @@ import java.util.List;
  * Disassembly reference: docs/s1disasm/_incObj/5E Seesaw.asm
  */
 public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, RewindRecreatable {
 
     // From disassembly: move.b #$30,obActWid(a0)
     private static final int COLLISION_HALF_WIDTH = 0x30;
@@ -68,7 +70,7 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
     };
 
     // Saved original X position (see_origX = objoff_30)
-    private final int origX;
+    private int origX;
 
     // Current target frame (see_frame = objoff_3A)
     // 0 = tilted left (left side up), 1 = flat, 2 = tilted right (right side up)
@@ -105,6 +107,11 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
         }
         // move.b obFrame(a0),see_frame(a0)
         targetFrame = mappingFrame;
+    }
+
+    @Override
+    public Sonic1SeesawObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1SeesawObjectInstance(ctx.spawn());
     }
 
     @Override

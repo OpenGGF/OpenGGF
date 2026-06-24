@@ -24,8 +24,6 @@ com.openggf.game.sonic1.objects.Sonic1LavaGeyserObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance#finalScalar#currentY
 com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance#finalScalar#role
 com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1SeesawObjectInstance#finalScalar#origX
-com.openggf.game.sonic1.objects.Sonic1SeesawObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance$SmashBlockFragmentInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#finalScalar#collisionType
 com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild#finalScalar#frame
@@ -124,7 +122,6 @@ com.openggf.game.sonic2.objects.PointPokeyObjectInstance#recreate
 com.openggf.game.sonic2.objects.RisingPillarObjectInstance$RisingPillarDebrisInstance#recreate
 com.openggf.game.sonic2.objects.RivetObjectInstance#objectRef#lastNativeMainPlayer
 com.openggf.game.sonic2.objects.RivetObjectInstance#recreate
-com.openggf.game.sonic2.objects.SeesawObjectInstance#recreate
 com.openggf.game.sonic2.objects.SidewaysPformObjectInstance#recreate
 com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance$SmallMetalPformChildInstance#finalScalar#xFlipped
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance#recreate

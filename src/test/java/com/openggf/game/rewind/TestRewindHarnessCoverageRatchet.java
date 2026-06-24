@@ -253,13 +253,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       generic recreate and its private wing moved under graph-covered parent-dependent restore.</li>
  *   <li>2026-06-24: raised to 325 after S1 Caterkiller and Orbinaut graph
  *       parent restores moved to generic recreate under badnik graph coverage.</li>
+ *   <li>2026-06-24: raised to 327 after S1 and S2 seesaw parent restores moved
+ *       to generic recreate under seesaw ball graph coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 325 after S1 Caterkiller and Orbinaut graph parent restores moved to generic recreate.
-    static final int RATCHET_FLOOR = 325;
+    // 2026-06-24: raised to 327 after S1 and S2 seesaw parent restores moved to generic recreate.
+    static final int RATCHET_FLOOR = 327;
 
     @BeforeEach
     void initHeadless() {

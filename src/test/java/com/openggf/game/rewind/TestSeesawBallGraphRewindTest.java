@@ -233,13 +233,21 @@ abstract class AbstractSeesawBallGraphRewindTest {
     }
 
     @Test
-    void seesawBallsUseRewindRecreatableWithoutExplicitDynamicCodecs() {
+    void seesawGraphUsesRewindRecreatableWithoutExplicitDynamicCodecs() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1SeesawObjectInstance.class),
+                "S1 seesaw parent must restore through RewindRecreatable");
         assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1SeesawBallObjectInstance.class),
                 "S1 seesaw ball must restore through RewindRecreatable");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(SeesawObjectInstance.class),
+                "S2 seesaw parent must restore through RewindRecreatable");
         assertTrue(RewindRecreatable.class.isAssignableFrom(SeesawBallObjectInstance.class),
                 "S2 seesaw ball must restore through RewindRecreatable");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(Sonic1SeesawObjectInstance.class.getName()),
+                "S1 seesaw parent must not keep an explicit dynamic rewind codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(Sonic1SeesawBallObjectInstance.class.getName()),
                 "S1 seesaw ball must not keep an explicit dynamic rewind codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(SeesawObjectInstance.class.getName()),
+                "S2 seesaw parent must not keep an explicit dynamic rewind codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(SeesawBallObjectInstance.class.getName()),
                 "S2 seesaw ball must not keep an explicit dynamic rewind codec");
     }
