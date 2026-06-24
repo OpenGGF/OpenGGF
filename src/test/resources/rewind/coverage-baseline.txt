@@ -211,7 +211,6 @@ com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance#finalScalar#knucklesOn
 com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance#finalScalar#sizeIndex
 com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance#finalScalar#variant
 com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance#recreate
-com.openggf.game.sonic3k.objects.AizMinibossCutsceneInstance#recreate
 com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild#finalScalar#worldX
 com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild#finalScalar#worldY
 com.openggf.game.sonic3k.objects.AizRideVineObjectInstance#finalScalar#subtype
@@ -344,7 +343,6 @@ com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLeafPa
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLeafParticle#recreate
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild#objectRef#player
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild#recreate
-com.openggf.game.sonic3k.objects.CutsceneKnucklesSkIntroInstance#recreate
 com.openggf.game.sonic3k.objects.DoorObjectInstance#finalScalar#baseX
 com.openggf.game.sonic3k.objects.DoorObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.DoorObjectInstance#finalScalar#halfHeight
@@ -463,7 +461,6 @@ com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSprayChild#
 com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSprayChild#recreate
 com.openggf.game.sonic3k.objects.Hcz2CutsceneButtonInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.Hcz2CutsceneButtonInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.Hcz2CutsceneButtonInstance#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScalar#frame
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScalar#vortexX
@@ -564,8 +561,6 @@ com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#f
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#finalScalar#x
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#finalScalar#y
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#recreate
-com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance#recreate
-com.openggf.game.sonic3k.objects.Lbz1RobotnikEventController#recreate
 com.openggf.game.sonic3k.objects.LbzAlarmObjectInstance#finalScalar#subtype
 com.openggf.game.sonic3k.objects.LbzCupElevatorInstance#finalScalar#flingAtEnd
 com.openggf.game.sonic3k.objects.LbzCupElevatorInstance#finalScalar#hFlip
@@ -689,7 +684,6 @@ com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#objectRef#spawnedKnu
 com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#recreate
 com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#recreate
 com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMinibossInstance#recreate
@@ -730,7 +724,6 @@ com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow#finalScalar#signpostX
 com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance#finalScalar#cutsceneOverride
 com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance#recreate
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorSubtype
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorX
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorY

@@ -20,6 +20,7 @@ import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -36,7 +37,8 @@ import java.util.List;
  * <p>ROM reference: {@code CutsceneKnux_SKIntro}. The intro only runs for
  * Knuckles-alone from a fresh MHZ1 start; other teams delete the object.
  */
-public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstance {
+public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final int CAMERA_X = 0x0560;
     private static final int CAMERA_Y = 0x0948;
     private static final int INTRO_TIMER = 0xEF;

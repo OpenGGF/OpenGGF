@@ -1877,6 +1877,29 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_STANDALONE_CUTSCENE_CONTROLLER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizMinibossCutsceneInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Hcz2CutsceneButtonInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Lbz1RobotnikEventController",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesSkIntroInstance",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S2_EGG_PRISON_BUTTON_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(EggPrisonObjectInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(EggPrisonButtonObjectInstance.class.getName(), GameId.S2));
@@ -6788,6 +6811,41 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kKnucklesCutsceneControllersRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_KNUCKLES_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K standalone cutscene controller batch: scalar-only cutscene controllers
+    // =====================================================================
+
+    @Test
+    void s3kStandaloneCutsceneControllersAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_STANDALONE_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K standalone cutscene coverage");
+        }
+    }
+
+    @Test
+    void s3kStandaloneCutsceneControllersHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_STANDALONE_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K standalone cutscene generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kStandaloneCutsceneControllersRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_STANDALONE_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -26,7 +27,8 @@ import java.util.logging.Logger;
  * <p>The button checks proximity against the active {@link CutsceneKnucklesHcz2Instance}
  * via the shared static reference (ROM equivalent: _unkFAA4).
  */
-public class Hcz2CutsceneButtonInstance extends AbstractObjectInstance {
+public class Hcz2CutsceneButtonInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(Hcz2CutsceneButtonInstance.class.getName());
 
     private static final int INIT_Y_OFFSET = 4;

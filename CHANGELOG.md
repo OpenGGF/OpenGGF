@@ -10,6 +10,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 
 - **S1 runtime spawn-recreate rewind coverage:** Bubbles, bumpers, running discs, and teleporters now rely on spawn-based generic rewind recreate without stale final-scalar or frame-local reference coverage gaps.
 - **S3K Knuckles cutscene rewind coverage:** AIZ2, CNZ2B, HCZ2, LBZ1, and MHZ2 Knuckles cutscene controllers now restore through spawn-based generic rewind recreate without stale recreate baselines.
+- **S3K standalone cutscene rewind coverage:** AIZ miniboss, MHZ1/SK intro, LBZ1 launch/Robotnik, and cutscene button controllers now restore through spawn-based generic rewind recreate without stale recreate baselines.
 - **S1 junction child rewind coverage:** The SBZ rotating-junction display child now restores through spawn-based generic rewind recreate instead of relying on an accept-drop baseline.
 - **Shared placeholder rewind coverage:** Unmapped placeholder objects now restore through generic rewind recreate, keeping fallback object probes from dropping across rewind.
 - **Sonic 2 collapsing-platform rewind coverage:** OOZ/MCZ/ARZ collapsing-platform parents now restore through generic rewind recreate while fragment children remain graph-scoped follow-up work.

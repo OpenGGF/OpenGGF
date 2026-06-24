@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -20,7 +21,8 @@ import java.util.List;
  * run-in — only after the LAUGH_2 phase begins (Knuckles has completed
  * his jump and is now laughing at the player).
  */
-public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance {
+public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
 
     private static final int INIT_Y_OFFSET = 4;
     private static final int PRIORITY = 4;
