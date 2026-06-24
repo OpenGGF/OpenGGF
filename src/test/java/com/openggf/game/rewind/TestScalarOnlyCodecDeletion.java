@@ -807,6 +807,45 @@ public class TestScalarOnlyCodecDeletion {
                             "com.openggf.game.sonic3k.objects.CnzTeleporterInstance",
                             "centreY"));
 
+    private static final List<MutableFieldCoverageCandidate> BATCH147_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizRockFragmentChild",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzMinibossDebrisChild",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance$IczBreakableWallDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$IceDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance$IceDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance$IceCubeDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$BreakDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance$StalagtiteDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.RockDebrisChild",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild",
+                            "gravity"));
+
     private static final List<CodecDeletionCandidate> BATCH31_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(BombPrizeObjectInstance.class.getName(), GameId.S2));
 
@@ -4208,6 +4247,23 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void batch146S3kCnzConstructorScalarsAreMutableForCompactRestore() {
         for (MutableFieldCoverageCandidate candidate : BATCH146_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch147S3kGravityDebrisConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH147_MUTABLE_FIELDS) {
             Class<?> cls = loadClass(candidate.fqn());
             for (String fieldName : candidate.fieldNames()) {
                 try {
