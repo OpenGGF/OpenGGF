@@ -696,8 +696,19 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         if (!initialized) {
             return true;
         }
+        // Act 3 only: ROM keeps platforms within one chunk (0x80) to the left of
+        // the window (cmpi.w #-$80,d0 / bhs.s SpinC_Display,
+        // docs/s1disasm/_incObj/6F SBZ Spin Platform Conveyor.asm:17-21); acts
+        // 1/2 use the standard window. Modelled on the ROM act value, not the
+        // zone/trace.
+        if (services().currentAct() == ACT3) {
+            return isInRangeAtWithLeftExtension(baseX, 1);
+        }
         return isBaseXOnScreen(baseX);
     }
+
+    // From disassembly: cmpi.b #act3,(v_act).w. Act index is 0-based (act 3 = 2).
+    private static final int ACT3 = 2;
 
     /**
      * Check if the object is within out-of-range distance from camera.
