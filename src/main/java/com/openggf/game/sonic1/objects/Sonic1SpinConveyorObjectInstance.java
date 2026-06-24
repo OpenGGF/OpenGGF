@@ -685,6 +685,17 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         }
         // Platform: out_of_range.s uses objoff_30 (base X)
         // Act 3 has a wider range check: cmpi.w #-$80,d0 / bhs.s SpinC_Display
+        //
+        // ROM runs SpinC_Main (which sets objoff_30/baseX) before the out_of_range
+        // macro that follows the jsr (docs/s1disasm/_incObj/6F SBZ Spin Platform
+        // Conveyor.asm:5-13,53-54). The engine loads baseX lazily in
+        // ensureInitialized() on the first update(); until then baseX is the
+        // sentinel 0 and must not be treated as off-screen, else the platform is
+        // despawned on its spawn frame before it can initialise (matching the LZ
+        // conveyor fix in Sonic1LZConveyorObjectInstance.isPersistent()).
+        if (!initialized) {
+            return true;
+        }
         return isBaseXOnScreen(baseX);
     }
 

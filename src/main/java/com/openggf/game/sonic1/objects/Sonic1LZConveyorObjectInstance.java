@@ -391,6 +391,20 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
         // Platform: out_of_range uses objoff_30 (base X)
         // ROM: out_of_range.s loc_1236A, objoff_30(a0)
         // (docs/s1disasm/_incObj/63 LZ Conveyor.asm, line 10)
+        //
+        // ROM runs the routine (LabyrinthConvey -> LCon_Index -> LCon_Main) which
+        // sets objoff_30 (baseX) BEFORE the out_of_range macro that follows the
+        // jsr (docs/s1disasm/_incObj/63 LZ Conveyor.asm:5-13). A freshly spawned
+        // platform therefore always has a valid objoff_30 when its first
+        // out_of_range check runs. The engine loads baseX lazily in
+        // ensureInitialized() on the first update(); until then baseX is the
+        // sentinel 0 and must NOT be treated as an off-screen position, or the
+        // platform is despawned before it can initialise (it would otherwise
+        // self-cull on the spawn frame whenever the spawn pre-pass checks
+        // out_of_range before the object's first routine runs).
+        if (!initialized) {
+            return true;
+        }
         return isInRangeAt(baseX);
     }
 
