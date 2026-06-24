@@ -386,7 +386,6 @@ com.openggf.game.sonic3k.objects.FloatingPlatformObjectInstance#finalScalar#move
 com.openggf.game.sonic3k.objects.FloatingPlatformObjectInstance#finalScalar#outOfRangeLimit
 com.openggf.game.sonic3k.objects.FloatingPlatformObjectInstance#finalScalar#outOfRangeReferenceX
 com.openggf.game.sonic3k.objects.FloatingPlatformObjectInstance#finalScalar#xFlip
-com.openggf.game.sonic3k.objects.FloatingPlatformObjectInstance#recreate
 com.openggf.game.sonic3k.objects.GumballItemObjectInstance#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.GumballItemObjectInstance#finalScalar#motionMode
 com.openggf.game.sonic3k.objects.GumballItemObjectInstance#finalScalar#rewardMode
@@ -405,7 +404,6 @@ com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild#finalScalar#offsetFromMachine
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild#recreate
-com.openggf.game.sonic3k.objects.GumballTriangleBumperObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZ2WallObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZBlockObjectInstance#finalScalar#halfHeight
 com.openggf.game.sonic3k.objects.HCZBlockObjectInstance#finalScalar#halfWidth
@@ -755,13 +753,9 @@ com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzSwingBarVerticalObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance#finalScalar#upperVariant
 com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance#recreate
-com.openggf.game.sonic3k.objects.PachinkoBumperObjectInstance#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance#recreate
-com.openggf.game.sonic3k.objects.PachinkoMagnetOrbObjectInstance#recreate
-com.openggf.game.sonic3k.objects.PachinkoPlatformObjectInstance#recreate
-com.openggf.game.sonic3k.objects.PachinkoTriangleBumperObjectInstance#recreate
 com.openggf.game.sonic3k.objects.RockDebrisChild#finalScalar#gravity
 com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow#finalScalar#signpostX
 com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance#finalScalar#cutsceneOverride

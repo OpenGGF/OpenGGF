@@ -9,6 +9,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -52,7 +54,7 @@ import java.util.List;
  * drops an edge case.
  */
 public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final int BOUNCE_X_SPEED = 0x300;
     private static final int BOUNCE_Y_SPEED = -0x600;
@@ -62,6 +64,11 @@ public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
 
     public GumballTriangleBumperObjectInstance(ObjectSpawn spawn) {
         super(spawn, "GumballTriangleBumper");
+    }
+
+    @Override
+    public GumballTriangleBumperObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new GumballTriangleBumperObjectInstance(ctx.spawn());
     }
 
     @Override
