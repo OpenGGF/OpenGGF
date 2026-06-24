@@ -508,25 +508,46 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
      * Each fragment uses static_mappings mode where the mappings pointer points to a
      * single sprite piece. The piece's x/y offsets provide visual displacement.
      */
-    public static class CollapsingPlatformFragmentInstance extends AbstractFallingFragment {
+    public static class CollapsingPlatformFragmentInstance extends AbstractFallingFragment
+            implements RewindRecreatable {
 
-        private final int fragmentIndex;
+        private static final int FRAGMENT_INDEX_MASK = 0x07;
+        private static final int CONFIG_SHIFT = 3;
+        private static final int CONFIG_MASK = 0x03;
+        private static final int CONFIG_OOZ = 0;
+        private static final int CONFIG_MCZ = 1;
+        private static final int CONFIG_ARZ = 2;
+        private static final int RENDER_H_FLIP = 0x01;
+        private static final int RENDER_V_FLIP = 0x02;
+
+        private int fragmentIndex;
         private final ZoneConfig config;
         private final ObjectRenderManager renderManager;
 
         // Inherited from parent (per disassembly: render_flags copied from parent to fragment)
-        private final boolean hFlip;
-        private final boolean vFlip;
+        private boolean hFlip;
+        private boolean vFlip;
 
         // Piece offset from parent (for rendering positioning)
-        private final int pieceOffsetX;
-        private final int pieceOffsetY;
+        private int pieceOffsetX;
+        private int pieceOffsetY;
 
         public CollapsingPlatformFragmentInstance(int parentX, int parentY, int delay, int fragmentIndex,
                                                    ZoneConfig config, ObjectRenderManager renderManager,
                                                    boolean hFlip, boolean vFlip) {
-            super(new ObjectSpawn(parentX, parentY, 0x1F, 0, 0, false, 0),
-                    "CollapsingPlatformFragment", delay, 4);
+            this(fragmentSpawn(parentX, parentY, fragmentIndex, config, hFlip, vFlip),
+                    delay, fragmentIndex, config, renderManager, hFlip, vFlip);
+        }
+
+        public CollapsingPlatformFragmentInstance(ObjectSpawn spawn) {
+            this(spawn, 0, decodeFragmentIndex(spawn), decodeConfig(spawn), null,
+                    decodeHFlip(spawn), decodeVFlip(spawn));
+        }
+
+        private CollapsingPlatformFragmentInstance(ObjectSpawn spawn, int delay, int fragmentIndex,
+                                                   ZoneConfig config, ObjectRenderManager renderManager,
+                                                   boolean hFlip, boolean vFlip) {
+            super(spawn, "CollapsingPlatformFragment", delay, 4);
 
             this.pieceOffsetX = computeOffsetX(config, fragmentIndex, hFlip);
             this.pieceOffsetY = computeOffsetY(config, fragmentIndex, vFlip);
@@ -535,6 +556,50 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             this.renderManager = renderManager;
             this.hFlip = hFlip;
             this.vFlip = vFlip;
+        }
+
+        @Override
+        public CollapsingPlatformFragmentInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new CollapsingPlatformFragmentInstance(ctx.spawn());
+        }
+
+        private static ObjectSpawn fragmentSpawn(int parentX, int parentY, int fragmentIndex,
+                                                 ZoneConfig config, boolean hFlip, boolean vFlip) {
+            int subtype = (fragmentIndex & FRAGMENT_INDEX_MASK)
+                    | ((configId(config) & CONFIG_MASK) << CONFIG_SHIFT);
+            int renderFlags = (hFlip ? RENDER_H_FLIP : 0) | (vFlip ? RENDER_V_FLIP : 0);
+            return new ObjectSpawn(parentX, parentY, 0x1F, subtype, renderFlags, false, 0);
+        }
+
+        private static int decodeFragmentIndex(ObjectSpawn spawn) {
+            return spawn.subtype() & FRAGMENT_INDEX_MASK;
+        }
+
+        private static ZoneConfig decodeConfig(ObjectSpawn spawn) {
+            int configId = (spawn.subtype() >> CONFIG_SHIFT) & CONFIG_MASK;
+            return switch (configId) {
+                case CONFIG_MCZ -> MCZ_CONFIG;
+                case CONFIG_ARZ -> ARZ_CONFIG;
+                default -> OOZ_CONFIG;
+            };
+        }
+
+        private static boolean decodeHFlip(ObjectSpawn spawn) {
+            return (spawn.renderFlags() & RENDER_H_FLIP) != 0;
+        }
+
+        private static boolean decodeVFlip(ObjectSpawn spawn) {
+            return (spawn.renderFlags() & RENDER_V_FLIP) != 0;
+        }
+
+        private static int configId(ZoneConfig config) {
+            if (config == MCZ_CONFIG) {
+                return CONFIG_MCZ;
+            }
+            if (config == ARZ_CONFIG) {
+                return CONFIG_ARZ;
+            }
+            return CONFIG_OOZ;
         }
 
         private static int computeOffsetX(ZoneConfig config, int fragmentIndex, boolean hFlip) {
@@ -562,7 +627,8 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             // visual offset is in mappings data. Obj1F_FragmentFall then
             // deletes when BuildSprites clears render_flags.on_screen
             // (docs/s2disasm/s2.asm:23860-23864, 23880-23906).
-            return !isWithinRenderSpriteBounds(config.halfWidth(), APPROX_RENDER_Y_MARGIN);
+            ZoneConfig activeConfig = config == null ? DEFAULT_CONFIG : config;
+            return !isWithinRenderSpriteBounds(activeConfig.halfWidth(), APPROX_RENDER_Y_MARGIN);
         }
 
         @Override
