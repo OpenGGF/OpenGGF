@@ -237,7 +237,6 @@ com.openggf.game.sonic3k.objects.ClamerObjectInstance#finalScalar#currentY
 com.openggf.game.sonic3k.objects.ClamerObjectInstance#finalScalar#facingRight
 com.openggf.game.sonic3k.objects.ClamerObjectInstance#objectRef#springChildSlot
 com.openggf.game.sonic3k.objects.ClamerObjectInstance#recreate
-com.openggf.game.sonic3k.objects.ClamerObjectInstance$ClamerAutoCloseProjectile#recreate
 com.openggf.game.sonic3k.objects.ClamerObjectInstance$ClamerSpringChild#recreate
 com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance#finalScalar#subtype
 com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance#finalScalar#x
@@ -479,7 +478,6 @@ com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrostPuff#recreate
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#objectRef#capturedPlayer
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#recreate
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$IceDebris#finalScalar#gravity
-com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$IceDebris#recreate
 com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance#finalScalar#breakOnTouch
 com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance#finalScalar#x
@@ -514,7 +512,6 @@ com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance#finalScalar#startsNextLevel
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance#finalScalar#variant
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowPileDebris#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowPileDebris#recreate
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#finalScalar#priorityBucket
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#recreate

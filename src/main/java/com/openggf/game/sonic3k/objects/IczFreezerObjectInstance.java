@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -670,7 +671,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
     }
 
-    private static final class IceDebris extends GravityDebrisChild {
+    private static final class IceDebris extends GravityDebrisChild
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private static final int PRIORITY_BUCKET = 5;
         private static final int PALETTE = 2;
         private static final int GRAVITY = 0x38;
@@ -690,6 +692,11 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
             super(new ObjectSpawn(x, y, OBJECT_ID, subtype, 0, false, y),
                     "ICZFreezerIceDebris", xVel, yVel, GRAVITY);
             this.rawAnimation = subtype >= 8 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
+        }
+
+        private IceDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZFreezerIceDebris", 0, 0, GRAVITY);
+            this.rawAnimation = (spawn.subtype() & 0xFF) >= 8 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
         }
 
         @Override

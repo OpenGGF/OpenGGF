@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchCategory;
@@ -735,7 +736,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     private static final class ClamerAutoCloseProjectile extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, SpawnTrailingZeroIntsRewindRecreatable {
         private final SubpixelMotion.State motion;
         private boolean collisionEnabled = true;
         private boolean deleteNextFrame;

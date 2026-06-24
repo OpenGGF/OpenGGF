@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -344,15 +345,23 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
     public record SnowPileDebrisSpec(int subtype, int x, int y, int xVel, int yVel, boolean hFlip) {
     }
 
-    public static final class SnowPileDebris extends AbstractObjectInstance {
+    public static final class SnowPileDebris extends AbstractObjectInstance
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private final SubpixelMotion.State motion;
         private final boolean hFlip;
 
         private SnowPileDebris(SnowPileDebrisSpec spec) {
-            super(new ObjectSpawn(spec.x(), spec.y(), OBJECT_ID, spec.subtype(), 0, false, spec.y()),
+            super(new ObjectSpawn(spec.x(), spec.y(), OBJECT_ID, spec.subtype(),
+                            spec.hFlip() ? 1 : 0, false, spec.y()),
                     "ICZSnowPileDebris");
             this.motion = new SubpixelMotion.State(spec.x(), spec.y(), 0, 0, spec.xVel(), spec.yVel());
             this.hFlip = spec.hFlip();
+        }
+
+        private SnowPileDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZSnowPileDebris");
+            this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+            this.hFlip = (spawn.renderFlags() & 0x01) != 0;
         }
 
         @Override
