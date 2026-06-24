@@ -41,10 +41,10 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
         int mappingFrame;
     }
 
-    private final int currentX;
-    private final int currentY;
-    private final int segmentCount;
-    private final int phaseOffset;
+    private int currentX;
+    private int currentY;
+    private int segmentCount;
+    private int phaseOffset;
 
     private final Segment first;
     private final Segment[] chain;

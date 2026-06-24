@@ -52,8 +52,8 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
         int mappingFrame;
     }
 
-    private final int subtype;
-    private final int targetX;
+    private int subtype;
+    private int targetX;
 
     private int currentX;
     private int currentY;

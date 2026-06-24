@@ -46,8 +46,8 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
     // ROM global event word used by Obj_AIZ1TreeRevealControl and AIZ1_ScreenEvent.
     private static int eventsFg4;
 
-    private final int treeX;
-    private final int treeY;
+    private int treeX;
+    private int treeY;
     private final int[] progress = new int[2];
     private final boolean[] riding = new boolean[2];
     private final boolean[] releaseObjectControlPending = new boolean[2];

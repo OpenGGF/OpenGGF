@@ -30,10 +30,10 @@ import java.util.List;
  */
 public class AizForegroundPlantInstance extends AbstractObjectInstance implements RewindRecreatable {
 
-    private final int origX;
-    private final int origY;
-    private final int mappingFrame;
-    private final int scrollRate;
+    private int origX;
+    private int origY;
+    private int mappingFrame;
+    private int scrollRate;
     private PlaceholderObjectInstance placeholder;
 
     public AizForegroundPlantInstance(ObjectSpawn spawn) {

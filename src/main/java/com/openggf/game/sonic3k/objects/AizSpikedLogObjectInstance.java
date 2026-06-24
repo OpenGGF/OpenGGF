@@ -63,7 +63,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         -12, -12, 0, 0, 0, 0, 0, 12, 12, 12, 0, 0, 0, 0, 0, -12
     };
 
-    private final int baseY;              // $30: initial Y position (swing center)
+    private int baseY;              // $30: initial Y position (swing center)
     private int swingAngle;               // $32: current swing angle (0 to 0x40)
     private int swingState;               // $34: state flag (signed byte semantics)
     private int savedAnimFrame;           // $35: saved idle animation frame index
