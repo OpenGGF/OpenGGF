@@ -241,13 +241,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       generic recreate and shed stale scalar/recreate baselines.</li>
  *   <li>2026-06-24: raised to 315 after S1 effect scalar objects moved to
  *       generic recreate and shed stale scalar/recreate baselines.</li>
+ *   <li>2026-06-24: raised to 316 after S1 boss-fire scalar restore moved to
+ *       generic recreate and shed its stale recreate baseline.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-24: raised to 315 after S1 effect scalar objects moved to generic recreate.
-    static final int RATCHET_FLOOR = 315;
+    // 2026-06-24: raised to 316 after S1 boss-fire scalar restore moved to generic recreate.
+    static final int RATCHET_FLOOR = 316;
 
     @BeforeEach
     void initHeadless() {

@@ -900,6 +900,11 @@ public class TestScalarOnlyCodecDeletion {
                             "com.openggf.game.sonic1.objects.badniks.Sonic1MotobugSmokeInstance",
                             "facingLeft", "posX", "posY"));
 
+    private static final List<CodecDeletionCandidate> S1_BOSS_FIRE_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1BossFireInstance",
+                    GameId.S1));
+
     private static final List<CodecDeletionCandidate> S2_SCALAR_NAMED_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.ArrowShooterObjectInstance",
@@ -5865,6 +5870,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s1EffectScalarRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S1_EFFECT_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1BossFireScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_FIRE_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 boss-fire scalar coverage");
+        }
+    }
+
+    @Test
+    void s1BossFireScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_FIRE_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 boss-fire scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1BossFireScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_FIRE_SCALAR_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

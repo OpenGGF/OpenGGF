@@ -36,7 +36,6 @@ com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance#finalScalar#origY
 com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance#recreate
-com.openggf.game.sonic1.objects.bosses.Sonic1BossFireInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorFragment#finalScalar#currentX

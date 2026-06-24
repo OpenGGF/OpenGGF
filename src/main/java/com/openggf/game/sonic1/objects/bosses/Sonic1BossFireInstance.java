@@ -1,14 +1,14 @@
 package com.openggf.game.sonic1.objects.bosses;
 
-import com.openggf.audio.AudioManager;
-import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -21,7 +21,8 @@ import java.util.List;
  * Object 0x74 — MZ Boss Fire.
  * Reference: docs/s1disasm/_incObj/74 MZ Boss Fire.asm
  */
-public class Sonic1BossFireInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public class Sonic1BossFireInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, RewindRecreatable {
 
     // Main routine (obRoutine)
     private static final int ROUTINE_INIT = 0;
@@ -100,6 +101,11 @@ public class Sonic1BossFireInstance extends AbstractObjectInstance implements To
         this.routineSecondary = STATE_DROP;
         this.animId = 0;
         this.animStep = 0;
+    }
+
+    @Override
+    public Sonic1BossFireInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1BossFireInstance(ctx.spawn());
     }
 
     /**
