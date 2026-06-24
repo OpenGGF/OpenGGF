@@ -31,7 +31,7 @@ public class SplashObjectInstance extends AbstractObjectInstance {
     private final PlayerSpriteRenderer renderer;
     private int animTimer;
     private int frameIndex;
-    private final boolean facingLeft;
+    private boolean facingLeft;
 
     /**
      * Creates a splash object at the specified position.

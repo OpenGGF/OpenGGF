@@ -47,8 +47,6 @@ com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#xOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#yOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#recreate
 com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance#recreate
-com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment#finalScalar#fragmentFrameIndex
-com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment#finalScalar#pieceIndex
 com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment#recreate
 com.openggf.game.sonic3k.objects.ClamerObjectInstance#finalScalar#currentX
 com.openggf.game.sonic3k.objects.ClamerObjectInstance#finalScalar#currentY
@@ -229,14 +227,10 @@ com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreX
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreY
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#objectRef#endCannon
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#recreate
-com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance#finalScalar#fixedX
-com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance#finalScalar#fixedY
 com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine#finalScalar#xOffset
 com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine#finalScalar#yOffset
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance#objectRef#bossSnowdustEmitter
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance#recreate
-com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#finalScalar#flipX
-com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#finalScalar#frame
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossPlayerTwoCarryChild#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossSidekickLockChild#recreate
@@ -244,8 +238,5 @@ com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrep
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild#finalScalar#spark
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild#finalScalar#subtype
 com.openggf.level.objects.BoxObjectInstance#recreate
-com.openggf.level.objects.BreathingBubbleInstance#finalScalar#maxBubbleFrame
-com.openggf.level.objects.BreathingBubbleInstance#finalScalar#riseVelocity
 com.openggf.level.objects.BreathingBubbleInstance#recreate
-com.openggf.level.objects.SplashObjectInstance#finalScalar#facingLeft
 com.openggf.level.objects.SplashObjectInstance#recreate

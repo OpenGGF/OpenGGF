@@ -464,8 +464,8 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
 
         private int currentX;
         private int currentY;
-        private final int fragmentFrameIndex;
-        private final int pieceIndex;
+        private int fragmentFrameIndex;
+        private int pieceIndex;
         private final String artKey;
         private final SubpixelMotion.State motionState;
 

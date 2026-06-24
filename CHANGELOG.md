@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Effect/fragment scalar rewind cleanup:** shared breathing bubbles and splashes plus S3K breakable-wall fragments, ICZ end-boss debris, and HCZ egg capsule scalars now compact-restore without stale coverage-baseline keys.
 - **S3K mechanism scalar rewind cleanup:** HCZ hand launcher, ICZ ice spikes, and LBZ cup elevator constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S1/S2 object scalar rewind cleanup:** Sonic 1 Bomb fuse plus Sonic 2 flipper, launcher ball, and OOZ launcher constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K controller/platform scalar rewind cleanup:** MHZ1 Knuckles, miniboss tree chips, defeat signpost flow, cutscene button, collapsing platform, starpost, and shared skid-dust constructor scalars now compact-restore without stale coverage-baseline keys.

@@ -74,7 +74,7 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
     private int yPos16;
 
     /** ROM signed y_vel word, where 0x100 is one pixel/frame. */
-    private final int riseVelocity;
+    private int riseVelocity;
 
     /** ROM angle byte used to index the 7-bit wobble table. */
     private int wobbleAngle;
@@ -115,7 +115,7 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
     private final int[] countdownFrameMap;
 
     /** Maximum frame index for regular bubble growth animation */
-    private final int maxBubbleFrame;
+    private int maxBubbleFrame;
 
     /**
      * Creates a breathing bubble with game-specific art configuration.

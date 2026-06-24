@@ -1271,8 +1271,8 @@ public final class IczEndBossInstance extends AbstractBossInstance implements Mu
     private static final class IczEndBossDefeatDebrisChild extends GravityDebrisChild {
         private static final int GRAVITY = 0x38;
 
-        private final int frame;
-        private final boolean flipX;
+        private int frame;
+        private boolean flipX;
         private boolean visible = true;
 
         private IczEndBossDefeatDebrisChild(int x, int y, int xVel, int yVel, int frame, boolean flipX) {

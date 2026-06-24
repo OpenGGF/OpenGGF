@@ -74,8 +74,8 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     private static final int ANIMAL_COUNT = 14;
 
     // Fixed position
-    private final int fixedX;
-    private final int fixedY;
+    private int fixedX;
+    private int fixedY;
 
     // State
     private int mappingFrame;
