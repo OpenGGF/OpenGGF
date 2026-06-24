@@ -823,8 +823,22 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // Only process during cylinder attack phase
         if (state.routineSecondary != STATE_CYLINDER_ATTACK) return;
 
-        // ROM: tst.w d4 / bgt.s loc_19F50 — side collision path (d4 > 0)
+        // ROM: tst.w d4 / bgt.s loc_19F50 — side collision path (d4 > 0, i.e.
+        // SolidObject returned d4 == 1 "side collision", sub SolidObject.asm:13).
         if (!contact.touchSide()) return;
+
+        // ROM: loc_19F50 — addq.w #7,(v_random).w runs on EVERY side-contact frame,
+        // BEFORE the rolling/bounce check, whether or not the player is rolling
+        // (_incObj/85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:192-195).
+        // This advances v_random while Sonic pushes against the boss body during the
+        // cylinder-attack phase, so the later BossPlasma_MakeBalls RandomNumber draws
+        // (ball target spread) consume the ROM seed. addq.w targets (v_random).w —
+        // the high word of the 32-bit seed (big-endian) — so it is a 16-bit add to
+        // the high word with no carry into the low word.
+        GameRng rng = services().rng();
+        long seed = rng.getSeed();
+        long highWord = ((seed >>> 16) + 7) & 0xFFFFL;
+        rng.setSeed((seed & 0xFFFFL) | (highWord << 16));
 
         // ROM: cmpi.b #id_Roll,(v_player+obAnim).w
         int animId = player.getAnimationId();

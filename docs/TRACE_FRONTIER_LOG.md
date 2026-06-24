@@ -16,7 +16,7 @@ branch-local measurements.
 | Current blocking field | Movement downstream of Tails CPU: earliest current table target is OOZ f1782 Tails `tails_x`/`tails_x_speed` after preserving the ROM-visible S2 Obj36 negative-inertia riding push bridge |
 | Current owner hypothesis | Status-only sidekick lifetime/marker/on-object/airborne-zero-x-speed facing mismatches, first-landing CPU mirror/interact refresh lag, held-only Ctrl2 diagnostic latches, stationary released push-bit tails, and grounded push-bit-only tails are trace-framework noise when kinematics and pressed edges match; current sweep has moved the active S2 Tails CPU/status cluster into movement frontiers, and OOZ now points at the next real post-bypass movement delta |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain and tightening trace context output defaults |
-| Last frontier move | S1 FZ `f713 -> f743` — FZ boss `BossFinal_Eggman_Wait` advances `v_random` every wait frame (loc_19EA2) + a level-event-ordering spawn-compensation bump; first cylinder-select seed now ROM-correct (0x7F). New frontier is FZ plasma-ball spread/drop geometry. |
+| Last frontier move | S1 FZ `f743 -> f766` — FZ boss `addq.w #7,(v_random).w` on every cylinder-attack side-contact frame (loc_19F50 high-word seed add) advances v_random while Sonic rolls into the boss, so the BossPlasma_MakeBalls ball-spread RandomNumber draws match ROM. New frontier is a FZ cylinder 1px-Y / which-cylinder-drives-boss residual. |
 
 ### Active queue
 
@@ -143,6 +143,16 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-24 - S1 FZ boss adds 7 to v_random high word on every cylinder-attack side-contact frame (loc_19F50); FZ f743 -> f766 (156 -> 135)
+
+- Branch/worktree: `bugfix/ai-fz-plasma-trajectory` off `origin/develop` 74af905b6 (worktree `agent-ae2d8ca4e23e2f8ff`).
+- Command: `mvn -o test -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1FzCompleteRunTraceReplay" "-Dsurefire.argLine=-Xmx6g -Xshare:off"`.
+- First error before fix: f743 `y_speed` exp=0x0000 act=-0x0700. ROM Sonic stands still; engine jumps because a FZ plasma-ball (Obj0x86) overlaps him where ROM's balls sit elsewhere.
+- Root (verified via aux `object_near` Obj0x86 trajectories vs an engine per-ball diag): the first plasma round's ball drop endpoints diverged — ROM `0x2564/0x251E/0x24C2/0x2476` vs engine `0x2565/0x2527/0x24D5/0x246F` (ball 0 matched, errors grew with spread: +1/+9/+19/-7). The drop/overshoot math (`BossPlasma_Spread`/`_Drop` incl. the shipped FixBugs=0 `add.w d0,obX` buggy-leftmost overshoot) and `targetX = boss_fz_x+$128 + objoff_32*-$4F + (rand&$1F) - $10` were already ROM-faithful and ball 0 confirmed the RNG matched at draw time — so the divergence was the **seed value** entering `BossPlasma_MakeBalls`. ROM `BossPlasma_Eggman_Crush`/`loc_19F50` runs `addq.w #7,(v_random).w` EVERY frame the boss `SolidObject` returns a side collision (d4==1, `bgt.s loc_19F50`, before the rolling/bounce check), `_incObj/85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:192-195`. While Sonic rolls into the boss body during the cylinder attack (trace f360-408, roll=1 air=1), this advances v_random several times before the plasma round; the engine omitted it, so the ball-spread RNG draws used a stale seed.
+- Fix (`Sonic1FZBossInstance.onSolidContact`, FZ-boss-only): on the `contact.touchSide()` path, before the rolling/bounce check, add 7 to the **high word** of the 32-bit RNG seed — `addq.w #7,(v_random).w` targets the big-endian high word (`(v_random).w`), a 16-bit add with no carry into the low word (`sub RandomNumber.asm` reads the full long; `sub SolidObject.asm:13` defines d4==1 as side collision).
+- After: FZ f743 -> f766 (156 -> 135). New frontier f766 `y` exp=0x05AC act=0x05AB (1px): Sonic rides FZ Cylinder 0 (subpixels match ROM) but the cylinder/boss group is 1px high and the boss tracks a different host cylinder (ROM boss @2550 subtype-2 vs engine @24D0 subtype-0) — a distinct cylinder-attack 1px-Y / host-cylinder-selection residual, NOT the plasma RNG.
+- Regression sweep (with-fix vs develop 74af905b6, first-error frame + count): change is entirely inside `Sonic1FZBossInstance` (FZ-only). All 18 other S1 complete-runs BYTE-IDENTICAL: GHZ3 f6464/271, LZ1 f5745/662, LZ2 f1068/1616, LZ3 f8499/1525, MZ1 f2101/169, MZ2 f2823/1043, MZ3 f2079/1123, SBZ1 f3971/560, SBZ2 f1447/977, SLZ1 f2872/163, SLZ2 f2898/121, SLZ3 f814/1024, SYZ1 f4430/554, SYZ3 f6065/483. GHZ1/GHZ2/SYZ2/SBZ3 GREEN. S2 EHZ1 GREEN. S3K AIZ complete-run f1095/4309 unchanged.
 
 ## 2026-06-24 - S1 FZ boss wait-state advances v_random every frame (BossFinal_Eggman_Wait loc_19EA2 + level-event-ordering spawn compensation); FZ f713 -> f743 (155 -> 156)
 
