@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
@@ -24,7 +25,7 @@ import java.util.List;
  * then runs the raw breath animation. Wind pressure starts once the mapping
  * frame reaches 7 and breath child particles are emitted every 8 frames.
  */
-public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance {
+public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x1A;
     private static final int PRIORITY_BUCKET = 5;

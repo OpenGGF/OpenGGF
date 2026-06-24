@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Collection;
@@ -46,7 +47,7 @@ import java.util.List;
  * <h3>Animation:</h3>
  * Frames 0→1→2 loop (speed 0 = every frame). Wing flapping cycle.
  */
-public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance {
+public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
     // --- ObjDat_Buggernaut constants ---
 

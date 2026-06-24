@@ -29,7 +29,7 @@ import java.util.List;
  * parent paces horizontally, raises status byte {@code $38} bit 1 when ready to
  * fire, and waits until the child nozzle clears that bit after the shot cycle.
  */
-public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
+public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_Corkey collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_Corkey priority $280.
     private static final int NOZZLE_Y_OFFSET = 0x0C;      // ChildObjDat_8C90E.
