@@ -436,12 +436,9 @@ com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance$WaterRushBlockChild#
 com.openggf.game.sonic3k.objects.HCZWaterSplashObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.HCZWaterSplashObjectInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance#finalScalar#isHorizontal
-com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallDebrisChild#recreate
 com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSplashChild#finalScalar#x
 com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSplashChild#finalScalar#y
-com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSplashChild#recreate
 com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSprayChild#finalScalar#useBubbleArt
-com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSprayChild#recreate
 com.openggf.game.sonic3k.objects.Hcz2CutsceneButtonInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.Hcz2CutsceneButtonInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.HczMinibossInstance#recreate

@@ -2019,6 +2019,17 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance$PenguinatorSnowdustInstance",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_WATER_WALL_CHILD_BATCH96_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallDebrisChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSprayChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSplashChild",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(S3kSignpostStubChild.class.getName(), GameId.S3K));
 
@@ -7136,6 +7147,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kDynamicChildBatch95ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_DYNAMIC_CHILD_BATCH95_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kWaterWallChildBatch96ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_WATER_WALL_CHILD_BATCH96_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K water-wall child batch 96");
+        }
+    }
+
+    @Test
+    void s3kWaterWallChildBatch96ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_WATER_WALL_CHILD_BATCH96_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K water-wall child batch 96 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kWaterWallChildBatch96ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_WATER_WALL_CHILD_BATCH96_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()
