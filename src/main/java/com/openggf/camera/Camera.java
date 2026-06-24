@@ -38,6 +38,24 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// When true, normal vertical scroll rules may be modified
 	private boolean maxYChanging = false;
 
+	// ROM camera/boundary ordering (S1 DeformLayers REV01:16-18): ScrollVertical
+	// (camera move + clamp) runs BEFORE DynamicLevelEvents (boundary easing). The
+	// engine inverts this (updateBoundaryEasing() then updatePosition()), which is
+	// harmless while the boundary descends at a CONSTANT rate, but the boundary-down
+	// airborne acceleration (DynamicLevelEvents.asm:35-49: +8px instead of +2px once
+	// Sonic is airborne and the camera is within 8px of the bottom boundary) is a
+	// RATE CHANGE. Applying the freshly-accelerated boundary to the same frame's
+	// camera clamp runs the +8 one frame early (S1 MZ1 f2089 camera_y 0x02C4 vs ROM
+	// 0x02BE). cameraClampMaxY is the bottom boundary the camera may consume THIS
+	// frame: in the descending direction it advances by the step maxY took on the
+	// PREVIOUS frame (so a constant +2 keeps perfect pace, but the +8 jump reaches
+	// the camera one frame late, exactly like ROM ScrollVertical reading the prior
+	// frame's v_limitbtm2). The ascending/snap path (GHZ2 rising boundary under a
+	// roll, ROM SV_BottomBoundaryMoving) still follows maxY same-frame.
+	private short cameraClampMaxY;
+	private boolean cameraClampMaxYInitialized = false;
+	private short previousMaxYStep = BOUNDARY_EASE_STEP;
+
 	// ROM: Horiz_scroll_delay_val - horizontal scroll delay counter
 	// When > 0, horizontal scroll uses position history while vertical scroll continues normally
 	private int horizScrollDelayFrames = 0;
@@ -308,7 +326,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// rising bottom boundary by one frame (S1 GHZ2 f3349 camera_y 0x034C vs ROM
 		// 0x034A while the boundary eases 0x0400 -> 0x0300 under a grounded roll).
 		if (!lastFrameWrapped && (y != yBeforeVerticalScroll || maxYChanging)) {
-			y = clampAxisWithWrap(y, minY, maxY);
+			// Clamp to the bottom boundary the camera is allowed to read this frame.
+			// In the boundary-descending direction this lags the freshly-eased maxY by
+			// one frame (ROM ScrollVertical runs before DynamicLevelEvents), keeping the
+			// airborne +8 boundary acceleration from reaching the camera early (MZ1
+			// f2089). Falls back to maxY before the first easing pass / after force
+			// positions.
+			short clampMaxY = cameraClampMaxYInitialized ? cameraClampMaxY : maxY;
+			y = clampAxisWithWrap(y, minY, clampMaxY);
 		}
 		fastVerticalScrollRequested = false;
 		applyDeferredMaxYWrite();
@@ -479,10 +504,16 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void updateBoundaryEasing() {
 		maxYChanging = false;
 
+		if (!cameraClampMaxYInitialized) {
+			cameraClampMaxY = maxY;
+			cameraClampMaxYInitialized = true;
+		}
+
 		// Ease maxY toward target (ROM: s2.asm:20303-20332)
 		if (maxY != maxYTarget) {
 			short step = BOUNDARY_EASE_STEP; // d1 = 2
 			short diff = (short) (maxYTarget - maxY);
+			short preStepMaxY = maxY;
 
 			if (diff < 0) {
 				// Decreasing max Y (target < current) - ROM lines 20308-20316
@@ -508,7 +539,30 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				maxY = maxYTarget;
 			}
 
+			// Boundary the camera reads THIS frame.
+			//  - Descending (diff > 0, boundary moving down): the camera advances by
+			//    the step maxY took on the PREVIOUS frame, never past maxY. A constant
+			//    +2 ease keeps perfect pace (camera reads the full maxY each frame), but
+			//    the airborne +8 jump reaches the camera one frame late — matching ROM,
+			//    where ScrollVertical clamps to the v_limitbtm2 left by the PREVIOUS
+			//    frame's DynamicLevelEvents (S1 MZ1 f2089; the +8 rate change must not
+			//    reach the camera the same frame Sonic goes airborne).
+			//  - Ascending/snap (diff < 0): follow the freshly-snapped boundary
+			//    same-frame (ROM SV_BottomBoundaryMoving — GHZ2 rising boundary under a
+			//    roll).
+			short actualStep = (short) (maxY - preStepMaxY);
+			if (diff > 0) {
+				int advanced = (cameraClampMaxY & 0xFFFF) + (previousMaxYStep & 0xFFFF);
+				cameraClampMaxY = (short) Math.min(maxY & 0xFFFF, advanced);
+			} else {
+				cameraClampMaxY = maxY;
+			}
+			previousMaxYStep = actualStep;
+
 			maxYChanging = true;
+		} else {
+			cameraClampMaxY = maxY;
+			previousMaxYStep = BOUNDARY_EASE_STEP;
 		}
 
 		// Ease minY toward target (simple 2px/frame, no acceleration)
@@ -848,6 +902,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void setMaxY(short maxY) {
 		this.maxY = maxY;
 		this.maxYTarget = maxY;
+		// Immediate boundary writes (level load, force positions, boundary locks)
+		// must be visible to the camera clamp this frame — no one-frame lag.
+		this.cameraClampMaxY = maxY;
+		this.cameraClampMaxYInitialized = true;
+		this.previousMaxYStep = BOUNDARY_EASE_STEP;
 	}
 
 	/**
@@ -1144,6 +1203,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		wrapDeltaY = snapshot.wrapDeltaY();
 		yPosBias = snapshot.yPosBias();
 		fastScrollCap = snapshot.fastScrollCap();
+		// The camera-clamp lag (cameraClampMaxY / previousMaxYStep) is a derived
+		// one-frame deferral of the bottom-boundary acceleration, not independent
+		// state. Reset it to the converged value on restore so rewind/seek is
+		// deterministic without growing CameraSnapshot; any in-flight +8 deferral
+		// re-establishes within one frame of forward replay.
+		cameraClampMaxY = maxY;
+		cameraClampMaxYInitialized = true;
+		previousMaxYStep = BOUNDARY_EASE_STEP;
 		// Re-resolve focused sprite via SpriteManager after restore. Object instances
 		// are rebuilt during rewind; this ensures Camera tracks the live main player
 		// sprite rather than a stale or null reference (Track C / H.1).
