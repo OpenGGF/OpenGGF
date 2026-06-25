@@ -85,8 +85,6 @@ com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild#recr
 com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanBubbleChild#recreate
 com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild#recreate
-com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance#recreate
-com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance$WaterRushBlockChild#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#recreate
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration#recreate

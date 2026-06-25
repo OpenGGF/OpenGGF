@@ -9,6 +9,9 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -37,7 +40,7 @@ import java.util.List;
         reason = "Constructor writes global zone state (HCZBreakableBarState.setState(3)) "
                 + "in addition to spawning a child; only the child spawn is observable by "
                 + "the restore-time construction side-effect latch.")
-public class HCZWaterRushObjectInstance extends AbstractObjectInstance {
+public class HCZWaterRushObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // ===== Phase constants =====
     private static final int PHASE_WAITING = 0;
@@ -54,6 +57,10 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance {
     private int animFrameTimer;
 
     public HCZWaterRushObjectInstance(ObjectSpawn spawn) {
+        this(spawn, true);
+    }
+
+    private HCZWaterRushObjectInstance(ObjectSpawn spawn, boolean spawnBlock) {
         super(spawn, "HCZWaterRush");
         this.x = spawn.x();
         this.y = spawn.y();
@@ -61,14 +68,21 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance {
         this.phase = PHASE_WAITING;
 
         // ROM: AllocateObjectAfterCurrent — spawn solid block child
-        int childX = x - 0x30;
-        int childY = y;
-        spawnChild(() -> new WaterRushBlockChild(
-                new ObjectSpawn(childX, childY, Sonic3kObjectIds.HCZ_WATER_RUSH, 0, 0, false, 0),
-                this));
+        if (spawnBlock) {
+            int childX = x - 0x30;
+            int childY = y;
+            spawnChild(() -> new WaterRushBlockChild(
+                    new ObjectSpawn(childX, childY, Sonic3kObjectIds.HCZ_WATER_RUSH, 0, 0, false, 0),
+                    this));
+        }
 
         // ROM: move.b #3,(_unkF7C7).w
         HCZBreakableBarState.setState(3);
+    }
+
+    @Override
+    public HCZWaterRushObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HCZWaterRushObjectInstance(ctx.spawn(), false);
     }
 
     @Override
@@ -167,7 +181,7 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance {
      * ROM references: loc_2FEB2 / loc_2FEBE (sonic3k.asm:64811-64832).
      */
     static class WaterRushBlockChild extends AbstractObjectInstance
-            implements SolidObjectProvider, SolidObjectListener {
+            implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
         private static final int PHASE_WAITING = 0;
         private static final int PHASE_RISING = 1;
@@ -190,6 +204,13 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance {
             this.y = spawn.y();
             this.parent = parent;
             this.phase = PHASE_WAITING;
+        }
+
+        @Override
+        public WaterRushBlockChild recreateForRewind(RewindRecreateContext ctx) {
+            HCZWaterRushObjectInstance restoredParent =
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, HCZWaterRushObjectInstance.class);
+            return new WaterRushBlockChild(ctx.spawn(), restoredParent);
         }
 
         @Override
