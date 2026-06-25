@@ -33,6 +33,9 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindSchemaRegistry {
+    private static final String MADMOLE_SIDE_DRILL_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild";
+
     @AfterEach
     void clearRegistry() {
         RewindSchemaRegistry.clearForTest();
@@ -246,12 +249,15 @@ class TestRewindSchemaRegistry {
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(MhzMushroomParachuteObjectInstance.class);
         RewindClassSchema stickyVineSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(MhzStickyVineObjectInstance.class);
+        RewindClassSchema sideDrillSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(classForName(MADMOLE_SIDE_DRILL_CLASS));
 
         assertPolicy(grabberSchema, "grabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(grabberSchema, "pendingGrabPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(parachuteSchema, "grabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(parachuteSchema, "nativeP2GrabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(stickyVineSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
+        assertPolicy(sideDrillSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
         assertTrue(grabberSchema.unsupportedFields().isEmpty(),
                 "Grabber compact schema must capture player refs without fallback: "
                         + grabberSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
@@ -261,6 +267,9 @@ class TestRewindSchemaRegistry {
         assertTrue(stickyVineSchema.unsupportedFields().isEmpty(),
                 "MHZ sticky vine compact schema must capture player refs without fallback: "
                         + stickyVineSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(sideDrillSchema.unsupportedFields().isEmpty(),
+                "Madmole side drill compact schema must capture player refs without fallback: "
+                        + sideDrillSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 
     @Test
@@ -292,6 +301,14 @@ class TestRewindSchemaRegistry {
                 .findFirst()
                 .orElseThrow();
         assertEquals(policy, plan.policy());
+    }
+
+    private static Class<?> classForName(String className) {
+        try {
+            return Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private static class ParentFixture {

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Madmole side-drill rewind:** the side-drill child now has an explicit captured-player rewind policy and graph proof, removing its stale object-ref coverage gap.
 - **Player-reference graph rewind:** S2 Grabber plus S3K MHZ mushroom parachutes and sticky vines now restore live player references through the rewind identity table instead of stale object-ref/recreate baseline gaps.
 - **S3K ICZ end-boss graph rewind:** the snowdust emitter link now restores through generic recreate with a restored child reference instead of stale object-ref/recreate baseline gaps.
 - **S3K CNZ traversal player-reference rewind:** cannon and cylinder release handoffs now have explicit audit policies and graph tests proving player refs restore through the live identity table.

@@ -20,6 +20,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.List;
 
@@ -31,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestPlayerReferenceGraphRewind {
+    private static final String MADMOLE_SIDE_DRILL_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild";
     private static final ObjectSpawn GRABBER_SPAWN =
             new ObjectSpawn(0x1200, 0x0420, Sonic2ObjectIds.GRABBER, 0, 0, false, 80);
     private static final ObjectSpawn PARACHUTE_SPAWN =
@@ -139,13 +142,45 @@ class TestPlayerReferenceGraphRewind {
     }
 
     @Test
-    void playerReferenceObjectsUseGenericRecreateWithoutExplicitDynamicCodecs() {
+    void madmoleSideDrillCapturedPlayerRestoresToCurrentLivePlayerReference() throws Exception {
+        TestablePlayableSprite capturedPlayer = player("old-sonic");
+        Harness harness = Harness.create(capturedPlayer, List.of());
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        ObjectInstance source = objectManager.createDynamicObject(
+                () -> instantiateMadmoleSideDrill(0x3300, 0x0380, true));
+        writeBooleanField(source, "initialized", true);
+        writeBooleanField(source, "arcing", true);
+        writeObjectField(source, "capturedPlayer", capturedPlayer);
+        writeIntField(source, "xVelocity", 0x380);
+        writeIntField(source, "mappingFrame", 9);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        TestablePlayableSprite restoredPlayer = player("new-sonic");
+        harness.setPlayers(restoredPlayer, List.of());
+        rewindRegistry.restore(snapshot);
+
+        ObjectInstance restored = onlyLive(objectManager, loadMadmoleSideDrillClass());
+        assertNotSame(source, restored, "restore must recreate the Madmole side drill");
+        assertSame(restoredPlayer, readObjectField(restored, "capturedPlayer"),
+                "capturedPlayer must resolve through the current restore identity table");
+        assertEquals(0x380, readIntField(restored, "xVelocity"),
+                "side-drill motion must restore with the player ref");
+        assertEquals(9, readIntField(restored, "mappingFrame"),
+                "side-drill animation state must restore with the player ref");
+    }
+
+    @Test
+    void playerReferenceObjectsUseGenericRecreateWithoutExplicitDynamicCodecs() throws Exception {
         assertTrue(RewindRecreatable.class.isAssignableFrom(GrabberBadnikInstance.class),
                 "S2 Grabber must restore through RewindRecreatable generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(MhzMushroomParachuteObjectInstance.class),
                 "MHZ mushroom parachute must restore through RewindRecreatable generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(MhzStickyVineObjectInstance.class),
                 "MHZ sticky vine must restore through RewindRecreatable generic recreate");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(loadMadmoleSideDrillClass()),
+                "Madmole side drill must restore through RewindRecreatable generic recreate");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(GrabberBadnikInstance.class.getName()),
                 "S2 Grabber must not keep an explicit dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
@@ -153,6 +188,8 @@ class TestPlayerReferenceGraphRewind {
                 "MHZ mushroom parachute must not keep an explicit dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MhzStickyVineObjectInstance.class.getName()),
                 "MHZ sticky vine must not keep an explicit dynamic codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MADMOLE_SIDE_DRILL_CLASS),
+                "Madmole side drill must not keep an explicit dynamic codec");
     }
 
     @Test
@@ -261,6 +298,26 @@ class TestPlayerReferenceGraphRewind {
 
     private static TestablePlayableSprite player(String code) {
         return new TestablePlayableSprite(code, (short) 0x3200, (short) 0x0340);
+    }
+
+    private static ObjectInstance instantiateMadmoleSideDrill(int x, int y, boolean facingLeft) {
+        try {
+            Class<? extends ObjectInstance> type = loadMadmoleSideDrillClass();
+            Constructor<?> ctor = type.getDeclaredConstructor(int.class, int.class, boolean.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(x, y, facingLeft);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct Madmole side-drill child", e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Class<? extends ObjectInstance> loadMadmoleSideDrillClass() {
+        try {
+            return (Class<? extends ObjectInstance>) Class.forName(MADMOLE_SIDE_DRILL_CLASS);
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private static Object readObjectField(Object target, String name) throws Exception {
