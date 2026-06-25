@@ -15,7 +15,6 @@ com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFra
 com.openggf.game.sonic2.objects.SpiralObjectInstance#recreate
 com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate
 com.openggf.game.sonic2.objects.TornadoObjectInstance#finalScalar#subtype
-com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance#recreate
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance#recreate
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#xOffset

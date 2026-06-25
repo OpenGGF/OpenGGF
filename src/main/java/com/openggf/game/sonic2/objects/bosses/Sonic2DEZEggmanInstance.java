@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -36,7 +37,7 @@ import java.util.List;
  * Animation: Ani_objC5_objC6 anim 0 = speed 5, frames {2, 3, 4} looping.
  * Art: Combined RobotnikUpper + RobotnikRunning + RobotnikLower, mappings ObjC6_MapUnc_3D0EE.
  */
-public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
+public class Sonic2DEZEggmanInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // ========================================================================
     // STATE CONSTANTS
@@ -158,6 +159,12 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
         this.currentFrame = FRAME_STANDING;
         this.animFrameIndex = 0;
         this.animTimer = RUNNING_ANIM_SPEED;
+    }
+
+    @Override
+    public Sonic2DEZEggmanInstance recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new Sonic2DEZEggmanInstance(ctx.spawn()));
     }
 
     // ========================================================================

@@ -1772,6 +1772,12 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S2_DEZ_EGGMAN_GRAPH_COVERED_CLASSES = List.of(
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall",
+                    GameId.S2),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$ExhaustPuff",
                     GameId.S2));
 

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S2 DEZ Eggman graph rewind:** the transition Eggman root and barrier-wall child now restore through generic recreate with the wall link relinked to restored instances.
 - **S2 MTZ boss graph rewind:** MTZ boss roots, laser shooter children, and orbiting shield orbs now restore through generic recreate with child references relinked to restored boss instances.
 - **S2 Death Egg Robot graph rewind:** Death Egg Robot roots, structural body-part children, and runtime targeting sensors now restore through generic recreate with live parent/child references relinked to restored instances.
 - **S2 Mecha Sonic graph rewind:** Mecha Sonic and its DEZ window, LED, targeting sensor, and spikeball children now restore through generic recreate, with the runtime spikeball preserving constructor velocity/frame state.
