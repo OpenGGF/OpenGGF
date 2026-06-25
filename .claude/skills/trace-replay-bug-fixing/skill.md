@@ -385,6 +385,62 @@ in the `ENG:` line as `sub=(XXXX,YYYY)`. For P9-pattern 1-pixel Y frontiers
 blocks across the frames around the divergence to identify which routine
 dropped the sub-pixel carry.
 
+### Slot-occupancy divergence (`obj_sNN_slot` / `eng-expected-onObj sNN missing`)
+
+When the first error is a slot field (`obj_sNN_slot exp 0xNN act 0xMM`) or the
+context shows `eng-expected-onObj sNN missing` (the player rides/expects an
+object in a slot the engine filled with something else), the engine's dynamic
+object RAM (SST) occupancy has drifted from ROM. Diagnose, don't assume RAM:
+
+- **Slot_dump-comparison method.** Newer-format traces (post-old-lua-3.2) carry
+  a per-frame `slot_dump` aux event (ROM slot -> obID map; e.g. LZ2 has ~469).
+  Diff the engine's **live** slot map (`ObjectManager` slot occupancy) against the
+  aux `slot_dump` frame-by-frame to pin the divergence to an exact slot / frame /
+  obID, then trace WHY that slot diverged (which object spawned/unloaded
+  differently freed or claimed it). **Use the PRODUCTION bootstrap** (the real
+  trace-replay path / `applyBootstrap`, correct `zone()`/`act()` overrides) for
+  this probe — a bare `SharedLevel` + `HeadlessTestFixture` that skips
+  `applyBootstrap` produces a wrong-harness artifact (frame-0 slot mismatch that
+  isn't real). **Old lua-3.2 traces have no `slot_dump` aux** (only
+  `physics.csv` + `metadata.json`) — they must be regenerated before this method
+  applies; without the aux you cannot diff ROM-side occupancy.
+
+- **Triage reframe: "slot-cadence" is OFTEN a single tractable object bug, not
+  genuine RAM.** Before declaring a slot divergence RAM-gated, trace the
+  responsible object-lifetime event. Classify:
+  - **TRACTABLE** (fixable object-local, disasm-cited): an object deleted on the
+    wrong frame (delete-check run every frame vs only its ROM routines — see
+    s1-implement-object P9/S2 P50), a wrong child COUNT or array-vs-real-slot
+    spawn (`dbf`+1 / FindFreeObj per piece — P8/P21/S2 P46), a wrong off-screen
+    delete bound (raw `isOnScreenX` vs ROM render box — P10/S2 P52), an
+    incomplete collapse/release drop, a dormant/consumed object still collidable
+    (col_none — P7/P11/S2 P51/S3K P23), or a wrong allocation function
+    (`FindFreeObj` lowest-free per ring vs `FindNextFreeObj`/`allocateSlotAfter`
+    chaining — the S1 lost-ring scatter; `25, 37 Rings.asm:251` uses `FindFreeObj`
+    each iteration).
+  - **RAM-gated** (bounce with the exact first-divergent slot/frame/obID + the
+    `v_objstate`/remember-bit index): subpixel/position-accumulation, the
+    `v_objstate` remember-bit byte-array, or coupled multi-object spawn cadence
+    with no single tractable lifetime event.
+  Trace the responsible lifetime event (the upstream object whose spawn/unload
+  frame differs) before concluding gated — the SLOT being wrong does not mean the
+  ridden object's own position/motion is wrong (verify the solid is faithful and
+  only its SLOT differs).
+
+- **Re-verify on CLEAN develop, especially `TestRewindCoverageGuard`.** Local
+  worktree baselines (`coverage-baseline.txt`, frontier counts) go stale and can
+  MASK a new coverage gap a fix introduces. After any object-presence change,
+  `git reset --hard origin/develop`-equivalent re-verify and run
+  `TestRewindCoverageGuard`; a newly spawned real child (P8/P21) needs a
+  baseline entry or the guard fails.
+
+- **Rewind baseline-entry convention for parent-recreated render-only children.**
+  When a multi-piece fix spawns render-only children whose recreate path is
+  parent-driven (the parent re-creates them on rewind), baseline-entry the
+  child's `#recreate` + `#finalScalar` keys in `coverage-baseline.txt` (precedent:
+  `SpikedBallChain$ChainChild`, `CollapsingLedge$Fragment`), rather than adding a
+  bespoke per-child recreate path.
+
 ## Cross-Game Sanity Checks
 
 Always run all green trace tests every iteration when touching shared code:

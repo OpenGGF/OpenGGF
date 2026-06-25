@@ -824,6 +824,94 @@ The S2 Obj42 SteamSpring mirror is documented in the S2 pitfall catalogue.
 inclusive right-edge fix; prior AIZ2 rock fix advanced `TestS3kAizTraceReplay`
 from frame 14193 to frame 14299.
 
+**Cross-game back-ref.** Same `bhi`-inclusive-right-edge rule confirmed in S1
+`SolidObject` (`docs/s1disasm/_incObj/sub SolidObject.asm:167-168`), commit
+`caf70abb7` (FZ boss exact-edge roll-bounce, f837 -> f1724). See
+`s1-implement-object/rom-pitfalls.md` P14.
+
+---
+
+## P21 -- Multi-piece objects spawn a real OST slot per part via `AllocateObject`/`AllocateObjectAfterCurrent`, not internal arrays
+
+**Pattern.** A chain / multi-segment / multi-piece object must spawn each part as
+a genuine SST-slot object through `AllocateObject` (lowest free slot) or
+`AllocateObjectAfterCurrent` (next free after parent), exactly as ROM does.
+Modeling the pieces as one object carrying internal position arrays (or reserving
+slots without occupying them) under-allocates the dynamic object RAM, shifting
+every later `AllocateObject`/streaming slot → cascading slot drift and a
+downstream object mis-slotted much later. Count matters: a ROM `dbf d1` loop with
+`d1 = N` runs N+1 times (body + fall-through).
+
+**What to check.** Trace the ROM spawn loop; each `AllocateObject*` +
+`obID` write is a real child object the engine must spawn as a real
+`ObjectInstance` on its own slot (`spawnFreeChild` for `AllocateObject`,
+`spawnChild` for `AllocateObjectAfterCurrent` — see P46 in the S2 catalogue for
+the allocator mapping). Render-only children still occupy a slot. Parent-recreated
+render-only children resolve via `TestRewindCoverageGuard` baseline entries.
+
+**ROM citation.** `docs/skdisasm/sonic3k.asm:37911` (`AllocateObject`, lowest
+free) / `:37917` (`AllocateObjectAfterCurrent`, after parent).
+
+**Originating commit (S1 origin).** `9f47f557f` (S1 swinging-platform chain links
+spawned as real OST slots; `docs/s1disasm/_incObj/15 Swinging Platforms.asm:67-105`).
+See `s1-implement-object/rom-pitfalls.md` P8.
+
+---
+
+## P22 -- Object delete/cancel checks run only in the routines that `bsr` them, not every frame
+
+**Pattern.** A child/projectile delete-or-cancel subroutine (`*_ChkCancel`,
+`*_ChkDel`) is reached by ROM only from specific `Obj_routine` jump-table entries,
+not from the active/in-flight routine. Calling it from the engine object's
+per-frame update unconditionally deletes the object during a phase ROM keeps it
+alive → its slot frees at the wrong time → slot drift.
+
+**What to check.** Find every `bsr`/`jsr` to the delete/cancel subroutine and note
+which `Obj_routine` values reach it. Gate the engine call to the equivalent
+engine routine/state; do not run it from the shared per-frame entry.
+
+**ROM citation.** S3K objects dispatch through `Obj_routine` index tables; a
+delete/cancel subroutine belongs only in the routines that `bsr` it (same dispatch
+structure as S1/S2). S1 origin:
+`docs/s1disasm/_incObj/22, 23 Badnik - Buzz Bomber and Missile.asm:162-194,220-249`.
+
+**Originating commit (S1 origin).** `53da8c24a` (S1 Buzz Bomber Missile cancels
+only in flare phase, not active — deleted ~840 frames early). See
+`s1-implement-object/rom-pitfalls.md` P9.
+
+---
+
+## P23 -- Dormant / consumed objects must not be in `Collision_response_list` until active
+
+**Pattern.** S3K only touch-checks objects that added themselves to
+`Collision_response_list` during ExecuteObjects. So an object in a pre-activation
+waiting state, or a broken/consumed terminal state, must not be present in the
+response list (equivalently, its engine `getCollisionFlags()` returns `0`) until
+it activates — otherwise it can hurt the player while dormant, or preempt an
+adjacent live object's contact. This is the S3K analog of S1's `obColType ==
+col_none` / S2's `collision_flags == 0` skip.
+
+**What to check.** For any object with a waiting state or a consumed terminal
+state: trace when ROM adds it to / removes it from the response list (or writes
+its `collision_flags`). Gate the engine's `getCollisionFlags()` to `0` outside
+the active window, derived from the (monotonic) activation routine — no new
+rewind field.
+
+**ROM citation.** `docs/skdisasm/sonic3k.asm` `Collision_response_list` (built
+during ExecuteObjects; only added objects are touch-checked). S1 origin:
+`Sonic ReactToItem.asm:52-53` (`tst.b obColType / bne`).
+
+**Originating commits (S1 origin).** `466f408a8` (S1 broken monitor clears col
+type — *consumed* case) + SYZ Roller dormant case. See
+`s1-implement-object/rom-pitfalls.md` P7 and P11.
+
+**Cross-game note.** Off-screen-delete render-bound (S1 P10 / S2 P52: use the ROM
+render box / `out_of_range` camera-coarse bound, not a raw `isOnScreenX(<N>)`
+margin) is already covered for S3K by P17 (child uses own X vs parent anchor) and
+the inline `out_of_range` camera-coarse checks (`docs/skdisasm/sonic3k.asm`
+`.enemy_out_of_range` family). Verify each short-lived object deletes on the ROM
+camera-coarse bound keyed on its width, not a fixed engine margin.
+
 ---
 
 ## How to add a new entry
