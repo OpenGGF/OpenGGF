@@ -5,10 +5,14 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -33,7 +37,8 @@ import java.util.List;
  * firing animations from parent status bit 1, and the cover clears that bit
  * when its animation completes.
  */
-public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance {
+public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
+        implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x1A; // loc_8BFF2 / loc_8C052.
     private static final int PRIORITY_BUCKET = 4;         // ObjDat_SnaleBlaster priority $200.
     private static final int CLOSED_WAIT_FRAMES = 0x20;   // loc_8BFD4: move.w #$20,$2E.
@@ -247,11 +252,44 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance 
         firingWindow = false;
     }
 
+    private void attachShooterForRewind(SnaleBlasterShooterChild shooter) {
+        if (!shooters.contains(shooter)) {
+            shooters.add(shooter);
+        }
+    }
+
+    private void attachCoverForRewind(SnaleBlasterCoverChild restoredCover) {
+        cover = restoredCover;
+    }
+
     private ObjectSpawn childSpawnAt(int x, int y) {
         return buildSpawnAt(x, y);
     }
 
-    private static final class SnaleBlasterShooterChild extends AbstractObjectInstance {
+    private static SnaleBlasterBadnikInstance findLiveParentForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
+                || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        SnaleBlasterBadnikInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (!(instance instanceof SnaleBlasterBadnikInstance parent) || parent.isDestroyed()) {
+                continue;
+            }
+            long dx = parent.getX() - ctx.spawn().x();
+            long dy = parent.getY() - ctx.spawn().y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = parent;
+            }
+        }
+        return best;
+    }
+
+    private static final class SnaleBlasterShooterChild extends AbstractObjectInstance
+            implements RewindRecreatable {
         private static final int PRIORITY_BUCKET = 4; // word_8C278 priority $200.
         private static final int REST_FRAME = 7;
         private static final int PROJECTILE_ANIM_INDEX = 3;
@@ -285,6 +323,18 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance 
             this.yOffset = yOffset;
             this.verticalFlipShot = verticalFlipShot;
             refreshPosition();
+        }
+
+        @Override
+        public SnaleBlasterShooterChild recreateForRewind(RewindRecreateContext ctx) {
+            SnaleBlasterBadnikInstance liveParent = findLiveParentForRewind(ctx);
+            if (liveParent == null) {
+                return null;
+            }
+            SnaleBlasterShooterChild restored =
+                    new SnaleBlasterShooterChild(liveParent, 0, 0, false);
+            liveParent.attachShooterForRewind(restored);
+            return restored;
         }
 
         @Override
@@ -392,7 +442,8 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance 
         }
     }
 
-    private static final class SnaleBlasterCoverChild extends AbstractObjectInstance {
+    private static final class SnaleBlasterCoverChild extends AbstractObjectInstance
+            implements RewindRecreatable {
         private static final int PRIORITY_BUCKET = 3; // word_8C272 priority $180.
         private static final int[] FRAMES = {5, 6, 10, 6, 5};
         private static final int[] DELAYS = {2, 2, 0x5F, 2, 2};
@@ -418,6 +469,17 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance 
             this.xOffset = xOffset;
             this.yOffset = yOffset;
             refreshPosition();
+        }
+
+        @Override
+        public SnaleBlasterCoverChild recreateForRewind(RewindRecreateContext ctx) {
+            SnaleBlasterBadnikInstance liveParent = findLiveParentForRewind(ctx);
+            if (liveParent == null) {
+                return null;
+            }
+            SnaleBlasterCoverChild restored = new SnaleBlasterCoverChild(liveParent, 0, 0);
+            liveParent.attachCoverForRewind(restored);
+            return restored;
         }
 
         @Override

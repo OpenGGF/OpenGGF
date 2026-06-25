@@ -1025,6 +1025,10 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance$ShellChild",
                 "com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterCoverChild",
+                "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild",
+                "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance");
         // S3K MHZ cutscene/miniboss children. The parent object IDs are zone-set
         // dependent, so registryForSeededParent supplies exact parent factories.
         m.put("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
@@ -1102,6 +1106,8 @@ public final class RewindRoundTripHarness {
             Map.entry("com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance", 0x9D),
             // MushmeanieBadnikInstance: Sonic3kObjectIds.MUSHMEANIE = 0x8D (lazy child spawn)
             Map.entry("com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance", 0x8D),
+            // SnaleBlasterBadnikInstance: Sonic3kObjectIds.SNALE_BLASTER = 0xBE (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance", 0xBE),
             // CutsceneKnucklesMhz2Instance: Sonic3kObjectIds.CUTSCENE_KNUCKLES = 0x82
             Map.entry("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance", 0x82),
             // Mhz1CutsceneButtonInstance: Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON = 0xA9
@@ -1375,6 +1381,11 @@ public final class RewindRoundTripHarness {
                     && params[0].isAssignableFrom(liveParent.getClass())
                     && params[1] == int.class
                     && params[2] == int.class;
+            boolean parentIntIntBoolean = params.length == 4
+                    && params[0].isAssignableFrom(liveParent.getClass())
+                    && params[1] == int.class
+                    && params[2] == int.class
+                    && params[3] == boolean.class;
             boolean parentAnchorIntInt = params.length == 4
                     && params[0].isAssignableFrom(liveParent.getClass())
                     && params[1].isAssignableFrom(liveParent.getClass())
@@ -1396,7 +1407,7 @@ public final class RewindRoundTripHarness {
                     && params[3] == int.class
                     && params[4] == int.class;
             if (!spawnAndParent && !parentOnly && !parentString && !parentIntInt
-                    && !parentAnchorIntInt && !spawnIntIntParent
+                    && !parentIntIntBoolean && !parentAnchorIntInt && !spawnIntIntParent
                     && !spawnParentInt && !spawnParentIntIntInt) continue;
             Constructor<? extends AbstractObjectInstance> ctor =
                     (Constructor<? extends AbstractObjectInstance>) rawCtor;
@@ -1414,6 +1425,10 @@ public final class RewindRoundTripHarness {
                 if (parentIntInt) {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, parent, 0, 0));
+                }
+                if (parentIntIntBoolean) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, parent, 0, 0, false));
                 }
                 if (parentAnchorIntInt) {
                     return ObjectConstructionContext.construct(stub,
@@ -1475,6 +1490,10 @@ public final class RewindRoundTripHarness {
             boolean parentIntInt = params.length == 3
                     && params[1] == int.class
                     && params[2] == int.class;
+            boolean parentIntIntBoolean = params.length == 4
+                    && params[1] == int.class
+                    && params[2] == int.class
+                    && params[3] == boolean.class;
             boolean parentAnchorIntInt = params.length == 4
                     && AbstractObjectInstance.class.isAssignableFrom(params[1])
                     && params[2] == int.class
@@ -1492,7 +1511,7 @@ public final class RewindRoundTripHarness {
                     && params[3] == int.class
                     && params[4] == int.class;
             if (!spawnAndParent && !parentOnly && !parentString && !parentIntInt
-                    && !parentAnchorIntInt && !spawnIntIntParent
+                    && !parentIntIntBoolean && !parentAnchorIntInt && !spawnIntIntParent
                     && !spawnParentInt && !spawnParentIntIntInt) continue;
             Class<?> parentType = (spawnIntIntParent || spawnParentIntIntInt)
                     ? (spawnIntIntParent ? params[3] : params[1])
@@ -1522,6 +1541,10 @@ public final class RewindRoundTripHarness {
                 if (parentIntInt) {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, finalParent, 0, 0));
+                }
+                if (parentIntIntBoolean) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, finalParent, 0, 0, false));
                 }
                 if (parentAnchorIntInt) {
                     return ObjectConstructionContext.construct(stub,

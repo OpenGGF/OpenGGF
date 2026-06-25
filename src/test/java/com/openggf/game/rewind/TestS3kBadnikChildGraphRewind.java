@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
@@ -66,6 +67,10 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild";
     private static final String RIBOT_VISUAL_CHILD =
             "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild";
+    private static final String SNALE_BLASTER_COVER_CHILD =
+            "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterCoverChild";
+    private static final String SNALE_BLASTER_SHOOTER_CHILD =
+            "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild";
 
     @BeforeEach
     void initHeadless() {
@@ -718,6 +723,106 @@ class TestS3kBadnikChildGraphRewind {
     }
 
     @Test
+    void snaleBlasterChildrenRelinkToRestoredParentAndParentSlots() {
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of(
+                new ObjectSpawn(0x180, 0x130, Sonic3kObjectIds.SNALE_BLASTER, 0, 0, false, 100),
+                new ObjectSpawn(0x2A0, 0x130, Sonic3kObjectIds.SNALE_BLASTER, 1, 0, false, 101)));
+        ObjectManager objectManager = harness.objectManager();
+        TestablePlayableSprite player = player();
+        List<SnaleBlasterBadnikInstance> sourceParents =
+                liveByType(objectManager, SnaleBlasterBadnikInstance.class);
+        assertEquals(2, sourceParents.size(), "precondition: two SnaleBlaster parents must be captured");
+        SnaleBlasterBadnikInstance sourceParentA = sourceParents.get(0);
+        SnaleBlasterBadnikInstance sourceParentB = sourceParents.get(1);
+        sourceParentA.update(0, player);
+        sourceParentB.update(0, player);
+        List<ObjectInstance> sourceShooters = liveByClassName(objectManager, SNALE_BLASTER_SHOOTER_CHILD);
+        assertEquals(4, sourceShooters.size(), "precondition: each SnaleBlaster must create two shooters");
+        List<ObjectInstance> sourceCovers = liveByClassName(objectManager, SNALE_BLASTER_COVER_CHILD);
+        assertEquals(2, sourceCovers.size(), "precondition: each SnaleBlaster must create one cover");
+        ObjectInstance sourceShooterA0 = childWithParentAndYOffset(sourceShooters, sourceParentA, 0);
+        ObjectInstance sourceShooterB7 = childWithParentAndYOffset(sourceShooters, sourceParentB, 7);
+        ObjectInstance sourceCoverA = childWithParent(sourceCovers, sourceParentA);
+        ObjectInstance sourceCoverB = childWithParent(sourceCovers, sourceParentB);
+        setIntField(sourceShooterA0, "currentX", 0x191);
+        setIntField(sourceShooterA0, "currentY", 0x121);
+        setIntField(sourceShooterA0, "mappingFrame", 8);
+        setIntField(sourceShooterA0, "animIndex", 2);
+        setIntField(sourceShooterA0, "animTimer", 3);
+        setBooleanField(sourceShooterA0, "shotFired", true);
+        setIntField(sourceShooterB7, "currentX", 0x2A8);
+        setIntField(sourceShooterB7, "currentY", 0x13A);
+        setIntField(sourceShooterB7, "mappingFrame", 7);
+        setIntField(sourceCoverA, "currentX", 0x188);
+        setIntField(sourceCoverA, "currentY", 0x134);
+        setIntField(sourceCoverA, "mappingFrame", 10);
+        setIntField(sourceCoverA, "animIndex", 2);
+        setIntField(sourceCoverA, "animTimer", 11);
+
+        ObjectRefId parentAId = objectId(objectManager, sourceParentA);
+        ObjectRefId parentBId = objectId(objectManager, sourceParentB);
+        ObjectRefId shooterA0Id = objectId(objectManager, sourceShooterA0);
+        ObjectRefId shooterB7Id = objectId(objectManager, sourceShooterB7);
+        ObjectRefId coverAId = objectId(objectManager, sourceCoverA);
+        ObjectRefId coverBId = objectId(objectManager, sourceCoverB);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> new SnaleBlasterBadnikInstance(new ObjectSpawn(
+                0x220, 0x130, Sonic3kObjectIds.SNALE_BLASTER, 0, 0, false, 102)));
+
+        rewindRegistry.restore(snapshot);
+
+        SnaleBlasterBadnikInstance restoredParentA =
+                objectById(objectManager, SnaleBlasterBadnikInstance.class, parentAId);
+        SnaleBlasterBadnikInstance restoredParentB =
+                objectById(objectManager, SnaleBlasterBadnikInstance.class, parentBId);
+        ObjectInstance restoredShooterA0 = objectById(objectManager, ObjectInstance.class, shooterA0Id);
+        ObjectInstance restoredShooterB7 = objectById(objectManager, ObjectInstance.class, shooterB7Id);
+        ObjectInstance restoredCoverA = objectById(objectManager, ObjectInstance.class, coverAId);
+        ObjectInstance restoredCoverB = objectById(objectManager, ObjectInstance.class, coverBId);
+
+        assertNotSame(sourceShooterA0, restoredShooterA0, "restore must recreate Snale shooter A0");
+        assertNotSame(sourceShooterB7, restoredShooterB7, "restore must recreate Snale shooter B7");
+        assertNotSame(sourceCoverA, restoredCoverA, "restore must recreate Snale cover A");
+        assertNotSame(sourceCoverB, restoredCoverB, "restore must recreate Snale cover B");
+        assertSame(restoredParentA, readObjectField(restoredShooterA0, "parent"),
+                "shooter A0 parent must resolve to restored SnaleBlaster A");
+        assertSame(restoredParentB, readObjectField(restoredShooterB7, "parent"),
+                "shooter B7 parent must resolve to restored SnaleBlaster B");
+        assertSame(restoredParentA, readObjectField(restoredCoverA, "parent"),
+                "cover A parent must resolve to restored SnaleBlaster A");
+        assertSame(restoredParentB, readObjectField(restoredCoverB, "parent"),
+                "cover B parent must resolve to restored SnaleBlaster B");
+        assertSame(restoredCoverA, readObjectField(restoredParentA, "cover"),
+                "SnaleBlaster A cover slot must resolve to restored cover A");
+        assertSame(restoredCoverB, readObjectField(restoredParentB, "cover"),
+                "SnaleBlaster B cover slot must resolve to restored cover B");
+        assertTrue(((List<?>) readObjectField(restoredParentA, "shooters")).contains(restoredShooterA0),
+                "SnaleBlaster A shooter list must contain restored shooter A0");
+        assertTrue(((List<?>) readObjectField(restoredParentB, "shooters")).contains(restoredShooterB7),
+                "SnaleBlaster B shooter list must contain restored shooter B7");
+        assertEquals(0x191, readIntField(restoredShooterA0, "currentX"));
+        assertEquals(0x121, readIntField(restoredShooterA0, "currentY"));
+        assertEquals(8, readIntField(restoredShooterA0, "mappingFrame"));
+        assertEquals(2, readIntField(restoredShooterA0, "animIndex"));
+        assertEquals(3, readIntField(restoredShooterA0, "animTimer"));
+        assertTrue((Boolean) readObjectField(restoredShooterA0, "shotFired"));
+        assertEquals(0x2A8, readIntField(restoredShooterB7, "currentX"));
+        assertEquals(0x13A, readIntField(restoredShooterB7, "currentY"));
+        assertEquals(7, readIntField(restoredShooterB7, "mappingFrame"));
+        assertEquals(0x188, readIntField(restoredCoverA, "currentX"));
+        assertEquals(0x134, readIntField(restoredCoverA, "currentY"));
+        assertEquals(10, readIntField(restoredCoverA, "mappingFrame"));
+        assertEquals(2, readIntField(restoredCoverA, "animIndex"));
+        assertEquals(11, readIntField(restoredCoverA, "animTimer"));
+        assertEquals(4, liveByClassName(objectManager, SNALE_BLASTER_SHOOTER_CHILD).size(),
+                "restore must keep exactly the captured SnaleBlaster shooters");
+        assertEquals(2, liveByClassName(objectManager, SNALE_BLASTER_COVER_CHILD).size(),
+                "restore must keep exactly the captured SnaleBlaster covers");
+    }
+
+    @Test
     void captureFailsForNonNullObjectReferenceWithoutRegisteredRewindIdentity() {
         Harness harness = Harness.create(new S3klTestRegistry(), List.of());
         ObjectManager objectManager = harness.objectManager();
@@ -827,6 +932,16 @@ class TestS3kBadnikChildGraphRewind {
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("missing "
                         + (leftSide ? "left" : "right") + " child for " + parent.getClass()));
+    }
+
+    private static ObjectInstance childWithParentAndYOffset(
+            List<ObjectInstance> children, ObjectInstance parent, int yOffset) {
+        return children.stream()
+                .filter(child -> readObjectField(child, "parent") == parent)
+                .filter(child -> readIntField(child, "yOffset") == yOffset)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("missing yOffset "
+                        + yOffset + " child for " + parent.getClass()));
     }
 
     private static ObjectInstance visualChildWithParentAndIndex(
