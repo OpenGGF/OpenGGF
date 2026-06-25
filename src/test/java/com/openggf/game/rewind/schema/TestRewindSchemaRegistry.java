@@ -33,6 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindSchemaRegistry {
+    private static final String MHZ2_LIFT_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild";
     private static final String MADMOLE_SIDE_DRILL_CLASS =
             "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild";
 
@@ -249,6 +251,8 @@ class TestRewindSchemaRegistry {
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(MhzMushroomParachuteObjectInstance.class);
         RewindClassSchema stickyVineSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(MhzStickyVineObjectInstance.class);
+        RewindClassSchema mhz2LiftSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(classForName(MHZ2_LIFT_CHILD_CLASS));
         RewindClassSchema sideDrillSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(classForName(MADMOLE_SIDE_DRILL_CLASS));
 
@@ -257,6 +261,7 @@ class TestRewindSchemaRegistry {
         assertPolicy(parachuteSchema, "grabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(parachuteSchema, "nativeP2GrabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(stickyVineSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
+        assertPolicy(mhz2LiftSchema, "player", RewindFieldPolicy.CAPTURED);
         assertPolicy(sideDrillSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
         assertTrue(grabberSchema.unsupportedFields().isEmpty(),
                 "Grabber compact schema must capture player refs without fallback: "
@@ -267,6 +272,9 @@ class TestRewindSchemaRegistry {
         assertTrue(stickyVineSchema.unsupportedFields().isEmpty(),
                 "MHZ sticky vine compact schema must capture player refs without fallback: "
                         + stickyVineSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(mhz2LiftSchema.unsupportedFields().isEmpty(),
+                "MHZ2 lift compact schema must capture player refs without fallback: "
+                        + mhz2LiftSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
         assertTrue(sideDrillSchema.unsupportedFields().isEmpty(),
                 "Madmole side drill compact schema must capture player refs without fallback: "
                         + sideDrillSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());

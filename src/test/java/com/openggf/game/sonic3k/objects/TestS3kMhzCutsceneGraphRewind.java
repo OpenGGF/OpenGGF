@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
@@ -14,9 +15,12 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +42,8 @@ class TestS3kMhzCutsceneGraphRewind {
             "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper";
     private static final String ROUTE_SWITCH_CLASS =
             "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild";
+    private static final String LIFT_CLASS =
+            "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild";
 
     private static final ObjectSpawn BUTTON_NEAR_DOOR =
             new ObjectSpawn(0x0380, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x31);
@@ -228,6 +234,48 @@ class TestS3kMhzCutsceneGraphRewind {
     }
 
     @Test
+    void mhz2LiftChildRestoresFreshWithCapturedPlayerReference() {
+        TestablePlayableSprite capturedPlayer = player("old-sonic", 0x03D8, 0x0680);
+        Harness harness = Harness.create(List.of(MHZ2_PARENT_CAPTURED), capturedPlayer, List.of());
+        ObjectManager objectManager = harness.objectManager();
+        CutsceneKnucklesMhz2Instance parent =
+                objectBySpawn(objectManager, CutsceneKnucklesMhz2Instance.class, MHZ2_PARENT_CAPTURED);
+        AbstractObjectInstance lift = objectManager.createDynamicObject(
+                () -> newLiftChild(parent, capturedPlayer));
+        setBooleanField(lift, "initialized", true);
+
+        RewindIdentityTable captureTable = objectManager.captureIdentityContext().requireIdentityTable();
+        ObjectRefId parentId = requireId(captureTable, parent);
+        ObjectRefId liftId = requireId(captureTable, lift);
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = registry.capture();
+
+        objectManager.removeDynamicObject(lift);
+        TestablePlayableSprite divergentPlayer = player("divergent-sonic", 0x0400, 0x0690);
+        AbstractObjectInstance divergentLift = objectManager.createDynamicObject(
+                () -> newLiftChild(parent, divergentPlayer));
+        TestablePlayableSprite restoredPlayer = player("new-sonic", 0x03E0, 0x0670);
+        harness.setPlayers(restoredPlayer, List.of());
+
+        registry.restore(snapshot);
+
+        CutsceneKnucklesMhz2Instance restoredParent =
+                objectById(objectManager, CutsceneKnucklesMhz2Instance.class, parentId);
+        AbstractObjectInstance restoredLift = objectById(objectManager, childClass(LIFT_CLASS), liftId);
+        assertEquals(1, countLive(objectManager, childClass(LIFT_CLASS)),
+                "restore must recreate exactly one captured MHZ2 lift child");
+        assertNotSame(lift, restoredLift, "lift child must be recreated, not reused stale");
+        assertNotSame(divergentLift, restoredLift, "restore must drop divergent lift child");
+        assertSame(restoredParent, readObjectField(restoredLift, "parent"),
+                "lift child parent must relink to the restored MHZ2 cutscene parent");
+        assertSame(restoredPlayer, readObjectField(restoredLift, "player"),
+                "lift child player must resolve through the current live player identity");
+        assertTrue(readBooleanField(restoredLift, "initialized"),
+                "lift child initialized scalar must restore exactly");
+    }
+
+    @Test
     void mhzCutsceneHelpersUseRewindRecreatableWithoutExplicitDynamicCodecs() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(Mhz1CutsceneDoorInstance.class),
                 "MHZ1 cutscene door must restore through RewindRecreatable");
@@ -241,6 +289,8 @@ class TestS3kMhzCutsceneGraphRewind {
                 "MHZ1 P2 stopper must restore through RewindRecreatable");
         assertTrue(RewindRecreatable.class.isAssignableFrom(childClass(ROUTE_SWITCH_CLASS)),
                 "MHZ2 route-switch child must restore through RewindRecreatable");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(childClass(LIFT_CLASS)),
+                "MHZ2 lift child must restore through RewindRecreatable");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
                         Mhz1CutsceneDoorInstance.class.getName()),
                 "MHZ1 cutscene door must not keep an explicit S3K dynamic codec");
@@ -257,6 +307,8 @@ class TestS3kMhzCutsceneGraphRewind {
                 "MHZ1 P2 stopper must not keep an explicit S3K dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ROUTE_SWITCH_CLASS),
                 "MHZ2 route-switch child must not keep an explicit S3K dynamic codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(LIFT_CLASS),
+                "MHZ2 lift child must not keep an explicit S3K dynamic codec");
     }
 
     @Test
@@ -319,16 +371,47 @@ class TestS3kMhzCutsceneGraphRewind {
         });
     }
 
-    private record Harness(ObjectManager objectManager, StubObjectServices services) {
+    @Test
+    void capturedMhz2LiftChildFailsLoudlyWhenPlayerMissingOnRestore() {
+        TestablePlayableSprite capturedPlayer = player("old-sonic", 0x03D8, 0x0680);
+        Harness harness = Harness.create(List.of(MHZ2_PARENT_CAPTURED), capturedPlayer, List.of());
+        CutsceneKnucklesMhz2Instance parent =
+                objectBySpawn(harness.objectManager(), CutsceneKnucklesMhz2Instance.class, MHZ2_PARENT_CAPTURED);
+        harness.objectManager().createDynamicObject(() -> newLiftChild(parent, capturedPlayer));
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(harness.objectManager().rewindSnapshottable());
+        CompositeSnapshot snapshot = registry.capture();
+
+        harness.setPlayers(null, List.of());
+        IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> registry.restore(snapshot));
+        assertTrue(thrown.getMessage().contains("Missing required player reference"),
+                "missing live player identity must fail loudly");
+    }
+
+    private record Harness(ObjectManager objectManager, StubObjectServices services, TestCamera camera) {
         static Harness create() {
             return create(List.of());
         }
 
         static Harness create(List<ObjectSpawn> spawns) {
+            return create(spawns, null, List.of());
+        }
+
+        static Harness create(
+                List<ObjectSpawn> spawns,
+                AbstractPlayableSprite focusedPlayer,
+                List<? extends PlayableEntity> sidekicks) {
             ObjectManager[] holder = new ObjectManager[1];
+            TestCamera camera = new TestCamera();
+            camera.setFocusedSprite(focusedPlayer);
+            List<? extends PlayableEntity> copiedSidekicks = List.copyOf(sidekicks);
             StubObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
-                @Override public Camera camera() { return mockCamera(); }
+                @Override public Camera camera() { return camera; }
+                @Override public List<PlayableEntity> sidekicks() { return List.copyOf(copiedSidekicks); }
+                @Override public ObjectPlayerQuery playerQuery() {
+                    return new ObjectPlayerQuery(camera::getFocusedSprite, () -> copiedSidekicks);
+                }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
                 @Override public int romZoneId() { return Sonic3kZoneIds.ZONE_MHZ; }
                 @Override public int featureZoneId() { return Sonic3kZoneIds.ZONE_MHZ; }
@@ -336,12 +419,28 @@ class TestS3kMhzCutsceneGraphRewind {
             services.zoneRuntimeRegistry().install(new MhzZoneRuntimeState(0, PlayerCharacter.SONIC_AND_TAILS));
             ObjectManager objectManager = new ObjectManager(
                     spawns, new MhzTestRegistry(), 0, null, null,
-                    GraphicsManager.getInstance(), mockCamera(), services);
+                    GraphicsManager.getInstance(), camera, services);
             holder[0] = objectManager;
             objectManager.reset(0);
             objectManager.setRewindInPlaceRestoreEnabledForTest(false);
-            return new Harness(objectManager, services);
+            return new Harness(objectManager, services, camera);
         }
+
+        void setPlayers(AbstractPlayableSprite focusedPlayer, List<? extends PlayableEntity> sidekicks) {
+            camera.setFocusedSprite(focusedPlayer);
+        }
+    }
+
+    private static final class TestCamera extends Camera {
+        private AbstractPlayableSprite focusedSprite;
+
+        @Override public void setFocusedSprite(AbstractPlayableSprite sprite) { focusedSprite = sprite; }
+        @Override public AbstractPlayableSprite getFocusedSprite() { return focusedSprite; }
+        @Override public short getX() { return 0; }
+        @Override public short getY() { return 0; }
+        @Override public short getWidth() { return 0x1000; }
+        @Override public short getHeight() { return 0x1000; }
+        @Override public boolean isVerticalWrapEnabled() { return false; }
     }
 
     private static final class MhzTestRegistry extends Sonic3kObjectRegistry {
@@ -396,6 +495,24 @@ class TestS3kMhzCutsceneGraphRewind {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to construct " + className, e);
         }
+    }
+
+    private static AbstractObjectInstance newLiftChild(
+            CutsceneKnucklesMhz2Instance parent,
+            AbstractPlayableSprite player) {
+        try {
+            Class<? extends AbstractObjectInstance> type = childClass(LIFT_CLASS);
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    type.getDeclaredConstructor(CutsceneKnucklesMhz2Instance.class, AbstractPlayableSprite.class);
+            ctor.setAccessible(true);
+            return ctor.newInstance(parent, player);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct " + LIFT_CLASS, e);
+        }
+    }
+
+    private static TestablePlayableSprite player(String code, int x, int y) {
+        return new TestablePlayableSprite(code, (short) x, (short) y);
     }
 
     @SuppressWarnings("unchecked")
@@ -514,13 +631,4 @@ class TestS3kMhzCutsceneGraphRewind {
         throw new NoSuchFieldException(fieldName);
     }
 
-    private static Camera mockCamera() {
-        return new Camera() {
-            @Override public short getX() { return 0; }
-            @Override public short getY() { return 0; }
-            @Override public short getWidth() { return 0x1000; }
-            @Override public short getHeight() { return 0x1000; }
-            @Override public boolean isVerticalWrapEnabled() { return false; }
-        };
-    }
 }

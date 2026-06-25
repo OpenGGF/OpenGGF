@@ -40,6 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindPolicyRegistry {
+    private static final String MHZ2_LIFT_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild";
     private static final String MADMOLE_SIDE_DRILL_CLASS =
             "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild";
 
@@ -221,6 +223,7 @@ class TestRewindPolicyRegistry {
         Field parachuteNativeP2Player =
                 MhzMushroomParachuteObjectInstance.class.getDeclaredField("nativeP2GrabbedPlayer");
         Field stickyVineCapturedPlayer = MhzStickyVineObjectInstance.class.getDeclaredField("capturedPlayer");
+        Field mhz2LiftPlayer = classForName(MHZ2_LIFT_CHILD_CLASS).getDeclaredField("player");
         Field sideDrillCapturedPlayer = classForName(MADMOLE_SIDE_DRILL_CLASS).getDeclaredField("capturedPlayer");
 
         assertEquals(RewindFieldPolicy.CAPTURED,
@@ -231,6 +234,8 @@ class TestRewindPolicyRegistry {
                 RewindPolicyRegistry.policyForAudit(parachuteNativeP2Player).orElse(null));
         assertEquals(RewindFieldPolicy.CAPTURED,
                 RewindPolicyRegistry.policyForAudit(stickyVineCapturedPlayer).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(mhz2LiftPlayer).orElse(null));
         assertEquals(RewindFieldPolicy.CAPTURED,
                 RewindPolicyRegistry.policyForAudit(sideDrillCapturedPlayer).orElse(null));
     }

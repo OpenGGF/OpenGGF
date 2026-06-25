@@ -501,9 +501,10 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
     }
 
-    private static final class Mhz2KnucklesLiftChild extends AbstractObjectInstance {
+    private static final class Mhz2KnucklesLiftChild extends AbstractObjectInstance
+            implements RewindRecreatable {
         private final CutsceneKnucklesMhz2Instance parent;
-        private final AbstractPlayableSprite player;
+        private AbstractPlayableSprite player;
         private boolean initialized;
 
         private Mhz2KnucklesLiftChild(CutsceneKnucklesMhz2Instance parent, AbstractPlayableSprite player) {
@@ -514,14 +515,27 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             this.player = player;
         }
 
+        private Mhz2KnucklesLiftChild(CutsceneKnucklesMhz2Instance parent) {
+            super(new ObjectSpawn(parent.getX(), parent.getY(),
+                    Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0),
+                    "MHZ2KnucklesLift");
+            this.parent = parent;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            CutsceneKnucklesMhz2Instance liveParent = Mhz2KnucklesRouteSwitchChild.findNearestLiveParent(ctx);
+            return liveParent == null ? null : new Mhz2KnucklesLiftChild(liveParent);
+        }
+
         @Override
         public int getX() {
-            return player.getCentreX() & 0xFFFF;
+            return player != null ? player.getCentreX() & 0xFFFF : getSpawn().x();
         }
 
         @Override
         public int getY() {
-            return player.getCentreY() & 0xFFFF;
+            return player != null ? player.getCentreY() & 0xFFFF : getSpawn().y();
         }
 
         @Override
@@ -531,6 +545,10 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (player == null) {
+                setDestroyed(true);
+                return;
+            }
             if (!initialized) {
                 initialized = true;
                 player.setYSpeed((short) PLAYER_LAUNCH_Y_VEL);
