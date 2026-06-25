@@ -77,10 +77,6 @@ com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#obje
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#recreate
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#finalScalar#mappingFrame
-com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#objectRef#previous
-com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#objectRef#root
-com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#recreate
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#recreate
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance#recreate
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#recreate
