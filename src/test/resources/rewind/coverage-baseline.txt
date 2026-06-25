@@ -6,8 +6,6 @@ com.openggf.game.sonic3k.objects.CnzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#recreate
 com.openggf.game.sonic3k.objects.IczMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#recreate
-com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingDebrisChild#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$DefeatFragmentChild#recreate
@@ -16,7 +14,6 @@ com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild#
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$MgzBossCameraScrollHelper#recreate
 com.openggf.game.sonic3k.objects.MhzMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance#recreate
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossPlayerTwoCarryChild#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossSidekickLockChild#recreate

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K MGZ mechanism rewind:** MGZ top launcher/platform graphs and Pachinko item orbs now restore through generic recreate with preserved dynamic identity.
 - **Shared water-effect rewind:** Shared breathing bubbles and water splashes now restore through generic recreate with spawn-encoded visual state.
 - **S2 debris-fragment rewind:** ARZ rising-pillar and HTZ smashable-ground fragments now restore through generic recreate with encoded visual piece selectors.
 - **S3K graph rewind coverage:** CNZ end-boss and MHZ1 cutscene-button spawn coordinates now participate in compact restore, clearing stale final-scalar coverage gaps.

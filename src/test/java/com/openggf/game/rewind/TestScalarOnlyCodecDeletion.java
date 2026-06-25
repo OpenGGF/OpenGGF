@@ -2965,6 +2965,18 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_MGZ_MECHANISM_GRAPH_BATCH245_RECREATE_CLASSES =
+            List.of(
+                    new CodecDeletionCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance",
+                            GameId.S3K),
+                    new CodecDeletionCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance",
+                            GameId.S3K),
+                    new CodecDeletionCandidate(
+                            "com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance",
+                            GameId.S3K));
+
     private static final List<CodecDeletionCandidate> SHARED_BOX_BATCH237_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate("com.openggf.level.objects.BoxObjectInstance", GameId.S2));
 
@@ -9662,6 +9674,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K ICZ snow graph batch 236 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMgzMechanismGraphBatch245ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MGZ_MECHANISM_GRAPH_BATCH245_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K MGZ mechanism batch 245");
+        }
+    }
+
+    @Test
+    void s3kMgzMechanismGraphBatch245ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MGZ_MECHANISM_GRAPH_BATCH245_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MGZ mechanism batch 245 generic recreate, not a dynamic codec");
         }
     }
 

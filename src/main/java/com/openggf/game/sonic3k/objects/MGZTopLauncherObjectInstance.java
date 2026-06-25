@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -16,7 +17,7 @@ import java.util.List;
  * Object 0x5C — MGZ Top Launcher.
  * Owns the visible base and a passive Obj_MGZTopPlatform child until release.
  */
-public class MGZTopLauncherObjectInstance extends AbstractObjectInstance {
+public class MGZTopLauncherObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_TOP_LAUNCHER;
     private static final int PRIORITY_BUCKET = 4;
     private static final int BASE_FRAME = 2;
