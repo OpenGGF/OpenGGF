@@ -109,9 +109,17 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        // Msl_ChkCancel compares the current obID in the parent's old slot with
-        // ExplosionItem (0x27); a cleared or reused slot does not cancel.
-        if (isParentSlotExplosionItem()) {
+        // ROM Msl_ChkCancel (parent-destroyed -> delete) is called ONLY from
+        // Msl_Main (routine 0) and Msl_Animate (routine 2) — the flare phases.
+        // Msl_FromBuzz (routine 4, the active flight phase) does NOT call it
+        // (docs/s1disasm/_incObj/22, 23 Badnik - Buzz Bomber and Missile.asm:
+        // 162-194, 220-249). Once the missile is active it ignores the parent's
+        // fate and only deletes at the bottom-boundary check. Checking it in
+        // ACTIVE made the missile vanish the frame Sonic destroys the Buzz Bomber
+        // (MZ3 f239: Buzz Bomber slot 80 -> ExplosionItem 0x27), freeing the
+        // missile's OST slot ~840 frames early and shifting every later slot down
+        // one (Batbrain 73 vs ROM 74 -> missed React bounce at f2079).
+        if (phase != Phase.ACTIVE && isParentSlotExplosionItem()) {
             setDestroyed(true);
             return;
         }
