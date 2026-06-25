@@ -981,6 +981,8 @@ public final class RewindRoundTripHarness {
         // not spawn these children; their update routines do.
         m.put("com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild",
                 "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$WingChild",
+                "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild",
                 "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",

@@ -52,8 +52,6 @@ com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment#recreate
 com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$ArrowChild#recreate
-com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance#recreate
-com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$WingChild#recreate
 com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance$MantisChild#recreate
 com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance#recreate

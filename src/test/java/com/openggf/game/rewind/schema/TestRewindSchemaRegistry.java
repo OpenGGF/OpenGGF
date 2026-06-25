@@ -30,6 +30,7 @@ import com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance.LinkedBodyChild;
+import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance.WingChild;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -247,6 +248,17 @@ class TestRewindSchemaRegistry {
         assertPolicy(schema, "followAnchor", RewindFieldPolicy.CAPTURED);
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "Dragonfly linked body compact schema must capture parent/follow-anchor links without fallback: "
+                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesDragonflyWingParent() {
+        RewindClassSchema schema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(WingChild.class);
+
+        assertPolicy(schema, "parent", RewindFieldPolicy.CAPTURED);
+        assertTrue(schema.unsupportedFields().isEmpty(),
+                "Dragonfly wing compact schema must capture parent link without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 

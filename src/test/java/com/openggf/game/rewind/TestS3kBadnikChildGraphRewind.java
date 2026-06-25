@@ -40,6 +40,8 @@ class TestS3kBadnikChildGraphRewind {
 
     private static final String DRAGONFLY_LINKED_BODY_CHILD =
             "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild";
+    private static final String DRAGONFLY_WING_CHILD =
+            "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$WingChild";
     private static final String SPIKER_TOP_SPIKE_CHILD =
             "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild";
     private static final String TURBO_SPIKER_SHELL_CHILD =
@@ -73,11 +75,15 @@ class TestS3kBadnikChildGraphRewind {
         sourceParentB.update(1, player);
         List<ObjectInstance> sourceSegments = liveByClassName(objectManager, DRAGONFLY_LINKED_BODY_CHILD);
         assertEquals(14, sourceSegments.size(), "precondition: Dragonfly setup must create seven body links per parent");
+        List<ObjectInstance> sourceWings = liveByClassName(objectManager, DRAGONFLY_WING_CHILD);
+        assertEquals(2, sourceWings.size(), "precondition: each Dragonfly must create one wing child");
 
         ObjectInstance sourceSegmentA0 = segmentByParentAndIndex(sourceSegments, sourceParentA, 0);
         ObjectInstance sourceSegmentA1 = segmentByParentAndIndex(sourceSegments, sourceParentA, 1);
         ObjectInstance sourceSegmentB0 = segmentByParentAndIndex(sourceSegments, sourceParentB, 0);
         ObjectInstance sourceSegmentB1 = segmentByParentAndIndex(sourceSegments, sourceParentB, 1);
+        ObjectInstance sourceWingA = childWithParent(sourceWings, sourceParentA);
+        ObjectInstance sourceWingB = childWithParent(sourceWings, sourceParentB);
         setIntField(sourceSegmentA0, "childX", 0x1A0);
         setIntField(sourceSegmentA0, "childY", 0x120);
         setIntField(sourceSegmentA0, "countdown", 7);
@@ -97,6 +103,8 @@ class TestS3kBadnikChildGraphRewind {
         ObjectRefId segmentA1Id = objectId(objectManager, sourceSegmentA1);
         ObjectRefId segmentB0Id = objectId(objectManager, sourceSegmentB0);
         ObjectRefId segmentB1Id = objectId(objectManager, sourceSegmentB1);
+        ObjectRefId wingAId = objectId(objectManager, sourceWingA);
+        ObjectRefId wingBId = objectId(objectManager, sourceWingB);
         RewindRegistry rewindRegistry = registryFor(objectManager);
         CompositeSnapshot snapshot = rewindRegistry.capture();
 
@@ -109,15 +117,25 @@ class TestS3kBadnikChildGraphRewind {
         DragonflyBadnikInstance restoredParentB = objectById(objectManager, DragonflyBadnikInstance.class, parentBId);
         List<ObjectInstance> restoredSegments = liveByClassName(objectManager, DRAGONFLY_LINKED_BODY_CHILD);
         assertEquals(14, restoredSegments.size(), "restore must keep exactly the captured fourteen body links");
+        List<ObjectInstance> restoredWings = liveByClassName(objectManager, DRAGONFLY_WING_CHILD);
+        assertEquals(2, restoredWings.size(), "restore must keep exactly the captured two wing children");
         ObjectInstance restoredSegmentA0 = objectById(objectManager, ObjectInstance.class, segmentA0Id);
         ObjectInstance restoredSegmentA1 = objectById(objectManager, ObjectInstance.class, segmentA1Id);
         ObjectInstance restoredSegmentB0 = objectById(objectManager, ObjectInstance.class, segmentB0Id);
         ObjectInstance restoredSegmentB1 = objectById(objectManager, ObjectInstance.class, segmentB1Id);
+        ObjectInstance restoredWingA = objectById(objectManager, ObjectInstance.class, wingAId);
+        ObjectInstance restoredWingB = objectById(objectManager, ObjectInstance.class, wingBId);
 
         assertNotSame(sourceSegmentA0, restoredSegmentA0, "restore must recreate removed graph A body segment 0");
         assertNotSame(sourceSegmentA1, restoredSegmentA1, "restore must recreate removed graph A body segment 1");
         assertNotSame(sourceSegmentB0, restoredSegmentB0, "restore must recreate removed graph B body segment 0");
         assertNotSame(sourceSegmentB1, restoredSegmentB1, "restore must recreate removed graph B body segment 1");
+        assertNotSame(sourceWingA, restoredWingA, "restore must recreate removed graph A wing child");
+        assertNotSame(sourceWingB, restoredWingB, "restore must recreate removed graph B wing child");
+        assertSame(restoredParentA, readObjectField(restoredWingA, "parent"),
+                "graph A wing parent must resolve to restored Dragonfly A");
+        assertSame(restoredParentB, readObjectField(restoredWingB, "parent"),
+                "graph B wing parent must resolve to restored Dragonfly B");
         assertSame(restoredParentA, readObjectField(restoredSegmentA0, "parent"),
                 "graph A segment 0 parent must resolve to restored Dragonfly A");
         assertSame(restoredParentA, readObjectField(restoredSegmentA0, "followAnchor"),
