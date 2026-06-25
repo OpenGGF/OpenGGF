@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SplashObjectInstance;
 import com.openggf.level.objects.TouchActorContextPolicy;
@@ -1369,7 +1370,8 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
      * Phase 3 ($1F frames): dying pull, then delete.
      */
     private static final class VortexBubbleChild extends com.openggf.level.objects.AbstractObjectInstance
-            implements com.openggf.game.rewind.RewindStateful<VortexBubbleChild.RewindState> {
+            implements com.openggf.game.rewind.RewindStateful<VortexBubbleChild.RewindState>,
+            SpawnCoordinateZeroScalarArgsRewindRecreatable {
         private static final int PHASE_TIMER = 0x1F;
         private static final int PHASE_PULL = 0;
         private static final int PHASE_HOLD = 1;
@@ -1383,6 +1385,10 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         private boolean vortexEnded;
 
         private record RewindState(int x, int y, int phase, int timer, short xVel, boolean vortexEnded) {}
+
+        private VortexBubbleChild(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(), 0, 0, 0);
+        }
 
         VortexBubbleChild(int x, int y, int frame, int vortexX, int vortexY) {
             super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "VortexBubble");

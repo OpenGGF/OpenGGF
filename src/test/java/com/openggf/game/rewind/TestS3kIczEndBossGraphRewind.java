@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Constructor;
 import java.util.Comparator;
 import java.util.List;
 
@@ -35,6 +36,8 @@ class TestS3kIczEndBossGraphRewind {
             new ObjectSpawn(0x4380, 0x02F0, Sonic3kObjectIds.ICZ_SNOW_PILE, 0x18, 0, false, 71);
     private static final String SNOWDUST_PARTICLE_CLASS =
             "com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle";
+    private static final String DEFEAT_DEBRIS_CLASS =
+            "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild";
 
     @BeforeEach
     void initHeadless() {
@@ -168,6 +171,44 @@ class TestS3kIczEndBossGraphRewind {
     }
 
     @Test
+    void iczEndBossDefeatDebrisRestoresFreshAndPreservesDebrisState() throws Exception {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        ObjectInstance sourceDebris = objectManager.createDynamicObject(
+                () -> constructDefeatDebris(0x4420, 0x0390, 0x0180, -0x0300, 3, true));
+        writeIntField(sourceDebris, "gravity", 0x38);
+        writeBooleanField(sourceDebris, "visible", false);
+
+        ObjectRefId debrisId = objectId(objectManager, sourceDebris);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.removeDynamicObject(sourceDebris);
+        ObjectInstance divergentDebris = objectManager.createDynamicObject(
+                () -> constructDefeatDebris(0x4520, 0x0310, 0, 0, 0, false));
+        assertEquals(1, liveObjectsOfType(objectManager, Class.forName(DEFEAT_DEBRIS_CLASS)).size(),
+                "diverge step should leave one unrelated ICZ defeat debris before restore");
+
+        rewindRegistry.restore(snapshot);
+
+        ObjectInstance restoredDebris =
+                objectByIdOfType(objectManager, Class.forName(DEFEAT_DEBRIS_CLASS), debrisId);
+        assertEquals(1, liveObjectsOfType(objectManager, Class.forName(DEFEAT_DEBRIS_CLASS)).size(),
+                "restore must keep exactly the captured ICZ defeat debris");
+        assertNotSame(sourceDebris, restoredDebris, "restore must recreate ICZ defeat debris");
+        assertNotSame(divergentDebris, restoredDebris, "restore must drop divergent ICZ defeat debris");
+        assertEquals(0x4420, restoredDebris.getSpawn().x());
+        assertEquals(0x0390, restoredDebris.getSpawn().y());
+        assertEquals(3, readIntField(restoredDebris, "frame"));
+        assertTrue(readBooleanField(restoredDebris, "flipX"));
+        assertFalse(readBooleanField(restoredDebris, "visible"));
+        assertEquals(0x0180, readIntField(readObjectField(restoredDebris, "motionState"), "xVel"));
+        assertEquals(-0x0300, readIntField(readObjectField(restoredDebris, "motionState"), "yVel"));
+        assertEquals(0x38, readIntField(restoredDebris, "gravity"));
+    }
+
+    @Test
     void captureFailsWhenIczEndBossSnowdustEmitterHasNoRewindIdentity() throws Exception {
         Harness harness = Harness.create();
         IczEndBossInstance boss = harness.objectManager().createDynamicObject(
@@ -268,6 +309,19 @@ class TestS3kIczEndBossGraphRewind {
 
     private static Object readObjectField(Object target, String name) throws Exception {
         return field(target, name).get(target);
+    }
+
+    private static ObjectInstance constructDefeatDebris(
+            int x, int y, int xVel, int yVel, int frame, boolean flipX) {
+        try {
+            Class<?> cls = Class.forName(DEFEAT_DEBRIS_CLASS);
+            Constructor<?> ctor = cls.getDeclaredConstructor(
+                    int.class, int.class, int.class, int.class, int.class, boolean.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(x, y, xVel, yVel, frame, flipX);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct ICZ defeat debris", e);
+        }
     }
 
     private static int readIntField(Object target, String name) throws Exception {

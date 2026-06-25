@@ -20,7 +20,11 @@ import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.ZeroArgRewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -930,7 +934,8 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         return highPriority;
     }
 
-    private static final class MhzEndBossSidekickLockChild extends AbstractObjectInstance {
+    private static final class MhzEndBossSidekickLockChild extends AbstractObjectInstance
+            implements ZeroArgRewindRecreatable {
         private boolean lockIssued;
 
         private MhzEndBossSidekickLockChild() {
@@ -990,16 +995,23 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         }
     }
 
-    private static final class MhzEndBossWalkoffPrepChild extends AbstractObjectInstance {
+    private static final class MhzEndBossWalkoffPrepChild extends AbstractObjectInstance
+            implements RewindRecreatable {
         private static final int WALKOFF_PREP_X = 0x4600;
 
-        private final MhzEndBossInstance parent;
+        private MhzEndBossInstance parent;
         private boolean forcingWalkoff;
 
         private MhzEndBossWalkoffPrepChild(MhzEndBossInstance parent) {
             super(new ObjectSpawn(0, 0, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0),
                     "MHZEndBossWalkoffPrep");
             this.parent = parent;
+        }
+
+        @Override
+        public MhzEndBossWalkoffPrepChild recreateForRewind(RewindRecreateContext ctx) {
+            return new MhzEndBossWalkoffPrepChild(
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, MhzEndBossInstance.class));
         }
 
         @Override
@@ -1047,7 +1059,8 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         }
     }
 
-    private static final class MhzEndBossPlayerTwoCarryChild extends AbstractObjectInstance {
+    private static final class MhzEndBossPlayerTwoCarryChild extends AbstractObjectInstance
+            implements ZeroArgRewindRecreatable {
         private boolean initialized;
 
         private MhzEndBossPlayerTwoCarryChild() {

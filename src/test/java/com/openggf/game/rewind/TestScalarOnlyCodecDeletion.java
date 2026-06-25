@@ -3363,6 +3363,17 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardInstance",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_MHZ_END_BOSS_CONTROLLER_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossSidekickLockChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossPlayerTwoCarryChild",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_NESTED_HURTBOX_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
@@ -3378,6 +3389,12 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S3K),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.MgzMinibossInstance$MgzBossCameraScrollHelper",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild",
                     GameId.S3K),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild",
@@ -10673,6 +10690,29 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K MHZ escape-shard graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K MHZ end-boss controller graph batch: invisible control helpers
+    // =====================================================================
+
+    @Test
+    void s3kMhzEndBossControllerGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_END_BOSS_CONTROLLER_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K MHZ end-boss controller graph batch");
+        }
+    }
+
+    @Test
+    void s3kMhzEndBossControllerGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_END_BOSS_CONTROLLER_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MHZ end-boss controller generic recreate, not a dynamic codec");
         }
     }
 

@@ -21,6 +21,7 @@ import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
@@ -1270,12 +1271,17 @@ public final class IczEndBossInstance extends AbstractBossInstance
         return getBottomChildYForTesting();
     }
 
-    private static final class IczEndBossDefeatDebrisChild extends GravityDebrisChild {
+    private static final class IczEndBossDefeatDebrisChild extends GravityDebrisChild
+            implements SpawnCoordinateZeroScalarArgsRewindRecreatable {
         private static final int GRAVITY = 0x38;
 
         private int frame;
         private boolean flipX;
         private boolean visible = true;
+
+        private IczEndBossDefeatDebrisChild(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(), 0, 0, 0, false);
+        }
 
         private IczEndBossDefeatDebrisChild(int x, int y, int xVel, int yVel, int frame, boolean flipX) {
             super(new ObjectSpawn(x, y, Sonic3kObjectIds.ICZ_END_BOSS, 0, 0, false, 0),

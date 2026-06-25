@@ -504,13 +504,16 @@ public class TestRewindHarnessCoverageRatchet {
    *       spawn-based generic recreate coverage.</li>
    *   <li>2026-06-25: raised to 635 after MGZ miniboss debris, defeat
    *       fragments, and camera scroll helper gained generic recreate coverage.</li>
+   *   <li>2026-06-25: raised to 639 after HCZ vortex bubbles, ICZ defeat
+   *       debris, and MHZ end-boss controllers gained graph-backed generic
+   *       recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 635 after MGZ miniboss tail objects gained generic recreate coverage.
-    static final int RATCHET_FLOOR = 635;
+    // 2026-06-25: raised to 639 after S3K late-boss tail objects gained generic recreate coverage.
+    static final int RATCHET_FLOOR = 639;
 
     @BeforeEach
     void initHeadless() {

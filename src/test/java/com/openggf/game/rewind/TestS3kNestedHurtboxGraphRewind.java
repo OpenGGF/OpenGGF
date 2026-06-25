@@ -46,6 +46,8 @@ class TestS3kNestedHurtboxGraphRewind {
             "com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild";
     private static final String MGZ_CAMERA_SCROLL_HELPER_CLASS =
             "com.openggf.game.sonic3k.objects.MgzMinibossInstance$MgzBossCameraScrollHelper";
+    private static final String HCZ_VORTEX_BUBBLE_CLASS =
+            "com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild";
     private static final String ICZ_HURT_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild";
     private static final String ICZ_TENSION_SUPPORT_CLASS =
@@ -55,6 +57,8 @@ class TestS3kNestedHurtboxGraphRewind {
 
     private static final ObjectSpawn MGZ_BOSS_SPAWN =
             new ObjectSpawn(0x0300, 0x0200, Sonic3kObjectIds.MGZ_MINIBOSS, 0, 0, false, 10);
+    private static final ObjectSpawn HCZ_BOSS_SPAWN =
+            new ObjectSpawn(0x0500, 0x0200, Sonic3kObjectIds.HCZ_MINIBOSS, 0, 0, false, 12);
     private static final ObjectSpawn ICZ_SPIKE_A =
             new ObjectSpawn(0x0120, 0x0180, Sonic3kObjectIds.ICZ_ICE_SPIKES, 0, 0, false, 20);
     private static final ObjectSpawn ICZ_SPIKE_B =
@@ -257,6 +261,46 @@ class TestS3kNestedHurtboxGraphRewind {
         assertEquals(4, readIntField(restoredPlatform, "routine"));
         assertEquals(0x55, readIntField(restoredPlatform, "timer"));
         assertEquals(0x2E00, readIntField(restoredScrollHelper, "targetX"));
+    }
+
+    @Test
+    void hczVortexBubbleRestoresFreshAndPreservesPullState() {
+        Harness harness = Harness.create(List.of(HCZ_BOSS_SPAWN));
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        ObjectInstance sourceBubble = objectManager.createDynamicObject(
+                () -> constructHczVortexBubble(0x0520, 0x01E0, 2, 0x0500, 0x0200));
+        setIntField(sourceBubble, "phase", 1);
+        setIntField(sourceBubble, "timer", 0x16);
+        setShortField(sourceBubble, "xVel", (short) 0x0120);
+        setBooleanField(sourceBubble, "vortexEnded", true);
+
+        ObjectRefId bubbleId = objectId(objectManager, sourceBubble);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.removeDynamicObject(sourceBubble);
+        ObjectInstance divergentBubble = objectManager.createDynamicObject(
+                () -> constructHczVortexBubble(0x0600, 0x01A0, 0, 0x0600, 0x01A0));
+        assertEquals(1, liveObjectsByName(objectManager, HCZ_VORTEX_BUBBLE_CLASS).size(),
+                "diverge step should leave one unrelated HCZ vortex bubble before restore");
+
+        rewindRegistry.restore(snapshot);
+
+        ObjectInstance restoredBubble = objectById(objectManager, bubbleId);
+        assertEquals(1, liveObjectsByName(objectManager, HCZ_VORTEX_BUBBLE_CLASS).size(),
+                "restore must keep exactly the captured HCZ vortex bubble");
+        assertNotSame(sourceBubble, restoredBubble, "restore must recreate the HCZ vortex bubble");
+        assertNotSame(divergentBubble, restoredBubble, "restore must drop the divergent HCZ vortex bubble");
+        assertEquals(0x0520, restoredBubble.getSpawn().x());
+        assertEquals(0x01E0, restoredBubble.getSpawn().y());
+        assertEquals(2, readIntField(restoredBubble, "frame"));
+        assertEquals(0x0500, readIntField(restoredBubble, "vortexX"));
+        assertEquals(0x0200, readIntField(restoredBubble, "vortexY"));
+        assertEquals(1, readIntField(restoredBubble, "phase"));
+        assertEquals(0x16, readIntField(restoredBubble, "timer"));
+        assertEquals(0x0120, readShortField(restoredBubble, "xVel"));
+        assertTrue(readBooleanField(restoredBubble, "vortexEnded"));
     }
 
     @Test
@@ -659,6 +703,19 @@ class TestS3kNestedHurtboxGraphRewind {
         }
     }
 
+    private static ObjectInstance constructHczVortexBubble(
+            int x, int y, int frame, int vortexX, int vortexY) {
+        try {
+            Class<?> cls = Class.forName(HCZ_VORTEX_BUBBLE_CLASS);
+            Constructor<?> ctor =
+                    cls.getDeclaredConstructor(int.class, int.class, int.class, int.class, int.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(x, y, frame, vortexX, vortexY);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct HCZ vortex bubble", e);
+        }
+    }
+
     private static ObjectInstance constructIczHurtChild(
             IczIceSpikesObjectInstance parent, int x, int y) {
         try {
@@ -723,6 +780,14 @@ class TestS3kNestedHurtboxGraphRewind {
         }
     }
 
+    private static short readShortField(Object target, String fieldName) {
+        try {
+            return findField(target.getClass(), fieldName).getShort(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
+        }
+    }
+
     private static Object readObjectField(Object target, String fieldName) {
         try {
             return findField(target.getClass(), fieldName).get(target);
@@ -742,6 +807,14 @@ class TestS3kNestedHurtboxGraphRewind {
     private static void setBooleanField(Object target, String fieldName, boolean value) {
         try {
             findField(target.getClass(), fieldName).setBoolean(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static void setShortField(Object target, String fieldName, short value) {
+        try {
+            findField(target.getClass(), fieldName).setShort(target, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
         }
