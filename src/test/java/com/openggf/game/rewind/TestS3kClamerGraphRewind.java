@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kClamerGraphRewind {
@@ -124,6 +125,22 @@ class TestS3kClamerGraphRewind {
                 "Clamer must not keep an explicit S3K dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(SPRING_CLASS),
                 "Clamer spring must not keep an explicit S3K dynamic codec");
+    }
+
+    @Test
+    void clamerSpringSlotFailsLoudlyWhenTargetHasNoRewindIdentity() {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        objectManager.update(harness.camera().getX(), null, List.of(), 0);
+        ClamerObjectInstance sourceClamer = only(objectManager, ClamerObjectInstance.class);
+        ObjectInstance unmanagedSpring = constructSpring(sourceClamer);
+        writeObjectField(sourceClamer, "springChildSlot", unmanagedSpring);
+
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        IllegalStateException thrown = assertThrows(IllegalStateException.class, rewindRegistry::capture);
+        assertTrue(thrown.getMessage().contains("no registered id for object reference"),
+                "capturing an unmanaged Clamer springChildSlot reference must fail loudly");
     }
 
     private record Harness(ObjectManager objectManager, Camera camera, ObjectServices services) {
@@ -258,6 +275,15 @@ class TestS3kClamerGraphRewind {
     private static void writeBooleanField(Object target, String name, boolean value) throws Exception {
         Field field = field(target, name);
         field.setBoolean(target, value);
+    }
+
+    private static void writeObjectField(Object target, String name, Object value) {
+        try {
+            Field field = field(target, name);
+            field.set(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + name + " on " + target.getClass(), e);
+        }
     }
 
     private static Field field(Object target, String name) throws NoSuchFieldException {

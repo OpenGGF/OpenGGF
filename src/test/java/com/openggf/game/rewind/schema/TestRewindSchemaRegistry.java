@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.objects.FallingPillarObjectInstance;
 import com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance;
 import com.openggf.game.sonic2.objects.SidewaysPformObjectInstance;
 import com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance;
+import com.openggf.game.sonic3k.objects.ClamerObjectInstance;
 import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance;
@@ -191,6 +192,17 @@ class TestRewindSchemaRegistry {
         assertPolicy(schema, "blockingWall", RewindFieldPolicy.CAPTURED);
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "CNZ2 Knuckles cutscene compact schema must capture the blocking wall link without fallback: "
+                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesClamerSpringChildSlot() {
+        RewindClassSchema schema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(ClamerObjectInstance.class);
+
+        assertPolicy(schema, "springChildSlot", RewindFieldPolicy.CAPTURED);
+        assertTrue(schema.unsupportedFields().isEmpty(),
+                "Clamer compact schema must capture springChildSlot without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 
