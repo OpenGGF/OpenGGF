@@ -54,7 +54,6 @@ com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$ArrowChild#recreate
 com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance$MantisChild#recreate
-com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance$ShellChild#recreate
 com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild#recreate

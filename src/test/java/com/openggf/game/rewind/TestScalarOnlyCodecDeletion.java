@@ -2797,6 +2797,11 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_MEGA_CHOPPER_BATCH222_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance",
@@ -9062,6 +9067,35 @@ public class TestScalarOnlyCodecDeletion {
                 candidate.fqn()
                         + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                         + result);
+    }
+
+    @Test
+    void s3kMegaChopperBatch222ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MEGA_CHOPPER_BATCH222_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K MegaChopper batch 222");
+        }
+    }
+
+    @Test
+    void s3kMegaChopperBatch222ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MEGA_CHOPPER_BATCH222_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MegaChopper batch 222 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMegaChopperBatch222ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MEGA_CHOPPER_BATCH222_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
     }
 
     // =====================================================================

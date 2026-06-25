@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K MegaChopper rewind:** MegaChopper now restores through the generic spawn recreate path, clearing its stale recreate coverage-baseline gap.
 - **S3K Turbo Spiker graph rewind:** Turbo Spiker parents, trail emitters, and hidden waterfall overlays now restore through generic recreate with shell and parent links relinked to restored objects.
 - **S3K Spiker graph rewind:** Spiker parents and side launchers now restore through generic recreate with parent child slots relinked to restored children.
 - **S3K Dragonfly graph rewind:** Dragonfly parents and wing children now restore through generic recreate with wing parent links relinked to restored instances.
