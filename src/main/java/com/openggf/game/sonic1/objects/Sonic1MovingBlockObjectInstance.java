@@ -251,6 +251,24 @@ public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // ROM MBlock_Platform (routine 2) passes `move.b obActWid(a0),d1` directly
+        // into PlatformObject, whose X-range landing check uses that d1 as the full
+        // landing half-width (`add.w d1,d0 / bmi Plat_Exit; add.w d1,d1 / cmp d1,d0
+        // / bhs Plat_Exit` -> land range [objX-obActWid, objX+obActWid),
+        // docs/s1disasm/_incObj/52 Moving Blocks.asm:57-61; sub PlatformObject.asm:27-34).
+        // obActWid (0x10 here) is already the standable half-width, so it must NOT
+        // receive the generic SolidObjectFull `-$B` narrowing (which would shrink the
+        // landing width to obActWid-0xB=0x5). Without this, a player landing more than
+        // 5px from the block centre was rejected -- MZ3 f8646: a falling rolling player
+        // at relX 0xC from the rightward moving block (Obj 0x52 @0x1289) was outside the
+        // narrowed 0x5 landing width, so resolveContact returned no contact and he fell
+        // through. Same obActWid-direct landing-width pattern as the swing platform and
+        // CollapsingFloor PlatformObject paths.
+        return true;
+    }
+
+    @Override
     public boolean carriesAirborneRiderAfterExitPlatform() {
         return true;
     }
