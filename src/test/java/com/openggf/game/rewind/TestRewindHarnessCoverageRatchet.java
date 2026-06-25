@@ -435,13 +435,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       fan graph proof.</li>
     *   <li>2026-06-25: raised to 544 after S3K MGZ pulley parent restore
     *       gained generic recreate coverage under the pulley-chain graph proof.</li>
+    *   <li>2026-06-25: raised to 572 after S2 launcher objects gained
+    *       graph-tested generic recreate coverage with player-state map relinking.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 568 after S1 Scrap Eggman graph restore coverage.
-    static final int RATCHET_FLOOR = 568;
+    // 2026-06-25: raised to 572 after S2 launcher graph restore coverage.
+    static final int RATCHET_FLOOR = 572;
 
     @BeforeEach
     void initHeadless() {

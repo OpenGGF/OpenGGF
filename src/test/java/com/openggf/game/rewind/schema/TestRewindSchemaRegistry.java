@@ -5,7 +5,10 @@ import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance;
 import com.openggf.game.sonic2.objects.FallingPillarObjectInstance;
+import com.openggf.game.sonic2.objects.LauncherBallObjectInstance;
+import com.openggf.game.sonic2.objects.LauncherSpringObjectInstance;
 import com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance;
+import com.openggf.game.sonic2.objects.OOZLauncherObjectInstance;
 import com.openggf.game.sonic2.objects.SidewaysPformObjectInstance;
 import com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
@@ -260,6 +263,12 @@ class TestRewindSchemaRegistry {
     void exactDefaultObjectPolicyCapturesPlayerReferenceLinks() {
         RewindClassSchema grabberSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(GrabberBadnikInstance.class);
+        RewindClassSchema launcherBallSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(LauncherBallObjectInstance.class);
+        RewindClassSchema launcherSpringSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(LauncherSpringObjectInstance.class);
+        RewindClassSchema oozLauncherSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(OOZLauncherObjectInstance.class);
         RewindClassSchema parachuteSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(MhzMushroomParachuteObjectInstance.class);
         RewindClassSchema stickyVineSchema =
@@ -274,6 +283,11 @@ class TestRewindSchemaRegistry {
 
         assertPolicy(grabberSchema, "grabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(grabberSchema, "pendingGrabPlayer", RewindFieldPolicy.CAPTURED);
+        assertPolicy(launcherBallSchema, "playerCooldowns", RewindFieldPolicy.CAPTURED);
+        assertPolicy(launcherBallSchema, "playerStates", RewindFieldPolicy.CAPTURED);
+        assertPolicy(launcherBallSchema, "playerVelocities", RewindFieldPolicy.CAPTURED);
+        assertPolicy(launcherSpringSchema, "playerStates", RewindFieldPolicy.CAPTURED);
+        assertPolicy(oozLauncherSchema, "playerStates", RewindFieldPolicy.CAPTURED);
         assertPolicy(parachuteSchema, "grabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(parachuteSchema, "nativeP2GrabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(stickyVineSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
@@ -283,6 +297,15 @@ class TestRewindSchemaRegistry {
         assertTrue(grabberSchema.unsupportedFields().isEmpty(),
                 "Grabber compact schema must capture player refs without fallback: "
                         + grabberSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(launcherBallSchema.unsupportedFields().isEmpty(),
+                "Launcher ball compact schema must capture player refs without fallback: "
+                        + launcherBallSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(launcherSpringSchema.unsupportedFields().isEmpty(),
+                "Launcher spring compact schema must capture player refs without fallback: "
+                        + launcherSpringSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(oozLauncherSchema.unsupportedFields().isEmpty(),
+                "OOZ launcher compact schema must capture player refs without fallback: "
+                        + oozLauncherSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
         assertTrue(parachuteSchema.unsupportedFields().isEmpty(),
                 "MHZ mushroom parachute compact schema must capture player refs without fallback: "
                         + parachuteSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());

@@ -43,7 +43,7 @@ import java.util.Map;
  * <b>Disassembly Reference:</b> s2.asm obj85 (loc_2AD26 - loc_2AE76)
  */
 public class LauncherSpringObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // Subtype constants
     // Note: Bit 7 (0x80) indicates "slope running" mode for diagonal springs,
@@ -110,6 +110,11 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         this.baseY = spawn.y();
         this.currentSpriteX = spawn.x();
         this.currentSpriteY = spawn.y();
+    }
+
+    @Override
+    public LauncherSpringObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new LauncherSpringObjectInstance(ctx.spawn(), "LauncherSpring");
     }
 
     /**

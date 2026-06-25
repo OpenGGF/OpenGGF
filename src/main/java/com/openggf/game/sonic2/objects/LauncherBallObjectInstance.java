@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -35,7 +37,7 @@ import java.util.logging.Logger;
  *   <li>6 - COOLDOWN: Brief cooldown before returning to detection</li>
  * </ul>
  */
-public class LauncherBallObjectInstance extends AbstractObjectInstance {
+public class LauncherBallObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(LauncherBallObjectInstance.class.getName());
 
     // Player states (matches ROM objoff_2C/objoff_36 values)
@@ -123,6 +125,11 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
         startFrame = START_FRAMES[propIndex];
         mappingFrame = startFrame;
         animFrameDuration = 0;
+    }
+
+    @Override
+    public LauncherBallObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new LauncherBallObjectInstance(ctx.spawn(), "LauncherBall");
     }
 
     @Override

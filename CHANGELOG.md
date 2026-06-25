@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S2 launcher graph rewind:** launcher balls, launcher springs, OOZ launchers, and OOZ launcher fragments now restore through generic recreate while player-state maps relink to the current live player instances.
 - **S1 Scrap Eggman graph rewind:** SBZ2 Scrap Eggman and its button child now restore through generic recreate with child-first restore ordering relinked to restored instances.
 - **S2 DEZ Eggman graph rewind:** the transition Eggman root and barrier-wall child now restore through generic recreate with the wall link relinked to restored instances.
 - **S2 MTZ boss graph rewind:** MTZ boss roots, laser shooter children, and orbiting shield orbs now restore through generic recreate with child references relinked to restored boss instances.
