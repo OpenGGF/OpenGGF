@@ -969,6 +969,21 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // The FZ boss combat body uses plain SolidObject (BossFinal_Eggman_Crush ->
+        // loc_19F2E jsr (SolidObject), docs/s1disasm/_incObj/85,84,86 Boss - FZ Main,
+        // Cylinders, and Plasma Balls.asm:177-182). SolidObject's right-edge X gate is
+        // `cmp.w d3,d0 / bhi.w Solid_NoCollision` (docs/s1disasm/_incObj/sub
+        // SolidObject.asm:167-168), where bhi is exclusive-greater — so the exact-edge
+        // case relX == width*2 (d0 == d3) IS a valid contact. The engine's default
+        // exclusive gate (relX >= width*2 -> no contact) rejected the frame Sonic's
+        // rolling jump grazes the boss's right edge (player center == bossX + $2B), so
+        // the +$300 rolling-into-boss bounce fired one frame late (FZ trace f837 -> f838).
+        // Opting into the ROM-faithful inclusive right edge restores the f837 bounce.
+        return true;
+    }
+
+    @Override
     public int getTopLandingHalfWidth(PlayableEntity playerEntity, int collisionHalfWidth) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (state.routineSecondary == STATE_CYLINDER_ATTACK) {
