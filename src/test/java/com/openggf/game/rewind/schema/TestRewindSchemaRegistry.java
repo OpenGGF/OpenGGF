@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.objects.FallingPillarObjectInstance;
 import com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance;
 import com.openggf.game.sonic2.objects.SidewaysPformObjectInstance;
 import com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance;
+import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
@@ -152,6 +153,17 @@ class TestRewindSchemaRegistry {
         assertPolicy(schema, "monitorContentsSlot", RewindFieldPolicy.CAPTURED);
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "S3K monitor compact schema must capture the contents slot without fallback: "
+                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesCnz2CutsceneButtonFlashLink() {
+        RewindClassSchema schema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(Cnz2CutsceneButtonInstance.class);
+
+        assertPolicy(schema, "spawnedFlash", RewindFieldPolicy.CAPTURED);
+        assertTrue(schema.unsupportedFields().isEmpty(),
+                "CNZ2 cutscene button compact schema must capture the spawned flash link without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 

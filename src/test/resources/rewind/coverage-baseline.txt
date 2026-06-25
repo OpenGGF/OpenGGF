@@ -49,8 +49,6 @@ com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#recreate
 com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance#recreate
 com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment#recreate
 com.openggf.game.sonic3k.objects.ClamerObjectInstance#objectRef#springChildSlot
-com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance#objectRef#spawnedFlash
-com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance#recreate
 com.openggf.game.sonic3k.objects.CnzCannonInstance#objectRef#releasedPlayer
 com.openggf.game.sonic3k.objects.CnzCylinderInstance#objectRef#releasedJumpSolidSkipPlayer
 com.openggf.game.sonic3k.objects.CnzMinibossInstance#recreate

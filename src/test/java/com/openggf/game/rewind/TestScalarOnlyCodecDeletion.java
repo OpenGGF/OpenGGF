@@ -116,6 +116,7 @@ import com.openggf.game.sonic3k.objects.AnimatedStillSpriteInstance;
 import com.openggf.game.sonic3k.objects.AutoSpinObjectInstance;
 import com.openggf.game.sonic3k.objects.AutomaticTunnelObjectInstance;
 import com.openggf.game.sonic3k.objects.BubblerObjectInstance;
+import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzBalloonInstance;
 import com.openggf.game.sonic3k.objects.CnzBarberPoleObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzGiantWheelInstance;
@@ -3153,6 +3154,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S3K_SS_ENTRY_FLASH_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(Sonic3kSSEntryFlashObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_CNZ2_CUTSCENE_BUTTON_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Cnz2CutsceneButtonInstance.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -11137,6 +11141,28 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K SS-entry flash graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K CNZ2 cutscene button graph support: parent-side spawned-flash link
+    // =====================================================================
+
+    @Test
+    void s3kCnz2CutsceneButtonGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ2_CUTSCENE_BUTTON_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K CNZ2 button graph deletion");
+        }
+    }
+
+    @Test
+    void s3kCnz2CutsceneButtonGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ2_CUTSCENE_BUTTON_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K CNZ2 button graph generic recreate, not a dynamic codec");
         }
     }
 
