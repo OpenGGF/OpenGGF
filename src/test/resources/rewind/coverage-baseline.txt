@@ -21,5 +21,3 @@ com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebri
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossPlayerTwoCarryChild#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossSidekickLockChild#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild#recreate
-com.openggf.level.objects.BreathingBubbleInstance#recreate
-com.openggf.level.objects.SplashObjectInstance#recreate

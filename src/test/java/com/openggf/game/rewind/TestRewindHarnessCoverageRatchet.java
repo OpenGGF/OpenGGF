@@ -495,13 +495,16 @@ public class TestRewindHarnessCoverageRatchet {
    *   <li>2026-06-25: raised to 622 after S2 rising-pillar and
    *       smashable-ground debris fragments gained spawn-encoded generic
    *       recreate coverage.</li>
+   *   <li>2026-06-25: raised to 624 after shared breathing-bubble and
+   *       water-splash effects gained spawn-encoded generic recreate
+   *       coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 622 after S2 debris fragments gained generic recreate coverage.
-    static final int RATCHET_FLOOR = 622;
+    // 2026-06-25: raised to 624 after shared water effects gained generic recreate coverage.
+    static final int RATCHET_FLOOR = 624;
 
     @BeforeEach
     void initHeadless() {

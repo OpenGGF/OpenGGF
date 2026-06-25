@@ -1446,6 +1446,12 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> SHARED_PLACEHOLDER_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(PlaceholderObjectInstance.class.getName(), GameId.S2));
 
+    private static final List<CodecDeletionCandidate> SHARED_WATER_EFFECT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.level.objects.BreathingBubbleInstance", GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.level.objects.SplashObjectInstance", GameId.S2));
+
     private static final List<CodecDeletionCandidate> S2_SPEED_LAUNCHER_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance", GameId.S2));
@@ -7774,6 +7780,37 @@ public class TestScalarOnlyCodecDeletion {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn() + " should round-trip through shared placeholder generic recreate");
+        }
+    }
+
+    // =====================================================================
+    // Shared water-effect generic recreate
+    // =====================================================================
+
+    @Test
+    void sharedWaterEffectClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : SHARED_WATER_EFFECT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after shared water-effect coverage");
+        }
+    }
+
+    @Test
+    void sharedWaterEffectClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : SHARED_WATER_EFFECT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through shared water-effect generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void sharedWaterEffectClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : SHARED_WATER_EFFECT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through shared water-effect generic recreate");
         }
     }
 

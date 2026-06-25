@@ -1112,10 +1112,10 @@ now have rewind codecs in `Sonic1ObjectRegistry` and are restored on a backward 
 
 ## Batch-6 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
 
-Two batch-6 cosmetic transient children are intentionally **not** captured/recreated across
-a held-rewind boundary (no rewind codec; their `#recreate` / `#finalScalar` keys stay in
-`src/test/resources/rewind/coverage-baseline.txt`). Both self-regenerate, hold no
-player/score/terrain state, and are structurally awkward to codec because their only
+One batch-6 cosmetic transient child is intentionally **not** captured/recreated across
+a held-rewind boundary (no rewind codec; its `#recreate` key stays in
+`src/test/resources/rewind/coverage-baseline.txt`). It self-regenerates, holds no
+player/score/terrain state, and is structurally awkward to codec because its only
 constructor takes the live player rather than an `ObjectSpawn`. This mirrors the AIZ2
 transient-children precedent and the batch-2/3/4/5 cosmetic cases above.
 
@@ -1128,11 +1128,10 @@ transient-children precedent and the batch-2/3/4/5 cosmetic cases above.
   `Sonic2SuperStateController` (not the power-up spawner), so a deferred player-bound codec
   would orphan the pending entry. Dropping it causes at most a brief cosmetic absence that
   naturally re-emits.
-- `com.openggf.level.objects.SplashObjectInstance` (water splash; spawned on the S2 power-up path
-  and the S3K HCZ miniboss path): a ~30-frame animation (10 frames x 3 ticks) that self-expires
-  via `ObjectLifetimeOps.expireDynamic(this)`, re-emitted on every water entry/exit. Its direct
-  S1 sibling `Sonic1SplashObjectInstance` is already an established accept-drop with the same
-  rationale. `facingLeft` is spawn-derivable and the renderer is transient.
+
+`com.openggf.level.objects.SplashObjectInstance` was originally classified here, but as of
+2026-06-25 it restores through generic recreate with `facingLeft` encoded in `ObjectSpawn`
+render flags and a transient renderer lookup from the focused player's dust controller.
 
 All other batch-6 S2 objects that were previously dropped now have rewind codecs in
 `Sonic2ObjectRegistry` and are restored on a backward seek: `RingPrizeObjectInstance` (CNZ
@@ -1166,19 +1165,11 @@ precedent and the batch-2/3/4/5/6 cosmetic cases above.
   not spawn-constructible anyway (super ctor passes `null` spawn, fixed screen-space coords, and it
   holds a live sibling `emeralds` ref + a renderer), so even if wired up it would need a sibling-relink
   codec, not an `exactSpawnCodec`. Accept-drop-as-baseline rather than adding a codec for dead code.
-- `com.openggf.level.objects.BreathingBubbleInstance` (game-agnostic underwater drowning bubble,
-  spawned by the shared `com.openggf.sprites.playable.DrowningController` for both S1 LZ Obj0A and S2
-  drowning; reported as S1 because its disasm refs/primary use are S1 LZ): a short-lived cosmetic
-  bubble/particle continuously re-emitted (every `nextBubbleTimer` frames) by `DrowningController`
-  while the player is submerged, holding no player/score/terrain state (the air timer lives on the
-  player). An `exactSpawnCodec` is impossible: the ctor takes 6 non-spawn args (`startsFacingLeft`,
-  `countdownNumber`, `artKey`, `countdownFrameMap`, `maxBubbleFrame`, `riseVelocity`) while
-  `ObjectSpawn` only carries x/y/objectId=0x0A/subtype=0 — the per-game art config and the RNG-gated
-  `countdownNumber` (a one-time snapshot of player air at spawn) are not spawn-derivable, and it is not
-  parent/sibling-linked. Its baseline keys (`#recreate` + `#finalScalar#maxBubbleFrame` +
-  `#finalScalar#riseVelocity`) stay in the baseline. Dropping it on rewind only briefly blanks bubbles
-  until the next in-frame emit, directly analogous to the accepted `Sonic1SplashObjectInstance`
-  precedent ("Batch-3 Rewind: Transient Cosmetic Children Not Rewound"). Accept-drop.
+
+`com.openggf.level.objects.BreathingBubbleInstance` was originally classified here, but as of
+2026-06-25 it restores through generic recreate. Its spawn now encodes the one-shot constructor
+state needed for faithful reconstruction: facing direction, countdown number, S1/S2 art profile,
+and rise velocity.
 
 All other batch-7 objects now have rewind codecs and are restored on a backward seek:
 `com.openggf.level.objects.boss.BossExplosionObjectInstance` (shared boss-defeat explosion,
