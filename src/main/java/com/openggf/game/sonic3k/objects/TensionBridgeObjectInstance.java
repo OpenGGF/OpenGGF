@@ -495,10 +495,10 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
      * ROM: no initial velocity, just MoveSprite gravity.
      */
     private static final class BridgeFragment extends GravityDebrisChild {
-        private final int frameIndex;
+        private int frameIndex;
         private int delay;
         private final String artKey;
-        private final boolean highPri;
+        private boolean highPri;
 
         private BridgeFragment(int x, int y, int frameIndex, int delay,
                                String artKey, boolean highPri) {

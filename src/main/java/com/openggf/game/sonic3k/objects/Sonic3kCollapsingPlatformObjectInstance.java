@@ -664,10 +664,10 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
      */
     public static class CollapsingPlatformFragment extends AbstractFallingFragment {
 
-        private final int fragmentFrameIndex;
-        private final int pieceIndex;
+        private int fragmentFrameIndex;
+        private int pieceIndex;
         private final String artKey;
-        private final boolean hFlip;
+        private boolean hFlip;
 
         public CollapsingPlatformFragment(int parentX, int parentY,
                                           int fragmentFrameIndex, int pieceIndex,

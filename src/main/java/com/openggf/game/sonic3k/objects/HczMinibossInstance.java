@@ -1373,9 +1373,9 @@ public class HczMinibossInstance extends AbstractBossInstance {
         private static final int PHASE_PULL = 0;
         private static final int PHASE_HOLD = 1;
         private static final int PHASE_DYING = 2;
-        private final int vortexX;
-        private final int vortexY;
-        private final int frame;
+        private int vortexX;
+        private int vortexY;
+        private int frame;
         private int phase;
         private int timer;
         private short xVel;

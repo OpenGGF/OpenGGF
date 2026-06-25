@@ -403,8 +403,8 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
         @RewindTransient(reason = "structural parent link used only to mirror Hyudoro_count on particle expiry")
         private final IczSnowPileObjectInstance parent;
         private final SubpixelMotion.State motion;
-        private final int mappingFrame;
-        private final int priorityBucket;
+        private int mappingFrame;
+        private int priorityBucket;
         private boolean enteredScreen;
         private boolean flickerBit;
         private boolean drawThisFrame = true;

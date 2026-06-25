@@ -98,9 +98,6 @@ com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance$HandLauncherArmCh
 com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance$WaterRushBlockChild#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScalar#frame
-com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScalar#vortexX
-com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScalar#vortexY
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#recreate
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration#recreate
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance#objectRef#lastCaptureCloud
@@ -118,8 +115,6 @@ com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#finalSca
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#objectRef#previous
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#objectRef#root
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#recreate
-com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#finalScalar#mappingFrame
-com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#finalScalar#priorityBucket
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#recreate
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance#recreate
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#finalScalar#hFlip
@@ -136,11 +131,6 @@ com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild#fina
 com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild#finalScalar#facingLeft
 com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild#finalScalar#nativeP1
 com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild#recreate
-com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance#finalScalar#baseX
-com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance#finalScalar#baseY
-com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance#finalScalar#heightPixels
-com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance#finalScalar#triggerIndex
-com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance#finalScalar#widthPixels
 com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance#recreate
 com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance#finalScalar#closedOnly
 com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance#objectRef#overlayChild
@@ -179,9 +169,6 @@ com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance#recreate
-com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#fragmentFrameIndex
-com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#finalScalar#pieceIndex
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#recreate
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#finalScalar#type
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#objectRef#monitorContentsSlot
@@ -196,8 +183,6 @@ com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#negativ
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#segmentCount
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#triggerIndex
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#recreate
-com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment#finalScalar#frameIndex
-com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment#finalScalar#highPri
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment#recreate
 com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$ArrowChild#recreate

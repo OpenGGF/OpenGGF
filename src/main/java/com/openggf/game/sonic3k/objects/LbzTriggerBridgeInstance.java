@@ -49,11 +49,11 @@ public final class LbzTriggerBridgeInstance extends AbstractObjectInstance imple
             { -0x48, 0x00, 0x08, 0x40, 0x06, 0x00, 0x04, 0x08 }
     };
 
-    private final int baseX;
-    private final int baseY;
-    private final int triggerIndex;
-    private final int widthPixels;
-    private final int heightPixels;
+    private int baseX;
+    private int baseY;
+    private int triggerIndex;
+    private int widthPixels;
+    private int heightPixels;
 
     private int routine;
     private int mappingFrame;
