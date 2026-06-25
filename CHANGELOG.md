@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K MGZ pulley scalar rewind cleanup:** pulley anchor, facing, and extension scalars now compact-restore without stale coverage-baseline keys.
 - **S3K mechanism-root scalar rewind cleanup:** MGZ top-launcher facing and tension-bridge constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S3K mechanism graph-scalar rewind cleanup:** ICZ segment-column roots, ICZ tension-platform supports, MGZ2 collapse solids, and HCZ end-boss turbine offsets now compact-restore without stale coverage-baseline keys.
 - **S3K graph-helper scalar rewind cleanup:** LBZ1 cutscene helpers, starpost orbit stars, and MHZ end-boss weather visual scalars now compact-restore without stale coverage-baseline keys.

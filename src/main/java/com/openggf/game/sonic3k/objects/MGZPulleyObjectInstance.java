@@ -73,10 +73,10 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
     private static final int PLAYER_SLOT_COUNT = 2;
     private static final int PLAYER_HANG_ANIM = Sonic3kAnimationIds.GET_UP.id();
 
-    private final int anchorX;
-    private final int anchorY;
-    private final boolean flipped;
-    private final int targetExtension;
+    private int anchorX;
+    private int anchorY;
+    private boolean flipped;
+    private int targetExtension;
     private final PulleyChainChild chainChild;
     private final AbstractPlayableSprite[] grabbedPlayers = new AbstractPlayableSprite[PLAYER_SLOT_COUNT];
     private final boolean[] grabbed = new boolean[PLAYER_SLOT_COUNT];
