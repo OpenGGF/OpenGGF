@@ -23,8 +23,11 @@ import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kCnzMechanismRewind {
@@ -37,14 +40,20 @@ class TestS3kCnzMechanismRewind {
             new ObjectSpawn(0x0600, 0x0200, Sonic3kObjectIds.CNZ_SPIRAL_TUBE, 0x02, 0, false, 93);
     private static final ObjectSpawn TELEPORTER_BEAM_SPAWN =
             new ObjectSpawn(0x0640, 0x0A38, 0, 0, 0, false, 94);
+    private static final ObjectSpawn TELEPORTER_SPAWN =
+            new ObjectSpawn(0x0640, 0x0A30, 0, 0, 0, false, 95);
     private static final ObjectSpawn TRAP_DOOR_SPAWN =
-            new ObjectSpawn(0x0680, 0x0240, Sonic3kObjectIds.CNZ_TRAP_DOOR, 0x00, 0, false, 95);
+            new ObjectSpawn(0x0680, 0x0240, Sonic3kObjectIds.CNZ_TRAP_DOOR, 0x00, 0, false, 96);
     private static final ObjectSpawn TRIANGLE_BUMPER_SPAWN =
-            new ObjectSpawn(0x0700, 0x0280, Sonic3kObjectIds.CNZ_TRIANGLE_BUMPER, 0x30, 0x03, false, 96);
+            new ObjectSpawn(0x0700, 0x0280, Sonic3kObjectIds.CNZ_TRIANGLE_BUMPER, 0x30, 0x03, false, 97);
     private static final ObjectSpawn VACUUM_TUBE_SPAWN =
-            new ObjectSpawn(0x0780, 0x02C0, Sonic3kObjectIds.CNZ_VACUUM_TUBE, 0x20, 0x01, false, 97);
+            new ObjectSpawn(0x0780, 0x02C0, Sonic3kObjectIds.CNZ_VACUUM_TUBE, 0x20, 0x01, false, 98);
     private static final ObjectSpawn WATER_LEVEL_BUTTON_SPAWN =
-            new ObjectSpawn(0x0800, 0x0300, Sonic3kObjectIds.CNZ_WATER_LEVEL_BUTTON, 0x00, 0, false, 98);
+            new ObjectSpawn(0x0800, 0x0300, Sonic3kObjectIds.CNZ_WATER_LEVEL_BUTTON, 0x00, 0, false, 99);
+    private static final ObjectSpawn DIVERGENT_TELEPORTER_SPAWN =
+            new ObjectSpawn(0x0100, 0x0100, 0, 0, 0, false, 109);
+    private static final ObjectSpawn DIVERGENT_TELEPORTER_BEAM_SPAWN =
+            new ObjectSpawn(0x0110, 0x0110, 0, 0, 0, false, 110);
 
     @BeforeEach
     void initHeadless() {
@@ -201,6 +210,8 @@ class TestS3kCnzMechanismRewind {
                 "CnzSpiralTubeInstance must restore through generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(CnzTeleporterBeamInstance.class),
                 "CnzTeleporterBeamInstance must restore through generic recreate");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(CnzTeleporterInstance.class),
+                "CnzTeleporterInstance must restore through generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(CnzTrapDoorInstance.class),
                 "CnzTrapDoorInstance must restore through generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(CnzTriangleBumperObjectInstance.class),
@@ -211,7 +222,91 @@ class TestS3kCnzMechanismRewind {
                 "CnzWaterLevelButtonInstance must restore through generic recreate");
     }
 
-    private record Harness(ObjectManager objectManager) {
+    @Test
+    void cnzTeleporterRestoresBeamLinkWithoutDropsDoublesOrStaleRefs() {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+
+        CnzTeleporterInstance sourceTeleporter = objectManager.createDynamicObject(
+                () -> new CnzTeleporterInstance(TELEPORTER_SPAWN));
+        CnzTeleporterBeamInstance sourceBeam = objectManager.createDynamicObject(
+                () -> new CnzTeleporterBeamInstance(TELEPORTER_BEAM_SPAWN));
+        setBooleanField(sourceTeleporter, "armed", true);
+        setBooleanField(sourceTeleporter, "paletteLine2Patched", true);
+        setBooleanField(sourceTeleporter, "teleportArtQueued", true);
+        setBooleanField(sourceTeleporter, "beamSpawned", true);
+        setBooleanField(sourceTeleporter, "playerCaptured", true);
+        setObjectField(sourceTeleporter, "beam", sourceBeam);
+        setIntField(sourceBeam, "beamCounter", CnzTeleporterBeamInstance.PLAYER_CAPTURE_COUNTER);
+
+        ObjectRefId teleporterId = objectId(objectManager, sourceTeleporter);
+        ObjectRefId beamId = objectId(objectManager, sourceBeam);
+        CompositeSnapshot snapshot = registryFor(objectManager).capture();
+
+        objectManager.removeDynamicObject(sourceBeam);
+        objectManager.removeDynamicObject(sourceTeleporter);
+        CnzTeleporterInstance divergentTeleporter = objectManager.createDynamicObject(
+                () -> new CnzTeleporterInstance(DIVERGENT_TELEPORTER_SPAWN));
+        CnzTeleporterBeamInstance divergentBeam = objectManager.createDynamicObject(
+                () -> new CnzTeleporterBeamInstance(DIVERGENT_TELEPORTER_BEAM_SPAWN));
+        setObjectField(divergentTeleporter, "beam", divergentBeam);
+
+        registryFor(objectManager).restore(snapshot);
+
+        assertEquals(1, liveObjects(objectManager, CnzTeleporterInstance.class).size(),
+                "restore must keep exactly the captured CNZ teleporter parent");
+        assertEquals(1, liveObjects(objectManager, CnzTeleporterBeamInstance.class).size(),
+                "restore must keep exactly the captured CNZ teleporter beam");
+        CnzTeleporterInstance restoredTeleporter =
+                objectById(objectManager, CnzTeleporterInstance.class, teleporterId);
+        CnzTeleporterBeamInstance restoredBeam =
+                objectById(objectManager, CnzTeleporterBeamInstance.class, beamId);
+        assertNotSame(sourceTeleporter, restoredTeleporter,
+                "restore must recreate the CNZ teleporter parent");
+        assertNotSame(sourceBeam, restoredBeam,
+                "restore must recreate the CNZ teleporter beam");
+        assertNotSame(divergentTeleporter, restoredTeleporter,
+                "restore must drop the divergent CNZ teleporter parent");
+        assertNotSame(divergentBeam, restoredBeam,
+                "restore must drop the divergent CNZ teleporter beam");
+        assertSame(restoredBeam, readObjectField(restoredTeleporter, "beam"),
+                "CNZ teleporter beam reference must resolve to the restored beam");
+        assertNotSame(sourceBeam, readObjectField(restoredTeleporter, "beam"),
+                "CNZ teleporter must not retain the stale pre-restore beam");
+        assertTrue(readBooleanField(restoredTeleporter, "armed"),
+                "teleporter armed state must restore from compact state");
+        assertTrue(readBooleanField(restoredTeleporter, "paletteLine2Patched"),
+                "teleporter palette state must restore from compact state");
+        assertTrue(readBooleanField(restoredTeleporter, "teleportArtQueued"),
+                "teleporter queued-art state must restore from compact state");
+        assertTrue(readBooleanField(restoredTeleporter, "beamSpawned"),
+                "teleporter beam-spawned state must restore from compact state");
+        assertTrue(readBooleanField(restoredTeleporter, "playerCaptured"),
+                "teleporter player-captured state must restore from compact state");
+        assertFalse(readBooleanField(restoredTeleporter, "playerHidden"),
+                "uncaptured teleporter player-hidden state must remain false");
+        assertEquals(CnzTeleporterBeamInstance.PLAYER_CAPTURE_COUNTER, restoredBeam.getBeamCounter(),
+                "beam counter must restore from compact state");
+    }
+
+    @Test
+    void captureFailsWhenCnzTeleporterBeamHasNoRewindIdentity() {
+        Harness harness = Harness.create();
+        CnzTeleporterInstance teleporter = harness.objectManager().createDynamicObject(
+                () -> new CnzTeleporterInstance(TELEPORTER_SPAWN));
+        CnzTeleporterBeamInstance unmanagedBeam = new CnzTeleporterBeamInstance(TELEPORTER_BEAM_SPAWN);
+        unmanagedBeam.setServices(harness.services());
+        setObjectField(teleporter, "beam", unmanagedBeam);
+
+        IllegalStateException thrown = assertThrows(
+                IllegalStateException.class,
+                registryFor(harness.objectManager())::capture);
+        assertTrue(thrown.getMessage().contains("no registered id for object reference"),
+                "missing CNZ teleporter beam identity must fail loudly");
+    }
+
+    private record Harness(ObjectManager objectManager, ObjectServices services) {
         static Harness create() {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCamera();
@@ -231,7 +326,7 @@ class TestS3kCnzMechanismRewind {
                     services);
             holder[0] = objectManager;
             objectManager.reset(0);
-            return new Harness(objectManager);
+            return new Harness(objectManager, services);
         }
     }
 
@@ -293,6 +388,38 @@ class TestS3kCnzMechanismRewind {
             return findField(target.getClass(), fieldName).getBoolean(target);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
+        }
+    }
+
+    private static Object readObjectField(Object target, String fieldName) {
+        try {
+            return findField(target.getClass(), fieldName).get(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
+        }
+    }
+
+    private static void setIntField(Object target, String fieldName, int value) {
+        try {
+            findField(target.getClass(), fieldName).setInt(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static void setBooleanField(Object target, String fieldName, boolean value) {
+        try {
+            findField(target.getClass(), fieldName).setBoolean(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static void setObjectField(Object target, String fieldName, Object value) {
+        try {
+            findField(target.getClass(), fieldName).set(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
         }
     }
 

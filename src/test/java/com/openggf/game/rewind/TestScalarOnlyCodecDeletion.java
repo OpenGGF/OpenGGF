@@ -132,6 +132,7 @@ import com.openggf.game.sonic3k.objects.CnzMinibossTopInstance;
 import com.openggf.game.sonic3k.objects.CnzRisingPlatformInstance;
 import com.openggf.game.sonic3k.objects.CnzSpiralTubeInstance;
 import com.openggf.game.sonic3k.objects.CnzTeleporterBeamInstance;
+import com.openggf.game.sonic3k.objects.CnzTeleporterInstance;
 import com.openggf.game.sonic3k.objects.CnzTrapDoorInstance;
 import com.openggf.game.sonic3k.objects.CnzTriangleBumperObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzVacuumTubeInstance;
@@ -1594,6 +1595,7 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(CnzHoverFanInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(CnzSpiralTubeInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(CnzTeleporterBeamInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(CnzTeleporterInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(CnzTrapDoorInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(CnzTriangleBumperObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(CnzVacuumTubeInstance.class.getName(), GameId.S3K),

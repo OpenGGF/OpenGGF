@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -44,7 +45,7 @@ import java.util.List;
  *   route and beam handoff, not the later visual cleanup policy</li>
  * </ul>
  */
-public final class CnzTeleporterInstance extends AbstractObjectInstance {
+public final class CnzTeleporterInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     /**
      * Verified arming threshold from {@code Obj_CNZTeleporter}.
      */
