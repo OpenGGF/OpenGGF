@@ -164,6 +164,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance", "pendingMainPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance", "pendingSidekickPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild", "followAnchor"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance", "pendingLaunchPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild", "parent"), RewindFieldPolicy.CAPTURED),

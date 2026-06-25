@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K Dragonfly graph rewind cleanup:** linked body follow-anchor references are now guarded as captured rewind identities, removing a stale object-ref baseline key while preserving loud missing-target failures.
 - **S3K Clamer graph rewind cleanup:** Clamer parents now capture their spring-child slot by rewind identity, keeping the existing graph restore proof without a stale object-ref baseline key.
 - **S3K MHZ1 cutscene graph rewind:** the MHZ1 cutscene button, spawned Knuckles actor, and peering child now restore through generic graph recreate while preserving their parent/back-reference links.
 - **S3K CNZ2 Knuckles cutscene graph rewind:** the first CNZ2 Knuckles cutscene parent now restores through generic graph recreate, preserves its blocking-wall link, and no longer requires stale object-ref/recreate baseline keys.

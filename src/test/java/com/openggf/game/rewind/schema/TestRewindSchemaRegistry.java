@@ -17,6 +17,7 @@ import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1PeerInstance;
 import com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
+import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance.LinkedBodyChild;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -203,6 +204,18 @@ class TestRewindSchemaRegistry {
         assertPolicy(schema, "springChildSlot", RewindFieldPolicy.CAPTURED);
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "Clamer compact schema must capture springChildSlot without fallback: "
+                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesDragonflyLinkedBodyFollowAnchor() {
+        RewindClassSchema schema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(LinkedBodyChild.class);
+
+        assertPolicy(schema, "parent", RewindFieldPolicy.CAPTURED);
+        assertPolicy(schema, "followAnchor", RewindFieldPolicy.CAPTURED);
+        assertTrue(schema.unsupportedFields().isEmpty(),
+                "Dragonfly linked body compact schema must capture parent/follow-anchor links without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 

@@ -282,6 +282,30 @@ class TestS3kBadnikChildGraphRewind {
                 "missing required object targets must fail loudly");
     }
 
+    @Test
+    void dragonflyFollowAnchorFailsForObjectWithoutRegisteredRewindIdentity() {
+        Harness harness = Harness.create(new MhzTestRegistry(), List.of(
+                new ObjectSpawn(0x120, 0x100, Sonic3kObjectIds.DRAGONFLY, 0, 0, false, 50)));
+        ObjectManager objectManager = harness.objectManager();
+        DragonflyBadnikInstance sourceParent = liveByType(objectManager, DragonflyBadnikInstance.class).getFirst();
+        sourceParent.update(0, player());
+        sourceParent.update(1, player());
+        ObjectInstance sourceSegment = segmentByParentAndIndex(
+                liveByClassName(objectManager, DRAGONFLY_LINKED_BODY_CHILD),
+                sourceParent,
+                1);
+        DragonflyBadnikInstance externalAnchor = new DragonflyBadnikInstance(new ObjectSpawn(
+                0x180, 0x110, Sonic3kObjectIds.DRAGONFLY, 0, 0, false, 51));
+        setObjectField(sourceSegment, "followAnchor", externalAnchor);
+        assertSame(externalAnchor, readObjectField(sourceSegment, "followAnchor"),
+                "precondition: linked body must hold a follow anchor outside ObjectManager identity registration");
+
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        IllegalStateException thrown = assertThrows(IllegalStateException.class, rewindRegistry::capture);
+        assertTrue(thrown.getMessage().contains("no registered id for object reference"),
+                "missing required Dragonfly follow-anchor targets must fail loudly");
+    }
+
     private static ObjectInstance instantiateSpikerTopSpikeChild(SpikerBadnikInstance parent) {
         try {
             Class<?> cls = Class.forName(SPIKER_TOP_SPIKE_CHILD);
@@ -368,6 +392,14 @@ class TestS3kBadnikChildGraphRewind {
     private static void setIntField(Object target, String fieldName, int value) {
         try {
             findField(target.getClass(), fieldName).setInt(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static void setObjectField(Object target, String fieldName, Object value) {
+        try {
+            findField(target.getClass(), fieldName).set(target, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
         }
