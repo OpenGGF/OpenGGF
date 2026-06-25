@@ -8,7 +8,6 @@ com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance#recreate
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#xOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#yOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#recreate
-com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance#recreate
 com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment#recreate
 com.openggf.game.sonic3k.objects.CnzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.CnzTeleporterInstance#recreate

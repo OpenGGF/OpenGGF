@@ -23,6 +23,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -33,7 +34,7 @@ import java.util.logging.Logger;
  * Object 0x05 - AIZ/LRZ/EMZ Rock (Sonic 3 & Knuckles).
  */
 public class AizLrzRockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(AizLrzRockObjectInstance.class.getName());
 

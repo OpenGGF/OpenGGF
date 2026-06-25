@@ -3017,6 +3017,11 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance$FallingBridgeSegment",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_AIZ_LRZ_ROCK_BATCH218_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_SPARKLE_CHILD_BATCH103_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance$SparkleLightningWarningChild",
@@ -9435,6 +9440,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kAizDrawBridgeBatch102ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_AIZ_DRAW_BRIDGE_BATCH102_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kAizLrzRockBatch218ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_LRZ_ROCK_BATCH218_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K AIZ/LRZ rock batch 218");
+        }
+    }
+
+    @Test
+    void s3kAizLrzRockBatch218ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_LRZ_ROCK_BATCH218_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K AIZ/LRZ rock batch 218 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kAizLrzRockBatch218ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_LRZ_ROCK_BATCH218_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

@@ -443,13 +443,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       generic recreate coverage with rider/cylinder player-link relinking.</li>
     *   <li>2026-06-25: raised to 575 after the S3K AIZ draw-bridge parent
     *       gained generic spawn recreate coverage.</li>
+    *   <li>2026-06-25: raised to 576 after the S3K AIZ/LRZ rock gained
+    *       generic spawn recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 575 after S3K AIZ draw-bridge parent restore coverage.
-    static final int RATCHET_FLOOR = 575;
+    // 2026-06-25: raised to 576 after S3K AIZ/LRZ rock restore coverage.
+    static final int RATCHET_FLOOR = 576;
 
     @BeforeEach
     void initHeadless() {
