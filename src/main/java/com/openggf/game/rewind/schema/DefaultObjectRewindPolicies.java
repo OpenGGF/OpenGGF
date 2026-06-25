@@ -149,6 +149,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance", "moveTable"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZLauncherObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SidewaysPformObjectInstance", "linkedPlatform"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SpiralObjectInstance", "cylinderAngles"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SpiralObjectInstance", "ridingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.bosses.ARZBossArrow", "mainBoss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.PointPokeyObjectInstance", "slotMachineManager"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.RivetObjectInstance", "lastNativeMainPlayer"), RewindFieldPolicy.TRANSIENT),

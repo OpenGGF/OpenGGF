@@ -11,6 +11,7 @@ import com.openggf.game.sonic2.objects.LauncherSpringObjectInstance;
 import com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance;
 import com.openggf.game.sonic2.objects.OOZLauncherObjectInstance;
 import com.openggf.game.sonic2.objects.SidewaysPformObjectInstance;
+import com.openggf.game.sonic2.objects.SpiralObjectInstance;
 import com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic3k.objects.ClamerObjectInstance;
@@ -272,6 +273,8 @@ class TestRewindSchemaRegistry {
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(OOZLauncherObjectInstance.class);
         RewindClassSchema flipperSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(FlipperObjectInstance.class);
+        RewindClassSchema spiralSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(SpiralObjectInstance.class);
         RewindClassSchema parachuteSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(MhzMushroomParachuteObjectInstance.class);
         RewindClassSchema stickyVineSchema =
@@ -294,6 +297,8 @@ class TestRewindSchemaRegistry {
         assertPolicy(flipperSchema, "launchCooldown", RewindFieldPolicy.CAPTURED);
         assertPolicy(flipperSchema, "lockedPlayerPrevSuppressed", RewindFieldPolicy.CAPTURED);
         assertPolicy(flipperSchema, "playerFlipperState", RewindFieldPolicy.CAPTURED);
+        assertPolicy(spiralSchema, "cylinderAngles", RewindFieldPolicy.CAPTURED);
+        assertPolicy(spiralSchema, "ridingPlayers", RewindFieldPolicy.CAPTURED);
         assertPolicy(parachuteSchema, "grabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(parachuteSchema, "nativeP2GrabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(stickyVineSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
@@ -315,6 +320,9 @@ class TestRewindSchemaRegistry {
         assertTrue(flipperSchema.unsupportedFields().isEmpty(),
                 "Flipper compact schema must capture player refs without fallback: "
                         + flipperSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(spiralSchema.unsupportedFields().isEmpty(),
+                "Spiral compact schema must capture player refs without fallback: "
+                        + spiralSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
         assertTrue(parachuteSchema.unsupportedFields().isEmpty(),
                 "MHZ mushroom parachute compact schema must capture player refs without fallback: "
                         + parachuteSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());

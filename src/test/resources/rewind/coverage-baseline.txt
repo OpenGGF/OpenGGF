@@ -3,7 +3,6 @@ com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
 com.openggf.game.sonic1.objects.bosses.SYZBossSpike#recreate
 com.openggf.game.sonic2.objects.RisingPillarObjectInstance$RisingPillarDebrisInstance#recreate
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance#recreate
-com.openggf.game.sonic2.objects.SpiralObjectInstance#recreate
 com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate
 com.openggf.game.sonic2.objects.TornadoObjectInstance#finalScalar#subtype
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance#recreate
