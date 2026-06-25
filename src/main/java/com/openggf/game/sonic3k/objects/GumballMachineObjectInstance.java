@@ -10,8 +10,11 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.SpriteMaskReplayRole;
 import com.openggf.game.GameRng;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -51,7 +54,7 @@ import java.util.logging.Logger;
  *   <li>Priority: $0100</li>
  * </ul>
  */
-public class GumballMachineObjectInstance extends AbstractObjectInstance {
+public class GumballMachineObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(GumballMachineObjectInstance.class.getName());
 
@@ -300,6 +303,41 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
 
     public GumballMachineObjectInstance(ObjectSpawn spawn) {
         super(spawn, "GumballMachine");
+    }
+
+    private static GumballMachineObjectInstance nearestMachine(RewindRecreateContext ctx) {
+        return nearestLive(ctx, GumballMachineObjectInstance.class, "gumball machine");
+    }
+
+    private static DispenserChild nearestDispenser(RewindRecreateContext ctx) {
+        return nearestLive(ctx, DispenserChild.class, "gumball dispenser");
+    }
+
+    private static <T extends ObjectInstance> T nearestLive(
+            RewindRecreateContext ctx,
+            Class<T> type,
+            String label) {
+        ObjectManager objectManager = ctx.objectServices() != null
+                ? ctx.objectServices().objectManager()
+                : null;
+        if (objectManager == null) {
+            throw new IllegalStateException("Missing ObjectManager while recreating " + label);
+        }
+        ObjectSpawn capturedSpawn = ctx.spawn();
+        return objectManager.getActiveObjects().stream()
+                .filter(type::isInstance)
+                .map(type::cast)
+                .filter(object -> !object.isDestroyed())
+                .min(java.util.Comparator.comparingInt(object -> distanceFromSpawn(object, capturedSpawn)))
+                .orElseThrow(() -> new IllegalStateException(
+                        "Missing restored " + label + " for GumballMachine rewind recreate"));
+    }
+
+    private static int distanceFromSpawn(ObjectInstance object, ObjectSpawn capturedSpawn) {
+        if (capturedSpawn == null) {
+            return 0;
+        }
+        return Math.abs(object.getX() - capturedSpawn.x()) + Math.abs(object.getY() - capturedSpawn.y());
     }
 
     private void spawnChildren() {
@@ -701,7 +739,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
      * from byte_61342 + sub_61320, and self-destroys.
      */
     static class DispenserChild extends AbstractObjectInstance
-            implements SolidObjectProvider, SolidObjectListener {
+            implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
         // ROM sub_61314: d1=$4B (halfWidth=75), d2=$10 (airHalfHeight=16), d3=$11 (groundHalfHeight=17)
         private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(75, 16, 17);
@@ -795,7 +833,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
      * 16 spawned when dispenser deletes. Each has a different subtype (0-15) giving
      * a unique position offset and timer duration.
      */
-    static class EjectionEffectChild extends AbstractObjectInstance {
+    static class EjectionEffectChild extends AbstractObjectInstance implements RewindRecreatable {
         private static final int MAPPING_FRAME = 0x15;
 
         // ROM byte_61342: 16 signed (dx, dy) offsets
@@ -819,6 +857,11 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
             int[] off = OFFSETS[subtype];
             drawX = spawn.x() + off[0];
             drawY = spawn.y() + off[1];
+        }
+
+        @Override
+        public EjectionEffectChild recreateForRewind(RewindRecreateContext ctx) {
+            return new EjectionEffectChild(ctx.spawn(), 0);
         }
 
         @Override
@@ -891,7 +934,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
      *       (clears parent bits 1+3) and returns to DORMANT.</li>
      * </ul>
      */
-    static class ContainerDisplayChild extends AbstractObjectInstance {
+    static class ContainerDisplayChild extends AbstractObjectInstance implements RewindRecreatable {
 
         // ROM byte_6145B pairs (frame, timer-value). Timer value+1 runs frames.
         private static final int[][] ANIM_PAIRS = {
@@ -900,8 +943,8 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
         private static final int IDLE_FRAME = 2;
 
         private enum State { DORMANT, ANIMATING }
-        private final GumballMachineObjectInstance parent;
-        private final int offsetFromMachine; // Y offset (ROM: +$24)
+        private GumballMachineObjectInstance parent;
+        private int offsetFromMachine; // Y offset (ROM: +$24)
         private State state = State.DORMANT;
         private int animStep;
         private int animTimer;
@@ -912,6 +955,11 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
             super(spawn, "GumballContainer");
             this.parent = parent;
             this.offsetFromMachine = offsetFromMachine;
+        }
+
+        @Override
+        public ContainerDisplayChild recreateForRewind(RewindRecreateContext ctx) {
+            return new ContainerDisplayChild(ctx.spawn(), nearestMachine(ctx), CONTAINER_OFFSET_Y);
         }
 
         @Override
@@ -1061,7 +1109,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
      * RawAni_61388 [0, 1, 0, $16], set by sub_61362 based on the child's
      * subtype (spawn slot index in ChildObjDat_613F8).
      */
-    static class PlatformChild extends AbstractObjectInstance {
+    static class PlatformChild extends AbstractObjectInstance implements RewindRecreatable {
 
         /** Y offset from the machine's savedY (machine-relative). */
         private int offsetFromMachine;
@@ -1073,6 +1121,16 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
             super(spawn, name);
             this.offsetFromMachine = offsetFromMachine;
             this.mappingFrame = mappingFrame;
+        }
+
+        private PlatformChild() {
+            this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0),
+                    "GumballPlatformRewind", 0, 0);
+        }
+
+        @Override
+        public PlatformChild recreateForRewind(RewindRecreateContext ctx) {
+            return new PlatformChild(ctx.spawn(), "GumballPlatformRewind", 0, 0);
         }
 
         @Override
@@ -1158,7 +1216,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
      * ROM priority $0180 → bucket 3 (between apparatus at bucket 2 and piles at
      * bucket 4). VDP priority 0 (LOW) — renders behind high-priority FG tiles.
      */
-    static class BodyOverlayChild extends AbstractObjectInstance {
+    static class BodyOverlayChild extends AbstractObjectInstance implements RewindRecreatable {
 
         private static final int MAPPING_FRAME = 0x17;
 
@@ -1168,6 +1226,11 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
         BodyOverlayChild(ObjectSpawn spawn, int offsetFromMachine) {
             super(spawn, "GumballBodyShine");
             this.offsetFromMachine = offsetFromMachine;
+        }
+
+        @Override
+        public BodyOverlayChild recreateForRewind(RewindRecreateContext ctx) {
+            return new BodyOverlayChild(ctx.spawn(), 0);
         }
 
         @Override
@@ -1243,7 +1306,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
      * groundHalfHeight=$10 (16).
      */
     static class GumballSpringChild extends AbstractObjectInstance
-            implements SolidObjectProvider, SolidObjectListener {
+            implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
         // ROM: Obj_Spring params — halfWidth=$1B, airHalfHeight=8, groundHalfHeight=$10
         private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(27, 8, 16);
@@ -1258,8 +1321,8 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
         // ROM: Map_Spring frames — frame 0 idle, frame 1 compressed (played on bounce)
         private static final int IDLE_FRAME = 0;
         private static final int COMPRESSED_FRAME = 1;
-        private final GumballMachineObjectInstance parent;
-        private final DispenserChild dispenser;
+        private GumballMachineObjectInstance parent;
+        private DispenserChild dispenser;
         private boolean triggered;
         private int crumbleTimer;
         private boolean signaledDispenser;
@@ -1273,6 +1336,15 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
             super(spawn, "GumballSpring");
             this.parent = parent;
             this.dispenser = dispenser;
+        }
+
+        private GumballSpringChild() {
+            this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), null, null);
+        }
+
+        @Override
+        public GumballSpringChild recreateForRewind(RewindRecreateContext ctx) {
+            return new GumballSpringChild(ctx.spawn(), nearestMachine(ctx), nearestDispenser(ctx));
         }
 
         @Override

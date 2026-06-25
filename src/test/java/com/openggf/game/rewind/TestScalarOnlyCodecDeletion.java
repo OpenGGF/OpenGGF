@@ -2885,6 +2885,29 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_GUMBALL_GRAPH_BATCH233_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$DispenserChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ContainerDisplayChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$EjectionEffectChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$BodyOverlayChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance",
@@ -9468,6 +9491,24 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
+        }
+    }
+
+    @Test
+    void s3kGumballGraphBatch233ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_GUMBALL_GRAPH_BATCH233_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K gumball graph batch 233");
+        }
+    }
+
+    @Test
+    void s3kGumballGraphBatch233ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_GUMBALL_GRAPH_BATCH233_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K gumball graph batch 233 generic recreate, not a dynamic codec");
         }
     }
 

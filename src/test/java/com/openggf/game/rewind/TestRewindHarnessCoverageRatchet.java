@@ -473,13 +473,16 @@ public class TestRewindHarnessCoverageRatchet {
     *       falling fragment gained generic recreate coverage.</li>
     *   <li>2026-06-25: raised to 604 after S3K Breakable Wall, Cork Floor,
     *       and Collapsing Platform fragments gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 609 after S3K Gumball Machine root,
+    *       dispenser, ejection effect, exit trigger, and platform children
+    *       gained generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 604 after S3K destructible fragment graph restore coverage.
-    static final int RATCHET_FLOOR = 604;
+    // 2026-06-25: raised to 609 after S3K gumball machine graph restore coverage.
+    static final int RATCHET_FLOOR = 609;
 
     @BeforeEach
     void initHeadless() {

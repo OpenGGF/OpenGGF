@@ -10,14 +10,6 @@ com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#yOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#recreate
 com.openggf.game.sonic3k.objects.CnzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.CnzTeleporterInstance#recreate
-com.openggf.game.sonic3k.objects.GumballMachineObjectInstance#recreate
-com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$BodyOverlayChild#recreate
-com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ContainerDisplayChild#finalScalar#offsetFromMachine
-com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ContainerDisplayChild#recreate
-com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$DispenserChild#recreate
-com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$EjectionEffectChild#recreate
-com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild#recreate
-com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#recreate
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration#recreate

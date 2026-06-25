@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.BreakableWallObjectInstance;
 import com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
+import com.openggf.game.sonic3k.objects.GumballMachineObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance;
@@ -98,6 +99,18 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.CorkFloorObjectInstance$CorkFloorFragment";
     private static final String S3K_COLLAPSING_PLATFORM_FRAGMENT =
             "com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment";
+    private static final String GUMBALL_DISPENSER =
+            "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$DispenserChild";
+    private static final String GUMBALL_CONTAINER =
+            "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ContainerDisplayChild";
+    private static final String GUMBALL_EJECTION_EFFECT =
+            "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$EjectionEffectChild";
+    private static final String GUMBALL_PLATFORM =
+            "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild";
+    private static final String GUMBALL_BODY_OVERLAY =
+            "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$BodyOverlayChild";
+    private static final String GUMBALL_SPRING =
+            "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild";
 
     @BeforeEach
     void initHeadless() {
@@ -672,6 +685,117 @@ class TestS3kBadnikChildGraphRewind {
         assertTrue((Boolean) readObjectField(restoredPlatform, "hFlip"));
         assertEquals(0x1C0, restoredPlatform.getX());
         assertEquals(0x150, restoredPlatform.getY());
+    }
+
+    @Test
+    void gumballMachineGraphRestoresChildrenWithoutDropsDoublesOrStaleReferences() {
+        Harness harness = Harness.create(new GumballTestRegistry(), List.of(
+                new ObjectSpawn(0x100, 0x200, Sonic3kObjectIds.GUMBALL_MACHINE, 0, 0, false, 10)));
+        ObjectManager objectManager = harness.objectManager();
+        GumballMachineObjectInstance sourceMachine =
+                liveByType(objectManager, GumballMachineObjectInstance.class).getFirst();
+        sourceMachine.update(0, player());
+
+        ObjectInstance sourceDispenser = liveByClassName(objectManager, GUMBALL_DISPENSER).getFirst();
+        ObjectInstance sourceContainer = liveByClassName(objectManager, GUMBALL_CONTAINER).getFirst();
+        ObjectInstance sourceBodyOverlay = liveByClassName(objectManager, GUMBALL_BODY_OVERLAY).getFirst();
+        List<ObjectInstance> sourcePlatforms = liveByClassName(objectManager, GUMBALL_PLATFORM);
+        List<ObjectInstance> sourceSprings = liveByClassName(objectManager, GUMBALL_SPRING);
+        assertEquals(4, sourcePlatforms.size(), "precondition: gumball machine must spawn four platforms");
+        assertEquals(4, sourceSprings.size(), "precondition: gumball machine must spawn four springs");
+        ObjectInstance sourceExtraPlatform = sourcePlatforms.stream()
+                .filter(platform -> readIntField(platform, "mappingFrame") == 0x16)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("missing extra platform child"));
+        ObjectInstance sourceSpring = sourceSprings.get(1);
+        ObjectInstance sourceEjection = objectManager.createDynamicObject(() -> constructObject(
+                GUMBALL_EJECTION_EFFECT,
+                new Class<?>[] {ObjectSpawn.class, int.class},
+                new ObjectSpawn(0x100, 0x310, 0, 0, 0, false, 0),
+                5));
+
+        setIntField(sourceMachine, "currentY", 0x124);
+        setIntField(sourceMachine, "targetY", 0x160);
+        setIntField(sourceContainer, "currentFrame", 4);
+        setIntField(sourceContainer, "animStep", 2);
+        setIntField(sourceExtraPlatform, "offsetFromMachine", -0x30);
+        setIntField(sourceBodyOverlay, "offsetFromMachine", -0x2A);
+        setBooleanField(sourceSpring, "triggered", true);
+        setBooleanField(sourceSpring, "falling", true);
+        setIntField(sourceSpring, "fallY", 0x2F0);
+        setIntField(sourceEjection, "drawX", 0xD8);
+
+        ObjectRefId machineId = objectId(objectManager, sourceMachine);
+        ObjectRefId dispenserId = objectId(objectManager, sourceDispenser);
+        ObjectRefId containerId = objectId(objectManager, sourceContainer);
+        ObjectRefId platformId = objectId(objectManager, sourceExtraPlatform);
+        ObjectRefId bodyOverlayId = objectId(objectManager, sourceBodyOverlay);
+        ObjectRefId springId = objectId(objectManager, sourceSpring);
+        ObjectRefId ejectionId = objectId(objectManager, sourceEjection);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> new GumballMachineObjectInstance(
+                new ObjectSpawn(0x300, 0x300, Sonic3kObjectIds.GUMBALL_MACHINE, 0, 0, false, 99)));
+
+        rewindRegistry.restore(snapshot);
+
+        GumballMachineObjectInstance restoredMachine =
+                objectById(objectManager, GumballMachineObjectInstance.class, machineId);
+        ObjectInstance restoredDispenser = objectById(objectManager, ObjectInstance.class, dispenserId);
+        ObjectInstance restoredContainer = objectById(objectManager, ObjectInstance.class, containerId);
+        ObjectInstance restoredPlatform = objectById(objectManager, ObjectInstance.class, platformId);
+        ObjectInstance restoredBodyOverlay = objectById(objectManager, ObjectInstance.class, bodyOverlayId);
+        ObjectInstance restoredSpring = objectById(objectManager, ObjectInstance.class, springId);
+        ObjectInstance restoredEjection = objectById(objectManager, ObjectInstance.class, ejectionId);
+
+        assertNotSame(sourceMachine, restoredMachine, "restore must recreate the gumball machine");
+        assertNotSame(sourceDispenser, restoredDispenser, "restore must recreate the dispenser");
+        assertNotSame(sourceContainer, restoredContainer, "restore must recreate the container");
+        assertNotSame(sourceSpring, restoredSpring, "restore must recreate the spring");
+        assertEquals(1, liveByType(objectManager, GumballMachineObjectInstance.class).size(),
+                "restore must keep exactly the captured gumball machine");
+        assertEquals(1, liveByClassName(objectManager, GUMBALL_DISPENSER).size(),
+                "restore must keep exactly the captured dispenser");
+        assertEquals(1, liveByClassName(objectManager, GUMBALL_CONTAINER).size(),
+                "restore must keep exactly the captured container");
+        assertEquals(4, liveByClassName(objectManager, GUMBALL_PLATFORM).size(),
+                "restore must keep exactly the captured platform children");
+        assertEquals(1, liveByClassName(objectManager, GUMBALL_BODY_OVERLAY).size(),
+                "restore must keep exactly the captured body overlay");
+        assertEquals(4, liveByClassName(objectManager, GUMBALL_SPRING).size(),
+                "restore must keep exactly the captured springs");
+        assertEquals(1, liveByClassName(objectManager, GUMBALL_EJECTION_EFFECT).size(),
+                "restore must keep exactly the captured ejection effect");
+
+        assertSame(restoredMachine, readObjectField(restoredContainer, "parent"),
+                "container parent must relink to restored machine");
+        assertSame(restoredMachine, readObjectField(restoredSpring, "parent"),
+                "spring parent must relink to restored machine");
+        assertSame(restoredDispenser, readObjectField(restoredSpring, "dispenser"),
+                "spring dispenser must relink to restored dispenser");
+        assertSame(restoredDispenser, readObjectField(restoredMachine, "dispenser"),
+                "machine dispenser field must relink to restored dispenser");
+        List<?> restoredSpringRefs = (List<?>) readObjectField(restoredMachine, "springs");
+        assertEquals(4, restoredSpringRefs.size(), "machine spring list must keep four restored children");
+        assertTrue(restoredSpringRefs.containsAll(liveByClassName(objectManager, GUMBALL_SPRING)),
+                "machine spring list must contain restored spring instances");
+        assertFalse(restoredSpringRefs.contains(sourceSpring),
+                "machine spring list must not retain stale pre-restore spring instances");
+
+        assertEquals(0x124, readIntField(restoredMachine, "currentY"));
+        assertEquals(0x160, readIntField(restoredMachine, "targetY"));
+        assertEquals(4, readIntField(restoredContainer, "currentFrame"));
+        assertEquals(2, readIntField(restoredContainer, "animStep"));
+        assertEquals(0x16, readIntField(restoredPlatform, "mappingFrame"));
+        assertEquals(-0x30, readIntField(restoredPlatform, "offsetFromMachine"));
+        assertEquals(-0x2A, readIntField(restoredBodyOverlay, "offsetFromMachine"));
+        assertTrue((Boolean) readObjectField(restoredSpring, "triggered"));
+        assertTrue((Boolean) readObjectField(restoredSpring, "falling"));
+        assertEquals(0x2F0, readIntField(restoredSpring, "fallY"));
+        assertEquals(10, readIntField(restoredEjection, "timer"));
+        assertEquals(0xD8, readIntField(restoredEjection, "drawX"));
+        assertEquals(0x318, readIntField(restoredEjection, "drawY"));
     }
 
     @Test
@@ -1384,7 +1508,11 @@ class TestS3kBadnikChildGraphRewind {
         return liveByType(objectManager, type).stream()
                 .filter(object -> objectId(objectManager, object).equals(id))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("missing restored object " + id));
+                .orElseThrow(() -> new AssertionError("missing restored object " + id
+                        + "; live=" + objectManager.getActiveObjects().stream()
+                        .filter(object -> !object.isDestroyed())
+                        .map(object -> objectId(objectManager, object) + ":" + object.getClass().getName())
+                        .toList()));
     }
 
     private static <T extends ObjectInstance> List<T> liveByType(ObjectManager objectManager, Class<T> type) {
@@ -1443,6 +1571,17 @@ class TestS3kBadnikChildGraphRewind {
             findField(target.getClass(), fieldName).set(target, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static ObjectInstance constructObject(String className, Class<?>[] parameterTypes, Object... args) {
+        try {
+            Class<?> cls = Class.forName(className);
+            Constructor<?> ctor = cls.getDeclaredConstructor(parameterTypes);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(args);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct " + className, e);
         }
     }
 
@@ -1509,6 +1648,13 @@ class TestS3kBadnikChildGraphRewind {
         @Override
         protected int currentRomZoneId() {
             return Sonic3kZoneIds.ZONE_MGZ;
+        }
+    }
+
+    private static final class GumballTestRegistry extends Sonic3kObjectRegistry {
+        @Override
+        protected int currentRomZoneId() {
+            return Sonic3kZoneIds.ZONE_GUMBALL;
         }
     }
 

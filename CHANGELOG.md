@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K gumball-machine rewind:** Gumball machine roots and bonus-stage children now restore through generic recreate with restored parent/dispenser/spring links.
 - **S3K destructible fragment rewind:** Breakable Wall, Cork Floor, and Collapsing Platform fragments now restore through generic recreate with captured fragment render state preserved.
 - **S3K Tension Bridge graph rewind:** Tension Bridge roots and falling fragments now restore through generic recreate with fragment render state preserved.
 - **S3K Collapsing Bridge graph rewind:** Collapsing Bridge roots, wave fragments, and MGZ stomp debris now restore through generic recreate with fragment render state preserved.
