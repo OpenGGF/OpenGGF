@@ -433,13 +433,15 @@ public class TestRewindHarnessCoverageRatchet {
     *   <li>2026-06-25: raised to 543 after S3K HCZ/CGZ fan parent
     *       and bubble restores gained generic recreate coverage under the
     *       fan graph proof.</li>
+    *   <li>2026-06-25: raised to 544 after S3K MGZ pulley parent restore
+    *       gained generic recreate coverage under the pulley-chain graph proof.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 543 after S3K HCZ/CGZ fan graph restore coverage.
-    static final int RATCHET_FLOOR = 543;
+    // 2026-06-25: raised to 544 after S3K MGZ pulley graph restore coverage.
+    static final int RATCHET_FLOOR = 544;
 
     @BeforeEach
     void initHeadless() {

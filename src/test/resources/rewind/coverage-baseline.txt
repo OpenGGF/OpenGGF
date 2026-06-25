@@ -103,8 +103,6 @@ com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#r
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#objectRef#knucklesFightParent
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance#recreate
-com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance#recreate
-com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance$PulleyChainChild#recreate
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance#recreate
