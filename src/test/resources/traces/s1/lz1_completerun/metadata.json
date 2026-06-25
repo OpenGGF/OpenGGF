@@ -1,21 +1,19 @@
 {
- "game": "s1",
- "zone": "lz",
- "zone_id": 1,
- "act": 1,
- "bk2_frame_offset": 93657,
- "trace_frame_count": 13070,
- "start_x": "0x0060",
- "start_y": "0x006C",
- "rng_seed": "0x00000000",
- "recording_date": "2026-06-23",
- "lua_script_version": "3.4",
- "trace_schema": 3,
- "csv_version": 4,
- "aux_schema_extras": [
-  "s1_obj64_state_per_frame"
- ],
- "rom_checksum": "",
- "notes": "",
- "source_bk2": "s1-complete-run.bk2"
+  "game": "s1",
+  "zone": "lz",
+  "zone_id": 1,
+  "act": 1,
+  "bk2_frame_offset": 93657,
+  "trace_frame_count": 13070,
+  "start_x": "0x0060",
+  "start_y": "0x006C",
+  "rng_seed": "0x00000000",
+  "recording_date": "2026-06-26",
+  "lua_script_version": "3.7",
+  "trace_schema": 3,
+  "csv_version": 4,
+  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", "v_objstate_per_frame", "camera_boundary_per_frame"],
+  "rom_checksum": "",
+  "notes": "",
+  "source_bk2": "s1-complete-run.bk2"
 }
