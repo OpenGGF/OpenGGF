@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S2 Tornado graph rewind:** Tornado parents and thruster children now restore through generic recreate with the thruster follower link and child parent pointer relinked to restored instances.
 - **S3K ICZ freezer graph rewind:** freezer roots, capture clouds, and frozen-player blocks now restore through generic recreate with cloud/block/player references relinked from the rewind identity table.
 - **MHZ2 lift-child rewind:** the Knuckles lift carrier now restores through generic recreate with its live player reference relinked from the rewind identity table.
 - **Madmole side-drill rewind:** the side-drill child now has an explicit captured-player rewind policy and graph proof, removing its stale object-ref coverage gap.

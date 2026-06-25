@@ -8,6 +8,7 @@ import com.openggf.game.PowerUpObject;
 import com.openggf.game.PowerUpSpawner;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzCylinderInstance;
@@ -215,6 +216,14 @@ class TestRewindPolicyRegistry {
                 RewindPolicyRegistry.policyForAudit(cannonReleasedPlayer).orElse(null));
         assertEquals(RewindFieldPolicy.CAPTURED,
                 RewindPolicyRegistry.policyForAudit(cylinderReleasedPlayer).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesTornadoThrusterFollowerReference() throws NoSuchFieldException {
+        Field thrusterFollowerChild = TornadoObjectInstance.class.getDeclaredField("thrusterFollowerChild");
+
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(thrusterFollowerChild).orElse(null));
     }
 
     @Test

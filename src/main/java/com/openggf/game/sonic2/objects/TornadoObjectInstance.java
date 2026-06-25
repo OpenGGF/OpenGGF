@@ -18,11 +18,14 @@ import com.openggf.game.mutation.MutationEffects;
 import com.openggf.level.Level;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -49,7 +52,8 @@ import java.util.List;
  * - ObjC3 smoke child behavior: docs/s2disasm/s2.asm (ObjC3)
  */
 public class TornadoObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider, TouchResponseListener {
+        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider, TouchResponseListener,
+        RewindRecreatable {
 
     // ------------------------------------------------------------------------
     // Subtypes / routines (routine = subtype - 0x4E)
@@ -230,6 +234,42 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         this.animId = 0;
         this.animFrameIndex = 0;
         this.blinkerMiscBit = false;
+    }
+
+    @Override
+    public TornadoObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn rewindSpawn = ctx.spawn();
+        int rewindSubtype = rewindSpawn.subtype() & 0xFF;
+        if (isParentLinkedChildSubtype(rewindSubtype)) {
+            TornadoObjectInstance liveParent = nearestLiveTornadoParent(ctx);
+            return liveParent == null ? null : new TornadoObjectInstance(rewindSpawn, liveParent);
+        }
+        return new TornadoObjectInstance(rewindSpawn);
+    }
+
+    private static boolean isParentLinkedChildSubtype(int subtype) {
+        return subtype == SUBTYPE_INVISIBLE_GRABBER || subtype == SUBTYPE_THRUSTER;
+    }
+
+    private static TornadoObjectInstance nearestLiveTornadoParent(RewindRecreateContext ctx) {
+        ObjectManager manager = ctx.objectServices() != null ? ctx.objectServices().objectManager() : null;
+        if (manager == null) {
+            return null;
+        }
+        TornadoObjectInstance nearest = null;
+        int nearestDistance = Integer.MAX_VALUE;
+        for (ObjectInstance object : manager.getActiveObjects()) {
+            if (object instanceof TornadoObjectInstance tornado
+                    && !tornado.isDestroyed()
+                    && !isParentLinkedChildSubtype(tornado.subtype)) {
+                int distance = Math.abs(tornado.getX() - ctx.spawn().x());
+                if (distance < nearestDistance) {
+                    nearest = tornado;
+                    nearestDistance = distance;
+                }
+            }
+        }
+        return nearest;
     }
 
     @Override

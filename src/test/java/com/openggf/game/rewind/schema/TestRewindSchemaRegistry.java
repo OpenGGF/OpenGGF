@@ -8,6 +8,7 @@ import com.openggf.game.sonic2.objects.FallingPillarObjectInstance;
 import com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance;
 import com.openggf.game.sonic2.objects.SidewaysPformObjectInstance;
 import com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance;
+import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic3k.objects.ClamerObjectInstance;
 import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
@@ -163,6 +164,17 @@ class TestRewindSchemaRegistry {
         assertPolicy(schema, "displayChild", RewindFieldPolicy.CAPTURED);
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "Swinging Platform compact schema must capture the display child link without fallback: "
+                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesTornadoThrusterFollowerLink() {
+        RewindClassSchema schema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(TornadoObjectInstance.class);
+
+        assertPolicy(schema, "thrusterFollowerChild", RewindFieldPolicy.CAPTURED);
+        assertTrue(schema.unsupportedFields().isEmpty(),
+                "Tornado compact schema must capture the thruster follower link without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 
