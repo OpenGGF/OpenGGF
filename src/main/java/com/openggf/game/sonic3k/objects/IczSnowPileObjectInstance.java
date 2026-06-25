@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -399,7 +400,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
     private record SnowdustSpec(int x, int y, int mappingFrame, int priorityBucket, int xVel, int yVel) {
     }
 
-    private static final class SnowdustParticle extends AbstractObjectInstance {
+    private static final class SnowdustParticle extends AbstractObjectInstance implements RewindRecreatable {
         @RewindTransient(reason = "structural parent link used only to mirror Hyudoro_count on particle expiry")
         private final IczSnowPileObjectInstance parent;
         private final SubpixelMotion.State motion;
@@ -415,6 +416,33 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
             this.motion = new SubpixelMotion.State(spec.x(), spec.y(), 0, 0, spec.xVel(), spec.yVel());
             this.mappingFrame = spec.mappingFrame();
             this.priorityBucket = spec.priorityBucket();
+        }
+
+        private SnowdustParticle(IczSnowPileObjectInstance parent, ObjectSpawn spawn) {
+            super(spawn, "ICZSnowdustParticle");
+            this.parent = parent;
+            this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+            this.mappingFrame = FRAME_SNOWDUST;
+            this.priorityBucket = PRIORITY_BUCKET;
+        }
+
+        private SnowdustParticle(ObjectSpawn spawn) {
+            this(new IczSnowPileObjectInstance(new ObjectSpawn(
+                    spawn.x(), spawn.y(), OBJECT_ID, 0x18, 0, false, spawn.y())), spawn);
+        }
+
+        @Override
+        public SnowdustParticle recreateForRewind(RewindRecreateContext ctx) {
+            IczSnowPileObjectInstance liveParent =
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, IczSnowPileObjectInstance.class);
+            if (liveParent == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            if (spawn == null) {
+                spawn = new ObjectSpawn(liveParent.getX(), liveParent.getY(), OBJECT_ID, 0, 0, false, liveParent.getY());
+            }
+            return new SnowdustParticle(liveParent, spawn);
         }
 
         @Override

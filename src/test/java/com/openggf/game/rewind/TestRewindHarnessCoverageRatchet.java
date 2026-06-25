@@ -481,13 +481,16 @@ public class TestRewindHarnessCoverageRatchet {
     *   <li>2026-06-25: raised to 614 after S3K ICZ ice-spike root,
     *       tension-platform support, and crushing-column decoration gained
     *       generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 616 after S3K ICZ snowdust particles
+    *       gained parent-seeded generic recreate coverage and the ICZ
+    *       snowboard intro gained spawn-based recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 614 after S3K ICZ support graph restore coverage.
-    static final int RATCHET_FLOOR = 614;
+    // 2026-06-25: raised to 616 after S3K ICZ snow graph restore coverage.
+    static final int RATCHET_FLOOR = 616;
 
     @BeforeEach
     void initHeadless() {

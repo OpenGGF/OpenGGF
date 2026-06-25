@@ -25,7 +25,7 @@ import java.util.List;
  * the two ROM slope tables, and releases Sonic after the crash at the end of
  * the snowboard route.
  */
-public class IczSnowboardIntroInstance extends AbstractObjectInstance {
+public class IczSnowboardIntroInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     public static final int INITIAL_SNOWBOARD_X = 0x00C0;
     public static final int INITIAL_SNOWBOARD_Y = 0x0170;
 

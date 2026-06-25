@@ -33,6 +33,8 @@ class TestS3kIczEndBossGraphRewind {
             new ObjectSpawn(0x4400, 0x0420, Sonic3kObjectIds.ICZ_END_BOSS, 0, 0, false, 70);
     private static final ObjectSpawn EMITTER_SPAWN =
             new ObjectSpawn(0x4380, 0x02F0, Sonic3kObjectIds.ICZ_SNOW_PILE, 0x18, 0, false, 71);
+    private static final String SNOWDUST_PARTICLE_CLASS =
+            "com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle";
 
     @BeforeEach
     void initHeadless() {
@@ -113,6 +115,59 @@ class TestS3kIczEndBossGraphRewind {
     }
 
     @Test
+    void iczSnowdustParticleRestoresFreshAndExpiresAgainstRestoredEmitter() throws Exception {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        IczSnowPileObjectInstance sourceEmitter = objectManager.createDynamicObject(
+                () -> new IczSnowPileObjectInstance(EMITTER_SPAWN));
+        objectManager.update(harness.services().camera().getX(), null, List.of(), 0);
+
+        Class<?> particleClass = Class.forName(SNOWDUST_PARTICLE_CLASS);
+        ObjectInstance sourceParticle = onlyLiveObject(objectManager, particleClass);
+        ObjectRefId emitterId = objectId(objectManager, sourceEmitter);
+        ObjectRefId particleId = objectId(objectManager, sourceParticle);
+        assertEquals(1, readIntField(sourceEmitter, "activeSnowdustCount"),
+                "source emitter should count its spawned particle before capture");
+
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.removeDynamicObject(sourceParticle);
+        objectManager.removeDynamicObject(sourceEmitter);
+        IczSnowPileObjectInstance divergentEmitter = objectManager.createDynamicObject(
+                () -> new IczSnowPileObjectInstance(new ObjectSpawn(
+                        0x4500, 0x02F0, Sonic3kObjectIds.ICZ_SNOW_PILE, 0x18, 0, false, 72)));
+        objectManager.update(harness.services().camera().getX(), null, List.of(), 1);
+        assertEquals(1, liveObjects(objectManager, IczSnowPileObjectInstance.class).size(),
+                "diverge step should leave one unrelated emitter before restore");
+
+        rewindRegistry.restore(snapshot);
+
+        IczSnowPileObjectInstance restoredEmitter =
+                objectById(objectManager, IczSnowPileObjectInstance.class, emitterId);
+        ObjectInstance restoredParticle = objectByIdOfType(objectManager, particleClass, particleId);
+        assertEquals(1, liveObjects(objectManager, IczSnowPileObjectInstance.class).size(),
+                "restore must keep exactly one captured snowdust emitter");
+        assertEquals(1, liveObjectsOfType(objectManager, particleClass).size(),
+                "restore must keep exactly one captured snowdust particle");
+        assertNotSame(sourceEmitter, restoredEmitter, "restore must recreate the snowdust emitter");
+        assertNotSame(sourceParticle, restoredParticle, "restore must recreate the snowdust particle");
+        assertNotSame(divergentEmitter, restoredEmitter, "restore must drop the divergent emitter");
+        assertSame(restoredEmitter, readObjectField(restoredParticle, "parent"),
+                "snowdust particle must call back into the restored emitter");
+        assertNotSame(sourceEmitter, readObjectField(restoredParticle, "parent"),
+                "snowdust particle must not retain the stale pre-restore emitter");
+
+        writeBooleanField(restoredParticle, "enteredScreen", true);
+        writeIntField(readObjectField(restoredParticle, "motion"), "x", -0x1000);
+        restoredParticle.update(2, null);
+        assertTrue(restoredParticle.isDestroyed(), "offscreen restored particle should expire");
+        assertEquals(0, readIntField(restoredEmitter, "activeSnowdustCount"),
+                "particle expiry must decrement the restored emitter, not the stale source");
+    }
+
+    @Test
     void captureFailsWhenIczEndBossSnowdustEmitterHasNoRewindIdentity() throws Exception {
         Harness harness = Harness.create();
         IczEndBossInstance boss = harness.objectManager().createDynamicObject(
@@ -176,6 +231,18 @@ class TestS3kIczEndBossGraphRewind {
                 .orElseThrow(() -> new AssertionError("missing restored object " + id));
     }
 
+    private static ObjectInstance objectByIdOfType(
+            ObjectManager objectManager,
+            Class<?> type,
+            ObjectRefId id) {
+        return liveObjectsOfType(objectManager, type).stream()
+                .filter(object -> id.equals(objectManager.captureIdentityContext()
+                        .requireIdentityTable()
+                        .idFor(object)))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("missing restored object " + id));
+    }
+
     private static <T extends ObjectInstance> List<T> liveObjects(ObjectManager objectManager, Class<T> type) {
         return objectManager.getActiveObjects().stream()
                 .filter(type::isInstance)
@@ -183,6 +250,20 @@ class TestS3kIczEndBossGraphRewind {
                 .filter(object -> !object.isDestroyed())
                 .sorted(Comparator.comparingInt(ObjectInstance::getX))
                 .toList();
+    }
+
+    private static List<ObjectInstance> liveObjectsOfType(ObjectManager objectManager, Class<?> type) {
+        return objectManager.getActiveObjects().stream()
+                .filter(type::isInstance)
+                .filter(object -> !object.isDestroyed())
+                .sorted(Comparator.comparingInt(ObjectInstance::getX))
+                .toList();
+    }
+
+    private static ObjectInstance onlyLiveObject(ObjectManager objectManager, Class<?> type) {
+        List<ObjectInstance> objects = liveObjectsOfType(objectManager, type);
+        assertEquals(1, objects.size(), "expected exactly one live " + type.getName());
+        return objects.getFirst();
     }
 
     private static Object readObjectField(Object target, String name) throws Exception {
