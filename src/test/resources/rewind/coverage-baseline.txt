@@ -128,7 +128,6 @@ com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance#finalScalar#flipped
 com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance#finalScalar#targetExtension
 com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance$PulleyChainChild#recreate
-com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance#recreate
@@ -156,10 +155,6 @@ com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#finalScalar#type
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#objectRef#monitorContentsSlot
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot#recreate
-com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#baseY
-com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#negativeSubtype
-com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#segmentCount
-com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#finalScalar#triggerIndex
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment#recreate
 com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance#recreate

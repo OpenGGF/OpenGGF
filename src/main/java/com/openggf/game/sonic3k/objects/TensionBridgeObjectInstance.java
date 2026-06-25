@@ -114,10 +114,10 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
 
     // --- Instance state ---
 
-    private final boolean negativeSubtype;
-    private final int segmentCount;
-    private final int triggerIndex;
-    private final int baseY;
+    private boolean negativeSubtype;
+    private int segmentCount;
+    private int triggerIndex;
+    private int baseY;
 
     // Lazily resolved (can't call services() in constructor)
     private Variant variant;

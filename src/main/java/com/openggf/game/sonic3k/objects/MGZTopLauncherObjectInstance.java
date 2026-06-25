@@ -24,7 +24,7 @@ public class MGZTopLauncherObjectInstance extends AbstractObjectInstance {
     private static final int LAUNCH_TRIGGER_REMAINING = 4;
     private static final int LAUNCH_SPEED = 0x0C00;
 
-    private final boolean hFlip;
+    private boolean hFlip;
     private int posX;
     private int posY;
     private int remainingDrop = DROP_DISTANCE;
