@@ -14,6 +14,9 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -319,7 +322,7 @@ public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
         return value >= 0x8000 ? value - 0x10000 : value;
     }
 
-    public static final class SupportChild extends AbstractObjectInstance {
+    public static final class SupportChild extends AbstractObjectInstance implements RewindRecreatable {
         @RewindTransient(reason = "Structural parent pointer; support positions are derived from live parent state.")
         private final IczTensionPlatformObjectInstance parent;
         private int x;
@@ -333,6 +336,20 @@ public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
             this.x = x;
             this.y = y;
             this.hFlip = hFlip;
+        }
+
+        @Override
+        public SupportChild recreateForRewind(RewindRecreateContext ctx) {
+            IczTensionPlatformObjectInstance liveParent =
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, IczTensionPlatformObjectInstance.class);
+            if (liveParent == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            int restoredX = spawn != null ? spawn.x() : liveParent.x;
+            int restoredY = spawn != null ? spawn.y() : liveParent.baseY;
+            boolean restoredHFlip = spawn != null && (spawn.renderFlags() & 0x01) != 0;
+            return new SupportChild(liveParent, restoredX, restoredY, restoredHFlip);
         }
 
         @Override

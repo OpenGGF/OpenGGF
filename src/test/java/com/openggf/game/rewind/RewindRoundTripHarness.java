@@ -11,6 +11,8 @@ import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
+import com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance;
+import com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance;
 import com.openggf.game.sonic3k.objects.MhzMinibossInstance;
@@ -687,6 +689,8 @@ public final class RewindRoundTripHarness {
                  "com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance",
                  "com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance",
                  "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance",
+                 "com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance",
+                 "com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance",
                  "com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance",
                  "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance",
                  "com.openggf.game.sonic3k.objects.MhzMinibossInstance",
@@ -720,6 +724,14 @@ public final class RewindRoundTripHarness {
             case "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance" ->
                     spawn.objectId() == Sonic3kObjectIds.CUTSCENE_KNUCKLES
                             ? new CutsceneKnucklesMhz2Instance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.ICZ_CRUSHING_COLUMN
+                            ? new IczCrushingColumnObjectInstance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.ICZ_TENSION_PLATFORM
+                            ? new IczTensionPlatformObjectInstance(spawn)
                             : null;
             case "com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance" ->
                     spawn.objectId() == Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON
@@ -1054,6 +1066,11 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.MhzMinibossInstance");
         m.put("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance",
                 "com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance");
+        // S3K ICZ support children — parents are placed objects that spawn children lazily.
+        m.put("com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration",
+                "com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance");
+        m.put("com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild",
+                "com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance");
         // S1 spiked-ball chain child — parent is placed Obj57 and spawns children lazily.
         m.put("com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild",
                 "com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance");
@@ -1133,6 +1150,10 @@ public final class RewindRoundTripHarness {
             Map.entry("com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance", 0xA8),
             // MhzMinibossInstance: Sonic3kObjectIds.MHZ_MINIBOSS = 0x92
             Map.entry("com.openggf.game.sonic3k.objects.MhzMinibossInstance", 0x92),
+            // IczCrushingColumnObjectInstance: Sonic3kObjectIds.ICZ_CRUSHING_COLUMN = 0xAF
+            Map.entry("com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance", 0xAF),
+            // IczTensionPlatformObjectInstance: Sonic3kObjectIds.ICZ_TENSION_PLATFORM = 0xBA
+            Map.entry("com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance", 0xBA),
             // Sonic3kSSEntryRingObjectInstance: Sonic3kObjectIds.SS_ENTRY_RING = 0x85
             Map.entry("com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance", 0x85),
             // Sonic1SpikedBallChainObjectInstance: Sonic1ObjectIds.SPIKED_BALL_CHAIN = 0x57

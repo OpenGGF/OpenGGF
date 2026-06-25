@@ -4,7 +4,9 @@ import com.openggf.camera.Camera;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance;
 import com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance;
+import com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.MgzMinibossInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
@@ -38,6 +40,10 @@ class TestS3kNestedHurtboxGraphRewind {
             "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild";
     private static final String ICZ_HURT_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild";
+    private static final String ICZ_TENSION_SUPPORT_CLASS =
+            "com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild";
+    private static final String ICZ_CRUSHING_COLUMN_DECORATION_CLASS =
+            "com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration";
 
     private static final ObjectSpawn MGZ_BOSS_SPAWN =
             new ObjectSpawn(0x0300, 0x0200, Sonic3kObjectIds.MGZ_MINIBOSS, 0, 0, false, 10);
@@ -45,6 +51,10 @@ class TestS3kNestedHurtboxGraphRewind {
             new ObjectSpawn(0x0120, 0x0180, Sonic3kObjectIds.ICZ_ICE_SPIKES, 0, 0, false, 20);
     private static final ObjectSpawn ICZ_SPIKE_B =
             new ObjectSpawn(0x0280, 0x01C0, Sonic3kObjectIds.ICZ_ICE_SPIKES, 0, 0, false, 21);
+    private static final ObjectSpawn ICZ_TENSION_PLATFORM =
+            new ObjectSpawn(0x0340, 0x0240, Sonic3kObjectIds.ICZ_TENSION_PLATFORM, 0, 0, false, 22);
+    private static final ObjectSpawn ICZ_CRUSHING_COLUMN =
+            new ObjectSpawn(0x0480, 0x0180, Sonic3kObjectIds.ICZ_CRUSHING_COLUMN, 0, 0, false, 23);
 
     @BeforeEach
     void initHeadless() {
@@ -239,15 +249,112 @@ class TestS3kNestedHurtboxGraphRewind {
     }
 
     @Test
+    void iczSupportChildrenRestoreFreshRelinkParentsAndDoNotDuplicate() {
+        Harness harness = Harness.create(List.of(ICZ_TENSION_PLATFORM, ICZ_CRUSHING_COLUMN));
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        IczTensionPlatformObjectInstance sourcePlatform =
+                only(objectManager, IczTensionPlatformObjectInstance.class);
+        IczCrushingColumnObjectInstance sourceColumn =
+                only(objectManager, IczCrushingColumnObjectInstance.class);
+        sourcePlatform.update(0, null);
+        sourceColumn.update(0, null);
+        List<ObjectInstance> sourceSupports = liveObjectsByName(objectManager, ICZ_TENSION_SUPPORT_CLASS);
+        List<ObjectInstance> sourceDecorations =
+                liveObjectsByName(objectManager, ICZ_CRUSHING_COLUMN_DECORATION_CLASS);
+        assertEquals(2, sourceSupports.size(), "precondition: tension platform must spawn two supports");
+        assertEquals(1, sourceDecorations.size(), "precondition: crushing column must spawn one decoration");
+        ObjectInstance sourceLeftSupport = childAtX(sourceSupports, ICZ_TENSION_PLATFORM.x() - 0x38);
+        ObjectInstance sourceRightSupport = childAtX(sourceSupports, ICZ_TENSION_PLATFORM.x() + 0x38);
+        ObjectInstance sourceDecoration = sourceDecorations.getFirst();
+        setIntField(sourceLeftSupport, "y", 0x0238);
+        setIntField(sourceRightSupport, "y", 0x023C);
+
+        ObjectRefId platformId = objectId(objectManager, sourcePlatform);
+        ObjectRefId columnId = objectId(objectManager, sourceColumn);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.removeDynamicObject(sourceLeftSupport);
+        objectManager.removeDynamicObject(sourceRightSupport);
+        objectManager.removeDynamicObject(sourceDecoration);
+        ObjectInstance divergentSupport = objectManager.createDynamicObject(
+                () -> constructIczTensionSupport(sourcePlatform, 0x0600, 0x0300, false));
+        ObjectInstance divergentDecoration = objectManager.createDynamicObject(
+                () -> constructIczCrushingColumnDecoration(sourceColumn));
+        assertEquals(1, liveObjectsByName(objectManager, ICZ_TENSION_SUPPORT_CLASS).size(),
+                "diverge step should leave one unrelated tension support before restore");
+        assertEquals(1, liveObjectsByName(objectManager, ICZ_CRUSHING_COLUMN_DECORATION_CLASS).size(),
+                "diverge step should leave one unrelated column decoration before restore");
+
+        rewindRegistry.restore(snapshot);
+
+        IczTensionPlatformObjectInstance restoredPlatform =
+                objectById(objectManager, IczTensionPlatformObjectInstance.class, platformId);
+        IczCrushingColumnObjectInstance restoredColumn =
+                objectById(objectManager, IczCrushingColumnObjectInstance.class, columnId);
+        List<ObjectInstance> restoredSupports = liveObjectsByName(objectManager, ICZ_TENSION_SUPPORT_CLASS);
+        List<ObjectInstance> restoredDecorations =
+                liveObjectsByName(objectManager, ICZ_CRUSHING_COLUMN_DECORATION_CLASS);
+        assertEquals(1, liveObjects(objectManager, IczTensionPlatformObjectInstance.class).size(),
+                "restore must keep exactly the captured ICZ tension platform");
+        assertEquals(1, liveObjects(objectManager, IczCrushingColumnObjectInstance.class).size(),
+                "restore must keep exactly the captured ICZ crushing column");
+        assertEquals(2, restoredSupports.size(),
+                "restore must keep exactly the captured two tension supports");
+        assertEquals(1, restoredDecorations.size(),
+                "restore must keep exactly the captured column decoration");
+        ObjectInstance restoredLeftSupport = childAtX(restoredSupports, ICZ_TENSION_PLATFORM.x() - 0x38);
+        ObjectInstance restoredRightSupport = childAtX(restoredSupports, ICZ_TENSION_PLATFORM.x() + 0x38);
+        ObjectInstance restoredDecoration = restoredDecorations.getFirst();
+        assertNotSame(sourcePlatform, restoredPlatform, "restore must recreate the ICZ tension platform");
+        assertNotSame(sourceColumn, restoredColumn, "restore must recreate the ICZ crushing column");
+        assertNotSame(sourceLeftSupport, restoredLeftSupport, "restore must recreate the left support");
+        assertNotSame(sourceRightSupport, restoredRightSupport, "restore must recreate the right support");
+        assertNotSame(sourceDecoration, restoredDecoration, "restore must recreate the decoration");
+        assertNotSame(divergentSupport, restoredLeftSupport, "restore must drop the divergent support");
+        assertNotSame(divergentSupport, restoredRightSupport, "restore must drop the divergent support");
+        assertNotSame(divergentDecoration, restoredDecoration, "restore must drop the divergent decoration");
+
+        assertSame(restoredPlatform, readObjectField(restoredLeftSupport, "parent"),
+                "left support must relink to the restored tension platform");
+        assertSame(restoredPlatform, readObjectField(restoredRightSupport, "parent"),
+                "right support must relink to the restored tension platform");
+        assertSame(restoredColumn, readObjectField(restoredDecoration, "parent"),
+                "bottom decoration must relink to the restored crushing column");
+        assertEquals(0x0238, readIntField(restoredLeftSupport, "y"));
+        assertEquals(0x023C, readIntField(restoredRightSupport, "y"));
+
+        restoredPlatform.update(1, null);
+        restoredColumn.update(1, null);
+        assertEquals(2, liveObjectsByName(objectManager, ICZ_TENSION_SUPPORT_CLASS).size(),
+                "post-restore platform update must not spawn duplicate supports");
+        assertEquals(1, liveObjectsByName(objectManager, ICZ_CRUSHING_COLUMN_DECORATION_CLASS).size(),
+                "post-restore column update must not spawn duplicate decorations");
+    }
+
+    @Test
     void nestedHurtboxChildrenUseRewindRecreatableWithoutExplicitDynamicCodecs() throws Exception {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(IczIceSpikesObjectInstance.class),
+                "ICZ ice spikes root must restore through RewindRecreatable generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(MGZ_DRILL_ARM_CLASS)),
                 "MGZ drill arm must restore through RewindRecreatable generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(ICZ_HURT_CHILD_CLASS)),
                 "ICZ ice-spike hurt child must restore through RewindRecreatable generic recreate");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(ICZ_TENSION_SUPPORT_CLASS)),
+                "ICZ tension-platform support must restore through RewindRecreatable generic recreate");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(ICZ_CRUSHING_COLUMN_DECORATION_CLASS)),
+                "ICZ crushing-column bottom decoration must restore through RewindRecreatable generic recreate");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(IczIceSpikesObjectInstance.class.getName()),
+                "ICZ ice spikes root must not keep an explicit S3K dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MGZ_DRILL_ARM_CLASS),
                 "MGZ drill arm must not keep an explicit S3K dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ICZ_HURT_CHILD_CLASS),
                 "ICZ ice-spike hurt child must not keep an explicit S3K dynamic codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ICZ_TENSION_SUPPORT_CLASS),
+                "ICZ tension-platform support must not keep an explicit S3K dynamic codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ICZ_CRUSHING_COLUMN_DECORATION_CLASS),
+                "ICZ crushing-column bottom decoration must not keep an explicit S3K dynamic codec");
     }
 
     @Test
@@ -277,6 +384,20 @@ class TestS3kNestedHurtboxGraphRewind {
                 IllegalStateException.class, registryFor(iczHarness.objectManager())::capture);
         assertTrue(iczThrown.getMessage().contains("no registered id for object reference"),
                 "missing ICZ parent identity must fail loudly");
+
+        Harness columnHarness = Harness.create(List.of());
+        IczCrushingColumnObjectInstance unmanagedColumn =
+                new IczCrushingColumnObjectInstance(ICZ_CRUSHING_COLUMN);
+        unmanagedColumn.setServices(columnHarness.services());
+        ObjectInstance decoration = columnHarness.objectManager().createDynamicObject(
+                () -> constructIczCrushingColumnDecoration(unmanagedColumn));
+        assertSame(unmanagedColumn, readObjectField(decoration, "parent"),
+                "precondition: ICZ crushing-column decoration parent is outside ObjectManager identity registration");
+
+        IllegalStateException columnThrown = assertThrows(
+                IllegalStateException.class, registryFor(columnHarness.objectManager())::capture);
+        assertTrue(columnThrown.getMessage().contains("no registered id for object reference"),
+                "missing ICZ crushing-column decoration parent identity must fail loudly");
     }
 
     private record Harness(ObjectManager objectManager, ObjectServices services) {
@@ -364,6 +485,14 @@ class TestS3kNestedHurtboxGraphRewind {
                 .orElseThrow(() -> new AssertionError("missing child for parent " + parent));
     }
 
+    private static ObjectInstance childAtX(List<ObjectInstance> children, int x) {
+        List<ObjectInstance> matches = children.stream()
+                .filter(child -> child.getX() == x)
+                .toList();
+        assertEquals(1, matches.size(), "expected exactly one child at x=" + x);
+        return matches.getFirst();
+    }
+
     private static ObjectInstance constructMgzArm(MgzMinibossInstance parent, int xOffset, int yOffset) {
         try {
             Class<?> cls = Class.forName(MGZ_DRILL_ARM_CLASS);
@@ -385,6 +514,31 @@ class TestS3kNestedHurtboxGraphRewind {
             return (ObjectInstance) ctor.newInstance(parent, x, y);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to construct ICZ hurt child", e);
+        }
+    }
+
+    private static ObjectInstance constructIczTensionSupport(
+            IczTensionPlatformObjectInstance parent, int x, int y, boolean hFlip) {
+        try {
+            Class<?> cls = Class.forName(ICZ_TENSION_SUPPORT_CLASS);
+            Constructor<?> ctor = cls.getDeclaredConstructor(
+                    IczTensionPlatformObjectInstance.class, int.class, int.class, boolean.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(parent, x, y, hFlip);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct ICZ tension support", e);
+        }
+    }
+
+    private static ObjectInstance constructIczCrushingColumnDecoration(
+            IczCrushingColumnObjectInstance parent) {
+        try {
+            Class<?> cls = Class.forName(ICZ_CRUSHING_COLUMN_DECORATION_CLASS);
+            Constructor<?> ctor = cls.getDeclaredConstructor(IczCrushingColumnObjectInstance.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(parent);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct ICZ crushing-column decoration", e);
         }
     }
 

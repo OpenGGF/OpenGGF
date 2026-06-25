@@ -12,12 +12,9 @@ com.openggf.game.sonic3k.objects.CnzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.CnzTeleporterInstance#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#recreate
-com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration#recreate
-com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#recreate
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance#recreate
-com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#recreate
 com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance#recreate
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance#recreate

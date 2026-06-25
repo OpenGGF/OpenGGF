@@ -227,6 +227,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance", "lastCaptureCloud"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud", "frozenBlock"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment", "mappingFrame"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment", "previous"), RewindFieldPolicy.TRANSIENT),

@@ -30,7 +30,7 @@ import java.util.List;
  * the X axis, shake for 16 frames, then switch to {@code MoveTouchChkDel}.
  */
 public class IczIceSpikesObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, TouchResponseProvider {
+        implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN;
     private static final int PRIORITY_BUCKET = 5; // ObjDat_ICZIceSpikes priority $280.
@@ -77,6 +77,11 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
         this.x = originalX;
         this.y = originalY;
         this.phase = subtypeZero ? Phase.SOLID_BASE : Phase.WAIT_FOR_PLAYER;
+    }
+
+    @Override
+    public IczIceSpikesObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczIceSpikesObjectInstance(ctx.spawn());
     }
 
     @Override

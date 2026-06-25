@@ -7,6 +7,9 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -394,7 +397,7 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
         return hasBottomDecoration;
     }
 
-    private static final class BottomDecoration extends AbstractObjectInstance {
+    private static final class BottomDecoration extends AbstractObjectInstance implements RewindRecreatable {
         private final IczCrushingColumnObjectInstance parent;
 
         private BottomDecoration(IczCrushingColumnObjectInstance parent) {
@@ -402,6 +405,16 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
                     parent.spawn.objectId(), parent.subtype, parent.spawn.renderFlags(), false,
                     parent.y + BOTTOM_DECORATION_Y_OFFSET), "ICZCrushingColumnDecoration");
             this.parent = parent;
+        }
+
+        @Override
+        public BottomDecoration recreateForRewind(RewindRecreateContext ctx) {
+            IczCrushingColumnObjectInstance liveParent =
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, IczCrushingColumnObjectInstance.class);
+            if (liveParent == null) {
+                return null;
+            }
+            return new BottomDecoration(liveParent);
         }
 
         @Override

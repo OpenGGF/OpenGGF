@@ -478,13 +478,16 @@ public class TestRewindHarnessCoverageRatchet {
     *       gained generic recreate coverage.</li>
     *   <li>2026-06-25: raised to 611 after S3K Pachinko Energy Trap beam
     *       and column children gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 614 after S3K ICZ ice-spike root,
+    *       tension-platform support, and crushing-column decoration gained
+    *       generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 611 after S3K pachinko energy-trap child graph restore coverage.
-    static final int RATCHET_FLOOR = 611;
+    // 2026-06-25: raised to 614 after S3K ICZ support graph restore coverage.
+    static final int RATCHET_FLOOR = 614;
 
     @BeforeEach
     void initHeadless() {
