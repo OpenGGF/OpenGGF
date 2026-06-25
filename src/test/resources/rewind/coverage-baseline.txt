@@ -11,9 +11,6 @@ com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#recreate
 com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment#recreate
 com.openggf.game.sonic3k.objects.CnzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.CnzTeleporterInstance#recreate
-com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance#recreate
-com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#recreate
-com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris#recreate
 com.openggf.game.sonic3k.objects.CorkFloorObjectInstance$CorkFloorFragment#recreate
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$BodyOverlayChild#recreate

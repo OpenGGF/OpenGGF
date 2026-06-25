@@ -2855,6 +2855,17 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotDebris",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_COLLAPSING_BRIDGE_BATCH230_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance",
@@ -9346,6 +9357,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kTunnelbotGraphBatch229ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_TUNNELBOT_GRAPH_BATCH229_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kCollapsingBridgeBatch230ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_COLLAPSING_BRIDGE_BATCH230_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K collapsing bridge batch 230");
+        }
+    }
+
+    @Test
+    void s3kCollapsingBridgeBatch230ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_COLLAPSING_BRIDGE_BATCH230_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K collapsing bridge batch 230 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kCollapsingBridgeBatch230ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_COLLAPSING_BRIDGE_BATCH230_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

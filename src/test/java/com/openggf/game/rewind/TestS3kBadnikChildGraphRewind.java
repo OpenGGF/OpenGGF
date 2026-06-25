@@ -3,8 +3,10 @@ package com.openggf.game.rewind;
 import com.openggf.camera.Camera;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance;
 import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
@@ -80,6 +82,10 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm";
     private static final String TUNNELBOT_DEBRIS =
             "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotDebris";
+    private static final String COLLAPSING_BRIDGE_FRAGMENT =
+            "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment";
+    private static final String COLLAPSING_BRIDGE_MGZ_DEBRIS =
+            "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris";
 
     @BeforeEach
     void initHeadless() {
@@ -480,6 +486,68 @@ class TestS3kBadnikChildGraphRewind {
                 "arrow B parent must resolve to restored layout-slot B Cluckoid");
         assertEquals(2, liveByClassName(objectManager, CLUCKOID_ARROW_CHILD).size(),
                 "restore must keep exactly the captured Cluckoid arrows");
+    }
+
+    @Test
+    void collapsingBridgeFragmentsRestoreWithoutDropsDoublesOrStateLoss() {
+        Harness harness = Harness.create(new MgzTestRegistry(), List.of(
+                new ObjectSpawn(0x180, 0x130, Sonic3kObjectIds.COLLAPSING_BRIDGE, 0x20, 1, false, 130)));
+        ObjectManager objectManager = harness.objectManager();
+        List<CollapsingBridgeObjectInstance> sourceBridges =
+                liveByType(objectManager, CollapsingBridgeObjectInstance.class);
+        assertEquals(1, sourceBridges.size(), "precondition: one Collapsing Bridge root must be captured");
+        CollapsingBridgeObjectInstance sourceBridge = sourceBridges.getFirst();
+        ObjectInstance sourceFragment = objectManager.createDynamicObject(
+                () -> new CollapsingBridgeObjectInstance.BridgeFragment(
+                        0x184, 0x132, 3, 2, 9,
+                        Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_HCZ, true, true));
+        ObjectInstance sourceDebris = objectManager.createDynamicObject(
+                () -> new CollapsingBridgeObjectInstance.MgzStompDebris(
+                        0x1A0, 0x140, 4, 5, 0x60, -0x90,
+                        Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_MGZ, false));
+
+        ObjectRefId bridgeId = objectId(objectManager, sourceBridge);
+        ObjectRefId fragmentId = objectId(objectManager, sourceFragment);
+        ObjectRefId debrisId = objectId(objectManager, sourceDebris);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> new CollapsingBridgeObjectInstance.BridgeFragment(
+                0x300, 0x180, 1, 1, 1,
+                Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_LBZ, false, false));
+        objectManager.createDynamicObject(() -> new CollapsingBridgeObjectInstance.MgzStompDebris(
+                0x320, 0x188, 1, 1, 0x10, -0x20,
+                Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_MGZ, true));
+
+        rewindRegistry.restore(snapshot);
+
+        CollapsingBridgeObjectInstance restoredBridge =
+                objectById(objectManager, CollapsingBridgeObjectInstance.class, bridgeId);
+        ObjectInstance restoredFragment = objectById(objectManager, ObjectInstance.class, fragmentId);
+        ObjectInstance restoredDebris = objectById(objectManager, ObjectInstance.class, debrisId);
+        assertNotSame(sourceFragment, restoredFragment, "restore must recreate bridge fragment");
+        assertNotSame(sourceDebris, restoredDebris, "restore must recreate MGZ bridge debris");
+        assertEquals(1, liveByType(objectManager, CollapsingBridgeObjectInstance.class).size(),
+                "restore must keep exactly the captured bridge root");
+        assertEquals(1, liveByClassName(objectManager, COLLAPSING_BRIDGE_FRAGMENT).size(),
+                "restore must keep exactly the captured bridge fragment");
+        assertEquals(1, liveByClassName(objectManager, COLLAPSING_BRIDGE_MGZ_DEBRIS).size(),
+                "restore must keep exactly the captured MGZ bridge debris");
+        assertSame(restoredBridge, objectById(objectManager, CollapsingBridgeObjectInstance.class, bridgeId),
+                "bridge identity must resolve after restore");
+        assertEquals(3, readIntField(restoredFragment, "fragmentFrameIndex"));
+        assertEquals(2, readIntField(restoredFragment, "pieceIndex"));
+        assertEquals(Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_HCZ,
+                readObjectField(restoredFragment, "artKey"));
+        assertTrue((Boolean) readObjectField(restoredFragment, "hFlip"));
+        assertTrue(restoredFragment.isHighPriority());
+        assertEquals(4, readIntField(restoredDebris, "frameIndex"));
+        assertEquals(5, readIntField(restoredDebris, "pieceIndex"));
+        assertEquals(Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_MGZ,
+                readObjectField(restoredDebris, "artKey"));
+        assertFalse((Boolean) readObjectField(restoredDebris, "hFlip"));
+        assertEquals(0x1A0, restoredDebris.getX());
+        assertEquals(0x140, restoredDebris.getY());
     }
 
     @Test
@@ -1297,6 +1365,13 @@ class TestS3kBadnikChildGraphRewind {
         @Override
         protected int currentRomZoneId() {
             return Sonic3kZoneIds.ZONE_MHZ;
+        }
+    }
+
+    private static final class MgzTestRegistry extends Sonic3kObjectRegistry {
+        @Override
+        protected int currentRomZoneId() {
+            return Sonic3kZoneIds.ZONE_MGZ;
         }
     }
 

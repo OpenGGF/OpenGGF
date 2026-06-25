@@ -467,13 +467,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       restores gained generic recreate coverage.</li>
     *   <li>2026-06-25: raised to 596 after S3K Tunnelbot parent/arm/debris graph
     *       restores gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 599 after S3K Collapsing Bridge root,
+    *       wave fragment, and MGZ stomp debris gained generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 596 after S3K Tunnelbot graph restore coverage.
-    static final int RATCHET_FLOOR = 596;
+    // 2026-06-25: raised to 599 after S3K Collapsing Bridge graph restore coverage.
+    static final int RATCHET_FLOOR = 599;
 
     @BeforeEach
     void initHeadless() {

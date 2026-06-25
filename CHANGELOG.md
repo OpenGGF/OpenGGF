@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K Collapsing Bridge graph rewind:** Collapsing Bridge roots, wave fragments, and MGZ stomp debris now restore through generic recreate with fragment render state preserved.
 - **S3K Tunnelbot graph rewind:** Tunnelbot parents, arm collision proxies, and debris now restore through generic recreate with restored arm slots and debris state preserved.
 - **S3K Caterkiller Jr graph rewind:** Caterkiller Jr heads now restore through generic recreate, with restored body segments relinked into the head's runtime segment list.
 - **S3K SnaleBlaster graph rewind:** SnaleBlaster parents, covers, and shooters now restore through generic recreate with restored parent caches relinked to restored children.
