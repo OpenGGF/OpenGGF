@@ -189,6 +189,9 @@ com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance#finalScalar#xFli
 com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#baseX
 com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#baseY
 com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance#finalScalar#chainCount
+com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance$SwingChainLinkChild#finalScalar#frame
+com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance$SwingChainLinkChild#finalScalar#linkPriority
+com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance$SwingChainLinkChild#recreate
 com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance#finalScalar#subtype
 com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate

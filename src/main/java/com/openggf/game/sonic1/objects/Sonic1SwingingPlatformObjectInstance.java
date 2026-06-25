@@ -3,6 +3,7 @@ import com.openggf.game.PlayableEntity;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.OscillationManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -91,6 +92,16 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
     private int collisionType;
 
     private boolean initialized;
+
+    // ROM Swing_Main .makechain allocates one OST slot per chain link via
+    // FindFreeObj (REV01 FixBugs=0; docs/s1disasm/_incObj/15 Swinging
+    // Platforms.asm:67-105). Each child is a render-only object (routine $A =
+    // Swing_Display) positioned by the anchor's Swing_Move2 each frame; the
+    // children carry no collision. Modelling them as real OST-slot children
+    // makes the FindFreeObj occupancy match ROM (SBZ2 f1447: the missing chain
+    // slots shifted the Walking Bombs down 5 slots).
+    private SwingChainLinkChild[] chainLinkChildren;
+    private boolean chainLinkChildrenSpawned;
 
     public Sonic1SwingingPlatformObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SwingingPlatform");
@@ -193,15 +204,22 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
         // If obFrame is initially 1 (giant ball): starts at platformDistance+8, numChildren-1 times
         // For giant ball: addq.b #8,d3 / subq.w #1,d1 before makechain loop
 
+        // ROM .makechain runs `dbf d1` with d1 = chainCount (non-giant) or
+        // chainCount-1 (giant ball: `subq.w #1,d1`), so it executes d1+1 times
+        // → chainCount+1 children (non-giant) / chainCount (giant). The final
+        // child (d3 < 0) is the anchor-end piece (frame 2). The engine
+        // previously rendered that anchor piece in the parent (a separate pivot
+        // render) and spawned only `chainCount` links, leaving the OST one slot
+        // short of ROM (SBZ2 f1447: bombs at slot 0x68 vs ROM 0x69).
         int startDist;
         int childCount;
         if (variant == ZoneVariant.GIANT_BALL) {
             // Giant ball: d3 = (chainCount<<4)+8+8 = (chainCount<<4)+16
             startDist = platformDistance + 8;
-            childCount = Math.max(0, chainCount - 1);
+            childCount = chainCount;
         } else {
             startDist = platformDistance;
-            childCount = chainCount;
+            childCount = chainCount + 1;
         }
 
         // Allocate arrays for all elements we need to render:
@@ -230,6 +248,31 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
         }
 
         updatePositions();
+        spawnChainLinkChildren();
+    }
+
+    /**
+     * Spawn one render-only OST-slot child per chain link, matching ROM
+     * Swing_Main {@code .makechain} (FindFreeObj per link, REV01 FixBugs=0,
+     * docs/s1disasm/_incObj/15 Swinging Platforms.asm:67-105). The children
+     * occupy SST slots so FindFreeObj allocation downstream matches ROM; the
+     * anchor positions and the children render their own link sprite.
+     */
+    private void spawnChainLinkChildren() {
+        if (chainLinkChildrenSpawned) {
+            return;
+        }
+        chainLinkChildrenSpawned = true;
+        int count = chainDistances.length;
+        chainLinkChildren = new SwingChainLinkChild[count];
+        for (int i = 0; i < count; i++) {
+            final int idx = i;
+            chainLinkChildren[i] = spawnFreeChild(() -> new SwingChainLinkChild(
+                    baseX, baseY, artKey, linkFrame[idx], priority));
+            if (chainLinkChildren[i] != null) {
+                chainLinkChildren[i].setLinkPosition(linkX[i], linkY[i]);
+            }
+        }
     }
 
     @Override
@@ -303,12 +346,15 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
         x = origX + ((cos * platDist) >> 8);
         y = origY + ((sin * platDist) >> 8);
 
-        // Position chain links
+        // Position chain links (ROM Swing_Move2 writes each child's obX/obY).
         for (int i = 0; i < chainDistances.length; i++) {
             int dist = chainDistances[i];
             // For anchor frame (dist < 0), it stays near the pivot but still uses the formula
             linkX[i] = origX + ((cos * dist) >> 8);
             linkY[i] = origY + ((sin * dist) >> 8);
+            if (chainLinkChildren != null && chainLinkChildren[i] != null) {
+                chainLinkChildren[i].setLinkPosition(linkX[i], linkY[i]);
+            }
         }
     }
 
@@ -317,17 +363,9 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
         PatternSpriteRenderer renderer = getRenderer(artKey);
         if (renderer == null) return;
 
-        // Render anchor at pivot point (frame 2)
-        renderer.drawFrameIndex(2, baseX, baseY, false, false);
-
-        // Render chain links from anchor toward platform
-        // Iterate in reverse so links closer to anchor render first (behind)
-        // Disasm: bclr #6,obGfx(a1) clears palette bit 14 for all children (palette 0);
-        //         bset #6,obGfx(a1) restores it only for the anchor (palette 2).
-        for (int i = chainDistances.length - 1; i >= 0; i--) {
-            int palOverride = (linkFrame[i] == 1) ? 0 : -1;
-            renderer.drawFrameIndex(linkFrame[i], linkX[i], linkY[i], false, false, palOverride);
-        }
+        // Anchor + chain links are now rendered by their own OST-slot children
+        // (SwingChainLinkChild, the final child being the frame-2 anchor piece),
+        // matching ROM Swing_Display. The parent renders only the platform/ball.
 
         // Render platform/ball at end of chain (frame 0)
         // Giant ball: frame 1 (set by disasm: move.b #1,obFrame(a0))
@@ -431,5 +469,69 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
         ctx.drawLine(x, y - 4, x, y + 4, 1.0f, 0.0f, 0.0f);
     }
 
+    /**
+     * Render-only chain-link child of the swinging platform (Obj 0x15).
+     * <p>
+     * ROM Swing_Main {@code .makechain} allocates one SST slot per chain link
+     * (FindFreeObj) and sets routine $A ({@code Swing_Display}) — the links do
+     * nothing but display; the anchor positions them via {@code Swing_Move2}
+     * (docs/s1disasm/_incObj/15 Swinging Platforms.asm:88-105,215-241). The
+     * links carry no collision. Modelling them as real OST-slot children keeps
+     * the engine's FindFreeObj occupancy aligned with ROM.
+     */
+    public static final class SwingChainLinkChild extends AbstractObjectInstance {
+        private final String linkArtKey;
+        private final int frame;
+        private final int linkPriority;
+        private int posX;
+        private int posY;
 
+        SwingChainLinkChild(int x, int y, String artKey, int frame, int priority) {
+            super(new ObjectSpawn(x, y, Sonic1ObjectIds.SWINGING_PLATFORM, 0, 0, false, 0),
+                    "SwingChainLink");
+            this.linkArtKey = artKey;
+            this.frame = frame;
+            this.linkPriority = priority;
+            this.posX = x;
+            this.posY = y;
+        }
+
+        void setLinkPosition(int x, int y) {
+            this.posX = x;
+            this.posY = y;
+            updateDynamicSpawn(x, y);
+        }
+
+        @Override
+        public int getX() {
+            return posX;
+        }
+
+        @Override
+        public int getY() {
+            return posY;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            // Render-only (ROM Swing_Display): positioned by the anchor each frame.
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            PatternSpriteRenderer renderer = getRenderer(linkArtKey);
+            if (renderer == null) {
+                return;
+            }
+            // ROM: bclr #6,obGfx clears palette bit for chain links (palette 0);
+            // the anchor-end (frame 2) keeps its own palette.
+            int palOverride = (frame == 1) ? 0 : -1;
+            renderer.drawFrameIndex(frame, posX, posY, false, false, palOverride);
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return RenderPriority.clamp(linkPriority);
+        }
+    }
 }
