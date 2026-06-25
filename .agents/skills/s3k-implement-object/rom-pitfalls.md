@@ -914,6 +914,18 @@ camera-coarse bound keyed on its width, not a fixed engine margin.
 
 ---
 
+## P24 -- Object pushes the player: `add.w speed,x_pos(a1)` / `move.w pos,x_pos(a1)` preserve the rider's sub-pixel -- never `setCentreX`/`setCentreY` (they ZERO it)
+
+**Symptom.** A frontier reads as a "sub-pixel RAM-gated" small constant X/Y residual: the engine is byte-exact with ROM until an object first pushes/carries the player (conveyor, fan, moving solid, `MvSonicOnPtfm`-style carry, `SolidObject` side-push), then a CONSTANT fraction behind, crossing an integer boundary 1 frame off.
+
+**Root cause.** S3K object->player position writes operate on the PIXEL word only -- `add.w <speed>,x_pos(a1)` / `sub.w d0,x_pos(a1)` / `move.w <pos>,x_pos(a1)` write the `x_pos`/`y_pos` pixel word and leave the sub-pixel word UNTOUCHED. S3K positions are 16.16 (`x_pos` pixel word at `$10`, sub-pixel word at `$12`; `y_pos` at `$14`/`$16`), so a `.w` write to the pixel word preserves the 16-bit fraction, just like S1/S2. The engine's `setCentreX(short)` / `setCentreY(short)` ZERO the sub-pixel; any object-push path using them discards fraction every frame.
+
+**What to check / fix.** For any S3K object that pushes/carries the player or sets him to a pixel position the ROM writes via `add.w`/`sub.w`/`move.w` to the pixel word: use `player.shiftX/shiftY` (incremental push) or `setCentreXPreserveSubpixel`/`setCentreYPreserveSubpixel` / `setX`/`setY` (set-to-position). Keep `setCentreX`/`setCentreY` ONLY where ROM explicitly clears the fraction (e.g. `move.w #0,x_sub(a1)` or a full 32-bit replace that overwrites the sub word). FAITHFUL-OR-BOUNCE per call site against the object's actual routine in `docs/skdisasm/sonic3k.asm`. (Note: HCZ conveyors and moving platforms are the prime S3K candidates.)
+
+**Originating commit (S1 origin).** `b5bc778d4` (S1 Conveyor preserves rider sub-pixel via `shiftX`; SBZ2 f2224 -> f2323). See `s1-implement-object/rom-pitfalls.md` P15 / `s2-implement-object/rom-pitfalls.md` P53.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

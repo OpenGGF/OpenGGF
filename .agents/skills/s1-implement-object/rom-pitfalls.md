@@ -360,3 +360,24 @@ The engine models `locktime`/`move_lock` as `moveLockTimer`, decremented only in
 **Cross-game note.** S2 `SolidObject_cont` (`docs/s2disasm/s2.asm:35353-35354`) and S3K `SolidObject` (`docs/skdisasm/sonic3k.asm:41364-41365`) use the same `cmp.w d3,d0 / bhi` inclusive right edge. Apply `usesInclusiveRightEdge()` for any `SolidObject`-family object in those games too.
 
 **Originating commit.** `caf70abb7` (S1 FZ boss uses ROM-inclusive SolidObject right edge for roll-bounce; f837 -> f1724).
+
+---
+
+## P15 — Object pushes the player: `add.w speed,obX(a1)` / `move.w pos,obX(a1)` preserve the rider's sub-pixel — never `setCentreX`/`setCentreY` (they ZERO it)
+
+**Symptom.** A frontier reads as a "sub-pixel RAM-gated" 1px/0.x-px X (or Y) residual — the engine drifts a constant fraction behind ROM, crossing an integer boundary 1 frame off. The player is being pushed/carried/captured by an object (conveyor, fan/wind, moving solid, teleporter capture, MvSonicOnPtfm carry, ...) and the engine is byte-EXACT until the first frame that object touches him, then a CONSTANT delta thereafter.
+
+**Root cause.** Almost every ROM object→player position write operates on the PIXEL word only: `add.w <speed>,obX(a1)` / `sub.w d0,obX(a1)` / `move.w <pos>,obX(a1)` write obX/obY at offset `$8`/`$C` and leave the sub-pixel words (`x_sub`/`y_sub` at `$A`/`$E`) UNTOUCHED — the rider keeps his accumulated fraction. The engine's `setCentreX(short)` / `setCentreY(short)` ZERO the sub-pixel (`this.xSubpixel = 0`). Calling them in an object-push path discards up to ~1px of fraction every frame the object acts on the player, putting him progressively behind ROM.
+
+**What to check / fix.** For any object that pushes or carries the player each frame, or captures/repositions him to a pixel position the ROM writes via `add.w`/`sub.w`/`move.w` to the pixel word:
+- **Incremental push** (`add.w speed,obX(a1)`): use `player.shiftX(delta)` / `player.shiftY(delta)` — they add an integer pixel delta and preserve the sub-pixel.
+- **Set-to-position** (`move.w pos,obX(a1)`): use `player.setCentreXPreserveSubpixel(x)` / `setCentreYPreserveSubpixel(y)` (or `setX`/`setY`, which write the pixel word only).
+- **Only keep `setCentreX`/`setCentreY` (sub-pixel zeroing) where ROM EXPLICITLY clears the fraction**, e.g. `move.w #0,obSubpixelX(a0)`. The S1 level-side-boundary clamp does exactly this (`Boundary_Sides`: `move.w d0,obX(a0)` THEN `move.w #0,obSubpixelX(a0)`, `01 Sonic.asm:1097-1100`) — there `setCentreX` is CORRECT. Always read the object's actual ROM routine before changing the setter; FAITHFUL-OR-BOUNCE per call site.
+
+Audit method: gate a probe in `AbstractSprite.setCentreX/Y` on a system property that logs the first non-`AbstractSprite` caller whenever a NON-zero sub-pixel is zeroed (dedup per call site), then run the trace sweep; each hit is a candidate to verify against the disasm.
+
+**ROM citation.** Sub-pixel-PRESERVING object pushes (engine should use `shiftX`/`setCentreXPreserveSubpixel`): S1 Conveyor `add.w conv_speed(a0),obX(a1)`; SLZ Fan `add.w d0,obX(a1)` (`5D SLZ Fan.asm:82`); SBZ Teleporter capture `move.w obX(a0),obX(a1)` (`72 SBZ Teleporter.asm:73-74`); `SolidObject` side-push `sub.w d0,obX(a1)` (`sub SolidObject.asm:239`); `MvSonicOnPtfm` Y-seat `move.w d0,obY(a1)` + X-carry `sub.w d2,obX(a1)` (`sub MvSonicOnPtfm.asm:36,39`); Spring side-push `addq.w #8,obX(a1)` (`41 Springs.asm:137`); MZ PushBlock align `add.w d0,obX(a1)` (`33 MZ, LZ Pushable Blocks.asm:404`). Sub-pixel-ZEROING (engine `setCentreX` is correct): level-side boundary `move.w #0,obSubpixelX(a0)` (`01 Sonic.asm:1100`).
+
+**Cross-game note.** S2/S3K conveyors, fans, moving solids, and `MvSonicOnPtfm`/`SolidObject` side-pushes use the same `add.w`/`sub.w`/`move.w obX(a1)` pixel-word convention and likewise PRESERVE the rider's sub-pixel — any S2/S3K object-push path using a sub-pixel-zeroing centre setter is the same bug. (S3K `x_pos` is 16.16 with the same `$8`/`$A` obX/x_sub layout.)
+
+**Originating commit.** `b5bc778d4` (S1 Conveyor Belt preserves rider sub-pixel X on push via `shiftX`; SBZ2 f2224 -> f2323). Companion: SBZ Teleporter capture uses `setCentreXPreserveSubpixel`/`setCentreYPreserveSubpixel`.

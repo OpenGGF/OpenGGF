@@ -2204,6 +2204,20 @@ frames). See `s1-implement-object/rom-pitfalls.md` P10.
 
 ---
 
+## P53 — Object pushes the player: `add.w speed,obX(a1)` / `move.w pos,obX(a1)` preserve the rider's sub-pixel — never `setCentreX`/`setCentreY` (they ZERO it)
+
+**Symptom.** A frontier reads as a "sub-pixel RAM-gated" small constant X/Y residual: the engine is byte-exact with ROM until an object first pushes/carries the player (conveyor, fan, moving solid, `MvSonicOnPtfm`/`SolidObject` side-push), then a CONSTANT fraction behind — crossing an integer boundary 1 frame off.
+
+**Root cause.** S2 object→player position writes operate on the PIXEL word only — `add.w <speed>,obX(a1)` / `sub.w d0,obX(a1)` / `move.w <pos>,obX(a1)` write `x_pos`/`y_pos` at offset `$8`/`$C` and leave `x_sub`/`y_sub` (`$A`/`$E`) UNTOUCHED, so the rider keeps his accumulated fraction. The engine's `setCentreX(short)` / `setCentreY(short)` ZERO the sub-pixel. Any object-push path using them discards ~1px of fraction per frame.
+
+**What to check / fix.** For any S2 object that pushes/carries the player or sets him to a pixel position the ROM writes via `add.w`/`sub.w`/`move.w` to the pixel word: use `player.shiftX/shiftY` (incremental push) or `setCentreXPreserveSubpixel`/`setCentreYPreserveSubpixel` / `setX`/`setY` (set-to-position). Keep `setCentreX`/`setCentreY` ONLY where ROM explicitly clears the fraction (`move.w #0,x_sub(a1)` or a full-replace). FAITHFUL-OR-BOUNCE per call site against the object's actual ROM routine.
+
+**ROM citation.** S2 conveyors/fans/moving solids and `SolidObject`/`MvSonicOnPtfm` side-push/carry use the same `add.w`/`sub.w`/`move.w obX(a1)` pixel-word convention as S1 (preserves x_sub). Check each object's routine in `docs/s2disasm/s2.asm`; the `SolidObject_cont` side-push and the platform `MvSonicOnPtfm` carry are the shared cases. Only a `move.w #0,x_sub` (explicit clear) justifies a zeroing setter.
+
+**Originating commit (S1 origin).** `b5bc778d4` (S1 Conveyor preserves rider sub-pixel via `shiftX`; SBZ2 f2224 -> f2323). See `s1-implement-object/rom-pitfalls.md` P15.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
