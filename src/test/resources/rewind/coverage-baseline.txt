@@ -57,9 +57,6 @@ com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#recreate
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris#recreate
 com.openggf.game.sonic3k.objects.CorkFloorObjectInstance$CorkFloorFragment#recreate
-com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance#objectRef#parentButton
-com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance#recreate
-com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1PeerInstance#recreate
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild#objectRef#player
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild#recreate
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance#recreate
@@ -102,8 +99,6 @@ com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild#
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$MgzBossCameraScrollHelper#recreate
 com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#objectRef#spawnedKnuckles
-com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#objectRef#grabbedPlayer
 com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#objectRef#nativeP2GrabbedPlayer

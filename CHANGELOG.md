@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K MHZ1 cutscene graph rewind:** the MHZ1 cutscene button, spawned Knuckles actor, and peering child now restore through generic graph recreate while preserving their parent/back-reference links.
 - **S3K CNZ2 Knuckles cutscene graph rewind:** the first CNZ2 Knuckles cutscene parent now restores through generic graph recreate, preserves its blocking-wall link, and no longer requires stale object-ref/recreate baseline keys.
 - **S3K CNZ water-level cork-floor graph rewind:** the water helper and cork floor now restore through generic graph recreate, preserve the helper-to-floor link, and no longer require stale object-ref/recreate baseline keys.
 - **S3K CNZ2 cutscene-button graph rewind:** cutscene buttons now restore through generic graph recreate, preserve the spawned lights-flash link, and no longer require stale object-ref/recreate baseline keys.

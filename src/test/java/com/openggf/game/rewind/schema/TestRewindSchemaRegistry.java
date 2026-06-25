@@ -11,7 +11,10 @@ import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1PeerInstance;
 import com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance;
+import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -189,6 +192,29 @@ class TestRewindSchemaRegistry {
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "CNZ2 Knuckles cutscene compact schema must capture the blocking wall link without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesMhz1CutsceneButtonKnucklesLinks() {
+        RewindClassSchema buttonSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(Mhz1CutsceneButtonInstance.class);
+        RewindClassSchema knucklesSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(CutsceneKnucklesMhz1Instance.class);
+        RewindClassSchema peerSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(CutsceneKnucklesMhz1PeerInstance.class);
+
+        assertPolicy(buttonSchema, "spawnedKnuckles", RewindFieldPolicy.CAPTURED);
+        assertPolicy(knucklesSchema, "parentButton", RewindFieldPolicy.CAPTURED);
+        assertPolicy(peerSchema, "parent", RewindFieldPolicy.CAPTURED);
+        assertTrue(buttonSchema.unsupportedFields().isEmpty(),
+                "MHZ1 cutscene button compact schema must capture spawned Knuckles without fallback: "
+                        + buttonSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(knucklesSchema.unsupportedFields().isEmpty(),
+                "MHZ1 cutscene Knuckles compact schema must capture the parent button without fallback: "
+                        + knucklesSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(peerSchema.unsupportedFields().isEmpty(),
+                "MHZ1 cutscene peer compact schema must capture the parent Knuckles actor without fallback: "
+                        + peerSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {

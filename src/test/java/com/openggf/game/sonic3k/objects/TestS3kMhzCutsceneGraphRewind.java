@@ -43,6 +43,10 @@ class TestS3kMhzCutsceneGraphRewind {
             new ObjectSpawn(0x0380, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x31);
     private static final ObjectSpawn BUTTON_CAPTURED =
             new ObjectSpawn(0x0600, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x32);
+    private static final ObjectSpawn CUTSCENE_KNUCKLES_CAPTURED =
+            new ObjectSpawn(0x0608, 0x066C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x1C, 0, false, 0x37);
+    private static final ObjectSpawn CUTSCENE_KNUCKLES_PEER_CAPTURED =
+            new ObjectSpawn(0x0610, 0x066C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0, 0, false, 0x38);
     private static final ObjectSpawn OWNER_NEAR_STOPPER =
             new ObjectSpawn(0x0100, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0x33);
     private static final ObjectSpawn OWNER_CAPTURED =
@@ -88,6 +92,12 @@ class TestS3kMhzCutsceneGraphRewind {
 
         Mhz1CutsceneDoorInstance door = objectManager.createDynamicObject(
                 () -> new Mhz1CutsceneDoorInstance(buttonCaptured));
+        CutsceneKnucklesMhz1Instance spawnedKnuckles = objectManager.createDynamicObject(
+                () -> new CutsceneKnucklesMhz1Instance(CUTSCENE_KNUCKLES_CAPTURED, buttonCaptured));
+        setObjectField(buttonCaptured, "spawnedKnuckles", spawnedKnuckles);
+        CutsceneKnucklesMhz1PeerInstance peer = objectManager.createDynamicObject(
+                () -> new CutsceneKnucklesMhz1PeerInstance(
+                        CUTSCENE_KNUCKLES_PEER_CAPTURED, spawnedKnuckles));
         AbstractObjectInstance stopper = objectManager.createDynamicObject(
                 () -> newChild(P2_STOPPER_CLASS, Mhz1CutsceneKnucklesInstance.class, ownerCaptured));
         AbstractObjectInstance routeSwitch = objectManager.createDynamicObject(
@@ -105,6 +115,8 @@ class TestS3kMhzCutsceneGraphRewind {
         ObjectRefId routeParentDistractorId = requireId(captureTable, routeParentDistractor);
         ObjectRefId routeParentCapturedId = requireId(captureTable, routeParentCaptured);
         ObjectRefId doorId = requireId(captureTable, door);
+        ObjectRefId spawnedKnucklesId = requireId(captureTable, spawnedKnuckles);
+        ObjectRefId peerId = requireId(captureTable, peer);
         ObjectRefId stopperId = requireId(captureTable, stopper);
         ObjectRefId routeSwitchId = requireId(captureTable, routeSwitch);
 
@@ -113,6 +125,8 @@ class TestS3kMhzCutsceneGraphRewind {
         CompositeSnapshot snapshot = registry.capture();
 
         objectManager.removeDynamicObject(door);
+        objectManager.removeDynamicObject(spawnedKnuckles);
+        objectManager.removeDynamicObject(peer);
         objectManager.removeDynamicObject(stopper);
         objectManager.removeDynamicObject(routeSwitch);
         Mhz1CutsceneButtonInstance divergentButton = objectManager.createDynamicObject(
@@ -120,6 +134,15 @@ class TestS3kMhzCutsceneGraphRewind {
                         0x0390, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x41)));
         Mhz1CutsceneDoorInstance divergentDoor = objectManager.createDynamicObject(
                 () -> new Mhz1CutsceneDoorInstance(divergentButton));
+        CutsceneKnucklesMhz1Instance divergentSpawnedKnuckles = objectManager.createDynamicObject(
+                () -> new CutsceneKnucklesMhz1Instance(new ObjectSpawn(
+                        0x0388, 0x066C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x1C, 0, false, 0x44),
+                        divergentButton));
+        setObjectField(divergentButton, "spawnedKnuckles", divergentSpawnedKnuckles);
+        CutsceneKnucklesMhz1PeerInstance divergentPeer = objectManager.createDynamicObject(
+                () -> new CutsceneKnucklesMhz1PeerInstance(new ObjectSpawn(
+                        0x0398, 0x066C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0, 0, false, 0x45),
+                        divergentSpawnedKnuckles));
         Mhz1CutsceneKnucklesInstance divergentOwner = objectManager.createDynamicObject(
                 () -> new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
                         0x0080, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0x42)));
@@ -141,6 +164,10 @@ class TestS3kMhzCutsceneGraphRewind {
                 "restore must keep the captured MHZ2 cutscene parents without duplicate route switches");
         assertEquals(1, countLive(objectManager, Mhz1CutsceneDoorInstance.class),
                 "restore must recreate exactly one captured MHZ1 cutscene door");
+        assertEquals(1, countLive(objectManager, CutsceneKnucklesMhz1Instance.class),
+                "restore must recreate exactly one captured MHZ1 spawned Knuckles actor");
+        assertEquals(1, countLive(objectManager, CutsceneKnucklesMhz1PeerInstance.class),
+                "restore must recreate exactly one captured MHZ1 peering Knuckles child");
         assertEquals(1, countLive(objectManager, childClass(P2_STOPPER_CLASS)),
                 "restore must recreate exactly one captured P2 stopper");
         assertEquals(1, countLive(objectManager, childClass(ROUTE_SWITCH_CLASS)),
@@ -154,20 +181,36 @@ class TestS3kMhzCutsceneGraphRewind {
                 objectById(objectManager, CutsceneKnucklesMhz2Instance.class, routeParentCapturedId);
         Mhz1CutsceneDoorInstance restoredDoor =
                 objectById(objectManager, Mhz1CutsceneDoorInstance.class, doorId);
+        CutsceneKnucklesMhz1Instance restoredSpawnedKnuckles =
+                objectById(objectManager, CutsceneKnucklesMhz1Instance.class, spawnedKnucklesId);
+        CutsceneKnucklesMhz1PeerInstance restoredPeer =
+                objectById(objectManager, CutsceneKnucklesMhz1PeerInstance.class, peerId);
         AbstractObjectInstance restoredStopper =
                 objectById(objectManager, childClass(P2_STOPPER_CLASS), stopperId);
         AbstractObjectInstance restoredRouteSwitch =
                 objectById(objectManager, childClass(ROUTE_SWITCH_CLASS), routeSwitchId);
 
         assertNotSame(door, restoredDoor, "door must be recreated, not reused stale");
+        assertNotSame(spawnedKnuckles, restoredSpawnedKnuckles,
+                "spawned Knuckles must be recreated, not reused stale");
+        assertNotSame(peer, restoredPeer, "peer child must be recreated, not reused stale");
         assertNotSame(stopper, restoredStopper, "P2 stopper must be recreated, not reused stale");
         assertNotSame(routeSwitch, restoredRouteSwitch, "route switch must be recreated, not reused stale");
         assertNotSame(divergentDoor, restoredDoor, "restore must drop divergent door");
+        assertNotSame(divergentSpawnedKnuckles, restoredSpawnedKnuckles,
+                "restore must drop divergent spawned Knuckles");
+        assertNotSame(divergentPeer, restoredPeer, "restore must drop divergent peer child");
         assertNotSame(divergentStopper, restoredStopper, "restore must drop divergent P2 stopper");
         assertNotSame(divergentRouteSwitch, restoredRouteSwitch, "restore must drop divergent route switch");
 
         assertSame(restoredButton, readObjectField(restoredDoor, "parent"),
                 "door parent must relink to the captured restored button, not the nearest/first live button");
+        assertSame(restoredSpawnedKnuckles, readObjectField(restoredButton, "spawnedKnuckles"),
+                "button spawnedKnuckles must relink to the captured restored Knuckles actor");
+        assertSame(restoredButton, readObjectField(restoredSpawnedKnuckles, "parentButton"),
+                "spawned Knuckles parentButton must relink to the captured restored button");
+        assertSame(restoredSpawnedKnuckles, readObjectField(restoredPeer, "parent"),
+                "peer parent must relink to the captured restored Knuckles actor");
         assertSame(restoredOwner, readObjectField(restoredStopper, "owner"),
                 "P2 stopper owner must relink to the captured restored Knuckles owner");
         assertSame(restoredRouteParent, readObjectField(restoredRouteSwitch, "parent"),
@@ -188,6 +231,12 @@ class TestS3kMhzCutsceneGraphRewind {
     void mhzCutsceneHelpersUseRewindRecreatableWithoutExplicitDynamicCodecs() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(Mhz1CutsceneDoorInstance.class),
                 "MHZ1 cutscene door must restore through RewindRecreatable");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Mhz1CutsceneButtonInstance.class),
+                "MHZ1 cutscene button must restore through RewindRecreatable");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(CutsceneKnucklesMhz1Instance.class),
+                "MHZ1 spawned Knuckles actor must restore through RewindRecreatable");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(CutsceneKnucklesMhz1PeerInstance.class),
+                "MHZ1 peering Knuckles child must restore through RewindRecreatable");
         assertTrue(RewindRecreatable.class.isAssignableFrom(childClass(P2_STOPPER_CLASS)),
                 "MHZ1 P2 stopper must restore through RewindRecreatable");
         assertTrue(RewindRecreatable.class.isAssignableFrom(childClass(ROUTE_SWITCH_CLASS)),
@@ -195,6 +244,15 @@ class TestS3kMhzCutsceneGraphRewind {
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
                         Mhz1CutsceneDoorInstance.class.getName()),
                 "MHZ1 cutscene door must not keep an explicit S3K dynamic codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Mhz1CutsceneButtonInstance.class.getName()),
+                "MHZ1 cutscene button must not keep an explicit S3K dynamic codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        CutsceneKnucklesMhz1Instance.class.getName()),
+                "MHZ1 spawned Knuckles actor must not keep an explicit S3K dynamic codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        CutsceneKnucklesMhz1PeerInstance.class.getName()),
+                "MHZ1 peering Knuckles child must not keep an explicit S3K dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(P2_STOPPER_CLASS),
                 "MHZ1 P2 stopper must not keep an explicit S3K dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ROUTE_SWITCH_CLASS),
@@ -208,6 +266,37 @@ class TestS3kMhzCutsceneGraphRewind {
             Mhz1CutsceneButtonInstance unmanaged = new Mhz1CutsceneButtonInstance(BUTTON_CAPTURED);
             unmanaged.setServices(harness.services());
             harness.objectManager().createDynamicObject(() -> new Mhz1CutsceneDoorInstance(unmanaged));
+            return harness.objectManager();
+        });
+
+        assertMissingReferenceFails(() -> {
+            Harness harness = Harness.create(List.of(BUTTON_CAPTURED));
+            Mhz1CutsceneButtonInstance button =
+                    objectBySpawn(harness.objectManager(), Mhz1CutsceneButtonInstance.class, BUTTON_CAPTURED);
+            CutsceneKnucklesMhz1Instance unmanaged =
+                    new CutsceneKnucklesMhz1Instance(CUTSCENE_KNUCKLES_CAPTURED, button);
+            unmanaged.setServices(harness.services());
+            setObjectField(button, "spawnedKnuckles", unmanaged);
+            return harness.objectManager();
+        });
+
+        assertMissingReferenceFails(() -> {
+            Harness harness = Harness.create();
+            Mhz1CutsceneButtonInstance unmanaged = new Mhz1CutsceneButtonInstance(BUTTON_CAPTURED);
+            unmanaged.setServices(harness.services());
+            harness.objectManager().createDynamicObject(
+                    () -> new CutsceneKnucklesMhz1Instance(CUTSCENE_KNUCKLES_CAPTURED, unmanaged));
+            return harness.objectManager();
+        });
+
+        assertMissingReferenceFails(() -> {
+            Harness harness = Harness.create();
+            CutsceneKnucklesMhz1Instance unmanaged =
+                    new CutsceneKnucklesMhz1Instance(CUTSCENE_KNUCKLES_CAPTURED);
+            unmanaged.setServices(harness.services());
+            harness.objectManager().createDynamicObject(
+                    () -> new CutsceneKnucklesMhz1PeerInstance(
+                            CUTSCENE_KNUCKLES_PEER_CAPTURED, unmanaged));
             return harness.objectManager();
         });
 
@@ -387,6 +476,14 @@ class TestS3kMhzCutsceneGraphRewind {
     private static void setBooleanField(Object target, String fieldName, boolean value) {
         try {
             findField(target.getClass(), fieldName).setBoolean(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static void setObjectField(Object target, String fieldName, Object value) {
+        try {
+            findField(target.getClass(), fieldName).set(target, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
         }

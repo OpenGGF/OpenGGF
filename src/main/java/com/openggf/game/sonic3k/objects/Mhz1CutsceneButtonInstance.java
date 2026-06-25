@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -28,7 +29,7 @@ import java.util.List;
  * child used by the {@code _unkFAB8=$0C} release callback.
  */
 public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
     private static final int INIT_Y_OFFSET = 4;
     private static final int PRIORITY = 2;
     private static final int CALLBACK_WAIT = 0x5F;

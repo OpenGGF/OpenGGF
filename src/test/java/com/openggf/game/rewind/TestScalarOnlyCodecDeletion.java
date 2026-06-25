@@ -3049,6 +3049,15 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S3K_MHZ_CUTSCENE_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1PeerInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.Mhz1CutsceneDoorInstance",
                     GameId.S3K),
             new CodecDeletionCandidate(
