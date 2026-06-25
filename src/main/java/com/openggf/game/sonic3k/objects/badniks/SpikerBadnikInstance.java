@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -38,7 +39,8 @@ import java.util.List;
  * then launches the player upward at {@code -$600}. The side launchers animate
  * and fire one gravity-affected spike projectile from the player's side.
  */
-public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
+public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
+        implements SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x0A;
     private static final int PRIORITY_BUCKET = 5;
@@ -276,7 +278,20 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
-    private static final class SpikerSideLauncherChild extends AbstractObjectInstance {
+    private static SpikerBadnikInstance findLiveSpikerParent(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (instance instanceof SpikerBadnikInstance spiker && !spiker.isDestroyed()) {
+                return spiker;
+            }
+        }
+        return null;
+    }
+
+    private static final class SpikerSideLauncherChild extends AbstractObjectInstance
+            implements RewindRecreatable {
 
         private static final int IDLE_FRAME = 3;
         private static final int[] ATTACK_FRAMES = {3, 3, 4, 3};
@@ -287,7 +302,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
             ARMED,
             ATTACK
         }
-        private final SpikerBadnikInstance parent;
+        private SpikerBadnikInstance parent;
         private boolean leftSide;
 
         private State state = State.WAIT_FOR_OPEN;
@@ -300,6 +315,16 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
             super(parent.getSpawn(), leftSide ? "SpikerLeftLauncher" : "SpikerRightLauncher");
             this.parent = parent;
             this.leftSide = leftSide;
+        }
+
+        private SpikerSideLauncherChild(SpikerBadnikInstance parent) {
+            this(parent, false);
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            SpikerBadnikInstance liveParent = findLiveSpikerParent(ctx);
+            return liveParent != null ? new SpikerSideLauncherChild(liveParent) : null;
         }
 
         @Override
@@ -519,18 +544,6 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
         public void appendRenderCommands(List<GLCommand> commands) {
             // ROM parity: ObjDat child uses mapping frame 7, which is an empty frame.
             // This child only provides the spring/touch region above the body art.
-        }
-
-        private static SpikerBadnikInstance findLiveSpikerParent(RewindRecreateContext ctx) {
-            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
-                return null;
-            }
-            for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
-                if (instance instanceof SpikerBadnikInstance spiker && !spiker.isDestroyed()) {
-                    return spiker;
-                }
-            }
-            return null;
         }
     }
 

@@ -447,13 +447,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       generic spawn recreate coverage.</li>
     *   <li>2026-06-25: raised to 578 after S3K Dragonfly parent and wing
     *       child graph restores gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 580 after S3K Spiker parent and side-launcher
+    *       graph restores gained generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 578 after S3K Dragonfly parent/wing restore coverage.
-    static final int RATCHET_FLOOR = 578;
+    // 2026-06-25: raised to 580 after S3K Spiker parent/side-launcher restore coverage.
+    static final int RATCHET_FLOOR = 580;
 
     @BeforeEach
     void initHeadless() {

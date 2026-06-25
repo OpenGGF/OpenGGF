@@ -42,6 +42,8 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild";
     private static final String DRAGONFLY_WING_CHILD =
             "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$WingChild";
+    private static final String SPIKER_SIDE_LAUNCHER_CHILD =
+            "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild";
     private static final String SPIKER_TOP_SPIKE_CHILD =
             "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild";
     private static final String TURBO_SPIKER_SHELL_CHILD =
@@ -182,8 +184,14 @@ class TestS3kBadnikChildGraphRewind {
         sourceParentB.update(1, player());
         List<ObjectInstance> sourceTopSpikes = liveByClassName(objectManager, SPIKER_TOP_SPIKE_CHILD);
         assertEquals(2, sourceTopSpikes.size(), "precondition: each Spiker must create one top spike");
+        List<ObjectInstance> sourceSideLaunchers = liveByClassName(objectManager, SPIKER_SIDE_LAUNCHER_CHILD);
+        assertEquals(4, sourceSideLaunchers.size(), "precondition: each Spiker must create two side launchers");
         ObjectInstance sourceTopSpikeA = childWithParent(sourceTopSpikes, sourceParentA);
         ObjectInstance sourceTopSpikeB = childWithParent(sourceTopSpikes, sourceParentB);
+        ObjectInstance sourceLeftLauncherA = childWithParentAndSide(sourceSideLaunchers, sourceParentA, true);
+        ObjectInstance sourceRightLauncherA = childWithParentAndSide(sourceSideLaunchers, sourceParentA, false);
+        ObjectInstance sourceLeftLauncherB = childWithParentAndSide(sourceSideLaunchers, sourceParentB, true);
+        ObjectInstance sourceRightLauncherB = childWithParentAndSide(sourceSideLaunchers, sourceParentB, false);
         setIntField(sourceTopSpikeA, "cooldown", 9);
         setIntField(sourceTopSpikeB, "cooldown", 4);
 
@@ -191,6 +199,10 @@ class TestS3kBadnikChildGraphRewind {
         ObjectRefId parentBId = objectId(objectManager, sourceParentB);
         ObjectRefId topSpikeAId = objectId(objectManager, sourceTopSpikeA);
         ObjectRefId topSpikeBId = objectId(objectManager, sourceTopSpikeB);
+        ObjectRefId leftLauncherAId = objectId(objectManager, sourceLeftLauncherA);
+        ObjectRefId rightLauncherAId = objectId(objectManager, sourceRightLauncherA);
+        ObjectRefId leftLauncherBId = objectId(objectManager, sourceLeftLauncherB);
+        ObjectRefId rightLauncherBId = objectId(objectManager, sourceRightLauncherB);
         RewindRegistry rewindRegistry = registryFor(objectManager);
         CompositeSnapshot snapshot = rewindRegistry.capture();
 
@@ -203,12 +215,44 @@ class TestS3kBadnikChildGraphRewind {
         SpikerBadnikInstance restoredParentB = objectById(objectManager, SpikerBadnikInstance.class, parentBId);
         ObjectInstance restoredTopSpikeA = objectById(objectManager, ObjectInstance.class, topSpikeAId);
         ObjectInstance restoredTopSpikeB = objectById(objectManager, ObjectInstance.class, topSpikeBId);
+        ObjectInstance restoredLeftLauncherA = objectById(objectManager, ObjectInstance.class, leftLauncherAId);
+        ObjectInstance restoredRightLauncherA = objectById(objectManager, ObjectInstance.class, rightLauncherAId);
+        ObjectInstance restoredLeftLauncherB = objectById(objectManager, ObjectInstance.class, leftLauncherBId);
+        ObjectInstance restoredRightLauncherB = objectById(objectManager, ObjectInstance.class, rightLauncherBId);
         assertNotSame(sourceTopSpikeA, restoredTopSpikeA, "restore must recreate removed top spike A");
         assertNotSame(sourceTopSpikeB, restoredTopSpikeB, "restore must recreate removed top spike B");
+        assertNotSame(sourceLeftLauncherA, restoredLeftLauncherA, "restore must recreate left launcher A");
+        assertNotSame(sourceRightLauncherA, restoredRightLauncherA, "restore must recreate right launcher A");
+        assertNotSame(sourceLeftLauncherB, restoredLeftLauncherB, "restore must recreate left launcher B");
+        assertNotSame(sourceRightLauncherB, restoredRightLauncherB, "restore must recreate right launcher B");
         assertSame(restoredParentA, readObjectField(restoredTopSpikeA, "parent"),
                 "top spike A parent must resolve to restored Spiker A");
         assertSame(restoredParentB, readObjectField(restoredTopSpikeB, "parent"),
                 "top spike B parent must resolve to restored Spiker B");
+        assertSame(restoredParentA, readObjectField(restoredLeftLauncherA, "parent"),
+                "left launcher A parent must resolve to restored Spiker A");
+        assertSame(restoredParentA, readObjectField(restoredRightLauncherA, "parent"),
+                "right launcher A parent must resolve to restored Spiker A");
+        assertSame(restoredParentB, readObjectField(restoredLeftLauncherB, "parent"),
+                "left launcher B parent must resolve to restored Spiker B");
+        assertSame(restoredParentB, readObjectField(restoredRightLauncherB, "parent"),
+                "right launcher B parent must resolve to restored Spiker B");
+        assertSame(restoredLeftLauncherA, readObjectField(restoredParentA, "leftLauncher"),
+                "Spiker A leftLauncher slot must resolve to restored left launcher");
+        assertSame(restoredRightLauncherA, readObjectField(restoredParentA, "rightLauncher"),
+                "Spiker A rightLauncher slot must resolve to restored right launcher");
+        assertSame(restoredTopSpikeA, readObjectField(restoredParentA, "topSpike"),
+                "Spiker A topSpike slot must resolve to restored top spike");
+        assertSame(restoredLeftLauncherB, readObjectField(restoredParentB, "leftLauncher"),
+                "Spiker B leftLauncher slot must resolve to restored left launcher");
+        assertSame(restoredRightLauncherB, readObjectField(restoredParentB, "rightLauncher"),
+                "Spiker B rightLauncher slot must resolve to restored right launcher");
+        assertSame(restoredTopSpikeB, readObjectField(restoredParentB, "topSpike"),
+                "Spiker B topSpike slot must resolve to restored top spike");
+        assertTrue((Boolean) readObjectField(restoredLeftLauncherA, "leftSide"));
+        assertTrue(!(Boolean) readObjectField(restoredRightLauncherA, "leftSide"));
+        assertTrue((Boolean) readObjectField(restoredLeftLauncherB, "leftSide"));
+        assertTrue(!(Boolean) readObjectField(restoredRightLauncherB, "leftSide"));
         assertEquals(9, readIntField(restoredTopSpikeA, "cooldown"),
                 "top spike A cooldown must be restored from compact state");
         assertEquals(4, readIntField(restoredTopSpikeB, "cooldown"),
@@ -350,6 +394,16 @@ class TestS3kBadnikChildGraphRewind {
                 .filter(child -> readObjectField(child, "parent") == parent)
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("missing child for " + parent.getClass()));
+    }
+
+    private static ObjectInstance childWithParentAndSide(
+            List<ObjectInstance> children, ObjectInstance parent, boolean leftSide) {
+        return children.stream()
+                .filter(child -> readObjectField(child, "parent") == parent)
+                .filter(child -> ((Boolean) readObjectField(child, "leftSide")) == leftSide)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("missing "
+                        + (leftSide ? "left" : "right") + " child for " + parent.getClass()));
     }
 
     private static RewindRegistry registryFor(ObjectManager objectManager) {

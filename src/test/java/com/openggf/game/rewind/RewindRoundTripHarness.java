@@ -983,6 +983,8 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$WingChild",
                 "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild",
+                "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild",
                 "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",

@@ -31,6 +31,7 @@ import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance.LinkedBodyChild;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance.WingChild;
+import com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -45,6 +46,8 @@ class TestRewindSchemaRegistry {
             "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild";
     private static final String MADMOLE_SIDE_DRILL_CLASS =
             "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild";
+    private static final String SPIKER_SIDE_LAUNCHER_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild";
 
     @AfterEach
     void clearRegistry() {
@@ -260,6 +263,26 @@ class TestRewindSchemaRegistry {
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "Dragonfly wing compact schema must capture parent link without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesSpikerChildSlotsAndSideLauncherParent()
+            throws ClassNotFoundException {
+        RewindClassSchema parentSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(SpikerBadnikInstance.class);
+        RewindClassSchema launcherSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(Class.forName(SPIKER_SIDE_LAUNCHER_CLASS));
+
+        assertPolicy(parentSchema, "leftLauncher", RewindFieldPolicy.CAPTURED);
+        assertPolicy(parentSchema, "rightLauncher", RewindFieldPolicy.CAPTURED);
+        assertPolicy(parentSchema, "topSpike", RewindFieldPolicy.CAPTURED);
+        assertPolicy(launcherSchema, "parent", RewindFieldPolicy.CAPTURED);
+        assertTrue(parentSchema.unsupportedFields().isEmpty(),
+                "Spiker parent compact schema must capture child slots without fallback: "
+                        + parentSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(launcherSchema.unsupportedFields().isEmpty(),
+                "Spiker side launcher compact schema must capture parent link without fallback: "
+                        + launcherSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 
     @Test

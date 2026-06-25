@@ -2778,6 +2778,14 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$WingChild",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_SPIKER_GRAPH_BATCH220_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance",
@@ -8980,6 +8988,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kDragonflyGraphBatch219ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_DRAGONFLY_GRAPH_BATCH219_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kSpikerGraphBatch220ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_SPIKER_GRAPH_BATCH220_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Spiker graph batch 220");
+        }
+    }
+
+    @Test
+    void s3kSpikerGraphBatch220ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_SPIKER_GRAPH_BATCH220_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Spiker graph batch 220 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kSpikerGraphBatch220ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_SPIKER_GRAPH_BATCH220_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

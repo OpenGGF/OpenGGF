@@ -61,8 +61,6 @@ com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild#re
 com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterCoverChild#recreate
 com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild#recreate
-com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance#recreate
-com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild#recreate
 com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm#recreate
 com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotDebris#recreate
