@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K Ribot visual rewind:** Ribot visual trail children now restore through generic recreate by relinking to restored active children, clearing their stale recreate coverage gap.
 - **S3K Mantis graph rewind:** Mantis parents and visual children now restore through generic recreate with captured parent/child links, deleting their stale recreate coverage gaps.
 - **S3K Mushmeanie graph rewind:** Mushmeanie parents and shell children now restore through generic recreate with captured parent/shell links, deleting their stale recreate coverage gaps.
 - **S3K Cluckoid arrow rewind:** Cluckoid arrow children now restore through generic recreate, relinking to the restored layout-slot parent without a private codec.

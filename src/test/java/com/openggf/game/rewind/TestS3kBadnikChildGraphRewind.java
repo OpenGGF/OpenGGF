@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
@@ -61,6 +62,10 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance$MantisChild";
     private static final String MUSHMEANIE_SHELL_CHILD =
             "com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance$ShellChild";
+    private static final String RIBOT_ACTIVE_CHILD =
+            "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild";
+    private static final String RIBOT_VISUAL_CHILD =
+            "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild";
 
     @BeforeEach
     void initHeadless() {
@@ -632,6 +637,87 @@ class TestS3kBadnikChildGraphRewind {
     }
 
     @Test
+    void ribotVisualChildrenRelinkToRestoredActiveChildren() {
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of(
+                new ObjectSpawn(0x180, 0x130, Sonic3kObjectIds.RIBOT, 4, 0, false, 90),
+                new ObjectSpawn(0x2A0, 0x130, Sonic3kObjectIds.RIBOT, 4, 0, false, 91)));
+        ObjectManager objectManager = harness.objectManager();
+        TestablePlayableSprite player = player();
+        List<RibotBadnikInstance> sourceParents = liveByType(objectManager, RibotBadnikInstance.class);
+        assertEquals(2, sourceParents.size(), "precondition: two Ribot parents must be captured");
+        RibotBadnikInstance sourceParentA = sourceParents.get(0);
+        RibotBadnikInstance sourceParentB = sourceParents.get(1);
+        sourceParentA.update(0, player);
+        sourceParentB.update(0, player);
+        List<ObjectInstance> sourceActiveChildren = liveByClassName(objectManager, RIBOT_ACTIVE_CHILD);
+        assertEquals(2, sourceActiveChildren.size(), "precondition: each Ribot must create one active child");
+        ObjectInstance sourceActiveA = childWithParent(sourceActiveChildren, sourceParentA);
+        ObjectInstance sourceActiveB = childWithParent(sourceActiveChildren, sourceParentB);
+        sourceActiveA.update(1, player);
+        sourceActiveB.update(1, player);
+        List<ObjectInstance> sourceVisuals = liveByClassName(objectManager, RIBOT_VISUAL_CHILD);
+        assertEquals(6, sourceVisuals.size(), "precondition: each active child must create three visuals");
+        ObjectInstance sourceVisualA0 = visualChildWithParentAndIndex(sourceVisuals, sourceActiveA, 0);
+        ObjectInstance sourceVisualA2 = visualChildWithParentAndIndex(sourceVisuals, sourceActiveA, 2);
+        ObjectInstance sourceVisualB1 = visualChildWithParentAndIndex(sourceVisuals, sourceActiveB, 1);
+        setIntField(sourceVisualA0, "currentX", 0x190);
+        setIntField(sourceVisualA0, "currentY", 0x118);
+        setIntField(sourceVisualA0, "originX", 0x18C);
+        setIntField(sourceVisualA2, "currentX", 0x1A4);
+        setIntField(sourceVisualA2, "currentY", 0x120);
+        setIntField(sourceVisualB1, "currentX", 0x2AC);
+        setIntField(sourceVisualB1, "currentY", 0x12C);
+
+        ObjectRefId parentAId = objectId(objectManager, sourceParentA);
+        ObjectRefId parentBId = objectId(objectManager, sourceParentB);
+        ObjectRefId activeAId = objectId(objectManager, sourceActiveA);
+        ObjectRefId activeBId = objectId(objectManager, sourceActiveB);
+        ObjectRefId visualA0Id = objectId(objectManager, sourceVisualA0);
+        ObjectRefId visualA2Id = objectId(objectManager, sourceVisualA2);
+        ObjectRefId visualB1Id = objectId(objectManager, sourceVisualB1);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> new RibotBadnikInstance(new ObjectSpawn(
+                0x220, 0x130, Sonic3kObjectIds.RIBOT, 4, 0, false, 92)));
+
+        rewindRegistry.restore(snapshot);
+
+        RibotBadnikInstance restoredParentA =
+                objectById(objectManager, RibotBadnikInstance.class, parentAId);
+        RibotBadnikInstance restoredParentB =
+                objectById(objectManager, RibotBadnikInstance.class, parentBId);
+        ObjectInstance restoredActiveA = objectById(objectManager, ObjectInstance.class, activeAId);
+        ObjectInstance restoredActiveB = objectById(objectManager, ObjectInstance.class, activeBId);
+        ObjectInstance restoredVisualA0 = objectById(objectManager, ObjectInstance.class, visualA0Id);
+        ObjectInstance restoredVisualA2 = objectById(objectManager, ObjectInstance.class, visualA2Id);
+        ObjectInstance restoredVisualB1 = objectById(objectManager, ObjectInstance.class, visualB1Id);
+
+        assertNotSame(sourceVisualA0, restoredVisualA0, "restore must recreate Ribot visual A0");
+        assertNotSame(sourceVisualA2, restoredVisualA2, "restore must recreate Ribot visual A2");
+        assertNotSame(sourceVisualB1, restoredVisualB1, "restore must recreate Ribot visual B1");
+        assertSame(restoredParentA, readObjectField(restoredActiveA, "parent"),
+                "active child A parent must resolve to restored Ribot A");
+        assertSame(restoredParentB, readObjectField(restoredActiveB, "parent"),
+                "active child B parent must resolve to restored Ribot B");
+        assertSame(restoredActiveA, readObjectField(restoredVisualA0, "parent"),
+                "visual A0 parent must resolve to restored active child A");
+        assertSame(restoredActiveA, readObjectField(restoredVisualA2, "parent"),
+                "visual A2 parent must resolve to restored active child A");
+        assertSame(restoredActiveB, readObjectField(restoredVisualB1, "parent"),
+                "visual B1 parent must resolve to restored active child B");
+        assertEquals(0x190, readIntField(restoredVisualA0, "currentX"));
+        assertEquals(0x118, readIntField(restoredVisualA0, "currentY"));
+        assertEquals(0x18C, readIntField(restoredVisualA0, "originX"));
+        assertEquals(0x1A4, readIntField(restoredVisualA2, "currentX"));
+        assertEquals(0x120, readIntField(restoredVisualA2, "currentY"));
+        assertEquals(0x2AC, readIntField(restoredVisualB1, "currentX"));
+        assertEquals(0x12C, readIntField(restoredVisualB1, "currentY"));
+        assertEquals(6, liveByClassName(objectManager, RIBOT_VISUAL_CHILD).size(),
+                "restore must keep exactly the captured Ribot visuals");
+    }
+
+    @Test
     void captureFailsForNonNullObjectReferenceWithoutRegisteredRewindIdentity() {
         Harness harness = Harness.create(new S3klTestRegistry(), List.of());
         ObjectManager objectManager = harness.objectManager();
@@ -741,6 +827,16 @@ class TestS3kBadnikChildGraphRewind {
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("missing "
                         + (leftSide ? "left" : "right") + " child for " + parent.getClass()));
+    }
+
+    private static ObjectInstance visualChildWithParentAndIndex(
+            List<ObjectInstance> children, ObjectInstance parent, int visualIndex) {
+        return children.stream()
+                .filter(child -> readObjectField(child, "parent") == parent)
+                .filter(child -> readIntField(child, "visualIndex") == visualIndex)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("missing visual "
+                        + visualIndex + " child for " + parent.getClass()));
     }
 
     private static RewindRegistry registryFor(ObjectManager objectManager) {

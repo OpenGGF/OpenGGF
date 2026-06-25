@@ -19,6 +19,7 @@ import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -458,6 +459,11 @@ public final class RewindRoundTripHarness {
         try {
             instance = tryConstruct(cls, stub);
         } catch (Throwable t) {
+            RoundTripSweepResult retried =
+                    tryRoundTripWithSeededParent(fqn, cls, gameId, Map.of());
+            if (retried != null) {
+                return retried;
+            }
             return new RoundTripSweepResult.Unprobed(describeThrowable(t));
         }
 
@@ -956,6 +962,8 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild",
                 "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild",
+                "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild");
         m.put("com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance$OrbitingPointInstance",
                 "com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance");
         // S3K GumballMachine exit trigger — parent: GumballMachineObjectInstance (placed, objectId 0x86)
@@ -1134,6 +1142,9 @@ public final class RewindRoundTripHarness {
             Class<? extends AbstractObjectInstance> cls,
             GameId gameId,
             Map<String, String> beforeFields) {
+        if ("com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild".equals(fqn)) {
+            return tryRoundTripRibotVisualChild(cls);
+        }
         String parentFqn = PARENT_SEED_TABLE.get(fqn);
         if (parentFqn == null) {
             return null; // Not in the well-known table; stay Unprobed.
@@ -1233,6 +1244,80 @@ public final class RewindRoundTripHarness {
         }
 
         // Field diff using the fresh baseline captured above.
+        AbstractObjectInstance restored = findFirstByClass(om, cls);
+        if (restored == null) return null;
+        Map<String, String> afterFields = captureScalarFields(restored, cls);
+        List<ScalarDiff> diffs = new ArrayList<>();
+        for (Map.Entry<String, String> entry : seededBeforeFields.entrySet()) {
+            String key = entry.getKey();
+            String beforeVal = entry.getValue();
+            String afterVal = afterFields.get(key);
+            if (!Objects.equals(beforeVal, afterVal)) {
+                boolean isFinal = isFieldFinal(cls, key);
+                diffs.add(new ScalarDiff(fqn, key, beforeVal, afterVal, isFinal));
+            }
+        }
+        if (!diffs.isEmpty()) {
+            return new RoundTripSweepResult.ScalarMismatch(diffs);
+        }
+        return new RoundTripSweepResult.Passed();
+    }
+
+    private static RoundTripSweepResult tryRoundTripRibotVisualChild(
+            Class<? extends AbstractObjectInstance> cls) {
+        String fqn = cls.getName();
+        GraphicsManager.getInstance().initHeadless();
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        StubObjectServices stub = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+        };
+        ObjectManager om = new ObjectManager(
+                List.of(new ObjectSpawn(160, 240, Sonic3kObjectIds.RIBOT, 4, 0, false, 0)),
+                registryFor(GameId.S3K),
+                0,
+                null,
+                null,
+                GraphicsManager.getInstance(),
+                camera,
+                stub);
+        holder[0] = om;
+        om.reset(0);
+
+        AbstractObjectInstance ribot = findFirstByClass(om, RibotBadnikInstance.class);
+        if (ribot == null) return null;
+        ribot.update(0, new com.openggf.tests.TestablePlayableSprite("sonic", (short) 160, (short) 240));
+        AbstractObjectInstance activeChild = findFirstByClassName(
+                om,
+                "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild");
+        if (activeChild == null) return null;
+        AbstractObjectInstance child = tryConstructChildWithLiveParent(cls, stub, activeChild);
+        if (child == null) return null;
+        try {
+            om.addDynamicObject(child);
+        } catch (Throwable t) {
+            return null;
+        }
+
+        Map<String, String> seededBeforeFields = captureScalarFields(child, cls);
+        RewindRegistry rr = new RewindRegistry();
+        rr.register(om.rewindSnapshottable());
+        CompositeSnapshot snap;
+        try {
+            snap = rr.capture();
+            rr.restore(snap);
+        } catch (Throwable t) {
+            return null;
+        }
+
+        Map<String, Integer> afterCounts = countByTypeFrom(om);
+        int childAfter = afterCounts.getOrDefault(fqn, 0);
+        if (childAfter == 0) {
+            return null;
+        }
         AbstractObjectInstance restored = findFirstByClass(om, cls);
         if (restored == null) return null;
         Map<String, String> afterFields = captureScalarFields(restored, cls);
@@ -1569,6 +1654,15 @@ public final class RewindRoundTripHarness {
             ObjectManager om, Class<? extends AbstractObjectInstance> cls) {
         for (ObjectInstance o : om.getActiveObjects()) {
             if (cls.isInstance(o) && !o.isDestroyed()) {
+                return (AbstractObjectInstance) o;
+            }
+        }
+        return null;
+    }
+
+    private static AbstractObjectInstance findFirstByClassName(ObjectManager om, String className) {
+        for (ObjectInstance o : om.getActiveObjects()) {
+            if (o.getClass().getName().equals(className) && !o.isDestroyed()) {
                 return (AbstractObjectInstance) o;
             }
         }

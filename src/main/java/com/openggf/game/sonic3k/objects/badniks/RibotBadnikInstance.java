@@ -421,7 +421,8 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
         }
     }
 
-    private static final class RibotVisualChild extends AbstractObjectInstance {
+    private static final class RibotVisualChild extends AbstractObjectInstance
+            implements RewindRecreatable {
         private static final int PRIORITY_BUCKET = 4; // word_8C5DC priority $200.
         private static final int VISUAL_FRAME = 6;
 
@@ -441,6 +442,43 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
             this.originY = originY;
             this.currentX = originX;
             this.currentY = originY;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+                return null;
+            }
+            RibotActiveChild liveParent =
+                    findNearestLiveActiveChildForRewind(ctx.objectServices().objectManager(), ctx.spawn());
+            if (liveParent == null) {
+                return null;
+            }
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            return new RibotVisualChild(capturedSpawn, liveParent, 0, capturedSpawn.x(), capturedSpawn.y());
+        }
+
+        private static RibotActiveChild findNearestLiveActiveChildForRewind(
+                ObjectManager objectManager,
+                ObjectSpawn spawn) {
+            if (objectManager == null || spawn == null) {
+                return null;
+            }
+            RibotActiveChild best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance instance : objectManager.getActiveObjects()) {
+                if (!(instance instanceof RibotActiveChild activeChild) || activeChild.isDestroyed()) {
+                    continue;
+                }
+                long dx = activeChild.getX() - spawn.x();
+                long dy = activeChild.getY() - spawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = activeChild;
+                }
+            }
+            return best;
         }
 
         @Override
