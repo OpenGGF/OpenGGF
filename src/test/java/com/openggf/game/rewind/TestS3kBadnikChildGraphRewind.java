@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
@@ -55,6 +56,8 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild";
     private static final String CLUCKOID_ARROW_CHILD =
             "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$ArrowChild";
+    private static final String MUSHMEANIE_SHELL_CHILD =
+            "com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance$ShellChild";
 
     @BeforeEach
     void initHeadless() {
@@ -458,6 +461,95 @@ class TestS3kBadnikChildGraphRewind {
     }
 
     @Test
+    void mushmeanieShellRelinksToRestoredParentAndParentSlot() {
+        Harness harness = Harness.create(new MhzTestRegistry(), List.of(
+                new ObjectSpawn(0x180, 0x130, Sonic3kObjectIds.MUSHMEANIE, 0, 0, false, 0, 70),
+                new ObjectSpawn(0x2A0, 0x130, Sonic3kObjectIds.MUSHMEANIE, 0, 0, false, 0, 71)));
+        ObjectManager objectManager = harness.objectManager();
+        TestablePlayableSprite player = player();
+        List<MushmeanieBadnikInstance> sourceParents = liveByType(objectManager, MushmeanieBadnikInstance.class);
+        assertEquals(2, sourceParents.size(), "precondition: two Mushmeanie parents must be captured");
+        MushmeanieBadnikInstance sourceParentA = sourceParents.get(0);
+        MushmeanieBadnikInstance sourceParentB = sourceParents.get(1);
+        sourceParentA.update(0, player);
+        sourceParentA.update(1, player);
+        sourceParentB.update(0, player);
+        sourceParentB.update(1, player);
+        List<ObjectInstance> sourceShells = liveByClassName(objectManager, MUSHMEANIE_SHELL_CHILD);
+        assertEquals(2, sourceShells.size(), "precondition: each Mushmeanie must create one shell child");
+        ObjectInstance sourceShellA = childWithParent(sourceShells, sourceParentA);
+        ObjectInstance sourceShellB = childWithParent(sourceShells, sourceParentB);
+        setBooleanField(sourceShellA, "launched", true);
+        setIntField(sourceShellA, "x", 0x1C0);
+        setIntField(sourceShellA, "y", 0x118);
+        setIntField(sourceShellA, "xVelocity", 0x33);
+        setIntField(sourceShellA, "yVelocity", -0x44);
+        setBooleanField(sourceShellB, "launched", true);
+        setIntField(sourceShellB, "x", 0x2D0);
+        setIntField(sourceShellB, "y", 0x150);
+        setIntField(sourceShellB, "xVelocity", -0x55);
+        setIntField(sourceShellB, "yVelocity", -0x66);
+
+        ObjectRefId parentAId = objectId(objectManager, sourceParentA);
+        ObjectRefId parentBId = objectId(objectManager, sourceParentB);
+        ObjectRefId shellAId = objectId(objectManager, sourceShellA);
+        ObjectRefId shellBId = objectId(objectManager, sourceShellB);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> new MushmeanieBadnikInstance(new ObjectSpawn(
+                0x220, 0x130, Sonic3kObjectIds.MUSHMEANIE, 0, 0, false, 72)));
+
+        rewindRegistry.restore(snapshot);
+
+        MushmeanieBadnikInstance restoredParentA =
+                objectById(objectManager, MushmeanieBadnikInstance.class, parentAId);
+        MushmeanieBadnikInstance restoredParentB =
+                objectById(objectManager, MushmeanieBadnikInstance.class, parentBId);
+        ObjectInstance restoredShellA = objectById(objectManager, ObjectInstance.class, shellAId);
+        ObjectInstance restoredShellB = objectById(objectManager, ObjectInstance.class, shellBId);
+        assertNotSame(sourceShellA, restoredShellA, "restore must recreate Mushmeanie shell A");
+        assertNotSame(sourceShellB, restoredShellB, "restore must recreate Mushmeanie shell B");
+        assertSame(restoredParentA, readObjectField(restoredShellA, "parent"),
+                "shell A parent must resolve to restored Mushmeanie A");
+        assertSame(restoredParentB, readObjectField(restoredShellB, "parent"),
+                "shell B parent must resolve to restored Mushmeanie B");
+        assertSame(restoredShellA, readObjectField(restoredParentA, "shellChild"),
+                "Mushmeanie A shell slot must resolve to restored shell A");
+        assertSame(restoredShellB, readObjectField(restoredParentB, "shellChild"),
+                "Mushmeanie B shell slot must resolve to restored shell B");
+        assertTrue((Boolean) readObjectField(restoredShellA, "launched"));
+        assertTrue((Boolean) readObjectField(restoredShellB, "launched"));
+        assertEquals(0x1C0, readIntField(restoredShellA, "x"));
+        assertEquals(0x118, readIntField(restoredShellA, "y"));
+        assertEquals(0x33, readIntField(restoredShellA, "xVelocity"));
+        assertEquals(-0x44, readIntField(restoredShellA, "yVelocity"));
+        assertEquals(0x2D0, readIntField(restoredShellB, "x"));
+        assertEquals(0x150, readIntField(restoredShellB, "y"));
+        assertEquals(-0x55, readIntField(restoredShellB, "xVelocity"));
+        assertEquals(-0x66, readIntField(restoredShellB, "yVelocity"));
+        assertEquals(2, liveByClassName(objectManager, MUSHMEANIE_SHELL_CHILD).size(),
+                "restore must keep exactly the captured Mushmeanie shells");
+    }
+
+    @Test
+    void mushmeanieShellParentFailsForObjectWithoutRegisteredRewindIdentity() {
+        Harness harness = Harness.create(new MhzTestRegistry(), List.of());
+        ObjectManager objectManager = harness.objectManager();
+        MushmeanieBadnikInstance externalParent = new MushmeanieBadnikInstance(new ObjectSpawn(
+                0x180, 0x130, Sonic3kObjectIds.MUSHMEANIE, 0, 0, false, 73));
+        ObjectInstance shell = objectManager.createDynamicObject(
+                () -> instantiateMushmeanieShellChild(externalParent));
+        assertSame(externalParent, readObjectField(shell, "parent"),
+                "precondition: shell holds a non-null parent outside ObjectManager identity registration");
+
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        IllegalStateException thrown = assertThrows(IllegalStateException.class, rewindRegistry::capture);
+        assertTrue(thrown.getMessage().contains("no registered id for object reference"),
+                "missing required Mushmeanie parent targets must fail loudly");
+    }
+
+    @Test
     void captureFailsForNonNullObjectReferenceWithoutRegisteredRewindIdentity() {
         Harness harness = Harness.create(new S3klTestRegistry(), List.of());
         ObjectManager objectManager = harness.objectManager();
@@ -517,6 +609,17 @@ class TestS3kBadnikChildGraphRewind {
             return (ObjectInstance) ctor.newInstance(shell);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to construct Turbo Spiker trail emitter", e);
+        }
+    }
+
+    private static ObjectInstance instantiateMushmeanieShellChild(MushmeanieBadnikInstance parent) {
+        try {
+            Class<?> cls = Class.forName(MUSHMEANIE_SHELL_CHILD);
+            Constructor<?> ctor = cls.getDeclaredConstructor(MushmeanieBadnikInstance.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(parent);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct Mushmeanie shell child", e);
         }
     }
 
@@ -605,6 +708,14 @@ class TestS3kBadnikChildGraphRewind {
     private static void setIntField(Object target, String fieldName, int value) {
         try {
             findField(target.getClass(), fieldName).setInt(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static void setBooleanField(Object target, String fieldName, boolean value) {
+        try {
+            findField(target.getClass(), fieldName).setBoolean(target, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
         }
