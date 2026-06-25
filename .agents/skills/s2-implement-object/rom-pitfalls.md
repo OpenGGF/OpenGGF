@@ -2214,6 +2214,8 @@ frames). See `s1-implement-object/rom-pitfalls.md` P10.
 
 **ROM citation.** S2 conveyors/fans/moving solids and `SolidObject`/`MvSonicOnPtfm` side-push/carry use the same `add.w`/`sub.w`/`move.w obX(a1)` pixel-word convention as S1 (preserves x_sub). Check each object's routine in `docs/s2disasm/s2.asm`; the `SolidObject_cont` side-push and the platform `MvSonicOnPtfm` carry are the shared cases. Only a `move.w #0,x_sub` (explicit clear) justifies a zeroing setter.
 
+**Also covers object SELF-motion.** Same rule when an object moves ITSELF (`add.w speed,obX(a0)` preserves its own x_sub): a rideable object that self-moves via `setCentreX`/`setCentreY` drifts ~1px and surfaces it where the player rides/hits it. Use `SubpixelMotion.moveSprite`/`shiftX`/`shiftY`. (Objects that move in integer pixel steps with no sub-pixel accumulator need no change.) See S1 P15 for the `-Dobjsubpxaudit` method.
+
 **Originating commit (S1 origin).** `b5bc778d4` (S1 Conveyor preserves rider sub-pixel via `shiftX`; SBZ2 f2224 -> f2323). See `s1-implement-object/rom-pitfalls.md` P15.
 
 ---
