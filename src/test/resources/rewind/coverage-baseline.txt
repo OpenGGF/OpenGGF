@@ -112,11 +112,6 @@ com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$AttachChild#recreate
 com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$BaseChild#recreate
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#objectRef#knucklesFightParent
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild#finalScalar#baseX
-com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild#finalScalar#baseY
-com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild#finalScalar#facingLeft
-com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild#finalScalar#nativeP1
-com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild#recreate
 com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance#recreate
 com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance#finalScalar#closedOnly
 com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance#objectRef#overlayChild

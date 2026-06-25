@@ -7,6 +7,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -145,7 +148,7 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
         }
     }
 
-    private static final class LauncherArmChild extends AbstractObjectInstance {
+    private static final class LauncherArmChild extends AbstractObjectInstance implements RewindRecreatable {
         private static final int FRAME_ARM = 1;
         private static final int CHILD_SPRITE_COUNT = 4;
         private static final int INITIAL_ANGLE = 0x80;
@@ -153,16 +156,27 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
         private static final int EXPAND_END = 0xD0;
         private static final int RETRACT_STEP = 4;
 
-        private final LbzPlayerLauncherInstance parent;
-        private final boolean nativeP1;
-        private final int baseX;
-        private final int baseY;
-        private final boolean facingLeft;
+        private LbzPlayerLauncherInstance parent;
+        private boolean nativeP1;
+        private int baseX;
+        private int baseY;
+        private boolean facingLeft;
         private final int[] segmentX = new int[CHILD_SPRITE_COUNT + 1];
         private final int[] segmentY = new int[CHILD_SPRITE_COUNT + 1];
 
         private int routine;
         private int angle = INITIAL_ANGLE;
+
+        private LauncherArmChild(ObjectSpawn spawn) {
+            super(spawn, "LBZPlayerLauncherArm");
+            this.parent = null;
+            this.nativeP1 = false;
+            this.baseX = spawn.x();
+            this.baseY = spawn.y() + 0x10;
+            this.facingLeft = (spawn.renderFlags() & 0x01) != 0;
+            updateSegmentPositions();
+            updateDynamicSpawn(segmentX[CHILD_SPRITE_COUNT], segmentY[CHILD_SPRITE_COUNT]);
+        }
 
         private LauncherArmChild(ObjectSpawn spawn, LbzPlayerLauncherInstance parent, boolean nativeP1) {
             super(spawn, "LBZPlayerLauncherArm");
@@ -173,6 +187,16 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
             this.facingLeft = (spawn.renderFlags() & 0x01) != 0;
             updateSegmentPositions();
             updateDynamicSpawn(segmentX[CHILD_SPRITE_COUNT], segmentY[CHILD_SPRITE_COUNT]);
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            LbzPlayerLauncherInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                    ctx, LbzPlayerLauncherInstance.class);
+            if (liveParent == null) {
+                return null;
+            }
+            return new LauncherArmChild(ctx.spawn(), liveParent, false);
         }
 
         @Override
