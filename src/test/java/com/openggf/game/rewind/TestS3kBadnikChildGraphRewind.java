@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.objects.BreakableWallObjectInstance;
 import com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.GumballMachineObjectInstance;
+import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance;
@@ -111,6 +112,10 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$BodyOverlayChild";
     private static final String GUMBALL_SPRING =
             "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild";
+    private static final String PACHINKO_ENERGY_TRAP_COLUMN =
+            "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild";
+    private static final String PACHINKO_ENERGY_TRAP_BEAM =
+            "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild";
 
     @BeforeEach
     void initHeadless() {
@@ -796,6 +801,63 @@ class TestS3kBadnikChildGraphRewind {
         assertEquals(10, readIntField(restoredEjection, "timer"));
         assertEquals(0xD8, readIntField(restoredEjection, "drawX"));
         assertEquals(0x318, readIntField(restoredEjection, "drawY"));
+    }
+
+    @Test
+    void pachinkoEnergyTrapGraphRestoresChildrenWithoutDropsDoublesOrStaleReferences() {
+        Harness harness = Harness.create(new GumballTestRegistry(), List.of());
+        ObjectManager objectManager = harness.objectManager();
+        PachinkoEnergyTrapObjectInstance sourceTrap = objectManager.createDynamicObject(
+                () -> new PachinkoEnergyTrapObjectInstance(
+                        new ObjectSpawn(0x40, 0x180, Sonic3kObjectIds.PACHINKO_ENERGY_TRAP,
+                                0, 0, false, 20)));
+        sourceTrap.update(0, player());
+
+        ObjectInstance sourceColumn = liveByClassName(objectManager, PACHINKO_ENERGY_TRAP_COLUMN).getFirst();
+        ObjectInstance sourceBeam = liveByClassName(objectManager, PACHINKO_ENERGY_TRAP_BEAM).getFirst();
+        setIntField(sourceTrap, "currentY", 0x160);
+        setIntField(sourceTrap, "beamAngle", 0x48);
+        setIntField(sourceColumn, "currentY", 0x162);
+        setIntField(sourceBeam, "currentX", 0xE0);
+        setIntField(sourceBeam, "currentY", 0x158);
+        setIntField(sourceBeam, "beamAngle", 0xA4);
+
+        ObjectRefId trapId = objectId(objectManager, sourceTrap);
+        ObjectRefId columnId = objectId(objectManager, sourceColumn);
+        ObjectRefId beamId = objectId(objectManager, sourceBeam);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> new PachinkoEnergyTrapObjectInstance(
+                new ObjectSpawn(0x220, 0x200, Sonic3kObjectIds.PACHINKO_ENERGY_TRAP, 0, 0, false, 99)));
+
+        rewindRegistry.restore(snapshot);
+
+        PachinkoEnergyTrapObjectInstance restoredTrap =
+                objectById(objectManager, PachinkoEnergyTrapObjectInstance.class, trapId);
+        ObjectInstance restoredColumn = objectById(objectManager, ObjectInstance.class, columnId);
+        ObjectInstance restoredBeam = objectById(objectManager, ObjectInstance.class, beamId);
+
+        assertNotSame(sourceTrap, restoredTrap, "restore must recreate the pachinko energy trap");
+        assertNotSame(sourceColumn, restoredColumn, "restore must recreate the energy trap column");
+        assertNotSame(sourceBeam, restoredBeam, "restore must recreate the energy trap beam");
+        assertEquals(1, liveByType(objectManager, PachinkoEnergyTrapObjectInstance.class).size(),
+                "restore must keep exactly the captured energy trap");
+        assertEquals(1, liveByClassName(objectManager, PACHINKO_ENERGY_TRAP_COLUMN).size(),
+                "restore must keep exactly the captured energy trap column");
+        assertEquals(1, liveByClassName(objectManager, PACHINKO_ENERGY_TRAP_BEAM).size(),
+                "restore must keep exactly the captured energy trap beam");
+
+        assertSame(restoredTrap, readObjectField(restoredColumn, "parent"),
+                "column parent must relink to the restored energy trap");
+        assertSame(restoredTrap, readObjectField(restoredBeam, "parent"),
+                "beam parent must relink to the restored energy trap");
+        assertEquals(0x160, readIntField(restoredTrap, "currentY"));
+        assertEquals(0x48, readIntField(restoredTrap, "beamAngle"));
+        assertEquals(0x162, readIntField(restoredColumn, "currentY"));
+        assertEquals(0xE0, readIntField(restoredBeam, "currentX"));
+        assertEquals(0x158, readIntField(restoredBeam, "currentY"));
+        assertEquals(0xA4, readIntField(restoredBeam, "beamAngle"));
     }
 
     @Test

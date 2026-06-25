@@ -2908,6 +2908,14 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_PACHINKO_TRAP_GRAPH_BATCH234_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance",
@@ -9509,6 +9517,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K gumball graph batch 233 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kPachinkoTrapGraphBatch234ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_PACHINKO_TRAP_GRAPH_BATCH234_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K pachinko trap graph batch 234");
+        }
+    }
+
+    @Test
+    void s3kPachinkoTrapGraphBatch234ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_PACHINKO_TRAP_GRAPH_BATCH234_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K pachinko trap graph batch 234 generic recreate, not a dynamic codec");
         }
     }
 

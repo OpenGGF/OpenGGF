@@ -476,13 +476,15 @@ public class TestRewindHarnessCoverageRatchet {
     *   <li>2026-06-25: raised to 609 after S3K Gumball Machine root,
     *       dispenser, ejection effect, exit trigger, and platform children
     *       gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 611 after S3K Pachinko Energy Trap beam
+    *       and column children gained generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 609 after S3K gumball machine graph restore coverage.
-    static final int RATCHET_FLOOR = 609;
+    // 2026-06-25: raised to 611 after S3K pachinko energy-trap child graph restore coverage.
+    static final int RATCHET_FLOOR = 611;
 
     @BeforeEach
     void initHeadless() {

@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance;
 import com.openggf.game.sonic3k.objects.MhzMinibossInstance;
+import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
@@ -688,7 +689,8 @@ public final class RewindRoundTripHarness {
                  "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance",
                  "com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance",
                  "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance",
-                 "com.openggf.game.sonic3k.objects.MhzMinibossInstance" -> true;
+                 "com.openggf.game.sonic3k.objects.MhzMinibossInstance",
+                 "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance" -> true;
             default -> false;
         };
     }
@@ -730,6 +732,10 @@ public final class RewindRoundTripHarness {
             case "com.openggf.game.sonic3k.objects.MhzMinibossInstance" ->
                     spawn.objectId() == Sonic3kObjectIds.MHZ_MINIBOSS
                             ? new MhzMinibossInstance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.PACHINKO_ENERGY_TRAP
+                            ? new PachinkoEnergyTrapObjectInstance(spawn)
                             : null;
             default -> null;
         };
@@ -969,6 +975,11 @@ public final class RewindRoundTripHarness {
         // S3K GumballMachine exit trigger — parent: GumballMachineObjectInstance (placed, objectId 0x86)
         m.put("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ExitTriggerChild",
                 "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance");
+        // S3K pachinko energy-trap children — parent is placed ObjE8 and spawns children lazily.
+        m.put("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild",
+                "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance");
+        m.put("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild",
+                "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance");
         // S3K AIZ spiked-log collision child — parent: AizSpikedLogObjectInstance (placed, objectId 0x2E)
         m.put("com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild",
                 "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance");
@@ -1084,6 +1095,8 @@ public final class RewindRoundTripHarness {
             Map.entry("com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance", 0xC0),
             // GumballMachineObjectInstance: Sonic3kObjectIds.GUMBALL_MACHINE = 0x86
             Map.entry("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", 0x86),
+            // PachinkoEnergyTrapObjectInstance: Sonic3kObjectIds.PACHINKO_ENERGY_TRAP = 0xE8
+            Map.entry("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance", 0xE8),
             // AizSpikedLogObjectInstance: Sonic3kObjectIds.AIZ_SPIKED_LOG = 0x2E
             Map.entry("com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance", 0x2E),
             // TurtloidBadnikInstance: Sonic2ObjectIds.TURTLOID = 0x9A (lazy child spawn)
