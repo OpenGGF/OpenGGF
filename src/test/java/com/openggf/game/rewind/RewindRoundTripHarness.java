@@ -1029,6 +1029,8 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild",
                 "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm",
+                "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance");
         // S3K MHZ cutscene/miniboss children. The parent object IDs are zone-set
         // dependent, so registryForSeededParent supplies exact parent factories.
         m.put("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
@@ -1108,6 +1110,8 @@ public final class RewindRoundTripHarness {
             Map.entry("com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance", 0x8D),
             // SnaleBlasterBadnikInstance: Sonic3kObjectIds.SNALE_BLASTER = 0xBE (lazy child spawn)
             Map.entry("com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance", 0xBE),
+            // TunnelbotBadnikInstance: Sonic3kObjectIds.TUNNELBOT = 0x9E (lazy arm spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance", 0x9E),
             // CutsceneKnucklesMhz2Instance: Sonic3kObjectIds.CUTSCENE_KNUCKLES = 0x82
             Map.entry("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance", 0x82),
             // Mhz1CutsceneButtonInstance: Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON = 0xA9

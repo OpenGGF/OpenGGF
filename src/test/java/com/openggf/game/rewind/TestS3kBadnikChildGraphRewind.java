@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -75,6 +76,10 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild";
     private static final String CATERKILLER_JR_BODY =
             "com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance";
+    private static final String TUNNELBOT_ARM =
+            "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm";
+    private static final String TUNNELBOT_DEBRIS =
+            "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotDebris";
 
     @BeforeEach
     void initHeadless() {
@@ -914,6 +919,96 @@ class TestS3kBadnikChildGraphRewind {
     }
 
     @Test
+    void tunnelbotGraphRestoresArmsParentSlotsAndDebris() {
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of(
+                new ObjectSpawn(0x180, 0x130, Sonic3kObjectIds.TUNNELBOT, 0, 0, false, 120),
+                new ObjectSpawn(0x2A0, 0x130, Sonic3kObjectIds.TUNNELBOT, 0, 0, false, 121)));
+        ObjectManager objectManager = harness.objectManager();
+        TestablePlayableSprite player = player();
+        List<TunnelbotBadnikInstance> sourceParents =
+                liveByType(objectManager, TunnelbotBadnikInstance.class);
+        assertEquals(2, sourceParents.size(), "precondition: two Tunnelbots must be captured");
+        TunnelbotBadnikInstance sourceParentA = sourceParents.get(0);
+        TunnelbotBadnikInstance sourceParentB = sourceParents.get(1);
+        sourceParentA.update(0, player);
+        sourceParentA.update(1, player);
+        sourceParentB.update(0, player);
+        sourceParentB.update(1, player);
+        List<ObjectInstance> sourceArms = liveByClassName(objectManager, TUNNELBOT_ARM);
+        assertEquals(4, sourceArms.size(), "precondition: each Tunnelbot must create two arm proxies");
+        ObjectInstance sourceLeftArmA = tunnelbotArmWithParentAndSide(sourceArms, sourceParentA, true);
+        ObjectInstance sourceRightArmA = tunnelbotArmWithParentAndSide(sourceArms, sourceParentA, false);
+        ObjectInstance sourceLeftArmB = tunnelbotArmWithParentAndSide(sourceArms, sourceParentB, true);
+        ObjectInstance sourceRightArmB = tunnelbotArmWithParentAndSide(sourceArms, sourceParentB, false);
+        ObjectInstance sourceDebris = objectManager.createDynamicObject(() -> instantiateTunnelbotDebris(
+                new ObjectSpawn(0x1A0, 0xF0, Sonic3kObjectIds.TUNNELBOT, 0, 0, false, 122),
+                0x1A0, 0xF0, 3));
+        setIntField(sourceDebris, "debrisX", 0x1B4);
+        setIntField(sourceDebris, "debrisY", 0x108);
+        setIntField(sourceDebris, "yVelocity", 0x40);
+        setIntField(sourceDebris, "lifetime", 57);
+
+        ObjectRefId parentAId = objectId(objectManager, sourceParentA);
+        ObjectRefId parentBId = objectId(objectManager, sourceParentB);
+        ObjectRefId leftArmAId = objectId(objectManager, sourceLeftArmA);
+        ObjectRefId rightArmAId = objectId(objectManager, sourceRightArmA);
+        ObjectRefId leftArmBId = objectId(objectManager, sourceLeftArmB);
+        ObjectRefId rightArmBId = objectId(objectManager, sourceRightArmB);
+        ObjectRefId debrisId = objectId(objectManager, sourceDebris);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> new TunnelbotBadnikInstance(new ObjectSpawn(
+                0x360, 0x130, Sonic3kObjectIds.TUNNELBOT, 0, 0, false, 123)));
+
+        rewindRegistry.restore(snapshot);
+
+        TunnelbotBadnikInstance restoredParentA =
+                objectById(objectManager, TunnelbotBadnikInstance.class, parentAId);
+        TunnelbotBadnikInstance restoredParentB =
+                objectById(objectManager, TunnelbotBadnikInstance.class, parentBId);
+        ObjectInstance restoredLeftArmA = objectById(objectManager, ObjectInstance.class, leftArmAId);
+        ObjectInstance restoredRightArmA = objectById(objectManager, ObjectInstance.class, rightArmAId);
+        ObjectInstance restoredLeftArmB = objectById(objectManager, ObjectInstance.class, leftArmBId);
+        ObjectInstance restoredRightArmB = objectById(objectManager, ObjectInstance.class, rightArmBId);
+        ObjectInstance restoredDebris = objectById(objectManager, ObjectInstance.class, debrisId);
+
+        assertNotSame(sourceParentA, restoredParentA, "restore must recreate Tunnelbot parent A");
+        assertNotSame(sourceLeftArmA, restoredLeftArmA, "restore must recreate Tunnelbot left arm A");
+        assertNotSame(sourceRightArmA, restoredRightArmA, "restore must recreate Tunnelbot right arm A");
+        assertNotSame(sourceDebris, restoredDebris, "restore must recreate Tunnelbot debris");
+        assertSame(restoredParentA, readObjectField(restoredLeftArmA, "this$0"),
+                "left arm A enclosing parent must be the restored Tunnelbot A");
+        assertSame(restoredParentA, readObjectField(restoredRightArmA, "this$0"),
+                "right arm A enclosing parent must be the restored Tunnelbot A");
+        assertSame(restoredParentB, readObjectField(restoredLeftArmB, "this$0"),
+                "left arm B enclosing parent must be the restored Tunnelbot B");
+        assertSame(restoredParentB, readObjectField(restoredRightArmB, "this$0"),
+                "right arm B enclosing parent must be the restored Tunnelbot B");
+        assertSame(restoredLeftArmA, readObjectField(restoredParentA, "leftArm"),
+                "Tunnelbot A leftArm slot must resolve to the restored left arm");
+        assertSame(restoredRightArmA, readObjectField(restoredParentA, "rightArm"),
+                "Tunnelbot A rightArm slot must resolve to the restored right arm");
+        assertSame(restoredLeftArmB, readObjectField(restoredParentB, "leftArm"),
+                "Tunnelbot B leftArm slot must resolve to the restored left arm");
+        assertSame(restoredRightArmB, readObjectField(restoredParentB, "rightArm"),
+                "Tunnelbot B rightArm slot must resolve to the restored right arm");
+        assertEquals(-0x1C, readIntField(restoredLeftArmA, "xOffset"));
+        assertEquals(0x1C, readIntField(restoredRightArmA, "xOffset"));
+        assertEquals(0x1B4, readIntField(restoredDebris, "debrisX"));
+        assertEquals(0x108, readIntField(restoredDebris, "debrisY"));
+        assertEquals(0x40, readIntField(restoredDebris, "yVelocity"));
+        assertEquals(3, readIntField(restoredDebris, "frame"));
+        assertEquals(57, readIntField(restoredDebris, "lifetime"));
+        assertEquals(2, liveByType(objectManager, TunnelbotBadnikInstance.class).size(),
+                "restore must keep exactly the captured Tunnelbots");
+        assertEquals(4, liveByClassName(objectManager, TUNNELBOT_ARM).size(),
+                "restore must keep exactly the captured Tunnelbot arms");
+        assertEquals(1, liveByClassName(objectManager, TUNNELBOT_DEBRIS).size(),
+                "restore must keep exactly the captured Tunnelbot debris");
+    }
+
+    @Test
     void captureFailsForNonNullObjectReferenceWithoutRegisteredRewindIdentity() {
         Harness harness = Harness.create(new S3klTestRegistry(), List.of());
         ObjectManager objectManager = harness.objectManager();
@@ -998,6 +1093,18 @@ class TestS3kBadnikChildGraphRewind {
         }
     }
 
+    private static ObjectInstance instantiateTunnelbotDebris(
+            ObjectSpawn spawn, int x, int y, int frame) {
+        try {
+            Class<?> cls = Class.forName(TUNNELBOT_DEBRIS);
+            Constructor<?> ctor = cls.getDeclaredConstructor(ObjectSpawn.class, int.class, int.class, int.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(spawn, x, y, frame);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct Tunnelbot debris", e);
+        }
+    }
+
     private static ObjectInstance segmentByParentAndIndex(List<ObjectInstance> segments,
                                                           DragonflyBadnikInstance parent,
                                                           int segmentIndex) {
@@ -1023,6 +1130,16 @@ class TestS3kBadnikChildGraphRewind {
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("missing "
                         + (leftSide ? "left" : "right") + " child for " + parent.getClass()));
+    }
+
+    private static ObjectInstance tunnelbotArmWithParentAndSide(
+            List<ObjectInstance> children, TunnelbotBadnikInstance parent, boolean leftSide) {
+        return children.stream()
+                .filter(child -> readObjectField(child, "this$0") == parent)
+                .filter(child -> (readIntField(child, "xOffset") < 0) == leftSide)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("missing Tunnelbot "
+                        + (leftSide ? "left" : "right") + " arm for " + parent.getClass()));
     }
 
     private static ObjectInstance childWithParentAndYOffset(

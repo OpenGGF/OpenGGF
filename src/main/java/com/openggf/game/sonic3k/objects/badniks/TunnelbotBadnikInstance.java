@@ -14,9 +14,13 @@ import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -66,7 +70,7 @@ import java.util.List;
  * </ul>
  */
 public final class TunnelbotBadnikInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
 
     // ── Constants from ObjDat_Tunnelbot ──────────────────────────────────
 
@@ -210,6 +214,35 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         // Swing_Setup1: y_vel = $C0, direction = up (bit 0 clear)
         this.yVelocity = SWING_MAX_VELOCITY;
         this.swingDirectionDown = false;
+    }
+
+    private void attachArmForRewind(TunnelbotArm arm) {
+        if (arm.xOffset < 0) {
+            leftArm = arm;
+        } else {
+            rightArm = arm;
+        }
+    }
+
+    private static TunnelbotBadnikInstance findLiveParentForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectManager() == null) {
+            return null;
+        }
+        TunnelbotBadnikInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : ctx.objectManager().getActiveObjects()) {
+            if (!(instance instanceof TunnelbotBadnikInstance tunnelbot) || tunnelbot.isDestroyed()) {
+                continue;
+            }
+            long dx = tunnelbot.getX() - ctx.spawn().x();
+            long dy = tunnelbot.getY() - ctx.spawn().y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = tunnelbot;
+            }
+        }
+        return best;
     }
 
     /**
@@ -793,7 +826,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
      * </pre>
      */
     private final class TunnelbotArm extends AbstractObjectInstance
-            implements TouchResponseProvider, TouchResponseAttackable {
+            implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable {
 
         private int xOffset;
         private int yOffset;
@@ -806,6 +839,26 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
             this.yOffset = yOffset;
             this.armX = currentX + xOffset;
             this.armY = currentY + yOffset;
+        }
+
+        private TunnelbotArm(int xOffset, int yOffset) {
+            this(
+                    TunnelbotBadnikInstance.this.spawn,
+                    xOffset != 0 ? xOffset : ARM_RIGHT_X_OFFSET,
+                    yOffset != 0 ? yOffset : ARM_Y_OFFSET);
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            TunnelbotBadnikInstance parent = findLiveParentForRewind(ctx);
+            if (parent == null) {
+                return null;
+            }
+            ObjectSpawn capturedSpawn = ctx.spawn() != null ? ctx.spawn() : parent.spawn;
+            int xOffset = capturedSpawn.x() < parent.getX() ? ARM_LEFT_X_OFFSET : ARM_RIGHT_X_OFFSET;
+            TunnelbotArm restored = parent.new TunnelbotArm(capturedSpawn, xOffset, ARM_Y_OFFSET);
+            parent.attachArmForRewind(restored);
+            return restored;
         }
 
         @Override
@@ -876,7 +929,8 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
      *     MoveDraw_SpriteTimed2 with timeout $5F (95 frames)
      * </pre>
      */
-    private static final class TunnelbotDebris extends AbstractObjectInstance {
+    private static final class TunnelbotDebris extends AbstractObjectInstance
+            implements RewindRecreatable {
 
         // MoveSprite_LightGravity (sonic3k.asm:178352): moveq #$20,d1
         private static final int GRAVITY = 0x20;
@@ -899,6 +953,22 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
             // No initial velocity — debris just falls with gravity
             this.xVelocity = 0;
             this.yVelocity = 0;
+        }
+
+        private TunnelbotDebris() {
+            this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), 0, 0, 0);
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            int x = capturedSpawn != null ? capturedSpawn.x() : 0;
+            int y = capturedSpawn != null ? capturedSpawn.y() : 0;
+            return new TunnelbotDebris(
+                    capturedSpawn != null ? capturedSpawn : new ObjectSpawn(0, 0, 0, 0, 0, false, 0),
+                    x,
+                    y,
+                    0);
         }
 
         @Override
