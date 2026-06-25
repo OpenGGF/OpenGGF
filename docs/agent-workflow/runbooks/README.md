@@ -12,6 +12,7 @@ These runbooks implement **Option 1** of [`docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.m
 | [`runbook-s1-s2-object.md`](runbook-s1-s2-object.md) | Implementing a Sonic 1 or Sonic 2 object or badnik. |
 | [`runbook-s3k-zone-feature.md`](runbook-s3k-zone-feature.md) | Bringing up an S3K zone feature (events, parallax, animated tiles, palette cycling). |
 | [`runbook-trace-divergence.md`](runbook-trace-divergence.md) | Triaging and fixing a `*TraceReplay` test divergence. |
+| [`runbook-s1-v37-regen.md`](runbook-s1-v37-regen.md) | Regenerating S1 complete-run traces with recorder v3.7 (BizHawk) to unblock the gated red frontiers — `v_objstate`/`camera_boundary` + refreshed `object_near`/`slot_dump`. |
 | [`runbook-multi-agent-trace-orchestration.md`](runbook-multi-agent-trace-orchestration.md) | Running a fleet of trace-replay bug-fixing agents as the lead/orchestrator (the continuous survey → assign → gate → merge → reassign loop). |
 | [`runbook-rom-art-mappings-plc.md`](runbook-rom-art-mappings-plc.md) | Adding ROM-backed object art, sprite mappings, DPLCs, or PLC registration. |
 | [`runbook-gameplay-level-mutation.md`](runbook-gameplay-level-mutation.md) | Editing level tile data from gameplay code (terrain modifiers, breakables, layout changes). |
