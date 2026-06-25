@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.objects.SidewaysPformObjectInstance;
 import com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -140,6 +141,17 @@ class TestRewindSchemaRegistry {
         assertPolicy(schema, "displayChild", RewindFieldPolicy.CAPTURED);
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "Swinging Platform compact schema must capture the display child link without fallback: "
+                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesS3kMonitorContentsSlot() {
+        RewindClassSchema schema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(Sonic3kMonitorObjectInstance.class);
+
+        assertPolicy(schema, "monitorContentsSlot", RewindFieldPolicy.CAPTURED);
+        assertTrue(schema.unsupportedFields().isEmpty(),
+                "S3K monitor compact schema must capture the contents slot without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 
