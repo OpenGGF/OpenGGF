@@ -14,11 +14,15 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -32,7 +36,7 @@ import java.util.logging.Logger;
  * Object 0x3A - HCZ Hand Launcher (Hydrocity Zone).
  */
 public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(HCZHandLauncherObjectInstance.class.getName());
 
@@ -463,7 +467,11 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         return services().solidExecution().resolveSolidNowAll();
     }
 
-    public static class HandLauncherArmChild extends AbstractObjectInstance {
+    void rewindAttachArmChild(HandLauncherArmChild child) {
+        armChild = child;
+    }
+
+    public static class HandLauncherArmChild extends AbstractObjectInstance implements RewindRecreatable {
         private final HCZHandLauncherObjectInstance parent;
         private int currentFrame;
 
@@ -471,6 +479,18 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
             super(spawn, "HCZHandLauncherArm");
             this.parent = parent;
             this.currentFrame = 0;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            HCZHandLauncherObjectInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                    ctx, HCZHandLauncherObjectInstance.class);
+            if (liveParent == null) {
+                return null;
+            }
+            HandLauncherArmChild restored = new HandLauncherArmChild(ctx.spawn(), liveParent);
+            liveParent.rewindAttachArmChild(restored);
+            return restored;
         }
 
         @Override
