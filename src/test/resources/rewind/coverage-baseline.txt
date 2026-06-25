@@ -1,10 +1,6 @@
 com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
 com.openggf.game.sonic1.objects.bosses.SYZBossSpike#recreate
-com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance#recreate
-com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#finalScalar#buttonX
-com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#finalScalar#buttonY
-com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#recreate
 com.openggf.game.sonic2.objects.FlipperObjectInstance#recreate
 com.openggf.game.sonic2.objects.LauncherBallObjectInstance#recreate
 com.openggf.game.sonic2.objects.LauncherSpringObjectInstance#recreate

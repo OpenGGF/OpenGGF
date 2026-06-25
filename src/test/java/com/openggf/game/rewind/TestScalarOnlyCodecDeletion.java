@@ -39,6 +39,7 @@ import com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1GHZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball;
+import com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance;
 import com.openggf.game.sonic2.objects.BombPrizeObjectInstance;
 import com.openggf.game.sonic2.objects.CheckpointDongleInstance;
@@ -1780,6 +1781,12 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$ExhaustPuff",
                     GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S1_SCRAP_EGGMAN_GRAPH_COVERED_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic1ScrapEggmanInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton",
+                    GameId.S1));
 
     private static final List<CodecDeletionCandidate> S1_GARGOYLE_FIREBALL_GRAPH_COVERED_CLASSES = List.of(
             new CodecDeletionCandidate(
@@ -10024,6 +10031,35 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S2 DEZ Eggman graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1ScrapEggmanGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_SCRAP_EGGMAN_GRAPH_COVERED_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 Scrap Eggman graph coverage");
+        }
+    }
+
+    @Test
+    void s1ScrapEggmanGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_SCRAP_EGGMAN_GRAPH_COVERED_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 Scrap Eggman graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1ScrapEggmanGraphClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_SCRAP_EGGMAN_GRAPH_COVERED_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via S1 Scrap Eggman graph recreate; got: "
+                            + result);
         }
     }
 

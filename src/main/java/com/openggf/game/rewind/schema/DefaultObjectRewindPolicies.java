@@ -104,6 +104,7 @@ final class DefaultObjectRewindPolicies {
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance", "grabbingBoss"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance", "cylinders"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance", "grabbedBlock"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance", "buttonObject"), RewindFieldPolicy.CAPTURED),

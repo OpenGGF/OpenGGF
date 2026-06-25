@@ -440,8 +440,8 @@ public class TestRewindHarnessCoverageRatchet {
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 566 after S2 DEZ Eggman graph restore coverage.
-    static final int RATCHET_FLOOR = 566;
+    // 2026-06-25: raised to 568 after S1 Scrap Eggman graph restore coverage.
+    static final int RATCHET_FLOOR = 568;
 
     @BeforeEach
     void initHeadless() {
