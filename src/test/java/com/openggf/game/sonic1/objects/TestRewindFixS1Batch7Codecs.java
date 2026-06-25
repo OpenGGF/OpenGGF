@@ -4,7 +4,6 @@ import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -26,24 +25,18 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  *       {@code emeralds} ref), so it stays accept-drop.</li>
  * </ul>
  *
- * <p>Pure registry-content test: it constructs a registry and reads
- * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay session.
+ * <p>Pure metadata test: it reads deleted-codec state without a ROM, OpenGL, or
+ * an active gameplay session.
  */
 class TestRewindFixS1Batch7Codecs {
 
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
-
     @Test
     void batch7S1DeadCodeObjectStaysAcceptDropWithNoCodec() {
-        Set<String> names = codecClassNames();
-
         List<String> acceptDrop = List.of(
                 Sonic1TryAgainEggmanObjectInstance.class.getName());
 
         for (String name : acceptDrop) {
-            assertFalse(names.contains(name),
+            assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(name),
                     "batch-7 accept-drop class unexpectedly acquired a rewind codec: " + name
                             + " (see docs/KNOWN_DISCREPANCIES.md 'Batch-7 Rewind: Transient "
                             + "Cosmetic Children Not Rewound')");

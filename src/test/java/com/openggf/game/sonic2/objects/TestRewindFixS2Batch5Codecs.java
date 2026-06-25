@@ -11,17 +11,16 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link Sonic2ObjectRegistry} (unioned with the shared codecs)
- * reflects the current batch-5 S2 dynamic rewind codec inventory.
+ * Verifies that old batch-5 S2 objects stay on generic recreate coverage.
  *
  * <p>The original batch-5 codecs for CPZ-boss Dripper/PipeSegment, Rexon head,
  * Egg-prison button, destroyed Egg-prison body, ARZ leaf particle, and act
  * results have been deleted in favour of graph-tested or self-contained
  * {@code RewindRecreatable} generic recreate paths.
  *
- * <p>Pure registry-content test: it constructs a registry and reads
- * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
- * session. Full session round-trip is handled by the rewind coverage guard.
+ * <p>Pure metadata test: it reads class opt-ins without a ROM, OpenGL, or an
+ * active gameplay session. Full session round-trip is handled by the rewind
+ * coverage guard.
  */
 class TestRewindFixS2Batch5Codecs {
 

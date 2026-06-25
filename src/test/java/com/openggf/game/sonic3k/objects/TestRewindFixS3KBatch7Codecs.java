@@ -1,22 +1,19 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link Sonic3kObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-7 S3K object that
- * was previously dropped on a held-rewind restore: the Pachinko bonus-stage
- * energy trap and sloped flipper, the boss-defeat-to-signpost orchestrator, the
- * song-fade transition object, the AIZ/LRZ rock debris fragment, and the
- * egg-prison released animal.
+ * Verifies that every old batch-7 S3K object that was previously dropped on a
+ * held-rewind restore now exposes a generic recreate path: the Pachinko
+ * bonus-stage energy trap and sloped flipper, the boss-defeat-to-signpost
+ * orchestrator, the song-fade transition object, the AIZ/LRZ rock debris
+ * fragment, and the egg-prison released animal.
  *
  * <p>Batch 7 has no accept-drop objects: each listed class is genuinely
  * recreated on restore (gameplay-critical traps/terrain/orchestrators, or
@@ -24,20 +21,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * rather than dropped), so there are no documented transient-cosmetic drops to
  * exclude here.
  *
- * <p>Pure registry-content test: it constructs a registry and reads
- * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
- * session. Full session round-trip is handled by the rewind coverage guard.
+ * <p>Pure metadata test: it reads class opt-ins without a ROM, OpenGL, or an
+ * active gameplay session. Full session round-trip is handled by the rewind
+ * coverage guard.
  */
 class TestRewindFixS3KBatch7Codecs {
 
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
-
-    private static boolean hasDynamicRecreatePath(String className, Set<String> codecNames) {
-        if (codecNames.contains(className)) {
-            return true;
-        }
+    private static boolean hasDynamicRecreatePath(String className) {
         try {
             return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
         } catch (ClassNotFoundException e) {
@@ -46,9 +36,7 @@ class TestRewindFixS3KBatch7Codecs {
     }
 
     @Test
-    void registersCodecsForReleaseSliceBatch7Objects() {
-        Set<String> names = codecClassNames();
-
+    void releaseSliceBatch7ObjectsHaveGenericRecreatePaths() {
         List<String> required = List.of(
                 // Pachinko bonus-stage capture trap + sloped flipper.
                 PachinkoEnergyTrapObjectInstance.class.getName(),
@@ -63,7 +51,7 @@ class TestRewindFixS3KBatch7Codecs {
                 EggPrisonAnimalInstance.class.getName());
 
         for (String name : required) {
-            assertTrue(hasDynamicRecreatePath(name, names),
+            assertTrue(hasDynamicRecreatePath(name),
                     "missing rewind recreate path for " + name);
         }
     }

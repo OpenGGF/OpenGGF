@@ -4,8 +4,6 @@ import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -35,28 +33,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The WFZ floating-platform, laser-wall, and platform-hurt children now restore
  * through graph-tested {@code RewindRecreatable} generic recreate.
  *
- * <p>Pure registry-content test: it constructs a registry and reads
- * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
- * session. Full session round-trip coverage is enforced by the rewind coverage
- * guard ({@code TestRewindCoverageGuard}).
+ * <p>Pure metadata test: it reads class opt-ins without a ROM, OpenGL, or an
+ * active gameplay session. Full session round-trip coverage is enforced by the
+ * rewind coverage guard ({@code TestRewindCoverageGuard}).
  */
 class TestRewindFixS2InnerBatch2Codecs {
 
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
-
     @Test
     void deathEggRobotBombChildUsesRewindRecreatableWithoutExplicitCodec() throws Exception {
-        Set<String> names = codecClassNames();
-
         // ArticulatedChild, HeadChild, JetChild are intentionally NOT checked:
         // they are construction-spawned and must NOT have codecs.
         String bombChildClassName =
                 "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance"
                         + "$BombChild";
 
-        assertFalse(names.contains(bombChildClassName),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(bombChildClassName),
                 "DEZ BombChild must restore through RewindRecreatable generic recreate, "
                         + "not an explicit dynamic codec");
         assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(bombChildClassName)),

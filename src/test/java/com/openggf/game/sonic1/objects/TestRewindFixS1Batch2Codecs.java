@@ -9,21 +9,17 @@ import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link Sonic1ObjectRegistry} (unioned with the shared codecs)
- * still exposes explicit dynamic rewind recreate codecs for the remaining
- * batch-2 S1 objects that need one. The self-contained projectile children and
- * graph-restored badnik children now restore through generic recreate and are
- * asserted absent below.
+ * Verifies that the old batch-2 S1 objects stay on their current generic
+ * recreate paths and do not regain explicit dynamic codecs.
  *
- * <p>Pure registry-content test: it constructs a registry and reads
- * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
- * session. Full session round-trip is handled by the rewind coverage guard.
+ * <p>Pure metadata test: it reads class opt-ins without a ROM, OpenGL, or an
+ * active gameplay session. Full session round-trip is handled by the rewind
+ * coverage guard.
  *
  * <p><b>Intentionally absent:</b> {@code SYZBossSpike} is construction-spawned
  * (inside {@code Sonic1SYZBossInstance.initializeBossState()} → {@code spawnSpikeChild()}).
@@ -36,14 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TestRewindFixS1Batch2Codecs {
 
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
-
     @Test
-    void registersOnlyRemainingCodecsForBatch2S1Objects() {
-        Set<String> names = codecClassNames();
-
+    void batch2S1ObjectsUseGenericRecreateWithoutExplicitCodecs() {
         // SYZBossSpike intentionally absent: construction-spawned child.
         // Adding a codec would double it on restore. See TestBossChildNoDoubleSpawnParity.
 
@@ -56,7 +46,7 @@ class TestRewindFixS1Batch2Codecs {
                 "com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance",
                 Sonic1SLZBossSpikeball.class.getName());
         for (String name : genericRecreate) {
-            assertFalse(names.contains(name),
+            assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(name),
                     name + " must restore through RewindRecreatable generic recreate, not a batch-2 codec");
         }
 
@@ -66,7 +56,7 @@ class TestRewindFixS1Batch2Codecs {
                 Sonic1CaterkillerBodyInstance.class,
                 Sonic1SLZBossSpikeball.class);
         for (Class<?> type : graphRecreate) {
-            assertFalse(names.contains(type.getName()),
+            assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(type.getName()),
                     type.getName() + " must restore through graph-tested RewindRecreatable, "
                             + "not a batch-2 codec");
             assertTrue(RewindRecreatable.class.isAssignableFrom(type),

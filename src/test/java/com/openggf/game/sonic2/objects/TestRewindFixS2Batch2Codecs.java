@@ -12,13 +12,12 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link Sonic2ObjectRegistry} (unioned with the shared codecs)
- * keeps the current rewind path for every batch-2 S2 object that was
- * previously dropped on a held-rewind restore.
+ * Verifies that every old batch-2 S2 object that was previously dropped on a
+ * held-rewind restore keeps its current generic recreate path.
  *
- * <p>Pure registry-content test: it constructs a registry and reads
- * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
- * session. Full session round-trip is handled by the rewind coverage guard.
+ * <p>Pure metadata test: it reads class opt-ins without a ROM, OpenGL, or an
+ * active gameplay session. Full session round-trip is handled by the rewind
+ * coverage guard.
  */
 class TestRewindFixS2Batch2Codecs {
 

@@ -204,8 +204,6 @@ class TestS1GrassFireGraphRewind {
                 "Grass Fire must restore through RewindRecreatable generic recreate");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(Sonic1GrassFireObjectInstance.class.getName()),
                 "Grass Fire must not keep an explicit S1 dynamic rewind codec");
-        assertTrue(DeletedDynamicRewindCodecs.classNames().isEmpty(),
-                "Sonic 1 should have no remaining game-specific dynamic rewind codecs");
     }
 
     private static FireGraph createCapturedFireGraph(
