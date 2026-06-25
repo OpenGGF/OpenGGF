@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K graph-helper scalar rewind cleanup:** LBZ1 cutscene helpers, starpost orbit stars, and MHZ end-boss weather visual scalars now compact-restore without stale coverage-baseline keys.
 - **S3K gumball/MGZ helper scalar rewind cleanup:** gumball ejection/platform/body-overlay children plus MGZ miniboss fragment and camera helper scalars now compact-restore without stale coverage-baseline keys.
 - **S3K bridge/particle scalar rewind cleanup:** LBZ trigger bridge, HCZ vortex bubble, ICZ snowdust, collapsing-platform fragment, and tension-bridge fragment scalars now compact-restore without stale coverage-baseline keys.
 - **Effect/fragment scalar rewind cleanup:** shared breathing bubbles and splashes plus S3K breakable-wall fragments, ICZ end-boss debris, and HCZ egg capsule scalars now compact-restore without stale coverage-baseline keys.
