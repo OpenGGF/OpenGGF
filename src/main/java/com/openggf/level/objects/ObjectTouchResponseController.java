@@ -715,13 +715,8 @@ final class ObjectTouchResponseController {
                     // S3K sonic3k.asm:20911-20922 tst.b boss_hitcount2/beq. A NONZERO
                     // byte (incl. 0xFF/-1 always-bounce) negates both velocities.
                     if ((hpBeforeHit & 0xFF) != 0) {
-                        // S3K boss-hit path also negates ground_vel; S1/S2 keep it.
-                        sidekick.setXSpeed((short) -sidekick.getXSpeed());
-                        sidekick.setYSpeed((short) -sidekick.getYSpeed());
-                        if (sidekick.getPhysicsFeatureSet() != null
-                                && sidekick.getPhysicsFeatureSet().bossHitNegatesGroundSpeed()) {
-                            sidekick.setGSpeed((short) -sidekick.getGSpeed());
-                        }
+                        // S3K boss-hit path also negates ground_vel; S1 also halves.
+                        applyBossBounce(sidekick);
                     } else if (!wasAlreadyDestroyed) {
                         // Touch_EnemyNormal bounce: fires when this player's pass kills
                         // the instance. Objects that handle their own bounce (like Crawl
@@ -940,13 +935,8 @@ final class ObjectTouchResponseController {
                     // behaviorally identical there; the only changed case is the
                     // 0xFF always-bounce value, treated as nonzero by all 3 ROMs.
                     if ((hpBeforeHit & 0xFF) != 0) {
-                        // S3K boss-hit path also negates ground_vel; S1/S2 keep it.
-                        player.setXSpeed((short) -player.getXSpeed());
-                        player.setYSpeed((short) -player.getYSpeed());
-                        if (player.getPhysicsFeatureSet() != null
-                                && player.getPhysicsFeatureSet().bossHitNegatesGroundSpeed()) {
-                            player.setGSpeed((short) -player.getGSpeed());
-                        }
+                        // S3K boss-hit path also negates ground_vel; S1 also halves.
+                        applyBossBounce(player);
                     } else if (!wasAlreadyDestroyed) {
                         // Touch_KillEnemy: position-based bounce only when onPlayerAttack
                         // destroyed the instance. Objects like Crawl that handle their own
@@ -1055,14 +1045,26 @@ final class ObjectTouchResponseController {
 
     /**
      * ROM-accurate boss bounce: negate both X and Y velocities.
-     * From s2.asm Touch_Enemy_Part2 lines 84806-84807.
+     * S2 {@code Touch_Enemy_Part2} (s2.asm:85330-85331) and the multi-sprite boss
+     * path (s2.asm:85343-85344) only negate x_vel/y_vel.
+     * S1 {@code React_BossHit} (docs/s1disasm/_incObj/Sonic ReactToItem.asm:260-263)
+     * negates THEN halves both via {@code asr.w} ({@code neg / neg / asr / asr}),
+     * gated by {@code bossHitHalvesBounceVelocity}.
+     * S3K additionally negates ground velocity ({@code bossHitNegatesGroundSpeed}).
      * Does not set air flag - ROM only modifies velocities here.
      */
     private void applyBossBounce(PlayableEntity player) {
-        player.setXSpeed((short) -player.getXSpeed());
-        player.setYSpeed((short) -player.getYSpeed());
-        if (player.getPhysicsFeatureSet() != null
-                && player.getPhysicsFeatureSet().bossHitNegatesGroundSpeed()) {
+        int negX = -player.getXSpeed();
+        int negY = -player.getYSpeed();
+        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        if (featureSet != null && featureSet.bossHitHalvesBounceVelocity()) {
+            // ROM asr.w: arithmetic (sign-preserving) shift right by 1.
+            negX >>= 1;
+            negY >>= 1;
+        }
+        player.setXSpeed((short) negX);
+        player.setYSpeed((short) negY);
+        if (featureSet != null && featureSet.bossHitNegatesGroundSpeed()) {
             player.setGSpeed((short) -player.getGSpeed());
         }
     }
