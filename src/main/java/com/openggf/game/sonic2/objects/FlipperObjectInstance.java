@@ -33,7 +33,7 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm lines 57800-58058
  */
 public class FlipperObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, RewindRecreatable {
 
     private static final int TYPE_VERTICAL = 0;
     private static final int TYPE_HORIZONTAL = 1;
@@ -123,6 +123,11 @@ public class FlipperObjectInstance extends BoxObjectInstance
         super(spawn, name, 8, 8, 0.8f, 0.4f, 0.2f, false);
         this.idleAnimId = isHorizontal() ? ANIM_HORIZONTAL_IDLE : ANIM_VERTICAL_IDLE;
         this.mappingFrame = isHorizontal() ? 4 : 0;
+    }
+
+    @Override
+    public FlipperObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new FlipperObjectInstance(ctx.spawn(), "Flipper");
     }
 
     @Override

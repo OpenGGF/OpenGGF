@@ -437,13 +437,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       gained generic recreate coverage under the pulley-chain graph proof.</li>
     *   <li>2026-06-25: raised to 572 after S2 launcher objects gained
     *       graph-tested generic recreate coverage with player-state map relinking.</li>
+    *   <li>2026-06-25: raised to 573 after S2 flippers gained graph-tested
+    *       generic recreate coverage with player-state map relinking.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 572 after S2 launcher graph restore coverage.
-    static final int RATCHET_FLOOR = 572;
+    // 2026-06-25: raised to 573 after S2 flipper graph restore coverage.
+    static final int RATCHET_FLOOR = 573;
 
     @BeforeEach
     void initHeadless() {

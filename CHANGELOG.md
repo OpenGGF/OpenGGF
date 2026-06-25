@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S2 flipper graph rewind:** CNZ flippers now restore through generic recreate while per-player cooldown, flipper-state, and control-suppression maps relink to current live player instances.
 - **S2 launcher graph rewind:** launcher balls, launcher springs, OOZ launchers, and OOZ launcher fragments now restore through generic recreate while player-state maps relink to the current live player instances.
 - **S1 Scrap Eggman graph rewind:** SBZ2 Scrap Eggman and its button child now restore through generic recreate with child-first restore ordering relinked to restored instances.
 - **S2 DEZ Eggman graph rewind:** the transition Eggman root and barrier-wall child now restore through generic recreate with the wall link relinked to restored instances.

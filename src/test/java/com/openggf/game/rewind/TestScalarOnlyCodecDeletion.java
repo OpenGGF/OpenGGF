@@ -2535,6 +2535,11 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic2.objects.OOZLauncherObjectInstance$LauncherFragmentInstance",
                     GameId.S2));
 
+    private static final List<CodecDeletionCandidate> S2_FLIPPER_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.FlipperObjectInstance",
+                    GameId.S2));
+
     private static final List<MutableFieldCoverageCandidate> S2_MCZ_ROT_PFORMS_GRAPH_RECREATE_MUTABLE_FIELDS =
             List.of(
                     new MutableFieldCoverageCandidate(
@@ -11184,6 +11189,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s2LauncherGraphRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S2_LAUNCHER_GRAPH_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2FlipperGraphRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_FLIPPER_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 flipper graph coverage");
+        }
+    }
+
+    @Test
+    void s2FlipperGraphRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_FLIPPER_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 flipper graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2FlipperGraphRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_FLIPPER_GRAPH_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

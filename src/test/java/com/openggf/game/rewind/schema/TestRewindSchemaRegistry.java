@@ -5,6 +5,7 @@ import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance;
 import com.openggf.game.sonic2.objects.FallingPillarObjectInstance;
+import com.openggf.game.sonic2.objects.FlipperObjectInstance;
 import com.openggf.game.sonic2.objects.LauncherBallObjectInstance;
 import com.openggf.game.sonic2.objects.LauncherSpringObjectInstance;
 import com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance;
@@ -269,6 +270,8 @@ class TestRewindSchemaRegistry {
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(LauncherSpringObjectInstance.class);
         RewindClassSchema oozLauncherSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(OOZLauncherObjectInstance.class);
+        RewindClassSchema flipperSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(FlipperObjectInstance.class);
         RewindClassSchema parachuteSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(MhzMushroomParachuteObjectInstance.class);
         RewindClassSchema stickyVineSchema =
@@ -288,6 +291,9 @@ class TestRewindSchemaRegistry {
         assertPolicy(launcherBallSchema, "playerVelocities", RewindFieldPolicy.CAPTURED);
         assertPolicy(launcherSpringSchema, "playerStates", RewindFieldPolicy.CAPTURED);
         assertPolicy(oozLauncherSchema, "playerStates", RewindFieldPolicy.CAPTURED);
+        assertPolicy(flipperSchema, "launchCooldown", RewindFieldPolicy.CAPTURED);
+        assertPolicy(flipperSchema, "lockedPlayerPrevSuppressed", RewindFieldPolicy.CAPTURED);
+        assertPolicy(flipperSchema, "playerFlipperState", RewindFieldPolicy.CAPTURED);
         assertPolicy(parachuteSchema, "grabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(parachuteSchema, "nativeP2GrabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(stickyVineSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
@@ -306,6 +312,9 @@ class TestRewindSchemaRegistry {
         assertTrue(oozLauncherSchema.unsupportedFields().isEmpty(),
                 "OOZ launcher compact schema must capture player refs without fallback: "
                         + oozLauncherSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(flipperSchema.unsupportedFields().isEmpty(),
+                "Flipper compact schema must capture player refs without fallback: "
+                        + flipperSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
         assertTrue(parachuteSchema.unsupportedFields().isEmpty(),
                 "MHZ mushroom parachute compact schema must capture player refs without fallback: "
                         + parachuteSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
