@@ -8,6 +8,9 @@ import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
@@ -51,7 +54,7 @@ import java.util.logging.Logger;
  *
  * <p>Children: 7 orbiting shield orbs (Obj53), 1 laser shooter (Obj54 subtype 6).
  */
-public class Sonic2MTZBossInstance extends AbstractBossInstance {
+public class Sonic2MTZBossInstance extends AbstractBossInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic2MTZBossInstance.class.getName());
 
     // =========================================================================
@@ -254,12 +257,13 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance {
 
         initialized = true;
 
-        // Spawn laser shooter child
-        laserShooter = spawnFreeChild(() -> new MTZLaserShooter(this));
-        childComponents.add(laserShooter);
-
-        // Spawn 7 orbiting shield orbs (Obj53)
-        spawnOrbs();
+        if (getSpawn().objectId() == Sonic2ObjectIds.MTZ_BOSS) {
+            // Rewind probe construction uses a zero object id and must not leak
+            // structural child side effects.
+            laserShooter = spawnFreeChild(() -> new MTZLaserShooter(this));
+            childComponents.add(laserShooter);
+            spawnOrbs();
+        }
     }
 
     private void spawnOrbs() {
@@ -275,6 +279,48 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance {
             int tiltFlag = tiltFlags[i];
             MTZBossOrb orb = spawnFreeChild(() -> new MTZBossOrb(this, orbIndex, phaseOffset, tiltFlag));
             childComponents.add(orb);
+        }
+    }
+
+    @Override
+    public Sonic2MTZBossInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+            return null;
+        }
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new Sonic2MTZBossInstance(ctx.spawn()));
+    }
+
+    private static Sonic2MTZBossInstance nearestLiveBossForRewind(RewindRecreateContext ctx) {
+        ObjectManager objectManager = null;
+        if (ctx != null) {
+            objectManager = ctx.objectManager();
+            if (objectManager == null && ctx.objectServices() != null) {
+                objectManager = ctx.objectServices().objectManager();
+            }
+        }
+        if (objectManager == null || ctx == null || ctx.spawn() == null) {
+            return null;
+        }
+        Sonic2MTZBossInstance nearest = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (instance instanceof Sonic2MTZBossInstance boss && !boss.isDestroyed()) {
+                long dx = boss.getX() - (long) ctx.spawn().x();
+                long dy = boss.getY() - (long) ctx.spawn().y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    nearest = boss;
+                    bestDistance = distance;
+                }
+            }
+        }
+        return nearest;
+    }
+
+    private static void addChildComponentOnce(Sonic2MTZBossInstance boss, AbstractBossChild child) {
+        if (boss != null && child != null && !boss.childComponents.contains(child)) {
+            boss.childComponents.add(child);
         }
     }
 
@@ -1021,7 +1067,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance {
      * Each orb can break away when the boss is hit, bouncing off-screen.
      */
     public static class MTZBossOrb extends AbstractBossChild
-            implements TouchResponseProvider, TouchResponseAttackable, TouchResponseListener {
+            implements TouchResponseProvider, TouchResponseAttackable, TouchResponseListener, RewindRecreatable {
 
         /** Obj53 routine states (Obj53_Index, s2.asm:67282-67287). */
         private static final int RT_MAIN = 2;
@@ -1059,10 +1105,10 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance {
         private static final int ORB_GRAVITY = 0x38;
 
         // Orbit state
-        private final int orbIndex;
+        private int orbIndex;
         private int orbitAngle;       // objoff_28: horizontal orbit angle
         private int verticalAngle;    // objoff_3B: vertical orbit angle
-        private final int tiltFlag;   // objoff_3A(orb): 0 or 1 selects flatten/tilt branch
+        private int tiltFlag;         // objoff_3A(orb): 0 or 1 selects flatten/tilt branch
         private int flattenAngle;     // objoff_3C: 0..$40 expand/contract angle (tilt branch)
         private int depth;            // objoff_30: high word used by SetAnimPriority
 
@@ -1088,6 +1134,17 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance {
             this.tiltFlag = tilt;
             this.flattenAngle = 0; // ROM: move.b #0,objoff_3C
             this.breakTimer = -1;  // objoff_32 starts unset (negative => no timer)
+        }
+
+        @Override
+        public MTZBossOrb recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2MTZBossInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            MTZBossOrb orb = new MTZBossOrb(boss, 0, 0, 0);
+            addChildComponentOnce(boss, orb);
+            return orb;
         }
 
         @Override
@@ -1444,10 +1501,22 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance {
      * Laser shooter child that follows boss position.
      * ROM: Positioned at boss x/y, renders frame $13.
      */
-    public static class MTZLaserShooter extends AbstractBossChild {
+    public static class MTZLaserShooter extends AbstractBossChild implements RewindRecreatable {
 
         public MTZLaserShooter(Sonic2MTZBossInstance parent) {
             super(parent, "MTZ Laser Shooter", 6, Sonic2ObjectIds.MTZ_BOSS);
+        }
+
+        @Override
+        public MTZLaserShooter recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2MTZBossInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            MTZLaserShooter shooter = new MTZLaserShooter(boss);
+            boss.laserShooter = shooter;
+            addChildComponentOnce(boss, shooter);
+            return shooter;
         }
 
         @Override
