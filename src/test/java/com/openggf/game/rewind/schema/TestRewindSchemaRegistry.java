@@ -32,6 +32,7 @@ import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance.LinkedBodyChild;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance.WingChild;
 import com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -48,6 +49,12 @@ class TestRewindSchemaRegistry {
             "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild";
     private static final String SPIKER_SIDE_LAUNCHER_CLASS =
             "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild";
+    private static final String TURBO_SPIKER_SHELL_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild";
+    private static final String TURBO_SPIKER_TRAIL_EMITTER_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter";
+    private static final String TURBO_SPIKER_WATERFALL_OVERLAY_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild";
 
     @AfterEach
     void clearRegistry() {
@@ -283,6 +290,37 @@ class TestRewindSchemaRegistry {
         assertTrue(launcherSchema.unsupportedFields().isEmpty(),
                 "Spiker side launcher compact schema must capture parent link without fallback: "
                         + launcherSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesTurboSpikerGraphLinks()
+            throws ClassNotFoundException {
+        RewindClassSchema parentSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(TurboSpikerBadnikInstance.class);
+        RewindClassSchema shellSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(Class.forName(TURBO_SPIKER_SHELL_CLASS));
+        RewindClassSchema trailSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(Class.forName(TURBO_SPIKER_TRAIL_EMITTER_CLASS));
+        RewindClassSchema overlaySchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(Class.forName(TURBO_SPIKER_WATERFALL_OVERLAY_CLASS));
+
+        assertPolicy(parentSchema, "shellChild", RewindFieldPolicy.CAPTURED);
+        assertPolicy(shellSchema, "parent", RewindFieldPolicy.CAPTURED);
+        assertPolicy(shellSchema, "trailEmitter", RewindFieldPolicy.CAPTURED);
+        assertPolicy(trailSchema, "shell", RewindFieldPolicy.CAPTURED);
+        assertPolicy(overlaySchema, "parent", RewindFieldPolicy.CAPTURED);
+        assertTrue(parentSchema.unsupportedFields().isEmpty(),
+                "Turbo Spiker parent compact schema must capture shell slot without fallback: "
+                        + parentSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(shellSchema.unsupportedFields().isEmpty(),
+                "Turbo Spiker shell compact schema must capture parent/trail links without fallback: "
+                        + shellSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(trailSchema.unsupportedFields().isEmpty(),
+                "Turbo Spiker trail compact schema must capture shell link without fallback: "
+                        + trailSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(overlaySchema.unsupportedFields().isEmpty(),
+                "Turbo Spiker overlay compact schema must capture parent link without fallback: "
+                        + overlaySchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 
     @Test

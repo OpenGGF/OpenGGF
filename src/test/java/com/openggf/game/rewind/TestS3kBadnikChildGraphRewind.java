@@ -48,6 +48,10 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild";
     private static final String TURBO_SPIKER_SHELL_CHILD =
             "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild";
+    private static final String TURBO_SPIKER_TRAIL_EMITTER =
+            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter";
+    private static final String TURBO_SPIKER_WATERFALL_OVERLAY_CHILD =
+            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild";
 
     @BeforeEach
     void initHeadless() {
@@ -328,6 +332,81 @@ class TestS3kBadnikChildGraphRewind {
     }
 
     @Test
+    void turboSpikerLaunchedShellTrailAndWaterfallOverlayRelinkToRestoredOwners() {
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of(
+                new ObjectSpawn(0x1C0, 0x140, Sonic3kObjectIds.TURBO_SPIKER, 4, 0, false, 32),
+                new ObjectSpawn(0x2A0, 0x140, Sonic3kObjectIds.TURBO_SPIKER, 4, 2, false, 33)));
+        ObjectManager objectManager = harness.objectManager();
+        TestablePlayableSprite player = player();
+        List<TurboSpikerBadnikInstance> sourceParents = liveByType(objectManager, TurboSpikerBadnikInstance.class);
+        assertEquals(2, sourceParents.size(), "precondition: two Turbo Spiker parents must be captured");
+        TurboSpikerBadnikInstance sourceParentA = sourceParents.get(0);
+        TurboSpikerBadnikInstance sourceParentB = sourceParents.get(1);
+        sourceParentA.update(0, player);
+        sourceParentB.update(0, player);
+        List<ObjectInstance> sourceShells = liveByClassName(objectManager, TURBO_SPIKER_SHELL_CHILD);
+        assertEquals(2, sourceShells.size(), "precondition: each Turbo Spiker must create one shell");
+        List<ObjectInstance> sourceOverlays = liveByClassName(objectManager, TURBO_SPIKER_WATERFALL_OVERLAY_CHILD);
+        assertEquals(1, sourceOverlays.size(), "precondition: hidden Turbo Spiker must create one overlay");
+        ObjectInstance sourceShellA = childWithParent(sourceShells, sourceParentA);
+        ObjectInstance sourceShellB = childWithParent(sourceShells, sourceParentB);
+        ObjectInstance sourceOverlayB = childWithParent(sourceOverlays, sourceParentB);
+        setObjectField(sourceParentA, "shellChild", sourceShellA);
+        setObjectField(sourceParentB, "shellChild", sourceShellB);
+        setObjectField(sourceShellA, "attached", false);
+        setIntField(sourceShellA, "currentX", 0x1E8);
+        setIntField(sourceShellA, "currentY", 0x150);
+        ObjectInstance sourceTrailA = objectManager.createDynamicObject(
+                () -> instantiateTurboSpikerTrailEmitter(sourceShellA));
+        setObjectField(sourceShellA, "trailEmitter", sourceTrailA);
+        setObjectField(sourceTrailA, "shell", sourceShellA);
+        setIntField(sourceTrailA, "mappingFrame", 7);
+
+        ObjectRefId parentAId = objectId(objectManager, sourceParentA);
+        ObjectRefId parentBId = objectId(objectManager, sourceParentB);
+        ObjectRefId shellAId = objectId(objectManager, sourceShellA);
+        ObjectRefId shellBId = objectId(objectManager, sourceShellB);
+        ObjectRefId trailAId = objectId(objectManager, sourceTrailA);
+        ObjectRefId overlayBId = objectId(objectManager, sourceOverlayB);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> new TurboSpikerBadnikInstance(new ObjectSpawn(
+                0x340, 0x180, Sonic3kObjectIds.TURBO_SPIKER, 4, 0, false, 34)));
+
+        rewindRegistry.restore(snapshot);
+
+        TurboSpikerBadnikInstance restoredParentA =
+                objectById(objectManager, TurboSpikerBadnikInstance.class, parentAId);
+        TurboSpikerBadnikInstance restoredParentB =
+                objectById(objectManager, TurboSpikerBadnikInstance.class, parentBId);
+        ObjectInstance restoredShellA = objectById(objectManager, ObjectInstance.class, shellAId);
+        ObjectInstance restoredShellB = objectById(objectManager, ObjectInstance.class, shellBId);
+        ObjectInstance restoredTrailA = objectById(objectManager, ObjectInstance.class, trailAId);
+        ObjectInstance restoredOverlayB = objectById(objectManager, ObjectInstance.class, overlayBId);
+        assertNotSame(sourceTrailA, restoredTrailA, "restore must recreate removed trail emitter");
+        assertNotSame(sourceOverlayB, restoredOverlayB, "restore must recreate removed waterfall overlay");
+        assertSame(restoredShellA, readObjectField(restoredTrailA, "shell"),
+                "trail emitter must resolve to restored launched shell");
+        assertSame(restoredTrailA, readObjectField(restoredShellA, "trailEmitter"),
+                "shell A trail slot must not retain stale pre-restore emitter");
+        assertSame(restoredParentA, readObjectField(restoredShellA, "parent"),
+                "launched shell A parent must resolve to restored Turbo Spiker A");
+        assertSame(restoredParentB, readObjectField(restoredShellB, "parent"),
+                "attached shell B parent must resolve to restored Turbo Spiker B");
+        assertSame(restoredShellA, readObjectField(restoredParentA, "shellChild"),
+                "parent A shell slot must resolve to restored shell A");
+        assertSame(restoredShellB, readObjectField(restoredParentB, "shellChild"),
+                "parent B shell slot must resolve to restored shell B");
+        assertSame(restoredParentB, readObjectField(restoredOverlayB, "parent"),
+                "waterfall overlay must resolve to restored hidden Turbo Spiker");
+        assertTrue(!(Boolean) readObjectField(restoredShellA, "attached"),
+                "launched shell state must restore as detached");
+        assertEquals(7, readIntField(restoredTrailA, "mappingFrame"),
+                "trail emitter animation state must restore from compact state");
+    }
+
+    @Test
     void captureFailsForNonNullObjectReferenceWithoutRegisteredRewindIdentity() {
         Harness harness = Harness.create(new S3klTestRegistry(), List.of());
         ObjectManager objectManager = harness.objectManager();
@@ -376,6 +455,17 @@ class TestS3kBadnikChildGraphRewind {
             return (ObjectInstance) ctor.newInstance(parent);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to construct Spiker top spike child", e);
+        }
+    }
+
+    private static ObjectInstance instantiateTurboSpikerTrailEmitter(ObjectInstance shell) {
+        try {
+            Class<?> cls = Class.forName(TURBO_SPIKER_TRAIL_EMITTER);
+            Constructor<?> ctor = cls.getDeclaredConstructor(Class.forName(TURBO_SPIKER_SHELL_CHILD));
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(shell);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct Turbo Spiker trail emitter", e);
         }
     }
 

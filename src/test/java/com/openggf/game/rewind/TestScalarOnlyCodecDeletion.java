@@ -2786,6 +2786,17 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_TURBO_SPIKER_GRAPH_BATCH221_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance",
@@ -9023,6 +9034,34 @@ public class TestScalarOnlyCodecDeletion {
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
         }
+    }
+
+    @Test
+    void s3kTurboSpikerGraphBatch221ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_TURBO_SPIKER_GRAPH_BATCH221_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Turbo Spiker graph batch 221");
+        }
+    }
+
+    @Test
+    void s3kTurboSpikerGraphBatch221ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_TURBO_SPIKER_GRAPH_BATCH221_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Turbo Spiker graph batch 221 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kTurboSpikerGraphBatch221ParentRoundTripsPassedWithoutCodec() {
+        CodecDeletionCandidate candidate = S3K_TURBO_SPIKER_GRAPH_BATCH221_RECREATE_CLASSES.getFirst();
+        RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+        assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                candidate.fqn()
+                        + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                        + result);
     }
 
     // =====================================================================

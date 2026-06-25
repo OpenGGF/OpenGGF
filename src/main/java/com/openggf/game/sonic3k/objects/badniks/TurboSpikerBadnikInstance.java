@@ -33,7 +33,8 @@ import java.util.List;
  *
  * <p>ROM reference: {@code Obj_TurboSpiker} (sonic3k.asm:183861-184226).
  */
-public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
+public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
+        implements SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x1A;      // ObjDat_TurboSpiker flags $1A
     private static final int PRIORITY_BUCKET_NORMAL = 5;       // ObjDat_TurboSpiker priority $280
@@ -375,6 +376,30 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
+    private static TurboSpikerBadnikInstance findLiveTurboSpikerParent(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (instance instanceof TurboSpikerBadnikInstance turboSpiker && !turboSpiker.isDestroyed()) {
+                return turboSpiker;
+            }
+        }
+        return null;
+    }
+
+    private static TurboSpikerShellChild findLiveTurboSpikerShell(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (instance instanceof TurboSpikerShellChild shell && !shell.isDestroyed()) {
+                return shell;
+            }
+        }
+        return null;
+    }
+
     private static final class TurboSpikerShellChild extends AbstractObjectInstance
             implements TouchResponseProvider, RewindRecreatable {
         private TurboSpikerBadnikInstance parent;
@@ -496,31 +521,26 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
             }
             renderer.drawFrameIndex(SHELL_FRAME, currentX, currentY, !facingLeft, false);
         }
-
-        private static TurboSpikerBadnikInstance findLiveTurboSpikerParent(RewindRecreateContext ctx) {
-            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
-                return null;
-            }
-            for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
-                if (instance instanceof TurboSpikerBadnikInstance turboSpiker && !turboSpiker.isDestroyed()) {
-                    return turboSpiker;
-                }
-            }
-            return null;
-        }
     }
 
-    private static final class TurboSpikerTrailEmitter extends AbstractObjectInstance {
+    private static final class TurboSpikerTrailEmitter extends AbstractObjectInstance
+            implements RewindRecreatable {
 
         private static final int SPAWN_INTERVAL_MASK = 0x03;
         private static final int OFFSET_X = -4;
         private static final int OFFSET_Y = 0x14;
-        private final TurboSpikerShellChild shell;
+        private TurboSpikerShellChild shell;
         private int mappingFrame = SHELL_TRAIL_FRAME;
 
         TurboSpikerTrailEmitter(TurboSpikerShellChild shell) {
             super(shell.getSpawn(), "TurboSpikerTrailEmitter");
             this.shell = shell;
+        }
+
+        @Override
+        public TurboSpikerTrailEmitter recreateForRewind(RewindRecreateContext ctx) {
+            TurboSpikerShellChild liveShell = findLiveTurboSpikerShell(ctx);
+            return liveShell != null ? new TurboSpikerTrailEmitter(liveShell) : null;
         }
 
         @Override
@@ -714,12 +734,19 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
-    private static final class TurboSpikerWaterfallOverlayChild extends AbstractObjectInstance {
-        private final TurboSpikerBadnikInstance parent;
+    private static final class TurboSpikerWaterfallOverlayChild extends AbstractObjectInstance
+            implements RewindRecreatable {
+        private TurboSpikerBadnikInstance parent;
 
         TurboSpikerWaterfallOverlayChild(TurboSpikerBadnikInstance parent) {
             super(parent.getSpawn(), "TurboSpikerWaterfallOverlay");
             this.parent = parent;
+        }
+
+        @Override
+        public TurboSpikerWaterfallOverlayChild recreateForRewind(RewindRecreateContext ctx) {
+            TurboSpikerBadnikInstance liveParent = findLiveTurboSpikerParent(ctx);
+            return liveParent != null ? new TurboSpikerWaterfallOverlayChild(liveParent) : null;
         }
 
         @Override

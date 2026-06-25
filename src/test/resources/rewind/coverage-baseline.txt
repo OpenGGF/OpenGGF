@@ -64,9 +64,6 @@ com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlaster
 com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm#recreate
 com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotDebris#recreate
-com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance#recreate
-com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter#recreate
-com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild#recreate
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreX
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreY
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#recreate

@@ -989,6 +989,10 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",
                 "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter",
+                "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild");
+        m.put("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild",
+                "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance");
         // S3K MHZ cutscene/miniboss children. The parent object IDs are zone-set
         // dependent, so registryForSeededParent supplies exact parent factories.
         m.put("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
