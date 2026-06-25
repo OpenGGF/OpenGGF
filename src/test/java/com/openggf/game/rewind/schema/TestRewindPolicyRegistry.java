@@ -9,6 +9,7 @@ import com.openggf.game.PowerUpSpawner;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.sonic3k.objects.LbzMinibossInstance;
+import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
@@ -177,6 +178,13 @@ class TestRewindPolicyRegistry {
         Field parent = LbzMinibossInstance.class.getDeclaredField("knucklesFightParent");
 
         assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(parent).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesCnzEndBossCannonReference() throws NoSuchFieldException {
+        Field endCannon = CnzEndBossInstance.class.getDeclaredField("endCannon");
+
+        assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(endCannon).orElse(null));
     }
 
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {

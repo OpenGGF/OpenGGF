@@ -128,8 +128,6 @@ com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTr
 com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild#recreate
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreX
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreY
-com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#objectRef#endCannon
-com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#recreate
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance#objectRef#bossSnowdustEmitter
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance#recreate
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#recreate
