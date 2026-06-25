@@ -2,12 +2,6 @@ com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
 com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#recreate
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingDebrisChild#recreate
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$DefeatFragmentChild#recreate
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild#finalScalar#baseY
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild#finalScalar#mirrored
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild#recreate
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$MgzBossCameraScrollHelper#recreate
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossPlayerTwoCarryChild#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossSidekickLockChild#recreate

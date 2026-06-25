@@ -38,6 +38,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestS3kNestedHurtboxGraphRewind {
     private static final String MGZ_DRILL_ARM_CLASS =
             "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild";
+    private static final String MGZ_CEILING_DEBRIS_CLASS =
+            "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingDebrisChild";
+    private static final String MGZ_DEFEAT_FRAGMENT_CLASS =
+            "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DefeatFragmentChild";
+    private static final String MGZ_SPIKE_PLATFORM_CLASS =
+            "com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild";
+    private static final String MGZ_CAMERA_SCROLL_HELPER_CLASS =
+            "com.openggf.game.sonic3k.objects.MgzMinibossInstance$MgzBossCameraScrollHelper";
     private static final String ICZ_HURT_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild";
     private static final String ICZ_TENSION_SUPPORT_CLASS =
@@ -174,6 +182,81 @@ class TestS3kNestedHurtboxGraphRewind {
         invokeNoArg(restoredBoss, "spawnArmChildren");
         assertEquals(2, liveObjectsByName(objectManager, MGZ_DRILL_ARM_CLASS).size(),
                 "post-restore flipped arm spawn path must not duplicate restored arms");
+    }
+
+    @Test
+    void mgzMinibossTailObjectsRestoreFreshRelinkParentAndPreserveScalars() {
+        Harness harness = Harness.create(List.of(MGZ_BOSS_SPAWN));
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        MgzMinibossInstance sourceBoss = only(objectManager, MgzMinibossInstance.class);
+        ObjectInstance sourceDebris = objectManager.createDynamicObject(
+                () -> constructMgzCeilingDebris(0x0330, 0x0180, 2, false));
+        ObjectInstance sourceFragment = objectManager.createDynamicObject(
+                () -> constructMgzDefeatFragment(0x0340, 0x01A0, 3, 0x120, -0x380));
+        ObjectInstance sourcePlatform = objectManager.createDynamicObject(
+                () -> constructMgzSpikePlatform(sourceBoss, true, 0x02E0, 0x0100));
+        ObjectInstance sourceScrollHelper = objectManager.createDynamicObject(
+                () -> constructMgzCameraScrollHelper(0x2E00));
+        setIntField(sourcePlatform, "currentX", 0x03B4);
+        setIntField(sourcePlatform, "currentY", 0x01C8);
+        setIntField(sourcePlatform, "baseY", 0x01F0);
+        setIntField(sourcePlatform, "routine", 4);
+        setIntField(sourcePlatform, "timer", 0x55);
+
+        ObjectRefId bossId = objectId(objectManager, sourceBoss);
+        ObjectRefId debrisId = objectId(objectManager, sourceDebris);
+        ObjectRefId fragmentId = objectId(objectManager, sourceFragment);
+        ObjectRefId platformId = objectId(objectManager, sourcePlatform);
+        ObjectRefId scrollHelperId = objectId(objectManager, sourceScrollHelper);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.removeDynamicObject(sourceDebris);
+        objectManager.removeDynamicObject(sourceFragment);
+        objectManager.removeDynamicObject(sourcePlatform);
+        objectManager.removeDynamicObject(sourceScrollHelper);
+        ObjectInstance divergentPlatform = objectManager.createDynamicObject(
+                () -> constructMgzSpikePlatform(sourceBoss, false, 0x0200, 0x0200));
+        assertEquals(1, liveObjectsByName(objectManager, MGZ_SPIKE_PLATFORM_CLASS).size(),
+                "diverge step should leave one unrelated MGZ spike platform before restore");
+
+        rewindRegistry.restore(snapshot);
+
+        MgzMinibossInstance restoredBoss = objectById(objectManager, MgzMinibossInstance.class, bossId);
+        ObjectInstance restoredDebris = objectById(objectManager, debrisId);
+        ObjectInstance restoredFragment = objectById(objectManager, fragmentId);
+        ObjectInstance restoredPlatform = objectById(objectManager, platformId);
+        ObjectInstance restoredScrollHelper = objectById(objectManager, scrollHelperId);
+        assertEquals(1, liveObjectsByName(objectManager, MGZ_CEILING_DEBRIS_CLASS).size(),
+                "restore must keep exactly the captured MGZ ceiling debris");
+        assertEquals(1, liveObjectsByName(objectManager, MGZ_DEFEAT_FRAGMENT_CLASS).size(),
+                "restore must keep exactly the captured MGZ defeat fragment");
+        assertEquals(1, liveObjectsByName(objectManager, MGZ_SPIKE_PLATFORM_CLASS).size(),
+                "restore must keep exactly the captured MGZ spike platform");
+        assertEquals(1, liveObjectsByName(objectManager, MGZ_CAMERA_SCROLL_HELPER_CLASS).size(),
+                "restore must keep exactly the captured MGZ camera scroll helper");
+        assertNotSame(sourceDebris, restoredDebris, "restore must recreate MGZ ceiling debris");
+        assertNotSame(sourceFragment, restoredFragment, "restore must recreate MGZ defeat fragment");
+        assertNotSame(sourcePlatform, restoredPlatform, "restore must recreate MGZ spike platform");
+        assertNotSame(sourceScrollHelper, restoredScrollHelper, "restore must recreate MGZ camera scroll helper");
+        assertNotSame(divergentPlatform, restoredPlatform, "restore must drop the divergent spike platform");
+        assertSame(restoredBoss, readObjectField(restoredPlatform, "parent"),
+                "spike platform parent must resolve to the restored MGZ miniboss");
+        assertNotSame(sourceBoss, readObjectField(restoredPlatform, "parent"),
+                "spike platform must not retain the stale pre-restore parent");
+        assertEquals(2, readIntField(restoredDebris, "mappingFrame"));
+        assertFalse(readBooleanField(restoredDebris, "spire"));
+        assertEquals(3, readIntField(restoredFragment, "mappingFrame"));
+        assertEquals(0x120, readIntField(restoredFragment, "xVel"));
+        assertEquals(-0x380, readIntField(restoredFragment, "yVel"));
+        assertTrue(readBooleanField(restoredPlatform, "mirrored"));
+        assertEquals(0x03B4, readIntField(restoredPlatform, "currentX"));
+        assertEquals(0x01C8, readIntField(restoredPlatform, "currentY"));
+        assertEquals(0x01F0, readIntField(restoredPlatform, "baseY"));
+        assertEquals(4, readIntField(restoredPlatform, "routine"));
+        assertEquals(0x55, readIntField(restoredPlatform, "timer"));
+        assertEquals(0x2E00, readIntField(restoredScrollHelper, "targetX"));
     }
 
     @Test
@@ -339,6 +422,14 @@ class TestS3kNestedHurtboxGraphRewind {
                 "ICZ ice spikes root must restore through RewindRecreatable generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(MGZ_DRILL_ARM_CLASS)),
                 "MGZ drill arm must restore through RewindRecreatable generic recreate");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(MGZ_CEILING_DEBRIS_CLASS)),
+                "MGZ ceiling debris must restore through RewindRecreatable generic recreate");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(MGZ_DEFEAT_FRAGMENT_CLASS)),
+                "MGZ defeat fragment must restore through RewindRecreatable generic recreate");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(MGZ_SPIKE_PLATFORM_CLASS)),
+                "MGZ spike platform must restore through RewindRecreatable generic recreate");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(MGZ_CAMERA_SCROLL_HELPER_CLASS)),
+                "MGZ camera scroll helper must restore through RewindRecreatable generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(ICZ_HURT_CHILD_CLASS)),
                 "ICZ ice-spike hurt child must restore through RewindRecreatable generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(ICZ_TENSION_SUPPORT_CLASS)),
@@ -349,6 +440,14 @@ class TestS3kNestedHurtboxGraphRewind {
                 "ICZ ice spikes root must not keep an explicit S3K dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MGZ_DRILL_ARM_CLASS),
                 "MGZ drill arm must not keep an explicit S3K dynamic codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MGZ_CEILING_DEBRIS_CLASS),
+                "MGZ ceiling debris must not keep an explicit S3K dynamic codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MGZ_DEFEAT_FRAGMENT_CLASS),
+                "MGZ defeat fragment must not keep an explicit S3K dynamic codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MGZ_SPIKE_PLATFORM_CLASS),
+                "MGZ spike platform must not keep an explicit S3K dynamic codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(MGZ_CAMERA_SCROLL_HELPER_CLASS),
+                "MGZ camera scroll helper must not keep an explicit S3K dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ICZ_HURT_CHILD_CLASS),
                 "ICZ ice-spike hurt child must not keep an explicit S3K dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(ICZ_TENSION_SUPPORT_CLASS),
@@ -445,6 +544,14 @@ class TestS3kNestedHurtboxGraphRewind {
                 .orElseThrow(() -> new AssertionError("missing restored object " + id));
     }
 
+    private static ObjectInstance objectById(ObjectManager objectManager, ObjectRefId id) {
+        return objectManager.getActiveObjects().stream()
+                .filter(object -> !object.isDestroyed())
+                .filter(object -> objectId(objectManager, object).equals(id))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("missing restored object " + id));
+    }
+
     private static <T extends ObjectInstance> T only(ObjectManager objectManager, Class<T> type) {
         List<T> live = liveObjects(objectManager, type);
         assertEquals(1, live.size(), "expected exactly one live " + type.getSimpleName());
@@ -501,6 +608,54 @@ class TestS3kNestedHurtboxGraphRewind {
             return (ObjectInstance) ctor.newInstance(parent, xOffset, yOffset);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to construct MGZ drill arm", e);
+        }
+    }
+
+    private static ObjectInstance constructMgzCeilingDebris(int x, int y, int mappingFrame, boolean spire) {
+        try {
+            Class<?> cls = Class.forName(MGZ_CEILING_DEBRIS_CLASS);
+            Constructor<?> ctor = cls.getDeclaredConstructor(int.class, int.class, int.class, boolean.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(x, y, mappingFrame, spire);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct MGZ ceiling debris", e);
+        }
+    }
+
+    private static ObjectInstance constructMgzDefeatFragment(
+            int x, int y, int mappingFrame, int xVel, int yVel) {
+        try {
+            Class<?> cls = Class.forName(MGZ_DEFEAT_FRAGMENT_CLASS);
+            Constructor<?> ctor =
+                    cls.getDeclaredConstructor(int.class, int.class, int.class, int.class, int.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(x, y, mappingFrame, xVel, yVel);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct MGZ defeat fragment", e);
+        }
+    }
+
+    private static ObjectInstance constructMgzSpikePlatform(
+            MgzMinibossInstance parent, boolean mirrored, int cameraX, int cameraY) {
+        try {
+            Class<?> cls = Class.forName(MGZ_SPIKE_PLATFORM_CLASS);
+            Constructor<?> ctor =
+                    cls.getDeclaredConstructor(MgzMinibossInstance.class, boolean.class, int.class, int.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(parent, mirrored, cameraX, cameraY);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct MGZ spike platform", e);
+        }
+    }
+
+    private static ObjectInstance constructMgzCameraScrollHelper(int targetX) {
+        try {
+            Class<?> cls = Class.forName(MGZ_CAMERA_SCROLL_HELPER_CLASS);
+            Constructor<?> ctor = cls.getDeclaredConstructor(int.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(targetX);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct MGZ camera scroll helper", e);
         }
     }
 

@@ -239,6 +239,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance", "endBossDefeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance", "child"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance", "grabbedPlayers"), RewindFieldPolicy.CAPTURED),

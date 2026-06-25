@@ -3368,6 +3368,18 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
                     GameId.S3K),
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingDebrisChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DefeatFragmentChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$MgzBossCameraScrollHelper",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild",
                     GameId.S3K));
 
