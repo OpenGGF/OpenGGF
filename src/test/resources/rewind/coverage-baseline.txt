@@ -113,10 +113,6 @@ com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$BaseChild#recreate
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#objectRef#knucklesFightParent
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance#recreate
-com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance#finalScalar#closedOnly
-com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance#objectRef#overlayChild
-com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance#recreate
-com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance$OverlayChild#recreate
 com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance$PulleyChainChild#recreate
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#recreate

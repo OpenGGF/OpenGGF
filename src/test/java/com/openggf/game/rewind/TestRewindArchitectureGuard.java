@@ -70,6 +70,7 @@ class TestRewindArchitectureGuard {
             // reference is object-graph structure rebuilt when the parent re-spawns its
             // children, not rewindable state. Same triage precedent as the entries above.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzCupElevatorInstance.java#@RewindTransient", 4),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzTubeElevatorInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/IczSnowPileObjectInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/IczTensionPlatformObjectInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Mhz1CutsceneKnucklesInstance.java#@RewindTransient", 1),

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K LBZ tube-elevator graph rewind:** tube elevator overlays now restore through generic graph recreate, relink to the restored parent, and no longer require stale coverage-baseline keys.
 - **S3K LBZ player-launcher graph rewind:** launcher-arm children now restore through generic graph recreate, relink to the restored parent, and no longer need stale scalar/recreate baseline keys.
 - **S3K MGZ pulley scalar rewind cleanup:** pulley anchor, facing, and extension scalars now compact-restore without stale coverage-baseline keys.
 - **S3K mechanism-root scalar rewind cleanup:** MGZ top-launcher facing and tension-bridge constructor scalars now compact-restore without stale coverage-baseline keys.
