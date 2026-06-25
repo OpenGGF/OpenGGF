@@ -28,15 +28,6 @@ com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb#finalSca
 com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb#finalScalar#tiltFlag
 com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZLaserShooter#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance#objectRef#targetingSensor
-com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicDEZWindow#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicLEDWindow#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball#finalScalar#mappingFrame
-com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball#finalScalar#xVel
-com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball#finalScalar#yVel
-com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicTargetingSensor#recreate
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance#recreate
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#xOffset

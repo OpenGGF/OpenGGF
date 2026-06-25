@@ -91,6 +91,7 @@ final class DefaultObjectRewindPolicies {
             "shoulder",
             "sourceShip",
             "spikeChild",
+            "targetingSensor",
             "topSpike",
             "trailEmitter",
             "turbine",

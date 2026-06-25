@@ -10,6 +10,10 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -40,7 +44,7 @@ import java.util.function.Supplier;
  * it only in specific routines/phases: idle (routine 8 at loc_3986A) and
  * specific attack sub-phases. Descent (routine 6) does not animate at all.
  */
-public class Sonic2MechaSonicInstance extends AbstractBossInstance {
+public class Sonic2MechaSonicInstance extends AbstractBossInstance implements RewindRecreatable {
 
     // State machine routine constants
     private static final int ROUTINE_INIT = 0x00;
@@ -166,7 +170,6 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
             {0x18, 0x00, 0x300, 0x000, 0x15},
             {0x10, -0x10, 0x200, -0x200, 0x16}
     };
-
     // Internal state
     private int actionTimer;
     private int attackIndex;
@@ -209,6 +212,13 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
     }
 
     @Override
+    public Sonic2MechaSonicInstance recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.construct(
+                ctx.objectServices(),
+                () -> new Sonic2MechaSonicInstance(ctx.spawn()));
+    }
+
+    @Override
     protected void initializeBossState() {
         state.routine = ROUTINE_INIT;
         state.routineSecondary = 0;
@@ -228,7 +238,9 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
         animTerminatorReached = false;
 
         state.routine = ROUTINE_WAIT_CAMERA;
-        spawnChildObjects();
+        if (getSpawn().objectId() == Sonic2ObjectIds.MECHA_SONIC) {
+            spawnChildObjects();
+        }
     }
 
     private void spawnChildObjects() {
@@ -1036,11 +1048,33 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
         return Sonic2Sfx.BOSS_EXPLOSION.id;
     }
 
+    private static Sonic2MechaSonicInstance nearestLiveBossForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
+                || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        Sonic2MechaSonicInstance nearest = null;
+        long bestDistance = Long.MAX_VALUE;
+        ObjectSpawn spawn = ctx.spawn();
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (instance instanceof Sonic2MechaSonicInstance boss && !boss.isDestroyed()) {
+                long dx = boss.getX() - (long) spawn.x();
+                long dy = boss.getY() - (long) spawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    nearest = boss;
+                    bestDistance = distance;
+                }
+            }
+        }
+        return nearest;
+    }
+
     // ========================================================================
     // Child Objects
     // ========================================================================
 
-    static class MechaSonicDEZWindow extends AbstractBossChild {
+    static class MechaSonicDEZWindow extends AbstractBossChild implements RewindRecreatable {
         private static final int WINDOW_X = 0x2C0;
         private static final int WINDOW_Y = 0x139;
         private static final int[][] WINDOW_ANIMS = {
@@ -1082,6 +1116,20 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
             this.animFrame = 0;
             this.animTimer = 0;
             this.mappingFrame = 4;
+        }
+
+        @Override
+        public MechaSonicDEZWindow recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2MechaSonicInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            MechaSonicDEZWindow window = new MechaSonicDEZWindow(boss);
+            boss.dezWindow = window;
+            if (!boss.childComponents.contains(window)) {
+                boss.childComponents.add(window);
+            }
+            return window;
         }
 
         /**
@@ -1212,7 +1260,7 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
         }
     }
 
-    static class MechaSonicTargetingSensor extends AbstractBossChild {
+    static class MechaSonicTargetingSensor extends AbstractBossChild implements RewindRecreatable {
         private static final int X_OFFSET_RIGHT = 0x0C;
         private static final int X_OFFSET_LEFT = -0x0C;
         private static final int Y_OFFSET = -0x0C;
@@ -1221,6 +1269,20 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
         MechaSonicTargetingSensor(Sonic2MechaSonicInstance parent) {
             super(parent, "Targeting Sensor", 4, Sonic2ObjectIds.MECHA_SONIC);
             this.collisionEnabled = false;
+        }
+
+        @Override
+        public MechaSonicTargetingSensor recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2MechaSonicInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            MechaSonicTargetingSensor sensor = new MechaSonicTargetingSensor(boss);
+            boss.targetingSensor = sensor;
+            if (!boss.childComponents.contains(sensor)) {
+                boss.childComponents.add(sensor);
+            }
+            return sensor;
         }
 
         void setCollisionEnabled(boolean enabled) { this.collisionEnabled = enabled; }
@@ -1248,7 +1310,7 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
         public void appendRenderCommands(List<GLCommand> commands) {}
     }
 
-    static class MechaSonicLEDWindow extends AbstractBossChild {
+    static class MechaSonicLEDWindow extends AbstractBossChild implements RewindRecreatable {
         private static final int[][] LED_ANIMS = {
                 {1, 0x0B, 0x0C},
                 {1, 0x0D, 0x0E},
@@ -1275,6 +1337,20 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
             this.mappingFrame = 0x0B;
             // ROM: child created at routine $10 (visible) with default anim 0 (bottom jets)
             this.visible = true;
+        }
+
+        @Override
+        public MechaSonicLEDWindow recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2MechaSonicInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            MechaSonicLEDWindow window = new MechaSonicLEDWindow(boss);
+            boss.ledWindow = window;
+            if (!boss.childComponents.contains(window)) {
+                boss.childComponents.add(window);
+            }
+            return window;
         }
 
         void setVisible(boolean v) { this.visible = v; }
@@ -1332,11 +1408,11 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
         }
     }
 
-    static class MechaSonicSpikeball extends AbstractBossChild {
+    static class MechaSonicSpikeball extends AbstractBossChild implements RewindRecreatable {
         private static final int SCREEN_BOUNDS_HALF_WIDTH = 0x180;
-        private final int xVel;
-        private final int yVel;
-        private final int mappingFrame;
+        private int xVel;
+        private int yVel;
+        private int mappingFrame;
         private int xFixed;
         private int yFixed;
 
@@ -1351,6 +1427,24 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
             this.xVel = xVel;
             this.yVel = yVel;
             this.mappingFrame = mappingFrame;
+        }
+
+        MechaSonicSpikeball(Sonic2MechaSonicInstance parent,
+                            int startX, int startY,
+                            int xVel, int yVel) {
+            this(parent, startX, startY, xVel, yVel, 0);
+        }
+
+        @Override
+        public MechaSonicSpikeball recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2MechaSonicInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            int x = spawn == null ? boss.getX() : spawn.x();
+            int y = spawn == null ? boss.getY() : spawn.y();
+            return new MechaSonicSpikeball(boss, x, y, 0, 0, 0);
         }
 
         @Override
