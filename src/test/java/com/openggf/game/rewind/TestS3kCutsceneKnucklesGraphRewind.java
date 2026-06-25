@@ -163,10 +163,15 @@ class TestS3kCutsceneKnucklesGraphRewind {
 
     @Test
     void cutsceneKnucklesChildrenUseRewindRecreatableWithoutExplicitDynamicCodecs() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(CutsceneKnucklesCnz2AInstance.class),
+                "CNZ2 Knuckles cutscene parent must restore through RewindRecreatable generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(CutsceneKnucklesRockChild.class),
                 "AIZ rock child must restore through RewindRecreatable generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(CutsceneKnuxCnz2WallInstance.class),
                 "CNZ wall must restore through RewindRecreatable generic recreate");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        CutsceneKnucklesCnz2AInstance.class.getName()),
+                "CNZ2 Knuckles cutscene parent must not keep an explicit S3K dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
                         CutsceneKnucklesRockChild.class.getName()),
                 "AIZ rock child must not keep an explicit S3K dynamic codec");

@@ -3078,6 +3078,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S3K_CUTSCENE_KNUCKLES_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.CutsceneKnucklesRockChild",
                     GameId.S3K),
             new CodecDeletionCandidate(

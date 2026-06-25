@@ -12,6 +12,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.Level;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -22,7 +23,8 @@ import java.util.List;
  *
  * <p>ROM reference: {@code CutsceneKnux_CNZ2A}.
  */
-public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
+public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final int CAMERA_LOCK_X = 0x1D00;
     private static final int CAMERA_LOCK_Y = 0x0280;
     private static final int MUSIC_FADE_WAIT = 2 * 60;

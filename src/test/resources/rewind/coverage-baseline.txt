@@ -57,8 +57,6 @@ com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment#recreate
 com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris#recreate
 com.openggf.game.sonic3k.objects.CorkFloorObjectInstance$CorkFloorFragment#recreate
-com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance#objectRef#blockingWall
-com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance#recreate
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance#objectRef#parentButton
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance#recreate
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1PeerInstance#recreate
