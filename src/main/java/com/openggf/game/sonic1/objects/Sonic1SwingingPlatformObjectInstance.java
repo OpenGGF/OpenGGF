@@ -426,6 +426,29 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean carriesAirborneRiderAfterExitPlatform() {
+        // ROM Obj15 routine 4 Swing_Action2 (docs/s1disasm/_incObj/15 Swinging
+        // Platforms.asm:144-154) is `bsr ExitPlatform / bsr Swing_Move /
+        // bsr MvSonicOnPtfm` (d3 = obHeight+1). ExitPlatform clears the rider's
+        // on-platform bit (status #3) when he walks past the platform's full
+        // 2*obActWid width (`cmp d2,d0 / blo .return`, sub ExitPlatform.asm:24-34),
+        // but Swing_Move then advances the platform and MvSonicOnPtfm re-seats the
+        // rider's Y UNCONDITIONALLY -- it does not test the on-platform bit
+        // (sub MvSonicOnPtfm.asm:11-40). So on the frame the rider crosses the
+        // platform's right edge he still receives one final post-move Y carry from
+        // that platform's surface, instead of being dropped at his stale terrain Y.
+        // This is the exact ExitPlatform-then-unconditional-MvSonicOnPtfm shape of
+        // the Obj 18 platform family and Obj 52 moving block. Without it, walking
+        // off one swing platform onto an abutting one made the engine release the
+        // ride and leave the rider 2px off ROM for the exit frame (MZ3 f6558: ROM
+        // re-seats him to 0x74D from platform B's post-move surface 0x769 while the
+        // engine kept the pre-exit terrain Y 0x74F; the next platform A acquires him
+        // the following frame). forceAirOnRideExit() stays at its default but is a
+        // no-op for S1's UNIFIED collision model, so this carry never forces air.
+        return true;
+    }
+
+    @Override
     public boolean usesPlatformObjectLandingSnap() {
         // Swing_SetSolid passes d3=obHeight into Swing_Solid/Platform3, but
         // Swing_Action2 passes d3=obHeight+1 to MvSonicOnPtfm for continued
