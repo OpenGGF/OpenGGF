@@ -386,6 +386,46 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // ROM Swing_SetSolid passes `move.b obActWid(a0),d1` directly into
+        // Swing_Solid (docs/s1disasm/_incObj/15 Swinging Platforms.asm:128-133),
+        // and Swing_Solid's X-range check uses that d1 as the landing half-width
+        // (`add.w d1,d0 / bmi Plat_Exit; add.w d1,d1 / cmp d1,d0 / bhs Plat_Exit`
+        // -> land range [objX-obActWid, objX+obActWid), docs/s1disasm/_incObj/sub
+        // PlatformObject.asm:165-179). obActWid is already the standable half-width
+        // (0x18 for the 48-wide GHZ/MZ platform, 0x20 for the 64-wide SLZ one), so
+        // it must NOT receive the generic SolidObjectFull `-$B` narrowing. Without
+        // this the engine narrowed the landing width to obActWid-0xB, opening a gap
+        // at the platform edges so the player fell between two adjacent platforms
+        // (MZ3 f6430: walking from one swing platform onto the abutting one's left
+        // edge x=0xB80, the narrowed range did not reach it -> airborne vs ROM
+        // on_object). Mirrors the CollapsingFloor (Obj 0x53) PlatformObject path.
+        return true;
+    }
+
+    @Override
+    public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
+        // ROM Swing_SetSolid (routine 2, the landing/detect frame) runs Swing_Solid
+        // BEFORE falling through to Swing_Action -> Swing_Move, the oscillator-driven
+        // position update (docs/s1disasm/_incObj/15 Swinging Platforms.asm:128-138:
+        // `bsr Swing_Solid` then fall-through `Swing_Action: bsr Swing_Move`).
+        // Swing_Solid seats a new rider from the platform's PRE-move obY
+        // (`move.w obY(a0),d0 / sub.w d3,d0 / bra Plat_NoXCheck_AltY`,
+        // sub PlatformObject.asm:177-179), so a fresh landing observes the surface
+        // before that frame's swing nudge. The engine moves the platform from
+        // OscillationManager during update() (before the solid-contact pass), so
+        // without this override the landing seat used the POST-move Y, seating the
+        // rider 2px off ROM on the landing frame only (MZ3 f6430: engine seated
+        // 0x74D from a post-move slot Y of 0x769; ROM seats 0x74F from the pre-move
+        // Y of 0x76B). Continued-ride frames (f6431+) already matched because the
+        // routine-4 Swing_Action2 path moves (Swing_Move) THEN re-seats via
+        // MvSonicOnPtfm. Same PlatformObject/ExitPlatform-before-move order as the
+        // Obj 18 platform family and the SLZ circling platform
+        // (Sonic1CirclingPlatformObjectInstance).
+        return true;
+    }
+
+    @Override
     public boolean usesPlatformObjectLandingSnap() {
         // Swing_SetSolid passes d3=obHeight into Swing_Solid/Platform3, but
         // Swing_Action2 passes d3=obHeight+1 to MvSonicOnPtfm for continued
