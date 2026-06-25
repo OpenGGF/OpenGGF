@@ -100,6 +100,7 @@ import com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.Aiz1TreeObjectInstance;
 import com.openggf.game.sonic3k.objects.Aiz1ZiplinePegObjectInstance;
 import com.openggf.game.sonic3k.objects.AizForegroundPlantInstance;
+import com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild;
 import com.openggf.game.sonic3k.objects.AizIntroPlaneChild;
 import com.openggf.game.sonic3k.objects.AizIntroWaveChild;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -1661,7 +1662,8 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> AIZ_INTRO_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(AizIntroPlaneChild.class.getName(), GameId.S3K),
-            new CodecDeletionCandidate(AizIntroWaveChild.class.getName(), GameId.S3K));
+            new CodecDeletionCandidate(AizIntroWaveChild.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AizIntroEmeraldGlowChild.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> AIZ_INTRO_PARENT_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(AizPlaneIntroInstance.class.getName(), GameId.S3K));

@@ -104,6 +104,28 @@ class TestS3kAizIntroGraphRewind {
     }
 
     @Test
+    void aizIntroEmeraldGlowGenericRecreateRelinksToLivePlaneIfCapturedDynamically() {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        AizPlaneIntroInstance parent = only(objectManager, AizPlaneIntroInstance.class);
+        AizIntroPlaneChild plane = objectManager.createDynamicObject(
+                () -> new AizIntroPlaneChild(spawn(0x0080, 0x005C, 411), parent));
+
+        ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(
+                dynamicEntry(AizIntroEmeraldGlowChild.class, spawn(0x0088, 0x0050, 412)),
+                new DynamicObjectRecreateContext(objectManager));
+
+        assertTrue(result instanceof AizIntroEmeraldGlowChild,
+                "generic recreate should rebuild an AIZ intro glow child when a live plane is present");
+        assertSame(plane, readObjectField(result, "parent"),
+                "glow child must relink to the restore-time live plane");
+        assertEquals(0, readObjectField(result, "xOffset"),
+                "generic recreate should use harmless offset placeholders before compact scalar restore");
+        assertEquals(0, readObjectField(result, "yOffset"),
+                "generic recreate should use harmless offset placeholders before compact scalar restore");
+    }
+
+    @Test
     void genericRecreateDropsAizIntroChildrenWhenActiveParentIsMissingOrStale() {
         Harness harness = Harness.createWithoutPlacedParent();
         ObjectManager objectManager = harness.objectManager();
@@ -125,6 +147,12 @@ class TestS3kAizIntroGraphRewind {
                 new DynamicObjectRecreateContext(objectManager));
         assertNull(missingResult,
                 "generic recreate must drop an AIZ intro wave child when no live intro parent exists");
+
+        ObjectInstance missingGlowResult = ObjectRewindDynamicCodecs.genericRecreate(
+                dynamicEntry(AizIntroEmeraldGlowChild.class, spawn(0x0440, 0x0080, 405)),
+                new DynamicObjectRecreateContext(objectManager));
+        assertNull(missingGlowResult,
+                "generic recreate must drop an AIZ intro glow child when no live plane exists");
     }
 
     private record Harness(ObjectManager objectManager) {

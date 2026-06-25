@@ -35,4 +35,25 @@ final class AizIntroRewindLinks {
         }
         return null;
     }
+
+    static AizIntroPlaneChild liveIntroPlane(RewindRecreateContext ctx) {
+        ObjectManager objectManager = ctx.objectManager();
+        if (objectManager == null && ctx.objectServices() != null) {
+            objectManager = ctx.objectServices().objectManager();
+        }
+        if (objectManager == null) {
+            return null;
+        }
+        AizIntroPlaneChild onlyLive = null;
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (!(object instanceof AizIntroPlaneChild candidate) || candidate.isDestroyed()) {
+                continue;
+            }
+            if (onlyLive != null) {
+                return null;
+            }
+            onlyLive = candidate;
+        }
+        return onlyLive;
+    }
 }

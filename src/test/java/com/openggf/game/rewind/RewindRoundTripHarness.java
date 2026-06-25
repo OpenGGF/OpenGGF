@@ -927,8 +927,8 @@ public final class RewindRoundTripHarness {
         // (ObjectSpawn, ParentType), (ParentType), (ParentType, String),
         // (ParentType, int, int), (ParentType, AbstractObjectInstance, int, int),
         // (ObjectSpawn, int, int, ParentType), (ObjectSpawn, ParentType, int),
-        // and (ObjectSpawn, ParentType, int, int, int). Build a stub parent of that type
-        // headlessly (using simple strategies only to avoid recursion), then
+        // (ObjectSpawn, ParentType, int, int), and (ObjectSpawn, ParentType, int, int, int).
+        // Build a stub parent of that type headlessly (using simple strategies only to avoid recursion), then
         // construct the child with the matching placeholder arguments.
         AbstractObjectInstance constructedWithParent = tryConstructWithInferredParent(cls, stub);
         if (constructedWithParent != null) {
@@ -947,6 +947,7 @@ public final class RewindRoundTripHarness {
                         + " (ParentType,AbstractObjectInstance,int,int),"
                         + " (ObjectSpawn,int,int,ParentType),"
                         + " (ObjectSpawn,ParentType,int),"
+                        + " (ObjectSpawn,ParentType,int,int),"
                         + " (ObjectSpawn,ParentType,int,int,int))");
     }
 
@@ -1391,7 +1392,8 @@ public final class RewindRoundTripHarness {
      * {@code (ParentType, String)}, {@code (ParentType, int, int)},
      * {@code (ParentType, AbstractObjectInstance, int, int)},
      * {@code (ObjectSpawn, int, int, ParentType)}, {@code (ObjectSpawn, ParentType, int)},
-     * or {@code (ObjectSpawn, ParentType, int, int, int)} where {@code ParentType} is
+     * {@code (ObjectSpawn, ParentType, int, int)}, or
+     * {@code (ObjectSpawn, ParentType, int, int, int)} where {@code ParentType} is
      * assignment-compatible with {@code liveParent}, then invoking it directly with the
      * live parent instance.
      *
@@ -1442,6 +1444,11 @@ public final class RewindRoundTripHarness {
                     && params[0] == ObjectSpawn.class
                     && params[1].isAssignableFrom(liveParent.getClass())
                     && params[2] == int.class;
+            boolean spawnParentIntInt = params.length == 4
+                    && params[0] == ObjectSpawn.class
+                    && params[1].isAssignableFrom(liveParent.getClass())
+                    && params[2] == int.class
+                    && params[3] == int.class;
             boolean spawnParentIntIntInt = params.length == 5
                     && params[0] == ObjectSpawn.class
                     && params[1].isAssignableFrom(liveParent.getClass())
@@ -1450,7 +1457,7 @@ public final class RewindRoundTripHarness {
                     && params[4] == int.class;
             if (!spawnAndParent && !parentOnly && !parentString && !parentIntInt
                     && !parentIntIntBoolean && !parentAnchorIntInt && !spawnIntIntParent
-                    && !spawnParentInt && !spawnParentIntIntInt) continue;
+                    && !spawnParentInt && !spawnParentIntInt && !spawnParentIntIntInt) continue;
             Constructor<? extends AbstractObjectInstance> ctor =
                     (Constructor<? extends AbstractObjectInstance>) rawCtor;
             ctor.setAccessible(true);
@@ -1484,6 +1491,10 @@ public final class RewindRoundTripHarness {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, PROBE_SPAWN, parent, 0));
                 }
+                if (spawnParentIntInt) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, parent, 0, 0));
+                }
                 if (spawnParentIntIntInt) {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, PROBE_SPAWN, parent, 0, PROBE_SPAWN.x(), PROBE_SPAWN.y()));
@@ -1506,6 +1517,7 @@ public final class RewindRoundTripHarness {
      * {@code (ParentType, AbstractObjectInstance, int, int)},
      * {@code (ObjectSpawn, int, int, ParentType)},
      * {@code (ObjectSpawn, ParentType, int)}, or
+     * {@code (ObjectSpawn, ParentType, int, int)}, or
      * {@code (ObjectSpawn, ParentType, int, int, int)} where {@code ParentType} is
      * a concrete, non-abstract
      * {@link AbstractObjectInstance} subclass. When found:
@@ -1547,6 +1559,10 @@ public final class RewindRoundTripHarness {
             boolean spawnParentInt = params.length == 3
                     && params[0] == ObjectSpawn.class
                     && params[2] == int.class;
+            boolean spawnParentIntInt = params.length == 4
+                    && params[0] == ObjectSpawn.class
+                    && params[2] == int.class
+                    && params[3] == int.class;
             boolean spawnParentIntIntInt = params.length == 5
                     && params[0] == ObjectSpawn.class
                     && params[2] == int.class
@@ -1554,8 +1570,8 @@ public final class RewindRoundTripHarness {
                     && params[4] == int.class;
             if (!spawnAndParent && !parentOnly && !parentString && !parentIntInt
                     && !parentIntIntBoolean && !parentAnchorIntInt && !spawnIntIntParent
-                    && !spawnParentInt && !spawnParentIntIntInt) continue;
-            Class<?> parentType = (spawnIntIntParent || spawnParentIntIntInt)
+                    && !spawnParentInt && !spawnParentIntInt && !spawnParentIntIntInt) continue;
+            Class<?> parentType = (spawnIntIntParent || spawnParentIntInt || spawnParentIntIntInt)
                     ? (spawnIntIntParent ? params[3] : params[1])
                     : (spawnAndParent || spawnParentInt ? params[1] : params[0]);
             if (!AbstractObjectInstance.class.isAssignableFrom(parentType)) continue;
@@ -1599,6 +1615,10 @@ public final class RewindRoundTripHarness {
                 if (spawnParentInt) {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, PROBE_SPAWN, finalParent, 0));
+                }
+                if (spawnParentIntInt) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, finalParent, 0, 0));
                 }
                 if (spawnParentIntIntInt) {
                     return ObjectConstructionContext.construct(stub,

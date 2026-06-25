@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K AIZ intro glow rewind:** AIZ intro emerald glow helpers now expose a generic recreate hook with live-plane relinking, clearing stale recreate/final-scalar coverage gaps.
 - **S3K AIZ emerald-scatter rewind:** AIZ Emerald Scatter now restores through spawn-based generic recreate, clearing its stale recreate coverage gap.
 - **S3K LBZ trigger-bridge rewind:** LBZ Trigger Bridge now restores through spawn-based generic recreate, clearing its stale recreate coverage gap.
 - **S3K CNZ teleporter rewind:** CNZ Teleporter now restores through generic recreate, with its live beam link captured and relinked to the restored beam.
