@@ -8,6 +8,7 @@ import com.openggf.game.PowerUpObject;
 import com.openggf.game.PowerUpSpawner;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -22,6 +23,7 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.util.BitSet;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
@@ -160,6 +162,13 @@ class TestRewindPolicyRegistry {
         assertPolicy(schema, "instaShieldObject", RewindFieldPolicy.TRANSIENT);
         assertPolicy(schema, "invincibilityObject", RewindFieldPolicy.TRANSIENT);
         assertTrue(schema.unsupportedFields().isEmpty());
+    }
+
+    @Test
+    void defaultObjectPolicyTreatsSnaleBlasterCoverCacheAsTransient() throws NoSuchFieldException {
+        Field cover = SnaleBlasterBadnikInstance.class.getDeclaredField("cover");
+
+        assertEquals(RewindFieldPolicy.TRANSIENT, RewindPolicyRegistry.policyForAudit(cover).orElse(null));
     }
 
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {
