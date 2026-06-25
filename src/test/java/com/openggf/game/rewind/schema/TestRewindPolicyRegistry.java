@@ -11,6 +11,7 @@ import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzCylinderInstance;
+import com.openggf.game.sonic3k.objects.IczFreezerObjectInstance;
 import com.openggf.game.sonic3k.objects.LbzMinibossInstance;
 import com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance;
 import com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance;
@@ -225,6 +226,8 @@ class TestRewindPolicyRegistry {
         Field stickyVineCapturedPlayer = MhzStickyVineObjectInstance.class.getDeclaredField("capturedPlayer");
         Field mhz2LiftPlayer = classForName(MHZ2_LIFT_CHILD_CLASS).getDeclaredField("player");
         Field sideDrillCapturedPlayer = classForName(MADMOLE_SIDE_DRILL_CLASS).getDeclaredField("capturedPlayer");
+        Field iczFrozenBlockCapturedPlayer =
+                IczFreezerObjectInstance.FrozenPlayerBlock.class.getDeclaredField("capturedPlayer");
 
         assertEquals(RewindFieldPolicy.CAPTURED,
                 RewindPolicyRegistry.policyForAudit(grabberPendingPlayer).orElse(null));
@@ -238,6 +241,8 @@ class TestRewindPolicyRegistry {
                 RewindPolicyRegistry.policyForAudit(mhz2LiftPlayer).orElse(null));
         assertEquals(RewindFieldPolicy.CAPTURED,
                 RewindPolicyRegistry.policyForAudit(sideDrillCapturedPlayer).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(iczFrozenBlockCapturedPlayer).orElse(null));
     }
 
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {

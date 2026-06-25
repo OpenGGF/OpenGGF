@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K ICZ freezer graph rewind:** freezer roots, capture clouds, and frozen-player blocks now restore through generic recreate with cloud/block/player references relinked from the rewind identity table.
 - **MHZ2 lift-child rewind:** the Knuckles lift carrier now restores through generic recreate with its live player reference relinked from the rewind identity table.
 - **Madmole side-drill rewind:** the side-drill child now has an explicit captured-player rewind policy and graph proof, removing its stale object-ref coverage gap.
 - **Player-reference graph rewind:** S2 Grabber plus S3K MHZ mushroom parachutes and sticky vines now restore live player references through the rewind identity table instead of stale object-ref/recreate baseline gaps.

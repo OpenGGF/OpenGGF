@@ -16,6 +16,7 @@ import com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1PeerInstance;
+import com.openggf.game.sonic3k.objects.IczFreezerObjectInstance;
 import com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance;
@@ -255,6 +256,9 @@ class TestRewindSchemaRegistry {
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(classForName(MHZ2_LIFT_CHILD_CLASS));
         RewindClassSchema sideDrillSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(classForName(MADMOLE_SIDE_DRILL_CLASS));
+        RewindClassSchema iczFrozenBlockSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(
+                        IczFreezerObjectInstance.FrozenPlayerBlock.class);
 
         assertPolicy(grabberSchema, "grabbedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(grabberSchema, "pendingGrabPlayer", RewindFieldPolicy.CAPTURED);
@@ -263,6 +267,7 @@ class TestRewindSchemaRegistry {
         assertPolicy(stickyVineSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(mhz2LiftSchema, "player", RewindFieldPolicy.CAPTURED);
         assertPolicy(sideDrillSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
+        assertPolicy(iczFrozenBlockSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
         assertTrue(grabberSchema.unsupportedFields().isEmpty(),
                 "Grabber compact schema must capture player refs without fallback: "
                         + grabberSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
@@ -278,6 +283,27 @@ class TestRewindSchemaRegistry {
         assertTrue(sideDrillSchema.unsupportedFields().isEmpty(),
                 "Madmole side drill compact schema must capture player refs without fallback: "
                         + sideDrillSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(iczFrozenBlockSchema.unsupportedFields().isEmpty(),
+                "ICZ frozen block compact schema must capture player refs without fallback: "
+                        + iczFrozenBlockSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesIczFreezerGraphLinks() {
+        RewindClassSchema freezerSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(IczFreezerObjectInstance.class);
+        RewindClassSchema cloudSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(
+                        IczFreezerObjectInstance.CaptureCloud.class);
+
+        assertPolicy(freezerSchema, "lastCaptureCloud", RewindFieldPolicy.CAPTURED);
+        assertPolicy(cloudSchema, "frozenBlock", RewindFieldPolicy.CAPTURED);
+        assertTrue(freezerSchema.unsupportedFields().isEmpty(),
+                "ICZ freezer compact schema must capture the last cloud link without fallback: "
+                        + freezerSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(cloudSchema.unsupportedFields().isEmpty(),
+                "ICZ capture cloud compact schema must capture the frozen block link without fallback: "
+                        + cloudSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 
     @Test
