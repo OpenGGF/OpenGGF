@@ -457,13 +457,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       generic graph recreate coverage.</li>
     *   <li>2026-06-25: raised to 586 after S3K Mushmeanie parent/shell
     *       graph restores gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 588 after S3K Mantis parent/child graph
+    *       restores gained generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 586 after S3K Mushmeanie parent/shell graph restore coverage.
-    static final int RATCHET_FLOOR = 586;
+    // 2026-06-25: raised to 588 after S3K Mantis parent/child graph restore coverage.
+    static final int RATCHET_FLOOR = 588;
 
     @BeforeEach
     void initHeadless() {

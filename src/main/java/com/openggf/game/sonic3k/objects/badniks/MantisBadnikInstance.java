@@ -4,10 +4,14 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -26,7 +30,8 @@ import java.util.List;
  * <p>Collision: {@code $1A} (ENEMY, size $1A). Art is loaded from
  * {@code ArtKosM_Mantis} / {@code Map_Mantis}.
  */
-public final class MantisBadnikInstance extends AbstractS3kBadnikInstance {
+public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
+        implements SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x1A;
     private static final int PRIORITY_BUCKET = 5;
@@ -226,8 +231,33 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
-    private static final class MantisChild extends AbstractObjectInstance {
-        private final MantisBadnikInstance parent;
+    private static MantisBadnikInstance findLiveMantisParentForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        MantisBadnikInstance nearest = null;
+        int nearestDistance = Integer.MAX_VALUE;
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (!(instance instanceof MantisBadnikInstance mantis) || mantis.isDestroyed()) {
+                continue;
+            }
+            ObjectSpawn candidateSpawn = mantis.getSpawn();
+            if (spawn.layoutIndex() >= 0 && candidateSpawn.layoutIndex() == spawn.layoutIndex()) {
+                return mantis;
+            }
+            int distance = Math.abs(candidateSpawn.x() - spawn.x())
+                    + Math.abs(candidateSpawn.y() - spawn.y());
+            if (distance < nearestDistance) {
+                nearest = mantis;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
+    }
+
+    private static final class MantisChild extends AbstractObjectInstance implements RewindRecreatable {
+        private MantisBadnikInstance parent;
         private int currentX;
         private int currentY;
         private int mappingFrame = CHILD_IDLE_FRAME;
@@ -236,6 +266,12 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance {
             super(parent.spawn, "MantisChild");
             this.parent = parent;
             syncFromParent();
+        }
+
+        @Override
+        public MantisChild recreateForRewind(RewindRecreateContext ctx) {
+            MantisBadnikInstance liveParent = findLiveMantisParentForRewind(ctx);
+            return liveParent == null ? null : new MantisChild(liveParent);
         }
 
         @Override

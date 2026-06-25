@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
@@ -56,6 +57,8 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild";
     private static final String CLUCKOID_ARROW_CHILD =
             "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$ArrowChild";
+    private static final String MANTIS_CHILD =
+            "com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance$MantisChild";
     private static final String MUSHMEANIE_SHELL_CHILD =
             "com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance$ShellChild";
 
@@ -550,6 +553,85 @@ class TestS3kBadnikChildGraphRewind {
     }
 
     @Test
+    void mantisChildRelinksToRestoredParentAndParentSlot() {
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of(
+                new ObjectSpawn(0x180, 0x130, Sonic3kObjectIds.MANTIS, 0, 0, false, 0, 80),
+                new ObjectSpawn(0x2A0, 0x130, Sonic3kObjectIds.MANTIS, 0, 0, false, 0, 81)));
+        ObjectManager objectManager = harness.objectManager();
+        TestablePlayableSprite player = player();
+        List<MantisBadnikInstance> sourceParents = liveByType(objectManager, MantisBadnikInstance.class);
+        assertEquals(2, sourceParents.size(), "precondition: two Mantis parents must be captured");
+        MantisBadnikInstance sourceParentA = sourceParents.get(0);
+        MantisBadnikInstance sourceParentB = sourceParents.get(1);
+        sourceParentA.update(0, player);
+        sourceParentB.update(0, player);
+        List<ObjectInstance> sourceChildren = liveByClassName(objectManager, MANTIS_CHILD);
+        assertEquals(2, sourceChildren.size(), "precondition: each Mantis must create one visual child");
+        ObjectInstance sourceChildA = childWithParent(sourceChildren, sourceParentA);
+        ObjectInstance sourceChildB = childWithParent(sourceChildren, sourceParentB);
+        setIntField(sourceChildA, "currentX", 0x19A);
+        setIntField(sourceChildA, "currentY", 0x120);
+        setIntField(sourceChildA, "mappingFrame", 5);
+        setIntField(sourceChildB, "currentX", 0x2B2);
+        setIntField(sourceChildB, "currentY", 0x126);
+        setIntField(sourceChildB, "mappingFrame", 4);
+
+        ObjectRefId parentAId = objectId(objectManager, sourceParentA);
+        ObjectRefId parentBId = objectId(objectManager, sourceParentB);
+        ObjectRefId childAId = objectId(objectManager, sourceChildA);
+        ObjectRefId childBId = objectId(objectManager, sourceChildB);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> new MantisBadnikInstance(new ObjectSpawn(
+                0x220, 0x130, Sonic3kObjectIds.MANTIS, 0, 0, false, 82)));
+
+        rewindRegistry.restore(snapshot);
+
+        MantisBadnikInstance restoredParentA =
+                objectById(objectManager, MantisBadnikInstance.class, parentAId);
+        MantisBadnikInstance restoredParentB =
+                objectById(objectManager, MantisBadnikInstance.class, parentBId);
+        ObjectInstance restoredChildA = objectById(objectManager, ObjectInstance.class, childAId);
+        ObjectInstance restoredChildB = objectById(objectManager, ObjectInstance.class, childBId);
+        assertNotSame(sourceChildA, restoredChildA, "restore must recreate Mantis child A");
+        assertNotSame(sourceChildB, restoredChildB, "restore must recreate Mantis child B");
+        assertSame(restoredParentA, readObjectField(restoredChildA, "parent"),
+                "child A parent must resolve to restored Mantis A");
+        assertSame(restoredParentB, readObjectField(restoredChildB, "parent"),
+                "child B parent must resolve to restored Mantis B");
+        assertSame(restoredChildA, readObjectField(restoredParentA, "child"),
+                "Mantis A child slot must resolve to restored child A");
+        assertSame(restoredChildB, readObjectField(restoredParentB, "child"),
+                "Mantis B child slot must resolve to restored child B");
+        assertEquals(0x19A, readIntField(restoredChildA, "currentX"));
+        assertEquals(0x120, readIntField(restoredChildA, "currentY"));
+        assertEquals(5, readIntField(restoredChildA, "mappingFrame"));
+        assertEquals(0x2B2, readIntField(restoredChildB, "currentX"));
+        assertEquals(0x126, readIntField(restoredChildB, "currentY"));
+        assertEquals(4, readIntField(restoredChildB, "mappingFrame"));
+        assertEquals(2, liveByClassName(objectManager, MANTIS_CHILD).size(),
+                "restore must keep exactly the captured Mantis children");
+    }
+
+    @Test
+    void mantisChildParentFailsForObjectWithoutRegisteredRewindIdentity() {
+        Harness harness = Harness.create(new MhzTestRegistry(), List.of());
+        ObjectManager objectManager = harness.objectManager();
+        MantisBadnikInstance externalParent = new MantisBadnikInstance(new ObjectSpawn(
+                0x180, 0x130, Sonic3kObjectIds.MANTIS, 0, 0, false, 83));
+        ObjectInstance child = objectManager.createDynamicObject(
+                () -> instantiateMantisChild(externalParent));
+        assertSame(externalParent, readObjectField(child, "parent"),
+                "precondition: child holds a non-null parent outside ObjectManager identity registration");
+
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        IllegalStateException thrown = assertThrows(IllegalStateException.class, rewindRegistry::capture);
+        assertTrue(thrown.getMessage().contains("no registered id for object reference"),
+                "missing required Mantis parent targets must fail loudly");
+    }
+
+    @Test
     void captureFailsForNonNullObjectReferenceWithoutRegisteredRewindIdentity() {
         Harness harness = Harness.create(new S3klTestRegistry(), List.of());
         ObjectManager objectManager = harness.objectManager();
@@ -620,6 +702,17 @@ class TestS3kBadnikChildGraphRewind {
             return (ObjectInstance) ctor.newInstance(parent);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to construct Mushmeanie shell child", e);
+        }
+    }
+
+    private static ObjectInstance instantiateMantisChild(MantisBadnikInstance parent) {
+        try {
+            Class<?> cls = Class.forName(MANTIS_CHILD);
+            Constructor<?> ctor = cls.getDeclaredConstructor(MantisBadnikInstance.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(parent);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct Mantis child", e);
         }
     }
 
