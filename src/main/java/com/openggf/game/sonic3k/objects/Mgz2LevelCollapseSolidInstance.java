@@ -30,8 +30,8 @@ public final class Mgz2LevelCollapseSolidInstance extends AbstractObjectInstance
     private static final int HALF_WIDTH = 0x1B;
     private static final int HALF_HEIGHT = 0x40;
 
-    private final int anchorX;
-    private final int baseY;
+    private int anchorX;
+    private int baseY;
     private final IntSupplier scrollSupplier;
     private final BooleanSupplier deleteSupplier;
 

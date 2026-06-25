@@ -100,18 +100,12 @@ com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#obje
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#recreate
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#recreate
 com.openggf.game.sonic3k.objects.IczMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#segmentCount
-com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#x
-com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#objectRef#previous
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#objectRef#root
 com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment#recreate
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#recreate
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance#recreate
-com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#finalScalar#x
-com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#finalScalar#y
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#recreate
 com.openggf.game.sonic3k.objects.LbzCupElevatorInstance#recreate
 com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$AttachChild#recreate
@@ -137,8 +131,6 @@ com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance$PulleyChainChild#recrea
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance#recreate
-com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance#finalScalar#anchorX
-com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.MgzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingDebrisChild#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$DefeatFragmentChild#recreate
@@ -198,8 +190,6 @@ com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreX
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreY
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#objectRef#endCannon
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#recreate
-com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine#finalScalar#xOffset
-com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine#finalScalar#yOffset
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance#objectRef#bossSnowdustEmitter
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance#recreate
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#recreate

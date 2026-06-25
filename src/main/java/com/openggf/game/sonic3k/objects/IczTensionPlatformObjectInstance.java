@@ -322,9 +322,9 @@ public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
     public static final class SupportChild extends AbstractObjectInstance {
         @RewindTransient(reason = "Structural parent pointer; support positions are derived from live parent state.")
         private final IczTensionPlatformObjectInstance parent;
-        private final int x;
-        private final int y;
-        private final boolean hFlip;
+        private int x;
+        private int y;
+        private boolean hFlip;
 
         private SupportChild(IczTensionPlatformObjectInstance parent, int x, int y, boolean hFlip) {
             super(new ObjectSpawn(x, y, OBJECT_ID, 0, hFlip ? 1 : 0, false, y),

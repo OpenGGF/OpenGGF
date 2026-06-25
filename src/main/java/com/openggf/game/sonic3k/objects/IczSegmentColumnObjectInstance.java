@@ -55,9 +55,9 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
             {0x400, -0x300}, {-0x200, -0x200}, {0x200, -0x200}, {0, -0x100}
     };
 
-    private final int x;
-    private final int y;
-    private final int segmentCount;
+    private int x;
+    private int y;
+    private int segmentCount;
     private boolean spawnedSegments;
     private int screenShakeFrames;
     private boolean ownsScreenShakeFlag;
