@@ -138,8 +138,16 @@ public class Sonic1ConveyorBeltObjectInstance extends AbstractObjectInstance imp
             return;
         }
 
-        // Push player horizontally
-        player.setCentreX((short) (player.getCentreX() + convSpeed));
+        // Push player horizontally.
+        // ROM: `add.w conv_speed(a0),obX(a1)` adds the conveyor speed to the
+        // player's x_pos PIXEL word only -- x_sub is untouched, so the player's
+        // accumulated sub-pixel fraction survives the conveyor push. The engine's
+        // setCentreX() ZEROES x_sub, which discarded up to ~1px of fraction every
+        // frame the player rode a conveyor, putting him progressively behind ROM
+        // (SBZ2 f2168: x_sub 0x2800 dropped to 0, seeding the constant 0x4C00
+        // offset that read as the "subpixel RAM-gated" f2224 frontier). shiftX adds
+        // an integer pixel delta and preserves x_sub, matching the ROM add.w.
+        player.shiftX(convSpeed);
     }
 
     @Override
