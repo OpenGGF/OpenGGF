@@ -94,6 +94,7 @@ import com.openggf.game.sonic3k.objects.AizEndBossShipChild;
 import com.openggf.game.sonic3k.objects.AizEndBossSmokeChild;
 import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance;
+import com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance;
 import com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance;
 import com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.Aiz1TreeObjectInstance;
@@ -2944,6 +2945,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance",
                     GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_AIZ_EMERALD_SCATTER_BATCH240_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(AizEmeraldScatterInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
@@ -9653,6 +9657,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kLbzTriggerBridgeBatch238ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_LBZ_TRIGGER_BRIDGE_BATCH238_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kAizEmeraldScatterBatch240ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_EMERALD_SCATTER_BATCH240_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ emerald scatter batch 240");
+        }
+    }
+
+    @Test
+    void s3kAizEmeraldScatterBatch240ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_EMERALD_SCATTER_BATCH240_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ emerald scatter batch 240 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kAizEmeraldScatterBatch240ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_EMERALD_SCATTER_BATCH240_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

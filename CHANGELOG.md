@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K AIZ emerald-scatter rewind:** AIZ Emerald Scatter now restores through spawn-based generic recreate, clearing its stale recreate coverage gap.
 - **S3K LBZ trigger-bridge rewind:** LBZ Trigger Bridge now restores through spawn-based generic recreate, clearing its stale recreate coverage gap.
 - **S3K CNZ teleporter rewind:** CNZ Teleporter now restores through generic recreate, with its live beam link captured and relinked to the restored beam.
 - **Shared box-object rewind:** BoxObjectInstance now restores through exact-class generic recreate, preserving subclass restore behavior while clearing its stale recreate gap.

@@ -1,14 +1,16 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.game.PlayableEntity;
 
 import java.util.List;
 
@@ -40,7 +42,7 @@ import java.util.List;
  *    - Subtype bit 1 = 0: collected when Knuckles moves RIGHT (positive x_vel)
  *    - Subtype bit 1 = 1: collected when Knuckles moves LEFT (negative x_vel)
  */
-public class AizEmeraldScatterInstance extends AbstractObjectInstance {
+public class AizEmeraldScatterInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // -----------------------------------------------------------------------
     // Phase enum
@@ -126,6 +128,11 @@ public class AizEmeraldScatterInstance extends AbstractObjectInstance {
         this.yVel = VELOCITY_TABLE[velIndex][1];
         this.mappingFrame = velIndex;
         this.phase = Phase.FALLING;
+    }
+
+    @Override
+    public AizEmeraldScatterInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizEmeraldScatterInstance(ctx.spawn());
     }
 
     // -----------------------------------------------------------------------
