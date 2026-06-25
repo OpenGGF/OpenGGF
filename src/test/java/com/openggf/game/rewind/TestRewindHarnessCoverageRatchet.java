@@ -486,13 +486,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       snowboard intro gained spawn-based recreate coverage.</li>
     *   <li>2026-06-25: raised to 617 after shared BoxObjectInstance
     *       gained exact-class generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 618 after S3K LBZ Trigger Bridge
+    *       gained spawn-based generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 617 after shared BoxObjectInstance generic recreate coverage.
-    static final int RATCHET_FLOOR = 617;
+    // 2026-06-25: raised to 618 after S3K LBZ Trigger Bridge generic recreate coverage.
+    static final int RATCHET_FLOOR = 618;
 
     @BeforeEach
     void initHeadless() {

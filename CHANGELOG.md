@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K LBZ trigger-bridge rewind:** LBZ Trigger Bridge now restores through spawn-based generic recreate, clearing its stale recreate coverage gap.
 - **Shared box-object rewind:** BoxObjectInstance now restores through exact-class generic recreate, preserving subclass restore behavior while clearing its stale recreate gap.
 - **S3K ICZ snow rewind:** ICZ snowdust particles and the snowboard intro controller now restore through generic recreate with restored emitter links.
 - **S3K ICZ support rewind:** ICZ ice spikes, tension-platform supports, and crushing-column bottom decorations now restore through generic recreate with restored parent links.

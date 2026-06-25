@@ -2938,6 +2938,11 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> SHARED_BOX_BATCH237_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate("com.openggf.level.objects.BoxObjectInstance", GameId.S2));
 
+    private static final List<CodecDeletionCandidate> S3K_LBZ_TRIGGER_BRIDGE_BATCH238_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance",
@@ -9617,6 +9622,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void sharedBoxBatch237ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : SHARED_BOX_BATCH237_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kLbzTriggerBridgeBatch238ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ_TRIGGER_BRIDGE_BATCH238_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after LBZ trigger bridge batch 238");
+        }
+    }
+
+    @Test
+    void s3kLbzTriggerBridgeBatch238ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ_TRIGGER_BRIDGE_BATCH238_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through LBZ trigger bridge batch 238 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kLbzTriggerBridgeBatch238ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ_TRIGGER_BRIDGE_BATCH238_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()
