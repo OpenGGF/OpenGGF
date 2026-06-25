@@ -106,9 +106,16 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         // Apply gravity
         yVelocity += GRAVITY;
 
-        // Check if off-screen (tst.b obRender(a0) / bpl.w DeleteObject)
-        // bset #7,obRender(a1) was set at spawn - bit 7 = on-screen flag
-        if (!isOnScreenX(160)) {
+        // ROM Bom_Shrapnel deletes via the render flag, not a raw camera margin:
+        //   tst.b obRender(a0) / bpl.w DeleteObject
+        // (docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm:218-219). obRender
+        // bit 7 is set by BuildSprites when the sprite's box overlaps the screen
+        // (X bound [cam-obActWid, cam+320+obActWid), obActWid=12 for the shrapnel;
+        // docs/s1disasm/_inc/BuildSprites.asm:47-58). The engine previously used
+        // isOnScreenX(160) (raw [cam-160, cam+480]) which keeps shrapnel alive far
+        // longer than ROM, changing the FindFreeObj survival set (SLZ3 f3249).
+        // isWithinSolidContactBounds() is the ROM obRender bit-7 render-box test.
+        if (!isWithinSolidContactBounds()) {
             destroyed = true;
             setDestroyed(true);
             return;
@@ -147,8 +154,20 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        // DisplaySprite: persists while on screen
-        return !destroyed && isOnScreenX(160);
+        // ROM Bom_Shrapnel keeps the shrapnel only while obRender bit 7 is set
+        // (the render-box on-screen test, same bound as the self-delete above);
+        // align the keep-alive with that bound, not the raw isOnScreenX(160).
+        return !destroyed && isWithinSolidContactBounds();
+    }
+
+    /**
+     * ROM shrapnel display width: {@code obActWid = 24/2 = 12} (inherited from
+     * Bom_Main, docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm:28). Drives
+     * the BuildSprites obRender on-screen X bound used for the delete/keep-alive.
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return 12;
     }
 
     @Override
