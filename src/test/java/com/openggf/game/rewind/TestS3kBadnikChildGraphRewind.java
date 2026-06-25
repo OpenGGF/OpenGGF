@@ -6,8 +6,11 @@ import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.objects.BreakableWallObjectInstance;
 import com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance;
+import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance;
 import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
@@ -89,6 +92,12 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris";
     private static final String TENSION_BRIDGE_FRAGMENT =
             "com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment";
+    private static final String BREAKABLE_WALL_FRAGMENT =
+            "com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment";
+    private static final String CORK_FLOOR_FRAGMENT =
+            "com.openggf.game.sonic3k.objects.CorkFloorObjectInstance$CorkFloorFragment";
+    private static final String S3K_COLLAPSING_PLATFORM_FRAGMENT =
+            "com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment";
 
     @BeforeEach
     void initHeadless() {
@@ -595,6 +604,74 @@ class TestS3kBadnikChildGraphRewind {
         assertTrue(restoredFragment.isHighPriority());
         assertEquals(0x184, restoredFragment.getX());
         assertEquals(0x132, restoredFragment.getY());
+    }
+
+    @Test
+    void s3kDestructibleFragmentsRestoreWithoutDropsDoublesOrStateLoss() {
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of());
+        ObjectManager objectManager = harness.objectManager();
+        ObjectInstance sourceWallFragment = objectManager.createDynamicObject(
+                () -> new BreakableWallObjectInstance.BreakableWallFragment(
+                        0x180, 0x130, 3, 2, 0x20, -0x40,
+                        Sonic3kObjectArtKeys.BREAKABLE_WALL_MGZ));
+        ObjectInstance sourceCorkFragment = objectManager.createDynamicObject(
+                () -> new CorkFloorObjectInstance.CorkFloorFragment(
+                        0x1A0, 0x140, 4, 1, 0x30, -0x50,
+                        Sonic3kObjectArtKeys.CORK_FLOOR_CNZ, true));
+        ObjectInstance sourcePlatformFragment = objectManager.createDynamicObject(
+                () -> new Sonic3kCollapsingPlatformObjectInstance.CollapsingPlatformFragment(
+                        0x1C0, 0x150, 5, 3, 6,
+                        Sonic3kObjectArtKeys.COLLAPSING_PLATFORM_ICZ, true));
+
+        ObjectRefId wallId = objectId(objectManager, sourceWallFragment);
+        ObjectRefId corkId = objectId(objectManager, sourceCorkFragment);
+        ObjectRefId platformId = objectId(objectManager, sourcePlatformFragment);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> new BreakableWallObjectInstance.BreakableWallFragment(
+                0x300, 0x180, 1, 1, 0x10, -0x20,
+                Sonic3kObjectArtKeys.BREAKABLE_WALL_HCZ));
+        objectManager.createDynamicObject(() -> new CorkFloorObjectInstance.CorkFloorFragment(
+                0x320, 0x188, 2, 2, 0x10, -0x20,
+                Sonic3kObjectArtKeys.CORK_FLOOR_LBZ, false));
+        objectManager.createDynamicObject(() -> new Sonic3kCollapsingPlatformObjectInstance.CollapsingPlatformFragment(
+                0x340, 0x190, 1, 1, 1,
+                Sonic3kObjectArtKeys.COLLAPSING_PLATFORM_AIZ2, false));
+
+        rewindRegistry.restore(snapshot);
+
+        ObjectInstance restoredWall = objectById(objectManager, ObjectInstance.class, wallId);
+        ObjectInstance restoredCork = objectById(objectManager, ObjectInstance.class, corkId);
+        ObjectInstance restoredPlatform = objectById(objectManager, ObjectInstance.class, platformId);
+        assertNotSame(sourceWallFragment, restoredWall, "restore must recreate wall fragment");
+        assertNotSame(sourceCorkFragment, restoredCork, "restore must recreate cork-floor fragment");
+        assertNotSame(sourcePlatformFragment, restoredPlatform, "restore must recreate platform fragment");
+        assertEquals(1, liveByClassName(objectManager, BREAKABLE_WALL_FRAGMENT).size(),
+                "restore must keep exactly the captured breakable-wall fragment");
+        assertEquals(1, liveByClassName(objectManager, CORK_FLOOR_FRAGMENT).size(),
+                "restore must keep exactly the captured cork-floor fragment");
+        assertEquals(1, liveByClassName(objectManager, S3K_COLLAPSING_PLATFORM_FRAGMENT).size(),
+                "restore must keep exactly the captured collapsing-platform fragment");
+
+        assertEquals(3, readIntField(restoredWall, "fragmentFrameIndex"));
+        assertEquals(2, readIntField(restoredWall, "pieceIndex"));
+        assertEquals(Sonic3kObjectArtKeys.BREAKABLE_WALL_MGZ, readObjectField(restoredWall, "artKey"));
+        assertEquals(0x180, restoredWall.getX());
+        assertEquals(0x130, restoredWall.getY());
+        assertEquals(4, readIntField(restoredCork, "fragmentFrameIndex"));
+        assertEquals(1, readIntField(restoredCork, "pieceIndex"));
+        assertEquals(Sonic3kObjectArtKeys.CORK_FLOOR_CNZ, readObjectField(restoredCork, "artKey"));
+        assertTrue((Boolean) readObjectField(restoredCork, "hFlip"));
+        assertEquals(0x1A0, restoredCork.getX());
+        assertEquals(0x140, restoredCork.getY());
+        assertEquals(5, readIntField(restoredPlatform, "fragmentFrameIndex"));
+        assertEquals(3, readIntField(restoredPlatform, "pieceIndex"));
+        assertEquals(Sonic3kObjectArtKeys.COLLAPSING_PLATFORM_ICZ,
+                readObjectField(restoredPlatform, "artKey"));
+        assertTrue((Boolean) readObjectField(restoredPlatform, "hFlip"));
+        assertEquals(0x1C0, restoredPlatform.getX());
+        assertEquals(0x150, restoredPlatform.getY());
     }
 
     @Test

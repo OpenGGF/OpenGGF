@@ -417,13 +417,13 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         return AIZ1_CONFIG;
     }
 
-    public static class CorkFloorFragment extends AbstractObjectInstance {
+    public static class CorkFloorFragment extends AbstractObjectInstance implements RewindRecreatable {
 
         private int currentX;
         private int currentY;
         private int fragmentFrameIndex;
         private int pieceIndex;
-        private final String artKey;
+        private String artKey;
         private boolean hFlip;
         private final SubpixelMotion.State motionState;
 
@@ -441,6 +441,27 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
             this.hFlip = hFlip;
             this.motionState = new SubpixelMotion.State(
                     currentX, currentY, 0, 0, xVel, yVel);
+        }
+
+        private CorkFloorFragment() {
+            this(0, 0, 0, 0, 0, 0, Sonic3kObjectArtKeys.CORK_FLOOR_AIZ1, false);
+        }
+
+        @Override
+        public CorkFloorFragment recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            int x = capturedSpawn != null ? capturedSpawn.x() : 0;
+            int y = capturedSpawn != null ? capturedSpawn.y() : 0;
+            boolean capturedHFlip = capturedSpawn != null && (capturedSpawn.renderFlags() & 1) != 0;
+            return new CorkFloorFragment(
+                    x,
+                    y,
+                    0,
+                    0,
+                    0,
+                    0,
+                    Sonic3kObjectArtKeys.CORK_FLOOR_AIZ1,
+                    capturedHFlip);
         }
 
         @Override

@@ -471,13 +471,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       wave fragment, and MGZ stomp debris gained generic recreate coverage.</li>
     *   <li>2026-06-25: raised to 601 after S3K Tension Bridge root and
     *       falling fragment gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 604 after S3K Breakable Wall, Cork Floor,
+    *       and Collapsing Platform fragments gained generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 601 after S3K Tension Bridge graph restore coverage.
-    static final int RATCHET_FLOOR = 601;
+    // 2026-06-25: raised to 604 after S3K destructible fragment graph restore coverage.
+    static final int RATCHET_FLOOR = 604;
 
     @BeforeEach
     void initHeadless() {

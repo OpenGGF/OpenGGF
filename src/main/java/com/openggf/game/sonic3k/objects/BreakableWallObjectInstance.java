@@ -20,6 +20,8 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -460,13 +462,13 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         };
     }
 
-    public static class BreakableWallFragment extends AbstractObjectInstance {
+    public static class BreakableWallFragment extends AbstractObjectInstance implements RewindRecreatable {
 
         private int currentX;
         private int currentY;
         private int fragmentFrameIndex;
         private int pieceIndex;
-        private final String artKey;
+        private String artKey;
         private final SubpixelMotion.State motionState;
 
         public BreakableWallFragment(int parentX, int parentY,
@@ -481,6 +483,25 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             this.artKey = artKey;
             this.motionState = new SubpixelMotion.State(
                     currentX, currentY, 0, 0, xVel, yVel);
+        }
+
+        private BreakableWallFragment() {
+            this(0, 0, 0, 0, 0, 0, Sonic3kObjectArtKeys.BREAKABLE_WALL_AIZ);
+        }
+
+        @Override
+        public BreakableWallFragment recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            int x = capturedSpawn != null ? capturedSpawn.x() : 0;
+            int y = capturedSpawn != null ? capturedSpawn.y() : 0;
+            return new BreakableWallFragment(
+                    x,
+                    y,
+                    0,
+                    0,
+                    0,
+                    0,
+                    Sonic3kObjectArtKeys.BREAKABLE_WALL_AIZ);
         }
 
         @Override

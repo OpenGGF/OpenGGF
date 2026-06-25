@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K destructible fragment rewind:** Breakable Wall, Cork Floor, and Collapsing Platform fragments now restore through generic recreate with captured fragment render state preserved.
 - **S3K Tension Bridge graph rewind:** Tension Bridge roots and falling fragments now restore through generic recreate with fragment render state preserved.
 - **S3K Collapsing Bridge graph rewind:** Collapsing Bridge roots, wave fragments, and MGZ stomp debris now restore through generic recreate with fragment render state preserved.
 - **S3K Tunnelbot graph rewind:** Tunnelbot parents, arm collision proxies, and debris now restore through generic recreate with restored arm slots and debris state preserved.

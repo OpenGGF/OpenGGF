@@ -8,10 +8,8 @@ com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance#recreate
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#xOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#yOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#recreate
-com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment#recreate
 com.openggf.game.sonic3k.objects.CnzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.CnzTeleporterInstance#recreate
-com.openggf.game.sonic3k.objects.CorkFloorObjectInstance$CorkFloorFragment#recreate
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$BodyOverlayChild#recreate
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ContainerDisplayChild#finalScalar#offsetFromMachine
@@ -44,7 +42,6 @@ com.openggf.game.sonic3k.objects.MhzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance#recreate
-com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#recreate
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreX
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreY
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#recreate

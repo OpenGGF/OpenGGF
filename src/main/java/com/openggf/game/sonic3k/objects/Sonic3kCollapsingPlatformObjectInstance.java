@@ -12,6 +12,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
@@ -662,11 +664,11 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
      * <p>
      * ROM: loc_205CE (fragment routine in Obj_CollapsingPlatform).
      */
-    public static class CollapsingPlatformFragment extends AbstractFallingFragment {
+    public static class CollapsingPlatformFragment extends AbstractFallingFragment implements RewindRecreatable {
 
         private int fragmentFrameIndex;
         private int pieceIndex;
-        private final String artKey;
+        private String artKey;
         private boolean hFlip;
 
         public CollapsingPlatformFragment(int parentX, int parentY,
@@ -678,6 +680,26 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
             this.pieceIndex = pieceIndex;
             this.artKey = artKey;
             this.hFlip = hFlip;
+        }
+
+        private CollapsingPlatformFragment() {
+            this(0, 0, 0, 0, 0, Sonic3kObjectArtKeys.COLLAPSING_PLATFORM_AIZ1, false);
+        }
+
+        @Override
+        public CollapsingPlatformFragment recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            int x = capturedSpawn != null ? capturedSpawn.x() : 0;
+            int y = capturedSpawn != null ? capturedSpawn.y() : 0;
+            boolean capturedHFlip = capturedSpawn != null && (capturedSpawn.renderFlags() & 1) != 0;
+            return new CollapsingPlatformFragment(
+                    x,
+                    y,
+                    0,
+                    0,
+                    0,
+                    Sonic3kObjectArtKeys.COLLAPSING_PLATFORM_AIZ1,
+                    capturedHFlip);
         }
 
         @Override
