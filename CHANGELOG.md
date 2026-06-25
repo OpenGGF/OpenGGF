@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K CNZ traversal player-reference rewind:** cannon and cylinder release handoffs now have explicit audit policies and graph tests proving player refs restore through the live identity table.
 - **S3K CNZ end-boss graph rewind:** the post-defeat cannon handoff now restores through generic recreate with a restored end-cannon reference instead of stale object-ref/recreate baseline gaps.
 - **S3K LBZ miniboss graph rewind:** Knuckles-route miniboss pairs now restore through generic recreate with restored box-parent references instead of stale coverage-baseline gaps.
 - **S3K ICZ segment-column graph rewind:** column child segments now restore through generic graph recreate with restored root/previous links instead of stale coverage-baseline gaps.

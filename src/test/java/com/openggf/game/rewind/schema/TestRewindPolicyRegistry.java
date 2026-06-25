@@ -8,6 +8,8 @@ import com.openggf.game.PowerUpObject;
 import com.openggf.game.PowerUpSpawner;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.sonic3k.objects.CnzCannonInstance;
+import com.openggf.game.sonic3k.objects.CnzCylinderInstance;
 import com.openggf.game.sonic3k.objects.LbzMinibossInstance;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
@@ -185,6 +187,17 @@ class TestRewindPolicyRegistry {
         Field endCannon = CnzEndBossInstance.class.getDeclaredField("endCannon");
 
         assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(endCannon).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesCnzTraversalReleasedPlayerReferences() throws NoSuchFieldException {
+        Field cannonReleasedPlayer = CnzCannonInstance.class.getDeclaredField("releasedPlayer");
+        Field cylinderReleasedPlayer = CnzCylinderInstance.class.getDeclaredField("releasedJumpSolidSkipPlayer");
+
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(cannonReleasedPlayer).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(cylinderReleasedPlayer).orElse(null));
     }
 
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {

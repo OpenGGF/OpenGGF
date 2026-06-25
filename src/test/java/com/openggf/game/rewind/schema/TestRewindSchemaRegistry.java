@@ -10,6 +10,7 @@ import com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.ClamerObjectInstance;
 import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
+import com.openggf.game.sonic3k.objects.CnzCylinderInstance;
 import com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance;
@@ -102,9 +103,12 @@ class TestRewindSchemaRegistry {
     @Test
     void defaultObjectSubclassSchemaCapturesDeferredPlayerReferences() {
         RewindClassSchema cannonSchema = RewindSchemaRegistry.defaultObjectSubclassSchemaFor(CnzCannonInstance.class);
+        RewindClassSchema cylinderSchema = RewindSchemaRegistry.defaultObjectSubclassSchemaFor(CnzCylinderInstance.class);
         RewindClassSchema pulleySchema = RewindSchemaRegistry.defaultObjectSubclassSchemaFor(MGZPulleyObjectInstance.class);
 
         assertPolicy(cannonSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
+        assertPolicy(cannonSchema, "releasedPlayer", RewindFieldPolicy.CAPTURED);
+        assertPolicy(cylinderSchema, "releasedJumpSolidSkipPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(pulleySchema, "grabbedPlayers", RewindFieldPolicy.CAPTURED);
     }
 
