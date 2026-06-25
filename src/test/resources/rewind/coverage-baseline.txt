@@ -82,9 +82,6 @@ com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$DispenserChild#rec
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$EjectionEffectChild#recreate
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild#recreate
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild#recreate
-com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance#recreate
-com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanBubbleChild#recreate
-com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#recreate
 com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration#recreate

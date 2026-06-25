@@ -14,6 +14,9 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -52,7 +55,7 @@ import java.util.List;
  * Bits 4-5: (When bit 7 set) Platform slide distance: ($00/$40/$80/$C0)
  * </pre>
  */
-public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
+public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // ===== Subtype bit masks =====
     private static final int MASK_STRENGTH = 0x0F;
@@ -136,6 +139,10 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
     private FanPlatformChild platformChild;
 
     public HCZCGZFanObjectInstance(ObjectSpawn spawn) {
+        this(spawn, true);
+    }
+
+    private HCZCGZFanObjectInstance(ObjectSpawn spawn, boolean spawnPlatform) {
         super(spawn, "HCZCGZFan");
         this.subtype = spawn.subtype();
         this.originalX = spawn.x();
@@ -160,9 +167,14 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
         this.latchedOn = false;
 
         // ROM: btst #7,d0 / beq.s loc_30602
-        if ((subtype & BIT_PLATFORM) != 0) {
+        if (spawnPlatform && (subtype & BIT_PLATFORM) != 0) {
             spawnPlatformChild();
         }
+    }
+
+    @Override
+    public HCZCGZFanObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HCZCGZFanObjectInstance(ctx.spawn(), false);
     }
 
     /**
@@ -519,7 +531,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
      * Uses Map_HCZWaterRushBlock mappings, ArtTile_HCZMisc+$A.
      */
     static class FanPlatformChild extends AbstractObjectInstance
-            implements SolidObjectProvider, SolidObjectListener {
+            implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
         // ROM: move.b #$10,width_pixels(a0) / move.b #$10,height_pixels(a0)
         private static final int HALF_WIDTH = 0x10;
@@ -552,6 +564,13 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
             this.x = spawn.x();
             this.y = spawn.y();
             this.slideOffset = 0;
+        }
+
+        @Override
+        public FanPlatformChild recreateForRewind(RewindRecreateContext ctx) {
+            HCZCGZFanObjectInstance restoredParent =
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, HCZCGZFanObjectInstance.class);
+            return new FanPlatformChild(ctx.spawn(), restoredParent, 0, false);
         }
 
         @Override
@@ -684,7 +703,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
      * ROM: loc_30834 (sonic3k.asm:65511-65520).
      * Uses Map_Bubbler mappings, ArtTile_Bubbles ($045C), palette 0.
      */
-    static class FanBubbleChild extends AbstractObjectInstance {
+    static class FanBubbleChild extends AbstractObjectInstance implements RewindRecreatable {
 
         // ROM: move.w #$300,priority(a1)
         private static final int PRIORITY = 6;
@@ -705,6 +724,11 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
             this.y = spawn.y();
             this.yVelocity = BUBBLE_Y_VELOCITY;
             this.lifetime = 0;
+        }
+
+        @Override
+        public FanBubbleChild recreateForRewind(RewindRecreateContext ctx) {
+            return new FanBubbleChild(ctx.spawn());
         }
 
         @Override

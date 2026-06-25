@@ -430,13 +430,16 @@ public class TestRewindHarnessCoverageRatchet {
     *   <li>2026-06-25: raised to 541 after S3K LBZ tube/cup elevator,
     *       HCZ hand-launcher, and HCZ water-rush graph restores gained
     *       generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 543 after S3K HCZ/CGZ fan parent
+    *       and bubble restores gained generic recreate coverage under the
+    *       fan graph proof.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 541 after S3K LBZ/HCZ graph restore coverage.
-    static final int RATCHET_FLOOR = 541;
+    // 2026-06-25: raised to 543 after S3K HCZ/CGZ fan graph restore coverage.
+    static final int RATCHET_FLOOR = 543;
 
     @BeforeEach
     void initHeadless() {

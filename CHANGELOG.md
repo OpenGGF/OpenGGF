@@ -4,6 +4,7 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 - **S3K HCZ water-rush graph rewind:** water-rush blocks now restore through generic graph recreate, keep captured block state, rerun the parent constructor side effect, and no longer require stale recreate baseline keys.
+- **S3K HCZ/CGZ fan graph rewind:** fan platforms and bubbles now restore through generic graph recreate, preserving captured child state without stale parent links or duplicate children.
 - **S3K HCZ hand-launcher graph rewind:** hand-launcher arms now restore through generic graph recreate, relink to the restored launcher, and no longer require stale recreate baseline keys.
 - **S3K LBZ cup-elevator graph rewind:** cup elevator attachment/base children now restore through generic graph recreate, relink to the restored parent, and no longer require stale recreate baseline keys.
 - **S3K LBZ tube-elevator graph rewind:** tube elevator overlays now restore through generic graph recreate, relink to the restored parent, and no longer require stale coverage-baseline keys.
