@@ -440,8 +440,8 @@ public class TestRewindHarnessCoverageRatchet {
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 563 after S2 Mecha Sonic graph restore coverage.
-    static final int RATCHET_FLOOR = 563;
+    // 2026-06-25: raised to 564 after S2 Death Egg Robot graph restore coverage.
+    static final int RATCHET_FLOOR = 564;
 
     @BeforeEach
     void initHeadless() {

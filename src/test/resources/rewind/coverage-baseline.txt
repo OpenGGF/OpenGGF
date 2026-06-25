@@ -16,13 +16,6 @@ com.openggf.game.sonic2.objects.SpiralObjectInstance#recreate
 com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate
 com.openggf.game.sonic2.objects.TornadoObjectInstance#finalScalar#subtype
 com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ForearmChild#finalScalar#isFront
-com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ForearmChild#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$HeadChild#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$JetChild#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$SensorChild#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb#finalScalar#orbIndex
 com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb#finalScalar#tiltFlag
