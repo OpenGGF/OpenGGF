@@ -980,7 +980,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         private static final int PRIORITY_BUCKET = 5;
         private static final int GRAVITY = 0x38;
 
-        private final int mappingFrame;
+        private int mappingFrame;
         private int xFixed;
         private int yFixed;
         private int xVel;
@@ -1193,7 +1193,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
     }
 
     static final class MgzBossCameraScrollHelper extends AbstractObjectInstance {
-        private final int targetX;
+        private int targetX;
 
         MgzBossCameraScrollHelper(int targetX) {
             super(new ObjectSpawn(targetX, 0, 0, 0, 0, false, 0), "MgzBossCameraScrollHelper");

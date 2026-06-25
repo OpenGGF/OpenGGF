@@ -807,8 +807,8 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
         };
 
         private int timer;  // ROM $2E(a0)
-        private final int drawX;
-        private final int drawY;
+        private int drawX;
+        private int drawY;
 
         EjectionEffectChild(ObjectSpawn spawn, int subtype) {
             super(spawn, "GumballEjectionEffect");
@@ -1064,10 +1064,10 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
     static class PlatformChild extends AbstractObjectInstance {
 
         /** Y offset from the machine's savedY (machine-relative). */
-        private final int offsetFromMachine;
+        private int offsetFromMachine;
 
         /** Per-instance mapping frame from RawAni_61388 (ROM sub_61362). */
-        private final int mappingFrame;
+        private int mappingFrame;
 
         PlatformChild(ObjectSpawn spawn, String name, int offsetFromMachine, int mappingFrame) {
             super(spawn, name);
@@ -1163,7 +1163,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
         private static final int MAPPING_FRAME = 0x17;
 
         /** Y offset from the machine's current Y (matches extra platform offset). */
-        private final int offsetFromMachine;
+        private int offsetFromMachine;
 
         BodyOverlayChild(ObjectSpawn spawn, int offsetFromMachine) {
             super(spawn, "GumballBodyShine");
