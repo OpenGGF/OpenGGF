@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.objects.SidewaysPformObjectInstance;
 import com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
+import com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance;
 import com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import org.junit.jupiter.api.AfterEach;
@@ -164,6 +165,17 @@ class TestRewindSchemaRegistry {
         assertPolicy(schema, "spawnedFlash", RewindFieldPolicy.CAPTURED);
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "CNZ2 cutscene button compact schema must capture the spawned flash link without fallback: "
+                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesCnzWaterLevelCorkFloorChildLink() {
+        RewindClassSchema schema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(CnzWaterLevelCorkFloorInstance.class);
+
+        assertPolicy(schema, "corkFloor", RewindFieldPolicy.CAPTURED);
+        assertTrue(schema.unsupportedFields().isEmpty(),
+                "CNZ water-level cork helper compact schema must capture the cork-floor link without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 

@@ -119,6 +119,8 @@ import com.openggf.game.sonic3k.objects.BubblerObjectInstance;
 import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzBalloonInstance;
 import com.openggf.game.sonic3k.objects.CnzBarberPoleObjectInstance;
+import com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance;
+import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzGiantWheelInstance;
 import com.openggf.game.sonic3k.objects.CnzHoverFanInstance;
 import com.openggf.game.sonic3k.objects.CnzLightBulbInstance;
@@ -3157,6 +3159,11 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S3K_CNZ2_CUTSCENE_BUTTON_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(Cnz2CutsceneButtonInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_CNZ_WATER_LEVEL_CORK_FLOOR_GRAPH_DELETED_CODECS =
+            List.of(
+                    new CodecDeletionCandidate(CnzWaterLevelCorkFloorInstance.class.getName(), GameId.S3K),
+                    new CodecDeletionCandidate(CorkFloorObjectInstance.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -11163,6 +11170,29 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K CNZ2 button graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =========================================================================
+    // S3K CNZ water-level cork-floor graph support: helper-side cork-floor link
+    // =========================================================================
+
+    @Test
+    void s3kCnzWaterLevelCorkFloorGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ_WATER_LEVEL_CORK_FLOOR_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K CNZ cork-floor graph deletion");
+        }
+    }
+
+    @Test
+    void s3kCnzWaterLevelCorkFloorGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ_WATER_LEVEL_CORK_FLOOR_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K CNZ cork-floor graph generic recreate, not a dynamic codec");
         }
     }
 

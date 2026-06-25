@@ -440,8 +440,8 @@ public class TestRewindHarnessCoverageRatchet {
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 547 after S3K CNZ2 cutscene-button flash graph restore coverage.
-    static final int RATCHET_FLOOR = 547;
+    // 2026-06-25: raised to 549 after S3K CNZ water-level cork-floor graph restore coverage.
+    static final int RATCHET_FLOOR = 549;
 
     @BeforeEach
     void initHeadless() {

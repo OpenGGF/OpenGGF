@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K CNZ water-level cork-floor graph rewind:** the water helper and cork floor now restore through generic graph recreate, preserve the helper-to-floor link, and no longer require stale object-ref/recreate baseline keys.
 - **S3K CNZ2 cutscene-button graph rewind:** cutscene buttons now restore through generic graph recreate, preserve the spawned lights-flash link, and no longer require stale object-ref/recreate baseline keys.
 - **S3K monitor graph rewind:** monitor contents slots now restore through generic graph recreate, relink to the restored monitor, and no longer require stale scalar/object-ref/recreate baseline keys.
 - **S3K Clamer graph rewind:** Clamer spring children now restore through generic graph recreate, relink to the restored parent, and no longer require stale scalar/recreate baseline keys.

@@ -11,11 +11,14 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -35,7 +38,7 @@ import java.util.logging.Logger;
  * Object 0x2A - Cork Floor (Sonic 3 & Knuckles).
  */
 public class CorkFloorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(CorkFloorObjectInstance.class.getName());
 
@@ -138,6 +141,13 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         this.effectiveVelTable = config.iczPlaneMode && (subtype & 0x10) != 0
                 ? VEL_TABLE_SMALL
                 : config.velTable;
+    }
+
+    @Override
+    public CorkFloorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.construct(
+                ctx.objectServices(),
+                () -> new CorkFloorObjectInstance(ctx.spawn()));
     }
 
     public boolean isBroken() {
