@@ -117,6 +117,35 @@ public sealed interface TraceEvent {
         implements TraceEvent {}
 
     /**
+     * Per-frame snapshot of the S1 object respawn-state bit array
+     * ({@code v_objstate}, 192 bytes at $FFFC00..$FFFCC0). Emitted by the v3.7+
+     * S1 recorder for the slot-interleave / slot-cadence cluster (LZ2 f1068,
+     * MZ3 f9917, SYZ1 f4430, SBZ1). {@code v_objstate[0]}/{@code [1]} are the
+     * ObjPosLoad forward/backward counters; the remaining bytes are per-spawn
+     * RememberState remember bits. <strong>Diagnostic only:</strong> tests must
+     * NOT hydrate the engine's placement/respawn state from these bytes -- they
+     * exist so the comparator can show, at a backward-OPL reload, whether ROM's
+     * respawn bit is clear (respawn) vs the engine's set (skip). Older traces
+     * (recorder &lt; 3.7) never emit this event.
+     */
+    record VObjState(int frame, byte[] bytes)
+        implements TraceEvent {}
+
+    /**
+     * Per-frame snapshot of the S1 camera vertical-boundary / look-shift state.
+     * Emitted by the v3.7+ S1 recorder for the MZ1 f2101 camera-boundary
+     * frontier (engine {@code v_limitbtm2} ~6px too high). Fields are the raw
+     * ROM words/byte: {@code limitBtm1}=v_limitbtm1 ($FFF726), {@code limitBtm2}
+     * =v_limitbtm2 ($FFF72E, the eased bottom boundary the camera clamps to),
+     * {@code lookShift}=v_lookshift ($FFF73E), {@code bgScrollVert}
+     * =f_bgscrollvert ($FFF75C). <strong>Diagnostic only:</strong> comparison
+     * context, never engine write-back. Older traces never emit this event.
+     */
+    record CameraBoundary(int frame, int limitBtm1, int limitBtm2,
+                          int lookShift, int bgScrollVert)
+        implements TraceEvent {}
+
+    /**
      * Pre-trace snapshot of a single ROM SST slot emitted by the Lua recorder
      * at the instant gameplay begins (before trace frame 0 is written).
      * The {@link #frame()} is -1 to keep it out of the frame-0 event bucket,
@@ -672,6 +701,17 @@ public sealed interface TraceEvent {
                     frame,
                     node.has("level_frame_counter") ? node.get("level_frame_counter").asInt() : 0,
                     parseHexByteString(node.has("osc_table") ? node.get("osc_table").asText() : "")
+                );
+                case "v_objstate" -> new VObjState(
+                    frame,
+                    parseHexByteString(node.has("bytes") ? node.get("bytes").asText() : "")
+                );
+                case "camera_boundary" -> new CameraBoundary(
+                    frame,
+                    parseHexIntOrDefault(node, "limitbtm1", -1),
+                    parseHexIntOrDefault(node, "limitbtm2", -1),
+                    parseHexIntOrDefault(node, "lookshift", -1),
+                    parseHexIntOrDefault(node, "bgscrollvert", -1)
                 );
                 case "object_state_snapshot" -> new ObjectStateSnapshot(
                     frame,

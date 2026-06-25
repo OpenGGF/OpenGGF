@@ -237,6 +237,39 @@ public record TraceMetadata(
     }
 
     /**
+     * Whether the trace emits the per-frame S1 {@code v_objstate} object
+     * respawn-state bit array ({@link TraceEvent.VObjState}), added by the v3.7+
+     * S1 recorder for the slot-interleave / slot-cadence cluster. Older traces
+     * never emit it; consult this before reading
+     * {@link TraceData#vObjStateForFrame(int)}.
+     */
+    public boolean hasVObjState() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("v_objstate_per_frame");
+    }
+
+    /**
+     * Whether the trace emits the per-frame S1 camera vertical-boundary state
+     * ({@link TraceEvent.CameraBoundary}), added by the v3.7+ S1 recorder for the
+     * MZ1 f2101 camera-boundary frontier. Older traces never emit it.
+     */
+    public boolean hasCameraBoundary() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("camera_boundary_per_frame");
+    }
+
+    /**
+     * Whether the trace's physics.csv carries the player sub-pixel fraction
+     * columns ({@code x_sub}/{@code y_sub}). These have been present since the
+     * v2.0 (18-column) CSV, so any csv_version &gt;= 2 trace has them; this is a
+     * convenience predicate for sub-pixel-trajectory diagnostics (SBZ2 f2224,
+     * SYZ3 f6358). Legacy v1 (11-column) traces return false.
+     */
+    public boolean hasSubpixel() {
+        return csvVersion != null && csvVersion >= 2;
+    }
+
+    /**
      * Whether the trace emits focused S3K AIZ battleship ship-loop execution
      * diagnostics around {@code AIZ2_DoShipLoop/sub_50318}.
      */

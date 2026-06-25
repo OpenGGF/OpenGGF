@@ -654,6 +654,16 @@ public class DivergenceReport {
         if (aizHandoffTerrain != null) {
             diagnostics.add(aizHandoffTerrain);
         }
+        // v3.7 S1 diagnostic context: object respawn-state bit array (slot-cadence
+        // cluster) and camera vertical-boundary state (MZ1). Comparison-only.
+        TraceEvent.VObjState vObjState = traceData.vObjStateForFrame(frame);
+        if (vObjState != null) {
+            diagnostics.add(vObjState);
+        }
+        TraceEvent.CameraBoundary cameraBoundary = traceData.cameraBoundaryForFrame(frame);
+        if (cameraBoundary != null) {
+            diagnostics.add(cameraBoundary);
+        }
         if (!diagnostics.isEmpty()) {
             sb.append("Trace diagnostics @")
                 .append(frame)

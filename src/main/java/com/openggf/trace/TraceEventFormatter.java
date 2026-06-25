@@ -263,8 +263,49 @@ public final class TraceEventFormatter {
                             state.solidSurfaceY() & 0xFFFF,
                             state.solidDelta() & 0xFFFF);
             case TraceEvent.StateSnapshot snapshot -> summariseStateSnapshot(snapshot);
+            case TraceEvent.VObjState vObjState -> summariseVObjState(vObjState);
+            case TraceEvent.CameraBoundary cameraBoundary ->
+                    String.format(
+                        "cameraBoundary limitBtm1=%04X limitBtm2=%04X lookShift=%04X bgScrollVert=%02X",
+                        cameraBoundary.limitBtm1() & 0xFFFF,
+                        cameraBoundary.limitBtm2() & 0xFFFF,
+                        cameraBoundary.lookShift() & 0xFFFF,
+                        cameraBoundary.bgScrollVert() & 0xFF);
             default -> "";
         };
+    }
+
+    /**
+     * Compact context summary of the S1 {@code v_objstate} respawn-bit array.
+     * The full 192 bytes are too long for the inline context window, so show the
+     * ObjPosLoad fwd/bwd counters ([0]/[1]) and every NON-zero remember byte as
+     * {@code idx=val} pairs (the set respawn bits are the diagnostic signal at a
+     * backward-OPL reload). The full bytes remain available on the
+     * {@link TraceEvent.VObjState} record for programmatic comparison.
+     */
+    private static String summariseVObjState(TraceEvent.VObjState state) {
+        byte[] b = state.bytes();
+        if (b == null || b.length == 0) {
+            return "vObjState (empty)";
+        }
+        StringBuilder sb = new StringBuilder("vObjState fwdCtr=");
+        sb.append(String.format("%02X", b[0] & 0xFF));
+        sb.append(" bwdCtr=").append(b.length > 1 ? String.format("%02X", b[1] & 0xFF) : "--");
+        sb.append(" set=[");
+        boolean first = true;
+        for (int i = 2; i < b.length; i++) {
+            int v = b[i] & 0xFF;
+            if (v == 0) {
+                continue;
+            }
+            if (!first) {
+                sb.append(' ');
+            }
+            sb.append(String.format("%d=%02X", i, v));
+            first = false;
+        }
+        sb.append(']');
+        return sb.toString();
     }
 
     private static String summariseStateSnapshot(TraceEvent.StateSnapshot snapshot) {

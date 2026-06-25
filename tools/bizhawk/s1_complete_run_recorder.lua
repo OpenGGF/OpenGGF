@@ -38,6 +38,19 @@
 -- client.exit() is a no-op on this BizHawk build (the loop terminates the lua and
 -- a guarded post-loop fallback re-tries exit), so EmuHawk no longer runs away
 -- after the movie finishes. metadata.lua_script_version reports "3.6".
+-- v3.7 changes: ADD two per-frame diagnostic AUX events (CSV schema UNCHANGED;
+-- both are comparison-only context, never engine write-back). v3.6 traces stay
+-- valid (the new aux_schema_extras keys gate the parser). (1) "v_objstate": the
+-- full 192-byte object respawn-state bit array (v_objstate $FFFC00..$FFFCC0) as a
+-- compact hex string -- unblocks the slot-interleave / slot-cadence cluster (LZ2
+-- f1068, MZ3 f9917, SYZ1 f4430, SBZ1) by exposing whether ROM's respawn bit is
+-- clear (respawn) vs the engine's set (skip) at a backward-OPL reload. (2)
+-- "camera_boundary": v_limitbtm1/v_limitbtm2/v_lookshift/f_bgscrollvert -- unblocks
+-- MZ1 f2101 (engine v_limitbtm2 ~6px high). NOTE: player x_sub/y_sub were ALREADY
+-- in physics.csv columns 12-13 since v2.0, so no CSV change was needed for the
+-- subpixel-trajectory frontiers (SBZ2 f2224, SYZ3 f6358). metadata
+-- lua_script_version reports "3.7"; aux_schema_extras gains v_objstate_per_frame
+-- and camera_boundary_per_frame.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -119,7 +132,16 @@ local ADDR_OPL_SCREEN      = 0xF76E   -- word: v_opl_screen (last processed came
 local ADDR_OPL_DATA_FWD    = 0xF770   -- long: v_opl_data (forward cursor ROM pointer)
 local ADDR_OPL_DATA_BWD    = 0xF774   -- long: v_opl_data+4 (backward cursor ROM pointer)
 local ADDR_OBJSTATE         = 0xFC00   -- byte[192]: v_objstate array (verified from ROM lea instruction)
+local OBJSTATE_SIZE         = 0xC0     -- 192 bytes (ds.b $C0; docs/s1disasm/sonic.lst v_objstate..v_objstate_end FFFC00..FFFCC0)
 -- v_objstate[0] = forward counter, v_objstate[1] = backward counter
+
+-- Camera vertical-boundary / look-shift state (v3.7 diagnostic, MZ1 f2101 cluster).
+-- Absolute mainmemory addresses confirmed from docs/s1disasm/sonic.lst instruction
+-- operands (e.g. `cmp.w (v_limitbtm2).w,d0` assembles to F72E):
+local ADDR_LIMITBTM1       = 0xF726   -- word: v_limitbtm1 (primary bottom level boundary)
+local ADDR_LIMITBTM2       = 0xF72E   -- word: v_limitbtm2 (secondary/eased bottom boundary the camera clamps to)
+local ADDR_LOOKSHIFT       = 0xF73E   -- word: v_lookshift (up/down look screen shift; default $60)
+local ADDR_BGSCROLLVERT    = 0xF75C   -- byte: f_bgscrollvert (bottom-boundary-moving / vertical bg-scroll flag)
 
 -- Object table (S1 SST: 128 slots of $40 bytes at $FFD000)
 local OBJ_TABLE_START      = 0xD000
@@ -333,10 +355,11 @@ local function write_metadata()
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.6",\n')
+    meta_file:write('  "lua_script_version": "3.7",\n')
     meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
-    meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame"],\n')
+    meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", '
+        .. '"v_objstate_per_frame", "camera_boundary_per_frame"],\n')
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": "",\n')
     -- The complete-run recorder always plays the shared complete-run BK2. Emit
@@ -400,6 +423,38 @@ local function write_s1_obj64_state(slot, addr, vfc)
         mainmemory.read_u16_be(addr + 0x36),
         mainmemory.read_u16_be(addr + 0x38),
         mainmemory.read_u32_be(addr + 0x3C)))
+end
+
+-- v3.7: full v_objstate respawn-bit array dump (compact hex), every frame.
+-- Unblocks the slot-interleave / slot-cadence cluster (LZ2 f1068, MZ3 f9917,
+-- SYZ1 f4430, SBZ1): the comparator can see, at a backward-OPL reload, whether
+-- the ROM respawn bit is CLEAR (ROM respawns the object) vs the engine's
+-- objState bit SET (engine skips the respawn) -- the exact LZ2 f217-style root.
+-- v_objstate[0]/[1] are the OPL fwd/bwd counters; [2..] are per-spawn remember
+-- bits indexed by RememberState. Diagnostic context ONLY (never write-back).
+local function write_v_objstate()
+    local parts = {}
+    for i = 0, OBJSTATE_SIZE - 1 do
+        parts[#parts + 1] = string.format("%02X", mainmemory.read_u8(ADDR_OBJSTATE + i))
+    end
+    write_aux(string.format(
+        '{"frame":%d,"event":"v_objstate","bytes":"%s"}',
+        trace_frame, table.concat(parts)))
+end
+
+-- v3.7: camera vertical-boundary / look-shift state, every frame.
+-- Unblocks MZ1 f2101 (engine v_limitbtm2 ~6px too high): logging v_limitbtm2 /
+-- v_limitbtm1 / v_lookshift / f_bgscrollvert resolves the +6-vs-+2 / clamp
+-- ordering deterministically. Diagnostic context ONLY (never write-back).
+local function write_camera_boundary()
+    write_aux(string.format(
+        '{"frame":%d,"event":"camera_boundary","limitbtm1":"0x%04X","limitbtm2":"0x%04X",'
+        .. '"lookshift":"0x%04X","bgscrollvert":"0x%02X"}',
+        trace_frame,
+        mainmemory.read_u16_be(ADDR_LIMITBTM1),
+        mainmemory.read_u16_be(ADDR_LIMITBTM2),
+        mainmemory.read_u16_be(ADDR_LOOKSHIFT),
+        mainmemory.read_u8(ADDR_BGSCROLLVERT)))
 end
 
 -- Scan all object slots (1-127). Log appearances, disappearances, proximity,
@@ -784,6 +839,11 @@ local function on_frame_end()
     -- Proximity logging runs every frame so we never miss collision-relevant objects.
     scan_objects(x, y)
 
+    -- v3.7 per-frame diagnostic context (comparison-only): the object respawn-bit
+    -- array (slot-cadence cluster) and the camera vertical-boundary state (MZ1).
+    write_v_objstate()
+    write_camera_boundary()
+
     -- OPL cursor state: emit event on chunk transitions for ROM↔engine comparison.
     -- v_opl_screen changes only when OPL_Next processes a new chunk.
     local opl_screen = mainmemory.read_u16_be(ADDR_OPL_SCREEN)
@@ -833,7 +893,7 @@ end
 -- The onframeend callback pattern doesn't work because callbacks stop
 -- firing when BizHawk pauses, and client.exit() can kill the process
 -- before file I/O completes.
-print("S1 Trace Recorder v3.6 loaded. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...")
+print("S1 Trace Recorder v3.7 loaded. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...")
 
 -- v3.6 hard safety net: even if every movie-end signal fails (movie.length()==0,
 -- mode never reports FINISHED, S1_STOP_AT_FRAME unset), the loop must not run
