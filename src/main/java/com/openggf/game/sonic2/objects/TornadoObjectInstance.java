@@ -163,7 +163,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     // State
     // ------------------------------------------------------------------------
 
-    private final int subtype;
+    private int subtype;
     private final TornadoObjectInstance parent;
 
     private int routine;

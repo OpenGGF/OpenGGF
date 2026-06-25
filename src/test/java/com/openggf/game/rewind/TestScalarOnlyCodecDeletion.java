@@ -2545,6 +2545,12 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic2.objects.SpiralObjectInstance",
                     GameId.S2));
 
+    private static final List<MutableFieldCoverageCandidate> S2_TORNADO_GRAPH_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.TornadoObjectInstance",
+                            "subtype"));
+
     private static final List<MutableFieldCoverageCandidate> S2_MCZ_ROT_PFORMS_GRAPH_RECREATE_MUTABLE_FIELDS =
             List.of(
                     new MutableFieldCoverageCandidate(
@@ -11257,6 +11263,23 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
+        }
+    }
+
+    @Test
+    void s2TornadoGraphRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_TORNADO_GRAPH_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
         }
     }
 
