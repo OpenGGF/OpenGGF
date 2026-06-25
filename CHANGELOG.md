@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S1 SYZ boss spike rewind:** The SYZ boss spike child now restores through generic recreate with parent relinking and exact extension state.
 - **S3K MGZ mechanism rewind:** MGZ top launcher/platform graphs and Pachinko item orbs now restore through generic recreate with preserved dynamic identity.
 - **Shared water-effect rewind:** Shared breathing bubbles and water splashes now restore through generic recreate with spawn-encoded visual state.
 - **S2 debris-fragment rewind:** ARZ rising-pillar and HTZ smashable-ground fragments now restore through generic recreate with encoded visual piece selectors.

@@ -1715,6 +1715,11 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(Sonic1SLZBossInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(Sonic1SYZBossInstance.class.getName(), GameId.S1));
 
+    private static final List<CodecDeletionCandidate> S1_SYZ_BOSS_SPIKE_GRAPH_BATCH246_RECREATE_CLASSES =
+            List.of(new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.SYZBossSpike",
+                    GameId.S1));
+
     private static final List<CodecDeletionCandidate> S1_FZ_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(FZCylinder.class.getName(), GameId.S1),
             new CodecDeletionCandidate(FZPlasmaLauncher.class.getName(), GameId.S1),
@@ -8956,6 +8961,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 boss graph parent generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1SyzBossSpikeGraphBatch246ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_SYZ_BOSS_SPIKE_GRAPH_BATCH246_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 SYZ spike batch 246");
+        }
+    }
+
+    @Test
+    void s1SyzBossSpikeGraphBatch246ClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_SYZ_BOSS_SPIKE_GRAPH_BATCH246_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 SYZ spike batch 246 generic recreate, not a dynamic codec");
         }
     }
 

@@ -1,6 +1,5 @@
 com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
-com.openggf.game.sonic1.objects.bosses.SYZBossSpike#recreate
 com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate
 com.openggf.game.sonic3k.objects.CnzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance#recreate
