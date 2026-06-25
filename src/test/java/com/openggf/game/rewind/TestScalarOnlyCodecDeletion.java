@@ -131,6 +131,8 @@ import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossTopInstance;
+import com.openggf.game.sonic3k.objects.HczMinibossInstance;
+import com.openggf.game.sonic3k.objects.IczMinibossInstance;
 import com.openggf.game.sonic3k.objects.CnzRisingPlatformInstance;
 import com.openggf.game.sonic3k.objects.CnzSpiralTubeInstance;
 import com.openggf.game.sonic3k.objects.CnzTeleporterBeamInstance;
@@ -163,6 +165,8 @@ import com.openggf.game.sonic3k.objects.LbzInvisibleBarrierInstance;
 import com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.Mgz2PostBossPaletteFadeController;
 import com.openggf.game.sonic3k.objects.Mgz2PostBossSequenceController;
+import com.openggf.game.sonic3k.objects.MgzMinibossInstance;
+import com.openggf.game.sonic3k.objects.MhzMinibossInstance;
 import com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance;
 import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
 import com.openggf.game.sonic3k.objects.PachinkoBumperObjectInstance;
@@ -2981,6 +2985,14 @@ public class TestScalarOnlyCodecDeletion {
                     new CodecDeletionCandidate(
                             "com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance",
                             GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MINIBOSS_ROOT_GRAPH_BATCH247_RECREATE_CLASSES =
+            List.of(
+                    new CodecDeletionCandidate(CnzMinibossInstance.class.getName(), GameId.S3K),
+                    new CodecDeletionCandidate(HczMinibossInstance.class.getName(), GameId.S3K),
+                    new CodecDeletionCandidate(IczMinibossInstance.class.getName(), GameId.S3K),
+                    new CodecDeletionCandidate(MgzMinibossInstance.class.getName(), GameId.S3K),
+                    new CodecDeletionCandidate(MhzMinibossInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> SHARED_BOX_BATCH237_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate("com.openggf.level.objects.BoxObjectInstance", GameId.S2));
@@ -8979,6 +8991,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 SYZ spike batch 246 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMinibossRootGraphBatch247ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MINIBOSS_ROOT_GRAPH_BATCH247_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K miniboss root batch 247");
+        }
+    }
+
+    @Test
+    void s3kMinibossRootGraphBatch247ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MINIBOSS_ROOT_GRAPH_BATCH247_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K miniboss root batch 247 generic recreate, not a dynamic codec");
         }
     }
 

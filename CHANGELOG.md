@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K miniboss root rewind:** CNZ, HCZ, ICZ, MGZ, and MHZ miniboss roots now restore through spawn-based generic recreate.
 - **S1 SYZ boss spike rewind:** The SYZ boss spike child now restores through generic recreate with parent relinking and exact extension state.
 - **S3K MGZ mechanism rewind:** MGZ top launcher/platform graphs and Pachinko item orbs now restore through generic recreate with preserved dynamic identity.
 - **Shared water-effect rewind:** Shared breathing bubbles and water splashes now restore through generic recreate with spawn-encoded visual state.

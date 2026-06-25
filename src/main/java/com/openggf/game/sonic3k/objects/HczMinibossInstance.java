@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SplashObjectInstance;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -44,7 +45,7 @@ import java.util.logging.Logger;
  * loop with orbiting rockets, the suction phase, custom palette flashing, and
  * a signpost-style defeat handoff.
  */
-public class HczMinibossInstance extends AbstractBossInstance {
+public class HczMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(HczMinibossInstance.class.getName());
 
     private static final int ROUTINE_INIT = 0;

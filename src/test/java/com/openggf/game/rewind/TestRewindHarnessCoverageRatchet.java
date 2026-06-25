@@ -500,13 +500,15 @@ public class TestRewindHarnessCoverageRatchet {
    *       coverage.</li>
    *   <li>2026-06-25: raised to 627 after S3K MGZ top launcher/platform
    *       and Pachinko item orb objects gained generic recreate coverage.</li>
+   *   <li>2026-06-25: raised to 632 after S3K miniboss roots gained
+   *       spawn-based generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 627 after S3K MGZ mechanisms gained generic recreate coverage.
-    static final int RATCHET_FLOOR = 627;
+    // 2026-06-25: raised to 632 after S3K miniboss roots gained generic recreate coverage.
+    static final int RATCHET_FLOOR = 632;
 
     @BeforeEach
     void initHeadless() {

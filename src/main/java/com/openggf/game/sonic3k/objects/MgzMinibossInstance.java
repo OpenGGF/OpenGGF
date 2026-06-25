@@ -22,6 +22,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -44,7 +45,7 @@ import java.util.List;
  * shared Tunnelbot routines for swing motion, drill animation, ceiling contact,
  * debris, hit flash, and defeat flow.
  */
-public final class MgzMinibossInstance extends AbstractBossInstance {
+public final class MgzMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
 
     private static final int ROUTINE_INIT = 0;
     private static final int ROUTINE_WAIT_CAMERA = 2;

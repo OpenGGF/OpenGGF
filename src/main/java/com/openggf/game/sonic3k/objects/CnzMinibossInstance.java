@@ -17,6 +17,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -94,7 +95,7 @@ import java.util.logging.Logger;
  * written by a {@code $34} callback now decrements the first time on
  * the subsequent frame, not the same frame it was set.
  */
-public final class CnzMinibossInstance extends AbstractBossInstance {
+public final class CnzMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(CnzMinibossInstance.class.getName());
 
     /**
