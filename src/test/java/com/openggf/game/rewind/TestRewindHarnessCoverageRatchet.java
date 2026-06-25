@@ -453,13 +453,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       waterfall-overlay graph restores gained generic recreate coverage.</li>
     *   <li>2026-06-25: raised to 583 after S3K MegaChopper gained generic
     *       spawn recreate coverage.</li>
+    *   <li>2026-06-25: raised to 584 after S3K Cluckoid arrow gained
+    *       generic graph recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 583 after S3K MegaChopper restore coverage.
-    static final int RATCHET_FLOOR = 583;
+    // 2026-06-25: raised to 584 after S3K Cluckoid arrow graph restore coverage.
+    static final int RATCHET_FLOOR = 584;
 
     @BeforeEach
     void initHeadless() {

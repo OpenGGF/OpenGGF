@@ -7,8 +7,11 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -458,7 +461,32 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
         }
     }
 
-    static final class ArrowChild extends AbstractObjectInstance {
+    private static CluckoidBadnikInstance findLiveCluckoidParentForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        CluckoidBadnikInstance nearest = null;
+        int nearestDistance = Integer.MAX_VALUE;
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (!(instance instanceof CluckoidBadnikInstance cluckoid) || cluckoid.isDestroyed()) {
+                continue;
+            }
+            ObjectSpawn candidateSpawn = cluckoid.getSpawn();
+            if (spawn.layoutIndex() >= 0 && candidateSpawn.layoutIndex() == spawn.layoutIndex()) {
+                return cluckoid;
+            }
+            int distance = Math.abs(candidateSpawn.x() - spawn.x())
+                    + Math.abs(candidateSpawn.y() - spawn.y());
+            if (distance < nearestDistance) {
+                nearest = cluckoid;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
+    }
+
+    static final class ArrowChild extends AbstractObjectInstance implements RewindRecreatable {
         private static final int RENDER_HALF_WIDTH = 0x10;
         private static final int RENDER_HALF_HEIGHT = 0x0C;
 
@@ -468,6 +496,12 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
         ArrowChild(CluckoidBadnikInstance parent) {
             super(parent.getSpawn(), "CluckoidArrow");
             this.parent = parent;
+        }
+
+        @Override
+        public ArrowChild recreateForRewind(RewindRecreateContext ctx) {
+            CluckoidBadnikInstance liveParent = findLiveCluckoidParentForRewind(ctx);
+            return liveParent == null ? null : new ArrowChild(liveParent);
         }
 
         @Override

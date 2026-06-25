@@ -6,6 +6,7 @@ import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
@@ -52,6 +53,8 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter";
     private static final String TURBO_SPIKER_WATERFALL_OVERLAY_CHILD =
             "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild";
+    private static final String CLUCKOID_ARROW_CHILD =
+            "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$ArrowChild";
 
     @BeforeEach
     void initHeadless() {
@@ -404,6 +407,54 @@ class TestS3kBadnikChildGraphRewind {
                 "launched shell state must restore as detached");
         assertEquals(7, readIntField(restoredTrailA, "mappingFrame"),
                 "trail emitter animation state must restore from compact state");
+    }
+
+    @Test
+    void cluckoidArrowRelinksToRestoredParentByLayoutSlot() {
+        Harness harness = Harness.create(new MhzTestRegistry(), List.of(
+                new ObjectSpawn(0x140, 0x120, Sonic3kObjectIds.CLUCKOID, 0, 0, false, 0, 60),
+                new ObjectSpawn(0x260, 0x120, Sonic3kObjectIds.CLUCKOID, 0, 0, false, 0, 61)));
+        ObjectManager objectManager = harness.objectManager();
+        TestablePlayableSprite player = player();
+        List<CluckoidBadnikInstance> sourceParents = liveByType(objectManager, CluckoidBadnikInstance.class);
+        assertEquals(2, sourceParents.size(), "precondition: two Cluckoid parents must be captured");
+        CluckoidBadnikInstance sourceParentA = sourceParents.get(0);
+        CluckoidBadnikInstance sourceParentB = sourceParents.get(1);
+        sourceParentA.update(0, player);
+        sourceParentA.update(1, player);
+        sourceParentB.update(0, player);
+        sourceParentB.update(1, player);
+        List<ObjectInstance> sourceArrows = liveByClassName(objectManager, CLUCKOID_ARROW_CHILD);
+        assertEquals(2, sourceArrows.size(), "precondition: each Cluckoid must create one arrow child");
+        ObjectInstance sourceArrowA = childWithParent(sourceArrows, sourceParentA);
+        ObjectInstance sourceArrowB = childWithParent(sourceArrows, sourceParentB);
+
+        ObjectRefId parentAId = objectId(objectManager, sourceParentA);
+        ObjectRefId parentBId = objectId(objectManager, sourceParentB);
+        ObjectRefId arrowAId = objectId(objectManager, sourceArrowA);
+        ObjectRefId arrowBId = objectId(objectManager, sourceArrowB);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> new CluckoidBadnikInstance(new ObjectSpawn(
+                0x340, 0x180, Sonic3kObjectIds.CLUCKOID, 0, 0, false, 62)));
+
+        rewindRegistry.restore(snapshot);
+
+        CluckoidBadnikInstance restoredParentA =
+                objectById(objectManager, CluckoidBadnikInstance.class, parentAId);
+        CluckoidBadnikInstance restoredParentB =
+                objectById(objectManager, CluckoidBadnikInstance.class, parentBId);
+        ObjectInstance restoredArrowA = objectById(objectManager, ObjectInstance.class, arrowAId);
+        ObjectInstance restoredArrowB = objectById(objectManager, ObjectInstance.class, arrowBId);
+        assertNotSame(sourceArrowA, restoredArrowA, "restore must recreate Cluckoid arrow A");
+        assertNotSame(sourceArrowB, restoredArrowB, "restore must recreate Cluckoid arrow B");
+        assertSame(restoredParentA, readObjectField(restoredArrowA, "parent"),
+                "arrow A parent must resolve to restored layout-slot A Cluckoid");
+        assertSame(restoredParentB, readObjectField(restoredArrowB, "parent"),
+                "arrow B parent must resolve to restored layout-slot B Cluckoid");
+        assertEquals(2, liveByClassName(objectManager, CLUCKOID_ARROW_CHILD).size(),
+                "restore must keep exactly the captured Cluckoid arrows");
     }
 
     @Test

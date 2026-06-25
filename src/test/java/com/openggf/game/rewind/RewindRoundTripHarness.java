@@ -15,6 +15,7 @@ import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance;
 import com.openggf.game.sonic3k.objects.MhzMinibossInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
@@ -673,6 +674,7 @@ public final class RewindRoundTripHarness {
         return switch (parentFqn) {
             case "com.openggf.game.sonic3k.objects.CnzMinibossInstance",
                  "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance",
+                 "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance",
                  "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance",
                  "com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance",
                  "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance",
@@ -690,6 +692,10 @@ public final class RewindRoundTripHarness {
             case "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance" ->
                     spawn.objectId() == Sonic3kObjectIds.DRAGONFLY
                             ? new DragonflyBadnikInstance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.CLUCKOID
+                            ? new CluckoidBadnikInstance(spawn)
                             : null;
             case "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance" ->
                     spawn.objectId() == Sonic3kObjectIds.CUTSCENE_KNUCKLES
@@ -993,6 +999,8 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild");
         m.put("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild",
                 "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$ArrowChild",
+                "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance");
         // S3K MHZ cutscene/miniboss children. The parent object IDs are zone-set
         // dependent, so registryForSeededParent supplies exact parent factories.
         m.put("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
@@ -1064,6 +1072,8 @@ public final class RewindRoundTripHarness {
             Map.entry("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance", 0x96),
             // SpikerBadnikInstance: Sonic3kObjectIds.SPIKER = 0x9C (lazy child spawn)
             Map.entry("com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance", 0x9C),
+            // CluckoidBadnikInstance: Sonic3kObjectIds.CLUCKOID = 0x90 (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance", 0x90),
             // CutsceneKnucklesMhz2Instance: Sonic3kObjectIds.CUTSCENE_KNUCKLES = 0x82
             Map.entry("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance", 0x82),
             // Mhz1CutsceneButtonInstance: Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON = 0xA9
