@@ -12,6 +12,7 @@ import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzCylinderInstance;
 import com.openggf.game.sonic3k.objects.LbzMinibossInstance;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
+import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
@@ -187,6 +188,13 @@ class TestRewindPolicyRegistry {
         Field endCannon = CnzEndBossInstance.class.getDeclaredField("endCannon");
 
         assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(endCannon).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesIczEndBossSnowdustEmitterReference() throws NoSuchFieldException {
+        Field snowdustEmitter = IczEndBossInstance.class.getDeclaredField("bossSnowdustEmitter");
+
+        assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(snowdustEmitter).orElse(null));
     }
 
     @Test

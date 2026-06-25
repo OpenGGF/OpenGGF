@@ -18,6 +18,7 @@ import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1PeerInstance;
 import com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
+import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance.LinkedBodyChild;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -220,6 +221,17 @@ class TestRewindSchemaRegistry {
         assertPolicy(schema, "followAnchor", RewindFieldPolicy.CAPTURED);
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "Dragonfly linked body compact schema must capture parent/follow-anchor links without fallback: "
+                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesIczEndBossSnowdustEmitterLink() {
+        RewindClassSchema schema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(IczEndBossInstance.class);
+
+        assertPolicy(schema, "bossSnowdustEmitter", RewindFieldPolicy.CAPTURED);
+        assertTrue(schema.unsupportedFields().isEmpty(),
+                "ICZ end boss compact schema must capture the snowdust emitter link without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 

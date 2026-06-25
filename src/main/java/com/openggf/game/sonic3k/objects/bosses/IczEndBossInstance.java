@@ -22,6 +22,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider.TouchRegion;
 import com.openggf.level.objects.TouchResponseResult;
@@ -42,7 +43,8 @@ import java.util.List;
  * entry gate, descent, swing/frost-puff attack loop, hit flash, and the fixed
  * egg-capsule handoff after defeat.
  */
-public final class IczEndBossInstance extends AbstractBossInstance implements MultiPieceSolidProvider {
+public final class IczEndBossInstance extends AbstractBossInstance
+        implements MultiPieceSolidProvider, SpawnRewindRecreatable {
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_DESCEND = 0x02;
     private static final int ROUTINE_SWING = 0x04;
