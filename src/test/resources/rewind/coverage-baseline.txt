@@ -45,8 +45,6 @@ com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeam
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#recreate
-com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#recreate
-com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment#recreate
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreX
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreY
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#recreate

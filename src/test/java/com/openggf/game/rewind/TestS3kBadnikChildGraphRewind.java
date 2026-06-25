@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance;
 import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
@@ -86,6 +87,8 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment";
     private static final String COLLAPSING_BRIDGE_MGZ_DEBRIS =
             "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris";
+    private static final String TENSION_BRIDGE_FRAGMENT =
+            "com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment";
 
     @BeforeEach
     void initHeadless() {
@@ -548,6 +551,50 @@ class TestS3kBadnikChildGraphRewind {
         assertFalse((Boolean) readObjectField(restoredDebris, "hFlip"));
         assertEquals(0x1A0, restoredDebris.getX());
         assertEquals(0x140, restoredDebris.getY());
+    }
+
+    @Test
+    void tensionBridgeFragmentsRestoreWithoutDropsDoublesOrStateLoss() {
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of(
+                new ObjectSpawn(0x180, 0x130, Sonic3kObjectIds.TENSION_BRIDGE, 8, 0, false, 131)));
+        ObjectManager objectManager = harness.objectManager();
+        List<TensionBridgeObjectInstance> sourceBridges =
+                liveByType(objectManager, TensionBridgeObjectInstance.class);
+        assertEquals(1, sourceBridges.size(), "precondition: one Tension Bridge root must be captured");
+        TensionBridgeObjectInstance sourceBridge = sourceBridges.getFirst();
+        ObjectInstance sourceFragment = objectManager.createDynamicObject(
+                () -> instantiateTensionBridgeFragment(
+                        0x184, 0x132, 5, 7,
+                        Sonic3kObjectArtKeys.TENSION_BRIDGE_LRZ, true));
+
+        ObjectRefId bridgeId = objectId(objectManager, sourceBridge);
+        ObjectRefId fragmentId = objectId(objectManager, sourceFragment);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> instantiateTensionBridgeFragment(
+                0x300, 0x180, 1, 2,
+                Sonic3kObjectArtKeys.TENSION_BRIDGE_ICZ, false));
+
+        rewindRegistry.restore(snapshot);
+
+        TensionBridgeObjectInstance restoredBridge =
+                objectById(objectManager, TensionBridgeObjectInstance.class, bridgeId);
+        ObjectInstance restoredFragment = objectById(objectManager, ObjectInstance.class, fragmentId);
+        assertNotSame(sourceFragment, restoredFragment, "restore must recreate Tension Bridge fragment");
+        assertSame(restoredBridge, objectById(objectManager, TensionBridgeObjectInstance.class, bridgeId),
+                "Tension Bridge identity must resolve after restore");
+        assertEquals(1, liveByType(objectManager, TensionBridgeObjectInstance.class).size(),
+                "restore must keep exactly the captured Tension Bridge root");
+        assertEquals(1, liveByClassName(objectManager, TENSION_BRIDGE_FRAGMENT).size(),
+                "restore must keep exactly the captured Tension Bridge fragment");
+        assertEquals(5, readIntField(restoredFragment, "frameIndex"));
+        assertEquals(7, readIntField(restoredFragment, "delay"));
+        assertEquals(Sonic3kObjectArtKeys.TENSION_BRIDGE_LRZ,
+                readObjectField(restoredFragment, "artKey"));
+        assertTrue(restoredFragment.isHighPriority());
+        assertEquals(0x184, restoredFragment.getX());
+        assertEquals(0x132, restoredFragment.getY());
     }
 
     @Test
@@ -1170,6 +1217,19 @@ class TestS3kBadnikChildGraphRewind {
             return (ObjectInstance) ctor.newInstance(spawn, x, y, frame);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to construct Tunnelbot debris", e);
+        }
+    }
+
+    private static ObjectInstance instantiateTensionBridgeFragment(
+            int x, int y, int frameIndex, int delay, String artKey, boolean highPriority) {
+        try {
+            Class<?> cls = Class.forName(TENSION_BRIDGE_FRAGMENT);
+            Constructor<?> ctor = cls.getDeclaredConstructor(
+                    int.class, int.class, int.class, int.class, String.class, boolean.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(x, y, frameIndex, delay, artKey, highPriority);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct Tension Bridge fragment", e);
         }
     }
 
