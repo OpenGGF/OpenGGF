@@ -17,12 +17,8 @@ com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild#
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild#finalScalar#mirrored
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$MgzBossCameraScrollHelper#recreate
-com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#finalScalar#x
-com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.MhzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance#recreate
-com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreX
-com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreY
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossPlayerTwoCarryChild#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossSidekickLockChild#recreate

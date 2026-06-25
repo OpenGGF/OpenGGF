@@ -35,8 +35,8 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     private static final int CALLBACK_WAIT = 0x5F;
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x1B, 4, 5);
 
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
     private boolean pressed;
     private boolean normalPressed;
     private boolean contactStanding;

@@ -65,8 +65,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private static final int COLLISION_FLAGS = 0x06;
     private static final int HIT_INVULNERABILITY_FRAMES = 0x20;
 
-    private final int centreX;
-    private final int centreY;
+    private int centreX;
+    private int centreY;
 
     private boolean defeatHandoffComplete;
     private int hitCount = HIT_COUNT;
