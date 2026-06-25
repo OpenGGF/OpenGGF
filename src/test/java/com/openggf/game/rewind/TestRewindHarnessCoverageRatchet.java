@@ -507,13 +507,15 @@ public class TestRewindHarnessCoverageRatchet {
    *   <li>2026-06-25: raised to 639 after HCZ vortex bubbles, ICZ defeat
    *       debris, and MHZ end-boss controllers gained graph-backed generic
    *       recreate coverage.</li>
+   *   <li>2026-06-25: raised to 642 after the final S1 try-again and S2
+   *       Super Sonic Stars recreate baseline gaps moved onto generic recreate.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 639 after S3K late-boss tail objects gained generic recreate coverage.
-    static final int RATCHET_FLOOR = 639;
+    // 2026-06-25: raised to 642 after final recreate-baseline gaps gained generic recreate coverage.
+    static final int RATCHET_FLOOR = 642;
 
     @BeforeEach
     void initHeadless() {

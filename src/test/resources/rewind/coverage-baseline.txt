@@ -1,3 +1,0 @@
-com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1TryAgainEmeraldsObjectInstance#recreate
-com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate

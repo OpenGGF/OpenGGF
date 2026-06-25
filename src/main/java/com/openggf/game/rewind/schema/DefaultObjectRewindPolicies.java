@@ -111,6 +111,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance", "lastPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance", "emeraldMaster"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance", "emeralds"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance", "textRenderer"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance", "children"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance", "parentPlatform"), RewindFieldPolicy.CAPTURED),
             // Grass Fire must remain compact-schema eligible so required parent/list refs are captured.

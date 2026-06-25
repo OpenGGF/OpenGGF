@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Rewind coverage closure:** the final S1 try-again and S2 Super Sonic Stars recreate-baseline gaps now restore through generic recreate.
 - **S3K late-boss tail rewind:** HCZ vortex bubbles, ICZ end-boss defeat debris, and MHZ end-boss invisible controllers now restore through generic recreate.
 - **S3K MGZ miniboss tail rewind:** MGZ miniboss debris, defeat fragments, Knuckles spike platforms, and camera scroll helper now restore through generic recreate.
 - **S3K miniboss root rewind:** CNZ, HCZ, ICZ, MGZ, and MHZ miniboss roots now restore through spawn-based generic recreate.
