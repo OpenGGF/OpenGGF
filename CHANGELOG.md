@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Shared box-object rewind:** BoxObjectInstance now restores through exact-class generic recreate, preserving subclass restore behavior while clearing its stale recreate gap.
 - **S3K ICZ snow rewind:** ICZ snowdust particles and the snowboard intro controller now restore through generic recreate with restored emitter links.
 - **S3K ICZ support rewind:** ICZ ice spikes, tension-platform supports, and crushing-column bottom decorations now restore through generic recreate with restored parent links.
 - **S3K pachinko energy-trap rewind:** Energy-trap column and beam children now restore through generic recreate with parent links relinked to the restored trap.

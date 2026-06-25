@@ -6,7 +6,7 @@ import java.util.List;
 
 
 
-public class BoxObjectInstance extends AbstractObjectInstance {
+public class BoxObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private int halfWidth;
     private int halfHeight;
     private float r;
@@ -23,6 +23,21 @@ public class BoxObjectInstance extends AbstractObjectInstance {
         this.g = g;
         this.b = b;
         this.highPriority = highPriority;
+    }
+
+    private BoxObjectInstance(ObjectSpawn spawn) {
+        this(spawn, "Box", 1, 1, 1.0f, 1.0f, 1.0f, false);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return RewindRecreateConstructors.instantiateExact(
+                this,
+                "BoxObjectInstance",
+                "ObjectSpawn",
+                "box rewind recreate",
+                new Class<?>[] {ObjectSpawn.class},
+                ctx.spawn());
     }
 
     @Override
