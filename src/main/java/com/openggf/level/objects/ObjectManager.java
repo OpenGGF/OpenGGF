@@ -3548,6 +3548,9 @@ public class ObjectManager {
         for (Class<?> current = type;
                 current != null && current != AbstractObjectInstance.class;
                 current = current.getSuperclass()) {
+            if (current == AbstractBadnikInstance.class) {
+                continue;
+            }
             try {
                 var method = current.getDeclaredMethod(name, parameterTypes);
                 if (!Modifier.isAbstract(method.getModifiers())

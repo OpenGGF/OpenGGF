@@ -8,9 +8,12 @@ import com.openggf.game.PowerUpObject;
 import com.openggf.game.PowerUpSpawner;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzCylinderInstance;
 import com.openggf.game.sonic3k.objects.LbzMinibossInstance;
+import com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance;
+import com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
@@ -206,6 +209,24 @@ class TestRewindPolicyRegistry {
                 RewindPolicyRegistry.policyForAudit(cannonReleasedPlayer).orElse(null));
         assertEquals(RewindFieldPolicy.CAPTURED,
                 RewindPolicyRegistry.policyForAudit(cylinderReleasedPlayer).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesPlayerReferenceFields() throws NoSuchFieldException {
+        Field grabberPendingPlayer = GrabberBadnikInstance.class.getDeclaredField("pendingGrabPlayer");
+        Field parachuteGrabbedPlayer = MhzMushroomParachuteObjectInstance.class.getDeclaredField("grabbedPlayer");
+        Field parachuteNativeP2Player =
+                MhzMushroomParachuteObjectInstance.class.getDeclaredField("nativeP2GrabbedPlayer");
+        Field stickyVineCapturedPlayer = MhzStickyVineObjectInstance.class.getDeclaredField("capturedPlayer");
+
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(grabberPendingPlayer).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(parachuteGrabbedPlayer).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(parachuteNativeP2Player).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(stickyVineCapturedPlayer).orElse(null));
     }
 
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {

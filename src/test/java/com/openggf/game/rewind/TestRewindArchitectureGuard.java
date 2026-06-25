@@ -35,8 +35,11 @@ class TestRewindArchitectureGuard {
     private static final Map<String, Integer> OBJECT_REWIND_OVERRIDE_BASELINE = Map.ofEntries(
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#captureRewindState", 2),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#restoreRewindState", 2),
-            Map.entry("src/main/java/com/openggf/level/objects/AbstractBadnikInstance.java#captureRewindState", 1),
-            Map.entry("src/main/java/com/openggf/level/objects/AbstractBadnikInstance.java#restoreRewindState", 1),
+            // Shared badnik base keeps the no-arg compatibility overrides and
+            // adds context-aware overloads so default badnik compact sidecars can
+            // resolve captured player/object references through the restore table.
+            Map.entry("src/main/java/com/openggf/level/objects/AbstractBadnikInstance.java#captureRewindState", 2),
+            Map.entry("src/main/java/com/openggf/level/objects/AbstractBadnikInstance.java#restoreRewindState", 2),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractMonitorObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractMonitorObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/ARZPlatformObjectInstance.java#captureRewindState", 1),

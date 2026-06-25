@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -26,7 +27,8 @@ import java.util.List;
  * critical player grab/carry/release path from {@code sub_3F5AA/sub_3F5C2}
  * plus the falling motion setup from {@code loc_3F500 -> loc_3F51C}.
  */
-public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInstance implements MhzUpdraftCarrier {
+public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInstance
+        implements MhzUpdraftCarrier, SpawnRewindRecreatable {
     private static final int PLAYER_Y_OFFSET = 0x25;
     private static final int GRAB_X_BIAS = 0x10;
     private static final int GRAB_X_RANGE = 0x20;

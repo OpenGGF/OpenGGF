@@ -17,8 +17,6 @@ com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#recreate
 com.openggf.game.sonic2.objects.TornadoObjectInstance#finalScalar#subtype
 com.openggf.game.sonic2.objects.TornadoObjectInstance#objectRef#thrusterFollowerChild
 com.openggf.game.sonic2.objects.TornadoObjectInstance#recreate
-com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#objectRef#pendingGrabPlayer
-com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild#recreate
@@ -91,11 +89,6 @@ com.openggf.game.sonic3k.objects.MgzMinibossInstance$MgzBossCameraScrollHelper#r
 com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.MhzMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#objectRef#grabbedPlayer
-com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#objectRef#nativeP2GrabbedPlayer
-com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance#recreate
-com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance#objectRef#capturedPlayer
-com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild#recreate
 com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance#recreate

@@ -7,6 +7,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -20,7 +21,7 @@ import java.util.List;
  * overlap capture, child-chain deformation state, player pull, and spindash
  * release handoff into the retraction routine.
  */
-public final class MhzStickyVineObjectInstance extends AbstractObjectInstance {
+public final class MhzStickyVineObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int PRIORITY_BUCKET = 4;
     private static final int DISPLAY_HALF_WIDTH = 0x80;
     private static final int DISPLAY_HALF_HEIGHT = 0x80;

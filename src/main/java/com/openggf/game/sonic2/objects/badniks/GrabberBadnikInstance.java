@@ -11,6 +11,7 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -25,7 +26,7 @@ import java.util.List;
  *
  * Based on ObjA7 from Sonic 2 disassembly.
  */
-public class GrabberBadnikInstance extends AbstractBadnikInstance {
+public class GrabberBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B; // From disassembly
 
     // Movement constants from disassembly

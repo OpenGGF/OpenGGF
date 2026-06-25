@@ -3,6 +3,7 @@ package com.openggf.game.rewind.schema;
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance;
 import com.openggf.game.sonic2.objects.FallingPillarObjectInstance;
 import com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance;
 import com.openggf.game.sonic2.objects.SidewaysPformObjectInstance;
@@ -17,6 +18,8 @@ import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1PeerInstance;
 import com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
+import com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance;
+import com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance.LinkedBodyChild;
@@ -233,6 +236,31 @@ class TestRewindSchemaRegistry {
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "ICZ end boss compact schema must capture the snowdust emitter link without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesPlayerReferenceLinks() {
+        RewindClassSchema grabberSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(GrabberBadnikInstance.class);
+        RewindClassSchema parachuteSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(MhzMushroomParachuteObjectInstance.class);
+        RewindClassSchema stickyVineSchema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(MhzStickyVineObjectInstance.class);
+
+        assertPolicy(grabberSchema, "grabbedPlayer", RewindFieldPolicy.CAPTURED);
+        assertPolicy(grabberSchema, "pendingGrabPlayer", RewindFieldPolicy.CAPTURED);
+        assertPolicy(parachuteSchema, "grabbedPlayer", RewindFieldPolicy.CAPTURED);
+        assertPolicy(parachuteSchema, "nativeP2GrabbedPlayer", RewindFieldPolicy.CAPTURED);
+        assertPolicy(stickyVineSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
+        assertTrue(grabberSchema.unsupportedFields().isEmpty(),
+                "Grabber compact schema must capture player refs without fallback: "
+                        + grabberSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(parachuteSchema.unsupportedFields().isEmpty(),
+                "MHZ mushroom parachute compact schema must capture player refs without fallback: "
+                        + parachuteSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        assertTrue(stickyVineSchema.unsupportedFields().isEmpty(),
+                "MHZ sticky vine compact schema must capture player refs without fallback: "
+                        + stickyVineSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 
     @Test
