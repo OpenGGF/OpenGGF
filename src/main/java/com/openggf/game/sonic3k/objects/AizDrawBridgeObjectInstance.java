@@ -30,7 +30,7 @@ import java.util.List;
  * directly from the parent for simplicity.
  */
 public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final int PRIORITY = 5;
     private static final int SEGMENT_COUNT = 14;

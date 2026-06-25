@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K AIZ draw bridge rewind:** The draw-bridge parent now restores through the generic spawn recreate path, clearing its stale coverage-baseline recreate gap.
 - **S2 Tornado rewind cleanup:** Tornado subtype state now compact-restores through the existing graph-tested generic recreate path without a stale final-scalar baseline key.
 - **S2 spiral graph rewind:** EHZ spiral/cylinder helpers now restore through generic recreate while rider and cylinder-angle player links relink to current live player instances.
 - **S2 flipper graph rewind:** CNZ flippers now restore through generic recreate while per-player cooldown, flipper-state, and control-suppression maps relink to current live player instances.

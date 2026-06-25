@@ -441,13 +441,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       generic recreate coverage with player-state map relinking.</li>
     *   <li>2026-06-25: raised to 574 after S2 spirals gained graph-tested
     *       generic recreate coverage with rider/cylinder player-link relinking.</li>
+    *   <li>2026-06-25: raised to 575 after the S3K AIZ draw-bridge parent
+    *       gained generic spawn recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 574 after S2 spiral graph restore coverage.
-    static final int RATCHET_FLOOR = 574;
+    // 2026-06-25: raised to 575 after S3K AIZ draw-bridge parent restore coverage.
+    static final int RATCHET_FLOOR = 575;
 
     @BeforeEach
     void initHeadless() {

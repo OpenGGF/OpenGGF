@@ -3011,6 +3011,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S3K_AIZ_DRAW_BRIDGE_BATCH102_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance$FallingBridgeSegment",
                     GameId.S3K));
 
