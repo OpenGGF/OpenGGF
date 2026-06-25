@@ -80,8 +80,6 @@ com.openggf.game.sonic3k.objects.IczMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle#recreate
 com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance#recreate
 com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild#recreate
-com.openggf.game.sonic3k.objects.LbzMinibossInstance#objectRef#knucklesFightParent
-com.openggf.game.sonic3k.objects.LbzMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance#recreate
 com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance#recreate

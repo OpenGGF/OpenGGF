@@ -8,6 +8,7 @@ import com.openggf.game.PowerUpObject;
 import com.openggf.game.PowerUpSpawner;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.sonic3k.objects.LbzMinibossInstance;
 import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
@@ -169,6 +170,13 @@ class TestRewindPolicyRegistry {
         Field cover = SnaleBlasterBadnikInstance.class.getDeclaredField("cover");
 
         assertEquals(RewindFieldPolicy.TRANSIENT, RewindPolicyRegistry.policyForAudit(cover).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesLbzMinibossKnucklesParentReference() throws NoSuchFieldException {
+        Field parent = LbzMinibossInstance.class.getDeclaredField("knucklesFightParent");
+
+        assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(parent).orElse(null));
     }
 
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {

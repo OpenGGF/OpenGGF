@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K LBZ miniboss graph rewind:** Knuckles-route miniboss pairs now restore through generic recreate with restored box-parent references instead of stale coverage-baseline gaps.
 - **S3K ICZ segment-column graph rewind:** column child segments now restore through generic graph recreate with restored root/previous links instead of stale coverage-baseline gaps.
 - **S3K SnaleBlaster rewind cleanup:** the transient cover cache no longer carries a stale object-ref coverage-baseline key.
 - **S3K Dragonfly graph rewind cleanup:** linked body follow-anchor references are now guarded as captured rewind identities, removing a stale object-ref baseline key while preserving loud missing-target failures.
