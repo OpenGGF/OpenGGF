@@ -50,7 +50,6 @@ com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment#recreate
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment#recreate
-com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm#recreate
 com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotDebris#recreate

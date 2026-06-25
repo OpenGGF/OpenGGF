@@ -6,6 +6,7 @@ import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance;
 import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance;
@@ -34,6 +35,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -71,6 +73,8 @@ class TestS3kBadnikChildGraphRewind {
             "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterCoverChild";
     private static final String SNALE_BLASTER_SHOOTER_CHILD =
             "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild";
+    private static final String CATERKILLER_JR_BODY =
+            "com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance";
 
     @BeforeEach
     void initHeadless() {
@@ -820,6 +824,93 @@ class TestS3kBadnikChildGraphRewind {
                 "restore must keep exactly the captured SnaleBlaster shooters");
         assertEquals(2, liveByClassName(objectManager, SNALE_BLASTER_COVER_CHILD).size(),
                 "restore must keep exactly the captured SnaleBlaster covers");
+    }
+
+    @Test
+    void caterkillerJrHeadRestoresBodySegmentListToRestoredChildren() {
+        Harness harness = Harness.create(new S3klTestRegistry(), List.of(
+                new ObjectSpawn(0x180, 0x130, Sonic3kObjectIds.CATERKILLER_JR, 0, 0, false, 110),
+                new ObjectSpawn(0x2A0, 0x130, Sonic3kObjectIds.CATERKILLER_JR, 1, 0, false, 111)));
+        ObjectManager objectManager = harness.objectManager();
+        TestablePlayableSprite player = player();
+        List<CaterkillerJrHeadInstance> sourceHeads =
+                liveByType(objectManager, CaterkillerJrHeadInstance.class);
+        assertEquals(2, sourceHeads.size(), "precondition: two Caterkiller Jr heads must be captured");
+        CaterkillerJrHeadInstance sourceHeadA = sourceHeads.get(0);
+        CaterkillerJrHeadInstance sourceHeadB = sourceHeads.get(1);
+        sourceHeadA.update(0, player);
+        sourceHeadB.update(0, player);
+        List<ObjectInstance> sourceBodies = liveByClassName(objectManager, CATERKILLER_JR_BODY);
+        assertEquals(12, sourceBodies.size(), "precondition: each Caterkiller Jr head must spawn six body segments");
+        List<?> sourceListA = (List<?>) readObjectField(sourceHeadA, "bodySegments");
+        List<?> sourceListB = (List<?>) readObjectField(sourceHeadB, "bodySegments");
+        assertEquals(6, sourceListA.size(), "precondition: head A must retain six body segment refs");
+        assertEquals(6, sourceListB.size(), "precondition: head B must retain six body segment refs");
+        ObjectInstance sourceBodyA0 = (ObjectInstance) sourceListA.get(0);
+        ObjectInstance sourceBodyB5 = (ObjectInstance) sourceListB.get(5);
+        setIntField(sourceHeadA, "peakCounter", 2);
+        setIntField(sourceHeadA, "swingMaxVel", 0x100);
+        setBooleanField(sourceHeadA, "swingDown", true);
+        setIntField(sourceBodyA0, "currentX", 0x190);
+        setIntField(sourceBodyA0, "currentY", 0x150);
+        setIntField(sourceBodyA0, "segmentIndex", 2);
+        setIntField(sourceBodyA0, "mappingFrame", 1);
+        setIntField(sourceBodyA0, "waitTimer", 7);
+        setIntField(sourceBodyB5, "currentX", 0x2B8);
+        setIntField(sourceBodyB5, "currentY", 0x168);
+        setIntField(sourceBodyB5, "segmentIndex", 5);
+        setIntField(sourceBodyB5, "mappingFrame", 3);
+
+        ObjectRefId headAId = objectId(objectManager, sourceHeadA);
+        ObjectRefId headBId = objectId(objectManager, sourceHeadB);
+        ObjectRefId bodyA0Id = objectId(objectManager, sourceBodyA0);
+        ObjectRefId bodyB5Id = objectId(objectManager, sourceBodyB5);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.createDynamicObject(() -> new CaterkillerJrHeadInstance(new ObjectSpawn(
+                0x220, 0x130, Sonic3kObjectIds.CATERKILLER_JR, 0, 0, false, 112)));
+
+        rewindRegistry.restore(snapshot);
+
+        CaterkillerJrHeadInstance restoredHeadA =
+                objectById(objectManager, CaterkillerJrHeadInstance.class, headAId);
+        CaterkillerJrHeadInstance restoredHeadB =
+                objectById(objectManager, CaterkillerJrHeadInstance.class, headBId);
+        ObjectInstance restoredBodyA0 = objectById(objectManager, ObjectInstance.class, bodyA0Id);
+        ObjectInstance restoredBodyB5 = objectById(objectManager, ObjectInstance.class, bodyB5Id);
+        List<?> restoredListA = (List<?>) readObjectField(restoredHeadA, "bodySegments");
+        List<?> restoredListB = (List<?>) readObjectField(restoredHeadB, "bodySegments");
+
+        assertNotSame(sourceHeadA, restoredHeadA, "restore must recreate Caterkiller Jr head A");
+        assertNotSame(sourceBodyA0, restoredBodyA0, "restore must recreate Caterkiller Jr body A0");
+        assertNotSame(sourceBodyB5, restoredBodyB5, "restore must recreate Caterkiller Jr body B5");
+        assertEquals(6, restoredListA.size(), "restored head A must retain six body segment refs");
+        assertEquals(6, restoredListB.size(), "restored head B must retain six body segment refs");
+        assertTrue(restoredListA.contains(restoredBodyA0),
+                "restored head A body list must point at restored body A0");
+        assertTrue(restoredListB.contains(restoredBodyB5),
+                "restored head B body list must point at restored body B5");
+        assertFalse(restoredListA.contains(sourceBodyA0),
+                "restored head A body list must not retain stale pre-restore body refs");
+        assertFalse(restoredListB.contains(sourceBodyB5),
+                "restored head B body list must not retain stale pre-restore body refs");
+        assertEquals(2, readIntField(restoredHeadA, "peakCounter"));
+        assertEquals(0x100, readIntField(restoredHeadA, "swingMaxVel"));
+        assertTrue((Boolean) readObjectField(restoredHeadA, "swingDown"));
+        assertEquals(0x190, readIntField(restoredBodyA0, "currentX"));
+        assertEquals(0x150, readIntField(restoredBodyA0, "currentY"));
+        assertEquals(2, readIntField(restoredBodyA0, "segmentIndex"));
+        assertEquals(1, readIntField(restoredBodyA0, "mappingFrame"));
+        assertEquals(7, readIntField(restoredBodyA0, "waitTimer"));
+        assertEquals(0x2B8, readIntField(restoredBodyB5, "currentX"));
+        assertEquals(0x168, readIntField(restoredBodyB5, "currentY"));
+        assertEquals(5, readIntField(restoredBodyB5, "segmentIndex"));
+        assertEquals(3, readIntField(restoredBodyB5, "mappingFrame"));
+        assertEquals(2, liveByType(objectManager, CaterkillerJrHeadInstance.class).size(),
+                "restore must keep exactly the captured Caterkiller Jr heads");
+        assertEquals(12, liveByClassName(objectManager, CATERKILLER_JR_BODY).size(),
+                "restore must keep exactly the captured Caterkiller Jr body segments");
     }
 
     @Test

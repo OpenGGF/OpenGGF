@@ -143,7 +143,12 @@ public final class CaterkillerJrBodyInstance extends AbstractObjectInstance
         if (capturedSpawn == null) {
             capturedSpawn = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
         }
-        return forRewindRecreate(capturedSpawn);
+        CaterkillerJrBodyInstance restored = forRewindRecreate(capturedSpawn);
+        CaterkillerJrHeadInstance liveHead = CaterkillerJrHeadInstance.findLiveHeadForRewind(ctx);
+        if (liveHead != null) {
+            liveHead.attachBodySegmentForRewind(restored);
+        }
+        return restored;
     }
 
     @Override

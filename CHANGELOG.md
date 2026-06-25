@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K Caterkiller Jr graph rewind:** Caterkiller Jr heads now restore through generic recreate, with restored body segments relinked into the head's runtime segment list.
 - **S3K SnaleBlaster graph rewind:** SnaleBlaster parents, covers, and shooters now restore through generic recreate with restored parent caches relinked to restored children.
 - **S3K Ribot visual rewind:** Ribot visual trail children now restore through generic recreate by relinking to restored active children, clearing their stale recreate coverage gap.
 - **S3K Mantis graph rewind:** Mantis parents and visual children now restore through generic recreate with captured parent/child links, deleting their stale recreate coverage gaps.

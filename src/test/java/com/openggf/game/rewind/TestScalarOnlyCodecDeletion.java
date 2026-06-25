@@ -2839,6 +2839,11 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_CATERKILLER_JR_GRAPH_BATCH228_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_RECREATE_CLASSES = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance",
@@ -9272,6 +9277,35 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kSnaleBlasterGraphBatch227ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_SNALE_BLASTER_GRAPH_BATCH227_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kCaterkillerJrGraphBatch228ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CATERKILLER_JR_GRAPH_BATCH228_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Caterkiller Jr graph batch 228");
+        }
+    }
+
+    @Test
+    void s3kCaterkillerJrGraphBatch228ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CATERKILLER_JR_GRAPH_BATCH228_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Caterkiller Jr graph batch 228 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kCaterkillerJrGraphBatch228ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CATERKILLER_JR_GRAPH_BATCH228_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

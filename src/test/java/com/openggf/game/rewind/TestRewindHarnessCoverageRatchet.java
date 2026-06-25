@@ -463,13 +463,15 @@ public class TestRewindHarnessCoverageRatchet {
     *       generic graph recreate coverage.</li>
     *   <li>2026-06-25: raised to 592 after S3K SnaleBlaster parent, cover,
     *       and shooter graph restores gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 593 after S3K Caterkiller Jr head/body graph
+    *       restores gained generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 592 after S3K SnaleBlaster parent/cover/shooter graph restore coverage.
-    static final int RATCHET_FLOOR = 592;
+    // 2026-06-25: raised to 593 after S3K Caterkiller Jr head/body graph restore coverage.
+    static final int RATCHET_FLOOR = 593;
 
     @BeforeEach
     void initHeadless() {
