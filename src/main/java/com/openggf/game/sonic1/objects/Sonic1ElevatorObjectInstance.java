@@ -469,6 +469,19 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // ROM Sonic_Move edge-balance reads the stood-on object's obActWid
+        // (docs/s1disasm/_incObj/01 Sonic.asm:414-431). The elevator sets obActWid
+        // from Elev_Var1 (= 80/2 = $28; docs/s1disasm/_incObj/59 SLZ Elevators.asm:22,59),
+        // which equals halfWidth here. The shared default getBalanceWidthPixels()
+        // returns getOnScreenHalfWidth() (16), which is far narrower than the elevator's
+        // $28 platform — that shifted the balance window so the player was treated as
+        // edge-balancing while centered on the platform, suppressing the ROM look-up/
+        // look-down camera pan (SLZ3 f3085: ducking on a rising elevator).
+        return halfWidth;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return true;
     }
