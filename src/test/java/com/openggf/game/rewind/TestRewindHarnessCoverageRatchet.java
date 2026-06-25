@@ -492,13 +492,16 @@ public class TestRewindHarnessCoverageRatchet {
    *       gained graph-backed generic recreate coverage.</li>
    *   <li>2026-06-25: raised to 620 after S3K AIZ Emerald Scatter
    *       gained spawn-based generic recreate coverage.</li>
+   *   <li>2026-06-25: raised to 622 after S2 rising-pillar and
+   *       smashable-ground debris fragments gained spawn-encoded generic
+   *       recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-25: raised to 620 after S3K AIZ Emerald Scatter spawn-based generic recreate coverage.
-    static final int RATCHET_FLOOR = 620;
+    // 2026-06-25: raised to 622 after S2 debris fragments gained generic recreate coverage.
+    static final int RATCHET_FLOOR = 622;
 
     @BeforeEach
     void initHeadless() {

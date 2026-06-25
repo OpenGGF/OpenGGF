@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S2 debris-fragment rewind:** ARZ rising-pillar and HTZ smashable-ground fragments now restore through generic recreate with encoded visual piece selectors.
 - **S3K graph rewind coverage:** CNZ end-boss and MHZ1 cutscene-button spawn coordinates now participate in compact restore, clearing stale final-scalar coverage gaps.
 - **S3K AIZ intro glow rewind:** AIZ intro emerald glow helpers now expose a generic recreate hook with live-plane relinking, clearing stale recreate/final-scalar coverage gaps.
 - **S3K AIZ emerald-scatter rewind:** AIZ Emerald Scatter now restores through spawn-based generic recreate, clearing its stale recreate coverage gap.

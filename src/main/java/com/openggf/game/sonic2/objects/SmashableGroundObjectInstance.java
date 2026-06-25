@@ -67,6 +67,9 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
     // Counter 0: 10, Counter 2: 20, Counter 4: 50, Counter 6+: 100
     // Counter 32+: 1000 (max bonus)
     private static final int[] CHAIN_BONUS_SCORES = { 10, 20, 50, 100 };
+    private static final int FRAGMENT_PIECE_MASK = 0x0F;
+    private static final int FRAGMENT_FRAME_SHIFT = 4;
+    private static final int FRAGMENT_FRAME_MASK = 0x0F;
 
     // Global chain bonus counter shared across all smashable objects
     // ROM: Chain_Bonus_counter at $FFFFF7D0
@@ -291,6 +294,8 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
             int velIndex = (i % 2) * 2;  // 0 for even pieces, 2 for odd pieces
             int velX = velocities[velIndex];
             int velY = velocities[velIndex + 1];
+            int fragmentFrameIndex = frameIndex;
+            int fragmentPieceIndex = i;
 
             // Fragment position is object position + piece offset
             // In ROM, fragments are created at object position and inherit the piece offset
@@ -298,7 +303,7 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
             spawnFreeChild(() -> new SmashableGroundFragmentInstance(
                     spawn.x(),  // Object center X
                     spawn.y(),  // Object center Y
-                    velX, velY, piece, renderer));
+                    velX, velY, piece, renderer, fragmentFrameIndex, fragmentPieceIndex));
         }
     }
 
@@ -404,7 +409,8 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
      * Fragment object that flies apart when the smashable ground breaks.
      * These are simple falling objects with initial velocity that despawn when off-screen.
      */
-    public static class SmashableGroundFragmentInstance extends AbstractObjectInstance {
+    public static class SmashableGroundFragmentInstance extends AbstractObjectInstance
+            implements RewindRecreatable {
 
         private static final int GRAVITY = 0x18;  // From disassembly: addi.w #$18,y_vel(a0)
 
@@ -414,22 +420,93 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         private int subY;  // 8.8 fixed point
         private int velX;  // 8.8 fixed point
         private int velY;  // 8.8 fixed point
+        private int frameIndex;
+        private int pieceIndex;
         private final SpriteMappingPiece piece;
         private final PatternSpriteRenderer renderer;
         private final List<SpriteMappingPiece> pieceList;
 
         public SmashableGroundFragmentInstance(int x, int y, int velX, int velY,
                                                SpriteMappingPiece piece, PatternSpriteRenderer renderer) {
-            super(new ObjectSpawn(x, y, 0x2F, 0, 0, false, 0), "SmashFragment");
-            this.currentX = x;
-            this.currentY = y;
-            this.subX = x << 8;
-            this.subY = y << 8;
+            this(x, y, velX, velY, piece, renderer, 0, 0);
+        }
+
+        public SmashableGroundFragmentInstance(int x, int y, int velX, int velY,
+                                               SpriteMappingPiece piece, PatternSpriteRenderer renderer,
+                                               int frameIndex, int pieceIndex) {
+            this(fragmentSpawn(x, y, frameIndex, pieceIndex), velX, velY, piece, renderer,
+                    frameIndex, pieceIndex);
+        }
+
+        public SmashableGroundFragmentInstance(ObjectSpawn spawn) {
+            this(spawn, null);
+        }
+
+        private SmashableGroundFragmentInstance(ObjectSpawn spawn, ObjectRenderManager renderManager) {
+            this(spawn, 0, 0, fragmentPiece(renderManager, decodeFrameIndex(spawn), decodePieceIndex(spawn)),
+                    fragmentRenderer(renderManager), decodeFrameIndex(spawn), decodePieceIndex(spawn));
+        }
+
+        private SmashableGroundFragmentInstance(ObjectSpawn spawn, int velX, int velY,
+                                                SpriteMappingPiece piece, PatternSpriteRenderer renderer,
+                                                int frameIndex, int pieceIndex) {
+            super(spawn, "SmashFragment");
+            this.currentX = spawn.x();
+            this.currentY = spawn.y();
+            this.subX = spawn.x() << 8;
+            this.subY = spawn.y() << 8;
             this.velX = velX;
             this.velY = velY;
+            this.frameIndex = frameIndex;
+            this.pieceIndex = pieceIndex;
             this.piece = piece;
             this.renderer = renderer;
             this.pieceList = piece != null ? List.of(piece) : List.of();
+        }
+
+        @Override
+        public SmashableGroundFragmentInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectRenderManager renderManager = ctx.objectServices() != null
+                    ? ctx.objectServices().renderManager()
+                    : null;
+            return new SmashableGroundFragmentInstance(ctx.spawn(), renderManager);
+        }
+
+        private static ObjectSpawn fragmentSpawn(int x, int y, int frameIndex, int pieceIndex) {
+            int subtype = (pieceIndex & FRAGMENT_PIECE_MASK)
+                    | ((frameIndex & FRAGMENT_FRAME_MASK) << FRAGMENT_FRAME_SHIFT);
+            return new ObjectSpawn(x, y, 0x2F, subtype, 0, false, 0);
+        }
+
+        private static int decodePieceIndex(ObjectSpawn spawn) {
+            return spawn.subtype() & FRAGMENT_PIECE_MASK;
+        }
+
+        private static int decodeFrameIndex(ObjectSpawn spawn) {
+            return (spawn.subtype() >> FRAGMENT_FRAME_SHIFT) & FRAGMENT_FRAME_MASK;
+        }
+
+        private static PatternSpriteRenderer fragmentRenderer(ObjectRenderManager renderManager) {
+            return renderManager != null
+                    ? renderManager.getRenderer(Sonic2ObjectArtKeys.SMASHABLE_GROUND)
+                    : null;
+        }
+
+        private static SpriteMappingPiece fragmentPiece(ObjectRenderManager renderManager, int frameIndex,
+                                                        int pieceIndex) {
+            if (renderManager == null) {
+                return null;
+            }
+            ObjectSpriteSheet sheet = renderManager.getSheet(Sonic2ObjectArtKeys.SMASHABLE_GROUND);
+            if (sheet == null || frameIndex < 0 || frameIndex >= sheet.getFrameCount()) {
+                return null;
+            }
+            SpriteMappingFrame frame = sheet.getFrame(frameIndex);
+            if (frame == null || frame.pieces() == null || pieceIndex < 0
+                    || pieceIndex >= frame.pieces().size()) {
+                return null;
+            }
+            return frame.pieces().get(pieceIndex);
         }
 
         @Override

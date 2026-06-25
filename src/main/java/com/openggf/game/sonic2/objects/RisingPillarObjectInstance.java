@@ -63,6 +63,9 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
     private static final int RISE_DELAY = 3;
     private static final int MAX_EXTENSION_FRAME = 6;
     private static final int GRAVITY = 0x18;
+    private static final int DEBRIS_PIECE_MASK = 0x0F;
+    private static final int DEBRIS_FRAME_SHIFT = 4;
+    private static final int DEBRIS_FRAME_MASK = 0x0F;
 
     // Debris fragment velocities from word_25BBE and delays from byte_25BB0
     // Format: x velocity, y velocity, delay
@@ -315,8 +318,9 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
                 // ROM loc_25C1C calls AllocateObjectAfterCurrent for each
                 // debris sibling (docs/s2disasm/s2.asm:51936-51938), so the
                 // spawned pieces must occupy slots after the pillar slot.
+                int fragmentIndex = i;
                 spawnChild(() -> new RisingPillarDebrisInstance(
-                        x, y, vx, vy, piece, delay));
+                        x, y, vx, vy, piece, delay, debrisFrame, fragmentIndex));
             }
         }
 
@@ -468,7 +472,8 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
      * Inner class for debris fragments (pieces 1-13).
      * Piece 0 is the original pillar object transformed into debris.
      */
-    public static class RisingPillarDebrisInstance extends AbstractObjectInstance {
+    public static class RisingPillarDebrisInstance extends AbstractObjectInstance
+            implements RewindRecreatable {
 
         private static final int GRAVITY = 0x18;
 
@@ -479,18 +484,71 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
         private int velX;
         private int velY;
         private int delay;
+        private int mappingFrame;
+        private int pieceIndex;
         private final SpriteMappingPiece piece;
 
         public RisingPillarDebrisInstance(int x, int y, int velX, int velY, SpriteMappingPiece piece, int delay) {
-            super(new ObjectSpawn(x, y, 0x2B, 0, 0, false, 0), "PillarDebris");
-            this.currentX = x;
-            this.currentY = y;
-            this.subX = x << 8;
-            this.subY = y << 8;
+            this(x, y, velX, velY, piece, delay, 0, 0);
+        }
+
+        public RisingPillarDebrisInstance(int x, int y, int velX, int velY, SpriteMappingPiece piece, int delay,
+                                          int mappingFrame, int pieceIndex) {
+            this(debrisSpawn(x, y, mappingFrame, pieceIndex), velX, velY, piece, delay,
+                    mappingFrame, pieceIndex);
+        }
+
+        public RisingPillarDebrisInstance(ObjectSpawn spawn) {
+            this(spawn, 0, 0, debrisPiece(decodeMappingFrame(spawn), decodePieceIndex(spawn)), 0,
+                    decodeMappingFrame(spawn), decodePieceIndex(spawn));
+        }
+
+        private RisingPillarDebrisInstance(ObjectSpawn spawn, int velX, int velY, SpriteMappingPiece piece,
+                                           int delay, int mappingFrame, int pieceIndex) {
+            super(spawn, "PillarDebris");
+            this.currentX = spawn.x();
+            this.currentY = spawn.y();
+            this.subX = spawn.x() << 8;
+            this.subY = spawn.y() << 8;
             this.velX = velX;
             this.velY = velY;
             this.piece = piece;
             this.delay = delay;
+            this.mappingFrame = mappingFrame;
+            this.pieceIndex = pieceIndex;
+        }
+
+        @Override
+        public RisingPillarDebrisInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new RisingPillarDebrisInstance(ctx.spawn());
+        }
+
+        private static ObjectSpawn debrisSpawn(int x, int y, int mappingFrame, int pieceIndex) {
+            int subtype = (pieceIndex & DEBRIS_PIECE_MASK)
+                    | ((mappingFrame & DEBRIS_FRAME_MASK) << DEBRIS_FRAME_SHIFT);
+            return new ObjectSpawn(x, y, 0x2B, subtype, 0, false, 0);
+        }
+
+        private static int decodePieceIndex(ObjectSpawn spawn) {
+            return spawn.subtype() & DEBRIS_PIECE_MASK;
+        }
+
+        private static int decodeMappingFrame(ObjectSpawn spawn) {
+            return (spawn.subtype() >> DEBRIS_FRAME_SHIFT) & DEBRIS_FRAME_MASK;
+        }
+
+        private static SpriteMappingPiece debrisPiece(int mappingFrame, int pieceIndex) {
+            List<SpriteMappingFrame> mappings = MAPPINGS.get(
+                    Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj2B");
+            if (mappingFrame < 0 || mappingFrame >= mappings.size()) {
+                return null;
+            }
+            SpriteMappingFrame frame = mappings.get(mappingFrame);
+            if (frame == null || frame.pieces().isEmpty()
+                    || pieceIndex < 0 || pieceIndex >= frame.pieces().size()) {
+                return null;
+            }
+            return frame.pieces().get(pieceIndex);
         }
 
         @Override
