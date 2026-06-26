@@ -63,9 +63,18 @@ public final class TraceEventFormatter {
                 }
                 // obj_frame (v3.5+) is the object's tilt/anim mapping frame; only
                 // render when the trace carries it (empty on older recordings).
-                yield (near.objFrame() == null || near.objFrame().isEmpty())
-                        ? base
-                        : base + " frm=" + stripHexPrefix(near.objFrame());
+                if (near.objFrame() != null && !near.objFrame().isEmpty()) {
+                    base = base + " frm=" + stripHexPrefix(near.objFrame());
+                }
+                // routine2 (ob2ndRout) and objoff_3c (32-bit generic timer / sub-pixel
+                // accumulator) are v3.8+; only render when the trace carries them.
+                if (near.routine2() != null && !near.routine2().isEmpty()) {
+                    base = base + " r2=" + stripHexPrefix(near.routine2());
+                }
+                if (near.objoff3c() != null && !near.objoff3c().isEmpty()) {
+                    base = base + " o3c=" + stripHexPrefix(near.objoff3c());
+                }
+                yield base;
             }
             case TraceEvent.ModeChange mode ->
                     String.format("%smode %s %d->%d",

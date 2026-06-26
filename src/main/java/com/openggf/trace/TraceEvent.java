@@ -22,8 +22,19 @@ public sealed interface TraceEvent {
     record ObjectRemoved(int frame, int slot, String objectType)
         implements TraceEvent {}
 
+    /**
+     * Per-frame snapshot of an object near the player, emitted by the S1 recorder
+     * for any active object within the proximity window. Diagnostic only: replay
+     * must never hydrate engine object state from these values.
+     *
+     * <p>{@code routine2} (ob2ndRout, object offset +0x25) and {@code objoff3c}
+     * (objoff_3C at +0x3C, the 32-bit generic timer / sub-pixel accumulator) are
+     * v3.8+ optional fields. Older traces omit them; the parser supplies {@code ""}
+     * so legacy traces parse unchanged.
+     */
     record ObjectNear(int frame, String character, int slot, String objectType, short x, short y,
-                      String routine, String status, String objFrame)
+                      String routine, String status, String objFrame,
+                      String routine2, String objoff3c)
         implements TraceEvent {}
 
     /**
@@ -624,7 +635,11 @@ public sealed interface TraceEvent {
                     node.has("routine") ? node.get("routine").asText() : "",
                     node.has("status") ? node.get("status").asText() : "",
                     // obj_frame is a v3.5+ optional field; older traces omit it.
-                    node.has("obj_frame") ? node.get("obj_frame").asText() : ""
+                    node.has("obj_frame") ? node.get("obj_frame").asText() : "",
+                    // routine2 (ob2ndRout) and objoff_3c are v3.8+ optional fields;
+                    // older traces omit them so default to "" (legacy-absent-safe).
+                    node.has("routine2") ? node.get("routine2").asText() : "",
+                    node.has("objoff_3c") ? node.get("objoff_3c").asText() : ""
                 );
                 case "s1_obj64_state" -> new S1Obj64State(
                     frame,
