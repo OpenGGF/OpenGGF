@@ -383,3 +383,16 @@ Audit method: gate a probe in `AbstractSprite.setCentreX/Y` on a system property
 **Cross-game note.** S2/S3K conveyors, fans, moving solids, and `MvSonicOnPtfm`/`SolidObject` side-pushes use the same `add.w`/`sub.w`/`move.w obX(a1)` pixel-word convention and likewise PRESERVE the rider's sub-pixel — any S2/S3K object-push OR self-move path using a sub-pixel-zeroing centre setter is the same bug. (S3K `x_pos` is 16.16 with the same `$8`/`$A` obX/x_sub layout.)
 
 **Originating commit.** `b5bc778d4` (S1 Conveyor Belt preserves rider sub-pixel X on push via `shiftX`; SBZ2 f2224 -> f2323). Companion: SBZ Teleporter capture uses `setCentreXPreserveSubpixel`/`setCentreYPreserveSubpixel`. Object-self-motion audit (no instances found in S1): this commit (catalogue update; no engine fix needed).
+
+## P16 — Trigger objects that throw the player off must clear Status_OnObj, SET Status_InAir, AND stop being solid — not just drop the riding link (extends P12)
+
+A capsule/switch/button the player rides and then triggers (Egg Prison switch, end-of-level capsule) does three things in ROM on the trigger frame; the engine must mirror all three:
+1. `bclr #3,(v_player+obStatus)` — clear `Status_OnObj` (engine `setOnObject(false)`).
+2. `bset #1,(v_player+obStatus)` — SET `Status_InAir`, i.e. throw the player AIRBORNE (engine `setAir(true)`). This is the part P12 (collapse-release) didn't need but trigger-switches do — the player is launched/falls, not re-seated on terrain.
+3. Advance `obRoutine` past the only routine that calls `SolidObject` (e.g. `Pri_Switch` routine 4 → `Pri_Explosion` `$A`) so the object **stops being solid** (engine `isSolidFor()` returns `false` once triggered). Otherwise the engine re-seats the just-released player onto the still-solid depressed switch every frame (`air=0`, `y_speed=0`) while ROM is airborne.
+
+Doing only (1) means the player is re-grabbed next frame by the still-solid object. ROM ref `3E Prison Capsule.asm:94,101-102`. Originating commit `5511805d0` (Egg Prison switch → GHZ3 GREEN). Same `bclr`-release family as P12.
+
+## P17 — Horizontally-moving solid objects do NOT drag a standing rider (ROM passes POST-move obX to MvSonicOnPtfm → zero carry delta)
+
+A solid object whose caller runs its `*_Move` (updating `obX`) BEFORE `move.w obX(a0),d4` passes the *post-move* `obX` as the carry reference, so `MvSonicOnPtfm`'s `sub.w obX(a0),d2` computes a **zero** horizontal delta — the standing rider is NOT carried sideways (he stays put and walks/falls off the edge as the object slides out from under him). Universal to such objects (every Spikes caller passes post-move obX: `36 Spikes.asm:52,96`; `sub MvSonicOnPtfm.asm:38-39`), NOT a zone carve-out. The engine's generic continued-ride carry defaults to dragging the rider by the object X-delta — override `carriesRiderOnHorizontalMove()` to `false` for horizontally-moving solids. Symptom: a stationary player (no input, zero velocity) dragged +N px/frame on a horizontally-moving object, then misses the ROM airborne/fall transition. Originating commit `37e8a19f2` (moving Spikes Obj0x36 → MZ1 f4230 -> f6222). Contrast: VERTICALLY-moving platforms DO carry the rider's Y (normal `MvSonicOnPtfm` Y re-seat) — this is specifically the HORIZONTAL drag.
