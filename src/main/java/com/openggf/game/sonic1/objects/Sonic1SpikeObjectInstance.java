@@ -212,6 +212,28 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        // ROM Spikes do NOT drag a standing rider horizontally. The Spikes
+        // standing branch reaches MvSonicOnPtfm via the shared SolidObject
+        // routine (sub SolidObject.asm:46-55, .stand), which carries the rider
+        // by the X-delta between d4 (the carry-reference X) and the object's
+        // current obX. The Spikes caller passes the object's *post-move* obX as
+        // the carry reference:
+        //   bsr.w Spikes_Move        ; updates obX to the new position FIRST
+        //   ...
+        //   move.w obX(a0),d4        ; d4 = already-moved obX (36 Spikes.asm:52,96)
+        // so MvSonicOnPtfm's "sub.w obX(a0),d2" computes a ZERO delta
+        // (sub MvSonicOnPtfm.asm:38-39) and the standing rider is not carried.
+        // A horizontally-moving spike (subtype $x2) therefore slides out from
+        // under a standing player, who stays put and walks off the edge — the
+        // MZ1 trace at f4230 (player x stays 0x0B35 while the spike moves
+        // 0x0B34->0x0B3C, then the player drops off and falls at f4234).
+        // This matches ALL spikes (every Spikes caller passes the post-move
+        // obX), so it is an object-wide property, not a zone carve-out.
+        return false;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         if (isSideways()) {
             // ROM: d2 = 4 (frame 5) or $14 (frame 1). d3 = d2 + 1 (addq.w #1,d3).
