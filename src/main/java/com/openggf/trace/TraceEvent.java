@@ -146,6 +146,21 @@ public sealed interface TraceEvent {
         implements TraceEvent {}
 
     /**
+     * Per-frame snapshot of the S1 global oscillation state ({@code v_oscillate}):
+     * the 2-byte direction bitfield at $FFFE5E followed by the $40-byte oscillating
+     * -values array at $FFFE60 ($42 bytes total). Emitted by the v3.10+ S1 recorder
+     * for the osc-phase cluster (e.g. SLZ2 f3353 circling-platform 1px). Per-object
+     * oscillators index this array (oscillator N -&gt; offset N*4 into the values
+     * array, i.e. byte $2 + N*4 from the start of this record). <strong>Diagnostic
+     * only:</strong> tests must NOT hydrate the engine's oscillation state from
+     * these bytes -- they let the comparator read the exact oscillator byte per
+     * frame to disambiguate an osc-phase-seed offset from a ride-exit seat. Older
+     * traces (recorder &lt; 3.10) never emit this event.
+     */
+    record VOscillate(int frame, byte[] bytes)
+        implements TraceEvent {}
+
+    /**
      * Per-frame snapshot of the S1 camera vertical-boundary / look-shift state.
      * Emitted by the v3.7+ S1 recorder for the MZ1 f2101 camera-boundary
      * frontier (engine {@code v_limitbtm2} ~6px too high). Fields are the raw
@@ -756,6 +771,10 @@ public sealed interface TraceEvent {
                     parseHexByteString(node.has("osc_table") ? node.get("osc_table").asText() : "")
                 );
                 case "v_objstate" -> new VObjState(
+                    frame,
+                    parseHexByteString(node.has("bytes") ? node.get("bytes").asText() : "")
+                );
+                case "v_oscillate" -> new VOscillate(
                     frame,
                     parseHexByteString(node.has("bytes") ? node.get("bytes").asText() : "")
                 );

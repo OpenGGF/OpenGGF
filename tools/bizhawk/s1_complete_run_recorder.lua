@@ -78,6 +78,18 @@
 -- objoff_38 WORD, distinct from the player-only OFF_STICK_CONVEX byte. metadata
 -- lua_script_version reports "3.9"; aux_schema_extras gains
 -- object_near_objoff_34_36_38.
+-- v3.10 changes: ADD one per-frame diagnostic AUX event (CSV schema UNCHANGED;
+-- comparison-only context, never engine write-back). v3.9 traces stay valid (the
+-- new aux_schema_extras key gates the parser). "v_oscillate": the FULL global
+-- oscillation state -- the v_oscillate direction-bitfield word (FFFE5E) plus the
+-- $40-byte oscillating-values array immediately after it (FFFE60), as a compact
+-- hex string ($42 bytes total). Unblocks the osc-phase cluster (SLZ2 f3353
+-- circling-platform 1px): the comparator reads the exact oscillator-8 byte
+-- (v_oscillate+$22 = FFFE80) per frame to disambiguate an osc-phase-seed offset
+-- (fixable) from the ride-exit seat (shared-riding wall, like SLZ1). Addresses
+-- verified from docs/s1disasm/sonic.lst (43F8 FE5E / 1038 FE60) +
+-- _Variables.asm:400-403. metadata lua_script_version reports "3.10";
+-- aux_schema_extras gains v_oscillate_per_frame.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -181,6 +193,19 @@ local ADDR_LIMITBTM1       = 0xF726   -- word: v_limitbtm1 (primary bottom level
 local ADDR_LIMITBTM2       = 0xF72E   -- word: v_limitbtm2 (secondary/eased bottom boundary the camera clamps to)
 local ADDR_LOOKSHIFT       = 0xF73E   -- word: v_lookshift (up/down look screen shift; default $60)
 local ADDR_BGSCROLLVERT    = 0xF75C   -- byte: f_bgscrollvert (bottom-boundary-moving / vertical bg-scroll flag)
+
+-- Global oscillation state (v3.10 diagnostic, SLZ2 f3353 osc-phase cluster).
+-- v_oscillate (word, the direction bitfield) at FFFE5E, immediately followed by
+-- the $40-byte oscillating-values array (v_timingvariables) at FFFE60. Both
+-- confirmed from docs/s1disasm/sonic.lst operands: `lea (v_oscillate).w,a1`
+-- assembles to 43F8 FE5E (v_oscillate=FE5E) and `move.b (v_oscillate+2).w,d0`
+-- to 1038 FE60 (values array=FE60); docs/s1disasm/_Variables.asm:400-403
+-- (v_oscillate ds.w 1; then ds.b $40 "values which oscillate").
+-- The SLZ circling-platform reads oscillator index 8 -> byte at v_oscillate+$22
+-- (= FFFE80 = values-array offset $20). Capturing the whole word+array lets the
+-- comparator disambiguate osc-phase-seed vs ride-exit-seat. Diagnostic ONLY.
+local ADDR_OSCILLATE       = 0xFE5E   -- word: v_oscillate direction bitfield
+local OSCILLATE_SIZE       = 0x42     -- $2 (bitfield word) + $40 (values array)
 
 -- Object table (S1 SST: 128 slots of $40 bytes at $FFD000)
 local OBJ_TABLE_START      = 0xD000
@@ -394,12 +419,12 @@ local function write_metadata()
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.9",\n')
+    meta_file:write('  "lua_script_version": "3.10",\n')
     meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
     meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", '
         .. '"v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c", '
-        .. '"object_near_objoff_34_36_38"],\n')
+        .. '"object_near_objoff_34_36_38", "v_oscillate_per_frame"],\n')
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": "",\n')
     -- The complete-run recorder always plays the shared complete-run BK2. Emit
@@ -495,6 +520,22 @@ local function write_camera_boundary()
         mainmemory.read_u16_be(ADDR_LIMITBTM2),
         mainmemory.read_u16_be(ADDR_LOOKSHIFT),
         mainmemory.read_u8(ADDR_BGSCROLLVERT)))
+end
+
+-- v3.10: full global oscillation state (compact hex), every frame. Unblocks the
+-- osc-phase cluster (SLZ2 f3353 circling-platform 1px): the v_oscillate word
+-- (direction bitfield) + the $40-byte oscillating-values array. The comparator
+-- can read the exact oscillator-8 byte (v_oscillate+$22) per frame to decide
+-- whether the SLZ2 1px is an osc-phase-seed offset (fixable) or the ride-exit
+-- seat (shared-riding wall, like SLZ1). Diagnostic context ONLY (never write-back).
+local function write_v_oscillate()
+    local parts = {}
+    for i = 0, OSCILLATE_SIZE - 1 do
+        parts[#parts + 1] = string.format("%02X", mainmemory.read_u8(ADDR_OSCILLATE + i))
+    end
+    write_aux(string.format(
+        '{"frame":%d,"event":"v_oscillate","bytes":"%s"}',
+        trace_frame, table.concat(parts)))
 end
 
 -- Scan all object slots (1-127). Log appearances, disappearances, proximity,
@@ -904,6 +945,9 @@ local function on_frame_end()
     -- array (slot-cadence cluster) and the camera vertical-boundary state (MZ1).
     write_v_objstate()
     write_camera_boundary()
+    -- v3.10 per-frame diagnostic context (comparison-only): global oscillation
+    -- state (v_oscillate word + values array) for the osc-phase cluster (SLZ2).
+    write_v_oscillate()
 
     -- OPL cursor state: emit event on chunk transitions for ROM↔engine comparison.
     -- v_opl_screen changes only when OPL_Next processes a new chunk.

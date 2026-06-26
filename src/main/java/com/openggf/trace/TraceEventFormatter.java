@@ -299,6 +299,7 @@ public final class TraceEventFormatter {
                             state.solidDelta() & 0xFFFF);
             case TraceEvent.StateSnapshot snapshot -> summariseStateSnapshot(snapshot);
             case TraceEvent.VObjState vObjState -> summariseVObjState(vObjState);
+            case TraceEvent.VOscillate vOscillate -> summariseVOscillate(vOscillate);
             case TraceEvent.CameraBoundary cameraBoundary ->
                     String.format(
                         "cameraBoundary limitBtm1=%04X limitBtm2=%04X lookShift=%04X bgScrollVert=%02X",
@@ -337,6 +338,40 @@ public final class TraceEventFormatter {
                 sb.append(' ');
             }
             sb.append(String.format("%d=%02X", i, v));
+            first = false;
+        }
+        sb.append(']');
+        return sb.toString();
+    }
+
+    /**
+     * Compact context summary of the S1 {@code v_oscillate} global oscillation
+     * state. Shows the direction-bitfield word ([0..1]) and, for each of the 16
+     * oscillators, the value-word high byte (array offset N*4 = record byte
+     * 2+N*4) as {@code N=hh} pairs -- the per-oscillator phase the circling/
+     * swinging platforms read. The full $42 bytes remain on the
+     * {@link TraceEvent.VOscillate} record for programmatic comparison.
+     */
+    private static String summariseVOscillate(TraceEvent.VOscillate state) {
+        byte[] b = state.bytes();
+        if (b == null || b.length == 0) {
+            return "vOscillate (empty)";
+        }
+        StringBuilder sb = new StringBuilder("vOscillate bits=");
+        sb.append(b.length > 1
+                ? String.format("%02X%02X", b[0] & 0xFF, b[1] & 0xFF)
+                : String.format("%02X", b[0] & 0xFF));
+        sb.append(" osc=[");
+        boolean first = true;
+        for (int n = 0; n < 16; n++) {
+            int valHiIndex = 2 + n * 4;
+            if (valHiIndex >= b.length) {
+                break;
+            }
+            if (!first) {
+                sb.append(' ');
+            }
+            sb.append(String.format("%d=%02X", n, b[valHiIndex] & 0xFF));
             first = false;
         }
         sb.append(']');
