@@ -248,6 +248,28 @@ public class Sonic1CirclingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean carriesAirborneRiderAfterExitPlatform() {
+        // ROM Circ_Action (routine 4, docs/s1disasm/_incObj/5A SLZ Circling
+        // Platform.asm:38-45) calls ExitPlatform first -- which clears the rider's
+        // on-object bit when he passes the pre-move X edge (docs/s1disasm/_incObj/
+        // sub ExitPlatform.asm:24-29) -- then runs Circ_Types to move the platform,
+        // then UNCONDITIONALLY calls MvSonicOnPtfm2 (asm:45). MvSonicOnPtfm2 does
+        // not test the on-object bit, so on the exit frame it still pulls the
+        // rider's y_pos to platformY-9-obHeight using the platform's post-move
+        // position and carries the platform's X delta (docs/s1disasm/_incObj/sub
+        // MvSonicOnPtfm.asm:18-41). This is structurally identical to Obj18
+        // Plat_Action2 / Obj52 MBlock_StandOn / Obj59 Elev_Action, which all opt in.
+        //
+        // Without this, when the descending circling platform's edge slides past
+        // the rider on the exit frame, the engine drops the ride before the final
+        // seat, leaving the rider 1px high (SLZ2 f3353: platformY post-move 0x013C,
+        // ROM seats centre 0x013C-9-0x13 = 0x0120; the engine kept the pre-exit
+        // 0x011F). The carry is applied in
+        // ObjectSolidContactController.processInlineRidingObject's exit branch.
+        return true;
+    }
+
+    @Override
     public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
         // ROM Circ_Platform (routine 2) runs PlatformObject before Circ_Types
         // moves the platform (docs/s1disasm/_incObj/5A SLZ Circling Platform.asm:
