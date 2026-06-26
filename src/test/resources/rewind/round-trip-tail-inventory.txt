@@ -1,12 +1,14 @@
 # bucket|class
 # Snapshot from the headless ObjectManager round-trip sweep.
-# Summary: total=783 passed=642 no-codec=0 no-probe-ctor=33 parent-dependent=101 other-failure=7 count-mismatch=0 scalar-mismatch=0
+# Summary: total=783 passed=643 no-codec=0 no-probe-ctor=33 parent-dependent=104 other-failure=3 count-mismatch=0 scalar-mismatch=0
 #
 # Parent-dependent classes live in parent-dependent-graph-coverage-baseline.txt
 # because that file also records graph-test evidence or session-tail status.
 #
 # Suggested next batches:
-# - other-failure boss roots: create services-backed graph/session tests for SYZ, CPZ, EHZ, and WFZ boss roots.
+# - other-failure tail: classify or fix GumballSpringChild, ICZ segment, and MHZ walkoff prep.
+# - constructor-spawning boss roots: SYZ, CPZ, and EHZ are graph-covered but need
+#   parent-before-child dynamic-root ordering before they can pass the isolated sweep.
 # - no-probe boss children: prioritize Death Egg Robot and AIZ end-boss child families, because each group has multiple related entries.
 no-probe-ctor|com.openggf.game.sonic1.objects.bosses.FZPlasmaBall
 no-probe-ctor|com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall
@@ -41,10 +43,6 @@ no-probe-ctor|com.openggf.game.sonic3k.objects.LightningShieldObjectInstance
 no-probe-ctor|com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardInstance
 no-probe-ctor|com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter
 no-probe-ctor|com.openggf.level.objects.ShieldObjectInstance
-other-failure|com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance
-other-failure|com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance
-other-failure|com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance
-other-failure|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance
 other-failure|com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild
 other-failure|com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment
 other-failure|com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild

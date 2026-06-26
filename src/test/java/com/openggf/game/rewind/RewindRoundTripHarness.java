@@ -89,7 +89,10 @@ public final class RewindRoundTripHarness {
             new ObjectSpawn(0x100, 0x100, 1, 0, 0, false, 0);
 
     private static final Set<String> GRAPH_ONLY_ISOLATED_PROBE_CLASSES = Set.of(
-            "com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance");
+            "com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance",
+            "com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance",
+            "com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance",
+            "com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance");
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();

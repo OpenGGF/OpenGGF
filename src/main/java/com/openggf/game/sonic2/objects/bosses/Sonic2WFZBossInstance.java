@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -61,7 +62,8 @@ import java.util.List;
  * 7. WFZRobotnik - fixed position, watches fight
  * 8. RobotnikPlatform - follows Robotnik Y+$26
  */
-public class Sonic2WFZBossInstance extends AbstractBossInstance implements RewindRecreatable {
+public class Sonic2WFZBossInstance extends AbstractBossInstance
+        implements SpawnConstructionContextRewindRecreatable {
 
     // State machine routine constants (16 sub-routines, $00-$1E)
     private static final int ROUTINE_INIT = 0x00;
@@ -174,11 +176,6 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance implements Rewin
 
     public Sonic2WFZBossInstance(ObjectSpawn spawn) {
         super(spawn, "WFZ Boss");
-    }
-
-    @Override
-    public Sonic2WFZBossInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic2WFZBossInstance(ctx.spawn());
     }
 
     @Override

@@ -33,6 +33,9 @@ covered|com.openggf.game.sonic2.objects.bosses.EHZBossPropeller|TestS2EhzBossGra
 covered|com.openggf.game.sonic2.objects.bosses.EHZBossSpike|TestS2EhzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.EHZBossVehicleTop|TestS2EhzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.EHZBossWheel|TestS2EhzBossGraphRewind
+covered|com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance|TestS1SyzBossBlockGraphRewind
+covered|com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance|TestS2CpzBossGraphRewind
+covered|com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance|TestS2EhzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZFloatingPlatform|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaser|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserShooter|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
