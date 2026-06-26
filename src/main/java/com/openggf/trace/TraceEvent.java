@@ -29,12 +29,15 @@ public sealed interface TraceEvent {
      *
      * <p>{@code routine2} (ob2ndRout, object offset +0x25) and {@code objoff3c}
      * (objoff_3C at +0x3C, the 32-bit generic timer / sub-pixel accumulator) are
-     * v3.8+ optional fields. Older traces omit them; the parser supplies {@code ""}
+     * v3.8+ optional fields. {@code objoff34}/{@code objoff36}/{@code objoff38}
+     * (per-object counter/timer/sub-state words at +0x34/+0x36/+0x38) are v3.9+
+     * optional fields. Older traces omit them; the parser supplies {@code ""}
      * so legacy traces parse unchanged.
      */
     record ObjectNear(int frame, String character, int slot, String objectType, short x, short y,
                       String routine, String status, String objFrame,
-                      String routine2, String objoff3c)
+                      String routine2, String objoff3c,
+                      String objoff34, String objoff36, String objoff38)
         implements TraceEvent {}
 
     /**
@@ -639,7 +642,12 @@ public sealed interface TraceEvent {
                     // routine2 (ob2ndRout) and objoff_3c are v3.8+ optional fields;
                     // older traces omit them so default to "" (legacy-absent-safe).
                     node.has("routine2") ? node.get("routine2").asText() : "",
-                    node.has("objoff_3c") ? node.get("objoff_3c").asText() : ""
+                    node.has("objoff_3c") ? node.get("objoff_3c").asText() : "",
+                    // objoff_34/36/38 are v3.9+ optional fields; older traces omit
+                    // them so default to "" (legacy-absent-safe).
+                    node.has("objoff_34") ? node.get("objoff_34").asText() : "",
+                    node.has("objoff_36") ? node.get("objoff_36").asText() : "",
+                    node.has("objoff_38") ? node.get("objoff_38").asText() : ""
                 );
                 case "s1_obj64_state" -> new S1Obj64State(
                     frame,

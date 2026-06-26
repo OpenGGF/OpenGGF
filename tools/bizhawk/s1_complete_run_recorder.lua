@@ -64,6 +64,20 @@
 -- only cost bytes for objects already in the player window. metadata
 -- lua_script_version reports "3.8"; aux_schema_extras gains
 -- object_near_routine2_objoff3c.
+-- v3.9 changes: ADD three per-object WORD fields to the EXISTING object_near aux
+-- event (CSV schema UNCHANGED; comparison-only context, never engine write-back).
+-- v3.8 traces stay valid (the new aux_schema_extras key gates the parser; the
+-- parser treats all three as legacy-absent-safe). "objoff_34"/"objoff_36"/
+-- "objoff_38" are the per-object counter/timer/sub-state words at offsets +0x34/
+-- +0x36/+0x38 (read_u16_be). They pin object-COUNTER-phase frontiers where the
+-- seat/spawn reaches a counter value one frame before ROM -- the GHZ3 1-frame-
+-- counter-defer shape, now visible per-object: SLZ Staircase Obj5B ride counter
+-- (SLZ1 f2872), geyser-maker timer (MZ2 f2819), platform oscillation phase, etc.
+-- All three ride the existing object_near proximity gate, so they only cost bytes
+-- for objects already in the player window. NB +0x38 here is the object-frame
+-- objoff_38 WORD, distinct from the player-only OFF_STICK_CONVEX byte. metadata
+-- lua_script_version reports "3.9"; aux_schema_extras gains
+-- object_near_objoff_34_36_38.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -119,6 +133,13 @@ local OFF_ROUTINE_2ND      = 0x25   -- byte: ob2ndRout — object secondary rout
 local OFF_OBJOFF_3C        = 0x3C   -- LONG (32-bit): objoff_3C — generic timer / 32-bit
                                     --       sub-pixel accumulator (e.g. BGHZ_BossGenericTimer,
                                     --       FZ cylinder Obj84 rise accumulator)
+local OFF_OBJOFF_34        = 0x34   -- WORD: objoff_34 — per-object counter/sub-state
+                                    --       (e.g. SLZ Staircase Obj5B ride counter)
+local OFF_OBJOFF_36        = 0x36   -- WORD: objoff_36 — per-object timer/phase
+                                    --       (e.g. platform oscillation phase, maker timer)
+local OFF_OBJOFF_38        = 0x38   -- WORD: objoff_38 — per-object sub-state/timer
+                                    --       (NB object-frame +0x38 word; distinct from the
+                                    --       player-only OFF_STICK_CONVEX byte below)
 local OFF_SUBTYPE          = 0x28   -- byte
 local OFF_RENDER_FLAGS     = 0x01   -- byte: obRender
 local OFF_ANGLE            = 0x26   -- byte: terrain angle
@@ -373,11 +394,12 @@ local function write_metadata()
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.8",\n')
+    meta_file:write('  "lua_script_version": "3.9",\n')
     meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
     meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", '
-        .. '"v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c"],\n')
+        .. '"v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c", '
+        .. '"object_near_objoff_34_36_38"],\n')
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": "",\n')
     -- The complete-run recorder always plays the shared complete-run BK2. Emit
@@ -531,12 +553,22 @@ local function scan_objects(player_x, player_y)
                 -- as an unsigned 32-bit big-endian word; consumers reinterpret the
                 -- high word as a signed 16-bit pixel offset where appropriate.
                 local obj_off3c = mainmemory.read_u32_be(addr + OFF_OBJOFF_3C)
+                -- objoff_34/36/38 (offsets +0x34/+0x36/+0x38): per-object
+                -- counter/timer/sub-state WORDs. Pin object-counter-phase frontiers
+                -- where the seat/spawn reaches a counter value one frame before ROM
+                -- (e.g. SLZ Staircase Obj5B ride counter at SLZ1 f2872, geyser-maker
+                -- timer at MZ2 f2819) — the GHZ3 1-frame-counter-defer shape, now
+                -- visible per-object.
+                local obj_off34 = mainmemory.read_u16_be(addr + OFF_OBJOFF_34)
+                local obj_off36 = mainmemory.read_u16_be(addr + OFF_OBJOFF_36)
+                local obj_off38 = mainmemory.read_u16_be(addr + OFF_OBJOFF_38)
                 write_aux(string.format(
                     '{"frame":%d,"vfc":%d,"event":"object_near","slot":%d,"type":"0x%02X",'
                     .. '"x":"0x%04X","y":"0x%04X","routine":"0x%02X","status":"0x%02X","obj_frame":"0x%02X",'
-                    .. '"routine2":"0x%02X","objoff_3c":"0x%08X"}',
+                    .. '"routine2":"0x%02X","objoff_3c":"0x%08X",'
+                    .. '"objoff_34":"0x%04X","objoff_36":"0x%04X","objoff_38":"0x%04X"}',
                     trace_frame, vfc, slot, obj_id, obj_x, obj_y, obj_routine, obj_status, obj_frame,
-                    obj_routine2, obj_off3c))
+                    obj_routine2, obj_off3c, obj_off34, obj_off36, obj_off38))
             end
         end
 

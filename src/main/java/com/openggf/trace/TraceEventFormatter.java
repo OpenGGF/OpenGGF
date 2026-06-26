@@ -74,6 +74,17 @@ public final class TraceEventFormatter {
                 if (near.objoff3c() != null && !near.objoff3c().isEmpty()) {
                     base = base + " o3c=" + stripHexPrefix(near.objoff3c());
                 }
+                // objoff_34/36/38 (per-object counter/timer/sub-state words) are
+                // v3.9+; only render when the trace carries them.
+                if (near.objoff34() != null && !near.objoff34().isEmpty()) {
+                    base = base + " o34=" + stripHexPrefix(near.objoff34());
+                }
+                if (near.objoff36() != null && !near.objoff36().isEmpty()) {
+                    base = base + " o36=" + stripHexPrefix(near.objoff36());
+                }
+                if (near.objoff38() != null && !near.objoff38().isEmpty()) {
+                    base = base + " o38=" + stripHexPrefix(near.objoff38());
+                }
                 yield base;
             }
             case TraceEvent.ModeChange mode ->
