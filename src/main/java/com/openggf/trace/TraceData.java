@@ -676,6 +676,24 @@ public class TraceData {
     }
 
     /**
+     * Returns the focused S3K AIZ1-&gt;AIZ2 fake-fire transition diagnostic for
+     * the requested frame, or {@code null} when absent (legacy traces).
+     *
+     * <p><strong>Diagnostic only.</strong> This exposes the ROM
+     * {@code Camera_Y_pos_BG_copy} fire ramp + BG event state for reports;
+     * replay code must not hydrate state from it.
+     */
+    public TraceEvent.AizFireTransition aizFireTransitionForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.AizFireTransition state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Returns the focused S3K AIZ fire-handoff terrain diagnostic for the
      * requested frame, or {@code null} when absent.
      *

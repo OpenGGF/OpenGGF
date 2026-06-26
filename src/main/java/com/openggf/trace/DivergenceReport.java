@@ -654,6 +654,11 @@ public class DivergenceReport {
         if (aizHandoffTerrain != null) {
             diagnostics.add(aizHandoffTerrain);
         }
+        TraceEvent.AizFireTransition aizFireTransition =
+                traceData.aizFireTransitionForFrame(frame);
+        if (aizFireTransition != null) {
+            diagnostics.add(aizFireTransition);
+        }
         // v3.7 S1 diagnostic context: object respawn-state bit array (slot-cadence
         // cluster) and camera vertical-boundary state (MZ1). Comparison-only.
         TraceEvent.VObjState vObjState = traceData.vObjStateForFrame(frame);

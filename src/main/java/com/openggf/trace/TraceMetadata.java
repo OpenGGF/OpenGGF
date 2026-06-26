@@ -393,6 +393,18 @@ public record TraceMetadata(
     }
 
     /**
+     * Whether the trace emits per-frame {@code aiz_fire_transition} events, the
+     * focused S3K AIZ1-&gt;AIZ2 fake-fire {@code Camera_Y_pos_BG_copy} ramp
+     * diagnostic used to align the engine's continuous fire-transition ramp and
+     * the {@code AIZ2BGE_WaitFire} {@code Camera_max_X_pos} release. Returns
+     * {@code false} for legacy traces recorded before the v6.27-s3k recorder.
+     */
+    public boolean hasPerFrameAizFireTransition() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("aiz_fire_transition_per_frame");
+    }
+
+    /**
      * Whether the trace emits per-frame {@code aiz_handoff_terrain_state}
      * events, the focused S3K AIZ fire-handoff terrain diagnostic for F5435.
      */

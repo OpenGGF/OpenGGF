@@ -214,6 +214,21 @@ public final class TraceEventFormatter {
                             state.postMoveY() & 0xFFFF,
                             state.postMoveXVel() & 0xFFFF,
                             state.postMoveYVel() & 0xFFFF);
+            case TraceEvent.AizFireTransition state ->
+                    String.format("aizFire bgCopy=%08X bgInt=%04X bgRound=%04X speed=%04X "
+                                    + "bgTarget=%04X rtnBg=%04X fg5=%04X cam=(%04X,min%04X,max%04X) px=%04X act=%02X",
+                            state.cameraYBgCopy(),
+                            (state.cameraYBgCopy() >>> 16) & 0xFFFF,
+                            state.cameraYBgRounded() & 0xFFFF,
+                            state.eventsBg02Word() & 0xFFFF,
+                            state.eventsBg00Word() & 0xFFFF,
+                            state.eventsRoutineBg() & 0xFFFF,
+                            state.eventsFg5() & 0xFFFF,
+                            state.cameraX() & 0xFFFF,
+                            state.cameraMinX() & 0xFFFF,
+                            state.cameraMaxX() & 0xFFFF,
+                            state.playerX() & 0xFFFF,
+                            state.act() & 0xFF);
             case TraceEvent.AizTransitionFloorSolidState state ->
                     String.format("aizFloor s%d @%04X,%04X st=%02X stand=%s/%s p1=%s y=%04X yr=%02X st=%02X obj=%02X d=%04X/%04X/%04X p2=%s y=%04X yr=%02X st=%02X obj=%02X d=%04X/%04X/%04X",
                             state.slot(),

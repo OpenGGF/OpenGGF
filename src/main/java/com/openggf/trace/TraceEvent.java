@@ -522,6 +522,36 @@ public sealed interface TraceEvent {
         implements TraceEvent {}
 
     /**
+     * Per-frame AIZ1-&gt;AIZ2 fake-fire transition diagnostic. The ROM drives a
+     * single continuous {@code Camera_Y_pos_BG_copy} (16.16) ramp via
+     * {@code AIZ1_FireRise} (docs/skdisasm/s3.asm:70383: {@code Events_bg+$02}
+     * accumulates {@code +$280} capped at {@code $A000}, then
+     * {@code Camera_Y_pos_BG_copy += speed&lt;&lt;4}), initialized at
+     * {@code $200000} with lerp target {@code Events_bg+$00=$68} in
+     * {@code AIZ1_AIZ2_Transition} (docs/skdisasm/sonic3k.asm:104638). The ramp
+     * runs uninterrupted through the seamless reload ({@code AIZ1BGE_Finish}
+     * Kos wait) and releases the post-reload {@code Camera_max_X_pos=$6000} when
+     * it crosses {@code $310} in {@code AIZ2BGE_WaitFire}
+     * (docs/skdisasm/sonic3k.asm:105084-105096). {@code eventsFg5} marks the
+     * fire-transition start trigger; {@code eventsRoutineBg} is the BG event
+     * phase. Diagnostic only: never hydrated into engine state.
+     */
+    record AizFireTransition(
+            int frame,
+            int cameraYBgCopy,
+            int cameraYBgRounded,
+            int eventsBg00Word,
+            int eventsBg02Word,
+            int eventsRoutineBg,
+            int eventsFg5,
+            int cameraX,
+            int cameraMinX,
+            int cameraMaxX,
+            int playerX,
+            int act)
+        implements TraceEvent {}
+
+    /**
      * Per-frame AIZ transition-floor solid diagnostic around the F5415
      * Sonic/Tails split. The ROM spawns {@code Obj_AIZTransitionFloor} during
      * the AIZ1 fire-refresh sequence (docs/skdisasm/sonic3k.asm:104683-104690)
@@ -1103,6 +1133,20 @@ public sealed interface TraceEvent {
                     parseHexInt(node, "post_move_y"),
                     parseHexInt(node, "post_move_x_vel"),
                     parseHexInt(node, "post_move_y_vel")
+                );
+                case "aiz_fire_transition" -> new AizFireTransition(
+                    frame,
+                    parseHexInt(node, "camera_y_bg_copy"),
+                    parseHexInt(node, "camera_y_bg_rounded"),
+                    parseHexInt(node, "events_bg_00_word"),
+                    parseHexInt(node, "events_bg_02_word"),
+                    parseHexInt(node, "events_routine_bg"),
+                    parseHexInt(node, "events_fg_5"),
+                    parseHexInt(node, "camera_x"),
+                    parseHexInt(node, "camera_min_x"),
+                    parseHexInt(node, "camera_max_x"),
+                    parseHexInt(node, "player_x"),
+                    parseHexInt(node, "act")
                 );
                 case "aiz_transition_floor_solid" -> new AizTransitionFloorSolidState(
                     frame,
