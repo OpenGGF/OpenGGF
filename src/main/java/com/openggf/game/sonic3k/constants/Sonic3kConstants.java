@@ -194,6 +194,18 @@ public class Sonic3kConstants {
     // Map_LBZCupElevator (5 frames). LockOn data include; verified by ROM byte
     // search for offset-table prefix 00 0A 00 18 00 20 00 2E 00 42.
     public static final int MAP_LBZ_CUP_ELEVATOR_ADDR = 0x22619A;
+    // Map_LBZGateLaser (3 frames). LockOn S3 data; Obj_LBZGateLaser in sonic3k.asm
+    // references this S3-half table and no S&K-side duplicate exists.
+    public static final int MAP_LBZ_GATE_LASER_ADDR = 0x228394;
+    // Map_LBZSpinLauncher (1 frame). LockOn S3 data; Obj_LBZSpinLauncher in
+    // sonic3k.asm references this S3-half table and no S&K-side duplicate exists.
+    public static final int MAP_LBZ_SPIN_LAUNCHER_ADDR = 0x227BC2;
+    // Map_LBZLoweringGrapple (15 frames). LockOn S3 data; Obj_LBZLoweringGrapple
+    // in sonic3k.asm references this S3-half table and no S&K-side duplicate exists.
+    public static final int MAP_LBZ_LOWERING_GRAPPLE_ADDR = 0x227DBC;
+    // Map_LBZPipePlug (8 frames). LockOn S3 data; Obj_LBZPipePlug in
+    // sonic3k.asm references this S3-half table and no S&K-side duplicate exists.
+    public static final int MAP_LBZ_PIPE_PLUG_ADDR = 0x226854;
     public static final int MAP_FBZ_CORK_FLOOR_ADDR = 0x2A920;    // Map_FBZCorkFloor (2 frames, 2/4 pieces, in sonic3k.asm)
 
     // ===== Breakable Wall mappings (Obj_BreakableWall, ID 0x0D) =====

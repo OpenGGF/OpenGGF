@@ -93,6 +93,7 @@ public final class Sonic3kPlcArtRegistry {
      * @param builderName  name of hardcoded builder method on {@link Sonic3kObjectArt},
      *                     or null if mappings are ROM-parsed
      * @param frameFilter  if non-null, only include these frame indices from the mapping table
+     * @param mappingFrameCount explicit mapping frame count, or -1 to auto-detect
      */
     public record LevelArtEntry(
             String key,
@@ -101,18 +102,31 @@ public final class Sonic3kPlcArtRegistry {
             int palette,
             String builderName,
             int[] frameFilter,
-            S3kSpriteDataLoader.MappingFormat mappingFormat
+            S3kSpriteDataLoader.MappingFormat mappingFormat,
+            int mappingFrameCount
     ) {
         public LevelArtEntry(String key, int mappingAddr, int artTileBase, int palette,
                 String builderName) {
             this(key, mappingAddr, artTileBase, palette, builderName, null,
-                    S3kSpriteDataLoader.MappingFormat.STANDARD);
+                    S3kSpriteDataLoader.MappingFormat.STANDARD, -1);
         }
 
         public LevelArtEntry(String key, int mappingAddr, int artTileBase, int palette,
                 String builderName, int[] frameFilter) {
             this(key, mappingAddr, artTileBase, palette, builderName, frameFilter,
-                    S3kSpriteDataLoader.MappingFormat.STANDARD);
+                    S3kSpriteDataLoader.MappingFormat.STANDARD, -1);
+        }
+
+        public LevelArtEntry(String key, int mappingAddr, int artTileBase, int palette,
+                String builderName, int[] frameFilter, S3kSpriteDataLoader.MappingFormat mappingFormat) {
+            this(key, mappingAddr, artTileBase, palette, builderName, frameFilter,
+                    mappingFormat, -1);
+        }
+
+        public LevelArtEntry(String key, int mappingAddr, int artTileBase, int palette,
+                String builderName, int mappingFrameCount) {
+            this(key, mappingAddr, artTileBase, palette, builderName, null,
+                    S3kSpriteDataLoader.MappingFormat.STANDARD, mappingFrameCount);
         }
     }
 
@@ -1570,6 +1584,31 @@ public final class Sonic3kPlcArtRegistry {
                     2,
                     null
             ));
+            // Spin Launcher (Object 0x1E): make_art_tile(ArtTile_LBZ2Misc, 2, 0)
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_SPIN_LAUNCHER,
+                    Sonic3kConstants.MAP_LBZ_SPIN_LAUNCHER_ADDR,
+                    Sonic3kConstants.ARTTILE_LBZ2_MISC,
+                    2,
+                    null
+            ));
+            // Lowering Grapple (Object 0x1F): make_art_tile(ArtTile_LBZ2Misc, 2, 0)
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_LOWERING_GRAPPLE,
+                    Sonic3kConstants.MAP_LBZ_LOWERING_GRAPPLE_ADDR,
+                    Sonic3kConstants.ARTTILE_LBZ2_MISC,
+                    2,
+                    null
+            ));
+            // Pipe Plug (Object 0x1B): make_art_tile(ArtTile_LBZ2Misc-$4, 2, 0)
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_PIPE_PLUG,
+                    Sonic3kConstants.MAP_LBZ_PIPE_PLUG_ADDR,
+                    Sonic3kConstants.ARTTILE_LBZ2_MISC - 4,
+                    2,
+                    null,
+                    8
+            ));
         }
 
         // StillSprite groups: subtype 20 (pole), subtypes 21-23 (girders)
@@ -1606,6 +1645,13 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_CUP_ELEVATOR,
                 Sonic3kConstants.MAP_LBZ_CUP_ELEVATOR_ADDR,
                 Sonic3kConstants.ARTTILE_LBZ_MISC + 0x4A,
+                2,
+                null));
+
+        // Gate Laser (Object 0x21): make_art_tile(ArtTile_LBZ2Misc, 2, 0)
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_GATE_LASER,
+                Sonic3kConstants.MAP_LBZ_GATE_LASER_ADDR,
+                Sonic3kConstants.ARTTILE_LBZ2_MISC,
                 2,
                 null));
 

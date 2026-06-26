@@ -50,6 +50,12 @@ public final class Sonic3kObjectIds {
     public static final int LBZ_CUP_ELEVATOR = 0x18;
     // S3KL object table: Obj_LBZCupElevatorPole.
     public static final int LBZ_CUP_ELEVATOR_POLE = 0x19;
+    // S3KL object table: Obj_LBZPipePlug. SKL reuses $1B for Obj_LRZFireballLauncher.
+    public static final int LBZ_PIPE_PLUG = 0x1B;
+    // S3KL object table: Obj_LBZSpinLauncher. SKL reuses $1E for Obj_LRZDashElevator.
+    public static final int LBZ_SPIN_LAUNCHER = 0x1E;
+    // S3KL object table: Obj_LBZLoweringGrapple. SKL reuses $1F for Obj_LRZLavaFall.
+    public static final int LBZ_LOWERING_GRAPPLE = 0x1F;
     public static final int AUTOMATIC_TUNNEL = 0x24;
     public static final int AUTO_SPIN = 0x26;
     public static final int CORK_FLOOR = 0x2A;
@@ -109,6 +115,8 @@ public final class Sonic3kObjectIds {
     // S3KL object table: Obj_CNZWireCage.
     public static final int CNZ_WIRE_CAGE = 0x4E;
     public static final int MGZLBZ_SMASHING_PILLAR_ALT = 0x20;
+    // S3KL object table: Obj_LBZGateLaser. SKL reuses $21 for Obj_LRZSmashingSpikePlatform.
+    public static final int LBZ_GATE_LASER = 0x21;
     // S3KL object table: Obj_LBZAlarm.
     public static final int LBZ_ALARM = 0x22;
     public static final int MGZLBZ_SMASHING_PILLAR = 0x52;

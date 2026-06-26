@@ -863,7 +863,7 @@ Total: 430 objects | Implemented: 28 | Unimplemented: 4
 
 #### Act 2
 
-Total: 489 objects | Implemented: 26 | Unimplemented: 9
+Total: 489 objects | Implemented: 33 | Unimplemented: 2
 
 **Badniks:**
 - [x] 0xBE SnaleBlaster (x7) [0x00]
@@ -873,8 +873,8 @@ Total: 489 objects | Implemented: 26 | Unimplemented: 9
 - [x] 0xC2 Flybot767 (x12) [0x00]
 
 **Bosses:**
-- [ ] 0xC6 LBZ2RobotnikShip (x1) [0x00]
-- [ ] 0xCB LBZEndBoss (x1) [0x00]
+- [x] 0xC6 LBZ2RobotnikShip (x1) [0x00]
+- [x] 0xCB LBZEndBoss (x1) [0x00]
 - [ ] 0xCD LBZFinalBossKnux (x1) [0x00]
 
 **Objects:**
@@ -892,10 +892,10 @@ Total: 489 objects | Implemented: 26 | Unimplemented: 9
 - [x] 0x17 LBZRideGrapple (x6) [6 subtypes]
 - [x] 0x18 LBZCupElevator (x10) [6 subtypes]
 - [x] 0x19 LBZCupElevatorPole (x31) [0x00, 0x01]
-- [ ] 0x1B LBZPipePlug (x12) [6 subtypes]
-- [ ] 0x1E LBZSpinLauncher (x6) [0x00]
-- [ ] 0x1F LBZLoweringGrapple (x4) [0x9A, 0x1A]
-- [ ] 0x21 LBZGateLaser (x5) [0x88]
+- [x] 0x1B LBZPipePlug (x12) [6 subtypes]
+- [x] 0x1E LBZSpinLauncher (x6) [0x00]
+- [x] 0x1F LBZLoweringGrapple (x4) [0x9A, 0x1A]
+- [x] 0x21 LBZGateLaser (x5) [0x88]
 - [x] 0x28 InvisibleBlock (x20) [12 subtypes]
 - [x] 0x2A CorkFloor (x1) [0x00]
 - [x] 0x2F StillSprite (x74) [4 subtypes]
@@ -904,7 +904,7 @@ Total: 489 objects | Implemented: 26 | Unimplemented: 9
 - [x] 0x6B InvisibleHurtBlockV (x2) [0x12]
 - [x] 0x82 CutsceneKnuckles (x1) [0x18]
 - [x] 0x85 SSEntryRing (x5) [5 subtypes]
-- [ ] 0xC8 LBZKnuxPillar (x8) [0x00]
+- [x] 0xC8 LBZKnuxPillar (x8) [0x00]
 
 ### Mushroom Hill Zone
 

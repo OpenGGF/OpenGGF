@@ -339,6 +339,99 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void lbzPlanIncludesGateLaserLevelArt() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 1);
+
+        Sonic3kPlcArtRegistry.LevelArtEntry gateLaser = plan.levelArt().stream()
+                .filter(e -> e.key().equals(Sonic3kObjectArtKeys.LBZ_GATE_LASER))
+                .findFirst().orElse(null);
+
+        assertNotNull(gateLaser, "Obj_LBZGateLaser uses resident LBZ2 misc art");
+        assertEquals(Sonic3kConstants.MAP_LBZ_GATE_LASER_ADDR, gateLaser.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_LBZ2_MISC, gateLaser.artTileBase());
+        assertEquals(2, gateLaser.palette());
+    }
+
+    @Test
+    public void lbz2PlanIncludesSpinLauncherLevelArt() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 1);
+
+        Sonic3kPlcArtRegistry.LevelArtEntry spinLauncher = plan.levelArt().stream()
+                .filter(e -> e.key().equals(Sonic3kObjectArtKeys.LBZ_SPIN_LAUNCHER))
+                .findFirst().orElse(null);
+
+        assertNotNull(spinLauncher, "Obj_LBZSpinLauncher uses resident LBZ2 misc art");
+        assertEquals(Sonic3kConstants.MAP_LBZ_SPIN_LAUNCHER_ADDR, spinLauncher.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_LBZ2_MISC, spinLauncher.artTileBase());
+        assertEquals(2, spinLauncher.palette());
+    }
+
+    @Test
+    public void lbz2PlanIncludesPipePlugLevelArtWithExplicitFrameCount() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 1);
+
+        Sonic3kPlcArtRegistry.LevelArtEntry pipePlug =
+                requireLevelArt(plan, Sonic3kObjectArtKeys.LBZ_PIPE_PLUG);
+
+        assertEquals(Sonic3kConstants.MAP_LBZ_PIPE_PLUG_ADDR, pipePlug.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_LBZ2_MISC - 4, pipePlug.artTileBase());
+        assertEquals(2, pipePlug.palette());
+        assertEquals(8, pipePlug.mappingFrameCount(),
+                "Map_LBZPipePlug frame 0 is stored after frame 7, so the first offset is not the table size");
+    }
+
+    @Test
+    public void lbz2PlanIncludesLoweringGrappleLevelArt() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 1);
+
+        Sonic3kPlcArtRegistry.LevelArtEntry grapple =
+                requireLevelArt(plan, Sonic3kObjectArtKeys.LBZ_LOWERING_GRAPPLE);
+
+        assertEquals(Sonic3kConstants.MAP_LBZ_LOWERING_GRAPPLE_ADDR, grapple.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_LBZ2_MISC, grapple.artTileBase());
+        assertEquals(2, grapple.palette());
+    }
+
+    @Test
+    public void lbzLoweringGrappleMappingsMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_LBZ_LOWERING_GRAPPLE_ADDR);
+
+            assertEquals(15, frames.size(), "Map_LBZLoweringGrapple has 14 extension frames plus a duplicate max frame");
+            assertEquals(3, frames.get(0).pieces().size());
+            assertEquals(16, frames.get(14).pieces().size());
+            assertLbz2Piece(frames.get(0), 0, 3, 2, 2, 0x3A);
+            assertLbz2Piece(frames.get(0), 1, 3, 2, 2, 0x149);
+            assertLbz2Piece(frames.get(14), 15, 16, 2, 2, 0x14E);
+        }
+    }
+
+    @Test
+    public void lbzPipePlugMappingsParseEightRomFrames() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_LBZ_PIPE_PLUG_ADDR, 8);
+
+            assertEquals(8, frames.size());
+            assertLbz2Piece(frames.get(0), 0, 1, 1, 2, 0x08);
+            assertLbz2Piece(frames.get(6), 0, 1, 1, 2, 0x808 & 0x7FF);
+            assertEquals(16, frames.get(7).pieces().size(), "LBZ PipePlug intact frame piece count");
+            assertLbzPipePlugPiece(frames.get(7).pieces().getFirst(), -16, -32, 2, 2, 0x04);
+        }
+    }
+
+    @Test
     public void lbzPlanIncludesTubeElevatorLevelArt() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 0);
 
@@ -370,6 +463,42 @@ public class TestSonic3kPlcArtRegistry {
             assertEquals(7, frames.get(4).pieces().size());
             assertEquals(10, frames.get(5).pieces().size());
             assertEquals(3, frames.get(6).pieces().size());
+        }
+    }
+
+    @Test
+    public void lbzGateLaserMappingsMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            var frames = S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_LBZ_GATE_LASER_ADDR);
+
+            assertEquals(3, frames.size(), "Map_LBZGateLaser has full, left-half, and right-half frames");
+            assertEquals(2, frames.get(0).pieces().size());
+            assertLbzGateLaserPiece(frames.get(0).pieces().get(0), -0x1C, -4, 4, 1);
+            assertLbzGateLaserPiece(frames.get(0).pieces().get(1), 4, -4, 3, 1);
+            assertEquals(1, frames.get(1).pieces().size());
+            assertLbzGateLaserPiece(frames.get(1).pieces().get(0), -0x1C, -4, 4, 1);
+            assertEquals(1, frames.get(2).pieces().size());
+            assertLbzGateLaserPiece(frames.get(2).pieces().get(0), 4, -4, 3, 1);
+        }
+    }
+
+    @Test
+    public void lbzSpinLauncherMappingsMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            var frames = S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_LBZ_SPIN_LAUNCHER_ADDR);
+
+            assertEquals(1, frames.size(), "Map_LBZSpinLauncher has one frame");
+            assertEquals(7, frames.get(0).pieces().size());
         }
     }
 
@@ -727,7 +856,10 @@ public class TestSonic3kPlcArtRegistry {
                         if (entry.mappingAddr() <= 0) {
                             continue;
                         }
-                        List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
+                        List<SpriteMappingFrame> frames = entry.mappingFrameCount() > 0
+                                ? S3kSpriteDataLoader.loadMappingFrames(
+                                reader, entry.mappingAddr(), entry.mappingFrameCount(), entry.mappingFormat())
+                                : S3kSpriteDataLoader.loadMappingFrames(
                                 reader, entry.mappingAddr(), entry.mappingFormat());
                         if (entry.frameFilter() != null) {
                             List<SpriteMappingFrame> filtered = new ArrayList<>();
@@ -1242,6 +1374,15 @@ public class TestSonic3kPlcArtRegistry {
         assertEquals(tileIndex, piece.tileIndex());
     }
 
+    private static void assertLbzGateLaserPiece(SpriteMappingPiece piece, int xOffset, int yOffset,
+            int widthTiles, int heightTiles) {
+        assertEquals(xOffset, piece.xOffset());
+        assertEquals(yOffset, piece.yOffset());
+        assertEquals(widthTiles, piece.widthTiles());
+        assertEquals(heightTiles, piece.heightTiles());
+        assertEquals(0x36, piece.tileIndex());
+    }
+
     private static void assertLbzFlameThrowerFrame(SpriteMappingFrame frame, int[][] expectedPieces) {
         assertEquals(expectedPieces.length, frame.pieces().size(), "LBZ flame thrower frame piece count");
         for (int i = 0; i < expectedPieces.length; i++) {
@@ -1260,6 +1401,15 @@ public class TestSonic3kPlcArtRegistry {
         assertEquals(widthTiles, piece.widthTiles(), "LBZ2 mapping piece width");
         assertEquals(heightTiles, piece.heightTiles(), "LBZ2 mapping piece height");
         assertEquals(tileIndex, piece.tileIndex(), "LBZ2 mapping piece tile");
+    }
+
+    private static void assertLbzPipePlugPiece(SpriteMappingPiece piece, int xOffset, int yOffset,
+            int widthTiles, int heightTiles, int tileIndex) {
+        assertEquals(xOffset, piece.xOffset(), "LBZ PipePlug piece x offset");
+        assertEquals(yOffset, piece.yOffset(), "LBZ PipePlug piece y offset");
+        assertEquals(widthTiles, piece.widthTiles(), "LBZ PipePlug piece width");
+        assertEquals(heightTiles, piece.heightTiles(), "LBZ PipePlug piece height");
+        assertEquals(tileIndex, piece.tileIndex(), "LBZ PipePlug piece tile");
     }
 
     private static Sonic3kPlcArtRegistry.LevelArtEntry requireLevelArt(Sonic3kPlcArtRegistry.ZoneArtPlan plan,

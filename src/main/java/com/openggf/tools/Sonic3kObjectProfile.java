@@ -4,6 +4,7 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic3k.Sonic3kObjectPlacement;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.LevelData;
 import com.openggf.level.objects.ObjectSpawn;
@@ -84,6 +85,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
 
     // S3KL-only implementations (zones 0-6: AIZ through LBZ)
     private static final Set<Integer> S3KL_IMPLEMENTED_IDS;
+    // LBZ-only implementations from S3KL ids that map to different zone objects elsewhere.
+    private static final Set<Integer> LBZ_IMPLEMENTED_IDS;
     // SKL-only implementations (zones 7-13: MHZ through DDZ)
     private static final Set<Integer> SKL_IMPLEMENTED_IDS;
 
@@ -202,6 +205,12 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0xCB  // LBZEndBoss
         ));
         S3KL_IMPLEMENTED_IDS = Set.copyOf(s3kl);
+        var lbz = new HashSet<>(S3KL_IMPLEMENTED_IDS);
+        lbz.add(0x1B); // LBZPipePlug
+        lbz.add(0x1E); // LBZSpinLauncher
+        lbz.add(0x1F); // LBZLoweringGrapple
+        lbz.add(0x21); // LBZGateLaser
+        LBZ_IMPLEMENTED_IDS = Set.copyOf(lbz);
 
         // No SKL-specific objects implemented yet
         SKL_IMPLEMENTED_IDS = Set.copyOf(SHARED_IMPLEMENTED_IDS);
@@ -379,7 +388,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     @Override public List<ObjectDiscoveryTool.LevelConfig> getLevels() { return LEVELS; }
     @Override public Set<Integer> getImplementedIds() { return S3KL_IMPLEMENTED_IDS; }
     @Override public Set<Integer> getImplementedIds(ObjectDiscoveryTool.LevelConfig level) {
-        return zoneSetForLevel(level) == S3kZoneSet.SKL ? SKL_IMPLEMENTED_IDS : S3KL_IMPLEMENTED_IDS;
+        int[] za = LEVEL_ZONE_ACT.get(level.levelData());
+        if (zoneSetForLevel(level) == S3kZoneSet.SKL) {
+            return SKL_IMPLEMENTED_IDS;
+        }
+        return za[0] == Sonic3kZoneIds.ZONE_LBZ ? LBZ_IMPLEMENTED_IDS : S3KL_IMPLEMENTED_IDS;
     }
     @Override public Map<String, List<ObjectDiscoveryTool.DynamicBoss>> getDynamicBosses() { return DYNAMIC_BOSSES; }
 
