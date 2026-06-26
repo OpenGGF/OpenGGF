@@ -555,6 +555,7 @@ public class TestRewindHarnessCoverageRatchet {
 
         int total = classes.size();
         int passed = 0;
+        int graphCovered = 0;
         int noCodec = 0;
         int noProbeCtor = 0;
         int parentDependent = 0;
@@ -572,6 +573,7 @@ public class TestRewindHarnessCoverageRatchet {
                     passed++;
                     passedNames.add(sc.fqn());
                 }
+                case RoundTripSweepResult.GraphCovered g -> graphCovered++;
                 case RoundTripSweepResult.Unprobed u -> {
                     String reason = u.reason();
                     if (reason.startsWith("no dynamic recreate path")) {
@@ -594,6 +596,7 @@ public class TestRewindHarnessCoverageRatchet {
 
         System.out.println("[ratchet] total=" + total
                 + " passed=" + passed
+                + " graph-covered=" + graphCovered
                 + " no-codec=" + noCodec
                 + " no-probe-ctor=" + noProbeCtor
                 + " parent-dependent=" + parentDependent

@@ -1,12 +1,12 @@
 # bucket|class
 # Snapshot from the headless ObjectManager round-trip sweep.
-# Summary: total=783 passed=643 no-codec=0 no-probe-ctor=33 parent-dependent=107 other-failure=0 count-mismatch=0 scalar-mismatch=0
+# Summary: total=783 passed=643 graph-covered=11 no-codec=0 no-probe-ctor=24 parent-dependent=105 other-failure=0 count-mismatch=0 scalar-mismatch=0
 #
 # Parent-dependent classes live in parent-dependent-graph-coverage-baseline.txt
 # because that file also records graph-test evidence or session-tail status.
 #
 # Suggested next batches:
-# - no-probe boss children: prioritize Death Egg Robot and AIZ end-boss child families, because each group has multiple related entries.
+# - no-probe boss children: prioritize the remaining S1/FZ and S2/S3K constructor-only graph families.
 # - constructor-spawning boss roots and graph-only children are covered by focused graph tests, but still need
 #   parent-before-child/session ordering before they can pass the isolated sweep.
 no-probe-ctor|com.openggf.game.sonic1.objects.bosses.FZPlasmaBall
@@ -17,20 +17,11 @@ no-probe-ctor|com.openggf.game.sonic2.objects.CheckpointStarInstance
 no-probe-ctor|com.openggf.game.sonic2.objects.CogObjectInstance$CogSlotChildInstance
 no-probe-ctor|com.openggf.game.sonic2.objects.OOZBurnerFlameObjectInstance
 no-probe-ctor|com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance$SwingingPlatformDisplayChild
-no-probe-ctor|com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild
-no-probe-ctor|com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$BombChild
-no-probe-ctor|com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ForearmChild
-no-probe-ctor|com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$HeadChild
-no-probe-ctor|com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$JetChild
 no-probe-ctor|com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb
 no-probe-ctor|com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball
 no-probe-ctor|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt
 no-probe-ctor|com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$Aiz2ResultsScreenObjectInstance
 no-probe-ctor|com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$HighPriorityAnimal
-no-probe-ctor|com.openggf.game.sonic3k.objects.AizEndBossArmChild
-no-probe-ctor|com.openggf.game.sonic3k.objects.AizEndBossBombChild
-no-probe-ctor|com.openggf.game.sonic3k.objects.AizEndBossFlameChild
-no-probe-ctor|com.openggf.game.sonic3k.objects.AizEndBossPropellerChild
 no-probe-ctor|com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild
 no-probe-ctor|com.openggf.game.sonic3k.objects.AizShipBombInstance
 no-probe-ctor|com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance

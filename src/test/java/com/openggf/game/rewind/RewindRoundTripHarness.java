@@ -97,6 +97,41 @@ public final class RewindRoundTripHarness {
             "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment",
             "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild");
 
+    private static final Map<String, String> GRAPH_COVERED_ISOLATED_PROBE_CLASSES = Map.ofEntries(
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ForearmChild",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$HeadChild",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$JetChild",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$SensorChild",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$BombChild",
+                    "TestS2DezBombGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossArmChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossPropellerChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossFlameChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossBombChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossSmokeChild",
+                    "TestS3kAizEndBossGraphRewind"));
+
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
     private static final ObjectRenderManager INERT_RENDER_MANAGER =
@@ -332,6 +367,7 @@ public final class RewindRoundTripHarness {
      */
     public sealed interface RoundTripSweepResult
             permits RoundTripSweepResult.Passed,
+                    RoundTripSweepResult.GraphCovered,
                     RoundTripSweepResult.Unprobed,
                     RoundTripSweepResult.CountMismatch,
                     RoundTripSweepResult.ScalarMismatch {
@@ -340,6 +376,12 @@ public final class RewindRoundTripHarness {
          * Round-trip succeeded: object count unchanged and all scalar fields identical.
          */
         record Passed() implements RoundTripSweepResult {}
+
+        /**
+         * The isolated class probe cannot honestly construct or relink this object
+         * alone, but a focused object-graph/session test covers its restore path.
+         */
+        record GraphCovered(String evidence) implements RoundTripSweepResult {}
 
         /**
          * Object could not be constructed headlessly (ROM/OpenGL required) or added
@@ -404,6 +446,10 @@ public final class RewindRoundTripHarness {
         //    and is not useful for Phase 2 gate purposes.
         if (!hasRegisteredCodec(fqn)) {
             return new RoundTripSweepResult.Unprobed("no dynamic recreate path (no codec registered)");
+        }
+        String graphEvidence = GRAPH_COVERED_ISOLATED_PROBE_CLASSES.get(fqn);
+        if (graphEvidence != null) {
+            return new RoundTripSweepResult.GraphCovered(graphEvidence);
         }
         if (GRAPH_ONLY_ISOLATED_PROBE_CLASSES.contains(fqn)) {
             return new RoundTripSweepResult.Unprobed(

@@ -162,6 +162,11 @@ public class TestEveryObjectRewindRoundTrip {
             return;
         }
 
+        if (result instanceof RewindRoundTripHarness.RoundTripSweepResult.GraphCovered g) {
+            System.out.println("[rewind-sweep][graph-covered] " + fqn + ": " + g.evidence());
+            return;
+        }
+
         if (result instanceof RewindRoundTripHarness.RoundTripSweepResult.Passed) {
             return; // clean round-trip
         }
@@ -204,6 +209,7 @@ public class TestEveryObjectRewindRoundTrip {
         int total = classes.size();
         int unprobed = 0;
         int probed = 0;
+        int graphCovered = 0;
         int countMismatches = 0;
         int scalarMismatches = 0;
         List<String> unprobedNames = new ArrayList<>();
@@ -214,6 +220,7 @@ public class TestEveryObjectRewindRoundTrip {
                     RewindRoundTripHarness.probeClass(sc.fqn());
             switch (result) {
                 case RewindRoundTripHarness.RoundTripSweepResult.Passed ignored -> probed++;
+                case RewindRoundTripHarness.RoundTripSweepResult.GraphCovered ignored -> graphCovered++;
                 case RewindRoundTripHarness.RoundTripSweepResult.Unprobed u -> {
                     unprobed++;
                     unprobedNames.add(sc.fqn());
@@ -234,6 +241,7 @@ public class TestEveryObjectRewindRoundTrip {
         // Report
         System.out.println("[rewind-sweep] total=" + total
                 + " probed=" + probed
+                + " graph-covered=" + graphCovered
                 + " unprobed=" + unprobed
                 + " count-mismatches=" + countMismatches
                 + " scalar-mismatches=" + scalarMismatches);

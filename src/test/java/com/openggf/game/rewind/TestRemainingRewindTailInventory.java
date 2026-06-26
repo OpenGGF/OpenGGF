@@ -52,6 +52,7 @@ class TestRemainingRewindTailInventory {
 
         assertEquals(expected.total(), current.total(), "total object class count changed");
         assertEquals(expected.passed(), current.passed(), "passed object count changed");
+        assertEquals(expected.graphCovered(), current.graphCovered(), "graph-covered object count changed");
         assertEquals(expected.noCodec(), current.noCodec(), "no-codec bucket must stay empty");
         assertEquals(expected.classesByBucket(), current.classesByBucket(),
                 "Remaining rewind tail changed. If a class moved out, delete its row. "
@@ -71,11 +72,14 @@ class TestRemainingRewindTailInventory {
 
         Map<Bucket, TreeSet<String>> buckets = emptyBuckets();
         int passed = 0;
+        int graphCovered = 0;
         int noCodec = 0;
         for (ObjectClasspathScan.SourceClass sourceClass : classes) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(sourceClass.fqn());
             if (result instanceof RoundTripSweepResult.Passed) {
                 passed++;
+            } else if (result instanceof RoundTripSweepResult.GraphCovered) {
+                graphCovered++;
             } else if (result instanceof RoundTripSweepResult.Unprobed unprobed) {
                 String reason = unprobed.reason();
                 if (reason.startsWith("no dynamic recreate path")) {
@@ -94,7 +98,7 @@ class TestRemainingRewindTailInventory {
                 buckets.get(Bucket.SCALAR_MISMATCH).add(sourceClass.fqn());
             }
         }
-        return new TailInventory(classes.size(), passed, noCodec, buckets);
+        return new TailInventory(classes.size(), passed, graphCovered, noCodec, buckets);
     }
 
     private static TailInventory loadInventory() {
@@ -102,13 +106,13 @@ class TestRemainingRewindTailInventory {
         loadBucketRows(INVENTORY_RESOURCE, buckets);
         loadParentDependentRows(buckets);
 
-        assertEquals(33, buckets.get(Bucket.NO_PROBE_CTOR).size(), "no-probe-ctor inventory count");
-        assertEquals(107, buckets.get(Bucket.PARENT_DEPENDENT).size(), "parent-dependent inventory count");
+        assertEquals(24, buckets.get(Bucket.NO_PROBE_CTOR).size(), "no-probe-ctor inventory count");
+        assertEquals(105, buckets.get(Bucket.PARENT_DEPENDENT).size(), "parent-dependent inventory count");
         assertEquals(0, buckets.get(Bucket.OTHER_FAILURE).size(), "other-failure inventory count");
         assertEquals(0, buckets.get(Bucket.COUNT_MISMATCH).size(), "count-mismatch inventory count");
         assertEquals(0, buckets.get(Bucket.SCALAR_MISMATCH).size(), "scalar-mismatch inventory count");
 
-        return new TailInventory(783, 643, 0, buckets);
+        return new TailInventory(783, 643, 11, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
@@ -196,6 +200,7 @@ class TestRemainingRewindTailInventory {
     private record TailInventory(
             int total,
             int passed,
+            int graphCovered,
             int noCodec,
             Map<Bucket, TreeSet<String>> classesByBucket) {
     }
