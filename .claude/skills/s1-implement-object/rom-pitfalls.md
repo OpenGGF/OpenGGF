@@ -227,3 +227,172 @@ The engine models `locktime`/`move_lock` as `moveLockTimer`, decremented only in
 **ROM citation.** `docs/s1disasm/_incObj/41 Springs.asm:145` (`Spring_BounceLR`: `move.w #15,locktime(a1)`). Grounded-only decrement: `docs/s1disasm/_incObj/01 Sonic.asm:1383,1410` (`Sonic_SlopeRepel` `tst.w locktime` / `subq.w #1,locktime`), called from `Sonic_MdNormal`/`Sonic_MdRoll` (`asm:323,352`) but not the airborne modes (`asm:328-341,357-370`). S2 equivalent: `docs/s2disasm/s2.asm:34031` (horizontal spring `move.w #$F,move_lock(a1)`).
 
 **Originating commit.** `bugfix/ai-s1-slz2-f1493` (SLZ2 f1714 -> f2552, 215 -> 137; S1 LR spring routed control lock through moveLockTimer).
+
+---
+
+## P7 — Dormant object has obColType=0 until it activates: ReactToItem skips it entirely
+
+**Symptom.** A badnik/hazard that waits in an inert state before activating (curled, hidden, pre-trigger) wrongly hurts or interacts with the player while still dormant. Trace signature: the player loses rings / enters the hurt routine (`rtn` 2 -> 4) on a frame where ROM has him pass the object untouched; the object is on-screen and near the player but ROM never reacts to it.
+
+**Root cause.** S1 `ReactToItem` gates every object on its `obColType` byte: `move.b obColType(a1),d0 / bne React_CheckHitboxOverlap` — if `obColType == 0` (col_none), the object is skipped before any hitbox test. Many objects do NOT set `obColType` in their init routine (routine 0 / `*_Main`); they write it only when they transition into an active/damaging/destroyable state. So a freshly spawned, not-yet-triggered object is non-collidable even though it has a position, a size, and is rendered. Engine object classes that hardcode `getCollisionFlags()` to a non-zero size index from construction make the dormant object collidable from frame 0.
+
+**What to check.** For any object that has a pre-activation waiting state:
+- Trace where the ROM first writes `obColType` (`move.b #col_*,obColType(a0)`). Everything before that write is col_none.
+- Gate `getCollisionFlags()` to return `0` until the engine reaches the equivalent activated state. If the activation state is monotonic (the object never returns to the dormant routine once it has activated), derive the gate from the existing routine/secondary-routine field — no new rewind-captured field needed.
+- Distinguish this from the on-screen render gate (`isOnScreenForTouch()` / `requiresRenderFlagForTouch()`): that handles "off-screen or DisplaySprite-not-yet-run". This pitfall is the orthogonal "on-screen but obColType still 0" case.
+
+**ROM citation.** `docs/s1disasm/_incObj/Sonic ReactToItem.asm:52-53` (`tst`/`bne` obColType gate). Concrete object: `docs/s1disasm/_incObj/43 Badnik - Roller.asm:19-38` (`Roll_Main` sets height/width but never obColType) + `:86-100` (`Roll_Action_FromLeft` ob2ndRout=0 leaves it untouched until activation at `:96` sets `$8E`; stop-and-unfold `:177` sets `$0E`).
+
+**Cross-game note.** S2 `Touch_Loop` has no render-flag gate but still checks `collision_flags(a1)` (zero = skipped); S3K only adds opted-in objects to `Collision_response_list`. So the "dormant -> not in collision until activated" invariant holds in all three — verify each new waiting-state object reports zero collision until it writes its colType / adds itself to the list.
+
+**Originating commit.** `bugfix/ai-s1-syz1-f2338` (SYZ1 f2338 -> f4430; curled SYZ Roller (Obj 0x43) reported col=0x0E from spawn and hurt the falling player where ROM's dormant Roller has obColType=0).
+
+---
+
+## P8 — Multi-piece objects must spawn real OST-slot children (FindFreeObj/FindNextFreeObj), NOT internal arrays or bare slot-reservations
+
+**Symptom.** A whole zone's object slots drift out of ROM alignment, surfacing as a downstream object mis-slotted dozens-to-hundreds of frames later (e.g. trace `obj_sNN_slot exp 0xNN act 0xMM`, or a far-off object missing/extra). The multi-piece object itself looks correct on screen.
+
+**Root cause.** Modeling a chain / collapsing-floor row / multi-segment stomper / multi-link platform as ONE engine object that carries internal `linkX[]`/`linkY[]` arrays (render-only) — or that "reserves" slots without actually occupying them as real `ObjectInstance`s — under-allocates the OST. ROM spawns each piece as a genuine object via `FindFreeObj` (lowest free slot) or `FindNextFreeObj` (next free after parent), consuming real SST slots. Every subsequent `FindFreeObj`/ObjPosLoad call in the zone then sees a different free-slot pattern → cascading slot drift. **Count matters:** ROM `dbf d1` with `d1 = N` runs **N+1** times (the loop body + the fall-through), so a "spawn d1 children" loop creates `d1+1` pieces — off-by-one here under-allocates by one slot.
+
+**What to check.** For any chain/floor/multi-segment object: trace the ROM spawn loop. Each `FindFreeObj`/`FindNextFreeObj` + `_move.b #id,obID(a1)` is a REAL child object the engine must spawn as a real `ObjectInstance` on its own slot (`spawnChild` / `allocateChild*`), not an internal array entry. Count the `dbf` iterations as `d1+1`. Render-only children that have no collision still occupy a slot in ROM — spawn them.
+
+**ROM citation.** `docs/s1disasm/_incObj/15 Swinging Platforms.asm:67-105` (`.makechain`: `FindNextFreeObj`/`FindFreeObj` per link, `dbf d1,.makechain` = chain-length+1 children). `docs/s1disasm/_incObj/sub FindFreeObj.asm` (FindFreeObj lowest-free; FindNextFreeObj next-after-parent). MZ3 Chained Stomper: `docs/s1disasm/_incObj/31 MZ Chained Stompers.asm:59-97` (size-2 spike-fold = 2 children).
+
+**Rewind note.** Parent-recreated render-only children resolve via `TestRewindCoverageGuard` baseline entries (the recreate path is parent-driven; baseline-entry the child's `#recreate` + `#finalScalar` keys). Precedents: `SpikedBallChain$ChainChild`, `CollapsingLedge$Fragment`.
+
+**Cross-game note.** S2/S3K spawn multi-piece children through `AllocateObject` (lowest-free) / `AllocateObjectAfterCurrent` (after parent) — `docs/s2disasm/s2.asm` and `docs/skdisasm/sonic3k.asm:37911,37917`. Same "real OST slot per piece, count = dbf+1" rule.
+
+**Originating commit.** `9f47f557f` (S1 SBZ2 Obj 0x15 swinging-platform chain links — render-only children spawned as real OST slots). Banked: MZ3 ChainStomp `StomperPieceChild`.
+
+---
+
+## P9 — Object delete/cancel checks must run only in the ROM routines that call them, not every frame
+
+**Symptom.** A child/projectile object is deleted hundreds of frames too early (or too late), freeing its slot at the wrong time → slot drift / a downstream object mis-slotted. The object's own motion looks right until it vanishes.
+
+**Root cause.** Porting a "cancel if parent destroyed" (or any delete-gate) check into the engine object's per-frame `update()` unconditionally, when ROM only calls that check from SPECIFIC routines. ROM dispatches by `obRoutine`: the cancel subroutine is `bsr`'d only from the routines that should run it, not from the active/in-flight routine. Running it every frame deletes the object during a phase ROM keeps it alive.
+
+**What to check.** When porting any `*_ChkCancel` / `*_ChkDel` / delete-gate subroutine: find every `bsr`/`jsr` to it and note WHICH `obRoutine` values reach it. Gate the engine's call to the equivalent engine routine/state — do not call it from the shared per-frame entry.
+
+**ROM citation.** `docs/s1disasm/_incObj/22, 23 Badnik - Buzz Bomber and Missile.asm:162-194,220-249` — `Msl_ChkCancel` (cancel missile if parent Buzz Bomber destroyed) is `bsr`'d only from `Msl_Main` (routine 0) and `Msl_Animate` (routine 2, the flare phases), NOT from the active `Msl_FromBuzz` (routine 4). The engine ran it every frame → missile deleted ~840 frames early.
+
+**Cross-game note.** S2/S3K objects use the same `obRoutine`/`Obj_routine` jump-table dispatch; a delete/cancel check belongs in the routines that ROM `bsr`s it from. Verify the calling routines per object before porting.
+
+**Originating commit.** `53da8c24a` (S1 Buzz Bomber Missile cancels-on-parent-destroyed only in flare phase, not active).
+
+---
+
+## P10 — Off-screen delete uses ROM's obRender render-box `[camX-obActWid, camX+320+obActWid)`, not a raw `isOnScreenX(160)` margin
+
+**Symptom.** A short-lived object (debris, shrapnel, projectile) lingers a few frames longer (or unloads earlier) than ROM, so the count of that object's instances differs at a given frame → slot drift.
+
+**Root cause.** Using a fixed engine `isOnScreenX(160)` (or any raw pixel margin) for the off-screen delete instead of the ROM render-box bound. ROM deletes when the `obRender` on-screen bit is clear, which `BuildSprites` computes from the camera-X-coarse window widened by the object's `obActWid` (and chunk-rounded). A 160px margin keeps the object alive over a wider/narrower window than ROM (e.g. Walking Bomb shrapnel lingered 24 frames vs ROM's 16).
+
+**What to check.** For any object whose ROM delete is `tst.b obRender(a0) / bpl DeleteObject` (or the `out_of_range` macro): model the delete with the engine's ROM-render-box helper keyed on the object's `obActWid`, not `isOnScreenX(<arbitrary>)`. Scope the fix to the specific object — the broad badnik `isPersistent` keep-alive is a separate, inert concern.
+
+**ROM citation.** `docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm:218-219` (shrapnel `tst.b obRender(a0) / bpl.w DeleteObject`). Render-box computation: `docs/s1disasm/_inc/BuildSprites.asm:47-58` (camera-X-coarse + width window sets the `obRender` on-screen bit).
+
+**Cross-game note.** S2 `MarkObjGone` uses the chunk-rounded camera-X-coarse bound `$80 + screen_width + $80` (`docs/s2disasm/s2.asm`, `MarkObjGone`); S3K's render/display path is equivalent. Use the ROM render bound, not a raw margin, in all three.
+
+**Originating commit.** `0a15683b9` (S1 Walking Bomb shrapnel deletes via ROM obRender render bound, not raw isOnScreenX).
+
+---
+
+## P11 — Broken/consumed objects must report `col_none` so ReactToItem skips them (orthogonal to P7's dormant case)
+
+**Symptom.** A broken monitor (or any consumed/spent object) still reports a non-zero collision type and PREEMPTS an adjacent live object's interaction — e.g. an already-broken monitor's stale col_item shadows the break of a neighbouring monitor the player actually touches.
+
+**Root cause.** S1 `ReactToItem` gates each object on `obColType` (`tst / bne` — `col_none` = skipped, `Sonic ReactToItem.asm:52-53`). A broken/consumed object that fails to write `col_none` keeps its old collision flags, so `ReactToItem` still considers it (and, because ReactToItem returns after the first overlap, it can consume the contact that should have hit the adjacent object). This is the *post-activation/consumed* mirror of **P7** (which covers the *pre-activation/dormant* case).
+
+**What to check.** For any object with a "broken"/"consumed"/"spent" terminal state: confirm the ROM writes `move.b #col_none,obColType(a0)` on entering that state, and gate the engine's `getCollisionFlags()` to return `0` there. Cross-reference P7 for the dormant-before-activation case.
+
+**ROM citation.** `docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:183` (`move.b #col_none,obColType(a0)` — broken monitor stops further collision). Gate: `docs/s1disasm/_incObj/Sonic ReactToItem.asm:52-53`.
+
+**Cross-game note.** S2 `Touch_Loop` reads `collision_flags(a1)` and `bne` to the check (zero = skipped, `docs/s2disasm/s2.asm:85048-85049`); S3K only touch-checks objects added to `Collision_response_list`. A consumed object must clear its flags / not re-add itself in all three.
+
+**Originating commit.** `466f408a8` (S1 broken monitor clears col type so it stops preempting ReactToItem).
+
+---
+
+## P12 — Collapse/release drops must clear the player's on-object status bit, not just the engine's riding link
+
+**Symptom.** A collapsing ledge/floor (or any "drop the rider" object) releases the player, but the player stays grounded / pinned at the object's last surface Y for a frame instead of falling — a 1px seat error and a 1-frame-late airborne transition.
+
+**Root cause.** Calling only the engine's `clearRidingObject` (which drops the internal riding bookkeeping) leaves the player's `onObject`/grounded flags set, so the player is still treated as standing. ROM's release path does `bclr #3,obStatus(a1)` (clear the player's on-platform bit) — the player becomes airborne. The engine must mirror that: `setOnObject(false)` + `setAir(true)` on release, not just unlink the ride.
+
+**What to check.** For any object that drops/releases a standing player (collapse, retract, vanish, switch-off): after `clearRidingObject`, also clear the player's on-object status and set air — matching the ROM `bclr #3,obStatus(a1)`.
+
+**ROM citation.** `docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:104-105` (CollapseLedge `.delayCollapse` `bclr #3,obStatus(a1)`) and `:233-240` (CollapseFloor `.delayCollapse` `bclr #3,obStatus(a1)`).
+
+**Cross-game note.** S2/S3K release routines likewise `bclr` the player's standing/on-object status bit; clearing only the engine ride link under-models them.
+
+**Originating commits.** `7a9a8a4b2` (S1 CollapseFloor airborne-drop on collapse), `446d87185` (S1 GHZ CollapsingLedge clears rider on-object/push status on collapse-release).
+
+---
+
+## P13 — Routine transitions in the engine's pre-update SOLID pass run 1 frame AHEAD of ROM's in-execution PlatformObject routine advance — defer the first frame
+
+**Symptom.** A timer-driven object (collapse delay, fall delay) started by a solid-contact routine transition fires 1 frame early vs ROM.
+
+**Root cause.** ROM advances the object's `obRoutine` *inside* `PlatformObject`, which runs during the object's own `ExecuteObjects` slot — so the new routine's body first executes on the *next* frame. The engine resolves solid contact in a PRE-update pass before the object's `update()`, so the routine transition it sets is observed by the same-frame `update()` body → the timer/state advances one frame early. (This is the routine-advance sibling of **P2**, which is about reading the standing BIT after the checkpoint; P13 is about the ROUTINE transition the solid pass triggers.)
+
+**What to check.** When a solid-contact/PlatformObject routine advance starts a per-object timer or state machine, guard the first frame: a `*EnteredThisFrame` flag that skips the new routine's body on the transition frame, matching ROM's "advance now, run next frame" cadence.
+
+**ROM citation.** `docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm` (CollapseFloor routine-4 entry via the solid pass; the collapse timer must not tick on the entry frame). See also P2 (`18 Platforms.asm:201-216`) for the standing-bit-read sibling.
+
+**Cross-game note.** S2/S3K `SolidObject`/`PlatformObject` also advance the object routine during the object's own slot execution; an engine pre-update solid pass that sets the routine will see it one frame early — apply the same first-frame defer.
+
+**Originating commit.** `7a9a8a4b2` (S1 Collapsing Floor defers routine-4 entry one frame via a `collapseEnteredThisFrame` guard).
+
+---
+
+## P14 — SolidObject edge tests are inclusive (`bhi`): `relX == width*2` IS a contact
+
+**Symptom.** An object's side/top contact misses on the exact-edge frame — e.g. a rolling player grazing the precise right edge of a boss body produces no bounce, firing the bounce one frame late (when the player has penetrated 1px).
+
+**Root cause.** ROM `SolidObject`'s X-range gate is `cmp.w d3,d0 / bhi.w Solid_NoCollision` where `d3 = width*2` and `d0 = playerX - objX + halfWidth`. `bhi` is exclusive-greater, so `d0 == d3` (player centre exactly at `objX + halfWidth`, i.e. `relX == width*2`) is NOT rejected — it IS a valid contact. An engine overlap gate using `relX >= width*2 → no contact` (exclusive) drops that exact-edge frame.
+
+**What to check.** For any object using the plain `SolidObject` family, the right-edge X gate must treat `relX == width*2` as in-contact. In the engine, opt into `usesInclusiveRightEdge()` (the flag S3K horizontal springs and S1 spikes already use for their `SolidObject`-family `bhi` gates). Verify against the object's actual ROM solid routine.
+
+**ROM citation.** `docs/s1disasm/_incObj/sub SolidObject.asm:167-168` (`cmp.w d3,d0 / bhi.w Solid_NoCollision`).
+
+**Cross-game note.** S2 `SolidObject_cont` (`docs/s2disasm/s2.asm:35353-35354`) and S3K `SolidObject` (`docs/skdisasm/sonic3k.asm:41364-41365`) use the same `cmp.w d3,d0 / bhi` inclusive right edge. Apply `usesInclusiveRightEdge()` for any `SolidObject`-family object in those games too.
+
+**Originating commit.** `caf70abb7` (S1 FZ boss uses ROM-inclusive SolidObject right edge for roll-bounce; f837 -> f1724).
+
+---
+
+## P15 — Object pushes the player: `add.w speed,obX(a1)` / `move.w pos,obX(a1)` preserve the rider's sub-pixel — never `setCentreX`/`setCentreY` (they ZERO it)
+
+**Symptom.** A frontier reads as a "sub-pixel RAM-gated" 1px/0.x-px X (or Y) residual — the engine drifts a constant fraction behind ROM, crossing an integer boundary 1 frame off. The player is being pushed/carried/captured by an object (conveyor, fan/wind, moving solid, teleporter capture, MvSonicOnPtfm carry, ...) and the engine is byte-EXACT until the first frame that object touches him, then a CONSTANT delta thereafter.
+
+**Root cause.** Almost every ROM object→player position write operates on the PIXEL word only: `add.w <speed>,obX(a1)` / `sub.w d0,obX(a1)` / `move.w <pos>,obX(a1)` write obX/obY at offset `$8`/`$C` and leave the sub-pixel words (`x_sub`/`y_sub` at `$A`/`$E`) UNTOUCHED — the rider keeps his accumulated fraction. The engine's `setCentreX(short)` / `setCentreY(short)` ZERO the sub-pixel (`this.xSubpixel = 0`). Calling them in an object-push path discards up to ~1px of fraction every frame the object acts on the player, putting him progressively behind ROM.
+
+**What to check / fix.** For any object that pushes or carries the player each frame, or captures/repositions him to a pixel position the ROM writes via `add.w`/`sub.w`/`move.w` to the pixel word:
+- **Incremental push** (`add.w speed,obX(a1)`): use `player.shiftX(delta)` / `player.shiftY(delta)` — they add an integer pixel delta and preserve the sub-pixel.
+- **Set-to-position** (`move.w pos,obX(a1)`): use `player.setCentreXPreserveSubpixel(x)` / `setCentreYPreserveSubpixel(y)` (or `setX`/`setY`, which write the pixel word only).
+- **Only keep `setCentreX`/`setCentreY` (sub-pixel zeroing) where ROM EXPLICITLY clears the fraction**, e.g. `move.w #0,obSubpixelX(a0)`. The S1 level-side-boundary clamp does exactly this (`Boundary_Sides`: `move.w d0,obX(a0)` THEN `move.w #0,obSubpixelX(a0)`, `01 Sonic.asm:1097-1100`) — there `setCentreX` is CORRECT. Always read the object's actual ROM routine before changing the setter; FAITHFUL-OR-BOUNCE per call site.
+
+Audit method: gate a probe in `AbstractSprite.setCentreX/Y` on a system property that logs the first non-`AbstractSprite` caller whenever a NON-zero sub-pixel is zeroed (dedup per call site), then run the trace sweep; each hit is a candidate to verify against the disasm.
+
+**ROM citation.** Sub-pixel-PRESERVING object pushes (engine should use `shiftX`/`setCentreXPreserveSubpixel`): S1 Conveyor `add.w conv_speed(a0),obX(a1)`; SLZ Fan `add.w d0,obX(a1)` (`5D SLZ Fan.asm:82`); SBZ Teleporter capture `move.w obX(a0),obX(a1)` (`72 SBZ Teleporter.asm:73-74`); `SolidObject` side-push `sub.w d0,obX(a1)` (`sub SolidObject.asm:239`); `MvSonicOnPtfm` Y-seat `move.w d0,obY(a1)` + X-carry `sub.w d2,obX(a1)` (`sub MvSonicOnPtfm.asm:36,39`); Spring side-push `addq.w #8,obX(a1)` (`41 Springs.asm:137`); MZ PushBlock align `add.w d0,obX(a1)` (`33 MZ, LZ Pushable Blocks.asm:404`). Sub-pixel-ZEROING (engine `setCentreX` is correct): level-side boundary `move.w #0,obSubpixelX(a0)` (`01 Sonic.asm:1100`).
+
+**Also covers object SELF-motion, not just player-push.** The same rule applies when an object moves ITSELF: ROM `add.w speed,obX(a0)` adds to the object's own pixel word and preserves its own `x_sub`, so a rideable/collidable object that self-moves via `setCentreX`/`setCentreY` (zeroing) would drift ~1px and surface that 1px wherever the player rides/hits it. Use `SubpixelMotion.moveSprite` / `shiftX`/`shiftY` for self-motion too. (An object that legitimately moves in INTEGER pixel steps — e.g. SLZ staircase/seesaw use integer `int x`/`int y` self-position with no sub-pixel accumulator, matching ROM's integer/oscillation-table motion — has no fraction to discard and needs no change; a 16.16-accumulator object like the GHZ boss `xFixed`/`yFixed` already preserves it.) A `-Dobjsubpxaudit` probe in `setCentreX/Y` (log non-`AbstractSprite` object-code callers that zero a non-zero subpixel on any sprite) finds these. **S1 audit result (commit below): a full 19-zone sweep found ZERO object-self-motion subpixel-zeroing instances** — the gated 1px-object reds (SLZ1 f2872 staircase, GHZ3 f8021 boss, SLZ2/SLZ3) are genuinely counter-phase / RAM-gated, NOT self-motion-subpixel.
+
+**Cross-game note.** S2/S3K conveyors, fans, moving solids, and `MvSonicOnPtfm`/`SolidObject` side-pushes use the same `add.w`/`sub.w`/`move.w obX(a1)` pixel-word convention and likewise PRESERVE the rider's sub-pixel — any S2/S3K object-push OR self-move path using a sub-pixel-zeroing centre setter is the same bug. (S3K `x_pos` is 16.16 with the same `$8`/`$A` obX/x_sub layout.)
+
+**Originating commit.** `b5bc778d4` (S1 Conveyor Belt preserves rider sub-pixel X on push via `shiftX`; SBZ2 f2224 -> f2323). Companion: SBZ Teleporter capture uses `setCentreXPreserveSubpixel`/`setCentreYPreserveSubpixel`. Object-self-motion audit (no instances found in S1): this commit (catalogue update; no engine fix needed).
+
+## P16 — Trigger objects that throw the player off must clear Status_OnObj, SET Status_InAir, AND stop being solid — not just drop the riding link (extends P12)
+
+A capsule/switch/button the player rides and then triggers (Egg Prison switch, end-of-level capsule) does three things in ROM on the trigger frame; the engine must mirror all three:
+1. `bclr #3,(v_player+obStatus)` — clear `Status_OnObj` (engine `setOnObject(false)`).
+2. `bset #1,(v_player+obStatus)` — SET `Status_InAir`, i.e. throw the player AIRBORNE (engine `setAir(true)`). This is the part P12 (collapse-release) didn't need but trigger-switches do — the player is launched/falls, not re-seated on terrain.
+3. Advance `obRoutine` past the only routine that calls `SolidObject` (e.g. `Pri_Switch` routine 4 → `Pri_Explosion` `$A`) so the object **stops being solid** (engine `isSolidFor()` returns `false` once triggered). Otherwise the engine re-seats the just-released player onto the still-solid depressed switch every frame (`air=0`, `y_speed=0`) while ROM is airborne.
+
+Doing only (1) means the player is re-grabbed next frame by the still-solid object. ROM ref `3E Prison Capsule.asm:94,101-102`. Originating commit `5511805d0` (Egg Prison switch → GHZ3 GREEN). Same `bclr`-release family as P12.
+
+## P17 — Horizontally-moving solid objects do NOT drag a standing rider (ROM passes POST-move obX to MvSonicOnPtfm → zero carry delta)
+
+A solid object whose caller runs its `*_Move` (updating `obX`) BEFORE `move.w obX(a0),d4` passes the *post-move* `obX` as the carry reference, so `MvSonicOnPtfm`'s `sub.w obX(a0),d2` computes a **zero** horizontal delta — the standing rider is NOT carried sideways (he stays put and walks/falls off the edge as the object slides out from under him). Universal to such objects (every Spikes caller passes post-move obX: `36 Spikes.asm:52,96`; `sub MvSonicOnPtfm.asm:38-39`), NOT a zone carve-out. The engine's generic continued-ride carry defaults to dragging the rider by the object X-delta — override `carriesRiderOnHorizontalMove()` to `false` for horizontally-moving solids. Symptom: a stationary player (no input, zero velocity) dragged +N px/frame on a horizontally-moving object, then misses the ROM airborne/fall transition. Originating commit `37e8a19f2` (moving Spikes Obj0x36 → MZ1 f4230 -> f6222). Contrast: VERTICALLY-moving platforms DO carry the rider's Y (normal `MvSonicOnPtfm` Y re-seat) — this is specifically the HORIZONTAL drag.

@@ -150,16 +150,17 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
      * </pre>
      */
     private void initialize() {
-        // ObjectFall: VelY += gravity, then Y += VelY (gravity applied before Y movement).
-        // Note: this differs from ROM's "use old velocity, then add gravity" order; preserved
-        // here via manual pre-increment + moveSprite2 (no gravity inside the helper).
-        yVelocity += GRAVITY;
+        // ROM ObjectFall (_incObj/sub ObjectFall & SpeedToPos.asm:8-23): Y moves with
+        // the OLD y_vel, then gravity is added to y_vel for the next frame (one-frame
+        // delayed gravity). The previous manual pre-increment applied gravity before
+        // the move.
         motion.x = currentX;
         motion.y = currentY;
         motion.xVel = 0;
         motion.yVel = yVelocity;
-        SubpixelMotion.moveSprite2(motion);
+        SubpixelMotion.objectFall(motion, GRAVITY);
         currentY = motion.y;
+        yVelocity = (short) motion.yVel;
 
         // ObjFloorDist: find floor from feet (obY + obHeight)
         TerrainCheckResult floorResult = ObjectTerrainUtils.checkFloorDist(currentX, currentY, Y_RADIUS);

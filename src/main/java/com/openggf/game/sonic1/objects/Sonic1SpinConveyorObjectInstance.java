@@ -685,8 +685,30 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         }
         // Platform: out_of_range.s uses objoff_30 (base X)
         // Act 3 has a wider range check: cmpi.w #-$80,d0 / bhs.s SpinC_Display
+        //
+        // ROM runs SpinC_Main (which sets objoff_30/baseX) before the out_of_range
+        // macro that follows the jsr (docs/s1disasm/_incObj/6F SBZ Spin Platform
+        // Conveyor.asm:5-13,53-54). The engine loads baseX lazily in
+        // ensureInitialized() on the first update(); until then baseX is the
+        // sentinel 0 and must not be treated as off-screen, else the platform is
+        // despawned on its spawn frame before it can initialise (matching the LZ
+        // conveyor fix in Sonic1LZConveyorObjectInstance.isPersistent()).
+        if (!initialized) {
+            return true;
+        }
+        // Act 3 only: ROM keeps platforms within one chunk (0x80) to the left of
+        // the window (cmpi.w #-$80,d0 / bhs.s SpinC_Display,
+        // docs/s1disasm/_incObj/6F SBZ Spin Platform Conveyor.asm:17-21); acts
+        // 1/2 use the standard window. Modelled on the ROM act value, not the
+        // zone/trace.
+        if (services().currentAct() == ACT3) {
+            return isInRangeAtWithLeftExtension(baseX, 1);
+        }
         return isBaseXOnScreen(baseX);
     }
+
+    // From disassembly: cmpi.b #act3,(v_act).w. Act index is 0-based (act 3 = 2).
+    private static final int ACT3 = 2;
 
     /**
      * Check if the object is within out-of-range distance from camera.
@@ -699,6 +721,43 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isHighPriority() {
         return mode == Mode.SPAWNER;
+    }
+
+    /**
+     * Clears the spawner's {@code v_obj63} latch when this platform's cluster
+     * leaves the camera window, so the spawner re-spawns the cluster when the
+     * camera returns.
+     * <p>
+     * ROM models this through {@code SpinC_OutOfRange}'s
+     * {@code bclr #0,(v_obj63,slot)}
+     * (docs/s1disasm/_incObj/6F SBZ Spin Platform Conveyor.asm:24-28): when a
+     * SpinConvey object goes out of range it clears its spawner slot's latch so
+     * a later re-load of that spawner re-creates the children. All of a
+     * spawner's children share the same {@code SpinC_Data} group baseX
+     * ({@code objoff_30}, e.g. group3 = 0xF80), so they leave the window
+     * together; clearing the latch on a platform's out-of-range unload matches
+     * the observed ROM re-spawn (the SBZ1 group3 cluster vanishes ~f3550-3650
+     * and reappears in fresh slots by f3750). Each spawner slot maps 1:1 to its
+     * children's {@code pathIndex} (spawner subtype 0x80+N spawns children with
+     * subtype 0xN0-0xN3, so {@code (subtype>>4)&7 == N}).
+     * <p>
+     * Gated to PLATFORM mode and the out-of-range unload path only: the
+     * spawner's own self-delete after spawning ({@code spawnerDone}) must not
+     * clear the latch, or the cluster would re-spawn every frame. The
+     * {@code unloadedByOutOfRange} flag is set by {@link #isPersistent()}
+     * returning false purely due to leaving the window (not destruction).
+     */
+    @Override
+    public void onUnload() {
+        if (mode == Mode.PLATFORM && initialized && !isDestroyed()) {
+            // Reached here via the counter-based out_of_range unload path
+            // (ObjectManager calls onUnload() before freeing the slot). A
+            // platform reaching out_of_range is the ROM SpinC_OutOfRange case.
+            Sonic1ConveyorState conveyorState = services().gameService(Sonic1ConveyorState.class);
+            if (conveyorState != null) {
+                conveyorState.clearSpawned(pathIndex);
+            }
+        }
     }
 
     // ========================================

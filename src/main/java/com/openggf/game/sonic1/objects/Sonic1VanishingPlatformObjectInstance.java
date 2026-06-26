@@ -54,8 +54,14 @@ public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstanc
     // From disassembly: move.b #$10,obActWid(a0)
     private static final int HALF_WIDTH = 0x10;
 
-    // Platform surface height (thin solid)
-    private static final int HALF_HEIGHT = 0x08;
+    // PlatformObject/MvSonicOnPtfm2 ground half-height. ROM VanP routine 2/4
+    // (docs/s1disasm/_incObj/6C SBZ Vanishing Platforms.asm:82-93) lands the
+    // first contact via PlatformObject and continued riding via MvSonicOnPtfm2,
+    // the same top-solid platform family as Obj18 (Sonic1PlatformObjectInstance).
+    // MvSonicOnPtfm2 uses subi.w #9 (docs/s1disasm/_incObj/sub MvSonicOnPtfm.asm:18-41),
+    // so the ground half-height is 9; PlatformObject's obY-8 first-landing detection
+    // is modelled by getTopLandingSnapAdjustment()=-1 below.
+    private static final int HALF_HEIGHT = 9;
 
     // From disassembly: move.b #4,obPriority(a0)
     private static final int PRIORITY = 4;
@@ -174,7 +180,24 @@ public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstanc
      * - If zero: transition to routine 2 (vanish)
      */
     private void updateIdle(int frameCounter, AbstractPlayableSprite player) {
-        int check = (frameCounter - phaseOffset) & phaseMask;
+        // ROM VanP_Sync (docs/s1disasm/_incObj/6C SBZ Vanishing Platforms.asm:51-56):
+        //   move.w (v_framecount).w,d0 / sub.w objoff_36,d0 / and.w objoff_38,d0
+        // The routine 6->2 transition gate reads v_framecount (= Level_frame_counter),
+        // NOT the V-int/VBla clock. The engine's update() frameCounter parameter is the
+        // VBla counter for S1 objects (ObjectManager passes vblaCounter), which runs
+        // ahead of and out of phase with v_framecount, so the platform entered its
+        // vanish/appear cycle at the wrong absolute frame (SBZ1 trace: VBla 0x8500
+        // multiple at vfc 2170 instead of ROM's v_framecount 0x800 multiple at vfc
+        // 2048 — a 122-frame phase error), leaving the @0BB0,0648 platform half a cycle
+        // out of phase (engine vanished while ROM solid) so Sonic fell through at f2268.
+        // LevelManager.frameCounter is the engine's canonical Level_frame_counter;
+        // objects execute pre-increment, so getFrameCounter()+1 is this frame's
+        // v_framecount (same source as the SBZ Electrocuter vfc gate). The v3.5 trace's
+        // object_near obj_frame confirmed the target platform is solid (obj_frame 0) at
+        // f2268 in both ROM and the engine after this fix.
+        LevelManager levelManager = services().levelManager();
+        int vFrameCount = levelManager != null ? levelManager.getFrameCounter() + 1 : frameCounter;
+        int check = (vFrameCount - phaseOffset) & phaseMask;
         if (check == 0) {
             // subq.b #4,obRoutine(a0) -> routine 6-4 = 2
             routine = 2;
@@ -284,6 +307,35 @@ public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstanc
     @Override
     public boolean isTopSolidOnly() {
         return true;
+    }
+
+    // --- PlatformObject landing-surface family (ROM VanP routine 2 PlatformObject /
+    // routine 4 MvSonicOnPtfm2, 6C SBZ Vanishing Platforms.asm:82-93). Same family as
+    // Sonic1PlatformObjectInstance (Obj18); a vanishing platform that re-appears must
+    // catch a falling player on the exact ROM frame and at the exact ROM surface Y. ---
+
+    @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // PlatformObject receives obActWid directly as d1 (sub PlatformObject.asm:17),
+        // so the collision half-width is the standable width with no SolidObject +$B
+        // narrowing.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // PlatformObject gates the land band with an UNSIGNED blo #-16 (rejects the
+        // exact-touch d0==0 case), matching the Obj18 family. Combined with the obY-8
+        // detection offset this lands on the same frame as ROM.
+        return true;
+    }
+
+    @Override
+    public int getTopLandingSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
+        // PlatformObject builds its first-landing detection surface from obY-8
+        // (sub PlatformObject.asm:37-38 subq.w #8,d0). HALF_HEIGHT is 9 (the
+        // MvSonicOnPtfm2 ride surface), so -1 shifts the first-landing detect to obY-8.
+        return -1;
     }
 
     @Override

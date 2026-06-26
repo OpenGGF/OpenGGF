@@ -258,6 +258,30 @@ public interface ObjectInstance {
     }
 
     /**
+     * Returns true when the ROM routine for this object performs its
+     * {@code out_of_range} / {@code RememberState} unload check at the END of
+     * its routine, AFTER moving (e.g. S1 badniks run {@code SpeedToPos} then
+     * {@code bra.w RememberState}, which tests the object's CURRENT post-move
+     * {@code x_pos} — docs/s1disasm/_incObj/sub RememberState.asm:9).
+     * <p>
+     * When true, the S1 counter-based exec loop
+     * ({@code ObjectManager.updateCounterBasedExecThenLoad}) skips the
+     * pre-execute out_of_range check and instead re-checks out_of_range AFTER
+     * {@code executeObjectWithSolidContext} has run the routine and applied the
+     * frame's movement — matching ROM's post-move unload timing and mirroring
+     * the non-counter {@code runExecLoop} (S2/S3K MarkObjGone at routine end).
+     * <p>
+     * Leave false for objects whose ROM {@code out_of_range} is at routine
+     * START (static scenery / fixed-anchor objects that test before any move);
+     * for those the pre-execute check already matches ROM. Static objects that
+     * do not move see the same position either way, so this flag only changes
+     * behaviour for objects that actually move within their routine.
+     */
+    default boolean checksOutOfRangeAfterRoutine() {
+        return false;
+    }
+
+    /**
      * Object-specific out-of-range delete predicate. Called only when
      * {@link #usesCustomOutOfRangeCheck()} returns true.
      *

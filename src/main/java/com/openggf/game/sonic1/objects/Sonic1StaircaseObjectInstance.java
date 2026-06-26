@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -104,6 +105,23 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
     private boolean contactTop;
     private boolean contactBottom;
 
+    // ROM Stair_Main allocates 3 child blocks via FindNextFreeObj, in slots ABOVE
+    // the parent (docs/s1disasm/_incObj/5B SLZ Staircase.asm:39-60; sub
+    // FindFreeObj.asm:32-48 scans forward from the parent). The engine folds the
+    // parent + 3 children into this single instance, so we reserve those 3 child
+    // slots to keep the SST slot landscape ROM-faithful AND execute this
+    // consolidated object from the HIGHEST child slot. ROM runs the child blocks'
+    // Stair_Solid AFTER any lower-slot object the player also interacts with that
+    // frame — notably the SLZ Fan (Obj5D), which loads into a slot between the
+    // staircase parent and its children and pushes the rider's x_pos BEFORE the
+    // child block re-checks the ride bounds. Executing at the parent slot ran the
+    // ride re-seat BEFORE the fan push, keeping the rider on the block one frame
+    // too long at the walk-off edge (SLZ2 f2554: engine re-seats y 0212 vs ROM
+    // 0211). Pattern mirrors AizGiantRideVineObjectInstance.getExecutionSlotIndex.
+    private static final int CHILD_SLOT_COUNT = NUM_PIECES - 1; // parent + 3 children
+    private boolean childSlotsReserved;
+    private int executionSlot = -1;
+
     public Sonic1StaircaseObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Staircase");
         this.baseX = spawn.x();
@@ -137,6 +155,33 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
     @Override
     public int getY() {
         return baseY;
+    }
+
+    @Override
+    public int getExecutionSlotIndex() {
+        // Execute from the highest reserved child slot once allocated so the
+        // ride re-seat runs after lower-slot objects (the SLZ Fan) per ROM's
+        // child-block-after-fan slot order. Falls back to the parent slot before
+        // the children are reserved (this object's first frame).
+        return executionSlot >= 0 ? executionSlot : super.getExecutionSlotIndex();
+    }
+
+    private void reserveChildSlots() {
+        if (childSlotsReserved || getSlotIndex() < 0) {
+            return;
+        }
+        childSlotsReserved = true;
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.objectManager() == null || getSpawn() == null) {
+            return;
+        }
+        // ROM FindNextFreeObj scans forward from the parent slot
+        // (docs/s1disasm/_incObj/sub FindFreeObj.asm:32-48).
+        int[] childSlots = svc.objectManager().allocateChildSlotsAfter(
+                getSpawn(), CHILD_SLOT_COUNT, getSlotIndex());
+        if (childSlots.length > 0 && childSlots[childSlots.length - 1] >= 0) {
+            executionSlot = childSlots[childSlots.length - 1];
+        }
     }
     // MultiPieceSolidProvider implementation
 
@@ -206,6 +251,11 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        // ROM Stair_Main allocates child blocks via FindNextFreeObj on the parent's
+        // first ExecuteObjects pass; mirror that here so the consolidated instance
+        // executes from the child slot range (after the fan).
+        reserveChildSlots();
+
         // Read and clear contact flags (set by callbacks since last update).
         // ROM equivalent: Stair_Solid writes objoff_36, Stair_Move reads it.
         boolean touchTop = contactTop;

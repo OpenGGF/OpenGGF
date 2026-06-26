@@ -25,6 +25,45 @@
 -- RNG-frontier diagnostics. CSV schema is unchanged.
 -- v3.4 changes: add s1_obj64_state aux events for LZ air-bubble maker
 -- frontier diagnostics. CSV schema is unchanged.
+-- v3.5 changes: (1) emit metadata.source_bk2 so the shared _movies/ BK2 resolver
+-- finds the movie (previously omitted -> AbstractTraceReplayTest silently SKIPPED
+-- the regenerated trace). (2) add obj_frame (obFrame / OFF_ANIM_FRAME_DISP 0x1A)
+-- to object_near events for object-tilt/anim-phase diagnosis (e.g. SLZ seesaw
+-- Obj5E tilt mapping frame). Both are diagnostic-only; CSV schema is unchanged.
+-- v3.6 changes: RECORDER HYGIENE ONLY (no schema/data change; v3.5 traces stay
+-- valid). (1) No more per-segment cmd-window flashes: all per-act output subdirs
+-- are pre-created in a SINGLE os.execute at load (the only shell-out), and the
+-- per-segment os.execute("mkdir") is removed. (2) Reliable movie-end self-exit:
+-- the run now stops at min(S1_STOP_AT_FRAME, movie_end) and exits even when
+-- client.exit() is a no-op on this BizHawk build (the loop terminates the lua and
+-- a guarded post-loop fallback re-tries exit), so EmuHawk no longer runs away
+-- after the movie finishes. metadata.lua_script_version reports "3.6".
+-- v3.7 changes: ADD two per-frame diagnostic AUX events (CSV schema UNCHANGED;
+-- both are comparison-only context, never engine write-back). v3.6 traces stay
+-- valid (the new aux_schema_extras keys gate the parser). (1) "v_objstate": the
+-- full 192-byte object respawn-state bit array (v_objstate $FFFC00..$FFFCC0) as a
+-- compact hex string -- unblocks the slot-interleave / slot-cadence cluster (LZ2
+-- f1068, MZ3 f9917, SYZ1 f4430, SBZ1) by exposing whether ROM's respawn bit is
+-- clear (respawn) vs the engine's set (skip) at a backward-OPL reload. (2)
+-- "camera_boundary": v_limitbtm1/v_limitbtm2/v_lookshift/f_bgscrollvert -- unblocks
+-- MZ1 f2101 (engine v_limitbtm2 ~6px high). NOTE: player x_sub/y_sub were ALREADY
+-- in physics.csv columns 12-13 since v2.0, so no CSV change was needed for the
+-- subpixel-trajectory frontiers (SBZ2 f2224, SYZ3 f6358). metadata
+-- lua_script_version reports "3.7"; aux_schema_extras gains v_objstate_per_frame
+-- and camera_boundary_per_frame.
+-- v3.8 changes: ADD two per-object fields to the EXISTING object_near aux event
+-- (CSV schema UNCHANGED; comparison-only context, never engine write-back). v3.7
+-- traces stay valid (the new aux_schema_extras key gates the parser; the parser
+-- treats both fields as legacy-absent-safe). (1) "routine2": ob2ndRout (object
+-- offset +0x25) -- the object's secondary routine, pinning boss post-defeat phase
+-- transitions the primary routine byte hides (GHZ boss Obj3D enters ESCAPE ~1f
+-- early at GHZ3 f8569). (2) "objoff_3c": objoff_3C (offset +0x3C) as an unsigned
+-- 32-bit big-endian word -- the generic timer / 32-bit sub-pixel accumulator
+-- (BGHZ_BossGenericTimer; FZ cylinder Obj84 rise accumulator that seeds the player
+-- x_sub at FZ f3901). Both ride the existing object_near proximity gate, so they
+-- only cost bytes for objects already in the player window. metadata
+-- lua_script_version reports "3.8"; aux_schema_extras gains
+-- object_near_routine2_objoff3c.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -75,6 +114,11 @@ local OFF_ANIM_ID          = 0x1C   -- byte
 local OFF_ANIM_TIMER       = 0x1E   -- byte
 local OFF_STATUS           = 0x22   -- byte: status flags
 local OFF_ROUTINE          = 0x24   -- byte: player movement routine
+local OFF_ROUTINE_2ND      = 0x25   -- byte: ob2ndRout — object secondary routine
+                                    --       (e.g. GHZ boss Obj3D post-defeat ESCAPE phase)
+local OFF_OBJOFF_3C        = 0x3C   -- LONG (32-bit): objoff_3C — generic timer / 32-bit
+                                    --       sub-pixel accumulator (e.g. BGHZ_BossGenericTimer,
+                                    --       FZ cylinder Obj84 rise accumulator)
 local OFF_SUBTYPE          = 0x28   -- byte
 local OFF_RENDER_FLAGS     = 0x01   -- byte: obRender
 local OFF_ANGLE            = 0x26   -- byte: terrain angle
@@ -106,7 +150,16 @@ local ADDR_OPL_SCREEN      = 0xF76E   -- word: v_opl_screen (last processed came
 local ADDR_OPL_DATA_FWD    = 0xF770   -- long: v_opl_data (forward cursor ROM pointer)
 local ADDR_OPL_DATA_BWD    = 0xF774   -- long: v_opl_data+4 (backward cursor ROM pointer)
 local ADDR_OBJSTATE         = 0xFC00   -- byte[192]: v_objstate array (verified from ROM lea instruction)
+local OBJSTATE_SIZE         = 0xC0     -- 192 bytes (ds.b $C0; docs/s1disasm/sonic.lst v_objstate..v_objstate_end FFFC00..FFFCC0)
 -- v_objstate[0] = forward counter, v_objstate[1] = backward counter
+
+-- Camera vertical-boundary / look-shift state (v3.7 diagnostic, MZ1 f2101 cluster).
+-- Absolute mainmemory addresses confirmed from docs/s1disasm/sonic.lst instruction
+-- operands (e.g. `cmp.w (v_limitbtm2).w,d0` assembles to F72E):
+local ADDR_LIMITBTM1       = 0xF726   -- word: v_limitbtm1 (primary bottom level boundary)
+local ADDR_LIMITBTM2       = 0xF72E   -- word: v_limitbtm2 (secondary/eased bottom boundary the camera clamps to)
+local ADDR_LOOKSHIFT       = 0xF73E   -- word: v_lookshift (up/down look screen shift; default $60)
+local ADDR_BGSCROLLVERT    = 0xF75C   -- byte: f_bgscrollvert (bottom-boundary-moving / vertical bg-scroll flag)
 
 -- Object table (S1 SST: 128 slots of $40 bytes at $FFD000)
 local OBJ_TABLE_START      = 0xD000
@@ -141,6 +194,44 @@ local ZONE_NAMES = {
     [6] = "endz",  -- Ending Zone
     [7] = "ss",    -- Special Stage
 }
+
+-- v3.6 directory hygiene: pre-create every per-act segment dir in ONE shell-out
+-- at load so the per-segment os.execute("mkdir") (which flashed a cmd window for
+-- each zone) is gone. Defined here (after ZONE_NAMES / BASE_OUTPUT_DIR) so the
+-- frame loop's ensure_segment_dir() reference resolves to this local.
+local function precreate_segment_dirs()
+    -- Strip any trailing slash before quoting: a trailing "\" inside a cmd-quoted
+    -- path escapes the closing quote (`"trace_output\"` is malformed).
+    local function quote_dir(p)
+        local win = (p:gsub("/", "\\"))      -- parens: keep only the string, drop gsub's count
+        win = (win:gsub("\\+$", ""))         -- drop trailing backslashes
+        return "\"" .. win .. "\""
+    end
+    local quoted = { quote_dir(BASE_OUTPUT_DIR) }
+    for _, zname in pairs(ZONE_NAMES) do
+        for act = 1, 3 do
+            quoted[#quoted + 1] = quote_dir(BASE_OUTPUT_DIR .. zname .. tostring(act))
+        end
+    end
+    -- Windows mkdir takes multiple paths; 2>NUL swallows "already exists".
+    -- One brief cmd window for the whole run.
+    os.execute("mkdir " .. table.concat(quoted, " ") .. " 2>NUL")
+end
+
+-- Shell-free fallback for an UNKNOWN zone id whose dir was not pre-created
+-- (start_zone_name = "unknown_XX"). Probes via a temp file; only shells out if
+-- the dir genuinely does not exist, so the normal known-zone path never spawns a
+-- console.
+local function ensure_segment_dir(dir)
+    local probe_path = dir .. ".oggf_dir_probe"
+    local probe = io.open(probe_path, "w")
+    if probe then
+        probe:close()
+        os.remove(probe_path)
+        return  -- dir exists (pre-created); no shell-out.
+    end
+    os.execute("mkdir \"" .. (dir:gsub("/", "\\")) .. "\" 2>NUL")
+end
 
 -- Snapshot interval (frames between full state snapshots in aux file)
 local SNAPSHOT_INTERVAL = 60
@@ -282,12 +373,17 @@ local function write_metadata()
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.4",\n')
+    meta_file:write('  "lua_script_version": "3.8",\n')
     meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
-    meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame"],\n')
+    meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", '
+        .. '"v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c"],\n')
     meta_file:write('  "rom_checksum": "",\n')
-    meta_file:write('  "notes": ""\n')
+    meta_file:write('  "notes": "",\n')
+    -- The complete-run recorder always plays the shared complete-run BK2. Emit
+    -- source_bk2 so AbstractTraceReplayTest's _movies/ resolver finds it; without
+    -- it the regenerated trace silently SKIPS (no BK2 -> Assumptions.assumeTrue).
+    meta_file:write('  "source_bk2": "s1-complete-run.bk2"\n')
     meta_file:write("}\n")
     meta_file:close()
     print(string.format("Metadata written. Zone: %s Act %d, Trace frames: %d",
@@ -347,6 +443,38 @@ local function write_s1_obj64_state(slot, addr, vfc)
         mainmemory.read_u32_be(addr + 0x3C)))
 end
 
+-- v3.7: full v_objstate respawn-bit array dump (compact hex), every frame.
+-- Unblocks the slot-interleave / slot-cadence cluster (LZ2 f1068, MZ3 f9917,
+-- SYZ1 f4430, SBZ1): the comparator can see, at a backward-OPL reload, whether
+-- the ROM respawn bit is CLEAR (ROM respawns the object) vs the engine's
+-- objState bit SET (engine skips the respawn) -- the exact LZ2 f217-style root.
+-- v_objstate[0]/[1] are the OPL fwd/bwd counters; [2..] are per-spawn remember
+-- bits indexed by RememberState. Diagnostic context ONLY (never write-back).
+local function write_v_objstate()
+    local parts = {}
+    for i = 0, OBJSTATE_SIZE - 1 do
+        parts[#parts + 1] = string.format("%02X", mainmemory.read_u8(ADDR_OBJSTATE + i))
+    end
+    write_aux(string.format(
+        '{"frame":%d,"event":"v_objstate","bytes":"%s"}',
+        trace_frame, table.concat(parts)))
+end
+
+-- v3.7: camera vertical-boundary / look-shift state, every frame.
+-- Unblocks MZ1 f2101 (engine v_limitbtm2 ~6px too high): logging v_limitbtm2 /
+-- v_limitbtm1 / v_lookshift / f_bgscrollvert resolves the +6-vs-+2 / clamp
+-- ordering deterministically. Diagnostic context ONLY (never write-back).
+local function write_camera_boundary()
+    write_aux(string.format(
+        '{"frame":%d,"event":"camera_boundary","limitbtm1":"0x%04X","limitbtm2":"0x%04X",'
+        .. '"lookshift":"0x%04X","bgscrollvert":"0x%02X"}',
+        trace_frame,
+        mainmemory.read_u16_be(ADDR_LIMITBTM1),
+        mainmemory.read_u16_be(ADDR_LIMITBTM2),
+        mainmemory.read_u16_be(ADDR_LOOKSHIFT),
+        mainmemory.read_u8(ADDR_BGSCROLLVERT)))
+end
+
 -- Scan all object slots (1-127). Log appearances, disappearances, proximity,
 -- and emit a full slot_dump when any dynamic object appears.
 local function scan_objects(player_x, player_y)
@@ -390,10 +518,25 @@ local function scan_objects(player_x, player_y)
             if dx <= OBJECT_PROXIMITY and dy <= OBJECT_PROXIMITY then
                 local obj_status = mainmemory.read_u8(addr + OFF_STATUS)
                 local obj_routine = mainmemory.read_u8(addr + OFF_ROUTINE)
+                -- obj_frame = obFrame / OFF_ANIM_FRAME_DISP (0x1A). For tilt/anim
+                -- objects (e.g. SLZ seesaw Obj5E) this is the mapping/tilt frame,
+                -- needed to compare object-anim-phase against the engine.
+                local obj_frame = mainmemory.read_u8(addr + OFF_ANIM_FRAME_DISP)
+                -- ob2ndRout (offset +0x25): object secondary routine. Pins boss
+                -- post-defeat phase transitions (e.g. GHZ boss Obj3D ESCAPE) that
+                -- the primary routine byte alone does not reveal.
+                local obj_routine2 = mainmemory.read_u8(addr + OFF_ROUTINE_2ND)
+                -- objoff_3C (offset +0x3C): 32-bit generic timer / sub-pixel
+                -- accumulator (BGHZ_BossGenericTimer; FZ cylinder Obj84 rise). Read
+                -- as an unsigned 32-bit big-endian word; consumers reinterpret the
+                -- high word as a signed 16-bit pixel offset where appropriate.
+                local obj_off3c = mainmemory.read_u32_be(addr + OFF_OBJOFF_3C)
                 write_aux(string.format(
                     '{"frame":%d,"vfc":%d,"event":"object_near","slot":%d,"type":"0x%02X",'
-                    .. '"x":"0x%04X","y":"0x%04X","routine":"0x%02X","status":"0x%02X"}',
-                    trace_frame, vfc, slot, obj_id, obj_x, obj_y, obj_routine, obj_status))
+                    .. '"x":"0x%04X","y":"0x%04X","routine":"0x%02X","status":"0x%02X","obj_frame":"0x%02X",'
+                    .. '"routine2":"0x%02X","objoff_3c":"0x%08X"}',
+                    trace_frame, vfc, slot, obj_id, obj_x, obj_y, obj_routine, obj_status, obj_frame,
+                    obj_routine2, obj_off3c))
             end
         end
 
@@ -527,11 +670,18 @@ end
 local function on_frame_end()
     local game_mode = mainmemory.read_u8(ADDR_GAME_MODE)
 
-    -- MULTI-SEGMENT: stop the whole pass when the movie ends (or an optional
-    -- S1_STOP_AT_FRAME test limit is reached). Finalise any open segment first.
+    -- MULTI-SEGMENT: stop the whole pass at min(S1_STOP_AT_FRAME, movie_end).
+    -- v3.6: the movie-end / FINISHED checks are NO LONGER gated on `started`, so
+    -- the pass also terminates if the movie ends before gameplay is ever detected
+    -- (previously such a run -- or one where S1_STOP_AT_FRAME was unset and
+    -- movie.length() under-reported -- looped forever past the movie, leaving
+    -- EmuHawk running away). Whichever of the stop bounds is reached first wins.
     local stop_at = tonumber(os.getenv("S1_STOP_AT_FRAME") or "0")
-    local movie_done = started and movie.isloaded() and emu.framecount() >= movie.length()
-    local stop_reached = started and stop_at > 0 and emu.framecount() >= stop_at
+    local frame_now = emu.framecount()
+    local movie_len = movie.isloaded() and movie.length() or 0
+    local movie_done = (movie_len > 0 and frame_now >= movie_len)
+        or (movie.isloaded() and movie.mode() == "FINISHED")
+    local stop_reached = stop_at > 0 and frame_now >= stop_at
     if stop_reached or movie_done then
         if started then
             if physics_file then physics_file:flush() end
@@ -570,8 +720,13 @@ local function on_frame_end()
             trace_frame = 0
 
             -- MULTI-SEGMENT: per-act output dir, e.g. trace_output/ghz1/ (zone name + 1-based act).
+            -- v3.6: the directory was pre-created at load (precreate_segment_dirs), so
+            -- NO per-segment os.execute("mkdir") here -- that popped a cmd-window for
+            -- every zone segment. ensure_segment_dir is a no-op shell-free fallback that
+            -- only fires (one shell-out) for an unexpected/unknown zone id not covered
+            -- by the pre-created set.
             OUTPUT_DIR = BASE_OUTPUT_DIR .. start_zone_name .. tostring(start_act + 1) .. "/"
-            os.execute("mkdir \"" .. OUTPUT_DIR:gsub("/", "\\") .. "\" 2>NUL")
+            ensure_segment_dir(OUTPUT_DIR)
 
             open_files()
             -- Write metadata immediately so it exists even if the process is killed
@@ -713,6 +868,11 @@ local function on_frame_end()
     -- Proximity logging runs every frame so we never miss collision-relevant objects.
     scan_objects(x, y)
 
+    -- v3.7 per-frame diagnostic context (comparison-only): the object respawn-bit
+    -- array (slot-cadence cluster) and the camera vertical-boundary state (MZ1).
+    write_v_objstate()
+    write_camera_boundary()
+
     -- OPL cursor state: emit event on chunk transitions for ROM↔engine comparison.
     -- v_opl_screen changes only when OPL_Next processes a new chunk.
     local opl_screen = mainmemory.read_u16_be(ADDR_OPL_SCREEN)
@@ -736,8 +896,10 @@ local function on_frame_end()
     trace_frame = trace_frame + 1
 end
 
--- Create output directory at load time (avoids cmd.exe pause during gameplay)
-os.execute("mkdir \"" .. OUTPUT_DIR .. "\" 2>NUL")
+-- v3.6: All segment dirs are pre-created at load by precreate_segment_dirs()
+-- (defined just after ZONE_NAMES). This single load-time shell-out replaces the
+-- old per-segment os.execute("mkdir") that flashed one cmd window per zone.
+precreate_segment_dirs()
 
 -- Run at maximum speed in headless mode.
 -- emu.limitframerate(false) removes the 60fps cap.
@@ -760,10 +922,37 @@ end
 -- The onframeend callback pattern doesn't work because callbacks stop
 -- firing when BizHawk pauses, and client.exit() can kill the process
 -- before file I/O completes.
-print("S1 Trace Recorder v3.0 loaded. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...")
+print("S1 Trace Recorder v3.7 loaded. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...")
+
+-- v3.6 hard safety net: even if every movie-end signal fails (movie.length()==0,
+-- mode never reports FINISHED, S1_STOP_AT_FRAME unset), the loop must not run
+-- forever. Cap at the movie length (+ a small margin) when known, else a large
+-- absolute bound. This is the backstop that prevents the runaway EmuHawk.
+local function absolute_frame_cap()
+    local len = movie.isloaded() and movie.length() or 0
+    if len > 0 then
+        return len + 64  -- a few frames past the movie to let finalisation land
+    end
+    return 2000000       -- ~9h of frames; far beyond any S1 complete-run BK2
+end
+local FRAME_CAP = absolute_frame_cap()
 
 while true do
     on_frame_end()
+
+    -- Backstop: force-finish if we somehow blew past the movie/cap without any
+    -- normal stop signal firing.
+    if not finished and emu.framecount() >= FRAME_CAP then
+        print(string.format(
+            "Frame cap %d reached without a movie-end signal; finalising and exiting.", FRAME_CAP))
+        if started then
+            if physics_file then physics_file:flush() end
+            write_metadata()
+            close_files()
+            started = false
+        end
+        finished = true
+    end
 
     -- If recording is done, finalise files and exit from INSIDE the loop.
     -- Code after the loop may never execute because client.exit() kills
@@ -773,9 +962,6 @@ while true do
         -- (write_metadata + close_files) at movie-end, so do NOT re-finalise here
         -- (start_*/trace_frame are reset and would corrupt the last segment's metadata).
         print("All segments recorded. Exiting.")
-        if HEADLESS then
-            client.exit()
-        end
         break
     end
 
@@ -786,4 +972,22 @@ while true do
     end
 
     emu.frameadvance()
+end
+
+-- v3.6 reliable termination: client.exit() is a no-op on some BizHawk builds
+-- (the recorded "kept running" symptom). All files are already flushed/closed by
+-- the finalisation above, so it is safe to (a) call client.exit(), then (b) if it
+-- returns at all, keep advancing while re-issuing exit and pausing -- so EmuHawk
+-- stops chewing CPU/RAM even where the first exit did nothing. emu.frameadvance()
+-- yields control back to the host so a working exit can take effect.
+if HEADLESS then
+    for _ = 1, 8 do
+        client.exit()
+        if client.ispaused() then client.unpause() end
+        emu.frameadvance()
+    end
+    -- Last resort if the build truly ignores client.exit(): pause so EmuHawk idles
+    -- (0% CPU) instead of free-running the movie. The host launcher's process kill
+    -- / tasklist check then reaps it without a multi-GB runaway.
+    client.pause()
 end

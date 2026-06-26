@@ -457,6 +457,21 @@ public class Sonic1RollerBadnikInstance extends AbstractBadnikInstance implement
 
     @Override
     public int getCollisionFlags() {
+        // ROM parity: Roll_Main (routine 0) never sets obColType, and the initial
+        // waiting state Roll_Action_FromLeft (ob2ndRout=0) leaves it untouched too
+        // (docs/s1disasm/_incObj/43 Badnik - Roller.asm:19-38,86-100). obColType is
+        // first written only when the Roller activates (Roll_Action_FromLeft sets
+        // $8E, ...:96) or stops-and-unfolds (Roll_Action_StopAndUnfold sets $0E,
+        // ...:177) — both advance ob2ndRout away from 0 and never return to it. So a
+        // Roller still in STATE_ROLL_CHK has obColType=0 (col_none) and ReactToItem
+        // skips it entirely (`move.b obColType(a1),d0 / bne ...`,
+        // docs/s1disasm/_incObj/Sonic ReactToItem.asm:52-53). Without this, a curled
+        // waiting Roller wrongly hurt Sonic when he fell onto it (S1 SYZ1 trace
+        // f2338: engine hurt + ring loss vs ROM's unscathed fall past the dormant
+        // Roller).
+        if (secondaryState == STATE_ROLL_CHK) {
+            return 0;
+        }
         if (invincible) {
             // obColType = $8E: $80 = invincible (BOSS category in engine), $0E = size index
             // Using $80 (BOSS) category makes the Roller invincible to Sonic's attacks

@@ -38,6 +38,16 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// When true, normal vertical scroll rules may be modified
 	private boolean maxYChanging = false;
 
+	// ROM camera/boundary ordering (S1 DeformLayers (REV01).asm:16-18): ScrollHoriz
+	// + ScrollVertical (camera move + clamp to the prior-frame v_limitbtm2) run
+	// BEFORE DynamicLevelEvents (zone handler + bottom-boundary easing).
+	// LevelFrameStep mirrors this: updatePosition() runs before the zone event
+	// handler + updateBoundaryEasing(). So updatePosition() clamps to the maxY left
+	// by the PREVIOUS frame's easing, and the airborne +8 boundary acceleration
+	// applied by this frame's updateBoundaryEasing() (which reads the POST-scroll
+	// camera, ROM v_screenposy) reaches the camera on the NEXT frame — matching ROM
+	// without any explicit one-frame deferral state.
+
 	// ROM: Horiz_scroll_delay_val - horizontal scroll delay counter
 	// When > 0, horizontal scroll uses position history while vertical scroll continues normally
 	private int horizScrollDelayFrames = 0;
@@ -99,6 +109,15 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// Set per-game via setFastScrollCap().
 	private static final short DEFAULT_FAST_SCROLL_CAP = 16;
 	private short fastScrollCap = DEFAULT_FAST_SCROLL_CAP;
+
+	// ROM S1 (FixBugs=0): the leftward horizontal camera move is UNCAPPED — only the
+	// rightward move caps at fastScrollCap. The leftward cap is gated behind
+	// `if FixBugs` (FixBugs=0 in the shipped ROM), so SH_MoveCameraLeft runs straight
+	// to .moveLeft and adds the full (possibly >16px) offset
+	// (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:59-99). S2 (s2.asm:18102-
+	// 18105) and S3K (sonic3k.asm:38403-38406) cap BOTH directions, so this stays
+	// false for them. Set per-game from PhysicsFeatureSet.uncappedLeftwardHorizontalScroll.
+	private boolean uncappedLeftwardHorizontalScroll = false;
 
 	// ROM: Fast_V_scroll_flag. Moving solids request this for the current frame
 	// when the player is standing on them, so grounded vertical follow uses the
@@ -294,19 +313,24 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// where v_limitbtm2=$510 constrains the camera even though wrapping is active.
 		// ROM: ScrollVertical's SV_OnGround / SV_NotInAir path consults
 		// f_bgscrollvert (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:148-149,
-		// 157-158): when the bottom level boundary is moving this frame, it branches
-		// to SV_BottomBoundaryMoving (line 210) which forces d0=0 and falls through
-		// SV_SweetSpot -> SV_BottomBoundary (line 259), clamping the camera to the
-		// freshly-moved v_limitbtm2 EVEN when Sonic is exactly at the sweet spot and
-		// the normal grounded scroll produced no movement. DynamicLevelEvents
-		// (DynamicLevelEvents.asm:5-49) sets f_bgscrollvert=1 and steps v_limitbtm2
-		// toward v_limitbtm1 BEFORE ScrollVertical runs, so the camera follows the
-		// moving boundary on the same frame. The engine mirrors f_bgscrollvert with
-		// maxYChanging (set by updateBoundaryEasing, called before updatePosition).
-		// Without including maxYChanging here, a sweet-spot frame whose vertical
-		// scroll did not move the camera skips the clamp, so the camera lags the
-		// rising bottom boundary by one frame (S1 GHZ2 f3349 camera_y 0x034C vs ROM
-		// 0x034A while the boundary eases 0x0400 -> 0x0300 under a grounded roll).
+		// 157-158): when the bottom level boundary moved on the PREVIOUS frame, it
+		// branches to SV_BottomBoundaryMoving (line 210) which forces d0=0 and falls
+		// through SV_SweetSpot -> SV_BottomBoundary (line 259), clamping the camera to
+		// v_limitbtm2 EVEN when Sonic is exactly at the sweet spot and the normal
+		// grounded scroll produced no movement.
+		//
+		// ROM order (DeformLayers (REV01).asm:16-18): ScrollVertical runs BEFORE
+		// DynamicLevelEvents, so it clamps to the v_limitbtm2 left by the PREVIOUS
+		// frame's DynamicLevelEvents, and consults the f_bgscrollvert that frame set.
+		// LevelFrameStep mirrors this: updatePosition() (ScrollVertical) runs before
+		// the zone event handler + updateBoundaryEasing() (DynamicLevelEvents). So at
+		// this point maxY already holds the prior-frame boundary and maxYChanging
+		// mirrors the prior-frame f_bgscrollvert — both ROM-correct without any extra
+		// one-frame deferral. (The airborne +8 boundary acceleration applied by
+		// updateBoundaryEasing later this frame therefore reaches the camera on the
+		// NEXT frame, matching ROM — S1 MZ1 f2101.) The GHZ2 f3349 rising-boundary
+		// case is covered because maxYChanging keeps the clamp live on a sweet-spot
+		// frame whose grounded scroll produced no movement.
 		if (!lastFrameWrapped && (y != yBeforeVerticalScroll || maxYChanging)) {
 			y = clampAxisWithWrap(y, minY, maxY);
 		}
@@ -369,7 +393,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		int deadzoneRight = DeadzoneGeometry.rightEdge(width);
 		if (focusedSpriteRealX < deadzoneLeft) {
 			short difference = (short) (focusedSpriteRealX - deadzoneLeft);
-			if (difference < -cameraStepCap) {
+			// ROM S1 leaves the leftward move uncapped (FixBugs=0); S2/S3K cap it.
+			if (!uncappedLeftwardHorizontalScroll && difference < -cameraStepCap) {
 				nextX -= cameraStepCap;
 			} else {
 				nextX += difference;
@@ -495,8 +520,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				// Always add step (subtract 2) after potential snap
 				maxY += step;
 			} else {
-				// Increasing max Y (target > current) - ROM lines 20320-20331
-				// Check for acceleration: camera Y + 8 >= maxY AND player airborne
+				// Increasing max Y (target > current) - ROM lines 20320-20331.
+				// Boundary moving DOWN: check for the airborne acceleration
+				// (ROM DynamicLevelEvents.asm:35-49). This reads the camera (y) and
+				// the player airborne bit; because LevelFrameStep now runs
+				// updateBoundaryEasing() AFTER updatePosition() (matching ROM
+				// DynamicLevelEvents running after ScrollVertical), y here is the
+				// POST-scroll camera, exactly as ROM reads v_screenposy. The +8 step
+				// therefore reaches next frame's camera clamp, not this frame's.
 				if (focusedSprite != null && (y + 8) >= maxY && focusedSprite.getAir()) {
 					step = (short) (BOUNDARY_EASE_STEP * 4); // 8 pixels/frame
 				}
@@ -1084,6 +1115,16 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public void setFastScrollCap(int cap) {
 		this.fastScrollCap = (short) cap;
+	}
+
+	/**
+	 * Sets whether leftward horizontal camera scrolling is uncapped (ROM S1
+	 * FixBugs=0 behavior). When true, the per-frame cap applies only to rightward
+	 * scrolling. Set per-game from
+	 * {@link PhysicsFeatureSet#uncappedLeftwardHorizontalScroll()}.
+	 */
+	public void setUncappedLeftwardScroll(boolean uncapped) {
+		this.uncappedLeftwardHorizontalScroll = uncapped;
 	}
 
 	/** Returns the current fast vertical scroll cap in pixels/frame. */

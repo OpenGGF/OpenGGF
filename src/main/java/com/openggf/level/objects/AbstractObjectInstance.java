@@ -798,6 +798,33 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Variant of {@link #isInRangeAt(int)} that additionally keeps the object
+     * alive when its chunk-aligned reference X is up to {@code leftChunks}
+     * chunks (0x80 each) to the LEFT of the standard window's left edge.
+     * <p>
+     * Models ROM out_of_range tails that, instead of deleting on the
+     * {@code bhi exit}, test {@code cmpi.w #-(leftChunks*$80),d0 / bhs Display}
+     * to keep an object that has just scrolled off the left edge — e.g. the
+     * LZ Conveyor / SBZ Spin Conveyor act-3 path
+     * (docs/s1disasm/_incObj/63 LZ Conveyor.asm:16-20;
+     * docs/s1disasm/_incObj/6F SBZ Spin Platform Conveyor.asm:17-21).
+     *
+     * @param objectX    the chunk-aligned reference X to test
+     * @param leftChunks how many 0x80-px chunks of left slack to allow (ROM {@code $80} -> 1)
+     * @return true if in range under the extended-left window
+     */
+    protected boolean isInRangeAtWithLeftExtension(int objectX, int leftChunks) {
+        if (isInRangeAt(objectX)) {
+            return true;
+        }
+        int objAligned = objectX & 0xFF80;
+        int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
+        int dist = (objAligned - screenAligned) & 0xFFFF;
+        // ROM bhs #-(leftChunks*$80): keep when dist (unsigned) >= 0x10000 - leftChunks*0x80.
+        return dist >= (0x10000 - leftChunks * 0x80);
+    }
+
+    /**
      * ROM-accurate {@code ChkObjectVisible} check.
      * <p>
      * Returns true if the object position falls within the exact screen rectangle:

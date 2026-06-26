@@ -186,8 +186,15 @@ public class GHZBossWreckingBall extends AbstractBossChild
             }
         }
 
-        // Check if fully extended AND parent is in combat state (ob2ndRout >= 6)
-        if (allReached && parent.getState().routineSecondary >= 4) {
+        // Check if fully extended AND parent has reached the combat-reverse state.
+        // ROM GBall_Base only advances to GBall_Base2 (swing start) when the chain
+        // has fully extended AND the parent ship's ob2ndRout == 6
+        // (docs/s1disasm/_incObj/3D, 48 Boss - GHZ Main and Wrecking Ball.asm:506-511:
+        //  cmp.b BGHZ_BossGenericTimer / bne / cmpi.b #6,ob2ndRout(a1) / bne / addq.b #2,obRoutine).
+        // STATE_COMBAT_REVERSE = 6; the comment previously said ">= 6" but the gate
+        // used >= 4, starting the swing one boss-state early and shifting the ball's
+        // swing phase ahead of ROM.
+        if (allReached && parent.getState().routineSecondary >= 6) {
             chainFullyExtended = true;
         }
     }

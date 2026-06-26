@@ -283,10 +283,15 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
         // bset #1,obStatus(a1) - set player airborne
         player.setAir(true);
 
-        // move.w obX(a0),obX(a1)
-        player.setCentreX((short) getX());
-        // move.w obY(a0),obY(a1)
-        player.setCentreY((short) getY());
+        // ROM SBZ teleporter capture writes `move.w obX(a0),obX(a1)` /
+        // `move.w obY(a0),obY(a1)` (docs/s1disasm/_incObj/72 SBZ Teleporter.asm:
+        // 73-74): it sets only the player's x_pos/y_pos PIXEL words to the
+        // teleporter's pixel position -- the sub-pixel words (x_sub/y_sub) are
+        // UNTOUCHED. setCentreX/setCentreY zero the sub-pixel; use the
+        // preserve-subpixel setters so the captured player keeps his accumulated
+        // fraction, matching the ROM move.w.
+        player.setCentreXPreserveSubpixel((short) getX());
+        player.setCentreYPreserveSubpixel((short) getY());
 
         // clr.b objoff_32(a0)
         sineAngle = 0;
