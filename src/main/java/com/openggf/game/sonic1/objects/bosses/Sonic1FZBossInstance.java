@@ -144,7 +144,6 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // ROM: move.w #-1,objoff_30(a0) — ready for first cylinder pair
         cylinderState = -1;
         activeCylinderCount = 0;
-        previousFrameCamX = 0;
 
         damageCooldown = 0;
         seggAnim = Sonic1BossAnimations.ANIM_SEGG_STAND;
@@ -323,13 +322,15 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // which runs BEFORE DeformLayers/ScrollHoriz in the level main loop
         // (docs/s1disasm/sonic.asm Level loop: ExecuteObjects then DeformLayers;
         // docs/s1disasm/_inc/DeformLayers (REV01).asm:16-18). So the boss sees the
-        // camera as left by the PREVIOUS frame's scroll. The engine runs the camera
-        // scroll (LevelFrameStep step 5) after object updates (step 2/3) but its
-        // camera.getX() during the boss update already reflects this frame's scroll,
-        // so reading it directly advances the boss one frame ahead of ROM. Compare
-        // against the previous-frame camera X to restore the ROM read ordering.
-        int camX = previousFrameCamX;
-        previousFrameCamX = services().camera().getX() & 0xFFFF;
+        // camera as left by the PREVIOUS frame's scroll.
+        //
+        // The FZ boss is a dynamic object executed during object execution
+        // (LevelFrameStep step 2/3), which now runs BEFORE the camera scroll
+        // (step 4a, camera.updatePosition()) — matching ROM ExecuteObjects running
+        // before DeformLayers. So camera.getX() read here is already the
+        // previous-frame post-scroll camera (this frame's scroll has not run yet),
+        // exactly what ROM's ExecuteObjects-time read sees. Read it directly.
+        int camX = services().camera().getX() & 0xFFFF;
 
         if (camX >= BOSS_FZ_X) {
             state.routineSecondary = STATE_CYLINDER_ATTACK;

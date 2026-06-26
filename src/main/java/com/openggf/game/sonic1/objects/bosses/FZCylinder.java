@@ -226,8 +226,13 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
             }
         } else {
             // Extending (ROM: loc_1A5D4)
-            // ROM: cmpi.w #-$10,objoff_3C — boost when near limit
-            if ((extensionFixed >> 16) <= -0x10) {
+            // ROM: cmpi.w #-$10,objoff_3C / bge.s loc_1A5E4 — the boost
+            // (subi.l #$28000) runs only when objoff_3C < -$10 (the bge SKIPS the
+            // boost at exactly -$10). Using <= -0x10 here applied the boost one
+            // extension-step too early, shortening the cylinder crush cycle
+            // (docs/s1disasm/_incObj/85,84,86 Boss - FZ Main, Cylinders, and Plasma
+            // Balls.asm:793-796).
+            if ((extensionFixed >> 16) < -0x10) {
                 extensionFixed -= 0x28000; // ROM: subi.l #$28000
             }
 

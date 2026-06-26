@@ -170,19 +170,26 @@ public final class LevelFrameStep {
             wrapper.wrap("post-player-hooks", levelManager::updateObjectPostPlayerHooks);
         }
 
-        // 4. Dynamic level events — boss arenas, boundary changes, zone transitions.
+        // 4. Camera scroll + dynamic level events, in ROM order.
+        //
+        //    ROM DeformLayers (s1disasm DeformLayers (REV01).asm:16-18) runs
+        //    ScrollHoriz + ScrollVertical (camera move + clamp to the bottom
+        //    boundary left by the PREVIOUS frame's DynamicLevelEvents) BEFORE
+        //    DynamicLevelEvents. DynamicLevelEvents (DynamicLevelEvents.asm:5-49)
+        //    then runs the zone-specific handler (DLE_Index) FIRST and only after
+        //    that eases the bottom boundary, reading the POST-scroll camera
+        //    (v_screenposy) and the player's airborne bit to choose the +2 vs +8
+        //    step, and writing v_limitbtm2 / f_bgscrollvert for the NEXT frame.
+        //
+        //    So per frame: (4a) camera move/clamp, (4b) zone event handler reading
+        //    the post-scroll camera, (4c) boundary easing. The engine previously
+        //    inverted this (event handler + boundary easing before the camera
+        //    move), which applied the airborne +8 boundary acceleration to the
+        //    same frame's camera one frame early (S1 MZ1 f2101) and fed the zone
+        //    handlers (SBZ/FZ camera-X gates, left-boundary lock) a pre-scroll
+        //    camera-X one frame stale.
         LevelEventProvider levelEvents = context.levelEventProvider();
-        if (levelEvents != null) {
-            wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
-            levelEvents.update();
-        }
         boolean cameraDrivenScroll = levelManager.advanceCameraDrivenScrollForFrame();
-
-        levelManager.flushQueuedLayoutMutations();
-
-        if (levelManager.isLevelInactiveForTransition()) {
-            return;
-        }
 
         BonusStageProvider bonusStageProvider = context.bonusStageProvider();
         boolean integratedBonusStageUpdate = bonusStageProvider != null
@@ -190,16 +197,36 @@ public final class LevelFrameStep {
         boolean suppressDefaultCamera = bonusStageProvider != null
                 && bonusStageProvider.suppressesDefaultCameraStep();
 
-        if (integratedBonusStageUpdate) {
-            bonusStageProvider.onFrameUpdate();
+        // 4a. Camera scroll (ROM ScrollHoriz + ScrollVertical): move + clamp to the
+        //     prior-frame bottom boundary, BEFORE the zone event handler runs.
+        if (!suppressDefaultCamera && !cameraDrivenScroll) {
+            wrapper.wrap("camera-scroll", camera::updatePosition);
         }
 
-        // 5. Camera — ease boundaries toward targets, then reposition.
+        // 4b. Dynamic level events — boss arenas, boundary changes, zone
+        //     transitions. ROM runs the zone handler (DLE_Index) here, after the
+        //     scroll, so camera-X gates and the left-boundary lock see the
+        //     post-scroll camera. fixed-in-level objects run alongside.
+        if (levelEvents != null) {
+            wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
+            levelEvents.update();
+        }
+
+        // 4c. Boundary easing (ROM DynamicLevelEvents boundary tail): ease the
+        //     bottom boundary toward target reading the post-scroll camera, and
+        //     record the boundary state for the NEXT frame's scroll clamp.
         if (!suppressDefaultCamera && !cameraDrivenScroll) {
-            wrapper.wrap("camera", () -> {
-                camera.updateBoundaryEasing();
-                camera.updatePosition();
-            });
+            wrapper.wrap("camera-boundary", camera::updateBoundaryEasing);
+        }
+
+        levelManager.flushQueuedLayoutMutations();
+
+        if (levelManager.isLevelInactiveForTransition()) {
+            return;
+        }
+
+        if (integratedBonusStageUpdate) {
+            bonusStageProvider.onFrameUpdate();
         }
 
         // 5b. Post-camera placement catch-up — extend the spawn window with the

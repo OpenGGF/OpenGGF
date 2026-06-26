@@ -572,7 +572,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
 
         int cameraX = camera().getX();
-        int frameEndCameraX = camera().previewNextX() & 0xFFFF;
+        // ROM Do_ResizeEvents runs inside DeformBgLayer AFTER MoveCameraX commits
+        // the frame's camera position. LevelFrameStep now runs the zone event handler
+        // AFTER camera.updatePosition() (matching ROM ScrollHoriz -> DynamicLevelEvents
+        // / DeformBgLayer order), so camera().getX() here is already this frame's
+        // post-scroll camera X — no end-of-frame prediction needed.
+        int frameEndCameraX = camera().getX() & 0xFFFF;
         applyHollowTreeScreenEvent(cameraX);
 
         // --- Routine 0→1: MinX tracking during intro panning ---
@@ -1202,22 +1207,27 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 case AIZ2_WAIT_FIRE -> {
                     // Continue scroll-off until fire has exited the screen.
                     advanceFireRise(false);
-                    if (!act2WaitFireDrawActive) {
-                        // ROM AIZ2BGE_WaitFire cannot take the row-draw/$0310
-                        // release branch until Events_bg+$00 is set after the
-                        // low-bit gate (sonic3k.asm:105041-105075). The engine's
-                        // carried fixed-point BG copy already starts on the
-                        // scrolled-off strip, so model the flag timing without
-                        // rewriting the coordinate.
-                        act2WaitFireDrawActive = true;
-                        break;
-                    }
+                    // ROM AIZ2BGE_WaitFire (sonic3k.asm:105054-105096): when
+                    // Events_bg+$00 is clear it runs the low-bit gate and, once the
+                    // Camera_Y_pos_BG_copy low bits enter $20..$2F, SETS Events_bg+$00
+                    // (st, :105076) and then FALLS THROUGH to loc_50160 which draws
+                    // the tile row and checks `cmpi.w #$310,(Camera_Y_pos_BG_copy)`
+                    // (:105084) on the SAME frame. So the frame Events_bg+$00 is first
+                    // set is also eligible to release Camera_max_X_pos — there is no
+                    // extra one-frame defer before the $310 check. Model the flag set
+                    // here, then fall through to the release check this same frame.
+                    act2WaitFireDrawActive = true;
                     if (getFireTransitionBgY() >= FIRE_BG_FINISH_Y) {
                         // ROM AIZ2BGE_WaitFire releases the post-reload X clamp
                         // by writing Camera_max_X_pos=$6000 as soon as
                         // Camera_Y_pos_BG_copy reaches $0310
-                        // (sonic3k.asm:105075-105092). Camera_min_X_pos remains
+                        // (sonic3k.asm:105084-105096). Camera_min_X_pos remains
                         // at $0010 so Sonic cannot scroll back into the transition.
+                        // The handler runs after camera.updatePosition() this frame,
+                        // so the released bound is consumed by NEXT frame's scroll —
+                        // matching ROM, where AIZ2BGE_WaitFire runs in ScreenEvents
+                        // AFTER that frame's MoveCameraX (DeformBgLayer), so the new
+                        // Camera_max_X_pos applies to the following frame.
                         camera().setMaxX((short) AIZ2_POST_FIRE_CAMERA_MAX_X);
                         applyPostFireContinuationPaletteLine4(levelManager());
                         fireSequencePhase = FireSequencePhase.AIZ2_BG_REDRAW;
@@ -1360,12 +1370,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     /** ROM: AIZ2_SonicResize2 — continuous maxY + miniboss spawn. */
     private void updateAiz2SonicResize2() {
         // ROM: Do_ResizeEvents runs *inside* DeformBgLayer (sonic3k.asm:38303-38316)
-        // AFTER MoveCameraX has committed the new Camera_X_pos. Use the predicted
-        // end-of-frame camera X so the maxY narrow at $ED0 fires on the same trace
-        // frame ROM does — otherwise Camera_max_Y_pos lags by one frame, delaying
-        // the sidekick kill-plane fire (Tails_Check_Screen_Boundaries at
-        // sonic3k.asm:28428-28443) when Tails crosses the post-narrow plane.
-        int cameraX = camera().previewNextX() & 0xFFFF;
+        // AFTER MoveCameraX has committed the new Camera_X_pos. LevelFrameStep now
+        // runs the zone event handler AFTER camera.updatePosition() (matching that ROM
+        // order), so camera().getX() here is already this frame's post-scroll camera X
+        // — the maxY narrow at $ED0 fires on the same trace frame ROM does without
+        // end-of-frame prediction.
+        int cameraX = camera().getX() & 0xFFFF;
         int maxY = AIZ2_DEFAULT_MAX_Y;
         if (cameraX >= AIZ2_SONIC_RESIZE2_BOSS_TRIGGER_X) {
             maxY = AIZ2_SONIC_RESIZE2_BOSS_MAX_Y;
