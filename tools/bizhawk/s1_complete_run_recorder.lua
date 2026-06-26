@@ -101,6 +101,17 @@
 -- frames -- and the SLZ1/MZ1/MZ2/FZ counter+oscillation-phase cluster -- coincide
 -- exactly with emulator lag frames. metadata lua_script_version reports "3.11";
 -- aux_schema_extras gains lag_state_per_frame.
+-- v3.12 changes: ADD one per-object WORD field to the EXISTING object_near aux
+-- event (CSV schema UNCHANGED; comparison-only context, never engine write-back).
+-- v3.11 traces stay valid (the new aux_schema_extras key gates the parser; the
+-- parser treats it as legacy-absent-safe). "objoff_32" is the per-object timer at
+-- offset +0x32; for maker objects this is gmake_timer -- the MZ2 Lava Geyser maker
+-- (Obj4C) eruption-cadence countdown (gmake_timer equ objoff_32; decremented each
+-- frame, reset to gmake_time; docs/s1disasm/_incObj/4C, 4D MZ Lava Geyser and
+-- Maker.asm:27,42,44). Pins the coupled-cadence decode at MZ2 f2823 -- the banked
+-- root that was "not in aux". Rides the existing object_near proximity gate, so it
+-- only costs bytes for objects already in the player window. metadata
+-- lua_script_version reports "3.12"; aux_schema_extras gains object_near_objoff_32.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -156,6 +167,12 @@ local OFF_ROUTINE_2ND      = 0x25   -- byte: ob2ndRout — object secondary rout
 local OFF_OBJOFF_3C        = 0x3C   -- LONG (32-bit): objoff_3C — generic timer / 32-bit
                                     --       sub-pixel accumulator (e.g. BGHZ_BossGenericTimer,
                                     --       FZ cylinder Obj84 rise accumulator)
+local OFF_OBJOFF_32        = 0x32   -- WORD: objoff_32 — per-object timer; for maker
+                                    --       objects this is gmake_timer (e.g. the MZ2
+                                    --       Lava Geyser maker Obj4C; gmake_timer equ
+                                    --       objoff_32, docs/s1disasm/_incObj/4C, 4D MZ
+                                    --       Lava Geyser and Maker.asm:27,42,44 —
+                                    --       decremented each frame, reset to gmake_time)
 local OFF_OBJOFF_34        = 0x34   -- WORD: objoff_34 — per-object counter/sub-state
                                     --       (e.g. SLZ Staircase Obj5B ride counter)
 local OFF_OBJOFF_36        = 0x36   -- WORD: objoff_36 — per-object timer/phase
@@ -430,12 +447,13 @@ local function write_metadata()
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.11",\n')
+    meta_file:write('  "lua_script_version": "3.12",\n')
     meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
     meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", '
         .. '"v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c", '
-        .. '"object_near_objoff_34_36_38", "v_oscillate_per_frame", "lag_state_per_frame"],\n')
+        .. '"object_near_objoff_34_36_38", "v_oscillate_per_frame", "lag_state_per_frame", '
+        .. '"object_near_objoff_32"],\n')
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": "",\n')
     -- The complete-run recorder always plays the shared complete-run BK2. Emit
@@ -639,6 +657,11 @@ local function scan_objects(player_x, player_y)
                 -- (e.g. SLZ Staircase Obj5B ride counter at SLZ1 f2872, geyser-maker
                 -- timer at MZ2 f2819) — the GHZ3 1-frame-counter-defer shape, now
                 -- visible per-object.
+                -- objoff_32 (offset +0x32): per-object timer; for maker objects this
+                -- is gmake_timer (the MZ2 Lava Geyser maker Obj4C eruption-cadence
+                -- countdown, gmake_timer equ objoff_32). Pins the coupled-cadence
+                -- decode at MZ2 f2823 (the assumed root that was "not in aux").
+                local obj_off32 = mainmemory.read_u16_be(addr + OFF_OBJOFF_32)
                 local obj_off34 = mainmemory.read_u16_be(addr + OFF_OBJOFF_34)
                 local obj_off36 = mainmemory.read_u16_be(addr + OFF_OBJOFF_36)
                 local obj_off38 = mainmemory.read_u16_be(addr + OFF_OBJOFF_38)
@@ -646,9 +669,9 @@ local function scan_objects(player_x, player_y)
                     '{"frame":%d,"vfc":%d,"event":"object_near","slot":%d,"type":"0x%02X",'
                     .. '"x":"0x%04X","y":"0x%04X","routine":"0x%02X","status":"0x%02X","obj_frame":"0x%02X",'
                     .. '"routine2":"0x%02X","objoff_3c":"0x%08X",'
-                    .. '"objoff_34":"0x%04X","objoff_36":"0x%04X","objoff_38":"0x%04X"}',
+                    .. '"objoff_32":"0x%04X","objoff_34":"0x%04X","objoff_36":"0x%04X","objoff_38":"0x%04X"}',
                     trace_frame, vfc, slot, obj_id, obj_x, obj_y, obj_routine, obj_status, obj_frame,
-                    obj_routine2, obj_off3c, obj_off34, obj_off36, obj_off38))
+                    obj_routine2, obj_off3c, obj_off32, obj_off34, obj_off36, obj_off38))
             end
         end
 

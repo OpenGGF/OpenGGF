@@ -85,6 +85,11 @@ public final class TraceEventFormatter {
                 if (near.objoff38() != null && !near.objoff38().isEmpty()) {
                     base = base + " o38=" + stripHexPrefix(near.objoff38());
                 }
+                // objoff_32 (gmake_timer for makers) is v3.12+; only render when
+                // the trace carries it.
+                if (near.objoff32() != null && !near.objoff32().isEmpty()) {
+                    base = base + " o32=" + stripHexPrefix(near.objoff32());
+                }
                 yield base;
             }
             case TraceEvent.ModeChange mode ->

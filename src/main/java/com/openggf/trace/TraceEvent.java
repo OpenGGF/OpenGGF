@@ -31,13 +31,16 @@ public sealed interface TraceEvent {
      * (objoff_3C at +0x3C, the 32-bit generic timer / sub-pixel accumulator) are
      * v3.8+ optional fields. {@code objoff34}/{@code objoff36}/{@code objoff38}
      * (per-object counter/timer/sub-state words at +0x34/+0x36/+0x38) are v3.9+
-     * optional fields. Older traces omit them; the parser supplies {@code ""}
+     * optional fields. {@code objoff32} (per-object timer word at +0x32; for maker
+     * objects this is gmake_timer, e.g. the MZ2 Lava Geyser maker Obj4C) is a
+     * v3.12+ optional field. Older traces omit them; the parser supplies {@code ""}
      * so legacy traces parse unchanged.
      */
     record ObjectNear(int frame, String character, int slot, String objectType, short x, short y,
                       String routine, String status, String objFrame,
                       String routine2, String objoff3c,
-                      String objoff34, String objoff36, String objoff38)
+                      String objoff34, String objoff36, String objoff38,
+                      String objoff32)
         implements TraceEvent {}
 
     /**
@@ -676,7 +679,10 @@ public sealed interface TraceEvent {
                     // them so default to "" (legacy-absent-safe).
                     node.has("objoff_34") ? node.get("objoff_34").asText() : "",
                     node.has("objoff_36") ? node.get("objoff_36").asText() : "",
-                    node.has("objoff_38") ? node.get("objoff_38").asText() : ""
+                    node.has("objoff_38") ? node.get("objoff_38").asText() : "",
+                    // objoff_32 (gmake_timer for makers) is a v3.12+ optional field;
+                    // older traces omit it so default to "" (legacy-absent-safe).
+                    node.has("objoff_32") ? node.get("objoff_32").asText() : ""
                 );
                 case "s1_obj64_state" -> new S1Obj64State(
                     frame,
