@@ -92,7 +92,10 @@ public final class RewindRoundTripHarness {
             "com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance",
             "com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance",
             "com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance",
-            "com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance");
+            "com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance",
+            "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild",
+            "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment",
+            "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild");
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();

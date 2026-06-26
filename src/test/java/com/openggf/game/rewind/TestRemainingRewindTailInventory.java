@@ -103,8 +103,8 @@ class TestRemainingRewindTailInventory {
         loadParentDependentRows(buckets);
 
         assertEquals(33, buckets.get(Bucket.NO_PROBE_CTOR).size(), "no-probe-ctor inventory count");
-        assertEquals(104, buckets.get(Bucket.PARENT_DEPENDENT).size(), "parent-dependent inventory count");
-        assertEquals(3, buckets.get(Bucket.OTHER_FAILURE).size(), "other-failure inventory count");
+        assertEquals(107, buckets.get(Bucket.PARENT_DEPENDENT).size(), "parent-dependent inventory count");
+        assertEquals(0, buckets.get(Bucket.OTHER_FAILURE).size(), "other-failure inventory count");
         assertEquals(0, buckets.get(Bucket.COUNT_MISMATCH).size(), "count-mismatch inventory count");
         assertEquals(0, buckets.get(Bucket.SCALAR_MISMATCH).size(), "scalar-mismatch inventory count");
 
