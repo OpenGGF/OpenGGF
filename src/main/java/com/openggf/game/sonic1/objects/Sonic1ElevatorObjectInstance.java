@@ -495,6 +495,28 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM Elev_Platform (routine 2) lands the player through PlatformObject
+        // (docs/s1disasm/_incObj/59 SLZ Elevators.asm:77-80 ->
+        // docs/s1disasm/_incObj/sub PlatformObject.asm:36-52), whose Y land band
+        // is gated by an UNSIGNED `cmpi.w #-16,d0 / blo Plat_Exit` (top of platform
+        // = obY-8) AFTER a signed `bhi Plat_Exit` on d0>0. That rejects the
+        // exact-touch case d0=0 (`0x0000 <u 0xFFF0`): the standable band is d0 in
+        // [-16,-1] (strict penetration -- the player's bottom edge must be at least
+        // 1px below the obY-8 surface). The engine default accepts detectionDistY=0,
+        // so a fast-falling player whose bottom edge reaches exactly the surface
+        // seats one frame early. SLZ2 f3927: a rolling-jump player falling at
+        // ~18px/frame past the elevator at (0x1B80,0x0368) hits d0=0 at f3927 (feet
+        // 0x0360 == surface 0x0368-8=0x0360) -- ROM rejects and keeps falling
+        // (y_speed 0x11E0), the engine landed him (air 1->0, g_speed FC0B->FE8C).
+        // The elevator was the only PlatformObject-family S1 object missing this
+        // override (Obj 18/52/53/5A/63/6C/1A already have it). The elevator's
+        // top-landing detection already uses airHalfHeight=8 (= obY-8), matching
+        // ROM's subq.w #8, so no getTopLandingSnapAdjustment is needed here.
+        return true;
+    }
+
+    @Override
     public boolean carriesAirborneRiderAfterExitPlatform() {
         // ROM Elev_Action (docs/s1disasm/_incObj/59 SLZ Elevators.asm:84-101)
         // is structurally identical to MBlock_StandOn (docs/s1disasm/_incObj/52
