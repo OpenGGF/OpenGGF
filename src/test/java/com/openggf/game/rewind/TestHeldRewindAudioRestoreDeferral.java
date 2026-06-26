@@ -278,6 +278,76 @@ class TestHeldRewindAudioRestoreDeferral {
         }
     }
 
+    @Test
+    void liveRewindManagerLevelLoadBoundaryDropsDeferredRestoreBeforePresentationCleanup()
+            throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        try {
+            TestEnvironment.activeGameplayMode();
+            LiveRewindManager manager = liveManagerWithControllerAtFrame(config, 8);
+            InputHandler input = new InputHandler();
+            input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+            assertEquals(0, backend.logicalRestores);
+            audio.resetRingSound();
+            backend.logicalRestores = 0;
+            backend.calls.clear();
+
+            manager.markBoundary(RewindBoundary.LEVEL_LOAD);
+
+            assertEquals(0, backend.logicalRestores,
+                    "level-load boundary must drop stale deferred restore before cleanup");
+            assertTrue(backend.calls.contains("stopAllSfx"),
+                    "boundary must still clean transient reverse SFX presentation");
+            assertTrue(backend.calls.contains("restoreMusic"),
+                    "boundary must still resync music after reverse presentation");
+            assertFalse(audio.isReverseAudioPresentationActive(),
+                    "boundary cleanup must end reverse audio presentation");
+            assertTrue(audio.captureLogicalSnapshot().ringLeft(),
+                    "fresh boundary audio marker must survive the dropped restore");
+        } finally {
+            config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+            SessionManager.clear();
+        }
+    }
+
+    @Test
+    void liveRewindManagerSeamlessBoundaryDropsDeferredRestoreBeforePresentationCleanup()
+            throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        try {
+            TestEnvironment.activeGameplayMode();
+            LiveRewindManager manager = liveManagerWithControllerAtFrame(config, 8);
+            InputHandler input = new InputHandler();
+            input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+            assertEquals(0, backend.logicalRestores);
+            audio.resetRingSound();
+            backend.logicalRestores = 0;
+            backend.calls.clear();
+
+            manager.markBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
+
+            assertEquals(0, backend.logicalRestores,
+                    "seamless boundary must drop stale deferred restore before cleanup");
+            assertTrue(backend.calls.contains("stopAllSfx"),
+                    "boundary must still clean transient reverse SFX presentation");
+            assertTrue(backend.calls.contains("restoreMusic"),
+                    "boundary must still resync music after reverse presentation");
+            assertFalse(audio.isReverseAudioPresentationActive(),
+                    "boundary cleanup must end reverse audio presentation");
+            assertTrue(audio.captureLogicalSnapshot().ringLeft(),
+                    "post-transition audio marker must survive the dropped restore");
+        } finally {
+            config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+            SessionManager.clear();
+        }
+    }
+
     private RewindController newController(EngineStepper stepper, int keyframeInterval) {
         return new RewindController(
                 new RewindRegistry(),
@@ -310,6 +380,18 @@ class TestHeldRewindAudioRestoreDeferral {
         setField(manager, "rewindController", controller);
         setField(manager, "speedController",
                 RewindSpeedController.fromConfig(SonicConfigurationService.getInstance()));
+    }
+
+    private LiveRewindManager liveManagerWithControllerAtFrame(
+            SonicConfigurationService config,
+            int frame) throws Exception {
+        LiveRewindManager manager = new LiveRewindManager(config);
+        RewindController controller = newController(scriptedStepper(), 4);
+        for (int i = 0; i < frame; i++) {
+            controller.step();
+        }
+        installTestController(manager, controller);
+        return manager;
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

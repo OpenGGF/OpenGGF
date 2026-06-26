@@ -19,6 +19,8 @@ import com.openggf.game.rewind.EngineStepper;
 import com.openggf.game.rewind.InMemoryKeyframeStore;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
+import com.openggf.game.rewind.RewindBoundary;
+import com.openggf.game.rewind.RewindBoundaryReporter;
 import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.AbstractLevelEventManager;
@@ -85,6 +87,7 @@ public final class GameplayModeContext implements ModeContext {
     private RewindRegistry rewindRegistry;
     private RewindController rewindController;
     private PlaybackController playbackController;
+    private RewindBoundaryReporter rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
 
     public GameplayModeContext(WorldSession worldSession) {
         this(worldSession, 0, 0, null);
@@ -561,6 +564,16 @@ public final class GameplayModeContext implements ModeContext {
         return playbackController;
     }
 
+    public void setRewindBoundaryReporter(RewindBoundaryReporter reporter) {
+        this.rewindBoundaryReporter = reporter != null ? reporter : RewindBoundaryReporter.NO_OP;
+    }
+
+    public void markRewindBoundary(RewindBoundary boundary) {
+        if (boundary != null) {
+            rewindBoundaryReporter.markBoundary(boundary);
+        }
+    }
+
     // ── Bonus stage provider ─────────────────────────────────────────────
 
     /**
@@ -672,6 +685,7 @@ public final class GameplayModeContext implements ModeContext {
         activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
         rewindController = null;
         playbackController = null;
+        rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
         rewindRegistry = null;
     }
 

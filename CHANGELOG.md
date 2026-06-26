@@ -4,6 +4,7 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 - **S3K AIZ2 capsule private-child rewind:** AIZ2 end-capsule private animal/results children now restore through exact-class generic recreate, clearing the last no-probe constructor tail entries.
+- Added explicit rewind boundary reporting for level loads, seamless transitions, and gameplay mode changes so live rewind cannot cross session boundaries.
 - **Rewind coverage closure:** the final S1 try-again and S2 Super Sonic Stars recreate-baseline gaps now restore through generic recreate.
 - **S3K late-boss tail rewind:** HCZ vortex bubbles, ICZ end-boss defeat debris, and MHZ end-boss invisible controllers now restore through generic recreate.
 - **S3K MGZ miniboss tail rewind:** MGZ miniboss debris, defeat fragments, Knuckles spike platforms, and camera scroll helper now restore through generic recreate.

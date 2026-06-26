@@ -41,6 +41,7 @@ import com.openggf.game.launch.MasterTitleLaunchCoordinator;
 import com.openggf.game.mode.MenuScreenModeController;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.LiveRewindManager;
+import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.startup.DataSelectPresentationResolution;
 import com.openggf.game.startup.StartupRouteResolver;
 import com.openggf.game.startup.TitleActionRoute;
@@ -187,6 +188,7 @@ public class GameLoop {
 
     // Optional trace camera focus controller — ticked at the top of every stepInternal()
     private TraceCameraFocusController traceCameraFocusController;
+    private GameplayModeContext liveRewindBoundaryReporterContext;
 
     /** @deprecated use {@link com.openggf.GameModeChangeListener}. */
     @Deprecated
@@ -240,12 +242,11 @@ public class GameLoop {
     public void setGameplayMode(GameplayModeContext gameplayMode) {
         this.gameplayMode = gameplayMode;
         refreshRuntimeBindings();
+        installLiveRewindBoundaryReporter();
     }
 
     private void refreshRuntimeBindings() {
-        GameplayModeContext currentGameplayMode = gameplayMode != null
-                ? gameplayMode
-                : SessionManager.getCurrentGameplayMode();
+        GameplayModeContext currentGameplayMode = resolveGameplayModeContext();
         if (currentGameplayMode == null || !currentGameplayMode.isGameplayRuntimeReady()) {
             // Gameplay mode has been torn down (e.g. trace teardown returning to
             // master title). Clear cached references so resolveFadeManager()
@@ -260,6 +261,7 @@ public class GameLoop {
             this.gameState = null;
             this.fadeManager = null;
             this.waterSystem = null;
+            this.liveRewindBoundaryReporterContext = null;
             engineServices.graphics().clearRuntimeManagedReferences();
             return;
         }
@@ -272,6 +274,13 @@ public class GameLoop {
         this.fadeManager = currentGameplayMode.getFadeManager();
         this.waterSystem = currentGameplayMode.getWaterSystem();
         engineServices.graphics().bindRuntimeManagedReferences(this.camera, this.fadeManager);
+        if (currentGameplayMode != liveRewindBoundaryReporterContext) {
+            installLiveRewindBoundaryReporter();
+        }
+    }
+
+    private GameplayModeContext resolveGameplayModeContext() {
+        return gameplayMode != null ? gameplayMode : SessionManager.getCurrentGameplayMode();
     }
 
     public void resetModuleScopedProviders() {
@@ -372,11 +381,67 @@ public class GameLoop {
      * Sets the game mode directly. Used for master title screen initialization.
      */
     public void setGameMode(GameMode mode) {
-        GameMode oldMode = currentGameMode;
-        currentGameMode = mode;
+        GameMode oldMode = changeGameModeForBoundary(mode);
         if (gameModeChangeListener != null) {
             gameModeChangeListener.onGameModeChanged(oldMode, mode);
         }
+    }
+
+    void installLiveRewindBoundaryReporter() {
+        installLiveRewindBoundaryReporter(liveRewindManager::markBoundary);
+    }
+
+    void installLiveRewindBoundaryReporter(Consumer<RewindBoundary> liveBoundaryConsumer) {
+        GameplayModeContext context = resolveGameplayModeContext();
+        if (context == null) {
+            return;
+        }
+        context.setRewindBoundaryReporter(boundary -> {
+            if (TraceSessionLauncher.active() == null) {
+                liveBoundaryConsumer.accept(boundary);
+            }
+        });
+        liveRewindBoundaryReporterContext = context;
+    }
+
+    GameMode changeGameModeForBoundary(GameMode nextMode) {
+        GameMode oldMode = currentGameMode;
+        if (oldMode != nextMode) {
+            currentGameMode = nextMode;
+            reportRewindModeBoundary(oldMode, nextMode);
+        }
+        return oldMode;
+    }
+
+    GameMode changeGameModeWithoutRewindBoundary(GameMode nextMode) {
+        GameMode oldMode = currentGameMode;
+        currentGameMode = nextMode;
+        return oldMode;
+    }
+
+    private void reportRewindModeBoundary(GameMode oldMode, GameMode newMode) {
+        GameplayModeContext context = resolveGameplayModeContext();
+        if (context == null) {
+            return;
+        }
+        if (oldMode == GameMode.LEVEL && newMode != GameMode.LEVEL) {
+            context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
+        } else if (oldMode != GameMode.LEVEL && newMode == GameMode.LEVEL) {
+            context.markRewindBoundary(RewindBoundary.MODE_ENTER_REWINDABLE);
+        }
+    }
+
+    void markBonusEntryNonRewindableBoundary() {
+        GameplayModeContext context = resolveGameplayModeContext();
+        if (context != null) {
+            context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
+        }
+    }
+
+    GameMode enterBonusTitleCardAfterLevelLoadBoundary() {
+        markBonusEntryNonRewindableBoundary();
+        postTitleCardDestination = PostTitleCardDestination.BONUS_STAGE;
+        return changeGameModeWithoutRewindBoundary(GameMode.TITLE_CARD);
     }
 
     /**
@@ -862,7 +927,10 @@ public class GameLoop {
             if (traceSession != null) {
                 traceSession.recordExternalRewindFrameAtBoundary();
             } else {
-                liveRewindManager.resetBufferAtCurrentFrame(currentGameMode);
+                GameplayModeContext context = resolveGameplayModeContext();
+                if (context != null) {
+                    context.markRewindBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
+                }
             }
             return false;
         }
@@ -1498,8 +1566,7 @@ public class GameLoop {
             ssProvider.initializeStage(stageIndex);
             activeSpecialStageProvider = ssProvider;
 
-            GameMode oldMode = currentGameMode;
-            currentGameMode = GameMode.SPECIAL_STAGE;
+            GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE);
 
             // Set camera to origin for special stage rendering (uses screen coordinates)
             camera.setX((short) 0);
@@ -1656,9 +1723,10 @@ public class GameLoop {
             if (gameplayMode != null) {
                 gameplayMode.setActiveBonusStageProvider(null);
             }
-            currentGameMode = GameMode.LEVEL;
+            changeGameModeForBoundary(GameMode.LEVEL);
             return;
         }
+        GameMode oldMode = enterBonusTitleCardAfterLevelLoadBoundary();
 
         prepareBonusStageForTitleCard(type, savedState);
 
@@ -1680,9 +1748,6 @@ public class GameLoop {
         }
 
         // Enter TITLE_CARD mode — exitTitleCard will transition to BONUS_STAGE
-        GameMode oldMode = currentGameMode;
-        postTitleCardDestination = PostTitleCardDestination.BONUS_STAGE;
-        currentGameMode = GameMode.TITLE_CARD;
         applyTitleCardControlLock(true);
 
         // Cancel the FadeManager overlay — the bonus title card manages its own
@@ -1820,7 +1885,7 @@ public class GameLoop {
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load fallback level", e);
             }
-            currentGameMode = GameMode.LEVEL;
+            changeGameModeForBoundary(GameMode.LEVEL);
             fadeManager.startFadeFromBlack(null);
             return;
         }
@@ -1921,9 +1986,8 @@ public class GameLoop {
         }
 
         // Enter TITLE_CARD mode — exitTitleCard will transition to LEVEL
-        GameMode oldMode = currentGameMode;
         postTitleCardDestination = PostTitleCardDestination.LEVEL;
-        currentGameMode = GameMode.TITLE_CARD;
+        GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_CARD);
         applyTitleCardControlLock(true);
 
         // Play zone music (ROM: Restore_LevelMusic during title card wait)
@@ -2088,8 +2152,7 @@ public class GameLoop {
         ssProvider.reset();
 
         // Transition to results mode
-        GameMode oldMode = currentGameMode;
-        currentGameMode = GameMode.SPECIAL_STAGE_RESULTS;
+        GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE_RESULTS);
         resultsFrameCounter = 0;
 
         // Create results screen with current emerald count via provider
@@ -2153,8 +2216,7 @@ public class GameLoop {
         if (levelManager.getCurrentLevel() == null) {
             // No level was loaded (special stage launched from level select).
             // Load the starting level; loadCurrentLevel() will request its own title card.
-            GameMode oldMode = currentGameMode;
-            currentGameMode = GameMode.LEVEL;
+            GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
             try {
                 levelManager.loadZoneAndAct(0, 0);
             } catch (IOException e) {
@@ -2207,8 +2269,7 @@ public class GameLoop {
      * Restores the player to their checkpoint position before showing title card.
      */
     private void enterTitleCardFromResults(int zoneIndex, int actIndex) {
-        GameMode oldMode = currentGameMode;
-        currentGameMode = GameMode.TITLE_CARD;
+        GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_CARD);
 
         // Restore player to checkpoint state BEFORE title card starts
         // This prevents the player from falling/dying during the title card animation
@@ -2310,8 +2371,7 @@ public class GameLoop {
             return;
         }
 
-        GameMode oldMode = currentGameMode;
-        currentGameMode = GameMode.TITLE_CARD;
+        GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_CARD);
 
         // Freeze the player during title card - full state reset
         String mainCode = resolveMainCharacterCode();
@@ -2409,18 +2469,18 @@ public class GameLoop {
         if (postTitleCardDestination == PostTitleCardDestination.BONUS_STAGE) {
             // Transitioning to bonus stage after "BONUS STAGE" title card
             postTitleCardDestination = PostTitleCardDestination.LEVEL;
-            currentGameMode = GameMode.BONUS_STAGE;
+            changeGameModeForBoundary(GameMode.BONUS_STAGE);
 
             // Apply deferred bonus stage setup
             applyDeferredBonusStageSetup();
 
             LOGGER.info("Exited bonus title card, entering BONUS_STAGE mode");
         } else if (returningFromSpecialStage) {
-            currentGameMode = GameMode.LEVEL;
+            changeGameModeForBoundary(GameMode.LEVEL);
             returningFromSpecialStage = false;
             LOGGER.info("Exited Title Card, returned to level from special stage at checkpoint");
         } else {
-            currentGameMode = GameMode.LEVEL;
+            changeGameModeForBoundary(GameMode.LEVEL);
             applyPendingBonusStageShieldRestore(resolveMainPlayableSprite());
 
             // Re-apply zone-specific player state (airborne intros like HCZ1, MGZ1)
@@ -2580,7 +2640,7 @@ public class GameLoop {
         // currentGameMode directly (it fires a title card request for the next
         // frame). Force mode to LEVEL so step() can process the pending request.
         if (currentGameMode == GameMode.MASTER_TITLE_SCREEN) {
-            currentGameMode = GameMode.LEVEL;
+            changeGameModeForBoundary(GameMode.LEVEL);
         }
 
         resolveFadeManager().startFadeFromBlack(null);
@@ -2624,8 +2684,7 @@ public class GameLoop {
             throw new RuntimeException("Failed to load ROM for title screen", e);
         }
 
-        GameMode oldMode = currentGameMode;
-        currentGameMode = GameMode.TITLE_SCREEN;
+        GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_SCREEN);
 
         camera.setX((short) 0);
         camera.setY((short) 0);
@@ -2698,8 +2757,7 @@ public class GameLoop {
         // for rendering the frozen background behind level select text.
         // Do NOT fade music - title music continues.
 
-        GameMode oldMode = currentGameMode;
-        currentGameMode = GameMode.LEVEL_SELECT;
+        GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL_SELECT);
 
         camera.setX((short) 0);
         camera.setY((short) 0);
@@ -2854,8 +2912,7 @@ public class GameLoop {
      * Called when the S3K title screen exits (instead of going directly to level).
      */
     private void initializeDataSelectMode() {
-        GameMode oldMode = currentGameMode;
-        currentGameMode = GameMode.DATA_SELECT;
+        GameMode oldMode = changeGameModeForBoundary(GameMode.DATA_SELECT);
         camera.setX((short) 0);
         camera.setY((short) 0);
         var dataSelect = getDataSelectProviderLazy();
@@ -2978,8 +3035,7 @@ public class GameLoop {
             throw new RuntimeException("Failed to load ROM for level select", e);
         }
 
-        GameMode oldMode = currentGameMode;
-        currentGameMode = GameMode.LEVEL_SELECT;
+        GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL_SELECT);
 
         // Set camera to origin for level select rendering
         camera.setX((short) 0);
@@ -3029,8 +3085,7 @@ public class GameLoop {
      * Actually enters the level select screen after fade-to-black completes.
      */
     private void doEnterLevelSelect() {
-        GameMode oldMode = currentGameMode;
-        currentGameMode = GameMode.LEVEL_SELECT;
+        GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL_SELECT);
 
         // Set camera to origin for level select rendering
         camera.setX((short) 0);
@@ -3071,8 +3126,7 @@ public class GameLoop {
         if (levelSelect.isSpecialStageSelected()) {
             // Enter special stage
             levelSelect.reset();
-            GameMode oldMode = currentGameMode;
-            currentGameMode = GameMode.LEVEL;
+            GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
 
             // Notify listener of mode change
             if (gameModeChangeListener != null) {
@@ -3112,8 +3166,7 @@ public class GameLoop {
      * Actually loads the selected zone/act after fade-to-black completes.
      */
     private void doExitLevelSelectToZone(int zone, int act) {
-        GameMode oldMode = currentGameMode;
-        currentGameMode = GameMode.LEVEL;
+        GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
 
         // Load the selected zone/act
         try {

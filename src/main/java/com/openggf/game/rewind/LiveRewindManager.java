@@ -89,12 +89,23 @@ public final class LiveRewindManager {
         }
     }
 
-    public void resetBufferAtCurrentFrame(GameMode mode) {
-        if (mode != GameMode.LEVEL || !enabled() || !ensureInstalled()) {
+    public void markBoundary(RewindBoundary boundary) {
+        if (boundary == null) {
             return;
         }
-        inputSource.discardAfter(rewindController.currentFrame());
-        rewindController.resetBufferAtCurrentFrame();
+        switch (boundary) {
+            case LEVEL_LOAD -> handleLevelLoadBoundary();
+            case SEAMLESS_LEVEL_TRANSITION -> handleSeamlessLevelTransitionBoundary();
+            case MODE_EXIT_TO_NON_REWINDABLE -> clear();
+            case MODE_ENTER_REWINDABLE -> handleModeEnterRewindableBoundary();
+        }
+    }
+
+    public void resetBufferAtCurrentFrame(GameMode mode) {
+        if (mode != GameMode.LEVEL) {
+            return;
+        }
+        markBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
     }
 
     public void renderHud(GameMode mode, PixelFontTextRenderer text) {
@@ -134,6 +145,49 @@ public final class LiveRewindManager {
         speedController = RewindSpeedController.fromConfig(config);
         rewinding = false;
         return rewindController != null;
+    }
+
+    private void handleLevelLoadBoundary() {
+        if (!enabled()) {
+            clear();
+            return;
+        }
+        if (!ensureInstalled()) {
+            return;
+        }
+        boolean wasRewinding = rewinding;
+        inputSource.resetToFrameZero();
+        rewindController.resetToFrameZero();
+        if (wasRewinding) {
+            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+        }
+        rewinding = false;
+    }
+
+    private void handleSeamlessLevelTransitionBoundary() {
+        if (!enabled()) {
+            clear();
+            return;
+        }
+        if (!ensureInstalled()) {
+            return;
+        }
+        boolean wasRewinding = rewinding;
+        int frame = rewindController.currentFrame();
+        inputSource.retainOnlyFrame(frame);
+        rewindController.resetBufferAtCurrentFrame();
+        if (wasRewinding) {
+            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+        }
+        rewinding = false;
+    }
+
+    private void handleModeEnterRewindableBoundary() {
+        if (!enabled()) {
+            clear();
+            return;
+        }
+        ensureInstalled();
     }
 
     private int stepBackward(int steps) {

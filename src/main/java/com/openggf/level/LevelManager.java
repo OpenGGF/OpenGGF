@@ -29,7 +29,9 @@ import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
+import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
@@ -344,14 +346,13 @@ public class LevelManager {
     }
 
     private void resetRewindBufferAfterLevelBoundary() {
-        com.openggf.game.session.GameplayModeContext gameplayMode =
-                com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (gameplayMode != null && gameplayMode.getRewindController() != null) {
-            // Reset the rewind controller's frame counter back to 0 so
-            // the new level starts with a clean rewind-counter origin.
-            // Without this, the rewind HUD counter carries over the
-            // accumulated frame count from the previous level.
-            gameplayMode.getRewindController().resetToFrameZero();
+        markRewindLevelLoadBoundary();
+    }
+
+    static void markRewindLevelLoadBoundary() {
+        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.markRewindBoundary(RewindBoundary.LEVEL_LOAD);
         }
     }
 
