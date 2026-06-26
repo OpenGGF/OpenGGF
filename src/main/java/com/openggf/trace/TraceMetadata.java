@@ -261,6 +261,18 @@ public record TraceMetadata(
     }
 
     /**
+     * Whether the trace emits the per-frame BizHawk lag state
+     * ({@link TraceEvent.LagState}: {@code emu.islagged()} + {@code emu.lagcount()}),
+     * added by the v3.11+ S1 recorder to confirm the counter/oscillation skip-frame
+     * vs emulator-lag-frame coincidence. Older traces never emit it; consult this
+     * before reading {@link TraceData#lagStateForFrame(int)}.
+     */
+    public boolean hasLagState() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("lag_state_per_frame");
+    }
+
+    /**
      * Whether the trace emits the per-frame S1 camera vertical-boundary state
      * ({@link TraceEvent.CameraBoundary}), added by the v3.7+ S1 recorder for the
      * MZ1 f2101 camera-boundary frontier. Older traces never emit it.

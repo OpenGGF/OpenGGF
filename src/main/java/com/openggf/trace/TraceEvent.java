@@ -161,6 +161,20 @@ public sealed interface TraceEvent {
         implements TraceEvent {}
 
     /**
+     * Per-frame BizHawk authoritative lag state, emitted by the v3.11+ S1 recorder.
+     * {@code lagged} is {@code emu.islagged()} for the frame (the emulator polled
+     * input but did NOT complete a full logical/game step), and {@code lagcount}
+     * is {@code emu.lagcount()} (cumulative lag-frame total; {@code -1} when the
+     * recording emulator did not expose the API). Used to confirm whether the
+     * counter/oscillation "skip" frames (SLZ1/SLZ2/MZ1/MZ2/FZ cluster) coincide
+     * with emulator lag frames. <strong>Diagnostic only:</strong> tests must NOT
+     * change engine stepping from these values; any lag-handling fix is a separate,
+     * user-gated decision. Older traces (recorder &lt; 3.11) never emit this event.
+     */
+    record LagState(int frame, boolean lagged, int lagcount)
+        implements TraceEvent {}
+
+    /**
      * Per-frame snapshot of the S1 camera vertical-boundary / look-shift state.
      * Emitted by the v3.7+ S1 recorder for the MZ1 f2101 camera-boundary
      * frontier (engine {@code v_limitbtm2} ~6px too high). Fields are the raw
@@ -777,6 +791,11 @@ public sealed interface TraceEvent {
                 case "v_oscillate" -> new VOscillate(
                     frame,
                     parseHexByteString(node.has("bytes") ? node.get("bytes").asText() : "")
+                );
+                case "lag_state" -> new LagState(
+                    frame,
+                    node.has("lagged") && node.get("lagged").asBoolean(false),
+                    node.has("lagcount") ? node.get("lagcount").asInt(-1) : -1
                 );
                 case "camera_boundary" -> new CameraBoundary(
                     frame,

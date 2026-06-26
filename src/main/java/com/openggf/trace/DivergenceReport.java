@@ -671,6 +671,13 @@ public class DivergenceReport {
         if (vOscillate != null) {
             diagnostics.add(vOscillate);
         }
+        // v3.11 S1 diagnostic context: BizHawk authoritative lag state (confirms
+        // the counter/oscillation skip-frame vs emulator-lag coincidence).
+        // Comparison-only.
+        TraceEvent.LagState lagState = traceData.lagStateForFrame(frame);
+        if (lagState != null) {
+            diagnostics.add(lagState);
+        }
         TraceEvent.CameraBoundary cameraBoundary = traceData.cameraBoundaryForFrame(frame);
         if (cameraBoundary != null) {
             diagnostics.add(cameraBoundary);

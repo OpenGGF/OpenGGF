@@ -300,6 +300,9 @@ public final class TraceEventFormatter {
             case TraceEvent.StateSnapshot snapshot -> summariseStateSnapshot(snapshot);
             case TraceEvent.VObjState vObjState -> summariseVObjState(vObjState);
             case TraceEvent.VOscillate vOscillate -> summariseVOscillate(vOscillate);
+            case TraceEvent.LagState lagState ->
+                    String.format("lagState lagged=%s lagcount=%d",
+                        lagState.lagged(), lagState.lagcount());
             case TraceEvent.CameraBoundary cameraBoundary ->
                     String.format(
                         "cameraBoundary limitBtm1=%04X limitBtm2=%04X lookShift=%04X bgScrollVert=%02X",

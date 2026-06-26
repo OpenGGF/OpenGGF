@@ -90,6 +90,17 @@
 -- verified from docs/s1disasm/sonic.lst (43F8 FE5E / 1038 FE60) +
 -- _Variables.asm:400-403. metadata lua_script_version reports "3.10";
 -- aux_schema_extras gains v_oscillate_per_frame.
+-- v3.11 changes: ADD one per-frame diagnostic AUX event (CSV schema UNCHANGED;
+-- comparison-only context, never engine write-back). v3.10 traces stay valid (the
+-- new aux_schema_extras key gates the parser). "lag_state": BizHawk's
+-- AUTHORITATIVE per-frame lag flag emu.islagged() + cumulative emu.lagcount()
+-- (standard EmuHawk client lua: EmuApi emu.islagged()/emu.lagcount(),
+-- https://tasvideos.org/Bizhawk/LuaFunctions). Replaces the imperfect RAM lag
+-- proxies (lag_counter reads 0000; gfc/vbla deltas don't correlate) with the
+-- emulator's ground truth, to confirm whether the SLZ2 OscillateNumDo "skip"
+-- frames -- and the SLZ1/MZ1/MZ2/FZ counter+oscillation-phase cluster -- coincide
+-- exactly with emulator lag frames. metadata lua_script_version reports "3.11";
+-- aux_schema_extras gains lag_state_per_frame.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -419,12 +430,12 @@ local function write_metadata()
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.10",\n')
+    meta_file:write('  "lua_script_version": "3.11",\n')
     meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
     meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", '
         .. '"v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c", '
-        .. '"object_near_objoff_34_36_38", "v_oscillate_per_frame"],\n')
+        .. '"object_near_objoff_34_36_38", "v_oscillate_per_frame", "lag_state_per_frame"],\n')
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": "",\n')
     -- The complete-run recorder always plays the shared complete-run BK2. Emit
@@ -536,6 +547,34 @@ local function write_v_oscillate()
     write_aux(string.format(
         '{"frame":%d,"event":"v_oscillate","bytes":"%s"}',
         trace_frame, table.concat(parts)))
+end
+
+-- v3.11: BizHawk's AUTHORITATIVE per-frame lag state, every frame. The earlier
+-- lag-frame investigations relied on imperfect RAM proxies (a lag_counter that
+-- reads 0000; gfc/vbla deltas that don't correlate). emu.islagged() is BizHawk's
+-- own ground-truth flag for "this frame was a lag frame" (the core polled input
+-- but did NOT complete a full logical/game step), and emu.lagcount() is the
+-- cumulative lag-frame total. (Standard EmuHawk client lua: emu.islagged()
+-- returns a boolean for the current frame; emu.lagcount() returns the running
+-- total -- BizHawk EmuApi, https://tasvideos.org/Bizhawk/LuaFunctions emu.*.)
+-- This lets the comparator test whether the SLZ2 OscillateNumDo "skip" frames
+-- (and the SLZ1/MZ1/MZ2/FZ counter+oscillation phase cluster) coincide exactly
+-- with emulator lag frames. Diagnostic context ONLY (never write-back); any
+-- actual lag-handling fix is a separate, user-gated decision.
+local function write_lag_state()
+    local lagged = false
+    local lagcount = -1
+    if emu ~= nil then
+        if emu.islagged ~= nil then
+            lagged = emu.islagged()
+        end
+        if emu.lagcount ~= nil then
+            lagcount = emu.lagcount()
+        end
+    end
+    write_aux(string.format(
+        '{"frame":%d,"event":"lag_state","lagged":%s,"lagcount":%d}',
+        trace_frame, lagged and "true" or "false", lagcount))
 end
 
 -- Scan all object slots (1-127). Log appearances, disappearances, proximity,
@@ -948,6 +987,10 @@ local function on_frame_end()
     -- v3.10 per-frame diagnostic context (comparison-only): global oscillation
     -- state (v_oscillate word + values array) for the osc-phase cluster (SLZ2).
     write_v_oscillate()
+    -- v3.11 per-frame diagnostic context (comparison-only): BizHawk's authoritative
+    -- lag-frame state, to confirm whether the OscillateNumDo/counter "skip" frames
+    -- coincide with emulator lag frames (SLZ1/SLZ2/MZ1/MZ2/FZ cluster).
+    write_lag_state()
 
     -- OPL cursor state: emit event on chunk transitions for ROM↔engine comparison.
     -- v_opl_screen changes only when OPL_Next processes a new chunk.
