@@ -18,6 +18,8 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS2DezBombGraphRewind";
     private static final String AIZ_END_BOSS_GRAPH_TEST =
             "TestS3kAizEndBossGraphRewind";
+    private static final String MECHA_SONIC_GRAPH_TEST =
+            "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind";
 
     @BeforeEach
     void initHeadless() {
@@ -61,6 +63,21 @@ class TestGraphCoveredIsolatedProbeClassification {
                 AIZ_END_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.AizEndBossSmokeChild",
                 AIZ_END_BOSS_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void mechaSonicNoProbeAndParentDependentChildrenAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicDEZWindow",
+                MECHA_SONIC_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicLEDWindow",
+                MECHA_SONIC_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicTargetingSensor",
+                MECHA_SONIC_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball",
+                MECHA_SONIC_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }

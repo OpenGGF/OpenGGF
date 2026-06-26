@@ -117,6 +117,18 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$BombChild",
                     "TestS2DezBombGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicDEZWindow",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicLEDWindow",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicTargetingSensor",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic3k.objects.AizEndBossArmChild",
                     "TestS3kAizEndBossGraphRewind"),
             Map.entry(

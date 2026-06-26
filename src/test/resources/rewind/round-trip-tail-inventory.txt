@@ -1,6 +1,6 @@
 # bucket|class
 # Snapshot from the headless ObjectManager round-trip sweep.
-# Summary: total=783 passed=643 graph-covered=11 no-codec=0 no-probe-ctor=24 parent-dependent=105 other-failure=0 count-mismatch=0 scalar-mismatch=0
+# Summary: total=783 passed=643 graph-covered=15 no-codec=0 no-probe-ctor=23 parent-dependent=102 other-failure=0 count-mismatch=0 scalar-mismatch=0
 #
 # Parent-dependent classes live in parent-dependent-graph-coverage-baseline.txt
 # because that file also records graph-test evidence or session-tail status.
@@ -18,7 +18,6 @@ no-probe-ctor|com.openggf.game.sonic2.objects.CogObjectInstance$CogSlotChildInst
 no-probe-ctor|com.openggf.game.sonic2.objects.OOZBurnerFlameObjectInstance
 no-probe-ctor|com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance$SwingingPlatformDisplayChild
 no-probe-ctor|com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb
-no-probe-ctor|com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball
 no-probe-ctor|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt
 no-probe-ctor|com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$Aiz2ResultsScreenObjectInstance
 no-probe-ctor|com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$HighPriorityAnimal

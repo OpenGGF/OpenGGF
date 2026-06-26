@@ -87,9 +87,6 @@ covered|com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance
 covered|com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild|TestCheckpointStarpostGraphRewind
 covered|com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild|TestCheckpointStarpostGraphRewind
 covered|com.openggf.level.objects.InvincibilityStarsObjectInstance|com.openggf.game.sonic2.objects.TestS2SelfContainedTransientRewind
-session-tail|com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicDEZWindow|needs Mecha Sonic graph/session harness
-session-tail|com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicLEDWindow|needs Mecha Sonic graph/session harness
-session-tail|com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicTargetingSensor|needs Mecha Sonic graph/session harness
 session-tail|com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZLaserShooter|needs MTZ boss graph/session harness
 session-tail|com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance|needs MTZ long-platform graph/session harness
 session-tail|com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyNozzleChild|needs Corkey badnik graph/session harness
