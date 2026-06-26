@@ -135,6 +135,45 @@ class SwScrlLbzTest {
                 "ROM LBZ2_Deform subtracts Screen_shake_offset before writing Events_bg+$10.");
         assertEquals((short) 0x02C4, handler.getVscrollFactorBG(),
                 "BG vscroll should use the shaken-relative value and then add Screen_shake_offset back.");
+        assertEquals((short) 0x05F8, handler.getVscrollFactorFG(),
+                "LBZ2_ScreenEvent adds Screen_shake_offset to Camera_Y_pos_copy, so Plane A must shake too.");
+    }
+
+    @Test
+    void act2ScreenShakeMovesDeformationBandLookupWithBackgroundVScroll() {
+        SwScrlLbz baselineHandler = new SwScrlLbz();
+        int[] baseline = new int[VISIBLE_LINES];
+        baselineHandler.update(baseline, 0x2010, 0x05F0, 0, 1);
+
+        SwScrlLbz shakenHandler = new SwScrlLbz();
+        shakenHandler.setScreenShakeOffset(8);
+        int[] shaken = new int[VISIBLE_LINES];
+        shakenHandler.update(shaken, 0x2010, 0x05F0, 0, 1);
+
+        assertNotEquals(unpackBG(baseline[92]), unpackBG(baseline[96]),
+                "The fixture must straddle an LBZ2_BGDeformArray band boundary.");
+        assertEquals(unpackBG(baseline[96]), unpackBG(shaken[92]),
+                "ROM LBZ2_Deform writes shaken Camera_Y_pos_BG_copy before ApplyDeformation, "
+                        + "so a +8 screen shake moves the visible band boundary up by four BG pixels.");
+    }
+
+    @Test
+    void act2DeathEggScreenShakeIsNotAppliedTwiceToBackgroundVScroll() {
+        TestEnvironment.activeGameplayMode();
+        LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE);
+        state.setLaunchActive(true);
+        state.requestScreenShakeOffset(8);
+        GameServices.zoneRuntimeRegistry().install(state);
+        SwScrlLbz handler = new SwScrlLbz();
+        int[] buffer = new int[VISIBLE_LINES];
+
+        handler.update(buffer, 0x4380, 0x05F0, 0, 1);
+
+        assertEquals((short) 0x02C4, handler.getVscrollFactorBG(),
+                "LBZ2_DeathEggDeform already adds Screen_shake_offset when writing Camera_Y_pos_BG_copy; "
+                        + "the generic shake pass must not add it a second time.");
+        assertEquals((short) 0x05F8, handler.getVscrollFactorFG(),
+                "Death Egg launch foreground/window-plane terrain still uses shaken Camera_Y_pos_copy.");
     }
 
     @Test

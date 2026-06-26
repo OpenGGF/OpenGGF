@@ -124,7 +124,9 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         }
 
         if (screenShakeOffset != 0) {
-            composer.setVscrollFactorBG((short) (composer.getVscrollFactorBG() + screenShakeOffset));
+            if (actId == 0) {
+                composer.setVscrollFactorBG((short) (composer.getVscrollFactorBG() + screenShakeOffset));
+            }
             composer.setVscrollFactorFG((short) (cameraY + screenShakeOffset));
         }
         // ROM LBZ2BGE_PlatformDetach: Events_bg+$16 is added to the FG
@@ -207,7 +209,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         bgYFixed -= step >> 2;
         int bgYWithoutBase = wordFromFixed(bgYFixed);
         int equilibriumDelta = (short) (bgYWithoutBase - relativeY);
-        composer.setVscrollFactorBG((short) (bgYWithoutBase + 0x2C0));
+        composer.setVscrollFactorBG((short) (bgYWithoutBase + 0x2C0 + screenShakeOffset));
 
         int cameraXFixed = fixedFromWord(cameraX);
         buildWaterlineGradient(cameraXFixed, equilibriumDelta);
