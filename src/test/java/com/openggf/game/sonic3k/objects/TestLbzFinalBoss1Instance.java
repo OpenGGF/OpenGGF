@@ -21,6 +21,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -79,6 +80,38 @@ class TestLbzFinalBoss1Instance {
         assertEquals(4, boss.getRoutine(), "loc_72A5A switches routine to $04 after Obj_Wait");
         assertEquals(-0x100, boss.getYVelocity(), "activation sets y_vel=-$100");
         assertTrue(boss.isFinalBossPaletteLoaded(), "Pal_LBZFinalBoss1 must be loaded to line 1 on activation");
+    }
+
+    @Test
+    void robotnikHeadFacesInwardAfterRandomSideReposition() throws Exception {
+        HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
+        LbzFinalBoss1Instance boss = newBoss(services);
+        boss.update(0, null);
+        boss.activateForTest();
+        LbzFinalBoss1Instance.RobotnikHeadChild head = assertInstanceOf(
+                LbzFinalBoss1Instance.RobotnikHeadChild.class,
+                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ROBOTNIK_HEAD).get(0));
+
+        boss.forceHitCountForTest(2);
+        boss.setCentreYForTest(services.cameraY() - 0xB0);
+        services.rng().setSeed(1); // Odd Random_Number bit: word_72AE8+$2 => camera.x+$30.
+        boss.update(1, null);
+        head.update(1, null);
+
+        assertEquals(services.camera.getX() + 0x30, boss.getCentreX(),
+                "loc_72AAA places the odd-random pass on the left side of the arena");
+        assertTrue(hFlipForTest(head),
+                "Robotnik head must inherit render_flags bit0 and face right/inward on the left side");
+
+        boss.setCentreYForTest(services.cameraY() + 0x118);
+        services.rng().setSeed(2); // Even Random_Number bit: word_72AE8 => camera.x+$110.
+        boss.update(2, null);
+        head.update(2, null);
+
+        assertEquals(services.camera.getX() + 0x110, boss.getCentreX(),
+                "loc_72AAA places the even-random pass on the right side of the arena");
+        assertFalse(hFlipForTest(head),
+                "Robotnik head must face left/inward on the right side");
     }
 
     @Test
@@ -474,6 +507,12 @@ class TestLbzFinalBoss1Instance {
             LbzFinalBoss1Instance.ChildKind kind) {
         return assertInstanceOf(LbzFinalBoss1Instance.BossChild.class,
                 boss.childrenOfKindForTest(kind).stream().findFirst().orElseThrow());
+    }
+
+    private static boolean hFlipForTest(LbzFinalBoss1Instance.BossChild child) throws Exception {
+        Field hFlip = LbzFinalBoss1Instance.BossChild.class.getDeclaredField("hFlip");
+        hFlip.setAccessible(true);
+        return hFlip.getBoolean(child);
     }
 
     private static final class HarnessServices extends StubObjectServices {

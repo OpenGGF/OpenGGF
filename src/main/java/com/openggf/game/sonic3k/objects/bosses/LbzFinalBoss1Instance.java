@@ -1194,6 +1194,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             }
             // The head rides the defeated ship down (frame 3), no auto-delete.
             refreshFromBoss();
+            hFlip = boss.renderXFlip;
             if ((boss.statusBits & STATUS_DEFEATED) != 0) {
                 mappingFrame = 3;
                 return;
