@@ -35,9 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  *
  * <h2>Invariant</h2>
  * Construction-spawned children (those emitted during {@code initializeBossState()}
- * or the constructor, not from an update/attack routine) must NOT have a codec in
- * {@code DYNAMIC_REWIND_CODECS}. Reconstruction re-establishes them; the codec
- * would only add duplicates.
+ * or the constructor, not from an update/attack routine) must NOT opt into an
+ * explicit per-child dynamic recreate path. Reconstruction re-establishes them;
+ * restoring them separately would only add duplicates.
  *
  * <h2>Bosses covered</h2>
  * <ul>

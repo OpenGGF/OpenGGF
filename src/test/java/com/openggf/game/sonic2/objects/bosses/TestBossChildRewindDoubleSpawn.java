@@ -37,9 +37,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *   <li>It is a placed/active object (not dynamic) in the DEZ level spawn list.</li>
  *   <li>Its constructor → {@code initializeBossState()} → {@code spawnChildren()} spawns
  *       10 permanent children into {@code dynamicObjects} via {@code spawnFreeChild()}.</li>
- *   <li>{@code Sonic2ObjectRegistry.DYNAMIC_REWIND_CODECS} contains codecs for 8 of those
- *       10 children ({@code ArticulatedChild} ×6, {@code HeadChild} ×1, {@code JetChild} ×1;
- *       {@code ForearmChild} ×2 are intentionally excluded from the codec list).</li>
+ *   <li>The generic dynamic recreate path can restore the child objects separately
+ *       ({@code ArticulatedChild} x6, {@code HeadChild} x1, {@code JetChild} x1);
+ *       {@code ForearmChild} x2 are intentionally excluded from separate recreate.</li>
  * </ul>
  *
  * <h2>Expected child breakdown (pre-fix, if double-spawn occurs)</h2>
