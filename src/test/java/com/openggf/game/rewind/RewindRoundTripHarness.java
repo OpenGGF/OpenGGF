@@ -129,6 +129,36 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball",
                     "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2MTZBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZLaserShooter",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2MTZBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZFloatingPlatform",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaser",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserShooter",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserWall",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformReleaser",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnik",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnikPlatform",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic3k.objects.AizEndBossArmChild",
                     "TestS3kAizEndBossGraphRewind"),
             Map.entry(

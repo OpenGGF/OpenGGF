@@ -20,6 +20,10 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS3kAizEndBossGraphRewind";
     private static final String MECHA_SONIC_GRAPH_TEST =
             "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind";
+    private static final String MTZ_BOSS_GRAPH_TEST =
+            "com.openggf.game.sonic2.objects.bosses.TestS2MTZBossGraphRewind";
+    private static final String WFZ_BOSS_GRAPH_TEST =
+            "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind";
 
     @BeforeEach
     void initHeadless() {
@@ -78,6 +82,40 @@ class TestGraphCoveredIsolatedProbeClassification {
                 MECHA_SONIC_GRAPH_TEST,
                 "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball",
                 MECHA_SONIC_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void mtzBossNoProbeAndParentDependentChildrenAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb",
+                MTZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZLaserShooter",
+                MTZ_BOSS_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void wfzBossNoProbeAndParentDependentChildrenAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZFloatingPlatform",
+                WFZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaser",
+                WFZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserShooter",
+                WFZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserWall",
+                WFZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt",
+                WFZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformReleaser",
+                WFZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnik",
+                WFZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnikPlatform",
+                WFZ_BOSS_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }

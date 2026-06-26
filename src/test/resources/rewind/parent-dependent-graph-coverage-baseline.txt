@@ -36,13 +36,6 @@ covered|com.openggf.game.sonic2.objects.bosses.EHZBossWheel|TestS2EhzBossGraphRe
 covered|com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance|TestS1SyzBossBlockGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance|TestS2CpzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance|TestS2EhzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZFloatingPlatform|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaser|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserShooter|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserWall|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformReleaser|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnik|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnikPlatform|com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.SeesawBallObjectInstance|TestSeesawBallGraphRewind
 covered|com.openggf.game.sonic3k.objects.AizEndBossFlameColumnChild|TestS3kAizEndBossGraphRewind
 covered|com.openggf.game.sonic3k.objects.AizEndBossShipChild|TestS3kAizEndBossGraphRewind
@@ -87,7 +80,6 @@ covered|com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance
 covered|com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild|TestCheckpointStarpostGraphRewind
 covered|com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild|TestCheckpointStarpostGraphRewind
 covered|com.openggf.level.objects.InvincibilityStarsObjectInstance|com.openggf.game.sonic2.objects.TestS2SelfContainedTransientRewind
-session-tail|com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZLaserShooter|needs MTZ boss graph/session harness
 session-tail|com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance|needs MTZ long-platform graph/session harness
 session-tail|com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyNozzleChild|needs Corkey badnik graph/session harness
 session-tail|com.openggf.game.sonic3k.objects.ClamerObjectInstance$ClamerSpringChild|needs Clamer graph/session harness
