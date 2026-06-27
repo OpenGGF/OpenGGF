@@ -42,6 +42,12 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS2BadnikChildGraphRewind";
     private static final String S2_EHZ_BOSS_GRAPH_TEST =
             "TestS2EhzBossGraphRewind";
+    private static final String S2_ARZ_ARROW_GRAPH_TEST =
+            "TestS2ArzArrowGraphRewind";
+    private static final String S1_SYZ_BOSS_BLOCK_GRAPH_TEST =
+            "TestS1SyzBossBlockGraphRewind";
+    private static final String SEESAW_GRAPH_TEST =
+            "TestSeesawBallGraphRewind";
 
     @BeforeEach
     void initHeadless() {
@@ -228,6 +234,19 @@ class TestGraphCoveredIsolatedProbeClassification {
                 S2_EHZ_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance",
                 S2_EHZ_BOSS_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void smallCoveredParentDependentRowsAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic2.objects.bosses.ARZBossArrow",
+                S2_ARZ_ARROW_GRAPH_TEST,
+                "com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance",
+                S1_SYZ_BOSS_BLOCK_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.SeesawBallObjectInstance",
+                SEESAW_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }

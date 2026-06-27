@@ -89,7 +89,6 @@ public final class RewindRoundTripHarness {
             new ObjectSpawn(0x100, 0x100, 1, 0, 0, false, 0);
 
     private static final Set<String> GRAPH_ONLY_ISOLATED_PROBE_CLASSES = Set.of(
-            "com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance",
             "com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance",
             "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild",
             "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment");
@@ -110,6 +109,9 @@ public final class RewindRoundTripHarness {
             Map.entry(
                     "com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher",
                     "TestS1FzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance",
+                    "TestS1SyzBossBlockGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorBlock",
                     "com.openggf.game.sonic1.objects.TestFalseFloorBlockRewindGenericRestore"),
@@ -138,6 +140,9 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance",
                     "TestS2BadnikChildGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.ARZBossArrow",
+                    "TestS2ArzArrowGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle",
                     "TestS2EhzBossGraphRewind"),
             Map.entry(
@@ -155,6 +160,9 @@ public final class RewindRoundTripHarness {
             Map.entry(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance",
                     "TestS2EhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.SeesawBallObjectInstance",
+                    "TestSeesawBallGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild",
                     "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),

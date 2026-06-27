@@ -1,7 +1,6 @@
 # status|class|evidence
 # covered = focused graph/object-manager rewind test exists for this family.
 # session-tail = still needs a real session/family harness before claiming graph-safe restore.
-covered|com.openggf.game.sonic2.objects.bosses.ARZBossArrow|TestS2ArzArrowGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossContainer|TestS2CpzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend|TestS2CpzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor|TestS2CpzBossGraphRewind
@@ -14,9 +13,7 @@ covered|com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment|TestS2CpzBossG
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossPump|TestS2CpzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik|TestS2CpzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff|TestS2CpzBossGraphRewind
-covered|com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance|TestS1SyzBossBlockGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance|TestS2CpzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.SeesawBallObjectInstance|TestSeesawBallGraphRewind
 covered|com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild|com.openggf.game.sonic3k.objects.TestAizDisappearingFloorGraphRewind
 covered|com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1CollapseChild|com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind
 covered|com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper|com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind
