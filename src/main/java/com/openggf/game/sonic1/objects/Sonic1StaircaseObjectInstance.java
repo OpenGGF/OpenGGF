@@ -105,6 +105,14 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
     private boolean contactTop;
     private boolean contactBottom;
 
+    // objoff_36 propagation-latency model (see update()): a grounded cross-object
+    // walk-on transfer propagates the trigger one frame later than an airborne
+    // landing. prevPlayerAirborne is the approach air-state captured each frame;
+    // the deferred* flags hold the one-frame grounded defer buffer.
+    private boolean prevPlayerAirborne = true;
+    private boolean deferredTrigTop;
+    private boolean deferredTrigBottom;
+
     // ROM Stair_Main allocates 3 child blocks via FindNextFreeObj, in slots ABOVE
     // the parent (docs/s1disasm/_incObj/5B SLZ Staircase.asm:39-60; sub
     // FindFreeObj.asm:32-48 scans forward from the parent). The engine folds the
@@ -222,6 +230,31 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getPieceLandingHalfWidth(int pieceIndex) {
+        // ROM Stair_Solid passes obActWid (=0x10, half the 0x20 piece spacing) as
+        // the Solid_Landed width (docs/s1disasm/_incObj/5B SLZ Staircase.asm:80;
+        // sub SolidObject.asm:307-315), NOT the full collision half-width 0x1B used
+        // for the side/top box. The narrow 0x10 window makes adjacent pieces'
+        // landing windows contiguous and non-overlapping, so exactly one piece
+        // owns the player's standing as it walks across.
+        return PIECE_ACTIVE_WIDTH;
+    }
+
+    @Override
+    public boolean usesPieceScopedStandingBits() {
+        // ROM folds the parent + 3 child blocks into 4 separate SST slots, each
+        // running its own Stair_Solid -> SolidObject independently
+        // (docs/s1disasm/_incObj/5B SLZ Staircase.asm:39-96). As the player walks
+        // across the staircase, each piece's narrow Solid_Landed window
+        // (obActWid*2 = the 0x20 piece spacing) hands the standing latch to the
+        // next piece via Solid_ResetFloor (sub SolidObject.asm:305-375). This
+        // folded single-instance must reproduce that per-piece hand-off so the
+        // rider tracks the correct piece's interpolated height (piece0/parent at
+        // 100% vs piece1 at 75%), not stay stuck on the first piece it boarded.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
@@ -263,11 +296,43 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
         contactTop = false;
         contactBottom = false;
 
+        // ROM objoff_36 propagation latency modelled by approach state.
+        //
+        // A piece's Stair_Solid sets the PARENT's objoff_36 from its own
+        // Status_OnObj (docs/s1disasm/_incObj/5B SLZ Staircase.asm:90-93), and the
+        // parent's Stair_Move reads objoff_36 (lines 104-119). When the player
+        // lands from the AIR onto a piece, that piece's Solid_Landed sets its
+        // Status_OnObj and propagates objoff_36 the SAME frame (aux ground truth:
+        // SLZ1 f902 airborne landing on slot 0x3D -> parent objoff_36=1 at f902).
+        // When the player walks GROUNDED across the A->B boundary from an adjacent
+        // solid object, the standing-transfer (Solid_ResetFloor reassigning
+        // standonobject between separate SST slots) makes the new piece's
+        // objoff_36 propagation land ONE frame later (aux: SLZ1 f2835 grounded
+        // transfer onto slot 0x61 -> parent objoff_36=1 only at f2836). The
+        // engine's update()-then-checkpoint order already gives the base +1; add
+        // the extra +1 only for the grounded-approach case via a one-frame defer.
+        // The approach air-state is the player's air at the START of the frame the
+        // contact was registered, captured as prevPlayerAir on the prior update.
+        boolean trigTop;
+        boolean trigBottom;
+        if (prevPlayerAirborne) {
+            trigTop = touchTop;
+            trigBottom = touchBottom;
+            deferredTrigTop = false;
+            deferredTrigBottom = false;
+        } else {
+            trigTop = deferredTrigTop;
+            trigBottom = deferredTrigBottom;
+            deferredTrigTop = touchTop;
+            deferredTrigBottom = touchBottom;
+        }
+        prevPlayerAirborne = playerEntity != null && playerEntity.getAir();
+
         // Run state machine (subtype & 0x07 dispatch)
         switch (state & 0x07) {
-            case 0 -> updateType00(touchTop);
+            case 0 -> updateType00(trigTop);
             case 1, 3 -> updateType01();
-            case 2 -> updateType02(touchBottom);
+            case 2 -> updateType02(trigBottom);
             default -> {} // Subtypes 4-7 unused in SLZ placement data
         }
 

@@ -67,6 +67,21 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
     }
 
     /**
+     * Half-width of a piece's narrow Solid_Landed top-landing window, used to
+     * decide which piece owns the player's standing when several pieces' wider
+     * collision boxes overlap. ROM Solid_Landed gates the landing/standonobject
+     * assignment on {@code obActWid} (docs/s1disasm/_incObj/sub SolidObject.asm:307-315),
+     * which for spaced multi-piece objects is half the piece spacing — narrower
+     * than the full collision half-width used for side/push contact. Defaults to
+     * the full collision half-width (single-box objects have no distinction).
+     *
+     * @param pieceIndex 0-based index of the piece
+     */
+    default int getPieceLandingHalfWidth(int pieceIndex) {
+        return getPieceParams(pieceIndex).halfWidth();
+    }
+
+    /**
      * Called when a piece makes contact with the player.
      * Allows the object to track which pieces are being touched.
      *

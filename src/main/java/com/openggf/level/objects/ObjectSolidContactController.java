@@ -1309,6 +1309,24 @@ final class ObjectSolidContactController {
                 clearGroundWallSuppressionForNormalSolidSupport(player, instance);
                 inlineSupportedPlayers.add(player);
             }
+            // Solid_ResetFloor takeover (pieceScoped multi-piece only): an adjacent
+            // piece whose narrow Solid_Landed window now contains the player has
+            // claimed standing and re-seated the player onto itself. Transfer the
+            // riding latch to that piece and DO NOT restore the previously-ridden
+            // piece's Y, mirroring ROM Solid_ResetFloor reassigning standonobject
+            // (docs/s1disasm/_incObj/sub SolidObject.asm:305-375). Without this the
+            // engine holds the rider on the prior piece's interpolated height
+            // (SLZ staircase: piece1 at 75% vs piece0/parent at 100%), leaving the
+            // rider 1px high as the descending steps deepen (SLZ1 f2872).
+            if (result.overridePieceIndex() >= 0) {
+                putRidingState(player, instance, result.overrideX(), result.overrideY(),
+                        result.overridePieceIndex());
+                setObjectStandingBit(player, instance, result.overridePieceIndex());
+                markStandingBitEstablishedThisFrame(player, instance, result.overridePieceIndex());
+                clearGroundWallSuppressionForNormalSolidSupport(player, instance);
+                inlineSupportedPlayers.add(player);
+                return result.aggregateContact();
+            }
             // Restore riding piece Y after sibling-piece contacts. Non-riding sibling
             // pieces may have applied Solid_Landed Y snaps for overlapping X ranges.
             // In ROM each piece is a separate slot; the ridden piece runs LAST in slot
@@ -2335,7 +2353,10 @@ final class ObjectSolidContactController {
             int ridingX,
             int ridingY,
             int pieceIndex,
-            SolidContact aggregateContact) {}
+            SolidContact aggregateContact,
+            int overridePieceIndex,
+            int overrideX,
+            int overrideY) {}
 
     /**
      * Resolve the side/push contact of the sibling pieces allocated before the
@@ -2391,9 +2412,22 @@ final class ObjectSolidContactController {
         int standingPieceIndex = -1;
         int standingPieceX = 0;
         int standingPieceY = 0;
+        // ROM Solid_ResetFloor takeover: while the player rides one piece (held by
+        // its full-width continued window), an ADJACENT piece whose narrow
+        // Solid_Landed window (obActWid*2 = piece spacing) now contains the
+        // player's foot claims standing and reassigns standonobject to itself
+        // (docs/s1disasm/_incObj/sub SolidObject.asm:305-324 Solid_Landed ->
+        // Solid_ResetFloor:344-375). The narrow per-piece windows are contiguous
+        // and non-overlapping, so exactly one piece claims. Only providers that
+        // opt into usesPieceScopedStandingBits() (separate ROM SST slots folded
+        // into one instance) take this path.
+        int overridePieceIndex = -1;
+        int overridePieceX = 0;
+        int overridePieceY = 0;
         SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
         boolean ridingCurrentObject = isRidingCurrentPlayerObject(instance);
         int currentRidingPieceIndex = getCurrentPlayerRidingPieceIndex();
+        boolean pieceScopedStanding = multiPiece.usesPieceScopedStandingBits();
 
         for (int i = 0; i < pieceCount; i++) {
             // ROM slot-order parity: when the earlier slots of this ridden object
@@ -2475,6 +2509,27 @@ final class ObjectSolidContactController {
                     standingPieceX = pieceX;
                     standingPieceY = pieceY;
                 }
+                // Solid_ResetFloor takeover: a non-ridden sibling piece freshly
+                // standing while the player rides a different piece of this same
+                // instance. resolveContact already re-seated the player onto this
+                // piece (apply=true), so record it so the riding latch transfers.
+                // Gate on the NARROW Solid_Landed window (obActWid, not the wider
+                // collision half-width): adjacent pieces' full collision boxes
+                // overlap, so without this gate two neighbouring pieces both
+                // register standing and the takeover thrashes between them every
+                // frame. The narrow windows are contiguous/non-overlapping, so
+                // exactly one piece owns the player (ROM Solid_Landed obActWid
+                // gate, docs/s1disasm/_incObj/sub SolidObject.asm:307-315).
+                if (pieceScopedStanding && ridingCurrentObject && !player.getAir()
+                        && i != currentRidingPieceIndex && overridePieceIndex < 0) {
+                    int narrowHalf = multiPiece.getPieceLandingHalfWidth(i);
+                    int relNarrow = player.getCentreX() - pieceX + narrowHalf;
+                    if (relNarrow >= 0 && relNarrow < narrowHalf * 2) {
+                        overridePieceIndex = i;
+                        overridePieceX = pieceX;
+                        overridePieceY = pieceY;
+                    }
+                }
             }
             if (contact.touchTop()) {
                 anyTouchTop = true;
@@ -2500,7 +2555,8 @@ final class ObjectSolidContactController {
 
         return new MultiPieceContactResult(
                 anyStanding, anyPushing, standingPieceX, standingPieceY,
-                standingPieceIndex, aggregateContact);
+                standingPieceIndex, aggregateContact,
+                overridePieceIndex, overridePieceX, overridePieceY);
     }
 
     /**
