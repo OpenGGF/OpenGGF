@@ -19,6 +19,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -653,7 +654,7 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
         if (!player.getRolling()) {
             short preRollCentreX = player.getCentreX();
             player.setRolling(true);
-            player.setCentreXPreserveSubpixel(preRollCentreX);
+            NativePositionOps.writeXPosPreserveSubpixel(player, preRollCentreX);
             player.setY((short) (player.getY() + player.getRollHeightAdjustment()));
             player.setAnimationId(Sonic1AnimationIds.ROLL);
             if (player.getGSpeed() == 0) {
