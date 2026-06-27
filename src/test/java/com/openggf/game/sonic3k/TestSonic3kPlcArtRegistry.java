@@ -381,6 +381,19 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void lbz2PlanIncludesTunnelExhaustLevelArt() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 1);
+
+        Sonic3kPlcArtRegistry.LevelArtEntry exhaust =
+                requireLevelArt(plan, Sonic3kObjectArtKeys.LBZ_TUNNEL_EXHAUST);
+
+        assertEquals(Sonic3kConstants.MAP_TUNNEL_EXHAUST_ADDR, exhaust.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_LBZ2_MISC, exhaust.artTileBase());
+        assertEquals(2, exhaust.palette());
+        assertEquals(2, exhaust.mappingFrameCount());
+    }
+
+    @Test
     public void lbz2PlanIncludesLoweringGrappleLevelArt() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 1);
 
@@ -428,6 +441,23 @@ public class TestSonic3kPlcArtRegistry {
             assertLbz2Piece(frames.get(6), 0, 1, 1, 2, 0x808 & 0x7FF);
             assertEquals(16, frames.get(7).pieces().size(), "LBZ PipePlug intact frame piece count");
             assertLbzPipePlugPiece(frames.get(7).pieces().getFirst(), -16, -32, 2, 2, 0x04);
+        }
+    }
+
+    @Test
+    public void tunnelExhaustMappingsParseTwoRomFrames() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_TUNNEL_EXHAUST_ADDR, 2);
+
+            assertEquals(2, frames.size());
+            assertLbz2Piece(frames.get(0), 0, 1, 4, 3, 0x2A);
+            assertLbz2Piece(frames.get(1), 0, 1, 3, 4, 0x2A);
         }
     }
 

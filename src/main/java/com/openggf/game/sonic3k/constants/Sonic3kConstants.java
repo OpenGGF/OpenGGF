@@ -206,6 +206,7 @@ public class Sonic3kConstants {
     // Map_LBZPipePlug (8 frames). LockOn S3 data; Obj_LBZPipePlug in
     // sonic3k.asm references this S3-half table and no S&K-side duplicate exists.
     public static final int MAP_LBZ_PIPE_PLUG_ADDR = 0x226854;
+    public static final int MAP_TUNNEL_EXHAUST_ADDR = 0x029C8A; // Map_TunnelExhaust (2 frames, S&K-side)
     public static final int MAP_FBZ_CORK_FLOOR_ADDR = 0x2A920;    // Map_FBZCorkFloor (2 frames, 2/4 pieces, in sonic3k.asm)
 
     // ===== Breakable Wall mappings (Obj_BreakableWall, ID 0x0D) =====

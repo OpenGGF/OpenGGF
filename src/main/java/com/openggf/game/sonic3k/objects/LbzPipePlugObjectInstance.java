@@ -80,6 +80,7 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
 
     private final SubpixelMotion.State motion;
     private int mappingFrame = INITIAL_MAPPING_FRAME;
+    private int framePieceIndex = -1;
     private boolean broken;
 
     public LbzPipePlugObjectInstance(ObjectSpawn spawn) {
@@ -153,7 +154,11 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LBZ_PIPE_PLUG);
         if (renderer != null) {
-            renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false, 2);
+            if (framePieceIndex >= 0) {
+                renderer.drawFramePieceByIndex(mappingFrame, framePieceIndex, getX(), getY(), false, false);
+            } else {
+                renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false, 2);
+            }
         }
     }
 
@@ -271,16 +276,18 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
             int frame = SHARD_MAPPING_FRAMES[i];
             int x = motion.x + SHARD_X_OFFSETS[i];
             int y = motion.y + SHARD_Y_OFFSETS[i];
-            spawnChild(() -> new LbzPipePlugShardInstance(buildSpawnAt(x, y), frame, xVel, yVel, true));
+            spawnChild(() -> new LbzPipePlugShardInstance(buildSpawnAt(x, y), frame, -1, xVel, yVel, true));
         }
         int velocityIndex = SMALL_SHARD_COUNT * 2;
         motion.xVel = velocities[velocityIndex];
         motion.yVel = velocities[velocityIndex + 1];
+        framePieceIndex = 0;
         for (int i = 1; i < LARGE_CHUNK_COUNT; i++) {
             int xVel = velocities[velocityIndex + i * 2];
             int yVel = velocities[velocityIndex + i * 2 + 1];
+            int pieceIndex = i;
             spawnChild(() -> new LbzPipePlugShardInstance(
-                    buildSpawnAt(motion.x, motion.y), INITIAL_MAPPING_FRAME, xVel, yVel, false));
+                    buildSpawnAt(motion.x, motion.y), INITIAL_MAPPING_FRAME, pieceIndex, xVel, yVel, false));
         }
     }
 }

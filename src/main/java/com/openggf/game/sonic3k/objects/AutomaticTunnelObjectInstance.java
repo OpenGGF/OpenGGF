@@ -512,8 +512,15 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         // ROM: moveq #signextendB(sfx_TubeLauncher),d0; jsr (Play_SFX).l
         playSfx(Sonic3kSfx.TUBE_LAUNCHER.id);
 
-        // ROM: LBZ2 exhaust spawn (lines 57301-57313)
-        // Cosmetic waterfall effect — not implemented (LBZ2-only visual)
+        // ROM: btst #5,subtype(a0), then allocate Obj_TunnelExhaustControl at the player.
+        if (lbz2Mode) {
+            int exhaustX = player.getCentreX();
+            int exhaustY = player.getCentreY();
+            int exhaustXVel = player.getXSpeed();
+            int exhaustYVel = player.getYSpeed();
+            spawnChild(() -> new TunnelExhaustControlObjectInstance(
+                    buildSpawnAt(exhaustX, exhaustY), 0, exhaustXVel, exhaustYVel));
+        }
     }
 
     // =========================================================================

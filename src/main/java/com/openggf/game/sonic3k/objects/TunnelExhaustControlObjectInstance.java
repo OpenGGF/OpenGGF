@@ -1,11 +1,13 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
@@ -29,12 +31,14 @@ final class TunnelExhaustControlObjectInstance extends AbstractObjectInstance
     private int yVel;
     private int emitTimer;
     private int lifetime = LIFETIME;
+    private int angle;
 
     TunnelExhaustControlObjectInstance(ObjectSpawn spawn, int subtype, int xVel, int yVel) {
         super(spawn, "TunnelExhaustControl");
         this.subtype = subtype & 0xFF;
         this.xVel = xVel;
         this.yVel = yVel;
+        this.angle = selectAngle(xVel, yVel);
     }
 
     @Override
@@ -48,7 +52,15 @@ final class TunnelExhaustControlObjectInstance extends AbstractObjectInstance
         emitTimer--;
         if (emitTimer < 0) {
             emitTimer = EMIT_PERIOD - 1;
-            spawnChild(() -> new TunnelExhaustParticleInstance(buildSpawnAt(getX(), getY()), xVel, yVel, false));
+            ExhaustSpec spec = exhaustSpec();
+            spawnChild(() -> new TunnelExhaustParticleInstance(
+                    buildSpawnAt(getX(), getY()),
+                    spec.xVel(),
+                    spec.yVel(),
+                    spec.mappingFrame(),
+                    spec.renderFlags(),
+                    spec.horizontal(),
+                    false));
         }
         lifetime--;
         if (lifetime < 0) {
@@ -92,6 +104,34 @@ final class TunnelExhaustControlObjectInstance extends AbstractObjectInstance
     int subtypeForTesting() {
         return subtype;
     }
+
+    private static int selectAngle(int xVel, int yVel) {
+        int signedYVel = (short) yVel;
+        if (signedYVel != 0) {
+            return signedYVel > 0 ? 0x06 : 0x00;
+        }
+        return (short) xVel < 0 ? 0x0C : 0x12;
+    }
+
+    private ExhaustSpec exhaustSpec() {
+        return switch (angle) {
+            case 0x00 -> new ExhaustSpec(0, -0x600, 0x86, 1, false);
+            case 0x06 -> new ExhaustSpec(0, 0x400, 0x84, 1, false);
+            case 0x0C -> new ExhaustSpec(horizontalVelocity(-0x600), 0, 0x85, 0, true);
+            case 0x12 -> new ExhaustSpec(horizontalVelocity(0x600), 0, 0x84, 0, true);
+            default -> throw new IllegalStateException("Unsupported tunnel exhaust angle " + angle);
+        };
+    }
+
+    private int horizontalVelocity(int baseXVel) {
+        int adjustment = (LIFETIME - lifetime) << 4;
+        if (baseXVel > 0) {
+            adjustment = -adjustment;
+        }
+        return (short) (baseXVel + adjustment);
+    }
+
+    private record ExhaustSpec(int xVel, int yVel, int renderFlags, int mappingFrame, boolean horizontal) {}
 }
 
 final class TunnelExhaustParticleInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
@@ -102,13 +142,22 @@ final class TunnelExhaustParticleInstance extends AbstractObjectInstance impleme
 
     private final SubpixelMotion.State motion;
     private final boolean timed;
+    private final boolean horizontal;
     private int timer;
     private int mappingFrame = 1;
     private int renderFlags = 0x84;
 
     TunnelExhaustParticleInstance(ObjectSpawn spawn, int xVel, int yVel, boolean timed) {
+        this(spawn, xVel, yVel, 1, 0x84, false, timed);
+    }
+
+    TunnelExhaustParticleInstance(ObjectSpawn spawn, int xVel, int yVel,
+            int mappingFrame, int renderFlags, boolean horizontal, boolean timed) {
         super(spawn, "TunnelExhaustParticle");
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, xVel, yVel);
+        this.mappingFrame = mappingFrame;
+        this.renderFlags = renderFlags;
+        this.horizontal = horizontal;
         this.timed = timed;
         this.timer = timed ? TIMED_LIFETIME - 1 : 0;
     }
@@ -116,7 +165,7 @@ final class TunnelExhaustParticleInstance extends AbstractObjectInstance impleme
     @Override
     public void update(int frameCounter, PlayableEntity player) {
         if ((frameCounter & 1) == 0) {
-            renderFlags ^= 1;
+            renderFlags ^= horizontal ? 2 : 1;
         }
         if (timed) {
             timer--;
@@ -149,7 +198,11 @@ final class TunnelExhaustParticleInstance extends AbstractObjectInstance impleme
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // Exhaust particle art is owned by Map_TunnelExhaust; the pipe plug task
-        // only needs the control/timing handoff, so do not fake this with plug art.
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LBZ_TUNNEL_EXHAUST);
+        if (renderer != null) {
+            boolean hFlip = (renderFlags & 1) != 0;
+            boolean vFlip = (renderFlags & 2) != 0;
+            renderer.drawFrameIndex(mappingFrame, getX(), getY(), hFlip, vFlip, 2);
+        }
     }
 }

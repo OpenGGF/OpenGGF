@@ -128,8 +128,8 @@ class TestLbzPipePlugObjectInstance {
         assertFalse(player.getPushing());
         assertEquals(List.of(com.openggf.game.sonic3k.audio.Sonic3kSfx.COLLAPSE.id), services.playedSfx);
         assertEquals(15, services.children.size(),
-                "PipePlugSmashObject allocates 12 single-tile shards plus 3 new intact-frame chunks; "
-                        + "the original object becomes the fourth chunk");
+                "PipePlugSmashObject allocates 12 single-tile shards plus 3 new single-piece chunks; "
+                        + "the original object becomes the fourth single-piece chunk");
     }
 
     @Test
@@ -270,7 +270,7 @@ class TestLbzPipePlugObjectInstance {
     }
 
     @Test
-    void smashTurnsParentIntoLargeChunkAndCreatesTwelveSmallShardsPlusThreeLargeChildren() {
+    void smashTurnsParentIntoSinglePieceLargeChunkAndCreatesTwelveSmallShardsPlusThreeLargeChildren() {
         RecordingServices services = new RecordingServices();
         LbzPipePlugObjectInstance plug = createPlug(services, 0);
         TestablePlayableSprite player = player("sonic", PIPE_X + 0x20, PIPE_Y);
@@ -287,6 +287,13 @@ class TestLbzPipePlugObjectInstance {
         assertEquals(3, services.children.stream()
                 .filter(child -> mappingFrame(child) == 7)
                 .count());
+        assertEquals(0, framePieceIndex(plug),
+                "ROM reuses the original object with mappings(a0) pointing at frame 7 piece 0");
+        assertEquals(List.of(1, 2, 3), services.children.stream()
+                .filter(child -> mappingFrame(child) == 7)
+                .map(TestLbzPipePlugObjectInstance::framePieceIndex)
+                .toList(),
+                "ROM advances the mappings pointer by one 6-byte piece for each large child");
         assertEquals(0xFC00, motionVelocity(plug, "xVel") & 0xFFFF,
                 "Original object is reused as the first large chunk and consumes word_276D8 velocity pair 13");
         assertEquals(0xFD40, motionVelocity(plug, "yVel") & 0xFFFF);
@@ -370,6 +377,16 @@ class TestLbzPipePlugObjectInstance {
             Field velocityField = motion.getClass().getDeclaredField(fieldName);
             velocityField.setAccessible(true);
             return velocityField.getInt(motion);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static int framePieceIndex(Object instance) {
+        try {
+            Field field = instance.getClass().getDeclaredField("framePieceIndex");
+            field.setAccessible(true);
+            return field.getInt(instance);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }

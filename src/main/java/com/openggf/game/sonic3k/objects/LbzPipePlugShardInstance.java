@@ -25,11 +25,14 @@ final class LbzPipePlugShardInstance extends AbstractObjectInstance implements S
     private final SubpixelMotion.State motion;
     private boolean animatedSmallShard;
     private int mappingFrame;
+    private int framePieceIndex;
     private int animFrame;
 
-    LbzPipePlugShardInstance(ObjectSpawn spawn, int mappingFrame, int xVel, int yVel, boolean animatedSmallShard) {
+    LbzPipePlugShardInstance(ObjectSpawn spawn, int mappingFrame, int framePieceIndex,
+            int xVel, int yVel, boolean animatedSmallShard) {
         super(spawn, "LBZPipePlugShard");
         this.mappingFrame = mappingFrame;
+        this.framePieceIndex = framePieceIndex;
         this.animFrame = mappingFrame;
         this.animatedSmallShard = animatedSmallShard;
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, xVel, yVel);
@@ -71,7 +74,11 @@ final class LbzPipePlugShardInstance extends AbstractObjectInstance implements S
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LBZ_PIPE_PLUG);
         if (renderer != null) {
-            renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false, 2);
+            if (framePieceIndex >= 0) {
+                renderer.drawFramePieceByIndex(mappingFrame, framePieceIndex, getX(), getY(), false, false);
+            } else {
+                renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false, 2);
+            }
         }
     }
 }

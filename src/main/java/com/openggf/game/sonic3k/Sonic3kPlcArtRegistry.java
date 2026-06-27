@@ -1609,6 +1609,15 @@ public final class Sonic3kPlcArtRegistry {
                     null,
                     8
             ));
+            // Tunnel exhaust / LBZ2 water: make_art_tile(ArtTile_LBZ2Misc, 2, 0)
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_TUNNEL_EXHAUST,
+                    Sonic3kConstants.MAP_TUNNEL_EXHAUST_ADDR,
+                    Sonic3kConstants.ARTTILE_LBZ2_MISC,
+                    2,
+                    null,
+                    2
+            ));
         }
 
         // StillSprite groups: subtype 20 (pole), subtypes 21-23 (girders)
