@@ -376,6 +376,7 @@ Report any discrepancies with specific line references.
 - Drops spikes from above
 - Retracting platforms in arena
 - Spike timing pattern from disassembly
+- **objoff_3C/3D word/byte aliasing trap:** the block-drop hold/break shake reads `btst #1/#0,PhaseTimer` where `PhaseTimer` (objoff_3D) is the LOW BYTE of the WORD timer `GenericTimer` (objoff_3C). The `subq.w #1,GenericTimer` each frame overwrites objoff_3D, so the ±2 shake alternates with the decrementing timer's low bits — it is NOT a separate persistent flag (objoff_3D doubles as a patrol "already attacked" flag, but only because the word ops clobber it during the drop). If you model objoff_3D as its own field, the shake freezes and the ship's collision Y stops oscillating, mistiming the rolling-player boss-hit bounce by a frame (SYZ3 f11169, commit on `bugfix/ai-syz3-f11169`). Read the timer's low byte for the shake: `(timer & 2)` / `(timer & 1)`. (`docs/s1disasm/_incObj/75, 76 Boss - SYZ Main and Blocks.asm:20-21,264-295`.) General lesson: any S1 boss that decrements a WORD timer while also `btst`-ing an adjacent BYTE at the timer's low offset is using ROM memory aliasing — model them as one storage location.
 
 ### LZ Boss (0x77) - Rising Water
 - Unique chase boss (not arena-based)

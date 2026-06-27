@@ -318,10 +318,17 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance {
             state.yVel = (grabbedBlock != null) ? RISE_Y_VEL : RISE_Y_VEL_NO_BLOCK;
         } else {
             // Timer >= 0: shake when timer <= $1E
-            // ROM: btst #1,objoff_3D(a0) — shake direction from justReturnedFlag bit 1
+            // ROM BSYZ_Lift (loc_19366): cmpi.w #30,GenericTimer / bgt (no shake);
+            // moveq #2,d0; btst #1,PhaseTimer; beq (+2); neg.w d0 (-2).
+            // PhaseTimer (objoff_3D) is the LOW BYTE of the word timer GenericTimer
+            // (objoff_3C); the preceding subq.w #1,GenericTimer overwrites it each
+            // frame, so the shake direction is bit 1 of the (decrementing) timer,
+            // NOT a separate persistent flag.
+            // (75 Boss - SYZ Main and Blocks.asm:264-295, with objoff_3C/3D
+            // word/low-byte aliasing documented at lines 20-21.)
             if (timer <= 0x1E) {
                 yOffset = 2;
-                if ((justReturnedFlag & 2) != 0) {
+                if ((timer & 2) != 0) {
                     yOffset = -yOffset;
                 }
             }
@@ -394,12 +401,15 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance {
             state.yFixed -= (bobSpeed << 16);
         }
 
-        // ROM: loc_19424 — Y display shake when holding block
-        // btst #0,objoff_3D(a0) for shake direction
+        // ROM loc_19424 — Y display shake when holding block: btst #0,PhaseTimer.
+        // Same objoff_3C/3D word/low-byte aliasing as the hold phase above — the
+        // BSYZ_BreakBlock subq.w #1,GenericTimer overwrites PhaseTimer each frame,
+        // so the shake direction is bit 0 of the (decrementing) timer.
+        // (75 Boss - SYZ Main and Blocks.asm:334,378-386.)
         int yShake = 0;
         if (grabbedBlock != null) {
             yShake = 2;
-            if ((justReturnedFlag & 1) != 0) {
+            if ((timer & 1) != 0) {
                 yShake = -yShake;
             }
         }
