@@ -37,17 +37,6 @@ covered|com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance|TestS1SyzBo
 covered|com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance|TestS2CpzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance|TestS2EhzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.SeesawBallObjectInstance|TestSeesawBallGraphRewind
-covered|com.openggf.game.sonic3k.objects.AizEndBossFlameColumnChild|TestS3kAizEndBossGraphRewind
-covered|com.openggf.game.sonic3k.objects.AizEndBossShipChild|TestS3kAizEndBossGraphRewind
-covered|com.openggf.game.sonic3k.objects.AizIntroPlaneChild|TestS3kAizIntroGraphRewind
-covered|com.openggf.game.sonic3k.objects.AizIntroWaveChild|TestS3kAizIntroGraphRewind
-covered|com.openggf.game.sonic3k.objects.AizMinibossArmChild|TestS3kAizMinibossGraphRewind
-covered|com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild|TestS3kAizMinibossGraphRewind
-covered|com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild|TestS3kAizMinibossGraphRewind
-covered|com.openggf.game.sonic3k.objects.AizMinibossBodyChild|TestS3kAizMinibossGraphRewind
-covered|com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild|TestS3kAizMinibossGraphRewind
-covered|com.openggf.game.sonic3k.objects.AizMinibossFlameChild|TestS3kAizMinibossGraphRewind
-covered|com.openggf.game.sonic3k.objects.AizMinibossNapalmController|TestS3kAizMinibossGraphRewind
 covered|com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild|com.openggf.game.sonic3k.objects.TestAizDisappearingFloorGraphRewind
 covered|com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade|TestS3kHczEndBossGraphRewind
 covered|com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash|TestS3kHczEndBossGraphRewind

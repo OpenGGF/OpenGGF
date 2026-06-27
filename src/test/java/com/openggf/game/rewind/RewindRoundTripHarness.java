@@ -172,7 +172,43 @@ public final class RewindRoundTripHarness {
                     "TestS3kAizEndBossGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic3k.objects.AizEndBossSmokeChild",
-                    "TestS3kAizEndBossGraphRewind"));
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossFlameColumnChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossShipChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizIntroPlaneChild",
+                    "TestS3kAizIntroGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizIntroWaveChild",
+                    "TestS3kAizIntroGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild",
+                    "TestS3kAizIntroGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossArmChild",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossBodyChild",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossFlameChild",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossNapalmController",
+                    "TestS3kAizMinibossGraphRewind"));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();

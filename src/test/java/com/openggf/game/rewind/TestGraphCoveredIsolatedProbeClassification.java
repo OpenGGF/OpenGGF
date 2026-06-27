@@ -18,6 +18,10 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS2DezBombGraphRewind";
     private static final String AIZ_END_BOSS_GRAPH_TEST =
             "TestS3kAizEndBossGraphRewind";
+    private static final String AIZ_INTRO_GRAPH_TEST =
+            "TestS3kAizIntroGraphRewind";
+    private static final String AIZ_MINIBOSS_GRAPH_TEST =
+            "TestS3kAizMinibossGraphRewind";
     private static final String MECHA_SONIC_GRAPH_TEST =
             "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind";
     private static final String MTZ_BOSS_GRAPH_TEST =
@@ -66,7 +70,45 @@ class TestGraphCoveredIsolatedProbeClassification {
                 "com.openggf.game.sonic3k.objects.AizEndBossBombChild",
                 AIZ_END_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.AizEndBossSmokeChild",
+                AIZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.AizEndBossFlameColumnChild",
+                AIZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.AizEndBossShipChild",
                 AIZ_END_BOSS_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void aizIntroNoProbeAndParentDependentChildrenAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic3k.objects.AizIntroPlaneChild",
+                AIZ_INTRO_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.AizIntroWaveChild",
+                AIZ_INTRO_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild",
+                AIZ_INTRO_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void aizMinibossParentDependentChildrenAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic3k.objects.AizMinibossArmChild",
+                AIZ_MINIBOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild",
+                AIZ_MINIBOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild",
+                AIZ_MINIBOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.AizMinibossBodyChild",
+                AIZ_MINIBOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild",
+                AIZ_MINIBOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.AizMinibossFlameChild",
+                AIZ_MINIBOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.AizMinibossNapalmController",
+                AIZ_MINIBOSS_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }
