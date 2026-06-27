@@ -15,8 +15,6 @@ class TestRemainingOtherFailureGraphClassification {
             "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild";
     private static final String ICZ_SEGMENT =
             "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment";
-    private static final String MHZ_WALKOFF_PREP =
-            "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild";
 
     @AfterEach
     void tearDown() {
@@ -25,7 +23,7 @@ class TestRemainingOtherFailureGraphClassification {
 
     @Test
     void graphCoveredOtherFailuresAreParentDependentInIsolatedSweep() {
-        for (String className : List.of(GUMBALL_SPRING, ICZ_SEGMENT, MHZ_WALKOFF_PREP)) {
+        for (String className : List.of(GUMBALL_SPRING, ICZ_SEGMENT)) {
             RewindRoundTripHarness.RoundTripSweepResult result = RewindRoundTripHarness.probeClass(className);
             RewindRoundTripHarness.RoundTripSweepResult.Unprobed unprobed =
                     assertInstanceOf(RewindRoundTripHarness.RoundTripSweepResult.Unprobed.class, result, className);

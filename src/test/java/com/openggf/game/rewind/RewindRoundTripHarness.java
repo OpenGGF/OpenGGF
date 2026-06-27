@@ -94,8 +94,7 @@ public final class RewindRoundTripHarness {
             "com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance",
             "com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance",
             "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild",
-            "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment",
-            "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild");
+            "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment");
 
     private static final Map<String, String> GRAPH_COVERED_ISOLATED_PROBE_CLASSES = Map.ofEntries(
             Map.entry(
@@ -229,7 +228,31 @@ public final class RewindRoundTripHarness {
                     "TestS3kHczEndBossGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild",
-                    "TestS3kHczCgzFanGraphRewind"));
+                    "TestS3kHczCgzFanGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance",
+                    "com.openggf.game.sonic3k.objects.TestMhzEndBossArenaHelperRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossHitProxyRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild",
+                    "TestS3kMhzEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikHeadChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossRobotnikHeadRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossSpikeRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossVisualRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherMachineRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherVisualRewind"));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();

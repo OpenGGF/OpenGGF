@@ -1,6 +1,6 @@
 # bucket|class
 # Snapshot from the headless ObjectManager round-trip sweep.
-# Summary: total=783 passed=643 graph-covered=44 no-codec=0 no-probe-ctor=19 parent-dependent=77 other-failure=0 count-mismatch=0 scalar-mismatch=0
+# Summary: total=783 passed=643 graph-covered=52 no-codec=0 no-probe-ctor=19 parent-dependent=69 other-failure=0 count-mismatch=0 scalar-mismatch=0
 #
 # Parent-dependent classes live in parent-dependent-graph-coverage-baseline.txt
 # because that file also records graph-test evidence or session-tail status.

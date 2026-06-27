@@ -26,6 +26,8 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS3kHczEndBossGraphRewind";
     private static final String HCZ_CGZ_FAN_GRAPH_TEST =
             "TestS3kHczCgzFanGraphRewind";
+    private static final String MHZ_END_BOSS_GRAPH_TEST =
+            "TestS3kMhzEndBossGraphRewind";
     private static final String MECHA_SONIC_GRAPH_TEST =
             "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind";
     private static final String MTZ_BOSS_GRAPH_TEST =
@@ -134,6 +136,29 @@ class TestGraphCoveredIsolatedProbeClassification {
                 HCZ_END_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild",
                 HCZ_CGZ_FAN_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void mhzEndBossChildrenAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance",
+                "com.openggf.game.sonic3k.objects.TestMhzEndBossArenaHelperRewind",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild",
+                "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossHitProxyRewind",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild",
+                MHZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikHeadChild",
+                "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossRobotnikHeadRewind",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild",
+                "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossSpikeRewind",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild",
+                "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossVisualRewind",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild",
+                "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherMachineRewind",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild",
+                "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherVisualRewind");
 
         expected.forEach(this::assertGraphCovered);
     }
