@@ -98,6 +98,33 @@ public final class RewindRoundTripHarness {
 
     private static final Map<String, String> GRAPH_COVERED_ISOLATED_PROBE_CLASSES = Map.ofEntries(
             Map.entry(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance",
+                    "TestS1BadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance",
+                    "TestS1BadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance",
+                    "TestS1BadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.FZCylinder",
+                    "TestS1FzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher",
+                    "TestS1FzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorBlock",
+                    "com.openggf.game.sonic1.objects.TestFalseFloorBlockRewindGenericRestore"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance",
+                    "com.openggf.game.sonic1.objects.TestSonic1GlassReflectionGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance",
+                    "TestCheckpointStarpostGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.Sonic1SeesawBallObjectInstance",
+                    "TestSeesawBallGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild",
                     "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
             Map.entry(

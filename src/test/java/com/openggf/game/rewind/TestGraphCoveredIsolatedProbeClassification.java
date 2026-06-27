@@ -34,6 +34,10 @@ class TestGraphCoveredIsolatedProbeClassification {
             "com.openggf.game.sonic2.objects.bosses.TestS2MTZBossGraphRewind";
     private static final String WFZ_BOSS_GRAPH_TEST =
             "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind";
+    private static final String S1_BADNIK_CHILD_GRAPH_TEST =
+            "TestS1BadnikChildGraphRewind";
+    private static final String S1_FZ_BOSS_GRAPH_TEST =
+            "TestS1FzBossGraphRewind";
 
     @BeforeEach
     void initHeadless() {
@@ -159,6 +163,31 @@ class TestGraphCoveredIsolatedProbeClassification {
                 "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherMachineRewind",
                 "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild",
                 "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherVisualRewind");
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void sonic1CoveredParentDependentChildrenAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance",
+                S1_BADNIK_CHILD_GRAPH_TEST,
+                "com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance",
+                S1_BADNIK_CHILD_GRAPH_TEST,
+                "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance",
+                S1_BADNIK_CHILD_GRAPH_TEST,
+                "com.openggf.game.sonic1.objects.bosses.FZCylinder",
+                S1_FZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher",
+                S1_FZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorBlock",
+                "com.openggf.game.sonic1.objects.TestFalseFloorBlockRewindGenericRestore",
+                "com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance",
+                "com.openggf.game.sonic1.objects.TestSonic1GlassReflectionGraphRewind",
+                "com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance",
+                "TestCheckpointStarpostGraphRewind",
+                "com.openggf.game.sonic1.objects.Sonic1SeesawBallObjectInstance",
+                "TestSeesawBallGraphRewind");
 
         expected.forEach(this::assertGraphCovered);
     }

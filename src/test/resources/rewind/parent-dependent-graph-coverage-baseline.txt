@@ -1,15 +1,6 @@
 # status|class|evidence
 # covered = focused graph/object-manager rewind test exists for this family.
 # session-tail = still needs a real session/family harness before claiming graph-safe restore.
-covered|com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance|TestS1BadnikChildGraphRewind
-covered|com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance|TestS1BadnikChildGraphRewind
-covered|com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance|TestS1BadnikChildGraphRewind
-covered|com.openggf.game.sonic1.objects.bosses.FZCylinder|TestS1FzBossGraphRewind
-covered|com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher|TestS1FzBossGraphRewind
-covered|com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorBlock|com.openggf.game.sonic1.objects.TestFalseFloorBlockRewindGenericRestore
-covered|com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance|com.openggf.game.sonic1.objects.TestSonic1GlassReflectionGraphRewind
-covered|com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance|TestCheckpointStarpostGraphRewind
-covered|com.openggf.game.sonic1.objects.Sonic1SeesawBallObjectInstance|TestSeesawBallGraphRewind
 covered|com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild|TestS2BadnikChildGraphRewind
 covered|com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance|TestS2BadnikChildGraphRewind
 covered|com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance|TestS2BadnikChildGraphRewind
