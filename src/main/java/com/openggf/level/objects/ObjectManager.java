@@ -1689,12 +1689,8 @@ public class ObjectManager {
             int explicitParentSlot) {
         if (object instanceof AbstractObjectInstance aoi) {
             aoi.setServices(objectServices);
-            // ROM parity: FindFreeObj allocates an SST slot for EVERY object,
-            // including children spawned by other objects (lava balls, projectiles,
-            // explosion effects, etc.). Without this, child objects don't consume
-            // slots in the allocator, causing subsequent OPL allocations to get lower
-            // slot numbers than the ROM — shifting d7 values and breaking timing
-            // gates like (v_vbla_byte + d7) & 7.
+            // ROM parity: every dynamic object consumes an SST slot; otherwise
+            // later allocations get lower slot numbers and timing gates drift.
             if (aoi.getSlotIndex() < 0) {
                 int slot;
                 if (allocateAfterCurrent && explicitParentSlot >= 0) {
@@ -1765,16 +1761,7 @@ public class ObjectManager {
         return slotAllocator.allocate();
     }
 
-    /**
-     * Non-mutating ROM FindFreeObj probe: true if a free dynamic SST slot is
-     * available (an {@code allocate()} would succeed). Used by object routines
-     * that branch on FindFreeObj success/failure without spawning — e.g. the S1
-     * LZ drowning countdown retries its bubble RNG when the pool is full
-     * (docs/s1disasm/_incObj/0A LZ Drowning Countdown.asm:283-284).
-     */
-    public boolean hasFreeDynamicSlot() {
-        return slotAllocator.hasFreeSlot();
-    }
+    public boolean hasFreeDynamicSlot() { return slotAllocator.hasFreeSlot(); }
 
     /**
      * Reserves the next available dynamic slot for non-ObjectInstance systems
