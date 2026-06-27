@@ -206,8 +206,23 @@ public class Sonic1SmallDoorObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        // RememberState: object persists while on screen
-        return !isDestroyed() && isOnScreenX(160);
+        // ROM: ADoor_OpenShut ends with `bra.w RememberState`, which deletes the
+        // door via the plain `out_of_range` macro -- there is no extended
+        // persistence window. Returning false lets ObjectManager's standard
+        // out_of_range check (isObjectOutOfRange -> isOutOfRangeS1) govern the
+        // unload, matching the ROM frame exactly.
+        //
+        // The previous `isOnScreenX(160)` symmetric margin kept the door alive
+        // ~32px too long off the left edge (ROM's chunk-aligned out_of_range
+        // unloads at ~camX-128; the 160px margin held it to ~camX-160), so the
+        // door's SST slot was freed one batch late. That inverted the slot
+        // allocation of objects spawned afterward and, downstream, the SBZ2
+        // conveyor handoff processing order at f2323 (two adjacent conveyors
+        // with opposite push directions resolve order-dependently).
+        //
+        // docs/s1disasm/_incObj/2A SBZ Small Door.asm:55 (bra.w RememberState)
+        // docs/s1disasm/_incObj/sub RememberState.asm:8-9 (out_of_range.w)
+        return false;
     }
 
     // ---- Debug Rendering ----
