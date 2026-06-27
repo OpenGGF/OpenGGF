@@ -1766,6 +1766,17 @@ public class ObjectManager {
     }
 
     /**
+     * Non-mutating ROM FindFreeObj probe: true if a free dynamic SST slot is
+     * available (an {@code allocate()} would succeed). Used by object routines
+     * that branch on FindFreeObj success/failure without spawning — e.g. the S1
+     * LZ drowning countdown retries its bubble RNG when the pool is full
+     * (docs/s1disasm/_incObj/0A LZ Drowning Countdown.asm:283-284).
+     */
+    public boolean hasFreeDynamicSlot() {
+        return slotAllocator.hasFreeSlot();
+    }
+
+    /**
      * Reserves the next available dynamic slot for non-ObjectInstance systems
      * that still occupy ROM SST slots. Equivalent to S3K AllocateObject
      * (sonic3k.asm:37906-37909), used by attracted rings whose logic is owned
