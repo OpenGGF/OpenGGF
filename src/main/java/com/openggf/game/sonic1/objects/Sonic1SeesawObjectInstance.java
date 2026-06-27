@@ -390,6 +390,25 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
         return !isDestroyed();
     }
 
+    @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // ROM See_Slope / See_Slope2 pass #96/2 (= 0x30) directly as SlopeObject's
+        // / SlopeObject_AssumeStoodOn's d1 (docs/s1disasm/_incObj/5E SLZ
+        // Seesaw.asm:66-67,79-83), and obActWid is itself #96/2 (line 33). SlopeObject
+        // does its X-range check on that d1 with no narrowing (docs/s1disasm/_incObj/
+        // sub PlatformObject.asm:133-139), then bra's to Plat_NoXCheck_AltY which skips
+        // any further X check. COLLISION_HALF_WIDTH (0x30) is therefore already the
+        // standable top-landing width and must NOT receive the generic SolidObjectFull
+        // +$B narrowing (which would shrink it to 0x25). Without this, a player falling
+        // onto the raised end of the seesaw near its edge is rejected as out-of-width and
+        // never lands (SLZ3 f6364: a rolling-jump Sonic arcs back down onto the seesaw at
+        // relX=90 -- 42px right of centre, inside the full +/-0x30 range but outside the
+        // narrowed +/-0x25 -- so ROM re-lands him while the engine kept him falling).
+        // Matches the sibling SlopeObject users Sonic1CollapsingLedgeObjectInstance and
+        // Sonic1CollapsingFloorObjectInstance, which opt in for the same reason.
+        return true;
+    }
+
     // ---- SlopedSolidProvider ----
 
     @Override
