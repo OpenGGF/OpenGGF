@@ -147,6 +147,28 @@ class TestLbzSpinLauncherObjectInstance {
     }
 
     @Test
+    void bottomContactAtOpeningLaunchesPlayerThroughRomTopBottomResult() {
+        LbzSpinLauncherObjectInstance launcher = new LbzSpinLauncherObjectInstance(spawn(0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) (LAUNCHER_X + 0x08));
+
+        launcher.onSolidContact(player, new SolidContact(false, false, true, false, false), 0);
+
+        verify(player).setCentreXPreserveSubpixel((short) (LAUNCHER_X + 0x10));
+        verify(player).setCentreYPreserveSubpixel((short) LAUNCHER_Y);
+        verify(player).setXSpeed((short) 0);
+        verify(player).setYSpeed((short) -0x0A00);
+        verify(player).setGSpeed((short) 0x0800);
+        verify(player).setAir(true);
+        verify(player).setJumping(false);
+        verify(player).setRolling(true);
+        verify(player).setAnimationId(Sonic3kAnimationIds.ROLL);
+        assertEquals(0x10, launcher.cooldownForTesting(true),
+                "Obj_LBZSpinLauncher calls sub_28E76 when sub_1DD24 returns d4=-2 "
+                        + "for top/bottom contacts (sonic3k.asm:56488-56492)");
+    }
+
+    @Test
     void standingContactReleasesRiderWithoutRolling() {
         LbzSpinLauncherObjectInstance launcher = new LbzSpinLauncherObjectInstance(spawn(0));
         AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
@@ -163,6 +185,42 @@ class TestLbzSpinLauncherObjectInstance {
         verify(player).setOnObject(false);
         verify(player).clearRollingFlagPreserveRadii();
         verify(player, never()).setRolling(false);
+        verify(player, never()).setCentreYPreserveSubpixel((short) LAUNCHER_Y);
+        verify(player).setAnimationId(Sonic3kAnimationIds.WALK);
+        assertEquals(0x20, launcher.cooldownForTesting(true));
+    }
+
+    @Test
+    void standingContactOutsideUnsignedRomWindowDoesNotReleaseRider() {
+        LbzSpinLauncherObjectInstance launcher = new LbzSpinLauncherObjectInstance(spawn(0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) (LAUNCHER_X - 1));
+
+        launcher.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+
+        verify(player, never()).setCentreXPreserveSubpixel((short) (LAUNCHER_X + 0x10));
+        verify(player, never()).setYSpeed((short) 0);
+        assertEquals(0, launcher.cooldownForTesting(true),
+                "sub_28F40 rejects negative (player_x-object_x) via unsigned cmpi.w #$20,bhs");
+    }
+
+    @Test
+    void flippedStandingContactReleasesRiderToLeftWithoutWritingY() {
+        LbzSpinLauncherObjectInstance launcher = new LbzSpinLauncherObjectInstance(spawn(1));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) (LAUNCHER_X - 0x08));
+
+        launcher.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+
+        verify(player).setCentreXPreserveSubpixel((short) (LAUNCHER_X - 0x10));
+        verify(player, never()).setCentreYPreserveSubpixel((short) LAUNCHER_Y);
+        verify(player).setXSpeed((short) 0);
+        verify(player).setYSpeed((short) 0);
+        verify(player).setGSpeed((short) 0);
+        verify(player).setAir(true);
+        verify(player).setJumping(false);
+        verify(player).setOnObject(false);
+        verify(player).clearRollingFlagPreserveRadii();
         verify(player).setAnimationId(Sonic3kAnimationIds.WALK);
         assertEquals(0x20, launcher.cooldownForTesting(true));
     }

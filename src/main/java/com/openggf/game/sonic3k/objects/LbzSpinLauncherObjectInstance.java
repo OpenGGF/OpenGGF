@@ -98,7 +98,9 @@ public final class LbzSpinLauncherObjectInstance extends AbstractObjectInstance
         }
         if (contact.standing()) {
             setCooldown(player, tryStandingRelease(player, cooldownFor(player)));
-        } else if (contact.touchSide()) {
+        } else if (contact.touchSide() || contact.touchBottom() || contact.touchTop()) {
+            // Obj_LBZSpinLauncher calls sub_28E76 when sub_1DD24 returns d4=-2
+            // from its top/bottom branch, not only on left/right side contacts.
             setCooldown(player, trySideLaunch(player, cooldownFor(player)));
         }
     }
