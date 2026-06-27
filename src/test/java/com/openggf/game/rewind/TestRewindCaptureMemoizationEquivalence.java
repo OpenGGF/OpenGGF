@@ -159,7 +159,7 @@ class TestRewindCaptureMemoizationEquivalence {
     }
 
     @Test
-    void defaultBadnikSubclassGenericCaptureIsEqualAcrossCaptures() {
+    void defaultBadnikSubclassCompactCaptureIsByteIdenticalAcrossCaptures() {
         DefaultStateBadnik badnik = new DefaultStateBadnik();
         badnik.aiTimer = 33;
         badnik.charging = true;
@@ -167,10 +167,11 @@ class TestRewindCaptureMemoizationEquivalence {
         PerObjectRewindSnapshot first = badnik.captureRewindState();
         PerObjectRewindSnapshot second = badnik.captureRewindState();
 
-        assertNotNull(first.genericState(), "default badnik subclass must capture generic sidecar state");
-        assertNotNull(second.genericState());
-        assertEquals(first.genericState(), second.genericState(),
-                "cache-miss and cache-hit captures must produce equal generic snapshots");
+        assertNotNull(first.compactGenericState(),
+                "default badnik subclass must preserve a compact subclass sidecar alongside badnikExtra");
+        assertNotNull(second.compactGenericState());
+        assertArrayEquals(first.compactGenericState().scalarData(), second.compactGenericState().scalarData(),
+                "cache-miss and cache-hit captures must produce byte-identical compact blobs");
         assertEquals(first.badnikExtra(), second.badnikExtra());
     }
 

@@ -21,6 +21,7 @@ import java.util.Objects;
  * with no entry in the snapshot — leaves them at their current state.
  */
 public final class RewindRegistry {
+    private static final String GAME_RNG_KEY = "gamerng";
 
     private final Map<String, RewindSnapshottable<?>> entries = new LinkedHashMap<>();
     private final Map<String, Runnable> postRestoreCallbacks = new LinkedHashMap<>();
@@ -85,14 +86,24 @@ public final class RewindRegistry {
         }
         try {
             for (var e : entries.entrySet()) {
+                if (restoresAfterReconstruction(e.getKey())) {
+                    continue;
+                }
                 if (!cs.containsKey(e.getKey())) {
                     e.getValue().resetForMissingSnapshot();
                     continue;
                 }
-                Object snap = cs.get(e.getKey());
-                @SuppressWarnings({"rawtypes", "unchecked"})
-                RewindSnapshottable raw = e.getValue();
-                raw.restore(snap);
+                restoreEntry(e.getValue(), cs.get(e.getKey()));
+            }
+            for (var e : entries.entrySet()) {
+                if (!restoresAfterReconstruction(e.getKey())) {
+                    continue;
+                }
+                if (!cs.containsKey(e.getKey())) {
+                    e.getValue().resetForMissingSnapshot();
+                    continue;
+                }
+                restoreEntry(e.getValue(), cs.get(e.getKey()));
             }
             for (Runnable callback : postRestoreCallbacks.values()) {
                 callback.run();
@@ -102,5 +113,19 @@ public final class RewindRegistry {
                 profiler.endSection("rewind.restore");
             }
         }
+    }
+
+    private static boolean restoresAfterReconstruction(String key) {
+        // Object restore may recreate objects whose constructors consume the shared
+        // ROM RNG before their captured state blobs are applied. Restore the RNG
+        // cursor after those reconstruction side effects so the snapshot's seed is
+        // the final post-restore seed.
+        return GAME_RNG_KEY.equals(key);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void restoreEntry(RewindSnapshottable<?> entry, Object snapshot) {
+        RewindSnapshottable raw = entry;
+        raw.restore(snapshot);
     }
 }

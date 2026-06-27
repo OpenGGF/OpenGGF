@@ -3,6 +3,7 @@ package com.openggf.game.rewind.schema;
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance;
 import com.openggf.game.sonic2.objects.FallingPillarObjectInstance;
 import com.openggf.game.sonic2.objects.FlipperObjectInstance;
@@ -181,6 +182,14 @@ class TestRewindSchemaRegistry {
         assertTrue(schema.unsupportedFields().isEmpty(),
                 "Swinging Platform compact schema must capture the display child link without fallback: "
                         + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+    }
+
+    @Test
+    void exactDefaultObjectPolicyCapturesSonic1SwingingPlatformChainLinkArray() {
+        RewindClassSchema schema =
+                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(Sonic1SwingingPlatformObjectInstance.class);
+
+        assertPolicy(schema, "chainLinkChildren", RewindFieldPolicy.CAPTURED);
     }
 
     @Test

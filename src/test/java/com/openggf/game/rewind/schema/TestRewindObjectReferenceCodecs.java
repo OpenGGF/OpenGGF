@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -72,6 +73,31 @@ class TestRewindObjectReferenceCodecs {
         assertEquals(List.of(newFirst, newSecond), new ArrayList<>(fixture.states.keySet()));
         assertEquals(7, fixture.states.get(newFirst));
         assertEquals(9, fixture.states.get(newSecond));
+    }
+
+    @Test
+    void restoresObjectReferenceArraysThroughIdentityTable() {
+        ObjectInstance oldFirst = object(1);
+        ObjectInstance oldSecond = object(2);
+        ObjectArrayFixture fixture = new ObjectArrayFixture(oldFirst, oldSecond);
+
+        RewindObjectStateBlob blob = CompactFieldCapturer.capture(
+                fixture,
+                context(
+                        oldFirst, ObjectRefId.layout(4, 1, 30),
+                        oldSecond, ObjectRefId.child(7, 3, 31, 103)));
+
+        ObjectInstance newFirst = object(11);
+        ObjectInstance newSecond = object(12);
+        fixture.objects = new ObjectInstance[] {null, null, null};
+        CompactFieldCapturer.restore(
+                fixture,
+                blob,
+                context(
+                        newFirst, ObjectRefId.layout(4, 1, 30),
+                        newSecond, ObjectRefId.child(7, 3, 31, 103)));
+
+        assertArrayEquals(new ObjectInstance[] {newFirst, null, newSecond}, fixture.objects);
     }
 
     @Test
@@ -134,6 +160,14 @@ class TestRewindObjectReferenceCodecs {
 
         private ObjectReferenceFixture(ObjectInstance object) {
             this.object = object;
+        }
+    }
+
+    private static final class ObjectArrayFixture {
+        ObjectInstance[] objects;
+
+        private ObjectArrayFixture(ObjectInstance first, ObjectInstance second) {
+            objects = new ObjectInstance[] {first, null, second};
         }
     }
 
