@@ -225,6 +225,26 @@ public class Sonic1BossBlockInstance extends AbstractObjectInstance
     // SolidObjectProvider
     // ========================================================================
 
+    /**
+     * ROM: the solid boss blocks (BossBlock_Action routine 2 -> BossBlock_Solid ->
+     * SolidObject -> BossBlock_Display) have NO out_of_range / DeleteObject path
+     * (docs/s1disasm/_incObj/75, 76 Boss - SYZ Main and Blocks.asm:757-791). All 10
+     * blocks are created at once by BossBlock_Main's FindFreeObj loop (x =
+     * boss_syz_x+$10 .. +$130 = 0x2C10..0x2D30, asm:725-753) while the camera is
+     * still left of the arena, so the two rightmost blocks (0x2D10, 0x2D30) spawn
+     * off-screen and must stay alive for the player to walk onto them. Mark the
+     * solid/grabbed/breaking block persistent so the engine's generic out-of-range
+     * unload does not cull the off-screen blocks (which would never respawn — they
+     * are dynamically spawned, not layout objects). Fragments (routine 4) DO delete
+     * off-screen (BossBlock_Frag: tst.b obRender / bpl BossBlock_Delete, asm:798-804)
+     * and are handled by updateFragment()'s own isOnScreen() check, so they remain
+     * non-persistent.
+     */
+    @Override
+    public boolean isPersistent() {
+        return blockState != STATE_FRAGMENT;
+    }
+
     @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;

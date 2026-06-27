@@ -58,19 +58,48 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
     private final SubpixelMotion.State motionState;
     private int animTickCounter;
     private boolean destroyed;
+    // Non-final so the generic rewind field capturer records it like the other
+    // scalar state; it is only read by skipsSameFrameUpdateAfterSpawn() at spawn
+    // scheduling and is inert afterwards.
+    private boolean deferFirstMove;
 
     /**
      * Creates a shrapnel piece at the given position with the given velocity.
+     * Used by the rewind recreate path (no spawn-frame move deferral needed
+     * because the object is reconstructed mid-flight, not freshly spawned).
      *
      * @param x          Spawn X position (from fuse/bomb position)
      * @param y          Spawn Y position (from original bomb Y)
      * @param xVel       Initial X velocity (from Bom_ShrSpeed)
      * @param yVel       Initial Y velocity (from Bom_ShrSpeed)
-     * @param levelManager Level manager reference
      */
     public Sonic1BombShrapnelInstance(int x, int y, int xVel, int yVel) {
+        this(x, y, xVel, yVel, false);
+    }
+
+    /**
+     * Creates a shrapnel piece, optionally deferring its first {@code SpeedToPos}
+     * move by one frame.
+     * <p>
+     * ROM parity (docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm:181-220):
+     * {@code Bom_BurnFuseAndExplode} makes the FIRST shrapnel reuse the fuse's slot
+     * (movea.l a0,a1) and falls straight through to {@code Bom_Shrapnel} —
+     * {@code SpeedToPos} runs on the expiry frame, so piece 0 moves immediately. The
+     * other three are created via {@code FindNextFreeObj} with a cleared
+     * {@code obRoutine}, so on their creation frame they execute {@code Bom_Main}
+     * (routine 0), which only sets {@code obRoutine = obSubtype} (= 6) and returns
+     * WITHOUT calling SpeedToPos (Walking Bomb.asm:30-33). They first move on the
+     * following frame. The engine spawns all four as ready-to-move shrapnel, so
+     * pieces 1-3 moved one frame too early — putting the hitting piece one step
+     * ahead (1px low) and missing the standing player's ReactToItem box at
+     * SLZ3 trace f3249. Deferring pieces 1-3's first update reproduces the
+     * Bom_Main creation-frame hold.
+     *
+     * @param deferFirstMove true for FindNextFreeObj-created pieces (index 1-3)
+     */
+    public Sonic1BombShrapnelInstance(int x, int y, int xVel, int yVel, boolean deferFirstMove) {
         super(new ObjectSpawn(x, y, 0x5F, 6, 0, false, 0), "BombShrapnel");
-        
+
         this.currentX = x;
         this.currentY = y;
         this.xVelocity = xVel;
@@ -78,6 +107,15 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         this.motionState = new SubpixelMotion.State(x, y, 0, 0, xVel, yVel);
         this.animTickCounter = 0;
         this.destroyed = false;
+        this.deferFirstMove = deferFirstMove;
+    }
+
+    @Override
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        // Pieces 1-3 run Bom_Main (no move) on their creation frame; only the
+        // fuse-slot-reuse first piece moves the same frame. See the deferring
+        // constructor's Javadoc for the ROM citation.
+        return deferFirstMove;
     }
 
     @Override
