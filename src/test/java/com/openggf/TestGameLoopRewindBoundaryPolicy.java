@@ -2,9 +2,7 @@ package com.openggf;
 
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.rewind.RewindBoundary;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayModeContext;
@@ -31,9 +29,8 @@ class TestGameLoopRewindBoundaryPolicy {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        context = TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        context = SessionManager.getCurrentGameplayMode();
         boundaries = new ArrayList<>();
         loop = new GameLoop(new InputHandler());
         context.setRewindBoundaryReporter(boundaries::add);

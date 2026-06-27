@@ -7,13 +7,12 @@ import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.graphics.FadeManager;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.timer.TimerManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +33,7 @@ class TestLiveRewindBoundaryPolicy {
 
     @BeforeEach
     void configureServices() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetAll();
         config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
     }

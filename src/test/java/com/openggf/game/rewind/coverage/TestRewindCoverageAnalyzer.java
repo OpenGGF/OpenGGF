@@ -1,8 +1,11 @@
 package com.openggf.game.rewind.coverage;
 
 import com.openggf.game.GameId;
+import com.openggf.level.objects.ObjectInstance;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,16 +22,20 @@ class TestRewindCoverageAnalyzer {
     }
 
     @Test
-    void flagsUncapturedFinalScalarField() {
+    void flagsFinalScalarFieldWithNoCapturePolicy() throws Exception {
+        Field field = FinalScalarFixture.class.getDeclaredField("phase");
+        assertTrue(isUncapturedFinalScalar(field),
+                "final non-transient scalar must be reported as uncaptured");
+    }
+
+    @Test
+    void automaticTunnelSubtypeIsNoLongerAFinalScalarGap() {
         RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
-        // AutomaticTunnelObjectInstance has `private final int subtype` (no @RewindTransient /
-        // @RewindDeferred). It is a concrete AbstractObjectInstance subclass in the LBZ/S3K route.
-        // GenericFieldCapturer skips it solely because it is final — this is the gap we detect.
         ObjectCoverage cov = report.objects().stream()
                 .filter(o -> o.className().endsWith("AutomaticTunnelObjectInstance"))
                 .findFirst().orElseThrow();
-        assertTrue(cov.uncapturedFinalScalarFields().contains("subtype"),
-                "final non-transient scalar must be reported as uncaptured");
+        assertFalse(cov.uncapturedFinalScalarFields().contains("subtype"),
+                "AutomaticTunnel subtype is mutable/restored now and must not remain a stale final-scalar fixture");
     }
 
     @Test
@@ -42,27 +49,24 @@ class TestRewindCoverageAnalyzer {
     }
 
     /**
-     * POSITIVE test (Task 4): CutsceneKnucklesMhz1Instance holds a non-transient,
-     * non-structural reference to an ObjectInstance ({@code parentButton} field).
-     * The field name is not in the structural-name set of
-     * {@code DefaultObjectRewindPolicies}, so no policy suppresses it.
-     * The analyzer must report it as an un-id'd object-ref gap.
-     *
-     * <p>This test is RED before Task 4 is implemented (unIdObjectRefFields always
-     * returns an empty list) and GREEN after implementation.
+     * POSITIVE test (Task 4): an object reference with no transient/deferred/captured
+     * policy is an un-id'd object-ref gap.
      */
     @Test
-    void flagsNonTransientObjectRefField() {
+    void flagsNonTransientObjectRefField() throws Exception {
+        Field field = ObjectRefFixture.class.getDeclaredField("target");
+        assertTrue(isUnIdObjectRef(field),
+                "non-transient, non-policy ObjectInstance ref field must be reported as an un-id'd gap");
+    }
+
+    @Test
+    void capturedCutsceneParentButtonIsNoLongerFlagged() {
         RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, Set.of());
-        // CutsceneKnucklesMhz1Instance has `private final Mhz1CutsceneButtonInstance parentButton`.
-        // The field name "parentButton" is not in DefaultObjectRewindPolicies.STRUCTURAL_OBJECT_FIELD_NAMES,
-        // the field is not @RewindTransient / @RewindDeferred, and there is no exact-field policy.
-        // The type ObjectInstance is assignable to ObjectInstance. This must be flagged.
         ObjectCoverage cov = report.objects().stream()
                 .filter(o -> o.className().endsWith("CutsceneKnucklesMhz1Instance"))
                 .findFirst().orElseThrow();
-        assertTrue(cov.unIdObjectRefFields().contains("parentButton"),
-                "non-transient, non-structural ObjectInstance ref field 'parentButton' must be reported as un-id'd object-ref gap");
+        assertFalse(cov.unIdObjectRefFields().contains("parentButton"),
+                "parentButton now has an exact captured policy and must not remain a stale object-ref fixture");
     }
 
     /**
@@ -153,5 +157,27 @@ class TestRewindCoverageAnalyzer {
         assertTrue(report.objects().stream()
                 .anyMatch(o -> o.className().contains("TurboSpikerBadnikInstance$TurboSpikerShellChild")),
                 "inner-class concrete child TurboSpikerBadnikInstance$TurboSpikerShellChild must be enumerated");
+    }
+
+    private static boolean isUncapturedFinalScalar(Field field) throws Exception {
+        Method method = RewindCoverageAnalyzer.class.getDeclaredMethod("isUncapturedFinalScalar", Field.class);
+        method.setAccessible(true);
+        return (boolean) method.invoke(null, field);
+    }
+
+    private static boolean isUnIdObjectRef(Field field) throws Exception {
+        Method method = RewindCoverageAnalyzer.class.getDeclaredMethod("isUnIdObjectRef", Field.class);
+        method.setAccessible(true);
+        return (boolean) method.invoke(null, field);
+    }
+
+    private static final class FinalScalarFixture {
+        @SuppressWarnings("unused")
+        private final int phase = 1;
+    }
+
+    private static final class ObjectRefFixture {
+        @SuppressWarnings("unused")
+        private ObjectInstance target;
     }
 }
