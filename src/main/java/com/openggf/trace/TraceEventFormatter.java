@@ -63,9 +63,34 @@ public final class TraceEventFormatter {
                 }
                 // obj_frame (v3.5+) is the object's tilt/anim mapping frame; only
                 // render when the trace carries it (empty on older recordings).
-                yield (near.objFrame() == null || near.objFrame().isEmpty())
-                        ? base
-                        : base + " frm=" + stripHexPrefix(near.objFrame());
+                if (near.objFrame() != null && !near.objFrame().isEmpty()) {
+                    base = base + " frm=" + stripHexPrefix(near.objFrame());
+                }
+                // routine2 (ob2ndRout) and objoff_3c (32-bit generic timer / sub-pixel
+                // accumulator) are v3.8+; only render when the trace carries them.
+                if (near.routine2() != null && !near.routine2().isEmpty()) {
+                    base = base + " r2=" + stripHexPrefix(near.routine2());
+                }
+                if (near.objoff3c() != null && !near.objoff3c().isEmpty()) {
+                    base = base + " o3c=" + stripHexPrefix(near.objoff3c());
+                }
+                // objoff_34/36/38 (per-object counter/timer/sub-state words) are
+                // v3.9+; only render when the trace carries them.
+                if (near.objoff34() != null && !near.objoff34().isEmpty()) {
+                    base = base + " o34=" + stripHexPrefix(near.objoff34());
+                }
+                if (near.objoff36() != null && !near.objoff36().isEmpty()) {
+                    base = base + " o36=" + stripHexPrefix(near.objoff36());
+                }
+                if (near.objoff38() != null && !near.objoff38().isEmpty()) {
+                    base = base + " o38=" + stripHexPrefix(near.objoff38());
+                }
+                // objoff_32 (gmake_timer for makers) is v3.12+; only render when
+                // the trace carries it.
+                if (near.objoff32() != null && !near.objoff32().isEmpty()) {
+                    base = base + " o32=" + stripHexPrefix(near.objoff32());
+                }
+                yield base;
             }
             case TraceEvent.ModeChange mode ->
                     String.format("%smode %s %d->%d",
@@ -214,6 +239,21 @@ public final class TraceEventFormatter {
                             state.postMoveY() & 0xFFFF,
                             state.postMoveXVel() & 0xFFFF,
                             state.postMoveYVel() & 0xFFFF);
+            case TraceEvent.AizFireTransition state ->
+                    String.format("aizFire bgCopy=%08X bgInt=%04X bgRound=%04X speed=%04X "
+                                    + "bgTarget=%04X rtnBg=%04X fg5=%04X cam=(%04X,min%04X,max%04X) px=%04X act=%02X",
+                            state.cameraYBgCopy(),
+                            (state.cameraYBgCopy() >>> 16) & 0xFFFF,
+                            state.cameraYBgRounded() & 0xFFFF,
+                            state.eventsBg02Word() & 0xFFFF,
+                            state.eventsBg00Word() & 0xFFFF,
+                            state.eventsRoutineBg() & 0xFFFF,
+                            state.eventsFg5() & 0xFFFF,
+                            state.cameraX() & 0xFFFF,
+                            state.cameraMinX() & 0xFFFF,
+                            state.cameraMaxX() & 0xFFFF,
+                            state.playerX() & 0xFFFF,
+                            state.act() & 0xFF);
             case TraceEvent.AizTransitionFloorSolidState state ->
                     String.format("aizFloor s%d @%04X,%04X st=%02X stand=%s/%s p1=%s y=%04X yr=%02X st=%02X obj=%02X d=%04X/%04X/%04X p2=%s y=%04X yr=%02X st=%02X obj=%02X d=%04X/%04X/%04X",
                             state.slot(),
@@ -263,8 +303,87 @@ public final class TraceEventFormatter {
                             state.solidSurfaceY() & 0xFFFF,
                             state.solidDelta() & 0xFFFF);
             case TraceEvent.StateSnapshot snapshot -> summariseStateSnapshot(snapshot);
+            case TraceEvent.VObjState vObjState -> summariseVObjState(vObjState);
+            case TraceEvent.VOscillate vOscillate -> summariseVOscillate(vOscillate);
+            case TraceEvent.LagState lagState ->
+                    String.format("lagState lagged=%s lagcount=%d",
+                        lagState.lagged(), lagState.lagcount());
+            case TraceEvent.CameraBoundary cameraBoundary ->
+                    String.format(
+                        "cameraBoundary limitBtm1=%04X limitBtm2=%04X lookShift=%04X bgScrollVert=%02X",
+                        cameraBoundary.limitBtm1() & 0xFFFF,
+                        cameraBoundary.limitBtm2() & 0xFFFF,
+                        cameraBoundary.lookShift() & 0xFFFF,
+                        cameraBoundary.bgScrollVert() & 0xFF);
             default -> "";
         };
+    }
+
+    /**
+     * Compact context summary of the S1 {@code v_objstate} respawn-bit array.
+     * The full 192 bytes are too long for the inline context window, so show the
+     * ObjPosLoad fwd/bwd counters ([0]/[1]) and every NON-zero remember byte as
+     * {@code idx=val} pairs (the set respawn bits are the diagnostic signal at a
+     * backward-OPL reload). The full bytes remain available on the
+     * {@link TraceEvent.VObjState} record for programmatic comparison.
+     */
+    private static String summariseVObjState(TraceEvent.VObjState state) {
+        byte[] b = state.bytes();
+        if (b == null || b.length == 0) {
+            return "vObjState (empty)";
+        }
+        StringBuilder sb = new StringBuilder("vObjState fwdCtr=");
+        sb.append(String.format("%02X", b[0] & 0xFF));
+        sb.append(" bwdCtr=").append(b.length > 1 ? String.format("%02X", b[1] & 0xFF) : "--");
+        sb.append(" set=[");
+        boolean first = true;
+        for (int i = 2; i < b.length; i++) {
+            int v = b[i] & 0xFF;
+            if (v == 0) {
+                continue;
+            }
+            if (!first) {
+                sb.append(' ');
+            }
+            sb.append(String.format("%d=%02X", i, v));
+            first = false;
+        }
+        sb.append(']');
+        return sb.toString();
+    }
+
+    /**
+     * Compact context summary of the S1 {@code v_oscillate} global oscillation
+     * state. Shows the direction-bitfield word ([0..1]) and, for each of the 16
+     * oscillators, the value-word high byte (array offset N*4 = record byte
+     * 2+N*4) as {@code N=hh} pairs -- the per-oscillator phase the circling/
+     * swinging platforms read. The full $42 bytes remain on the
+     * {@link TraceEvent.VOscillate} record for programmatic comparison.
+     */
+    private static String summariseVOscillate(TraceEvent.VOscillate state) {
+        byte[] b = state.bytes();
+        if (b == null || b.length == 0) {
+            return "vOscillate (empty)";
+        }
+        StringBuilder sb = new StringBuilder("vOscillate bits=");
+        sb.append(b.length > 1
+                ? String.format("%02X%02X", b[0] & 0xFF, b[1] & 0xFF)
+                : String.format("%02X", b[0] & 0xFF));
+        sb.append(" osc=[");
+        boolean first = true;
+        for (int n = 0; n < 16; n++) {
+            int valHiIndex = 2 + n * 4;
+            if (valHiIndex >= b.length) {
+                break;
+            }
+            if (!first) {
+                sb.append(' ');
+            }
+            sb.append(String.format("%d=%02X", n, b[valHiIndex] & 0xFF));
+            first = false;
+        }
+        sb.append(']');
+        return sb.toString();
     }
 
     private static String summariseStateSnapshot(TraceEvent.StateSnapshot snapshot) {

@@ -25,6 +25,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import com.openggf.debug.DebugColor;
@@ -220,7 +221,23 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
         //   move.b #$E,obHeight(a1)  ; rolling height
         //   move.b #7,obWidth(a1)    ; rolling width
         //   move.b #id_Roll,obAnim(a1) ; make Sonic roll
+        // ROM .smash sets obHeight=sonic_roll_height directly (bset #2,obStatus;
+        // move.b #sonic_roll_height,obHeight) WITHOUT adjusting obY -- ROM obY is
+        // the center, so shrinking the height leaves the center (and thus the
+        // recorded y_pos) unchanged (docs/s1disasm/_incObj/51 MZ Smashable Green
+        // Block.asm:60-66). The engine stores y_pos as the TOP-left and derives the
+        // centre as top + height/2, so setRolling()'s height shrink (38->28px when
+        // the lander un-rolled to standing during Solid_ResetFloor and is now
+        // re-rolled) moves the derived CENTRE up by (sonic_height-sonic_roll_height)
+        // = 5px. Preserve the centre across the rolling transition so the rebound
+        // launches from ROM's obY (MZ3 f7982: ENTER centre 0x6CC matched ROM, but
+        // setRolling shifted it to 0x6C7 -- 5px high).
+        int centreYBeforeRoll = player.getCentreY();
+        boolean wasRolling = player.getRolling();
         player.setRolling(true);
+        if (!wasRolling) {
+            NativePositionOps.writeYPosPreserveSubpixel(player, centreYBeforeRoll);
+        }
 
         // From disassembly: move.w #-$300,obVelY(a1) - rebound upward
         player.setYSpeed((short) PLAYER_REBOUND_VEL_Y);

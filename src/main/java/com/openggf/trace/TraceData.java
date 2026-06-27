@@ -413,6 +413,87 @@ public class TraceData {
     }
 
     /**
+     * Returns the per-frame {@link TraceEvent.VObjState} (S1 object respawn-state
+     * bit array) for the requested trace frame, or {@code null} when the trace
+     * was recorded without v3.7+ per-frame {@code v_objstate} snapshots or when
+     * no event is present for that frame.
+     *
+     * <p><strong>Diagnostic only.</strong> Comparator context for the
+     * slot-interleave / slot-cadence cluster; the engine must NOT hydrate its
+     * placement/respawn state from these bytes.
+     */
+    public TraceEvent.VObjState vObjStateForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.VObjState state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the per-frame {@link TraceEvent.VOscillate} (S1 global oscillation
+     * state: the {@code v_oscillate} bitfield word + the $40-byte oscillating-
+     * values array) for the requested trace frame, or {@code null} when the trace
+     * was recorded without v3.10+ per-frame {@code v_oscillate} snapshots or when
+     * no event is present for that frame.
+     *
+     * <p><strong>Diagnostic only.</strong> Comparator context for the osc-phase
+     * cluster (e.g. SLZ2 f3353); the engine must NOT hydrate its oscillation
+     * state from these bytes.
+     */
+    public TraceEvent.VOscillate vOscillateForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.VOscillate state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the per-frame {@link TraceEvent.LagState} (BizHawk authoritative lag
+     * flag {@code emu.islagged()} + cumulative {@code emu.lagcount()}) for the
+     * requested trace frame, or {@code null} when the trace was recorded without
+     * v3.11+ per-frame {@code lag_state} snapshots or when no event is present for
+     * that frame.
+     *
+     * <p><strong>Diagnostic only.</strong> Used to confirm whether the
+     * counter/oscillation "skip" frames coincide with emulator lag frames; the
+     * engine must NOT change its stepping from these values.
+     */
+    public TraceEvent.LagState lagStateForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.LagState state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the per-frame {@link TraceEvent.CameraBoundary} (S1 camera
+     * vertical-boundary / look-shift) event for the requested trace frame, or
+     * {@code null} when the trace was recorded without v3.7+ camera-boundary
+     * snapshots or when no event is present for that frame.
+     *
+     * <p><strong>Diagnostic only.</strong> Comparator context for the MZ1 f2101
+     * camera-boundary frontier; never engine write-back.
+     */
+    public TraceEvent.CameraBoundary cameraBoundaryForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.CameraBoundary boundary) {
+                return boundary;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Returns the per-frame {@link TraceEvent.VelocityWrite} event for the
      * requested trace frame and character, or {@code null} when the trace was
      * recorded without v6.4+ per-frame velocity-write snapshots or when no
@@ -630,6 +711,24 @@ public class TraceData {
         List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
         for (TraceEvent event : events) {
             if (event instanceof TraceEvent.AizTransitionFloorSolidState state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the focused S3K AIZ1-&gt;AIZ2 fake-fire transition diagnostic for
+     * the requested frame, or {@code null} when absent (legacy traces).
+     *
+     * <p><strong>Diagnostic only.</strong> This exposes the ROM
+     * {@code Camera_Y_pos_BG_copy} fire ramp + BG event state for reports;
+     * replay code must not hydrate state from it.
+     */
+    public TraceEvent.AizFireTransition aizFireTransitionForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.AizFireTransition state) {
                 return state;
             }
         }

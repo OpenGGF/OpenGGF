@@ -2970,6 +2970,10 @@ public class LevelManager {
         PhysicsProvider physics = activeGameModule().getPhysicsProvider();
         if (physics != null && physics.getFeatureSet() != null) {
             camera.setFastScrollCap(physics.getFeatureSet().fastScrollCap());
+            // ROM S1 leaves the leftward horizontal camera move uncapped (FixBugs=0);
+            // S2/S3K cap both directions.
+            camera.setUncappedLeftwardScroll(
+                    physics.getFeatureSet().uncappedLeftwardHorizontalScroll());
         }
     }
 

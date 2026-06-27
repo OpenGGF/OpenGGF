@@ -1944,7 +1944,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// Standing still handling (ROM: Sonic_Lookup, Sonic_Duck, Obj01_ResetScr)
 			// S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp/Sonic_Duck)
 			// S2/S3K: 120-frame (2 second) delay before panning (s2.asm:36402-36405)
-			if (isOnFlatGround() && gSpeed == 0) {
+			//
+			// Edge-balancing suppresses looking up/down. ROM Sonic_Move runs
+			// Sonic_Balance BEFORE Sonic_LookUp/Sonic_Duck, and when the player is
+			// balancing on a floor or object edge it branches to Sonic_ResetScr
+			// ("prevent looking up/down", docs/s1disasm/_incObj/01 Sonic.asm:435-460;
+			// the standing-on-object path lines 409-431 reaches .balance -> ResetScr),
+			// easing v_lookshift back to $60 instead of running Look/Duck. The engine
+			// computes the balance state in updateCrouchState(), which runs AFTER this
+			// doGroundMove() look code, so on the FIRST balancing frame (e.g. the frame
+			// a hurt-knockback recovery lands the player edge-balancing) the look code
+			// read a stale not-balancing state and ducked once (SLZ3 f1167). Compute
+			// the current-frame balance predicate HERE, with no lasting side effects:
+			// the actual balance state + facing are restored and recomputed at their
+			// normal time by updateCrouchState(), so other traces are unaffected.
+			boolean lookGateActive = isOnFlatGround() && gSpeed == 0;
+			boolean balancingNow = lookGateActive && computeCurrentFrameBalancing();
+			if (lookGateActive && !balancingNow) {
 				sprite.setPushing(false);
 				short lookDelay = sprite.getLookDelayCounter();
 				PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
@@ -3547,6 +3563,35 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * 1. Standing on object edge (status.player.on_object set)
 	 * 2. Standing on terrain edge (ChkFloorEdge distance >= 12)
 	 */
+	/**
+	 * Returns whether the player would be edge-balancing THIS frame, with no
+	 * lasting side effects. ROM Sonic_Balance runs before Sonic_LookUp/Sonic_Duck
+	 * and balancing diverts to Sonic_ResetScr (no look-up/down). The engine
+	 * normally computes balance in updateCrouchState() AFTER the doGroundMove()
+	 * look code, so the look code needs a current-frame read here. updateBalanceState()
+	 * sets the balance level and (on an edge) the facing direction; we snapshot and
+	 * restore both so the authoritative balance/facing is still produced at the
+	 * normal time by updateCrouchState() -- this predicate is purely a read.
+	 *
+	 * <p>Returns false when left/right is held (ROM reaches the look/duck/balance
+	 * block only when not steering, s1.asm Sonic_CheckDpadLetGo). Callers gate on
+	 * the standing-still-on-flat-ground precondition before invoking.
+	 */
+	private boolean computeCurrentFrameBalancing() {
+		if (inputLeft || inputRight) {
+			return false;
+		}
+		Direction savedDirection = sprite.getDirection();
+		int savedBalanceState = sprite.getBalanceState();
+		updateBalanceState();
+		boolean balancing = sprite.isBalancing();
+		// Restore: the real balance state + facing are recomputed at their normal
+		// time by updateCrouchState(); this call must leave no trace.
+		sprite.setBalanceState(savedBalanceState);
+		sprite.setDirection(savedDirection);
+		return balancing;
+	}
+
 	private void updateBalanceState() {
 		// Reset balance state first
 		sprite.setBalanceState(0);

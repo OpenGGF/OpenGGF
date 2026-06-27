@@ -102,6 +102,24 @@ public class Sonic1RingInstance extends AbstractObjectInstance
             case INIT -> {
                 RingManager ringManager = services().ringManager();
                 spawnChildren(ringManager);
+                // ROM parity: Ring_Main clears the ring group's respawn-block flag
+                // (bit 7 of its v_objstate entry) for every uncollected ring before
+                // FindFreeObj — `bclr #7,(a2)` in Ring_Main / Ring_MakeRings
+                // (docs/s1disasm/_incObj/25, 37 Rings.asm:91,99). OPL_SpawnObj's
+                // REV01 `bset #7,2(a2,d2.w)` (docs/s1disasm/_inc/ObjPosLoad.asm:269)
+                // set the bit when the group (re)spawned; the group clears it again
+                // on execution so ObjPosLoad re-spawns it when the cursor re-scans
+                // the entry (e.g. a camera backtrack). Without this, a still-loaded
+                // or previously-loaded ring group keeps bit 7 set and the backward
+                // (OPL_MovedLeft) scan skips it — shifting slot allocation (S1 LZ2
+                // f217/SYZ3 tf6086 slot-cadence cascade). A fully-collected group
+                // keeps bit 7 set (no `bclr`), matching ROM's Ring_SpawningDone.
+                if (groupHasUncollectedRing(ringManager)) {
+                    ObjectManager objectManager = services().objectManager();
+                    if (objectManager != null) {
+                        objectManager.clearSpawnCounterActiveBit(getSpawn());
+                    }
+                }
                 if (ringManager != null && ringManager.isCollected(ringSpawn)) {
                     setDestroyed(true);
                     return;
@@ -132,6 +150,29 @@ public class Sonic1RingInstance extends AbstractObjectInstance
                 }
             }
         }
+    }
+
+    /**
+     * ROM Ring_Main runs {@code bclr #7,(a2)} only for rings that have not been
+     * collected yet (each collected ring is skipped via the per-ring
+     * "collected" bit). Returns true when at least one ring in this group
+     * (parent or child) is still uncollected, so the respawn-block flag should
+     * be cleared. A null ring manager (no collection state) is treated as
+     * fully uncollected.
+     */
+    private boolean groupHasUncollectedRing(RingManager ringManager) {
+        if (ringManager == null) {
+            return true;
+        }
+        if (!ringManager.isCollected(ringSpawn)) {
+            return true;
+        }
+        for (RingSpawn child : childRingSpawns) {
+            if (!ringManager.isCollected(child)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void spawnChildren(RingManager ringManager) {

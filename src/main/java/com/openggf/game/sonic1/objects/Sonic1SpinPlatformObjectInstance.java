@@ -223,8 +223,14 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
     // ========================================
 
     private void updateSpinner(int frameCounter, AbstractPlayableSprite player) {
+        // ROM Spin_Spinner reads (v_framecount).w (the Level frame counter), NOT
+        // the VBla clock ObjectManager passes into update(); the VBla gate runs
+        // the spin cycle ~14 frames out of phase (docs/s1disasm/_incObj/69 SBZ
+        // Spinning Platforms and Trapdoors.asm:96). Route through the trace-seeded
+        // Level frame counter (same pattern as the Electrocuter f1925 fix).
+        int vfc = resolveVFrameCounter(frameCounter);
         // move.w (v_framecount).w,d0 / and.w objoff_36(a0),d0 / bne.s .delay
-        if ((frameCounter & frameCounterMask) == 0) {
+        if ((vfc & frameCounterMask) == 0) {
             // move.b #1,objoff_34(a0)
             spinnerTriggered = true;
         }
@@ -280,6 +286,22 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
     }
 
     /**
+     * Resolves the ROM {@code v_framecount} (Level frame counter). The engine's
+     * canonical Level_frame_counter is {@code LevelManager.frameCounter} (the
+     * trace-seeded gameplay_frame_counter); it has not yet been incremented for
+     * the current frame at object-execution time, so +1 gives the current
+     * frame's v_framecount. Mirrors
+     * {@code Sonic1ElectrocuterObjectInstance.resolveVFrameCounter}.
+     */
+    private int resolveVFrameCounter(int fallbackFrameCounter) {
+        LevelManager lm = services().levelManager();
+        if (lm != null) {
+            return lm.getFrameCounter() + 1;
+        }
+        return fallbackFrameCounter;
+    }
+
+    /**
      * Reset animation state, matching AnimateSprite's detection of obAnim != obPrevAni.
      */
     private void resetAnimation() {
@@ -304,6 +326,20 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null && objectManager.isAnyPlayerRiding(this)) {
             objectManager.clearRidingObject(player);
+            // ROM .notsolid2 does bclr #3,obStatus(a1) + clr.b obSolid(a0): the
+            // platform fully releases the rider when it stops being solid
+            // (docs/s1disasm/_incObj/69 SBZ Spinning Platforms and Trapdoors.asm:124-130).
+            // It clears the on-object/standing bits but does NOT set Status_InAir —
+            // ROM's player only becomes airborne on the NEXT frame, when his own
+            // grounded floor check (which ran before the platform this frame, since
+            // Obj01 precedes the platform in ExecuteObjects) finds no floor. So
+            // release support (clearRidingObject + drop the SolidObject latch on THIS
+            // instance so finalizeInlinePlayer clears Status_OnObj) but let the
+            // player's next-frame grounded collision set air, rather than forcing it
+            // the same frame (which goes airborne one frame early — SBZ1 f5531).
+            if (player.getLatchedSolidObjectInstance() == this) {
+                player.setLatchedSolidObjectId(0);
+            }
         }
     }
 

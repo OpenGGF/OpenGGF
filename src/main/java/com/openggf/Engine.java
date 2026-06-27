@@ -169,6 +169,9 @@ public class Engine {
 	record ResolvedDisplayDimensions(int pixelWidth, int pixelHeight, int windowWidth, int windowHeight) {
 	}
 
+	record FramebufferDimensions(int width, int height) {
+	}
+
 	record PauseIndicatorPlacement(int x, int y) {
 	}
 
@@ -637,20 +640,33 @@ public class Engine {
 		realWidth = resolved.pixelWidth();
 		realHeight = resolved.pixelHeight();
 		projectionWidth = realWidth;
-		windowWidth = resolved.windowWidth();
-		windowHeight = resolved.windowHeight();
 		graphicsManager.setProjectionWidth((int) projectionWidth);
 		graphicsManager.applyResolvedDisplayWidth((int) projectionWidth);
 
 		if (glfwInitialized && window != 0L) {
-			isSnappingWindowSize = true;
-			try {
-				glfwSetWindowSize(window, resolved.windowWidth(), resolved.windowHeight());
-			} finally {
-				isSnappingWindowSize = false;
-			}
-			reshape(resolved.windowWidth(), resolved.windowHeight());
+			FramebufferDimensions framebuffer = readCurrentFramebufferDimensions();
+			windowWidth = framebuffer.width();
+			windowHeight = framebuffer.height();
+			reshape(framebuffer.width(), framebuffer.height());
 		}
+	}
+
+	private FramebufferDimensions readCurrentFramebufferDimensions() {
+		try (MemoryStack stack = stackPush()) {
+			IntBuffer pWidth = stack.mallocInt(1);
+			IntBuffer pHeight = stack.mallocInt(1);
+			glfwGetFramebufferSize(window, pWidth, pHeight);
+			return resolveFramebufferDimensionsAfterWindowResize(
+					windowWidth, windowHeight, pWidth.get(0), pHeight.get(0));
+		}
+	}
+
+	static FramebufferDimensions resolveFramebufferDimensionsAfterWindowResize(
+			int requestedWindowWidth, int requestedWindowHeight, int framebufferWidth, int framebufferHeight) {
+		if (framebufferWidth > 0 && framebufferHeight > 0) {
+			return new FramebufferDimensions(framebufferWidth, framebufferHeight);
+		}
+		return new FramebufferDimensions(requestedWindowWidth, requestedWindowHeight);
 	}
 
 	void rollbackLaunchSessionCachedConfig() {

@@ -201,7 +201,20 @@ public class Sonic1FanObjectInstance extends AbstractObjectInstance implements S
         }
 
         // move.w obY(a1),d1 / addi.w #$60,d1 / sub.w obY(a0),d1
-        int playerY = player.getCentreY();
+        // ROM reads obY(a1) at the fan's slot in ExecuteObjects. Objects whose
+        // ROM slot is HIGHER than the fan (Obj5D) have not re-positioned Sonic
+        // yet — notably the SLZ staircase he rides, whose child pieces are
+        // allocated above the fan's slot and re-seat his Y each frame. The
+        // engine folds the staircase into a lower slot than the fan, so the live
+        // centre Y already reflects this frame's ride-seat lift, putting Sonic in
+        // the fan's vertical range one frame early (SLZ2 f2552: engine pushes +2
+        // a frame before ROM). Read the player's centre Y as captured at the
+        // start of the object exec pass (post-physics, pre-any-object re-seat) so
+        // the fan sees the same pre-staircase-seat Y ROM's fan slot observes.
+        var objectManager = services().objectManager();
+        int playerY = objectManager != null
+                ? objectManager.getPlayerCentreYAtExecStart(player)
+                : player.getCentreY();
         int fanY = getY();
         int dy = playerY + WIND_Y_CHECK_OFFSET - fanY;
 

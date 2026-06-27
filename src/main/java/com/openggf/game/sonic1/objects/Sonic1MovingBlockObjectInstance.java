@@ -251,6 +251,42 @@ public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // ROM MBlock_Platform (routine 2) passes `move.b obActWid(a0),d1` directly
+        // into PlatformObject, whose X-range landing check uses that d1 as the full
+        // landing half-width (`add.w d1,d0 / bmi Plat_Exit; add.w d1,d1 / cmp d1,d0
+        // / bhs Plat_Exit` -> land range [objX-obActWid, objX+obActWid),
+        // docs/s1disasm/_incObj/52 Moving Blocks.asm:57-61; sub PlatformObject.asm:27-34).
+        // obActWid (0x10 here) is already the standable half-width, so it must NOT
+        // receive the generic SolidObjectFull `-$B` narrowing (which would shrink the
+        // landing width to obActWid-0xB=0x5). Without this, a player landing more than
+        // 5px from the block centre was rejected -- MZ3 f8646: a falling rolling player
+        // at relX 0xC from the rightward moving block (Obj 0x52 @0x1289) was outside the
+        // narrowed 0x5 landing width, so resolveContact returned no contact and he fell
+        // through. Same obActWid-direct landing-width pattern as the swing platform and
+        // CollapsingFloor PlatformObject paths.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM MBlock_Platform routes the landing through PlatformObject ->
+        // Plat_NoXCheck_AltY, whose land band is gated by an UNSIGNED
+        // `cmpi.w #-16,d0 / blo Plat_Exit` (docs/s1disasm/_incObj/sub
+        // PlatformObject.asm:51-52). That rejects the exact-touch case d0 = 0
+        // (0x0000 <u 0xFFF0): the standable band is d0 in [-16,-1] (strict
+        // penetration -- the feet must be at least 1px below the surface). The
+        // engine's default accepts d0 = 0 (S3K SolidObjectTop_1P semantics), so a
+        // player whose feet land exactly on the surface seated ONE FRAME EARLY vs
+        // ROM. MZ3 f8973: falling-right onto the moving block (Obj 0x52 @0x13CF,
+        // d0 = 0, feet 0x07B0 == surface 0x07B0) the engine grounded at f8973 while
+        // ROM stays airborne and lands at f8974 (d0 <= -1). Mirrors the same
+        // PlatformObject-family override on Obj 18 / Obj 53 / Obj 5A / Obj 63 / Obj
+        // 6C / Obj 1A. Object-local to Obj 0x52.
+        return true;
+    }
+
+    @Override
     public boolean carriesAirborneRiderAfterExitPlatform() {
         return true;
     }

@@ -129,6 +129,16 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
     // Whether fragments have been spawned
     private boolean fragmented;
 
+    // ROM enters routine 4 (CFlo_OnPlatform) via PlatformObject's addq #2,obRoutine
+    // during the routine-2 (CFlo_ChkTouch) execution, so the routine-4 code (which
+    // sets the flag and decrements the timer) only runs on the FOLLOWING frame.
+    // The engine's onSolidContact sets routine=4 during the solid pass, BEFORE the
+    // object's update dispatches that frame, so without this guard routine 4 would
+    // run (and decrement) the same frame the player lands -- one frame early,
+    // making the collapse timer reach 0 (and the drop fire) one frame before ROM
+    // (MZ3 f2173 vs ROM f2174). Skip the first routine-4 update to match ROM.
+    private boolean collapseEnteredThisFrame;
+
     // X-flip state (obRender bit 0). Can change dynamically for subtype bit 7 objects.
     private boolean hFlip;
 
@@ -241,6 +251,13 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
      * Falls through to CFlo_WalkOff: ExitPlatform + MvSonicOnPtfm2 + RememberState.
      */
     private void updateCollapse(AbstractPlayableSprite player) {
+        if (collapseEnteredThisFrame) {
+            // ROM: PlatformObject set routine 4 during routine-2 execution, so
+            // CFlo_OnPlatform first runs (and decrements) only next frame.
+            collapseEnteredThisFrame = false;
+            collapseFlag = true;
+            return;
+        }
         if (collapseDelay <= 0) {
             // loc_8458 (line 128): enters fragment code WITHOUT clearing collapse_flag.
             // The flag remains set so routine 6 runs WalkOff behavior (loc_8402).
@@ -306,9 +323,17 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
                 collapseFlag = false;
                 routine = 6;
             } else if (collapseDelay <= 0) {
-                // Timer expired with player still standing:
-                // bclr #3,obStatus(a1) / bclr #5,obStatus(a1)
+                // Timer expired with player still standing — ROM `.delayCollapse`
+                // (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:
+                // 233-240): `bclr #3,obStatus(a1)` clears Sonic's on-platform flag
+                // so he loses support and goes airborne, plus `bclr #5` (pushing).
+                // clearRidingObject only drops the engine's riding-state link; it
+                // leaves the player's onObject flag set and grounded, so he never
+                // goes airborne. Mirror `bclr #3` directly: clear onObject + set
+                // airborne (MZ3 f2174: ROM air 0->1 here).
                 objectManager.clearRidingObject(player);
+                player.setOnObject(false);
+                player.setAir(true);
                 // move.b #id_Run,obPrevAni(a1) - restart Sonic's animation
                 // loc_842E: clear flag
                 collapseFlag = false;
@@ -517,8 +542,12 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (routine == 2 && contact.standing()) {
             // Player stepped on floor: transition to routine 4 (CFlo_Collapse)
-            // From disassembly: addq.b #2,obRoutine(a0) in PlatformObject
+            // From disassembly: addq.b #2,obRoutine(a0) in PlatformObject.
+            // ROM runs routine 4 only on the NEXT frame (PlatformObject sets the
+            // routine during routine-2 execution); mark the transition so the
+            // routine-4 update skips this frame, matching that one-frame deferral.
             routine = 4;
+            collapseEnteredThisFrame = true;
         }
     }
 

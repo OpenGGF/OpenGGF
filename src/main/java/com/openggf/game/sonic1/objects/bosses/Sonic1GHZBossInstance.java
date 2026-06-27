@@ -104,6 +104,28 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
     }
 
     @Override
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        // ROM: the killing hit sets obStatus bit 7; the boss only acts on it when its
+        // own routine reaches BGHZ_ShipUpdate, where BGHZ_Defeated does
+        //   move.b #8,ob2ndRout(a0)   ; select BGHZ_Explode
+        //   move.w #$B3,BGHZ_BossGenericTimer(a0)
+        //   rts
+        // (docs/s1disasm/_incObj/3D, 48 Boss - GHZ Main and Wrecking Ball.asm:140-145).
+        // BGHZ_Defeated returns WITHOUT falling through to BGHZ_Explode, so the newly
+        // selected secondary routine — and its first `subq.w #1,BGHZ_BossGenericTimer`
+        // (asm:224) — is not dispatched until the next frame (BGHZ_ShipMain re-reads
+        // ob2ndRout at the top, asm:67-69). The engine selects the defeat routine during
+        // the touch-response pass that runs before this object's own update(), so without
+        // this one-frame deferral updateDefeatWait() decrements the $B3 timer on the same
+        // frame the routine changed. ROM holds the timer at $B3 for exactly one frame
+        // (trace f8295 off3c hi=$B3, first decrement f8296 -> $B2) before the explode
+        // countdown begins. The deferral restores that settle frame, which propagates
+        // through ascent (BGHZ_Recover) to BGHZ_Escape so the `addq.w #2,(v_limitright2)`
+        // camera scroll starts on the correct frame (trace f8570, not f8569).
+        return true;
+    }
+
+    @Override
     protected void onHitTaken(int remainingHits) {
         // ROM: sfx_HitBoss is played by BossHitHandler
         // Face shows hit animation

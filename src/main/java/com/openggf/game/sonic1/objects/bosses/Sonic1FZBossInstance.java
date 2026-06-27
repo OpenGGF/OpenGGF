@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.objects.bosses;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.GameRng;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
@@ -90,6 +91,12 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     private FZCylinder[] cylinders;
     private FZPlasmaLauncher plasmaLauncher;
     private boolean childComponentsSpawned;
+
+    // Camera X as of the previous frame's scroll. The FZ boss runs in ExecuteObjects
+    // (before DeformLayers/ScrollHoriz), so its wait-exit camera read sees the
+    // previous frame's camera; the engine's live camera.getX() is one frame ahead.
+    // Seeded to 0 so the wait never advances on the spawn frame before a real read.
+    private int previousFrameCamX;
 
     // objoff_30: cylinder activation state (-1 = ready for new pair)
     private int cylinderState;
@@ -312,15 +319,41 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         }
     }
 
-    // === State 0: WAIT (loc_19E90) ===
-    // Wait for camera to reach boss_fz_x
+    // === State 0: WAIT (loc_19E90 / BossFinal_Eggman_Wait) ===
+    // Wait for camera to reach boss_fz_x. ROM advances out of wait when the PLC
+    // buffer is empty AND the camera has reached boss_fz_x. Our art pipeline loads
+    // synchronously, so the PLC buffer is always empty here and only the camera
+    // gate applies.
     private void updateWait() {
-        Camera camera = services().camera();
-        int camX = camera.getX() & 0xFFFF;
+        // ROM BossFinal_Eggman_Wait reads (v_screenposx).w from inside ExecuteObjects,
+        // which runs BEFORE DeformLayers/ScrollHoriz in the level main loop
+        // (docs/s1disasm/sonic.asm Level loop: ExecuteObjects then DeformLayers;
+        // docs/s1disasm/_inc/DeformLayers (REV01).asm:16-18). So the boss sees the
+        // camera as left by the PREVIOUS frame's scroll.
+        //
+        // The FZ boss is a dynamic object executed during object execution
+        // (LevelFrameStep step 2/3), which now runs BEFORE the camera scroll
+        // (step 4a, camera.updatePosition()) — matching ROM ExecuteObjects running
+        // before DeformLayers. So camera.getX() read here is already the
+        // previous-frame post-scroll camera (this frame's scroll has not run yet),
+        // exactly what ROM's ExecuteObjects-time read sees. Read it directly.
+        int camX = services().camera().getX() & 0xFFFF;
 
         if (camX >= BOSS_FZ_X) {
             state.routineSecondary = STATE_CYLINDER_ATTACK;
         }
+
+        // ROM: loc_19EA2 — addq.l #1,(v_random).w runs EVERY frame the boss is in
+        // the wait sub-state (the fall-through tail of BossFinal_Eggman_Wait,
+        // reached whether or not the wait advances this frame). This deterministic
+        // per-frame advance of v_random through the boss-intro wait is what places
+        // the seed for the first BossFinal_Eggman_Crush RandomNumber draw
+        // (selectCylinderPair). _incObj/85,84,86 Boss - FZ Main, Cylinders, and
+        // Plasma Balls.asm:131-133. With the previous-frame camera read above, the
+        // wait spans the ROM-correct number of frames, so no separate seed
+        // compensation is needed.
+        GameRng rng = services().rng();
+        rng.setSeed(rng.getSeed() + 1);
     }
 
     // === State 2: CYLINDER_ATTACK (loc_19EA8) ===
@@ -793,8 +826,22 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // Only process during cylinder attack phase
         if (state.routineSecondary != STATE_CYLINDER_ATTACK) return;
 
-        // ROM: tst.w d4 / bgt.s loc_19F50 — side collision path (d4 > 0)
+        // ROM: tst.w d4 / bgt.s loc_19F50 — side collision path (d4 > 0, i.e.
+        // SolidObject returned d4 == 1 "side collision", sub SolidObject.asm:13).
         if (!contact.touchSide()) return;
+
+        // ROM: loc_19F50 — addq.w #7,(v_random).w runs on EVERY side-contact frame,
+        // BEFORE the rolling/bounce check, whether or not the player is rolling
+        // (_incObj/85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:192-195).
+        // This advances v_random while Sonic pushes against the boss body during the
+        // cylinder-attack phase, so the later BossPlasma_MakeBalls RandomNumber draws
+        // (ball target spread) consume the ROM seed. addq.w targets (v_random).w —
+        // the high word of the 32-bit seed (big-endian) — so it is a 16-bit add to
+        // the high word with no carry into the low word.
+        GameRng rng = services().rng();
+        long seed = rng.getSeed();
+        long highWord = ((seed >>> 16) + 7) & 0xFFFFL;
+        rng.setSeed((seed & 0xFFFFL) | (highWord << 16));
 
         // ROM: cmpi.b #id_Roll,(v_player+obAnim).w
         int animId = player.getAnimationId();
@@ -927,6 +974,21 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         return state.routineSecondary == STATE_CYLINDER_ATTACK ||
                 (state.routineSecondary >= STATE_DEFEAT_FALL &&
                         state.routineSecondary < STATE_SHIP_TRANSFORM);
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // The FZ boss combat body uses plain SolidObject (BossFinal_Eggman_Crush ->
+        // loc_19F2E jsr (SolidObject), docs/s1disasm/_incObj/85,84,86 Boss - FZ Main,
+        // Cylinders, and Plasma Balls.asm:177-182). SolidObject's right-edge X gate is
+        // `cmp.w d3,d0 / bhi.w Solid_NoCollision` (docs/s1disasm/_incObj/sub
+        // SolidObject.asm:167-168), where bhi is exclusive-greater — so the exact-edge
+        // case relX == width*2 (d0 == d3) IS a valid contact. The engine's default
+        // exclusive gate (relX >= width*2 -> no contact) rejected the frame Sonic's
+        // rolling jump grazes the boss's right edge (player center == bossX + $2B), so
+        // the +$300 rolling-into-boss bounce fired one frame late (FZ trace f837 -> f838).
+        // Opting into the ROM-faithful inclusive right edge restores the f837 bounce.
+        return true;
     }
 
     @Override

@@ -301,10 +301,20 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
 
     // -- Collision interfaces --
 
-    // From disassembly: obColType = $46
+    // From disassembly: obColType = $46 (col_32x32|col_item).
+    // ROM Mon_BreakOpen sets obColType = col_none once the monitor is broken
+    // (docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:183), so a
+    // broken monitor no longer participates in ReactToItem. Without this, a
+    // broken-but-not-yet-deleted monitor keeps reporting $46 and, because
+    // ReactToItem exits on the first overlapping object (rts), it preempts the
+    // every-frame break check of a later monitor the player is rolling toward
+    // (SYZ3: the broken invincibility monitor @0x19A0 blocked the shoes monitor
+    // @0x19C8 for ~3 frames, applying the speed-shoes air-accel doubling late).
+    // S2/S3K monitors already gate on broken (MonitorObjectInstance.java:324,
+    // Sonic3kMonitorObjectInstance.java:502); this brings S1 to parity.
     @Override
     public int getCollisionFlags() {
-        return 0x46;
+        return broken ? 0 : 0x46;
     }
 
     @Override

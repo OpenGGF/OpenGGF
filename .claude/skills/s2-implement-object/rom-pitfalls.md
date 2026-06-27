@@ -2003,6 +2003,12 @@ same slot pass when the ROM would reach it.
 S2 initial preload vertical-bypass parity, and
 `HTZLiftObjectInstance.spawnScenery()` using `spawnChild()`.
 
+**Cross-game back-ref.** Same "each multi-piece part is a real OST slot, never an
+internal `linkX[]`/`linkY[]` array; count = `dbf`+1" rule — S1 swinging-platform
+chain links `9f47f557f` (`docs/s1disasm/_incObj/15 Swinging Platforms.asm:67-105`,
+render-only children spawned as real slots). See `s1-implement-object/rom-pitfalls.md`
+P8.
+
 ---
 
 ## P47 — `make_art_tile` priority bit must reach render commands
@@ -2108,6 +2114,109 @@ current checkout); `SolidObject_cont` rejects only with `cmp.w d3,d0 / bhi`
 **Originating commit.** `<pending>` S2 MTZ SteamSpring inclusive right-edge
 solid contact; `TestS2MtzLevelSelectTraceReplay` advances from frame 1006
 `tails_status_byte` to frame 1169 `tails_cpu_interact`.
+
+**Cross-game back-ref.** Same `bhi`-inclusive-right-edge rule confirmed in S1
+`SolidObject` (`docs/s1disasm/_incObj/sub SolidObject.asm:167-168`), commit
+`caf70abb7` (FZ boss exact-edge roll-bounce, f837 -> f1724). See
+`s1-implement-object/rom-pitfalls.md` P14.
+
+---
+
+## P50 — Object delete/cancel checks run only in the ROM routines that `bsr` them, not every frame
+
+**Pattern.** A child/projectile "cancel if parent destroyed" (or other delete
+gate) is `bsr`'d by ROM only from specific `Obj_routine` values, not from the
+active/in-flight routine. Porting the check into the engine object's per-frame
+update unconditionally deletes the object during a phase ROM keeps it alive,
+freeing its slot at the wrong time → cascading slot drift / a downstream object
+mis-slotted hundreds of frames later.
+
+**What to check.** When porting any `*_ChkCancel` / `*_ChkDel` / delete-gate
+subroutine, find every `bsr`/`jsr` to it and note which `routine(a0)` values
+reach it. Gate the engine call to the equivalent engine routine/state — do not
+call it from the shared per-frame entry. S2/S3K objects use the same
+`routine(a0)` / `Obj_routine` jump-table dispatch as S1; verify the calling
+routines per object.
+
+**ROM citation.** S2/S3K objects dispatch through `Obj_routine` index tables
+(e.g. `docs/s2disasm/s2.asm` per-object `*_Index` tables); a delete/cancel
+subroutine belongs only in the routines that `bsr` it. S1 origin:
+`docs/s1disasm/_incObj/22, 23 Badnik - Buzz Bomber and Missile.asm:162-194,220-249`
+(`Msl_ChkCancel` `bsr`'d from `Msl_Main`/`Msl_Animate`, NOT active `Msl_FromBuzz`).
+
+**Originating commit (S1 origin).** `53da8c24a` (S1 Buzz Bomber Missile cancels
+only in flare phase, not active — missile was deleted ~840 frames early). See
+`s1-implement-object/rom-pitfalls.md` P9.
+
+---
+
+## P51 — Dormant / consumed objects must report zero `collision_flags` so `Touch_Loop` skips them
+
+**Pattern.** S2 `Touch_Loop` reads `collision_flags(a1)` and only checks the
+object when non-zero (`docs/s2disasm/s2.asm:85048-85049`,
+`move.b collision_flags(a1),d0 / bne Touch_CheckCollision`). S3K only
+touch-checks objects added to `Collision_response_list`. So an object that is
+(a) waiting before activation, or (b) in a broken/consumed terminal state, must
+report zero collision until it activates / not re-add itself once consumed —
+otherwise it can hurt the player while dormant, or (because the loop stops at
+the first overlap) preempt an adjacent live object's contact.
+
+**What to check.** For any object with a pre-activation waiting state or a
+broken/consumed terminal state: trace where the ROM first writes / clears
+`collision_flags` (or adds/removes itself from the response list). Gate the
+engine's `getCollisionFlags()` to return `0` outside the active window. Derive
+the gate from the (monotonic) activation routine — no new rewind field.
+
+**ROM citation.** S2 `Touch_Loop` zero-gate `docs/s2disasm/s2.asm:85048-85049`;
+S3K `Collision_response_list` opt-in (`docs/skdisasm/sonic3k.asm`, response-list
+build during ExecuteObjects). S1 origin: `Sonic ReactToItem.asm:52-53`
+(`tst.b obColType / bne`).
+
+**Originating commits (S1 origin).** `466f408a8` (S1 broken monitor clears col
+type so it stops preempting ReactToItem — *consumed* case) and the SYZ Roller
+dormant case (`s1-implement-object/rom-pitfalls.md` P7 + P11).
+
+---
+
+## P52 — Off-screen delete uses the ROM render-box / `MarkObjGone` bound, not a raw engine pixel margin
+
+**Pattern.** Short-lived objects (debris, shrapnel, projectiles) delete on the
+ROM render-box / camera-X-coarse bound, not a fixed engine `isOnScreenX(<N>)`
+margin. S2 `MarkObjGone` uses the chunk-rounded camera-X-coarse window
+`$80 + screen_width + $80` (`docs/s2disasm/s2.asm`, `MarkObjGone`). A raw margin
+keeps the object alive over a wider/narrower window than ROM, changing the
+instance count at a given frame → slot drift.
+
+**What to check.** For any object whose ROM delete is `tst.b render_flags / bpl
+DeleteObject` or the standard out-of-range macro, model the delete with the
+engine's ROM-render-box helper keyed on the object's `width_pixels`, not a raw
+pixel margin. See also S2 P29 (objects with bespoke multi-endpoint delete
+bounds) and P17 (child uses own X vs parent anchor).
+
+**ROM citation.** S2 `MarkObjGone` chunk-rounded camera-X bound
+(`docs/s2disasm/s2.asm`, `MarkObjGone`). S1 origin:
+`docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm:218-219` +
+`docs/s1disasm/_inc/BuildSprites.asm:47-58`.
+
+**Originating commit (S1 origin).** `0a15683b9` (S1 Walking Bomb shrapnel deletes
+via ROM obRender render bound, not raw isOnScreenX — lingered 24 vs ROM 16
+frames). See `s1-implement-object/rom-pitfalls.md` P10.
+
+---
+
+## P53 — Object pushes the player: `add.w speed,obX(a1)` / `move.w pos,obX(a1)` preserve the rider's sub-pixel — never `setCentreX`/`setCentreY` (they ZERO it)
+
+**Symptom.** A frontier reads as a "sub-pixel RAM-gated" small constant X/Y residual: the engine is byte-exact with ROM until an object first pushes/carries the player (conveyor, fan, moving solid, `MvSonicOnPtfm`/`SolidObject` side-push), then a CONSTANT fraction behind — crossing an integer boundary 1 frame off.
+
+**Root cause.** S2 object→player position writes operate on the PIXEL word only — `add.w <speed>,obX(a1)` / `sub.w d0,obX(a1)` / `move.w <pos>,obX(a1)` write `x_pos`/`y_pos` at offset `$8`/`$C` and leave `x_sub`/`y_sub` (`$A`/`$E`) UNTOUCHED, so the rider keeps his accumulated fraction. The engine's `setCentreX(short)` / `setCentreY(short)` ZERO the sub-pixel. Any object-push path using them discards ~1px of fraction per frame.
+
+**What to check / fix.** For any S2 object that pushes/carries the player or sets him to a pixel position the ROM writes via `add.w`/`sub.w`/`move.w` to the pixel word: use `player.shiftX/shiftY` (incremental push) or `setCentreXPreserveSubpixel`/`setCentreYPreserveSubpixel` / `setX`/`setY` (set-to-position). Keep `setCentreX`/`setCentreY` ONLY where ROM explicitly clears the fraction (`move.w #0,x_sub(a1)` or a full-replace). FAITHFUL-OR-BOUNCE per call site against the object's actual ROM routine.
+
+**ROM citation.** S2 conveyors/fans/moving solids and `SolidObject`/`MvSonicOnPtfm` side-push/carry use the same `add.w`/`sub.w`/`move.w obX(a1)` pixel-word convention as S1 (preserves x_sub). Check each object's routine in `docs/s2disasm/s2.asm`; the `SolidObject_cont` side-push and the platform `MvSonicOnPtfm` carry are the shared cases. Only a `move.w #0,x_sub` (explicit clear) justifies a zeroing setter.
+
+**Also covers object SELF-motion.** Same rule when an object moves ITSELF (`add.w speed,obX(a0)` preserves its own x_sub): a rideable object that self-moves via `setCentreX`/`setCentreY` drifts ~1px and surfaces it where the player rides/hits it. Use `SubpixelMotion.moveSprite`/`shiftX`/`shiftY`. (Objects that move in integer pixel steps with no sub-pixel accumulator need no change.) See S1 P15 for the `-Dobjsubpxaudit` method.
+
+**Originating commit (S1 origin).** `b5bc778d4` (S1 Conveyor preserves rider sub-pixel via `shiftX`; SBZ2 f2224 -> f2323). See `s1-implement-object/rom-pitfalls.md` P15.
 
 ---
 

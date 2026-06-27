@@ -286,6 +286,18 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
     private boolean initialized;
 
     /**
+     * True only on the frame a HEAD piece ran Geyser_Main (init). ROM's
+     * Geyser_Index jmp dispatch (docs/s1disasm/_incObj/"4C, 4D MZ Lava Geyser
+     * and Maker.asm":139) runs one routine per frame: Geyser_Main (routine 0,
+     * asm:157-167) only inits + addq.b #2,obRoutine, RETURNING without running
+     * Geyser_Action; the gravity (addi.w #$18,obVelY) + SpeedToPos of
+     * Geyser_Action (routine 2, asm:235-242) run the NEXT frame. The engine's
+     * update() collapses ensureInitialized()+updateHead() into one frame, so
+     * defer the head's first Geyser_Action move by a frame to match ROM.
+     */
+    private boolean ranGeyserMainThisFrame;
+
+    /**
      * Initializes this geyser piece. Deferred to first update() so that
      * ObjectServices are available (injected by addDynamicObject).
      */
@@ -294,6 +306,11 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
         initialized = true;
         if (role == Role.HEAD) {
             initializeHead();
+            // Geyser_Main occupied this frame; defer the first Geyser_Action.
+            // The THIRD piece is constructed already-initialized at routine 2
+            // (Geyser_Action) so it never runs Geyser_Main and is unaffected;
+            // the BODY (routine 4) tracks the head and is unaffected too.
+            ranGeyserMainThisFrame = true;
         }
     }
 
@@ -389,6 +406,13 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (pendingDelete) {
             setDestroyed(true);
+            return;
+        }
+
+        // ROM Geyser_Main (routine 0) returns after init without running
+        // Geyser_Action; the head's first gravity+move happens the next frame.
+        if (ranGeyserMainThisFrame) {
+            ranGeyserMainThisFrame = false;
             return;
         }
 

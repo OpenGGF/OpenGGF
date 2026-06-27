@@ -654,6 +654,34 @@ public class DivergenceReport {
         if (aizHandoffTerrain != null) {
             diagnostics.add(aizHandoffTerrain);
         }
+        TraceEvent.AizFireTransition aizFireTransition =
+                traceData.aizFireTransitionForFrame(frame);
+        if (aizFireTransition != null) {
+            diagnostics.add(aizFireTransition);
+        }
+        // v3.7 S1 diagnostic context: object respawn-state bit array (slot-cadence
+        // cluster) and camera vertical-boundary state (MZ1). Comparison-only.
+        TraceEvent.VObjState vObjState = traceData.vObjStateForFrame(frame);
+        if (vObjState != null) {
+            diagnostics.add(vObjState);
+        }
+        // v3.10 S1 diagnostic context: global oscillation state (osc-phase cluster,
+        // e.g. SLZ2 f3353). Comparison-only.
+        TraceEvent.VOscillate vOscillate = traceData.vOscillateForFrame(frame);
+        if (vOscillate != null) {
+            diagnostics.add(vOscillate);
+        }
+        // v3.11 S1 diagnostic context: BizHawk authoritative lag state (confirms
+        // the counter/oscillation skip-frame vs emulator-lag coincidence).
+        // Comparison-only.
+        TraceEvent.LagState lagState = traceData.lagStateForFrame(frame);
+        if (lagState != null) {
+            diagnostics.add(lagState);
+        }
+        TraceEvent.CameraBoundary cameraBoundary = traceData.cameraBoundaryForFrame(frame);
+        if (cameraBoundary != null) {
+            diagnostics.add(cameraBoundary);
+        }
         if (!diagnostics.isEmpty()) {
             sb.append("Trace diagnostics @")
                 .append(frame)

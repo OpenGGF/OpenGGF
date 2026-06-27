@@ -479,9 +479,41 @@ public class Sonic1SawObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        // out_of_range.s uses saw_origX for distance check.
-        // Ground saws update origX as they move, so they persist until far off screen.
-        return !isDestroyed();
+        // ROM Saw_Action ends with `out_of_range.s .delete, saw_origX(a0)`
+        // (docs/s1disasm/_incObj/6A SBZ Saws and Pizza Cutters.asm:39): the saw
+        // deletes when its ORIGIN anchor (saw_origX) leaves the camera window.
+        // Let the shared counter-based out_of_range unload run (against the
+        // saw_origX reference returned by getOutOfRangeReferenceX()); a blanket
+        // persistent=true kept off-screen saws alive that ROM had unloaded,
+        // shifting later slot occupancy (SBZ2 trace f239: two saws @0298,@02A0
+        // sat ~239px left of camera but the engine retained them, pushing rings
+        // down two slots).
+        return false;
+    }
+
+    /**
+     * ROM out_of_range tests {@code saw_origX} (objoff_3A), not the live
+     * {@code obX} — {@code out_of_range.s .delete, saw_origX(a0)}
+     * (docs/s1disasm/_incObj/6A SBZ Saws and Pizza Cutters.asm:39). Ground saws
+     * update {@code saw_origX} to the moved position each frame (lines 338/400
+     * = ROM {@code move.w obX(a0),saw_origX(a0)}), while oscillating pizza
+     * cutters keep it at the spawn origin, so {@code origX} is the correct
+     * reference for both.
+     */
+    @Override
+    public int getOutOfRangeReferenceX() {
+        return origX;
+    }
+
+    /**
+     * ROM checks {@code out_of_range} at the END of {@code Saw_Action}
+     * (line 39), AFTER the type subroutine has run (and, for ground saws,
+     * updated {@code saw_origX}). Run the unload post-execute so the check sees
+     * the same anchor ROM does.
+     */
+    @Override
+    public boolean checksOutOfRangeAfterRoutine() {
+        return true;
     }
 
     // ---- Debug Rendering ----

@@ -831,6 +831,14 @@ public class CollisionSystem {
         boolean canLandOnCeiling = ((ceilingAngle + 0x20) & 0x40) != 0;
 
         if (canLandOnCeiling) {
+            // ROM Sonic_FloorUp.angledceiling (s1disasm/_incObj/01 Sonic.asm:1720-1731;
+            // S2 loc_1B02C s2.asm:38048-38057; S3K loc_120EA sonic3k.asm:24258-24264):
+            // when an in-air player lands on an angled ceiling, the in-air status bit
+            // is cleared (Sonic_ResetOnFloor) and inertia is set from y_vel (negated
+            // for ascending slopes). resetWallCeilingLandingState() clears the in-air
+            // flag below — which, for a hurt player, also clears the hurt routine
+            // (AbstractPlayableSprite.setAir).
+            boolean wasHurt = sprite.isHurt();
             if ((lowestResult.angle() & 0x01) != 0) {
                 sprite.setAngle((byte) 0x80);
             } else {
@@ -838,11 +846,26 @@ public class CollisionSystem {
             }
             updateGroundMode(sprite);
             resetWallCeilingLandingState(sprite, ceilingAngle);
-            short gSpeed = sprite.getYSpeed();
-            if ((ceilingAngle & 0x80) != 0) {
-                gSpeed = (short) -gSpeed;
+            if (wasHurt) {
+                // ROM Sonic_HurtStop (s1disasm/_incObj/01 Sonic.asm:1918-1923; S2
+                // s2.asm:38216-38221; S3K sub_12318 sonic3k.asm:24492-24496): after
+                // Sonic_Floor/DoLevelCollision returns, the hurt routine re-checks
+                // Status_InAir; since this angled-ceiling land cleared it, the routine
+                // zeroes y_vel/x_vel/inertia (ground_vel) before reverting to control.
+                // The angledceiling inertia=y_vel assignment is therefore overwritten
+                // with 0. Identical in all three games — core hurt recovery, not a
+                // per-game divergence. Without this the engine left ground_vel = the
+                // converted hurt knockback velocity (SYZ1 f4430: inertia +0x370).
+                sprite.setYSpeed((short) 0);
+                sprite.setXSpeed((short) 0);
+                sprite.setGSpeed((short) 0);
+            } else {
+                short gSpeed = sprite.getYSpeed();
+                if ((ceilingAngle & 0x80) != 0) {
+                    gSpeed = (short) -gSpeed;
+                }
+                sprite.setGSpeed(gSpeed);
             }
-            sprite.setGSpeed(gSpeed);
             updateGroundMode(sprite);
         } else {
             sprite.setYSpeed((short) 0);

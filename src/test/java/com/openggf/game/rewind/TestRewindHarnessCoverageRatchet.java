@@ -511,13 +511,15 @@ public class TestRewindHarnessCoverageRatchet {
    *       Super Sonic Stars recreate baseline gaps moved onto generic recreate.</li>
    *   <li>2026-06-26: raised to 643 after the S2 WFZ boss root moved onto
    *       spawn-construction-context generic recreate.</li>
+   *   <li>2026-06-27: raised to 646 after S1 swinging-platform chain-link
+   *       children gained spawn-based generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    // 2026-06-26: raised to 643 after the S2 WFZ boss root gained service-backed generic recreate.
-    static final int RATCHET_FLOOR = 643;
+    // 2026-06-27: raised to 646 after S1 swing-chain children gained generic recreate.
+    static final int RATCHET_FLOOR = 646;
 
     @BeforeEach
     void initHeadless() {

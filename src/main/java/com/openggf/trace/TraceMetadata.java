@@ -237,6 +237,63 @@ public record TraceMetadata(
     }
 
     /**
+     * Whether the trace emits the per-frame S1 {@code v_objstate} object
+     * respawn-state bit array ({@link TraceEvent.VObjState}), added by the v3.7+
+     * S1 recorder for the slot-interleave / slot-cadence cluster. Older traces
+     * never emit it; consult this before reading
+     * {@link TraceData#vObjStateForFrame(int)}.
+     */
+    public boolean hasVObjState() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("v_objstate_per_frame");
+    }
+
+    /**
+     * Whether the trace emits the per-frame S1 global oscillation state
+     * ({@link TraceEvent.VOscillate}: {@code v_oscillate} bitfield word + the
+     * $40-byte oscillating-values array), added by the v3.10+ S1 recorder for the
+     * osc-phase cluster (e.g. SLZ2 f3353). Older traces never emit it; consult
+     * this before reading {@link TraceData#vOscillateForFrame(int)}.
+     */
+    public boolean hasVOscillate() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("v_oscillate_per_frame");
+    }
+
+    /**
+     * Whether the trace emits the per-frame BizHawk lag state
+     * ({@link TraceEvent.LagState}: {@code emu.islagged()} + {@code emu.lagcount()}),
+     * added by the v3.11+ S1 recorder to confirm the counter/oscillation skip-frame
+     * vs emulator-lag-frame coincidence. Older traces never emit it; consult this
+     * before reading {@link TraceData#lagStateForFrame(int)}.
+     */
+    public boolean hasLagState() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("lag_state_per_frame");
+    }
+
+    /**
+     * Whether the trace emits the per-frame S1 camera vertical-boundary state
+     * ({@link TraceEvent.CameraBoundary}), added by the v3.7+ S1 recorder for the
+     * MZ1 f2101 camera-boundary frontier. Older traces never emit it.
+     */
+    public boolean hasCameraBoundary() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("camera_boundary_per_frame");
+    }
+
+    /**
+     * Whether the trace's physics.csv carries the player sub-pixel fraction
+     * columns ({@code x_sub}/{@code y_sub}). These have been present since the
+     * v2.0 (18-column) CSV, so any csv_version &gt;= 2 trace has them; this is a
+     * convenience predicate for sub-pixel-trajectory diagnostics (SBZ2 f2224,
+     * SYZ3 f6358). Legacy v1 (11-column) traces return false.
+     */
+    public boolean hasSubpixel() {
+        return csvVersion != null && csvVersion >= 2;
+    }
+
+    /**
      * Whether the trace emits focused S3K AIZ battleship ship-loop execution
      * diagnostics around {@code AIZ2_DoShipLoop/sub_50318}.
      */
@@ -357,6 +414,18 @@ public record TraceMetadata(
     public boolean hasPerFrameAizTransitionFloorSolid() {
         return auxSchemaExtras != null
                 && auxSchemaExtras.contains("aiz_transition_floor_solid_per_frame");
+    }
+
+    /**
+     * Whether the trace emits per-frame {@code aiz_fire_transition} events, the
+     * focused S3K AIZ1-&gt;AIZ2 fake-fire {@code Camera_Y_pos_BG_copy} ramp
+     * diagnostic used to align the engine's continuous fire-transition ramp and
+     * the {@code AIZ2BGE_WaitFire} {@code Camera_max_X_pos} release. Returns
+     * {@code false} for legacy traces recorded before the v6.27-s3k recorder.
+     */
+    public boolean hasPerFrameAizFireTransition() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("aiz_fire_transition_per_frame");
     }
 
     /**

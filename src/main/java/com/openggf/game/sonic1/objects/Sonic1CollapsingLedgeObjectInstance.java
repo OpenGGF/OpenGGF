@@ -215,7 +215,19 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
                 } else if (collapseDelay <= 0) {
                     // Delay expired with player still standing:
                     // bclr #3,obStatus(a1) / bclr #5,obStatus(a1)
+                    // (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:104-105).
+                    // ROM clears Sonic's Status_OnObj (#3) and Status_Push (#5)
+                    // directly, so on the collapse-release frame the player is no
+                    // longer object-attached and Sonic_DoLevelCollision re-seats
+                    // him onto the terrain surface that frame. clearRidingObject only
+                    // drops the engine-side riding bookkeeping; it does NOT clear the
+                    // player's on-object/pushing status, so without these the player
+                    // stayed pinned at the ledge's last slope Y (GHZ3 f6464: engine
+                    // held centre 0x038E where ROM re-seats to the 2px-higher terrain
+                    // surface 0x038C).
                     objectManager.clearRidingObject(player);
+                    player.setOnObject(false);
+                    player.setPushing(false);
                     // loc_82FC: clear flag
                     collapseFlag = false;
                 }

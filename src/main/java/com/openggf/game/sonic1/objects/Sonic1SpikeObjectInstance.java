@@ -95,6 +95,23 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOutOfRangeReferenceX() {
+        // ROM Spikes_Display checks out_of_range against spikes_origX (objoff_30),
+        // the spawn-origin X, NOT the current (moved) obX:
+        //   out_of_range.w DeleteObject,spikes_origX(a0)
+        // (docs/s1disasm/_incObj/36 Spikes.asm:163,167; spikes_origX set at :47).
+        // Horizontal-moving spikes (subtype $x2) extend their obX away from the
+        // origin each frame, so anchoring the unload window on the moved getX()
+        // (the default) culls them up to a chunk early when the extended tip
+        // crosses the despawn threshold while the origin is still in range. MZ3:
+        // the sideways spike at origin (0xDEC,0x710) spawned at f6527 then the
+        // moved-getX() out_of_range deleted it at f6528, ~285 frames before the
+        // player rolling-jumps into its solid underside at f6813. Anchoring on
+        // baseX (= spikes_origX) keeps it loaded exactly as long as ROM does.
+        return baseX;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         updateMovement();
         updateDynamicSpawn(currentX, currentY);
@@ -191,6 +208,28 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
     public boolean usesStickyContactBuffer() {
         // Spikes should not hold contact via the generic riding sticky buffer.
         // This keeps collision/hurt timing aligned with ROM spike behavior.
+        return false;
+    }
+
+    @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        // ROM Spikes do NOT drag a standing rider horizontally. The Spikes
+        // standing branch reaches MvSonicOnPtfm via the shared SolidObject
+        // routine (sub SolidObject.asm:46-55, .stand), which carries the rider
+        // by the X-delta between d4 (the carry-reference X) and the object's
+        // current obX. The Spikes caller passes the object's *post-move* obX as
+        // the carry reference:
+        //   bsr.w Spikes_Move        ; updates obX to the new position FIRST
+        //   ...
+        //   move.w obX(a0),d4        ; d4 = already-moved obX (36 Spikes.asm:52,96)
+        // so MvSonicOnPtfm's "sub.w obX(a0),d2" computes a ZERO delta
+        // (sub MvSonicOnPtfm.asm:38-39) and the standing rider is not carried.
+        // A horizontally-moving spike (subtype $x2) therefore slides out from
+        // under a standing player, who stays put and walks off the edge — the
+        // MZ1 trace at f4230 (player x stays 0x0B35 while the spike moves
+        // 0x0B34->0x0B3C, then the player drops off and falls at f4234).
+        // This matches ALL spikes (every Spikes caller passes the post-move
+        // obX), so it is an object-wide property, not a zone carve-out.
         return false;
     }
 

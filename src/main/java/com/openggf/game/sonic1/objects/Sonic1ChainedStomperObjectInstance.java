@@ -220,9 +220,26 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     // Ceiling sub-object Y (routine 6: static display)
     private int ceilingY;
 
-    // ROM: CStom_MakeParts creates 3 additional sub-objects (spike, chain, ceiling)
-    // via FindNextFreeObj, each occupying one SST slot.
-    private static final int CHILD_SLOT_COUNT = 3;
+    // ROM: CStom_Main's CStom_Loop runs with d1=3 -> 4 iterations. The first
+    // iteration writes the main block into the object's own SST slot (a1=a0);
+    // the remaining iterations each call FindNextFreeObj to create one child
+    // sub-object (spike routine 4, chain routine 8, ceiling routine 6).
+    //
+    // So a placement normally allocates 3 CHILD slots. BUT when the spike piece
+    // (obFrame == 1) belongs to a stomper whose subtype upper nybble == $20,
+    // the ROM does `subq.w #1,d1` and then `beq.s CStom_MakeStomper`, re-running
+    // the body WITHOUT a fresh FindNextFreeObj — the spike reuses the previous
+    // sub-object's slot instead of consuming a new one. The net effect is only
+    // 2 child SST slots for $20-subtype stompers (no separate, collision-less
+    // spike object). 31 MZ Chained Stompers.asm: cmpi.b #1,obFrame(a1) /
+    // subq.w #1,d1 / cmpi.w #$20,d0 / beq.s CStom_MakeStomper.
+    //
+    // Derived from spikesHaveCollision (which encodes the same subtype==$20 test)
+    // instead of stored in a field, so the fix introduces no new rewind-captured
+    // scalar.
+    private int childSlotCount() {
+        return spikesHaveCollision ? 3 : 2;
+    }
 
     /** True once child slots have been allocated (second update, matching CStom_MakeParts). */
     private boolean childSlotsAllocated;
@@ -323,7 +340,7 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     }
     @Override
     public int getReservedChildSlotCount() {
-        return CHILD_SLOT_COUNT;
+        return childSlotCount();
     }
 
     @Override
@@ -339,7 +356,7 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
             childSlotsAllocated = true;
             var objectManager = services().objectManager();
             if (objectManager != null && getSlotIndex() >= 0) {
-                objectManager.allocateChildSlotsAfter(spawn, CHILD_SLOT_COUNT, getSlotIndex());
+                objectManager.allocateChildSlotsAfter(spawn, childSlotCount(), getSlotIndex());
             }
         }
 

@@ -391,8 +391,50 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
         // Platform: out_of_range uses objoff_30 (base X)
         // ROM: out_of_range.s loc_1236A, objoff_30(a0)
         // (docs/s1disasm/_incObj/63 LZ Conveyor.asm, line 10)
-        return isInRangeAt(baseX);
+        //
+        // ROM runs the routine (LabyrinthConvey -> LCon_Index -> LCon_Main) which
+        // sets objoff_30 (baseX) BEFORE the out_of_range macro that follows the
+        // jsr (docs/s1disasm/_incObj/63 LZ Conveyor.asm:5-13). A freshly spawned
+        // platform therefore always has a valid objoff_30 when its first
+        // out_of_range check runs. The engine loads baseX lazily in
+        // ensureInitialized() on the first update(); until then baseX is the
+        // sentinel 0 and must NOT be treated as an off-screen position, or the
+        // platform is despawned before it can initialise (it would otherwise
+        // self-cull on the spawn frame whenever the spawn pre-pass checks
+        // out_of_range before the object's first routine runs).
+        if (!initialized) {
+            return true;
+        }
+        return isConveyorInRange(baseX);
     }
+
+    /**
+     * out_of_range for the conveyor platform, with the ROM's act-3 left-extension.
+     * <p>
+     * The base {@code out_of_range} macro keeps an object whose chunk-aligned
+     * reference X is within {@code [screenAligned, screenAligned + 640]}
+     * ({@code cmpi.w #128+320+192,d0 / bhi exit}). In <b>act 3 only</b>, the
+     * LZ Conveyor's out-of-range tail does NOT immediately delete: it runs
+     * {@code cmpi.w #-$80,d0 / bhs.s LCon_Display}
+     * (docs/s1disasm/_incObj/63 LZ Conveyor.asm:16-20), so a platform whose
+     * aligned baseX is up to one chunk (0x80) to the LEFT of the window
+     * ({@code d0 in [0xFF80,0xFFFF]}) is kept alive and displayed instead of
+     * deleted. Modelled on the ROM act value (not the zone/trace), so it is a
+     * ROM-state branch, not a carve-out: the same object in acts 1/2 uses the
+     * standard window.
+     */
+    private boolean isConveyorInRange(int referenceX) {
+        // Act 3 only: ROM keeps platforms within one chunk (0x80) to the left of
+        // the window (cmpi.w #-$80,d0 / bhs LCon_Display); acts 1/2 use the
+        // standard window.
+        if (services().currentAct() == ACT3) {
+            return isInRangeAtWithLeftExtension(referenceX, 1);
+        }
+        return isInRangeAt(referenceX);
+    }
+
+    // From disassembly: cmpi.b #act3,(v_act).w. Act index is 0-based (act 3 = 2).
+    private static final int ACT3 = 2;
 
     // ---- Spawner mode ----
 

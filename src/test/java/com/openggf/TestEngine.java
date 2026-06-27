@@ -207,7 +207,7 @@ class TestEngine {
     }
 
     @Test
-    void applyResolvedDisplayDimensionsUsesResolvedWindowDimensionsInsteadOfStaleSnapScale() throws Exception {
+    void applyResolvedDisplayDimensionsPreservesCurrentWindowDuringModeTransitions() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         GraphicsManager graphics = new GraphicsManager();
         TilemapGpuRenderer tilemapRenderer = new TilemapGpuRenderer(320);
@@ -223,10 +223,28 @@ class TestEngine {
         assertEquals(400.0, (double) getPrivateField(engine, "realWidth"));
         assertEquals(224.0, (double) getPrivateField(engine, "realHeight"));
         assertEquals(400.0, (double) getPrivateField(engine, "projectionWidth"));
-        assertEquals(800, getPrivateField(engine, "windowWidth"));
+        assertEquals(640, getPrivateField(engine, "windowWidth"));
         assertEquals(448, getPrivateField(engine, "windowHeight"));
         assertEquals(400, graphics.getProjectionWidth());
         assertEquals(25, tilemapRenderer.getVScrollColumnCapacity());
+    }
+
+    @Test
+    void resolveFramebufferDimensionsAfterWindowResizePrefersActualFramebufferPixels() {
+        Engine.FramebufferDimensions dimensions =
+                Engine.resolveFramebufferDimensionsAfterWindowResize(800, 448, 1600, 896);
+
+        assertEquals(1600, dimensions.width());
+        assertEquals(896, dimensions.height());
+    }
+
+    @Test
+    void resolveFramebufferDimensionsAfterWindowResizeFallsBackWhenFramebufferUnavailable() {
+        Engine.FramebufferDimensions dimensions =
+                Engine.resolveFramebufferDimensionsAfterWindowResize(800, 448, 0, 0);
+
+        assertEquals(800, dimensions.width());
+        assertEquals(448, dimensions.height());
     }
 
     @Test

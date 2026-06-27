@@ -222,6 +222,15 @@
 -- words used by Tails_Display / Render_Sprites visibility
 -- (sonic3k.constants.asm:9-16,62,416-417; sonic3k.asm:26278-26300,
 -- 36323-36370). Diagnostic-only.
+-- v6.27-s3k adds aiz_fire_transition_per_frame (V628_AIZ_FIRE) for the
+-- aiz_end_to_end profile: a state-poll per-frame snapshot of
+-- Camera_Y_pos_BG_copy (0xEE90), Camera_Y_pos_BG_rounded (0xEE96),
+-- Events_bg+$00/$02 (0xEED2/0xEED4 lerp target / FireRise speed),
+-- Events_routine_bg (0xEEC2), Events_fg_5 (0xEEC6), and Camera_X/min_X/max_X
+-- (0xEE78/0xEE14/0xEE16) through the AIZ1->AIZ2 fake-fire transition. Window
+-- default 5200-5600, override via OGGF_S3K_AIZ_FIRE_RANGE=<start>-<end>. CSV
+-- schema unchanged; legacy traces (no aiz_fire_transition key) stay valid.
+-- Diagnostic-only.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -260,6 +269,14 @@ local ADDR_CAMERA_X         = 0xEE78
 local ADDR_CAMERA_Y         = 0xEE7C
 local ADDR_CAMERA_MAX_Y     = 0xEE1A
 local ADDR_CAMERA_TARGET_MAX_Y = 0xEE12
+-- Camera_Y_pos_BG_copy (long, 16.16) drives the AIZ1->AIZ2 fake-fire curtain
+-- rise via AIZ1_FireRise; the $310 crossing in AIZ2BGE_WaitFire releases the
+-- post-reload Camera_max_X_pos clamp (sonic3k.constants.asm:423 -> $FFFFEE90;
+-- s3.asm:70383 AIZ1_FireRise; sonic3k.asm:105084-105096).
+-- NOTE: intentionally global (not local) to stay under Lua's 200-local
+-- main-chunk limit; the file was at 201 locals after the v6.27 additions.
+ADDR_CAMERA_Y_BG_COPY = 0xEE90
+ADDR_CAMERA_Y_BG_ROUNDED = 0xEE96
 local ADDR_ZONE             = 0xFE10
 local ADDR_ACT              = 0xFE11
 local ADDR_PLAYER_MODE      = 0xFF08
@@ -952,7 +969,7 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.26-s3k",\n')
+    meta_file:write('  "lua_script_version": "6.27-s3k",\n')
     -- trace_schema: csv schema is unchanged from 5. v5 CSV + new per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux
     -- events are detected by parsers via aux_schema_extras rather than a
@@ -1038,6 +1055,7 @@ local function write_metadata()
         aux_schema_extras[#aux_schema_extras + 1] = "aiz_handoff_terrain_state_per_frame"
         aux_schema_extras[#aux_schema_extras + 1] = "terrain_wall_sensor_per_frame"
         aux_schema_extras[#aux_schema_extras + 1] = "aiz_ship_loop_per_frame"
+        aux_schema_extras[#aux_schema_extras + 1] = "aiz_fire_transition_per_frame"
     else
         aux_schema_extras[#aux_schema_extras + 1] = "cage_state_per_frame"
         aux_schema_extras[#aux_schema_extras + 1] = "cage_execution_per_frame"
@@ -3696,6 +3714,77 @@ function V69_AIZ.register_aiz_handoff_terrain_hooks()
 end
 
 -- =====================================================================
+-- AIZ1->AIZ2 fake-fire transition BG-copy ramp (v6.27-s3k)
+-- =====================================================================
+-- Comparison-only per-frame snapshot of the ROM's single continuous
+-- Camera_Y_pos_BG_copy fire-rise ramp, the FireRise speed accumulator, the BG
+-- event routine/phase, the Events_fg_5 fire-start trigger, and the camera X
+-- clamp through the seamless AIZ1->AIZ2 reload. Pins, for the engine's
+-- continuous-ramp AIZ fire-transition rewrite: (1) the frame Events_fg_5 starts
+-- the fire transition, (2) the Camera_Y_pos_BG_copy value at the AIZ1BGE_Finish
+-- reload frame, and (3) the frame the ramp crosses $310 to release
+-- Camera_max_X_pos=$6000. ROM refs: s3.asm:70383 AIZ1_FireRise
+-- (Events_bg+$02 += $280 cap $A000; Camera_Y_pos_BG_copy += speed<<4);
+-- sonic3k.asm:104638 AIZ1_AIZ2_Transition (BG copy init $200000, lerp target
+-- Events_bg+$00=$68); :105084-105096 AIZ2BGE_WaitFire $310 release. State-poll
+-- only (no execution hooks). Diagnostic report context; never feeds replay.
+local V628_AIZ_FIRE = {
+    FRAME_START = 5200,
+    FRAME_END = 5600,
+}
+
+V628_AIZ_FIRE.range = os.getenv("OGGF_S3K_AIZ_FIRE_RANGE")
+if V628_AIZ_FIRE.range and V628_AIZ_FIRE.range ~= "" then
+    local range_start, range_end = V628_AIZ_FIRE.range:match("^(%d+)%-(%d+)$")
+    if range_start and range_end then
+        V628_AIZ_FIRE.FRAME_START = tonumber(range_start)
+        V628_AIZ_FIRE.FRAME_END = tonumber(range_end)
+    else
+        print("WARN: invalid OGGF_S3K_AIZ_FIRE_RANGE, expected <start>-<end>: "
+            .. V628_AIZ_FIRE.range)
+    end
+end
+
+function V628_AIZ_FIRE.in_window()
+    return trace_frame >= V628_AIZ_FIRE.FRAME_START
+        and trace_frame <= V628_AIZ_FIRE.FRAME_END
+end
+
+function V628_AIZ_FIRE.is_aiz()
+    return mainmemory.read_u8(ADDR_ZONE) == 0x00
+end
+
+function V628_AIZ_FIRE.write()
+    if not aux_file then return end
+    if not started then return end
+    if not is_aiz_end_to_end_profile() then return end
+    if not V628_AIZ_FIRE.in_window() then return end
+    if not V628_AIZ_FIRE.is_aiz() then return end
+
+    local vfc = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
+    write_aux(string.format(
+        '{"frame":%d,"vfc":%d,"event":"aiz_fire_transition",'
+            .. '"camera_y_bg_copy":"0x%08X","camera_y_bg_rounded":"0x%04X",'
+            .. '"events_bg_00_word":"0x%04X","events_bg_02_word":"0x%04X",'
+            .. '"events_routine_bg":"0x%04X","events_fg_5":"0x%04X",'
+            .. '"camera_x":"0x%04X","camera_min_x":"0x%04X",'
+            .. '"camera_max_x":"0x%04X","player_x":"0x%04X","act":"0x%02X"}',
+        trace_frame,
+        vfc,
+        mainmemory.read_u32_be(ADDR_CAMERA_Y_BG_COPY),
+        mainmemory.read_u16_be(ADDR_CAMERA_Y_BG_ROUNDED),
+        mainmemory.read_u16_be(ADDR_EVENTS_BG + 0x00),
+        mainmemory.read_u16_be(ADDR_EVENTS_BG + 0x02),
+        mainmemory.read_u16_be(ADDR_EVENTS_ROUTINE_BG),
+        mainmemory.read_u16_be(ADDR_EVENTS_FG_5),
+        mainmemory.read_u16_be(ADDR_CAMERA_X),
+        mainmemory.read_u16_be(0xEE14),
+        mainmemory.read_u16_be(0xEE16),
+        mainmemory.read_u16_be(PLAYER_BASE + OFF_X_POS),
+        mainmemory.read_u8(ADDR_ACT)))
+end
+
+-- =====================================================================
 -- SolidObject_cont entry geometry hooks (v6.11-s3k)
 -- =====================================================================
 -- Hooks the SolidObject_cont label (sonic3k.asm:41394) every time it
@@ -4667,6 +4756,12 @@ function on_frame_end()
     -- callbacks capture ROM-side Sonic_CheckFloor and SolidObjectTop terrain
     -- evidence while this flush adds delayed redraw / Load_Level state.
     V69_AIZ.flush_aiz_handoff_terrain_state()
+
+    -- Per-frame AIZ1->AIZ2 fake-fire BG-copy ramp snapshot (v6.27 schema).
+    -- State-poll only: Camera_Y_pos_BG_copy, FireRise speed accumulator, BG
+    -- event routine/phase, Events_fg_5, and the camera X clamp through the
+    -- AIZ1->AIZ2 fire transition. Comparison-only.
+    V628_AIZ_FIRE.write()
 
     -- Per-frame oscillation snapshot (v6.1 schema). Always emit so the trace
     -- replay can ROM-verify the global oscillator phase used by HoverFan,

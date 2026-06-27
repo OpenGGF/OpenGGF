@@ -22,8 +22,25 @@ public sealed interface TraceEvent {
     record ObjectRemoved(int frame, int slot, String objectType)
         implements TraceEvent {}
 
+    /**
+     * Per-frame snapshot of an object near the player, emitted by the S1 recorder
+     * for any active object within the proximity window. Diagnostic only: replay
+     * must never hydrate engine object state from these values.
+     *
+     * <p>{@code routine2} (ob2ndRout, object offset +0x25) and {@code objoff3c}
+     * (objoff_3C at +0x3C, the 32-bit generic timer / sub-pixel accumulator) are
+     * v3.8+ optional fields. {@code objoff34}/{@code objoff36}/{@code objoff38}
+     * (per-object counter/timer/sub-state words at +0x34/+0x36/+0x38) are v3.9+
+     * optional fields. {@code objoff32} (per-object timer word at +0x32; for maker
+     * objects this is gmake_timer, e.g. the MZ2 Lava Geyser maker Obj4C) is a
+     * v3.12+ optional field. Older traces omit them; the parser supplies {@code ""}
+     * so legacy traces parse unchanged.
+     */
     record ObjectNear(int frame, String character, int slot, String objectType, short x, short y,
-                      String routine, String status, String objFrame)
+                      String routine, String status, String objFrame,
+                      String routine2, String objoff3c,
+                      String objoff34, String objoff36, String objoff38,
+                      String objoff32)
         implements TraceEvent {}
 
     /**
@@ -114,6 +131,64 @@ public sealed interface TraceEvent {
      * the ROM. Older traces (recorder &lt; 6.1) never emit this event.
      */
     record OscillationState(int frame, int levelFrameCounter, byte[] oscTable)
+        implements TraceEvent {}
+
+    /**
+     * Per-frame snapshot of the S1 object respawn-state bit array
+     * ({@code v_objstate}, 192 bytes at $FFFC00..$FFFCC0). Emitted by the v3.7+
+     * S1 recorder for the slot-interleave / slot-cadence cluster (LZ2 f1068,
+     * MZ3 f9917, SYZ1 f4430, SBZ1). {@code v_objstate[0]}/{@code [1]} are the
+     * ObjPosLoad forward/backward counters; the remaining bytes are per-spawn
+     * RememberState remember bits. <strong>Diagnostic only:</strong> tests must
+     * NOT hydrate the engine's placement/respawn state from these bytes -- they
+     * exist so the comparator can show, at a backward-OPL reload, whether ROM's
+     * respawn bit is clear (respawn) vs the engine's set (skip). Older traces
+     * (recorder &lt; 3.7) never emit this event.
+     */
+    record VObjState(int frame, byte[] bytes)
+        implements TraceEvent {}
+
+    /**
+     * Per-frame snapshot of the S1 global oscillation state ({@code v_oscillate}):
+     * the 2-byte direction bitfield at $FFFE5E followed by the $40-byte oscillating
+     * -values array at $FFFE60 ($42 bytes total). Emitted by the v3.10+ S1 recorder
+     * for the osc-phase cluster (e.g. SLZ2 f3353 circling-platform 1px). Per-object
+     * oscillators index this array (oscillator N -&gt; offset N*4 into the values
+     * array, i.e. byte $2 + N*4 from the start of this record). <strong>Diagnostic
+     * only:</strong> tests must NOT hydrate the engine's oscillation state from
+     * these bytes -- they let the comparator read the exact oscillator byte per
+     * frame to disambiguate an osc-phase-seed offset from a ride-exit seat. Older
+     * traces (recorder &lt; 3.10) never emit this event.
+     */
+    record VOscillate(int frame, byte[] bytes)
+        implements TraceEvent {}
+
+    /**
+     * Per-frame BizHawk authoritative lag state, emitted by the v3.11+ S1 recorder.
+     * {@code lagged} is {@code emu.islagged()} for the frame (the emulator polled
+     * input but did NOT complete a full logical/game step), and {@code lagcount}
+     * is {@code emu.lagcount()} (cumulative lag-frame total; {@code -1} when the
+     * recording emulator did not expose the API). Used to confirm whether the
+     * counter/oscillation "skip" frames (SLZ1/SLZ2/MZ1/MZ2/FZ cluster) coincide
+     * with emulator lag frames. <strong>Diagnostic only:</strong> tests must NOT
+     * change engine stepping from these values; any lag-handling fix is a separate,
+     * user-gated decision. Older traces (recorder &lt; 3.11) never emit this event.
+     */
+    record LagState(int frame, boolean lagged, int lagcount)
+        implements TraceEvent {}
+
+    /**
+     * Per-frame snapshot of the S1 camera vertical-boundary / look-shift state.
+     * Emitted by the v3.7+ S1 recorder for the MZ1 f2101 camera-boundary
+     * frontier (engine {@code v_limitbtm2} ~6px too high). Fields are the raw
+     * ROM words/byte: {@code limitBtm1}=v_limitbtm1 ($FFF726), {@code limitBtm2}
+     * =v_limitbtm2 ($FFF72E, the eased bottom boundary the camera clamps to),
+     * {@code lookShift}=v_lookshift ($FFF73E), {@code bgScrollVert}
+     * =f_bgscrollvert ($FFF75C). <strong>Diagnostic only:</strong> comparison
+     * context, never engine write-back. Older traces never emit this event.
+     */
+    record CameraBoundary(int frame, int limitBtm1, int limitBtm2,
+                          int lookShift, int bgScrollVert)
         implements TraceEvent {}
 
     /**
@@ -493,6 +568,36 @@ public sealed interface TraceEvent {
         implements TraceEvent {}
 
     /**
+     * Per-frame AIZ1-&gt;AIZ2 fake-fire transition diagnostic. The ROM drives a
+     * single continuous {@code Camera_Y_pos_BG_copy} (16.16) ramp via
+     * {@code AIZ1_FireRise} (docs/skdisasm/s3.asm:70383: {@code Events_bg+$02}
+     * accumulates {@code +$280} capped at {@code $A000}, then
+     * {@code Camera_Y_pos_BG_copy += speed&lt;&lt;4}), initialized at
+     * {@code $200000} with lerp target {@code Events_bg+$00=$68} in
+     * {@code AIZ1_AIZ2_Transition} (docs/skdisasm/sonic3k.asm:104638). The ramp
+     * runs uninterrupted through the seamless reload ({@code AIZ1BGE_Finish}
+     * Kos wait) and releases the post-reload {@code Camera_max_X_pos=$6000} when
+     * it crosses {@code $310} in {@code AIZ2BGE_WaitFire}
+     * (docs/skdisasm/sonic3k.asm:105084-105096). {@code eventsFg5} marks the
+     * fire-transition start trigger; {@code eventsRoutineBg} is the BG event
+     * phase. Diagnostic only: never hydrated into engine state.
+     */
+    record AizFireTransition(
+            int frame,
+            int cameraYBgCopy,
+            int cameraYBgRounded,
+            int eventsBg00Word,
+            int eventsBg02Word,
+            int eventsRoutineBg,
+            int eventsFg5,
+            int cameraX,
+            int cameraMinX,
+            int cameraMaxX,
+            int playerX,
+            int act)
+        implements TraceEvent {}
+
+    /**
      * Per-frame AIZ transition-floor solid diagnostic around the F5415
      * Sonic/Tails split. The ROM spawns {@code Obj_AIZTransitionFloor} during
      * the AIZ1 fire-refresh sequence (docs/skdisasm/sonic3k.asm:104683-104690)
@@ -565,7 +670,19 @@ public sealed interface TraceEvent {
                     node.has("routine") ? node.get("routine").asText() : "",
                     node.has("status") ? node.get("status").asText() : "",
                     // obj_frame is a v3.5+ optional field; older traces omit it.
-                    node.has("obj_frame") ? node.get("obj_frame").asText() : ""
+                    node.has("obj_frame") ? node.get("obj_frame").asText() : "",
+                    // routine2 (ob2ndRout) and objoff_3c are v3.8+ optional fields;
+                    // older traces omit them so default to "" (legacy-absent-safe).
+                    node.has("routine2") ? node.get("routine2").asText() : "",
+                    node.has("objoff_3c") ? node.get("objoff_3c").asText() : "",
+                    // objoff_34/36/38 are v3.9+ optional fields; older traces omit
+                    // them so default to "" (legacy-absent-safe).
+                    node.has("objoff_34") ? node.get("objoff_34").asText() : "",
+                    node.has("objoff_36") ? node.get("objoff_36").asText() : "",
+                    node.has("objoff_38") ? node.get("objoff_38").asText() : "",
+                    // objoff_32 (gmake_timer for makers) is a v3.12+ optional field;
+                    // older traces omit it so default to "" (legacy-absent-safe).
+                    node.has("objoff_32") ? node.get("objoff_32").asText() : ""
                 );
                 case "s1_obj64_state" -> new S1Obj64State(
                     frame,
@@ -672,6 +789,26 @@ public sealed interface TraceEvent {
                     frame,
                     node.has("level_frame_counter") ? node.get("level_frame_counter").asInt() : 0,
                     parseHexByteString(node.has("osc_table") ? node.get("osc_table").asText() : "")
+                );
+                case "v_objstate" -> new VObjState(
+                    frame,
+                    parseHexByteString(node.has("bytes") ? node.get("bytes").asText() : "")
+                );
+                case "v_oscillate" -> new VOscillate(
+                    frame,
+                    parseHexByteString(node.has("bytes") ? node.get("bytes").asText() : "")
+                );
+                case "lag_state" -> new LagState(
+                    frame,
+                    node.has("lagged") && node.get("lagged").asBoolean(false),
+                    node.has("lagcount") ? node.get("lagcount").asInt(-1) : -1
+                );
+                case "camera_boundary" -> new CameraBoundary(
+                    frame,
+                    parseHexIntOrDefault(node, "limitbtm1", -1),
+                    parseHexIntOrDefault(node, "limitbtm2", -1),
+                    parseHexIntOrDefault(node, "lookshift", -1),
+                    parseHexIntOrDefault(node, "bgscrollvert", -1)
                 );
                 case "object_state_snapshot" -> new ObjectStateSnapshot(
                     frame,
@@ -1063,6 +1200,20 @@ public sealed interface TraceEvent {
                     parseHexInt(node, "post_move_y"),
                     parseHexInt(node, "post_move_x_vel"),
                     parseHexInt(node, "post_move_y_vel")
+                );
+                case "aiz_fire_transition" -> new AizFireTransition(
+                    frame,
+                    parseHexInt(node, "camera_y_bg_copy"),
+                    parseHexInt(node, "camera_y_bg_rounded"),
+                    parseHexInt(node, "events_bg_00_word"),
+                    parseHexInt(node, "events_bg_02_word"),
+                    parseHexInt(node, "events_routine_bg"),
+                    parseHexInt(node, "events_fg_5"),
+                    parseHexInt(node, "camera_x"),
+                    parseHexInt(node, "camera_min_x"),
+                    parseHexInt(node, "camera_max_x"),
+                    parseHexInt(node, "player_x"),
+                    parseHexInt(node, "act")
                 );
                 case "aiz_transition_floor_solid" -> new AizTransitionFloorSolidState(
                     frame,

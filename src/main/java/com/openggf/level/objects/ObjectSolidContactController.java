@@ -2729,6 +2729,34 @@ final class ObjectSolidContactController {
         boolean withinLandingX = Math.abs(xFromCenter) <= landingXMargin;
 
         if (canLand && withinLandingX) {
+            // ROM Mon_Solid -> SolidObject top-overlap path gates the floor
+            // re-seat (Solid_ResetFloor / RideObject_SetRide: clear Status_InAir,
+            // set Status_OnObj, zero y_vel) on `tst.w y_vel(a1) / bmi` — a rising
+            // player crossing the top upward gets no re-seat (SolidObjectFull's
+            // upward-velocity branch, sonic3k.asm:41625-41626 loc_1E198 moveq #0,d4
+            // / rts). Without this, a player who JUMPS off the monitor's top loses
+            // his airborne state on the jump frame (SLZ3 f1187: a rolling jump off
+            // a Monitor — ROM keeps Sonic rising, the engine re-grounded him).
+            //
+            // We additionally require the JUMP status bit (`Status_Jump`), NOT just
+            // y_vel<0, to scope the release to the genuine jump-off case. ROM's gate
+            // is y_vel<0 alone, but a separate engine object-ordering issue can give
+            // a NON-jumping player a transient negative y_vel at the monitor pass
+            // (MZ1 f1260: Sonic falls, a broken monitor's break-bounce flips his
+            // y_vel up just before he should land on an ADJACENT monitor — ROM lands
+            // him because ROM's y_vel is still >=0 at that solid pass). Releasing
+            // that case regressed MZ1; gating on Status_Jump too keeps the fix to the
+            // player who actually jumped, without masking that ordering bug. Sticky
+            // (already-riding) contacts are resolved by processInlineRidingObject
+            // before reaching here, so this only affects a NEW top contact.
+            boolean risingNewContact = !sticky && player.getYSpeed() < 0
+                    && player instanceof AbstractPlayableSprite aps && aps.isJumping();
+            if (risingNewContact) {
+                // ROM loc_1E198: the player leaving the top upward is not penetrating,
+                // so neither the d3 vertical separation nor the OnObj/air-clear apply.
+                // Return no contact so the jump's airborne state and position survive.
+                return null;
+            }
             if (apply) {
                 // S1 Mon_SolidSides returns d3 as the vertical penetration and
                 // Mon_Solid aligns with `sub.w d3,obY(a1)`, unlike the generic

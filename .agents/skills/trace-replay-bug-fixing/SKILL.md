@@ -290,6 +290,30 @@ When a divergence can't be pinpointed without more ROM-side state:
 3. **Diagnostic use.** Wire the new data into `DivergenceReport.getContextWindow` rendering, or into a dedicated probe class for targeted bug investigation. **Do not** wire it into engine state mutation in the per-frame test loop.
 4. **Regenerate the affected trace(s).** Commit the regen separately from the recorder schema change so reviewers can see the data churn distinctly.
 
+## Recorder → Regen → Decode Loop — the primary engine for deep frontiers
+
+The single highest-leverage method for frontiers labelled "RAM-gated" / "BizHawk-gated": **extend the recorder to log the exact gated value, regen headless locally, decode against ground truth.** This loop cracked the deepest frontiers in practice (the camera-pipeline reorder, the S3K AIZ fire-transition fix, GHZ3 red→green). It is RUNNABLE in this environment — you do not have to defer it to the user.
+
+- **Run the recorder headless yourself.** The *complete-run* recorders are NOT driven by `record_<game>_trace.bat` (that launches the single-segment recorder). Invoke EmuHawk directly, in the background, and let it self-exit at movie end (~3.5 min for a full S1 run):
+  ```
+  EmuHawk.exe --chromeless --lua=tools/bizhawk/<game>_complete_run_recorder.lua \
+      --movie=<the complete-run bk2> "Sonic The Hedgehog (W) (REV01) [!].gen"
+  ```
+  Output lands per-zone in `tools/bizhawk/trace_output/<zone>/` (uncompressed). The full ROM name (spaces/parens/`[!]`) works as the trailing positional ROM arg to the recorder — the "spaces break it" trap is specific to the ad-hoc diag-capture path below, not the recorder. **Check which recorder made the target trace** via its `metadata.json` `profile`/`lua_script_version` (e.g. S3K AIZ is `s3k_trace_recorder.lua` + `OGGF_S3K_TRACE_PROFILE=aiz_end_to_end`, NOT the complete-run recorder).
+- **The regen CORRECTS wrong "gated" labels — distrust them.** Real ground truth disproved root after root: "needs BizHawk v_objstate" (LZ2) was actually a ring/object placement-pass separation; "needs BizHawk x_sub" (SBZ2) was a no-hardware conveyor subpixel-discard → a WIN; "boss 1px behind" (GHZ3) was a byte-identical boss with a 1-frame defeat-routine slip; a guessed `v_limitbtm2 ~0x2E8` (MZ1) was 0x02EA with a different (camera-ORDER) root. **Before accepting a "RAM-gated" verdict, regen the data that would prove it.** Equally, re-attack any frontier decoded BEFORE a pattern you have since learned (PlatformObject landing-flags, object-push/self-motion subpixel, the bclr-release pattern) — the old decode was blind to it.
+- **Validate recorder lua with a real compile, not balance-checking.** `pip install lupa`, then:
+  ```
+  python -c "import lupa; lupa.LuaRuntime().compile(open('tools/bizhawk/<recorder>.lua',encoding='utf-8',errors='replace').read())"
+  ```
+  Brace/paren/quote balance MISSES real errors — notably Lua's **200-locals-per-main-chunk limit** (top-level `local`s past 200 fail to load; EmuHawk runs, writes no `trace_output`, and looks like a silent core-init failure). Fix by making new constants global or keeping the main chunk ≤200 locals. Always lupa-compile before launching a regen.
+- **Install regen output by `bk2_frame_offset`, NOT by directory name.** The recorder names output dirs by RAM-detected zone/act, which do not match the repo `<zone>_completerun` names (e.g. regen `sbz3` off 189578 → repo `fz_completerun`; regen `lz4` off 181004 → repo `sbz3_completerun` — the S1 SBZ3=Labyrinth-act-4 internal quirk). Build an offset→repo-dir map from each repo `metadata.json` and install by matching offset; a name-based copy silently corrupts two zones. Gzip `physics.csv`/`aux_state.jsonl` → `.gz`, copy `metadata.json`.
+- **Verify the frontier reproduces, and do NOT commit aux bloat.** After install, run the comparator: the first-error frame must be UNCHANGED (the engine is unchanged; only the aux is richer) — that proves the regen is faithful before you decode. For the commit: a fix is an ENGINE change that advances against the lean already-committed trace, so prefer engine-only commits. Only commit a regenerated trace when the new aux fields are genuinely needed by the suite, and if the recorder widened the per-frame aux (it can balloon 8×), window it to the relevant frames or keep it out of the commit.
+- **Parallel regen/decode agents need worktree isolation.** Two non-isolated agents collided in a shared worktree (one branch overwrote the other). Use `isolation: worktree` (or run serially).
+
+## Shared-resolver ordering — check the engine's pipeline ORDER against ROM
+
+Camera/boundary/event-timing frontiers are often not a value bug but an **ordering** bug. ROM `DeformLayers` runs `ScrollHoriz`/`ScrollVertical` (camera move + clamp) BEFORE `DynamicLevelEvents` (zone event handler + boundary easing); the engine had it inverted (events+easing before the camera move), applying the airborne +8 boundary accel one frame early and feeding zone handlers a stale pre-scroll camera X. Reordering to ROM order fixed three S1 frontiers at once. Two lessons: (1) when a divergence is camera_x/camera_y/boundary/event-driven and the per-value math checks out, diff the engine's per-frame *pipeline order* against the ROM main loop; (2) a structural reorder can EXPOSE a pre-existing bug the wrong order was accidentally masking ("two wrongs made a right" — e.g. the S3K AIZ fire-transition `0x140` reset only "worked" because the inverted order applied a maxX release same-frame). Budget for the exposed bug, and gate the fix on the full cross-game sweep since the pipeline is shared.
+
 ## BizHawk Live Diagnostic Capture (ad-hoc register/RAM dumps)
 
 Separate from the recorder (which produces full trace files), you often need a **one-off lua** that dumps ROM registers/RAM at a few specific frames to compare against the engine — e.g. the ROM value of a player/object field at the exact divergence frame. Three hard-won rules make this fast and non-destructive.
@@ -385,6 +409,62 @@ in the `ENG:` line as `sub=(XXXX,YYYY)`. For P9-pattern 1-pixel Y frontiers
 blocks across the frames around the divergence to identify which routine
 dropped the sub-pixel carry.
 
+### Slot-occupancy divergence (`obj_sNN_slot` / `eng-expected-onObj sNN missing`)
+
+When the first error is a slot field (`obj_sNN_slot exp 0xNN act 0xMM`) or the
+context shows `eng-expected-onObj sNN missing` (the player rides/expects an
+object in a slot the engine filled with something else), the engine's dynamic
+object RAM (SST) occupancy has drifted from ROM. Diagnose, don't assume RAM:
+
+- **Slot_dump-comparison method.** Newer-format traces (post-old-lua-3.2) carry
+  a per-frame `slot_dump` aux event (ROM slot -> obID map; e.g. LZ2 has ~469).
+  Diff the engine's **live** slot map (`ObjectManager` slot occupancy) against the
+  aux `slot_dump` frame-by-frame to pin the divergence to an exact slot / frame /
+  obID, then trace WHY that slot diverged (which object spawned/unloaded
+  differently freed or claimed it). **Use the PRODUCTION bootstrap** (the real
+  trace-replay path / `applyBootstrap`, correct `zone()`/`act()` overrides) for
+  this probe — a bare `SharedLevel` + `HeadlessTestFixture` that skips
+  `applyBootstrap` produces a wrong-harness artifact (frame-0 slot mismatch that
+  isn't real). **Old lua-3.2 traces have no `slot_dump` aux** (only
+  `physics.csv` + `metadata.json`) — they must be regenerated before this method
+  applies; without the aux you cannot diff ROM-side occupancy.
+
+- **Triage reframe: "slot-cadence" is OFTEN a single tractable object bug, not
+  genuine RAM.** Before declaring a slot divergence RAM-gated, trace the
+  responsible object-lifetime event. Classify:
+  - **TRACTABLE** (fixable object-local, disasm-cited): an object deleted on the
+    wrong frame (delete-check run every frame vs only its ROM routines — see
+    s1-implement-object P9/S2 P50), a wrong child COUNT or array-vs-real-slot
+    spawn (`dbf`+1 / FindFreeObj per piece — P8/P21/S2 P46), a wrong off-screen
+    delete bound (raw `isOnScreenX` vs ROM render box — P10/S2 P52), an
+    incomplete collapse/release drop, a dormant/consumed object still collidable
+    (col_none — P7/P11/S2 P51/S3K P23), or a wrong allocation function
+    (`FindFreeObj` lowest-free per ring vs `FindNextFreeObj`/`allocateSlotAfter`
+    chaining — the S1 lost-ring scatter; `25, 37 Rings.asm:251` uses `FindFreeObj`
+    each iteration).
+  - **RAM-gated** (bounce with the exact first-divergent slot/frame/obID + the
+    `v_objstate`/remember-bit index): subpixel/position-accumulation, the
+    `v_objstate` remember-bit byte-array, or coupled multi-object spawn cadence
+    with no single tractable lifetime event.
+  Trace the responsible lifetime event (the upstream object whose spawn/unload
+  frame differs) before concluding gated — the SLOT being wrong does not mean the
+  ridden object's own position/motion is wrong (verify the solid is faithful and
+  only its SLOT differs).
+
+- **Re-verify on CLEAN develop, especially `TestRewindCoverageGuard`.** Local
+  worktree baselines (`coverage-baseline.txt`, frontier counts) go stale and can
+  MASK a new coverage gap a fix introduces. After any object-presence change,
+  `git reset --hard origin/develop`-equivalent re-verify and run
+  `TestRewindCoverageGuard`; a newly spawned real child (P8/P21) needs a
+  baseline entry or the guard fails.
+
+- **Rewind baseline-entry convention for parent-recreated render-only children.**
+  When a multi-piece fix spawns render-only children whose recreate path is
+  parent-driven (the parent re-creates them on rewind), baseline-entry the
+  child's `#recreate` + `#finalScalar` keys in `coverage-baseline.txt` (precedent:
+  `SpikedBallChain$ChainChild`, `CollapsingLedge$Fragment`), rather than adding a
+  bespoke per-child recreate path.
+
 ## Cross-Game Sanity Checks
 
 Always run all green trace tests every iteration when touching shared code:
@@ -400,6 +480,22 @@ For S3K work specifically, also keep the S3K must-keep-green tests green:
 - `TestSonic3kDecodingUtils`
 
 If a fix is genuinely game-divergent (different games' ROMs really do behave differently), add a flag to `PhysicsFeatureSet`, set the right value on each game's `SONIC_1`/`SONIC_2`/`SONIC_3K` constant, and branch on the flag at the call site.
+
+## Do NOT bounce a frontier as "RAM-gated" without a PC-execute probe first
+
+**Hard rule (hard-won, repeatedly violated):** a bounce that concludes a frontier is "BizHawk/RAM-gated", "needs hardware RAM", or that the deciding value is a "mid-frame register / sub-frame spawn order / slot-occupancy cadence / sub-pixel that no per-VBlank trace can capture" is **NOT valid** until you have built a targeted **PC-execute probe** (see *BizHawk Live Diagnostic Capture* above — `diag_template_fast.lua` + `event.onmemoryexecute`) and captured the exact mid-frame 68k state at the divergence instruction.
+
+**Why:** the recorder samples RAM once per VBlank, but the recorder is *Lua inside BizHawk* — `event.onmemoryexecute(cb, addr, "system")` fires at ANY 68k instruction and `emu.getregister("M68K <reg>")` / `mainmemory` read state **mid-frame, at that exact PC**. "The per-VBlank trace can't see it" is a recorder limitation, **never** a BizHawk one. Mid-frame registers, the slot a `FindFreeObj` returns, the `x_sub` at a `SpeedToPos`, a counter at its update — all directly capturable.
+
+**Proof this matters:** SYZ1 f4430 was bounced THREE times as "RAM-gated on ROM mid-frame obVelY". A PC-probe at the `Sonic_FloorUp` branch PCs (0x13DF0/0x13DF2/0x13E02), gated to `a0==v_player` in the divergence window, captured `obRoutine=0x04` (Sonic_Hurt) + which branch fired — revealing the engine missed `Sonic_HurtStop`'s velocity-zeroing on the *angled-ceiling* hurt-land. Object-local fix, universal S1/S2/S3K, commit `42bb2fe22`, 554→406 errors. The "uncapturable" wall was an error, not a fact.
+
+**Recipe by gate type** (build a standalone probe lua per *BizHawk Live Diagnostic Capture*; gate callbacks to `a0==0xFFD000` for the player or the target object slot + a `bk2_offset+frame` window; read-only):
+- **mid-frame register** → hook the computing instruction (the `move`/`btst`/branch); dump the register/field + which branch fired. Either find the engine's divergent branch/value (fix) or prove engine==ROM at every step (real bounce).
+- **slot-cadence / slot-interleave** → hook `FindFreeObj`/`FindNextFreeObj` (slot returned in an address reg → `slot=(areg-0xFFD000)/0x40`) + `DeleteObject` + the spawn site; capture the per-frame spawn/free→slot timeline; diff vs the engine to find the FIRST object that takes a wrong slot and WHY (spawned/freed at the wrong frame). Turns "irreducible slot-occupancy" into a decodable spawn/free-cadence diff — sometimes a fixable object-lifetime bug.
+- **sub-pixel** → hook `SpeedToPos` / the position-update instruction; capture `x_sub`/`y_sub` mid-frame.
+- **counter-phase** → hook the counter's update instruction.
+
+Only after the probe shows the engine's mid-frame value matches ROM at every inspectable step is a "gated" bounce honest — and then quote the captured values, not "ROM unknown". See memory `bizhawk-pc-execute-hook-lever`.
 
 ## When to Stop and Plan
 

@@ -166,6 +166,30 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
         return super.isHighPriority();
     }
 
+    /**
+     * Badniks move during their routine ({@code SpeedToPos}) and then run their
+     * {@code out_of_range} / {@code RememberState} unload check at the END of
+     * the routine, on the CURRENT post-move position. ROM examples:
+     * Jaws ({@code 2C Badnik - Jaws.asm:58-59} SpeedToPos -> RememberState),
+     * Crabmeat ({@code 1F Badnik - Crabmeat.asm:116,53}), Chopper
+     * ({@code 2B Badnik - Chopper.asm:35,11}), Burrobot ({@code 2D Badnik -
+     * Burrobot.asm:70,42}), Moto Bug ({@code 40 Badnik - Moto Bug.asm:89,67}),
+     * Newtron ({@code 42 Badnik - Newtron.asm:129,38}), Roller ({@code 43
+     * Badnik - Roller.asm:124,51}), Yadrin ({@code 50 Badnik - Yadrin.asm:110,
+     * 88}), Ball Hog ({@code 1E, 20 Badnik - Ball Hog and Cannonball.asm:55}),
+     * Basaran ({@code 55 Badnik - Basaran.asm:130 SpeedToPos -> RememberState
+     * tail}), Walking Bomb ({@code 5F Badnik - Walking Bomb.asm:167,158}),
+     * Orbinaut ({@code 60 Badnik - Orbinaut.asm:196,122 custom RememberState}).
+     * <p>
+     * Only the S1 counter-based exec loop honours this (S2/S3K already check
+     * out_of_range post-execute in {@code runExecLoop}). Static / fixed-anchor
+     * objects keep the default (pre-execute) check.
+     */
+    @Override
+    public boolean checksOutOfRangeAfterRoutine() {
+        return true;
+    }
+
     @Override
     public int getX() {
         return currentX;

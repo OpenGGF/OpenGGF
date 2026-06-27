@@ -3671,15 +3671,21 @@ public class GameLoop {
             levelManager.updateObjectPositions();
             spriteManager.update(inputHandler);
         }
+        // Camera/scroll in ROM order (DeformLayers (REV01).asm:16-18): the camera
+        // move/clamp (ScrollVertical) runs BEFORE the zone event handler, and the
+        // boundary easing (DynamicLevelEvents tail) runs AFTER it. Mirrors
+        // LevelFrameStep steps 4a/4b/4c. Camera/scroll only if not frozen (during
+        // fadeout, scroll freezes).
+        boolean scrollFrozen = endingProvider.isScrollFrozen();
+        if (!scrollFrozen) {
+            camera.updatePosition();
+        }
         LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
         if (levelEvents != null) {
             levelEvents.update();
         }
-
-        // Camera/scroll only if not frozen (during fadeout, scroll freezes)
-        if (!endingProvider.isScrollFrozen()) {
+        if (!scrollFrozen) {
             camera.updateBoundaryEasing();
-            camera.updatePosition();
             levelManager.postCameraObjectPlacementSync();
             levelManager.update();
             levelManager.refreshObjectPostCameraRenderState();

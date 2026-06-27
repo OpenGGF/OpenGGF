@@ -152,7 +152,12 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity sprite) {
-        return true;
+        // ROM Pri_Switch (3E Prison Capsule.asm:94): on the trigger frame the
+        // capsule object leaves routine 4 (SolidObject) for routine $A
+        // (Pri_Explosion), which never calls SolidObject again. So once the
+        // switch has fired it is no longer solid - the player it just released
+        // into the air must NOT be re-seated onto the depressed switch.
+        return !triggered;
     }
 
     @Override
@@ -161,6 +166,16 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
         if (!triggered && contact.standing() && player.getYSpeed() >= 0) {
             triggered = true;
             currentY = baseY + DEPRESS_DISTANCE;
+
+            // ROM Pri_Switch (3E Prison Capsule.asm:101-102): on the switch-trigger
+            // frame the capsule releases the player into the air -
+            //   bclr #3,(v_player+obStatus).w  ; clear Status_OnObj
+            //   bset #1,(v_player+obStatus).w  ; set Status_InAir
+            // so the player drops off the depressed switch under gravity while the
+            // controls are locked to btnR. Without this the engine left the player
+            // seated/riding (air=0, OnObj set) where the ROM was airborne.
+            player.setOnObject(false);
+            player.setAir(true);
 
             if (parent != null) {
                 parent.onButtonTriggered();
