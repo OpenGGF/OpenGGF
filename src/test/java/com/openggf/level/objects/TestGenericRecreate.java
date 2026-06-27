@@ -199,6 +199,23 @@ class TestGenericRecreate {
                 "fixture hook marker proves recreateForRewind ran after primitive probe construction");
     }
 
+    @Test
+    void spawnIntIntParentProbeSkipsConstructorWhenLiveParentIsMissing() {
+        ObjectSpawn capturedSpawn = new ObjectSpawn(0x260, 0x1D0, 0x7006, 0, 0, false, -1);
+        DynamicObjectEntry entry = new DynamicObjectEntry(
+                SpawnIntIntParentRewindRecreatableObject.class.getName(),
+                capturedSpawn,
+                -1,
+                null);
+
+        ObjectInstance result = assertDoesNotThrow(
+                () -> ObjectRewindDynamicCodecs.genericRecreate(entry, ctx),
+                "missing live parent should make the parent probe unavailable, not call the constructor with null");
+
+        assertNull(result,
+                "without a live parent or alternate probe constructor, genericRecreate should report no recreate path");
+    }
+
     // =========================================================================
     // Path 2 — Registry path (direct genericRecreate call)
     // =========================================================================
@@ -278,6 +295,14 @@ class TestGenericRecreate {
     void htzGroundFireImplementsRewindRecreatable() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(HtzGroundFireObjectInstance.class),
                 "HtzGroundFireObjectInstance must implement RewindRecreatable");
+    }
+
+    @Test
+    void dynamicObjectRecreateContextRequiresObjectManager() {
+        NullPointerException thrown = assertThrows(NullPointerException.class,
+                () -> new DynamicObjectRecreateContext(null));
+
+        assertTrue(thrown.getMessage().contains("objectManager"));
     }
 
     // =========================================================================
@@ -447,6 +472,42 @@ class TestGenericRecreate {
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
             return new IntIntIntBooleanRewindRecreatableObject(
                     ctx.spawn().x(), ctx.spawn().y(), ctx.spawn().subtype(), true);
+        }
+
+        @Override
+        public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) {
+            // no-op
+        }
+    }
+
+    private static final class SpawnIntIntParentRewindRecreatableObject
+            extends AbstractObjectInstance implements RewindRecreatable {
+        SpawnIntIntParentRewindRecreatableObject(
+                ObjectSpawn spawn,
+                int xOffset,
+                int yOffset,
+                ParentProbeObject parent) {
+            super(new ObjectSpawn(spawn.x() + xOffset, spawn.y() + yOffset, 0, 0, 0, false, 0),
+                    "SpawnIntIntParentRewindRecreatableObject");
+            if (parent == null) {
+                throw new IllegalArgumentException("parent is required");
+            }
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new SpawnIntIntParentRewindRecreatableObject(ctx.spawn(), 0, 0, new ParentProbeObject());
+        }
+
+        @Override
+        public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) {
+            // no-op
+        }
+    }
+
+    private static final class ParentProbeObject extends AbstractObjectInstance {
+        ParentProbeObject() {
+            super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "ParentProbeObject");
         }
 
         @Override
