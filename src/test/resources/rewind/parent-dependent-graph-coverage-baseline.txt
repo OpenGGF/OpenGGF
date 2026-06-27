@@ -1,11 +1,6 @@
 # status|class|evidence
 # covered = focused graph/object-manager rewind test exists for this family.
 # session-tail = still needs a real session/family harness before claiming graph-safe restore.
-covered|com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild|TestS2BadnikChildGraphRewind
-covered|com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance|TestS2BadnikChildGraphRewind
-covered|com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance|TestS2BadnikChildGraphRewind
-covered|com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance|TestS2BadnikChildGraphRewind
-covered|com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance|TestS2BadnikChildGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.ARZBossArrow|TestS2ArzArrowGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossContainer|TestS2CpzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend|TestS2CpzBossGraphRewind
