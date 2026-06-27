@@ -146,6 +146,28 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance {
     }
 
     @Override
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        // ROM: the killing hit sets obStatus bit 7; the boss only acts on it when its
+        // own routine reaches BSYZ_StatusUpdate, where BSYZ_Defeated does
+        //   move.b #6,ob2ndRout(a0)   ; select BSYZ_Explode
+        //   move.w #180,BossSpringYard_GenericTimer(a0)
+        //   rts
+        // (docs/s1disasm/_incObj/75, 76 Boss - SYZ Main and Blocks.asm:154-160).
+        // BSYZ_Defeated returns WITHOUT falling through to BSYZ_Explode, so the newly
+        // selected secondary routine — and its first defeat-timer decrement
+        // (BSYZ_Explode subq.w #1,GenericTimer, asm:434) — is not dispatched until the
+        // next frame (BSYZ_ShipMain re-reads ob2ndRout at the top, asm:70-74). The engine
+        // selects the defeat routine during the touch-response pass that runs before this
+        // object's own update(), so without this one-frame deferral updateDefeatWait()
+        // decrements the $B4 timer on the same frame the routine changed. The deferral
+        // restores that settle frame, which propagates through ascent (BSYZ_Recover) to
+        // BSYZ_Escape so the `addq.w #2,(v_limitright2)` camera scroll starts on the
+        // correct frame (SYZ3 trace f12491, not f12490). Same ROM dispatch shape as the
+        // GHZ boss (Sonic1GHZBossInstance.defeatDeferralAppliesToThisBoss).
+        return true;
+    }
+
+    @Override
     protected void onHitTaken(int remainingHits) {
         faceAnim = Sonic1BossAnimations.ANIM_FACE_HIT;
     }
@@ -434,7 +456,15 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance {
             state.xVel = 0;
             timer = -1;
 
-            services().gameState().setCurrentBossId(0);
+            // ROM: BSYZ_Explode .transition (asm:440-453) clears velocities and the
+            // defeated status bit but does NOT touch f_lockscreen — the screen lock
+            // stays set through the ascent/escape and the run to the egg capsule, and
+            // is cleared only by the Egg Prison (Obj3E: clr.b (f_lockscreen).w). The
+            // engine models f_lockscreen via currentBossId, which the Egg Prison clears
+            // (Sonic1EggPrisonObjectInstance). Clearing it here dropped the strict
+            // right-boundary (RIGHT_EXTRA +0x40) one phase early, letting the player run
+            // past v_limitright2+0x128 to the egg capsule (SYZ3 trace f12767: ROM stops
+            // x_speed at the boundary x=0x2E68, engine kept running).
         } else {
             // ROM: BossDefeated — spawn explosions every 8 frames
             if ((frameCounter & 7) == 0) {
