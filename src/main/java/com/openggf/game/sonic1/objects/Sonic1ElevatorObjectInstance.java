@@ -227,9 +227,27 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
             // ROM Elev_Action runs ExitPlatform, then movement, then MvSonicOnPtfm2.
             // Resolve the solid contact after movement so the riding player is
             // snapped to the platform's moved position in the same frame.
+            //
+            // ExitPlatform (docs/s1disasm/_incObj/sub ExitPlatform.asm:9-39) tests the
+            // player's pre-move state: if airborne (jumped off) OR horizontally outside
+            // the platform width, it does `move.b #2,obRoutine(a0)` -- reverting the
+            // elevator to Elev_Platform (routine 2). Capture that condition before the
+            // move (ExitPlatform runs first in Elev_Action), apply the routine revert
+            // after this frame's move+seat (the routine change takes effect next frame,
+            // exactly as the ROM continues into Elev_Types/MvSonicOnPtfm2 after setting
+            // the routine byte). Without this the elevator stays in routine 4 forever
+            // after the first ride, so re-landing detection (checkpointAll) keeps running
+            // AFTER the upward move instead of before it (routine 2's PlatformObject
+            // order), seating a falling rolling-jump player one frame early
+            // (SLZ3 f4026: detect at post-move elevY=0x0103/top 0xFB lands the player,
+            // ROM detects at pre-move elevY=0x0105/top 0xFD and stays airborne to f4027).
+            boolean exited = playerExitedPlatform(player);
             executeActionTypes(player);
             updateDynamicSpawn(x, y);
             checkpointAll();
+            if (exited && !isDestroyed()) {
+                routine = 2;
+            }
         } else if (routine == 2) {
             // Routine 2 (Elev_Platform): PlatformObject runs before Elev_Types.
             // Manual checkpoints do not invoke the legacy onSolidContact callback, so
@@ -245,6 +263,25 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
             }
             updateDynamicSpawn(x, y);
         }
+    }
+
+    /**
+     * ROM ExitPlatform exit test (docs/s1disasm/_incObj/sub ExitPlatform.asm:23-34):
+     * the rider has left the platform when airborne (jumped off) or when their X
+     * position is outside the platform's [x-halfWidth, x+halfWidth) span.
+     */
+    private boolean playerExitedPlatform(AbstractPlayableSprite player) {
+        if (player == null) {
+            return false;
+        }
+        // btst #1,obStatus(a1) / bne .exitedPlatform -- airborne riders exit immediately.
+        if (player.getAir()) {
+            return true;
+        }
+        // move.w obX(a1),d0 / sub.w obX(a0),d0 / add.w d1,d0 / bmi .exited;
+        // cmp.w d2,d0 / blo .return  (d1 = obActWid, d2 = 2*obActWid)
+        int rel = player.getCentreX() - x + halfWidth;
+        return rel < 0 || rel >= (halfWidth * 2);
     }
 
     /**
