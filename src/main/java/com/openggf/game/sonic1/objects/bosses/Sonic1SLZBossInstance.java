@@ -249,11 +249,15 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
             int seesawX = seesaw.getSpawn().x();
             // ROM: exact match (beq.s loc_18AC0)
             if (seesawX + d4 == bossX) {
-                // Matched seesaw — advance to ball spawn
+                // Matched seesaw — advance to ball spawn. ROM .prepDrop only arms
+                // the timer and advances the routine here; the ball itself is
+                // created one frame later on the first MakeBall frame (see
+                // updateBallSpawn), so it inherits the boss X/Y AFTER this match
+                // frame's BossMove (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main
+                // and Spike Balls.asm:251-255).
                 targetSeesawIndex = i;
                 state.routineSecondary = STATE_BALL_SPAWN;
                 timer = BALL_SPAWN_DELAY; // $28 = 40 frames
-                spawnBossSpikeball();
                 return;
             }
         }
@@ -264,6 +268,15 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
     // ROM: BossStarLight_MakeBall — timer countdown, then back to scanning
     // Returns true on timer expiry (BossMove + sine should run via loc_189CA)
     private boolean updateBallSpawn() {
+        // ROM BSLZ_MakeBall: on the first MakeBall frame (timer still == 40) it
+        // allocates the spikeball via FindNextFreeObj, THEN decrements the timer.
+        // Creating the ball here (rather than on the SCANNING match frame) makes it
+        // spawn at the boss's post-match-move X/Y and fall the ROM-correct number of
+        // gravity steps (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike
+        // Balls.asm:259-302).
+        if (timer == BALL_SPAWN_DELAY) {
+            spawnBossSpikeball();
+        }
         timer--;
         if (timer <= 0) {
             // ROM: subq.b #2,ob2ndRout(a0) — back to scanning (loc_18B40 -> loc_189CA)
