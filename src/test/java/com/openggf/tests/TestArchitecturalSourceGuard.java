@@ -23,12 +23,12 @@ class TestArchitecturalSourceGuard {
     private static final String ENGINE_PATH = "com/openggf/Engine.java";
     private static final String GAME_LOOP_PATH = "com/openggf/GameLoop.java";
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
-    private static final int OBJECT_MANAGER_MAX_LINES = 4276;
-    private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_LINE_BUDGETS = Map.of(
-            "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 8410,
-            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 5119,
-            "com/openggf/level/LevelManager.java", 4148,
-            GAME_LOOP_PATH, 3918
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2735;
+    private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
+            "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
+            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3065,
+            "com/openggf/level/LevelManager.java", 2752,
+            GAME_LOOP_PATH, 2624
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
@@ -638,9 +638,10 @@ class TestArchitecturalSourceGuard {
     @Test
     void objectManagerFacadeStaysWithinExtractedCollaboratorBudget() throws IOException {
         SourceFile objectManager = SourceFile.read(SRC_MAIN.resolve(OBJECT_MANAGER_PATH));
-        int lineCount = objectManager.lines().size();
-        assertTrue(lineCount <= OBJECT_MANAGER_MAX_LINES,
-                "ObjectManager.java is " + lineCount + " lines; budget is " + OBJECT_MANAGER_MAX_LINES
+        int lineCount = objectManager.effectiveSourceLineCount();
+        assertTrue(lineCount <= OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES,
+                "ObjectManager.java is " + lineCount + " effective source lines; budget is "
+                        + OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES
                         + " after extracting ObjectPlacementController, ObjectTouchResponseController, "
                         + "and ObjectSolidContactController. Keep new placement, touch-response, "
                         + "and solid-contact logic in those collaborators.");
@@ -649,11 +650,12 @@ class TestArchitecturalSourceGuard {
     @Test
     void releaseCriticalLargeClassesDoNotGrowWithoutExtraction() throws IOException {
         List<String> violations = new ArrayList<>();
-        for (Map.Entry<String, Integer> budget : RELEASE_CRITICAL_CLASS_LINE_BUDGETS.entrySet()) {
+        for (Map.Entry<String, Integer> budget
+                : RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS.entrySet()) {
             String relative = budget.getKey();
-            int lineCount = SourceFile.read(SRC_MAIN.resolve(relative)).lines().size();
+            int lineCount = SourceFile.read(SRC_MAIN.resolve(relative)).effectiveSourceLineCount();
             if (lineCount > budget.getValue()) {
-                violations.add(relative + " is " + lineCount + " lines; budget is "
+                violations.add(relative + " is " + lineCount + " effective source lines; budget is "
                         + budget.getValue()
                         + ". Extract focused collaborators before growing this release-critical file.");
             }
@@ -1347,6 +1349,28 @@ class TestArchitecturalSourceGuard {
                 violations);
     }
 
+    @Test
+    void sampleSourceBudgetIgnoresCommentsAndBlankLines() {
+        SourceFile source = SourceFile.fromText("""
+                class Budgeted {
+                    // This comment documents a non-obvious invariant.
+
+                    void work() {
+                        run();
+                    }
+
+                    /*
+                     * Multi-line explanations should not consume architecture budget.
+                     */
+                    void moreWork() {
+                        runAgain();
+                    }
+                }
+                """);
+
+        assertEquals(8, source.effectiveSourceLineCount());
+    }
+
     private static List<Path> productionFiles() throws IOException {
         if (!Files.isDirectory(SRC_MAIN)) {
             return List.of();
@@ -1615,6 +1639,16 @@ class TestArchitecturalSourceGuard {
 
         static SourceFile read(Path path) throws IOException {
             return new SourceFile(Files.readString(path), Files.readAllLines(path));
+        }
+
+        static SourceFile fromText(String text) {
+            return new SourceFile(text, text.lines().toList());
+        }
+
+        int effectiveSourceLineCount() {
+            return (int) stripComments(text).lines()
+                    .filter(line -> !line.isBlank())
+                    .count();
         }
 
         List<MethodSpan> methods() {

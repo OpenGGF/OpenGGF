@@ -144,7 +144,9 @@ oracles, and added a guard that fails the build on assertion-free `@Test`
 methods, plus order-dependence hardening (an S3K AIZ replay-probe crash fix, a
 fork-mate state-leak fix flagged by the singleton-lifecycle guard, and the MZ1
 lost-ring regression test rerouted through the production replay bootstrap so it
-is deterministic rather than fork-order dependent). See CHANGELOG.md for the
+is deterministic rather than fork-order dependent). Source-budget architecture
+guards now count effective source lines so comments and blank lines do not
+consume budget or incentivize deleting ROM-parity documentation. See CHANGELOG.md for the
 detailed, per-merge history.
 
 ### Where do I get ROMs?
