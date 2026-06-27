@@ -1790,11 +1790,23 @@ public final class RewindRoundTripHarness {
 
         AbstractObjectInstance ribot = findFirstByClass(om, RibotBadnikInstance.class);
         if (ribot == null) return null;
-        ribot.update(0, new com.openggf.tests.TestablePlayableSprite("sonic", (short) 160, (short) 240));
-        AbstractObjectInstance activeChild = findFirstByClassName(
-                om,
-                "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild");
+
+        Class<? extends AbstractObjectInstance> activeChildClass;
+        try {
+            activeChildClass = Class.forName(
+                    "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild")
+                    .asSubclass(AbstractObjectInstance.class);
+        } catch (ClassNotFoundException | ClassCastException e) {
+            return null;
+        }
+        AbstractObjectInstance activeChild = tryConstructChildWithLiveParent(activeChildClass, stub, ribot);
         if (activeChild == null) return null;
+        try {
+            om.addDynamicObject(activeChild);
+        } catch (Throwable t) {
+            return null;
+        }
+
         AbstractObjectInstance child = tryConstructChildWithLiveParent(cls, stub, activeChild);
         if (child == null) return null;
         try {
