@@ -38,12 +38,6 @@ covered|com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance|TestS2CpzBo
 covered|com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance|TestS2EhzBossGraphRewind
 covered|com.openggf.game.sonic2.objects.SeesawBallObjectInstance|TestSeesawBallGraphRewind
 covered|com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild|com.openggf.game.sonic3k.objects.TestAizDisappearingFloorGraphRewind
-covered|com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade|TestS3kHczEndBossGraphRewind
-covered|com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash|TestS3kHczEndBossGraphRewind
-covered|com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute|TestS3kHczEndBossGraphRewind
-covered|com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip|TestS3kHczEndBossGraphRewind
-covered|com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine|TestS3kHczEndBossGraphRewind
-covered|com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn|TestS3kHczEndBossGraphRewind
 covered|com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance|com.openggf.game.sonic3k.objects.TestMhzEndBossArenaHelperRewind
 covered|com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild|com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossHitProxyRewind
 covered|com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild|TestS3kMhzEndBossGraphRewind

@@ -22,6 +22,10 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS3kAizIntroGraphRewind";
     private static final String AIZ_MINIBOSS_GRAPH_TEST =
             "TestS3kAizMinibossGraphRewind";
+    private static final String HCZ_END_BOSS_GRAPH_TEST =
+            "TestS3kHczEndBossGraphRewind";
+    private static final String HCZ_CGZ_FAN_GRAPH_TEST =
+            "TestS3kHczCgzFanGraphRewind";
     private static final String MECHA_SONIC_GRAPH_TEST =
             "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind";
     private static final String MTZ_BOSS_GRAPH_TEST =
@@ -109,6 +113,27 @@ class TestGraphCoveredIsolatedProbeClassification {
                 AIZ_MINIBOSS_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.AizMinibossNapalmController",
                 AIZ_MINIBOSS_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void hczEndBossAndFanChildrenAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade",
+                HCZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash",
+                HCZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute",
+                HCZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip",
+                HCZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine",
+                HCZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn",
+                HCZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild",
+                HCZ_CGZ_FAN_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }

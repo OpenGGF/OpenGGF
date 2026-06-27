@@ -208,7 +208,28 @@ public final class RewindRoundTripHarness {
                     "TestS3kAizMinibossGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic3k.objects.AizMinibossNapalmController",
-                    "TestS3kAizMinibossGraphRewind"));
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild",
+                    "TestS3kHczCgzFanGraphRewind"));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
