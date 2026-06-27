@@ -313,6 +313,18 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.AizMinibossNapalmController",
                     "TestS3kAizMinibossGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild",
+                    "com.openggf.game.sonic3k.objects.TestAizDisappearingFloorGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1CollapseChild",
+                    "com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper",
+                    "com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild",
+                    "com.openggf.game.sonic3k.objects.TestHczMinibossRocketTouchRewind"),
+            Map.entry(
                     "com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade",
                     "TestS3kHczEndBossGraphRewind"),
             Map.entry(
@@ -333,6 +345,18 @@ public final class RewindRoundTripHarness {
             Map.entry(
                     "com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild",
                     "TestS3kHczCgzFanGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.IczBigSnowPileInstance",
+                    "com.openggf.game.sonic3k.objects.TestRewindFixS3KIczBigSnowPileCodec"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild",
+                    "TestS3kNestedHurtboxGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance",
+                    "com.openggf.game.sonic3k.events.TestSonic3kMgz2CollapseEvents"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
+                    "TestS3kNestedHurtboxGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance",
                     "com.openggf.game.sonic3k.objects.TestMhzEndBossArenaHelperRewind"),

@@ -50,6 +50,18 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS1SyzBossBlockGraphRewind";
     private static final String SEESAW_GRAPH_TEST =
             "TestSeesawBallGraphRewind";
+    private static final String AIZ_DISAPPEARING_FLOOR_GRAPH_TEST =
+            "com.openggf.game.sonic3k.objects.TestAizDisappearingFloorGraphRewind";
+    private static final String LBZ1_CUTSCENE_GRAPH_TEST =
+            "com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind";
+    private static final String HCZ_MINIBOSS_ROCKET_TOUCH_GRAPH_TEST =
+            "com.openggf.game.sonic3k.objects.TestHczMinibossRocketTouchRewind";
+    private static final String ICZ_BIG_SNOW_PILE_GRAPH_TEST =
+            "com.openggf.game.sonic3k.objects.TestRewindFixS3KIczBigSnowPileCodec";
+    private static final String S3K_NESTED_HURTBOX_GRAPH_TEST =
+            "TestS3kNestedHurtboxGraphRewind";
+    private static final String MGZ2_COLLAPSE_GRAPH_TEST =
+            "com.openggf.game.sonic3k.events.TestSonic3kMgz2CollapseEvents";
 
     @BeforeEach
     void initHeadless() {
@@ -289,6 +301,29 @@ class TestGraphCoveredIsolatedProbeClassification {
                 S2_CPZ_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment",
                 S2_CPZ_BOSS_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void sonic3kMiscCoveredParentDependentRowsAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild",
+                AIZ_DISAPPEARING_FLOOR_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1CollapseChild",
+                LBZ1_CUTSCENE_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper",
+                LBZ1_CUTSCENE_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild",
+                HCZ_MINIBOSS_ROCKET_TOUCH_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.IczBigSnowPileInstance",
+                ICZ_BIG_SNOW_PILE_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild",
+                S3K_NESTED_HURTBOX_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance",
+                MGZ2_COLLAPSE_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
+                S3K_NESTED_HURTBOX_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }
