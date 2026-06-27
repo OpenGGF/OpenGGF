@@ -1856,6 +1856,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (prePhysicsAngle == (sprite.getAngle() & 0xFF)) {
 			return;
 		}
+		// ROM's walking slope-resist routine runs BEFORE Sonic_Move with the
+		// FRAME-START inertia, and `tst.w inertia / beq return` skips the
+		// resist entirely when the player was stationary at frame start
+		// (S1 Sonic_SlopeResistWalk 01 Sonic.asm:1308-1309; S2 Sonic_SlopeResist
+		// s2.asm:37718-37719 / Tails_SlopeResist s2.asm:40620-40621; S3K
+		// Player_SlopeResist sonic3k.asm:23830-23831). This replay must observe
+		// that same frame-start inertia — using the post-Move inertia here would
+		// inject a slope resist ROM never applied (SYZ1 f4431: ROM lands with
+		// inertia 0, holds Right, Sonic_Move sets inertia +$C and AngleSpeed
+		// yields y_vel=-$A; SlopeRepel then detaches without touching velocity,
+		// so the ROM-recorded y_vel stays -$A). The S3K at-rest slope kick
+		// (|force| >= $D at inertia 0, sonic3k.asm:23847-23856) is owned by
+		// doSlopeResist, which sets slopeResistAppliedThisFrame and short-circuits
+		// this path, so the zero-inertia skip below is safe for all three games.
+		if (sprite.getPrePhysicsGSpeed() == 0) {
+			return;
+		}
 		// S1/S2/S3K run walking slope resist before SpeedToPos/MoveSprite2 and
 		// before AnglePos can detach the player (S1 01 Sonic.asm:283-291,
 		// 1246-1263; S2 s2.asm:36464-36477,37703-37723; S3K

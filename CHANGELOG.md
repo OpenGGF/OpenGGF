@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S1 SYZ1 wall-detach slope-resist fix:** The shared player-physics missed-detach slope-resist replay no longer re-applies walking slope resistance on a wall-detach frame when the player was stationary at frame start, matching ROM `Sonic_SlopeResistWalk`'s `tst.w inertia / beq` early return (S1 01 Sonic.asm:1308-1309, S2/S3K equivalents). Fixes SYZ1 trace divergence at f4431; SYZ1 is now the 11th green S1 trace.
 - **S1 swinging-platform chain-link rewind:** render-only chain-link children now restore through spawn-based generic recreate with compact-restored render state, closing the last reconciled rewind sweep gap.
 - **S3K AIZ2 capsule private-child rewind:** AIZ2 end-capsule private animal/results children now restore through exact-class generic recreate, clearing the last no-probe constructor tail entries.
 - Added explicit rewind boundary reporting for level loads, seamless transitions, and gameplay mode changes so live rewind cannot cross session boundaries.
