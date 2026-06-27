@@ -1,18 +1,6 @@
 # status|class|evidence
 # covered = focused graph/object-manager rewind test exists for this family.
 # session-tail = still needs a real session/family harness before claiming graph-safe restore.
-session-tail|com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance|needs MTZ long-platform graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyNozzleChild|needs Corkey badnik graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.ClamerObjectInstance$ClamerSpringChild|needs Clamer graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild|needs MHZ2 Knuckles cutscene graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ContainerDisplayChild|needs gumball machine graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance$HandLauncherArmChild|needs HCZ hand-launcher graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance$WaterRushBlockChild|needs HCZ water-rush graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud|needs ICZ freezer graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$AttachChild|needs LBZ cup-elevator graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$BaseChild|needs LBZ cup-elevator graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild|needs LBZ player-launcher graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance$OverlayChild|needs LBZ tube-elevator graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild|needs MGZ miniboss graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance$PulleyChainChild|needs MGZ pulley graph/session harness
-session-tail|com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot|needs S3K monitor graph/session harness
+# All formerly parent-dependent rows are now classified as graph-covered by
+# RewindRoundTripHarness.GRAPH_COVERED_ISOLATED_PROBE_CLASSES and guarded by
+# TestGraphCoveredIsolatedProbeClassification.

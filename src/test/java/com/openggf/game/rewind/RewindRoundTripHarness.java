@@ -455,6 +455,51 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.LightningShieldObjectInstance",
                     "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind"),
             Map.entry(
+                    "com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance",
+                    "com.openggf.game.sonic2.objects.TestS2MtzLongPlatformCogGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyNozzleChild",
+                    "com.openggf.game.sonic3k.objects.badniks.TestS3kCorkeyNozzleGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.ClamerObjectInstance$ClamerSpringChild",
+                    "TestS3kClamerGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild",
+                    "com.openggf.game.sonic3k.objects.TestS3kMhzCutsceneGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ContainerDisplayChild",
+                    "TestS3kBadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance$HandLauncherArmChild",
+                    "TestS3kHczHandLauncherGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance$WaterRushBlockChild",
+                    "TestS3kHczWaterRushGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud",
+                    "TestS3kIczFreezerGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$AttachChild",
+                    "TestS3kLbzCupElevatorGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$BaseChild",
+                    "TestS3kLbzCupElevatorGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild",
+                    "TestS3kLbzPlayerLauncherGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance$OverlayChild",
+                    "TestS3kLbzTubeElevatorGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild",
+                    "TestS3kNestedHurtboxGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance$PulleyChainChild",
+                    "TestS3kMgzPulleyGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot",
+                    "TestS3kMonitorGraphRewind"),
+            Map.entry(
                     "com.openggf.level.objects.ShieldObjectInstance",
                     "com.openggf.level.objects.TestShieldRewindPendingRestore"));
 

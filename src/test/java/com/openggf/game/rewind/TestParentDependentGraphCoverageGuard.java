@@ -33,7 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * parent/sibling graph in {@code ObjectManager}. The baseline keeps that bucket
  * explicit and marks focused graph rewind test evidence for each family. Any
  * remaining unproven families stay visible as {@code session-tail} rows until
- * focused session/family harnesses cover them.
+ * focused session/family harnesses cover them. An empty baseline is valid once
+ * the parent-dependent tail is fully graph-covered.
  */
 class TestParentDependentGraphCoverageGuard {
     private static final String BASELINE_RESOURCE =
@@ -66,7 +67,6 @@ class TestParentDependentGraphCoverageGuard {
         long sessionTail = baseline.values().stream()
                 .filter(entry -> entry.status() == Status.SESSION_TAIL)
                 .count();
-        assertTrue(sessionTail > 0, "baseline must record remaining session-tail families");
         assertEquals(baseline.size(), covered + sessionTail,
                 "baseline rows must be accounted for as covered or session-tail");
 
