@@ -1,6 +1,6 @@
 # bucket|class
 # Snapshot from the headless ObjectManager round-trip sweep.
-# Summary: total=783 passed=643 graph-covered=106 no-codec=0 no-probe-ctor=19 parent-dependent=15 other-failure=0 count-mismatch=0 scalar-mismatch=0
+# Summary: total=783 passed=643 graph-covered=116 no-codec=0 no-probe-ctor=9 parent-dependent=15 other-failure=0 count-mismatch=0 scalar-mismatch=0
 #
 # Parent-dependent classes live in parent-dependent-graph-coverage-baseline.txt
 # because that file also records graph-test evidence or session-tail status.
@@ -9,19 +9,9 @@
 # - no-probe boss children: prioritize the remaining S1/FZ and S2/S3K constructor-only graph families.
 # - constructor-spawning boss roots and graph-only children are covered by focused graph tests, but still need
 #   parent-before-child/session ordering before they can pass the isolated sweep.
-no-probe-ctor|com.openggf.game.sonic1.objects.bosses.FZPlasmaBall
-no-probe-ctor|com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall
-no-probe-ctor|com.openggf.game.sonic1.objects.bosses.SYZBossSpike
-no-probe-ctor|com.openggf.game.sonic2.objects.CheckpointDongleInstance
-no-probe-ctor|com.openggf.game.sonic2.objects.CheckpointStarInstance
-no-probe-ctor|com.openggf.game.sonic2.objects.CogObjectInstance$CogSlotChildInstance
-no-probe-ctor|com.openggf.game.sonic2.objects.OOZBurnerFlameObjectInstance
-no-probe-ctor|com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance$SwingingPlatformDisplayChild
 no-probe-ctor|com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$Aiz2ResultsScreenObjectInstance
 no-probe-ctor|com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$HighPriorityAnimal
-no-probe-ctor|com.openggf.game.sonic3k.objects.AizShipBombInstance
 no-probe-ctor|com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance
-no-probe-ctor|com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance
 no-probe-ctor|com.openggf.game.sonic3k.objects.FireShieldObjectInstance
 no-probe-ctor|com.openggf.game.sonic3k.objects.InstaShieldObjectInstance
 no-probe-ctor|com.openggf.game.sonic3k.objects.LightningShieldObjectInstance

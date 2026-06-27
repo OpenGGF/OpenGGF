@@ -101,11 +101,20 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic1.objects.bosses.FZCylinder",
                     "TestS1FzBossGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.FZPlasmaBall",
+                    "TestS1FzBossGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher",
                     "TestS1FzBossGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall",
+                    "TestS1GhzBossGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance",
                     "TestS1SyzBossBlockGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.SYZBossSpike",
+                    "TestBossChildExactStateRewind"),
             Map.entry(
                     "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorBlock",
                     "com.openggf.game.sonic1.objects.TestFalseFloorBlockRewindGenericRestore"),
@@ -194,8 +203,23 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance",
                     "TestS2CpzBossGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic2.objects.CheckpointDongleInstance",
+                    "TestCheckpointStarpostGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.CheckpointStarInstance",
+                    "TestCheckpointStarpostGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.CogObjectInstance$CogSlotChildInstance",
+                    "com.openggf.game.sonic2.objects.TestS2CogGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.OOZBurnerFlameObjectInstance",
+                    "TestS2OozBurnerFlameGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic2.objects.SeesawBallObjectInstance",
                     "TestSeesawBallGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance$SwingingPlatformDisplayChild",
+                    "com.openggf.game.sonic2.objects.TestS2SwingingPlatformGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild",
                     "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
@@ -307,6 +331,12 @@ public final class RewindRoundTripHarness {
             Map.entry(
                     "com.openggf.game.sonic3k.objects.AizMinibossNapalmController",
                     "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizShipBombInstance",
+                    "com.openggf.game.sonic3k.objects.TestAizShipBombGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance",
+                    "TestS3kCutsceneKnucklesGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild",
                     "com.openggf.game.sonic3k.objects.TestAizDisappearingFloorGraphRewind"),

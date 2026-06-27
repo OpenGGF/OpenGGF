@@ -38,10 +38,18 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS1BadnikChildGraphRewind";
     private static final String S1_FZ_BOSS_GRAPH_TEST =
             "TestS1FzBossGraphRewind";
+    private static final String S1_GHZ_BOSS_GRAPH_TEST =
+            "TestS1GhzBossGraphRewind";
     private static final String S2_BADNIK_CHILD_GRAPH_TEST =
             "TestS2BadnikChildGraphRewind";
     private static final String S2_EHZ_BOSS_GRAPH_TEST =
             "TestS2EhzBossGraphRewind";
+    private static final String S2_OOZ_BURNER_FLAME_GRAPH_TEST =
+            "TestS2OozBurnerFlameGraphRewind";
+    private static final String S2_COG_GRAPH_TEST =
+            "com.openggf.game.sonic2.objects.TestS2CogGraphRewind";
+    private static final String S2_SWINGING_PLATFORM_GRAPH_TEST =
+            "com.openggf.game.sonic2.objects.TestS2SwingingPlatformGraphRewind";
     private static final String S2_ARZ_ARROW_GRAPH_TEST =
             "TestS2ArzArrowGraphRewind";
     private static final String S2_CPZ_BOSS_GRAPH_TEST =
@@ -76,6 +84,10 @@ class TestGraphCoveredIsolatedProbeClassification {
             "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind";
     private static final String S2_SELF_CONTAINED_TRANSIENT_GRAPH_TEST =
             "com.openggf.game.sonic2.objects.TestS2SelfContainedTransientRewind";
+    private static final String AIZ_SHIP_BOMB_GRAPH_TEST =
+            "com.openggf.game.sonic3k.objects.TestAizShipBombGraphRewind";
+    private static final String S3K_CUTSCENE_KNUCKLES_GRAPH_TEST =
+            "TestS3kCutsceneKnucklesGraphRewind";
 
     @BeforeEach
     void initHeadless() {
@@ -365,6 +377,33 @@ class TestGraphCoveredIsolatedProbeClassification {
                 CHECKPOINT_STARPOST_GRAPH_TEST,
                 "com.openggf.level.objects.InvincibilityStarsObjectInstance",
                 S2_SELF_CONTAINED_TRANSIENT_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void noProbeRowsWithExistingGraphTestsAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic1.objects.bosses.FZPlasmaBall",
+                S1_FZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall",
+                S1_GHZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic1.objects.bosses.SYZBossSpike",
+                "TestBossChildExactStateRewind",
+                "com.openggf.game.sonic2.objects.CheckpointDongleInstance",
+                CHECKPOINT_STARPOST_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.CheckpointStarInstance",
+                CHECKPOINT_STARPOST_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.CogObjectInstance$CogSlotChildInstance",
+                S2_COG_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.OOZBurnerFlameObjectInstance",
+                S2_OOZ_BURNER_FLAME_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance$SwingingPlatformDisplayChild",
+                S2_SWINGING_PLATFORM_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.AizShipBombInstance",
+                AIZ_SHIP_BOMB_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance",
+                S3K_CUTSCENE_KNUCKLES_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }

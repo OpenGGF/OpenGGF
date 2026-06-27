@@ -106,13 +106,13 @@ class TestRemainingRewindTailInventory {
         loadBucketRows(INVENTORY_RESOURCE, buckets);
         loadParentDependentRows(buckets);
 
-        assertEquals(19, buckets.get(Bucket.NO_PROBE_CTOR).size(), "no-probe-ctor inventory count");
+        assertEquals(9, buckets.get(Bucket.NO_PROBE_CTOR).size(), "no-probe-ctor inventory count");
         assertEquals(15, buckets.get(Bucket.PARENT_DEPENDENT).size(), "parent-dependent inventory count");
         assertEquals(0, buckets.get(Bucket.OTHER_FAILURE).size(), "other-failure inventory count");
         assertEquals(0, buckets.get(Bucket.COUNT_MISMATCH).size(), "count-mismatch inventory count");
         assertEquals(0, buckets.get(Bucket.SCALAR_MISMATCH).size(), "scalar-mismatch inventory count");
 
-        return new TailInventory(783, 643, 106, 0, buckets);
+        return new TailInventory(783, 643, 116, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
