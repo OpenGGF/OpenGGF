@@ -71,9 +71,6 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
     // ROM: obColType = $8B (enemy type $8, size $B)
     private static final int COLLISION_FLAGS = 0x8B;
 
-    // ROM: move.b #$C,obActWid(a0)
-    private static final int WIDTH_PIXELS = 0x0C;
-
     // ROM: move.b #4,obPriority(a0)
     private static final int PRIORITY = 4;
     // ROM: fragments use priority 3
@@ -708,14 +705,22 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
 
     // ---- Position ----
 
+    // ROM obX/obY are the object CENTRE (sub ReactToItem.asm uses obX(a1)/obY(a1)
+    // directly against the ball's React_Sizes half-extents). obActWid ($C) is the
+    // render-cull half-width only, NOT a position offset — getX()/getY() must
+    // return the centre so the shared touch overlap (which reads getX()/getY() as
+    // the object centre, matching every other S1 object) places the hurt box
+    // correctly. Subtracting WIDTH_PIXELS shifted the col_16x16 hurt box 12px
+    // up-left, so a rolling player rising into the falling ball missed the hurt
+    // (SLZ3 trace f5917).
     @Override
     public int getX() {
-        return (xPos >> 16) - WIDTH_PIXELS;
+        return xPos >> 16;
     }
 
     @Override
     public int getY() {
-        return (yPos >> 16) - 0x0C;
+        return yPos >> 16;
     }
 
     @Override
