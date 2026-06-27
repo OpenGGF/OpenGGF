@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.events;
 import com.openggf.camera.Camera;
 import com.openggf.audio.AudioManager;
 import com.openggf.data.Rom;
+import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ObjectArtProvider;
@@ -138,8 +139,13 @@ public abstract class Sonic2ZoneEvents {
             byte[] paletteData = rom.readBytes(romAddr, PALETTE_LINE_SIZE);
             levelManager.updatePalette(paletteLine, paletteData);
         } catch (Exception e) {
-            LOGGER.warning("Failed to load boss palette from ROM offset 0x" +
-                    Integer.toHexString(romAddr) + ": " + e.getMessage());
+            if (RomManager.isConfiguredRomMissing(e)) {
+                LOGGER.fine(() -> "Skipped boss palette load from ROM offset 0x"
+                        + Integer.toHexString(romAddr) + ": " + e.getMessage());
+            } else {
+                LOGGER.warning("Failed to load boss palette from ROM offset 0x" +
+                        Integer.toHexString(romAddr) + ": " + e.getMessage());
+            }
         }
     }
 

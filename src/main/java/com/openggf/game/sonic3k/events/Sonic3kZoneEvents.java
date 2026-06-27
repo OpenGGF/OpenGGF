@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.events;
 import com.openggf.camera.Camera;
 import com.openggf.audio.AudioManager;
 import com.openggf.data.Rom;
+import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameModule;
@@ -219,8 +220,13 @@ public abstract class Sonic3kZoneEvents {
                     paletteData,
                     true);
         } catch (Exception e) {
-            LOGGER.warning("Failed to load palette from ROM offset 0x" +
-                    Integer.toHexString(romAddr) + ": " + e.getMessage());
+            if (RomManager.isConfiguredRomMissing(e)) {
+                LOGGER.fine(() -> "Skipped palette load from ROM offset 0x"
+                        + Integer.toHexString(romAddr) + ": " + e.getMessage());
+            } else {
+                LOGGER.warning("Failed to load palette from ROM offset 0x" +
+                        Integer.toHexString(romAddr) + ": " + e.getMessage());
+            }
         }
     }
 
@@ -243,7 +249,11 @@ public abstract class Sonic3kZoneEvents {
             List<Sonic3kPlcLoader.TileRange> modified = Sonic3kPlcLoader.applyToLevel(plc, sonic3kLevel);
             Sonic3kPlcLoader.refreshAffectedRenderers(modified, levelManager);
         } catch (Exception e) {
-            LOGGER.warning(String.format("Failed to apply PLC 0x%02X: %s", plcId, e.getMessage()));
+            if (RomManager.isConfiguredRomMissing(e)) {
+                LOGGER.fine(() -> String.format("Skipped PLC 0x%02X: %s", plcId, e.getMessage()));
+            } else {
+                LOGGER.warning(String.format("Failed to apply PLC 0x%02X: %s", plcId, e.getMessage()));
+            }
         }
     }
 
@@ -285,8 +295,13 @@ public abstract class Sonic3kZoneEvents {
                     + " lines from 0x" + Integer.toHexString(sourceAddr)
                     + " to line " + startLine);
         } catch (Exception e) {
-            LOGGER.warning("Failed to load palette from PalPointers index "
-                    + palPointersIndex + ": " + e.getMessage());
+            if (RomManager.isConfiguredRomMissing(e)) {
+                LOGGER.fine(() -> "Skipped palette load from PalPointers index "
+                        + palPointersIndex + ": " + e.getMessage());
+            } else {
+                LOGGER.warning("Failed to load palette from PalPointers index "
+                        + palPointersIndex + ": " + e.getMessage());
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ package com.openggf.level;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.Rom;
+import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameModule;
 import com.openggf.game.ScrollHandlerProvider;
@@ -364,7 +365,11 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
                     load(rom);
                 }
             } catch (IOException e) {
-                LOGGER.warning("Failed to lazy-load scroll provider: " + e.getMessage());
+                if (RomManager.isConfiguredRomMissing(e)) {
+                    LOGGER.fine(() -> "Skipped lazy scroll-provider load: " + e.getMessage());
+                } else {
+                    LOGGER.warning("Failed to lazy-load scroll provider: " + e.getMessage());
+                }
             }
         }
         if (scrollProvider == null || cam == null) {
