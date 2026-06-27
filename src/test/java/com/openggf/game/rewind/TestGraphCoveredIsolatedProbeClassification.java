@@ -44,6 +44,8 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS2EhzBossGraphRewind";
     private static final String S2_ARZ_ARROW_GRAPH_TEST =
             "TestS2ArzArrowGraphRewind";
+    private static final String S2_CPZ_BOSS_GRAPH_TEST =
+            "TestS2CpzBossGraphRewind";
     private static final String S1_SYZ_BOSS_BLOCK_GRAPH_TEST =
             "TestS1SyzBossBlockGraphRewind";
     private static final String SEESAW_GRAPH_TEST =
@@ -247,6 +249,27 @@ class TestGraphCoveredIsolatedProbeClassification {
                 S1_SYZ_BOSS_BLOCK_GRAPH_TEST,
                 "com.openggf.game.sonic2.objects.SeesawBallObjectInstance",
                 SEESAW_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void sonic2CpzBossPrimaryParentDependentRowsAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic2.objects.bosses.CPZBossContainer",
+                S2_CPZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.CPZBossFlame",
+                S2_CPZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.CPZBossPipe",
+                S2_CPZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.CPZBossPump",
+                S2_CPZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik",
+                S2_CPZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff",
+                S2_CPZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance",
+                S2_CPZ_BOSS_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }
