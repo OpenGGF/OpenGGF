@@ -156,6 +156,10 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         // This is needed even if the boss was never "defeated" (e.g. LZ boss
         // just escapes without being hit 8 times).
         services().gameState().setCurrentBossId(0);
+        // ROM: clr.b (f_lockscreen).w (s1disasm/_incObj/3E Prison Capsule.asm:97)
+        // — release the persistent screen lock that Sonic_LevelBound consumes for
+        // its +64 right-boundary extension gate.
+        services().gameState().setScreenLocked(false);
 
         // ROM: move.b #1,(f_lockctrl).w — lock player controls
         // ROM: move.w #(btnR<<8),(v_jpadhold2).w — force right input

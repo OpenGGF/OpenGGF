@@ -24,7 +24,8 @@ public record GameStateSnapshot(
         boolean reverseGravityActive,
         int collectedSpecialRings,
         boolean endOfLevelActive,
-        boolean endOfLevelFlag) {
+        boolean endOfLevelFlag,
+        boolean screenLocked) {
 
     public GameStateSnapshot {
         Objects.requireNonNull(gotEmeralds, "gotEmeralds");

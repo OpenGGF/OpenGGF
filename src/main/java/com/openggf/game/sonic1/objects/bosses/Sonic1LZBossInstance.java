@@ -438,8 +438,12 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance {
         services().playMusic(Sonic1Music.LZ.id);
 
         // ROM (Revision != 0): clr.b (f_lockscreen).w — unlock horizontal scrolling
-        // Clear the left boundary lock set at boss spawn, allowing free camera movement
+        // (s1disasm/_incObj/77 Boss - LZ Main.asm:288). Clear the left boundary
+        // lock set at boss spawn, allowing free camera movement, and release the
+        // persistent screen lock that Sonic_LevelBound consumes for its +64
+        // right-boundary extension gate.
         services().camera().setMinX((short) 0);
+        services().gameState().setScreenLocked(false);
 
         // ROM: bset #0,obStatus(a0) — face right
         state.renderFlags |= 1;

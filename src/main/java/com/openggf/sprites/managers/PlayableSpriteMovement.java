@@ -2461,8 +2461,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// (sonic3k.asm:23183-23186, 28418-28421). This reproduces +$128 / +$128+$40
 		// exactly: $128 = 320 - 24 = LEVEL_DESIGN_WIDTH - SONIC_WIDTH. The boundary
 		// is viewport-independent — it tracks the level's right wall, not the screen.
+		// The +64 right-boundary extension is removed during a boss/screen lock.
+		// ROM gates that on different flags per game: S1 uses the persistent
+		// f_lockscreen (set at boss spawn, cleared only by Egg Prison / LZ boss,
+		// so it survives boss defeat in the Final Zone — s1disasm/_incObj/01
+		// Sonic.asm:1047-1049); S2 uses Current_Boss_ID, i.e. boss-alive
+		// (s2.asm:37247-37250). PhysicsFeatureSet.levelBoundaryLockUsesScreenLockFlag
+		// selects which. S3K never adds the +64 (levelBoundaryRightStrict).
+		boolean lockActive = (featureSet != null && featureSet.levelBoundaryLockUsesScreenLockFlag())
+				? gameState().isScreenLocked()
+				: gameState().isBossFightActive();
 		boolean strict = (featureSet != null && featureSet.levelBoundaryRightStrict())
-				|| gameState().isBossFightActive() || gameState().isEndOfLevelActive();
+				|| lockActive || gameState().isEndOfLevelActive();
 		int rightBoundary = RightBoundary.compute(maxX, LEVEL_DESIGN_WIDTH, SONIC_WIDTH, RIGHT_EXTRA, strict);
 
 		// ROM comparison: left is always bhi.s (<). S1/S2 right uses bls.s
