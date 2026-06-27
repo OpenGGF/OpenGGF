@@ -363,8 +363,33 @@ public class GroundSensor extends Sensor {
             return result;
         }
 
-        // No collision found - return empty result with max distance
+        // No collision found in the foot tile or the extension tile.
+        //
+        // ROM FindFloor: when the FOOT tile is solid with a valid collision block,
+        // its angle is written to the angle buffer (sub FindNearestTile & FindFloor
+        // & FindWall.asm:131 `move.b (a2,d0.w),(a4)`) BEFORE the height value is
+        // read. A zero/overflowing height then branches to .isblank (line 159
+        // `beq .isblank`, or the .negfloor `bpl .isblank` at line 175) and extends
+        // to the tile below WITHOUT clearing that angle. FindFloor2 only overwrites
+        // the buffer if the extension tile is itself solid; its .isblank2 path
+        // (line 199) leaves the buffer untouched. So a top-solid foot tile that is
+        // empty (height 0) at the probed column still reports its real surface angle
+        // even though the surface alignment comes from the blank extension.
+        //
+        // The engine's first-pass scanTileVertical returns null for a solid tile
+        // with metric == 0 (preserving ROM's "extend" branch), which discarded that
+        // angle and fell back to FLAGGED_ANGLE -> spurious cardinal snap. Mirror the
+        // ROM angle-buffer retention: if the foot tile is solid, default to its angle.
         byte distance = calculateExtensionDefaultDistance(y, mirrorEmptyDefault);
+        ChunkDesc footDesc = lm.getChunkDescAt(
+                (byte) 0, x, verticalTileLookupY(y, direction), sprite.isLoopLowPlane());
+        SolidTile footTile = getSolidTile(lm, footDesc, solidityBit);
+        if (footTile != null) {
+            byte angle = footTile.getAngle(
+                    footDesc != null && footDesc.getHFlip(),
+                    footDesc != null && footDesc.getVFlip());
+            return reusableResult.set(angle, distance, footTile.getIndex(), direction);
+        }
         return reusableResult.set(FLAGGED_ANGLE, distance, 0, direction);
     }
 
