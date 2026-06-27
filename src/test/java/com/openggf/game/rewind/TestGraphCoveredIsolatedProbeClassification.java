@@ -40,6 +40,8 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS1FzBossGraphRewind";
     private static final String S2_BADNIK_CHILD_GRAPH_TEST =
             "TestS2BadnikChildGraphRewind";
+    private static final String S2_EHZ_BOSS_GRAPH_TEST =
+            "TestS2EhzBossGraphRewind";
 
     @BeforeEach
     void initHeadless() {
@@ -207,6 +209,25 @@ class TestGraphCoveredIsolatedProbeClassification {
                 S2_BADNIK_CHILD_GRAPH_TEST,
                 "com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance",
                 S2_BADNIK_CHILD_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void sonic2EhzBossParentDependentFamilyIsReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle",
+                S2_EHZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.EHZBossPropeller",
+                S2_EHZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.EHZBossSpike",
+                S2_EHZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.EHZBossVehicleTop",
+                S2_EHZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.EHZBossWheel",
+                S2_EHZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance",
+                S2_EHZ_BOSS_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }

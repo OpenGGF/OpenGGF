@@ -91,7 +91,6 @@ public final class RewindRoundTripHarness {
     private static final Set<String> GRAPH_ONLY_ISOLATED_PROBE_CLASSES = Set.of(
             "com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance",
             "com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance",
-            "com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance",
             "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild",
             "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment");
 
@@ -138,6 +137,24 @@ public final class RewindRoundTripHarness {
             Map.entry(
                     "com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance",
                     "TestS2BadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle",
+                    "TestS2EhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.EHZBossPropeller",
+                    "TestS2EhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.EHZBossSpike",
+                    "TestS2EhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.EHZBossVehicleTop",
+                    "TestS2EhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.EHZBossWheel",
+                    "TestS2EhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance",
+                    "TestS2EhzBossGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild",
                     "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
