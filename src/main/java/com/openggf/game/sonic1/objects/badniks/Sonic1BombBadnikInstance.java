@@ -458,8 +458,15 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
         for (int i = 0; i < SHRAPNEL_VELOCITIES.length; i++) {
             final int vx = SHRAPNEL_VELOCITIES[i][0];
             final int vy = SHRAPNEL_VELOCITIES[i][1];
+            // ROM: the first shrapnel reuses the fuse slot and runs Bom_Shrapnel
+            // (SpeedToPos) on the expiry frame, so it moves immediately. Pieces
+            // 1-3 are FindNextFreeObj-allocated with obRoutine cleared, so they
+            // run Bom_Main (no move) on their creation frame and first move the
+            // following frame (docs/s1disasm/_incObj/5F Badnik - Walking
+            // Bomb.asm:181-220, 30-33). Defer pieces 1-3's first move to match.
+            final boolean deferFirstMove = i != 0;
             spawnFreeChild(() -> new Sonic1BombShrapnelInstance(
-                    fuseX, fuseY, vx, vy));
+                    fuseX, fuseY, vx, vy, deferFirstMove));
         }
     }
 
