@@ -441,7 +441,22 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherMachineRewind"),
             Map.entry(
                     "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild",
-                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherVisualRewind"));
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherVisualRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.FireShieldObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.InstaShieldObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.LightningShieldObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind"),
+            Map.entry(
+                    "com.openggf.level.objects.ShieldObjectInstance",
+                    "com.openggf.level.objects.TestShieldRewindPendingRestore"));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();

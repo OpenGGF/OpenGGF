@@ -90,6 +90,8 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS3kCutsceneKnucklesGraphRewind";
     private static final String MHZ_MINIBOSS_ESCAPE_SHARD_GRAPH_TEST =
             "com.openggf.game.sonic3k.objects.TestMhzMinibossEscapeShardGraphRewind";
+    private static final String SHIELD_PENDING_RESTORE_TEST =
+            "com.openggf.level.objects.TestShieldRewindPendingRestore";
 
     @BeforeEach
     void initHeadless() {
@@ -466,6 +468,23 @@ class TestGraphCoveredIsolatedProbeClassification {
                 MHZ_MINIBOSS_ESCAPE_SHARD_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter",
                 S3K_BADNIK_CHILD_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void playerBoundShieldNoProbeRowsAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance",
+                S3K_SELF_CONTAINED_TRANSIENT_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.FireShieldObjectInstance",
+                S3K_SELF_CONTAINED_TRANSIENT_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.InstaShieldObjectInstance",
+                S3K_SELF_CONTAINED_TRANSIENT_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.LightningShieldObjectInstance",
+                S3K_SELF_CONTAINED_TRANSIENT_GRAPH_TEST,
+                "com.openggf.level.objects.ShieldObjectInstance",
+                SHIELD_PENDING_RESTORE_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }
