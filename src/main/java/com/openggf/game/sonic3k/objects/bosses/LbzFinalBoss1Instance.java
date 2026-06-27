@@ -1351,10 +1351,11 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         @Override
         public void update(int frameCounter, PlayableEntity player) {
             if (boss.isDestroyed() || (boss.statusBits & STATUS_DEFEATED) != 0
-                    || segment == null || segment.isDestroyed()) {
+                    || segment == null) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
             }
+            boolean detachedSegment = segment.isDestroyed();
             if (--stepTimer < 0) {
                 advanceStep();
             }
@@ -1364,6 +1365,11 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             flickerPhase ^= 1;
             visible = flickerPhase == 0 && FRAMES[step] != 0x2D;
             updateDynamicSpawn(getX(), getY());
+            if (detachedSegment) {
+                // ROM loc_731F4 runs sub_733FC before Child_Draw_Sprite_FlickerMove
+                // sees the detached parent and turns this child into debris.
+                ObjectLifetimeOps.expireDynamic(this);
+            }
         }
 
         private void advanceStep() {

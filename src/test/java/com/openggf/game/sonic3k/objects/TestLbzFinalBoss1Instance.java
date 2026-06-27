@@ -194,6 +194,38 @@ class TestLbzFinalBoss1Instance {
     }
 
     @Test
+    void detachedTopSegmentStillLetsLaserHeadStrobeFinalFiringNotch() {
+        HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
+        LbzFinalBoss1Instance boss = newBoss(services);
+        boss.update(0, null);
+        boss.activateForTest();
+        boss.setRenderXFlipForTest(false);
+        LbzFinalBoss1Instance.TurretSegmentChild topSegment = assertInstanceOf(
+                LbzFinalBoss1Instance.TurretSegmentChild.class,
+                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.TURRET_SEGMENT).get(0));
+        LbzFinalBoss1Instance.LaserHeadChild head = assertInstanceOf(
+                LbzFinalBoss1Instance.LaserHeadChild.class,
+                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.LASER_HEAD).get(0));
+
+        head.forceArcStepForTest(8);
+        head.forceStepTimerExpiredForTest();
+        boss.forceHitCountForTest(6);
+        boss.onPlayerAttack(null, null);
+        topSegment.update(1, null);
+
+        assertTrue(topSegment.isDestroyed(), "HP 5 detaches the top segment before its laser-head children update.");
+        assertFalse(boss.isLaserFiringNotchSet(), "The regression setup needs the boss movement gate bit clear.");
+
+        head.update(2, null);
+
+        assertTrue(boss.isLaserFiringNotchSet(),
+                "ROM loc_731F4 runs sub_733FC before Child_Draw_Sprite_FlickerMove reacts to the detached parent, "
+                        + "so the final frame-$04 strobe can still set $38 bit3.");
+        assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.MUZZLE_LASER).size(),
+                "The final strobe should still create the loc_7321A muzzle child before the head becomes debris.");
+    }
+
+    @Test
     void hitSpeedQuirkDoublesInRangeAndLeavesOutOfRangeVelocityUnchanged() {
         HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
         LbzFinalBoss1Instance boss = newBoss(services);
