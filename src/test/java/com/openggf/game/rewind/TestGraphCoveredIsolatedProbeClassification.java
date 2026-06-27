@@ -88,6 +88,8 @@ class TestGraphCoveredIsolatedProbeClassification {
             "com.openggf.game.sonic3k.objects.TestAizShipBombGraphRewind";
     private static final String S3K_CUTSCENE_KNUCKLES_GRAPH_TEST =
             "TestS3kCutsceneKnucklesGraphRewind";
+    private static final String MHZ_MINIBOSS_ESCAPE_SHARD_GRAPH_TEST =
+            "com.openggf.game.sonic3k.objects.TestMhzMinibossEscapeShardGraphRewind";
 
     @BeforeEach
     void initHeadless() {
@@ -453,6 +455,17 @@ class TestGraphCoveredIsolatedProbeClassification {
                 WFZ_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnikPlatform",
                 WFZ_BOSS_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void remainingNoProbeRowsWithExactOwnerGraphTestsAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardInstance",
+                MHZ_MINIBOSS_ESCAPE_SHARD_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter",
+                S3K_BADNIK_CHILD_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }

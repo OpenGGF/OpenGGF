@@ -383,6 +383,9 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
                     "TestS3kNestedHurtboxGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardInstance",
+                    "com.openggf.game.sonic3k.objects.TestMhzMinibossEscapeShardGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild",
                     "TestS3kBadnikChildGraphRewind"),
             Map.entry(
@@ -409,6 +412,9 @@ public final class RewindRoundTripHarness {
             Map.entry(
                     "com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild",
                     "TestCheckpointStarpostGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter",
+                    "TestS3kBadnikChildGraphRewind"),
             Map.entry(
                     "com.openggf.level.objects.InvincibilityStarsObjectInstance",
                     "com.openggf.game.sonic2.objects.TestS2SelfContainedTransientRewind"),
