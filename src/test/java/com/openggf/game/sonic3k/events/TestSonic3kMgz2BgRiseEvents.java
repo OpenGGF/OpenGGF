@@ -18,7 +18,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -114,6 +119,39 @@ class TestSonic3kMgz2BgRiseEvents {
         assertEquals(BG_RISE_SONIC, events.getBgRiseRoutine());
         assertTrue(GameServices.gameState().isBackgroundCollisionFlag());
         assertEquals(0, events.getBgRiseOffset(), "rise hasn't started moving yet");
+    }
+
+    @Test
+    void headlessBgRiseWithoutRuntimeStateDoesNotWarnAboutMissingScrollHandler() {
+        Logger logger = Logger.getLogger(Sonic3kMGZEvents.class.getName());
+        List<LogRecord> records = new ArrayList<>();
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                records.add(record);
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        logger.addHandler(handler);
+        try {
+            placePlayer(0x3500, 0x850);
+            Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+            events.init(1);
+
+            tick(events, 0);
+
+            assertTrue(records.stream().noneMatch(TestSonic3kMgz2BgRiseEvents::isMissingScrollHandlerWarning),
+                    "headless MGZ event tests must not warn when runtime state is intentionally absent");
+        } finally {
+            logger.removeHandler(handler);
+        }
     }
 
     @Test
@@ -389,6 +427,12 @@ class TestSonic3kMgz2BgRiseEvents {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to set Sonic3kMGZEvents." + fieldName, e);
         }
+    }
+
+    private static boolean isMissingScrollHandlerWarning(LogRecord record) {
+        return record.getLevel().intValue() >= Level.WARNING.intValue()
+                && record.getMessage() != null
+                && record.getMessage().startsWith("MGZ BG-rise: state SONIC armed");
     }
 
     private static void invokeLiftBgRisePassengers(Sonic3kMGZEvents events,
