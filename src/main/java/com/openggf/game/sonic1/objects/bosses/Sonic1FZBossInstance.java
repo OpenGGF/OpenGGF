@@ -374,10 +374,11 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
                 // ROM: v_bossstatus = 0 cleared on defeat (matches other S1 bosses)
                 services().gameState().setCurrentBossId(0);
                 state.routineSecondary = STATE_DEFEAT_FALL;
-                state.x = BOSS_FZ_X + 0x170;
-                state.y = BOSS_FZ_Y + 0x2C;
-                state.xFixed = state.x << 16;
-                state.yFixed = state.y << 16;
+                // ROM loc_19FBC: move.w #boss_fz_x+$170,obX / move.w #boss_fz_y+$2C,obY
+                // are WORD stores to the high word of the 16.16 long, preserving the
+                // accumulated subpixel low word.
+                clampXPreservingSubpixel(BOSS_FZ_X + 0x170);
+                clampYPreservingSubpixel(BOSS_FZ_Y + 0x2C);
                 state.defeated = true;
                 return;
             }
@@ -506,8 +507,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
 
         // ROM: cmpi.w #boss_fz_y+$8C,obY — check landing
         if (state.y >= BOSS_FZ_Y + 0x8C) {
-            state.y = BOSS_FZ_Y + 0x8C;
-            state.yFixed = state.y << 16;
+            // ROM loc_1A05A: move.w #boss_fz_y+$8C,obY — WORD store preserves subpixel.
+            clampYPreservingSubpixel(BOSS_FZ_Y + 0x8C);
             state.routineSecondary = STATE_RUNNING_ESCAPE;
             // ROM: move.w #$100,obVelX / move.w #-$100,obVelY
             state.xVel = 0x100;
@@ -583,8 +584,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
 
         // ROM: cmpi.w #boss_fz_x+$250,obX — transition to final ascent
         if (state.x >= BOSS_FZ_X + 0x250) {
-            state.x = BOSS_FZ_X + 0x250;
-            state.xFixed = state.x << 16;
+            // ROM loc_1A0F2: move.w #boss_fz_x+$250,obX — WORD store preserves subpixel.
+            clampXPreservingSubpixel(BOSS_FZ_X + 0x250);
             state.xVel = 0x240;
             state.yVel = -0x4C0;
             state.routineSecondary = STATE_FINAL_ASCENT;
@@ -614,8 +615,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
 
         // ROM: cmpi.w #boss_fz_y+$82,obY — landing check (only if yVel >= 0)
         if (state.yVel >= 0 && state.y >= BOSS_FZ_Y + 0x82) {
-            state.y = BOSS_FZ_Y + 0x82;
-            state.yFixed = state.y << 16;
+            // ROM: move.w #boss_fz_y+$82,obY — WORD store preserves subpixel.
+            clampYPreservingSubpixel(BOSS_FZ_Y + 0x82);
             state.yVel = 0;
         }
 
@@ -675,12 +676,19 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         state.x = state.xFixed >> 16;
         state.y = state.yFixed >> 16;
 
-        // ROM: Handle hittability during escape (objoff_30 timer)
+        // ROM loc_1A1FC: when the $1E post-hit timer expires, `tst.b obStatus / bpl
+        // loc_1A210` re-arms col_48x48|col_boss ONLY when obStatus bit 7 (the boss-
+        // defeated flag set by React_BossHit) is clear; otherwise it falls
+        // (move.w #$60,obVelY) and stays col_none. The escape carries obBossHits=1
+        // (BossFinal_Eggman_Jump loc_1A142), so the single escape roll-bounce takes
+        // obBossHits 1->0 and sets the defeated bit — the boss is never hittable
+        // again. The prior on-screen check wrongly re-armed the hitbox, producing a
+        // second roll-bounce ROM never makes (FZ trace f4182). showDamaged is set in
+        // onPlayerAttack on that escape hit and is the faithful defeated-bit proxy.
         if (escapeHitTimer > 0) {
             escapeHitTimer--;
             if (escapeHitTimer == 0) {
-                // ROM: Check render bit 7 — if off-screen, set yVel to $60
-                if (!isBossOnScreen()) {
+                if (showDamaged) {
                     state.yVel = 0x60;
                 } else {
                     escapeHittable = true;
@@ -697,13 +705,18 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
 
             // ROM: loc_1A216 — lock player controls past threshold
             if (playerX >= BOSS_FZ_END + 0x90) {
+                // ROM: move.b #1,f_lockctrl / move.w #0,v_jpadhold2 / clr.w
+                // (v_player+obInertia). ROM clears ONLY the inertia (ground speed) —
+                // it never clears obVelX, so an airborne rolling Sonic keeps his
+                // x_speed (FZ trace f4200: ROM x_speed stays 0x0255). The prior
+                // setXSpeed(0) zeroed it and diverged.
                 player.setControlLocked(true);
                 player.setGSpeed((short) 0);
 
-                // ROM: If boss Y velocity is negative, hold up
-                if (state.yVel >= 0) {
-                    player.setXSpeed((short) 0);
-                }
+                // ROM: tst.w obVelY(a0) / bpl loc_1A248 — only when the boss is still
+                // rising (velY < 0, i.e. Eggman escaped un-hit) does ROM force btnUp to
+                // make Sonic look up. On a successful-hit run the boss is defeated and
+                // falls (velY=$60), so velY >= 0 here and ROM takes no extra action.
             }
 
             // ROM: Cap player X at boss_fz_end + $E0
@@ -891,6 +904,28 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         state.y = y;
         state.xFixed = x << 16;
         state.yFixed = y << 16;
+    }
+
+    /**
+     * Clamp the integer Y position while preserving the accumulated 16.16 subpixel
+     * fraction, matching the ROM's {@code move.w #imm,obY(a0)} WORD store (which writes
+     * only the high word of the 16.16 long; the low-word subpixel is untouched).
+     * Zeroing the fraction with {@code y << 16} loses up to ~1px across the slow
+     * (velY=-$18) escape ascent, which shifted the boss 1px high and made the
+     * escape-sprite roll-bounce fire one frame late (FZ trace f4128).
+     */
+    private void clampYPreservingSubpixel(int newY) {
+        state.yFixed = (newY << 16) | (state.yFixed & 0xFFFF);
+        state.y = newY;
+    }
+
+    /**
+     * Clamp the integer X position while preserving the accumulated 16.16 subpixel
+     * fraction, matching the ROM's {@code move.w #imm,obX(a0)} WORD store.
+     */
+    private void clampXPreservingSubpixel(int newX) {
+        state.xFixed = (newX << 16) | (state.xFixed & 0xFFFF);
+        state.x = newX;
     }
 
     /**
