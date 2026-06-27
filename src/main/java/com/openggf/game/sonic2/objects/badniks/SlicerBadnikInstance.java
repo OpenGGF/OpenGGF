@@ -14,6 +14,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.PatrolMovementHelper;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -35,7 +37,7 @@ import java.util.List;
  *   Routine 6 (THROW_WINDUP): Raise arms (frame 3), wait 8 frames
  *   Routine 8 (AFTER_THROW): Display until off-screen (frame 4, no claws)
  */
-public class SlicerBadnikInstance extends AbstractBadnikInstance {
+public class SlicerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     // From ObjA1_SubObjData: collision_flags = 6 (enemy, size index 6)
     private static final int COLLISION_SIZE_INDEX = 0x06;
 
@@ -113,6 +115,11 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance {
         this.walkAnimTimer = WALK_ANIM_SPEED;
         this.walkAnimToggle = false;
         this.animFrame = 0;
+    }
+
+    @Override
+    public SlicerBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SlicerBadnikInstance(ctx.spawn());
     }
 
     @Override

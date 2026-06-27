@@ -17,6 +17,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -37,7 +39,7 @@ import java.util.logging.Logger;
  * <li>Spawn results screen (Obj3A), play end-level jingle</li>
  * </ol>
  */
-public class SignpostObjectInstance extends BoxObjectInstance implements PostPlayerUpdateHook {
+public class SignpostObjectInstance extends BoxObjectInstance implements PostPlayerUpdateHook, RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(SignpostObjectInstance.class.getName());
 
     // Routine states (matching ROM)
@@ -86,6 +88,11 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
 
     public SignpostObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name, 24, 40, 0.3f, 0.8f, 0.3f, false);
+    }
+
+    @Override
+    public SignpostObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SignpostObjectInstance(ctx.spawn(), "Signpost");
     }
 
     private void ensureInitialized() {

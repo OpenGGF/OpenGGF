@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -21,7 +23,7 @@ import java.util.List;
  * Moves horizontally, pauses, and throws a drill once when the player is near.
  * Based on disassembly Obj92.
  */
-public class SpikerBadnikInstance extends AbstractBadnikInstance {
+public class SpikerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x12; // From Obj92_SubObjData
 
     private static final int MOVE_TIMER_INIT = 0x40;   // objoff_2A = $40
@@ -51,7 +53,7 @@ public class SpikerBadnikInstance extends AbstractBadnikInstance {
     private boolean animateThisFrame;
     private boolean xFlipFlag;
     private final AnimationTimer anim = new AnimationTimer(9, 2);
-    private final boolean yFlipFlag;
+    private boolean yFlipFlag;
 
     public SpikerBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Spiker", Sonic2BadnikConfig.DESTRUCTION);
@@ -72,6 +74,11 @@ public class SpikerBadnikInstance extends AbstractBadnikInstance {
         // bchg #status.npc.x_flip,status(a0)
         this.xFlipFlag = !initialXFlip;
         this.facingLeft = !xFlipFlag;
+    }
+
+    @Override
+    public SpikerBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SpikerBadnikInstance(ctx.spawn());
     }
 
     @Override

@@ -7,6 +7,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -20,16 +22,16 @@ import java.util.List;
  * the ROM stores it at {@code $34(a0)} and stores twice that value at
  * {@code $32(a0)} for the unsigned range check.
  */
-public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance {
+public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int VERTICAL_HALF_HEIGHT = 0x14;
     private static final int BOUNCE_SPEED = 0x800;
     private static final int MOVE_LOCK_FRAMES = 15;
 
-    private final int halfWidth;
-    private final int fullWidth;
-    private final boolean launchLeft;
-    private final boolean launchDown;
+    private int halfWidth;
+    private int fullWidth;
+    private boolean launchLeft;
+    private boolean launchDown;
 
     public CnzTriangleBumperObjectInstance(ObjectSpawn spawn) {
         super(spawn, "CNZTriangleBumpers");
@@ -37,6 +39,11 @@ public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance {
         this.fullWidth = halfWidth << 1;
         this.launchLeft = (spawn.renderFlags() & 0x1) != 0;
         this.launchDown = (spawn.renderFlags() & 0x2) != 0;
+    }
+
+    @Override
+    public CnzTriangleBumperObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzTriangleBumperObjectInstance(ctx.spawn());
     }
 
     @Override

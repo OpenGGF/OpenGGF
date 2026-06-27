@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -39,7 +41,7 @@ import java.util.List;
  * Shares art with Object 0x6B (CPZ Elevator/Platform).
  */
 public class CPZStaircaseObjectInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider, SolidObjectListener {
+        implements MultiPieceSolidProvider, SolidObjectListener, RewindRecreatable {
 
     // Constants from disassembly
     private static final int NUM_PIECES = 4;
@@ -62,9 +64,9 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
     // State
     private int state;  // 0-7 (subtype & 0x07)
     private int timer;
-    private final int baseX;
-    private final int baseY;
-    private final boolean xFlip;
+    private int baseX;
+    private int baseY;
+    private boolean xFlip;
 
     // Y offsets for each piece (piece 0 is the "master", others interpolate from it)
     private final int[] yOffsets = new int[NUM_PIECES];
@@ -102,6 +104,11 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
         applyStaircaseInterpolation();
 
         updateDynamicSpawn(baseX, baseY + yOffsets[0]);
+    }
+
+    @Override
+    public CPZStaircaseObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CPZStaircaseObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

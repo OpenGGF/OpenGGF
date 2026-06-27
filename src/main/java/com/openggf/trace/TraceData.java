@@ -433,6 +433,48 @@ public class TraceData {
     }
 
     /**
+     * Returns the per-frame {@link TraceEvent.VOscillate} (S1 global oscillation
+     * state: the {@code v_oscillate} bitfield word + the $40-byte oscillating-
+     * values array) for the requested trace frame, or {@code null} when the trace
+     * was recorded without v3.10+ per-frame {@code v_oscillate} snapshots or when
+     * no event is present for that frame.
+     *
+     * <p><strong>Diagnostic only.</strong> Comparator context for the osc-phase
+     * cluster (e.g. SLZ2 f3353); the engine must NOT hydrate its oscillation
+     * state from these bytes.
+     */
+    public TraceEvent.VOscillate vOscillateForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.VOscillate state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the per-frame {@link TraceEvent.LagState} (BizHawk authoritative lag
+     * flag {@code emu.islagged()} + cumulative {@code emu.lagcount()}) for the
+     * requested trace frame, or {@code null} when the trace was recorded without
+     * v3.11+ per-frame {@code lag_state} snapshots or when no event is present for
+     * that frame.
+     *
+     * <p><strong>Diagnostic only.</strong> Used to confirm whether the
+     * counter/oscillation "skip" frames coincide with emulator lag frames; the
+     * engine must NOT change its stepping from these values.
+     */
+    public TraceEvent.LagState lagStateForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.LagState state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Returns the per-frame {@link TraceEvent.CameraBoundary} (S1 camera
      * vertical-boundary / look-shift) event for the requested trace frame, or
      * {@code null} when the trace was recorded without v3.7+ camera-boundary

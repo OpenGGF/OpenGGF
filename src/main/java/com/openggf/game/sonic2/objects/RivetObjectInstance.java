@@ -13,6 +13,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -66,7 +68,7 @@ import java.util.logging.Logger;
  * </ol>
  */
 public class RivetObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(RivetObjectInstance.class.getName());
 
@@ -109,11 +111,16 @@ public class RivetObjectInstance extends AbstractObjectInstance
 
     // Tracks the player's animation state each frame (ROM: objoff_30)
     private int cachedMainAnimationId;
-    private AbstractPlayableSprite lastNativeMainPlayer;
+    private transient AbstractPlayableSprite lastNativeMainPlayer;
 
     public RivetObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         this.busted = false;
+    }
+
+    @Override
+    public RivetObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new RivetObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

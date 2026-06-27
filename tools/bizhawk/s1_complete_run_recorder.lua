@@ -64,6 +64,54 @@
 -- only cost bytes for objects already in the player window. metadata
 -- lua_script_version reports "3.8"; aux_schema_extras gains
 -- object_near_routine2_objoff3c.
+-- v3.9 changes: ADD three per-object WORD fields to the EXISTING object_near aux
+-- event (CSV schema UNCHANGED; comparison-only context, never engine write-back).
+-- v3.8 traces stay valid (the new aux_schema_extras key gates the parser; the
+-- parser treats all three as legacy-absent-safe). "objoff_34"/"objoff_36"/
+-- "objoff_38" are the per-object counter/timer/sub-state words at offsets +0x34/
+-- +0x36/+0x38 (read_u16_be). They pin object-COUNTER-phase frontiers where the
+-- seat/spawn reaches a counter value one frame before ROM -- the GHZ3 1-frame-
+-- counter-defer shape, now visible per-object: SLZ Staircase Obj5B ride counter
+-- (SLZ1 f2872), geyser-maker timer (MZ2 f2819), platform oscillation phase, etc.
+-- All three ride the existing object_near proximity gate, so they only cost bytes
+-- for objects already in the player window. NB +0x38 here is the object-frame
+-- objoff_38 WORD, distinct from the player-only OFF_STICK_CONVEX byte. metadata
+-- lua_script_version reports "3.9"; aux_schema_extras gains
+-- object_near_objoff_34_36_38.
+-- v3.10 changes: ADD one per-frame diagnostic AUX event (CSV schema UNCHANGED;
+-- comparison-only context, never engine write-back). v3.9 traces stay valid (the
+-- new aux_schema_extras key gates the parser). "v_oscillate": the FULL global
+-- oscillation state -- the v_oscillate direction-bitfield word (FFFE5E) plus the
+-- $40-byte oscillating-values array immediately after it (FFFE60), as a compact
+-- hex string ($42 bytes total). Unblocks the osc-phase cluster (SLZ2 f3353
+-- circling-platform 1px): the comparator reads the exact oscillator-8 byte
+-- (v_oscillate+$22 = FFFE80) per frame to disambiguate an osc-phase-seed offset
+-- (fixable) from the ride-exit seat (shared-riding wall, like SLZ1). Addresses
+-- verified from docs/s1disasm/sonic.lst (43F8 FE5E / 1038 FE60) +
+-- _Variables.asm:400-403. metadata lua_script_version reports "3.10";
+-- aux_schema_extras gains v_oscillate_per_frame.
+-- v3.11 changes: ADD one per-frame diagnostic AUX event (CSV schema UNCHANGED;
+-- comparison-only context, never engine write-back). v3.10 traces stay valid (the
+-- new aux_schema_extras key gates the parser). "lag_state": BizHawk's
+-- AUTHORITATIVE per-frame lag flag emu.islagged() + cumulative emu.lagcount()
+-- (standard EmuHawk client lua: EmuApi emu.islagged()/emu.lagcount(),
+-- https://tasvideos.org/Bizhawk/LuaFunctions). Replaces the imperfect RAM lag
+-- proxies (lag_counter reads 0000; gfc/vbla deltas don't correlate) with the
+-- emulator's ground truth, to confirm whether the SLZ2 OscillateNumDo "skip"
+-- frames -- and the SLZ1/MZ1/MZ2/FZ counter+oscillation-phase cluster -- coincide
+-- exactly with emulator lag frames. metadata lua_script_version reports "3.11";
+-- aux_schema_extras gains lag_state_per_frame.
+-- v3.12 changes: ADD one per-object WORD field to the EXISTING object_near aux
+-- event (CSV schema UNCHANGED; comparison-only context, never engine write-back).
+-- v3.11 traces stay valid (the new aux_schema_extras key gates the parser; the
+-- parser treats it as legacy-absent-safe). "objoff_32" is the per-object timer at
+-- offset +0x32; for maker objects this is gmake_timer -- the MZ2 Lava Geyser maker
+-- (Obj4C) eruption-cadence countdown (gmake_timer equ objoff_32; decremented each
+-- frame, reset to gmake_time; docs/s1disasm/_incObj/4C, 4D MZ Lava Geyser and
+-- Maker.asm:27,42,44). Pins the coupled-cadence decode at MZ2 f2823 -- the banked
+-- root that was "not in aux". Rides the existing object_near proximity gate, so it
+-- only costs bytes for objects already in the player window. metadata
+-- lua_script_version reports "3.12"; aux_schema_extras gains object_near_objoff_32.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -119,6 +167,19 @@ local OFF_ROUTINE_2ND      = 0x25   -- byte: ob2ndRout — object secondary rout
 local OFF_OBJOFF_3C        = 0x3C   -- LONG (32-bit): objoff_3C — generic timer / 32-bit
                                     --       sub-pixel accumulator (e.g. BGHZ_BossGenericTimer,
                                     --       FZ cylinder Obj84 rise accumulator)
+local OFF_OBJOFF_32        = 0x32   -- WORD: objoff_32 — per-object timer; for maker
+                                    --       objects this is gmake_timer (e.g. the MZ2
+                                    --       Lava Geyser maker Obj4C; gmake_timer equ
+                                    --       objoff_32, docs/s1disasm/_incObj/4C, 4D MZ
+                                    --       Lava Geyser and Maker.asm:27,42,44 —
+                                    --       decremented each frame, reset to gmake_time)
+local OFF_OBJOFF_34        = 0x34   -- WORD: objoff_34 — per-object counter/sub-state
+                                    --       (e.g. SLZ Staircase Obj5B ride counter)
+local OFF_OBJOFF_36        = 0x36   -- WORD: objoff_36 — per-object timer/phase
+                                    --       (e.g. platform oscillation phase, maker timer)
+local OFF_OBJOFF_38        = 0x38   -- WORD: objoff_38 — per-object sub-state/timer
+                                    --       (NB object-frame +0x38 word; distinct from the
+                                    --       player-only OFF_STICK_CONVEX byte below)
 local OFF_SUBTYPE          = 0x28   -- byte
 local OFF_RENDER_FLAGS     = 0x01   -- byte: obRender
 local OFF_ANGLE            = 0x26   -- byte: terrain angle
@@ -160,6 +221,19 @@ local ADDR_LIMITBTM1       = 0xF726   -- word: v_limitbtm1 (primary bottom level
 local ADDR_LIMITBTM2       = 0xF72E   -- word: v_limitbtm2 (secondary/eased bottom boundary the camera clamps to)
 local ADDR_LOOKSHIFT       = 0xF73E   -- word: v_lookshift (up/down look screen shift; default $60)
 local ADDR_BGSCROLLVERT    = 0xF75C   -- byte: f_bgscrollvert (bottom-boundary-moving / vertical bg-scroll flag)
+
+-- Global oscillation state (v3.10 diagnostic, SLZ2 f3353 osc-phase cluster).
+-- v_oscillate (word, the direction bitfield) at FFFE5E, immediately followed by
+-- the $40-byte oscillating-values array (v_timingvariables) at FFFE60. Both
+-- confirmed from docs/s1disasm/sonic.lst operands: `lea (v_oscillate).w,a1`
+-- assembles to 43F8 FE5E (v_oscillate=FE5E) and `move.b (v_oscillate+2).w,d0`
+-- to 1038 FE60 (values array=FE60); docs/s1disasm/_Variables.asm:400-403
+-- (v_oscillate ds.w 1; then ds.b $40 "values which oscillate").
+-- The SLZ circling-platform reads oscillator index 8 -> byte at v_oscillate+$22
+-- (= FFFE80 = values-array offset $20). Capturing the whole word+array lets the
+-- comparator disambiguate osc-phase-seed vs ride-exit-seat. Diagnostic ONLY.
+local ADDR_OSCILLATE       = 0xFE5E   -- word: v_oscillate direction bitfield
+local OSCILLATE_SIZE       = 0x42     -- $2 (bitfield word) + $40 (values array)
 
 -- Object table (S1 SST: 128 slots of $40 bytes at $FFD000)
 local OBJ_TABLE_START      = 0xD000
@@ -373,11 +447,13 @@ local function write_metadata()
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.8",\n')
+    meta_file:write('  "lua_script_version": "3.12",\n')
     meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
     meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", '
-        .. '"v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c"],\n')
+        .. '"v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c", '
+        .. '"object_near_objoff_34_36_38", "v_oscillate_per_frame", "lag_state_per_frame", '
+        .. '"object_near_objoff_32"],\n')
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": "",\n')
     -- The complete-run recorder always plays the shared complete-run BK2. Emit
@@ -475,6 +551,50 @@ local function write_camera_boundary()
         mainmemory.read_u8(ADDR_BGSCROLLVERT)))
 end
 
+-- v3.10: full global oscillation state (compact hex), every frame. Unblocks the
+-- osc-phase cluster (SLZ2 f3353 circling-platform 1px): the v_oscillate word
+-- (direction bitfield) + the $40-byte oscillating-values array. The comparator
+-- can read the exact oscillator-8 byte (v_oscillate+$22) per frame to decide
+-- whether the SLZ2 1px is an osc-phase-seed offset (fixable) or the ride-exit
+-- seat (shared-riding wall, like SLZ1). Diagnostic context ONLY (never write-back).
+local function write_v_oscillate()
+    local parts = {}
+    for i = 0, OSCILLATE_SIZE - 1 do
+        parts[#parts + 1] = string.format("%02X", mainmemory.read_u8(ADDR_OSCILLATE + i))
+    end
+    write_aux(string.format(
+        '{"frame":%d,"event":"v_oscillate","bytes":"%s"}',
+        trace_frame, table.concat(parts)))
+end
+
+-- v3.11: BizHawk's AUTHORITATIVE per-frame lag state, every frame. The earlier
+-- lag-frame investigations relied on imperfect RAM proxies (a lag_counter that
+-- reads 0000; gfc/vbla deltas that don't correlate). emu.islagged() is BizHawk's
+-- own ground-truth flag for "this frame was a lag frame" (the core polled input
+-- but did NOT complete a full logical/game step), and emu.lagcount() is the
+-- cumulative lag-frame total. (Standard EmuHawk client lua: emu.islagged()
+-- returns a boolean for the current frame; emu.lagcount() returns the running
+-- total -- BizHawk EmuApi, https://tasvideos.org/Bizhawk/LuaFunctions emu.*.)
+-- This lets the comparator test whether the SLZ2 OscillateNumDo "skip" frames
+-- (and the SLZ1/MZ1/MZ2/FZ counter+oscillation phase cluster) coincide exactly
+-- with emulator lag frames. Diagnostic context ONLY (never write-back); any
+-- actual lag-handling fix is a separate, user-gated decision.
+local function write_lag_state()
+    local lagged = false
+    local lagcount = -1
+    if emu ~= nil then
+        if emu.islagged ~= nil then
+            lagged = emu.islagged()
+        end
+        if emu.lagcount ~= nil then
+            lagcount = emu.lagcount()
+        end
+    end
+    write_aux(string.format(
+        '{"frame":%d,"event":"lag_state","lagged":%s,"lagcount":%d}',
+        trace_frame, lagged and "true" or "false", lagcount))
+end
+
 -- Scan all object slots (1-127). Log appearances, disappearances, proximity,
 -- and emit a full slot_dump when any dynamic object appears.
 local function scan_objects(player_x, player_y)
@@ -531,12 +651,27 @@ local function scan_objects(player_x, player_y)
                 -- as an unsigned 32-bit big-endian word; consumers reinterpret the
                 -- high word as a signed 16-bit pixel offset where appropriate.
                 local obj_off3c = mainmemory.read_u32_be(addr + OFF_OBJOFF_3C)
+                -- objoff_34/36/38 (offsets +0x34/+0x36/+0x38): per-object
+                -- counter/timer/sub-state WORDs. Pin object-counter-phase frontiers
+                -- where the seat/spawn reaches a counter value one frame before ROM
+                -- (e.g. SLZ Staircase Obj5B ride counter at SLZ1 f2872, geyser-maker
+                -- timer at MZ2 f2819) — the GHZ3 1-frame-counter-defer shape, now
+                -- visible per-object.
+                -- objoff_32 (offset +0x32): per-object timer; for maker objects this
+                -- is gmake_timer (the MZ2 Lava Geyser maker Obj4C eruption-cadence
+                -- countdown, gmake_timer equ objoff_32). Pins the coupled-cadence
+                -- decode at MZ2 f2823 (the assumed root that was "not in aux").
+                local obj_off32 = mainmemory.read_u16_be(addr + OFF_OBJOFF_32)
+                local obj_off34 = mainmemory.read_u16_be(addr + OFF_OBJOFF_34)
+                local obj_off36 = mainmemory.read_u16_be(addr + OFF_OBJOFF_36)
+                local obj_off38 = mainmemory.read_u16_be(addr + OFF_OBJOFF_38)
                 write_aux(string.format(
                     '{"frame":%d,"vfc":%d,"event":"object_near","slot":%d,"type":"0x%02X",'
                     .. '"x":"0x%04X","y":"0x%04X","routine":"0x%02X","status":"0x%02X","obj_frame":"0x%02X",'
-                    .. '"routine2":"0x%02X","objoff_3c":"0x%08X"}',
+                    .. '"routine2":"0x%02X","objoff_3c":"0x%08X",'
+                    .. '"objoff_32":"0x%04X","objoff_34":"0x%04X","objoff_36":"0x%04X","objoff_38":"0x%04X"}',
                     trace_frame, vfc, slot, obj_id, obj_x, obj_y, obj_routine, obj_status, obj_frame,
-                    obj_routine2, obj_off3c))
+                    obj_routine2, obj_off3c, obj_off32, obj_off34, obj_off36, obj_off38))
             end
         end
 
@@ -872,6 +1007,13 @@ local function on_frame_end()
     -- array (slot-cadence cluster) and the camera vertical-boundary state (MZ1).
     write_v_objstate()
     write_camera_boundary()
+    -- v3.10 per-frame diagnostic context (comparison-only): global oscillation
+    -- state (v_oscillate word + values array) for the osc-phase cluster (SLZ2).
+    write_v_oscillate()
+    -- v3.11 per-frame diagnostic context (comparison-only): BizHawk's authoritative
+    -- lag-frame state, to confirm whether the OscillateNumDo/counter "skip" frames
+    -- coincide with emulator lag frames (SLZ1/SLZ2/MZ1/MZ2/FZ cluster).
+    write_lag_state()
 
     -- OPL cursor state: emit event on chunk transitions for ROM↔engine comparison.
     -- v_opl_screen changes only when OPL_Next processes a new chunk.

@@ -6,6 +6,8 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -75,7 +77,7 @@ import java.util.List;
  * @see BonusBlockObjectInstance Drop target with hit tracking
  */
 public class HexBumperObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
     // ========================================================================
     // ROM Constants
@@ -184,6 +186,11 @@ public class HexBumperObjectInstance extends AbstractObjectInstance
     public HexBumperObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         initMovement();
+    }
+
+    @Override
+    public HexBumperObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HexBumperObjectInstance(ctx.spawn(), getName());
     }
 
     private void initMovement() {

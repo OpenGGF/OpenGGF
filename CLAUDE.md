@@ -258,6 +258,8 @@ Physics differences across S1/S2/S3K are handled through a layered provider syst
 
 `collisionModel` selects `UNIFIED` (S1) vs `DUAL_PATH` (S2/S3K) and routes collision code paths — see the section below. All other per-game flags (spindash, angle thresholds, look-scroll delay, water shimmer, elemental shields, edge balance, sidekick rules, etc.) live on `PhysicsFeatureSet`. See `PhysicsFeatureSet.java` and its `SONIC_1` / `SONIC_2` / `SONIC_3K` factory constants for the authoritative list.
 
+For multi-sidekick daisy chains, `getEffectiveLeader()` uses a direct CPU leader immediately once that leader is in NORMAL. The 15-frame settled threshold is only for healing past broken or not-yet-normal links, not for skipping a direct NORMAL leader while its history warms.
+
 ### Collision Model: UNIFIED vs DUAL_PATH
 
 **S1 (UNIFIED):** Single collision index, solidity bits hardcoded per-routine, no dynamic path switching.

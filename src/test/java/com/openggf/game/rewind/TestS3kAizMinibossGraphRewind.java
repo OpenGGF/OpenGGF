@@ -20,6 +20,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import org.junit.jupiter.api.AfterEach;
@@ -33,10 +34,12 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kAizMinibossGraphRewind {
 
@@ -81,6 +84,15 @@ class TestS3kAizMinibossGraphRewind {
 
         assertAllReferencesPointAtRestoredGraph(restored);
         assertRestoredObjectsAreFresh(before, restored);
+    }
+
+    @Test
+    void aizMinibossParentUsesGenericRecreateWithoutExplicitDynamicCodec() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(AizMinibossInstance.class),
+                "AizMinibossInstance must restore through RewindRecreatable graph recreate");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        AizMinibossInstance.class.getName()),
+                "AizMinibossInstance must not keep an explicit S3K dynamic rewind codec");
     }
 
     @Test

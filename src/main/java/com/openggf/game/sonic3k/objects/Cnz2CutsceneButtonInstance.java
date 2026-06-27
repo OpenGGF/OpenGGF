@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -22,7 +23,7 @@ import java.util.List;
  * 6 runs {@code loc_65CAC}: shakes the screen and spawns the vacuum-tube
  * controllers used by the second encounter.
  */
-public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance {
+public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int INIT_Y_OFFSET = 4;
     private static final int PRIORITY = 4;
     private static final int RANGE_LEFT = -0x18;
@@ -37,9 +38,9 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance {
     private static final int WATER_FLASH_SUBTYPE = 4;
     private static final int VACUUM_TUBE_SUBTYPE = 6;
 
-    private final int x;
-    private final int y;
-    private final int subtype;
+    private int x;
+    private int y;
+    private int subtype;
     private boolean pressed;
     private CnzLightsFlashChildInstance spawnedFlash;
 

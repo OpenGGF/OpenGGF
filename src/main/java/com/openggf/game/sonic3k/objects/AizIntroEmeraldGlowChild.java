@@ -5,6 +5,8 @@ import com.openggf.camera.Camera;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -19,12 +21,12 @@ import java.util.logging.Logger;
  * visual effect on the plane's emeralds. Each follows the parent plane
  * with a fixed (x, y) offset and self-destructs when the parent is destroyed.
  */
-public class AizIntroEmeraldGlowChild extends AbstractObjectInstance {
+public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(AizIntroEmeraldGlowChild.class.getName());
     private final AizIntroPlaneChild parent;
-    private final int xOffset;
-    private final int yOffset;
+    private int xOffset;
+    private int yOffset;
 
     private static final int[] GLOW_FRAMES = {0, 5, 6};
     private static final int ANIM_FRAME_DURATION = 3;
@@ -43,6 +45,12 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance {
         this.parent = parent;
         this.xOffset = xOffset;
         this.yOffset = yOffset;
+    }
+
+    @Override
+    public AizIntroEmeraldGlowChild recreateForRewind(RewindRecreateContext ctx) {
+        AizIntroPlaneChild livePlane = AizIntroRewindLinks.liveIntroPlane(ctx);
+        return livePlane == null ? null : new AizIntroEmeraldGlowChild(ctx.spawn(), livePlane, 0, 0);
     }
 
     @Override

@@ -5,7 +5,10 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -18,7 +21,8 @@ import java.util.List;
  * to {@code loc_62F72}. The child uses {@code Map_MHZKnuxPeer} and
  * {@code ArtKosM_MHZKnuxPeer}, not the shared cutscene Knuckles DPLC sheet.
  */
-public final class CutsceneKnucklesMhz1PeerInstance extends AbstractObjectInstance {
+public final class CutsceneKnucklesMhz1PeerInstance extends AbstractObjectInstance
+        implements RewindRecreatable {
     private static final int INITIAL_X = 0x0374;
     private static final int INITIAL_Y = 0x066C;
     private static final int INITIAL_FRAME = 4;
@@ -56,6 +60,12 @@ public final class CutsceneKnucklesMhz1PeerInstance extends AbstractObjectInstan
     CutsceneKnucklesMhz1PeerInstance(ObjectSpawn spawn, CutsceneKnucklesMhz1Instance parent) {
         super(spawn, "CutsceneKnucklesMhz1Peer");
         this.parent = parent;
+    }
+
+    @Override
+    public CutsceneKnucklesMhz1PeerInstance recreateForRewind(RewindRecreateContext ctx) {
+        CutsceneKnucklesMhz1Instance liveParent = findNearestLiveParent(ctx);
+        return new CutsceneKnucklesMhz1PeerInstance(ctx.spawn(), liveParent);
     }
 
     @Override
@@ -133,6 +143,31 @@ public final class CutsceneKnucklesMhz1PeerInstance extends AbstractObjectInstan
             }
             setDestroyed(true);
         }
+    }
+
+    private static CutsceneKnucklesMhz1Instance findNearestLiveParent(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        CutsceneKnucklesMhz1Instance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (!(object instanceof CutsceneKnucklesMhz1Instance candidate) || candidate.isDestroyed()) {
+                continue;
+            }
+            if (spawn == null) {
+                return candidate;
+            }
+            long dx = candidate.getX() - spawn.x();
+            long dy = candidate.getY() - spawn.y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+        return best;
     }
 
     private enum State {

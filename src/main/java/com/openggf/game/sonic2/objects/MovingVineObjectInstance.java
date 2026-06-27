@@ -10,8 +10,11 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -42,7 +45,7 @@ import java.util.logging.Logger;
  *   <li>WFZ: Hook on chain - max extension 0xA0 (or 0x60), frame = extension/16 + 1, palette 1</li>
  * </ul>
  */
-public class MovingVineObjectInstance extends AbstractObjectInstance {
+public class MovingVineObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(MovingVineObjectInstance.class.getName());
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
@@ -85,12 +88,12 @@ public class MovingVineObjectInstance extends AbstractObjectInstance {
     }
 
     // === Object Configuration ===
-    private final ZoneVariant variant;
-    private final int initialY;             // objoff_3C: Saved initial Y position
-    private final int maxExtension;         // objoff_2E: Maximum extension distance
-    private final boolean reversedMode;     // objoff_36: If true, retract when player hanging
-    private final boolean buttonVineMode;   // objoff_34: Button switch mode flag
-    private final int buttonSwitchId;       // subtype & 0x0F: Switch ID for ButtonVine_Trigger
+    private ZoneVariant variant;
+    private int initialY;             // objoff_3C: Saved initial Y position
+    private int maxExtension;         // objoff_2E: Maximum extension distance
+    private boolean reversedMode;     // objoff_36: If true, retract when player hanging
+    private boolean buttonVineMode;   // objoff_34: Button switch mode flag
+    private int buttonSwitchId;       // subtype & 0x0F: Switch ID for ButtonVine_Trigger
 
     // === Movement State ===
     private int currentExtension;           // objoff_38: Current extension value
@@ -173,13 +176,19 @@ public class MovingVineObjectInstance extends AbstractObjectInstance {
                 spawn.x(), initialY, subtype, variant, maxExtension, reversedMode, buttonVineMode, buttonSwitchId));
     }
 
+    @Override
+    public MovingVineObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MovingVineObjectInstance(ctx.spawn(), "MovingVine");
+    }
+
     /**
      * Determines zone variant based on current level.
      * ROM: cmpi.b #wing_fortress_zone,(Current_Zone).w
      */
     private ZoneVariant determineZoneVariant() {
-        if (services().currentLevel() != null) {
-            int zoneId = services().currentLevel().getZoneIndex();
+        ObjectServices svc = tryServices();
+        if (svc != null && svc.currentLevel() != null) {
+            int zoneId = svc.currentLevel().getZoneIndex();
             if (zoneId == Sonic2ZoneConstants.ROM_ZONE_WFZ) {
                 return ZoneVariant.WFZ;
             }

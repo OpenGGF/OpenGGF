@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
@@ -21,7 +22,8 @@ import java.util.List;
  * and the latch handoff, because the generic cork-floor rendering and break
  * logic already lives elsewhere in the engine.
  */
-public final class CnzWaterLevelCorkFloorInstance extends AbstractObjectInstance {
+public final class CnzWaterLevelCorkFloorInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     /**
      * ROM: {@code move.w #$958,(Target_water_level).w}.
      */

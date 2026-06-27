@@ -13,6 +13,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -58,7 +60,7 @@ import java.util.logging.Logger;
  * the parent's first phase load).
  */
 public class MCZRotPformsObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(MCZRotPformsObjectInstance.class.getName());
 
@@ -118,8 +120,8 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     private int yVel;
 
     // Original spawn position (objoff_32, objoff_30 in disassembly).
-    private final int baseX;
-    private final int baseY;
+    private int baseX;
+    private int baseY;
 
     // Movement state.
     private int phaseIndex;         // objoff_38: byte-offset cursor into objoff_2C table
@@ -133,8 +135,8 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     private boolean isMtz;
     private int[][] moveTable;
     private int yRadius;
-    private final boolean xFlip;
-    private final boolean yFlip;
+    private boolean xFlip;
+    private boolean yFlip;
     private boolean isParent;  // Only MCZ subtype 0x18 acts as parent.
 
     // Child tracking for cleanup on unload.
@@ -178,6 +180,11 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
         this.spawnFrameSkipPending = true;
 
         updateDynamicSpawn(x, y);
+    }
+
+    @Override
+    public MCZRotPformsObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MCZRotPformsObjectInstance(ctx.spawn(), getName());
     }
 
     private void ensureInitialized() {

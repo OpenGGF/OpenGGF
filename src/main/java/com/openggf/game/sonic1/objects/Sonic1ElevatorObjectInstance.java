@@ -87,11 +87,11 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
     };
 
     // Saved original positions (elev_origX = objoff_32, elev_origY = objoff_30)
-    private final int origX;
-    private final int origY;
+    private int origX;
+    private int origY;
 
     // Half-width for platform collision
-    private final int halfWidth;
+    private int halfWidth;
 
     // Current dynamic position
     private int x;
@@ -104,7 +104,7 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
     private int actionType;
 
     // Whether this is a spawner (Elev_MakeMulti mode, bit 7 of original subtype)
-    private final boolean isSpawner;
+    private boolean isSpawner;
 
     // Spawner fields (Elev_MakeMulti: routine 6)
     private int spawnTimer;       // elev_dist when in spawner mode
@@ -227,9 +227,27 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
             // ROM Elev_Action runs ExitPlatform, then movement, then MvSonicOnPtfm2.
             // Resolve the solid contact after movement so the riding player is
             // snapped to the platform's moved position in the same frame.
+            //
+            // ExitPlatform (docs/s1disasm/_incObj/sub ExitPlatform.asm:9-39) tests the
+            // player's pre-move state: if airborne (jumped off) OR horizontally outside
+            // the platform width, it does `move.b #2,obRoutine(a0)` -- reverting the
+            // elevator to Elev_Platform (routine 2). Capture that condition before the
+            // move (ExitPlatform runs first in Elev_Action), apply the routine revert
+            // after this frame's move+seat (the routine change takes effect next frame,
+            // exactly as the ROM continues into Elev_Types/MvSonicOnPtfm2 after setting
+            // the routine byte). Without this the elevator stays in routine 4 forever
+            // after the first ride, so re-landing detection (checkpointAll) keeps running
+            // AFTER the upward move instead of before it (routine 2's PlatformObject
+            // order), seating a falling rolling-jump player one frame early
+            // (SLZ3 f4026: detect at post-move elevY=0x0103/top 0xFB lands the player,
+            // ROM detects at pre-move elevY=0x0105/top 0xFD and stays airborne to f4027).
+            boolean exited = playerExitedPlatform(player);
             executeActionTypes(player);
             updateDynamicSpawn(x, y);
             checkpointAll();
+            if (exited && !isDestroyed()) {
+                routine = 2;
+            }
         } else if (routine == 2) {
             // Routine 2 (Elev_Platform): PlatformObject runs before Elev_Types.
             // Manual checkpoints do not invoke the legacy onSolidContact callback, so
@@ -245,6 +263,25 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
             }
             updateDynamicSpawn(x, y);
         }
+    }
+
+    /**
+     * ROM ExitPlatform exit test (docs/s1disasm/_incObj/sub ExitPlatform.asm:23-34):
+     * the rider has left the platform when airborne (jumped off) or when their X
+     * position is outside the platform's [x-halfWidth, x+halfWidth) span.
+     */
+    private boolean playerExitedPlatform(AbstractPlayableSprite player) {
+        if (player == null) {
+            return false;
+        }
+        // btst #1,obStatus(a1) / bne .exitedPlatform -- airborne riders exit immediately.
+        if (player.getAir()) {
+            return true;
+        }
+        // move.w obX(a1),d0 / sub.w obX(a0),d0 / add.w d1,d0 / bmi .exited;
+        // cmp.w d2,d0 / blo .return  (d1 = obActWid, d2 = 2*obActWid)
+        int rel = player.getCentreX() - x + halfWidth;
+        return rel < 0 || rel >= (halfWidth * 2);
     }
 
     /**
@@ -491,6 +528,28 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
         // ROM: Elev_Platform / Elev_Action load d1 directly from obActWid before
         // calling PlatformObject / ExitPlatform, so the collision half-width is
         // already the correct Solid_Landed standing width.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM Elev_Platform (routine 2) lands the player through PlatformObject
+        // (docs/s1disasm/_incObj/59 SLZ Elevators.asm:77-80 ->
+        // docs/s1disasm/_incObj/sub PlatformObject.asm:36-52), whose Y land band
+        // is gated by an UNSIGNED `cmpi.w #-16,d0 / blo Plat_Exit` (top of platform
+        // = obY-8) AFTER a signed `bhi Plat_Exit` on d0>0. That rejects the
+        // exact-touch case d0=0 (`0x0000 <u 0xFFF0`): the standable band is d0 in
+        // [-16,-1] (strict penetration -- the player's bottom edge must be at least
+        // 1px below the obY-8 surface). The engine default accepts detectionDistY=0,
+        // so a fast-falling player whose bottom edge reaches exactly the surface
+        // seats one frame early. SLZ2 f3927: a rolling-jump player falling at
+        // ~18px/frame past the elevator at (0x1B80,0x0368) hits d0=0 at f3927 (feet
+        // 0x0360 == surface 0x0368-8=0x0360) -- ROM rejects and keeps falling
+        // (y_speed 0x11E0), the engine landed him (air 1->0, g_speed FC0B->FE8C).
+        // The elevator was the only PlatformObject-family S1 object missing this
+        // override (Obj 18/52/53/5A/63/6C/1A already have it). The elevator's
+        // top-landing detection already uses airHalfHeight=8 (= obY-8), matching
+        // ROM's subq.w #8, so no getTopLandingSnapAdjustment is needed here.
         return true;
     }
 

@@ -15,6 +15,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -31,7 +32,7 @@ import java.util.List;
  * subtypes.
  */
 public final class LbzMovingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final int PRIORITY_BUCKET = 3; // priority=$180
     private static final int SOLID_GROUND_HALF_HEIGHT = 9;
@@ -55,13 +56,13 @@ public final class LbzMovingPlatformObjectInstance extends AbstractObjectInstanc
             {0x34, 0x36, 224 / 2, 0}
     };
 
-    private final int halfWidth;
-    private final int halfHeight;
-    private final int mappingFrame;
-    private final boolean hFlip;
-    private final int originalBaseX;
-    private final int baseY;
-    private final int liftDistance;
+    private int halfWidth;
+    private int halfHeight;
+    private int mappingFrame;
+    private boolean hFlip;
+    private int originalBaseX;
+    private int baseY;
+    private int liftDistance;
     private final PlatformBobHelper bobHelper = new PlatformBobHelper();
     private final SubpixelMotion.State fallMotion;
     private final List<PlayableEntity> standingPlayers = new ArrayList<>(2);

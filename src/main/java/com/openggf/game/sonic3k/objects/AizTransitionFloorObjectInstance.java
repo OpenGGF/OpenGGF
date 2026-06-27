@@ -6,6 +6,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.ZeroArgRewindRecreatable;
 import com.openggf.game.PlayableEntity;
 
 import java.util.IdentityHashMap;
@@ -20,7 +21,7 @@ import java.util.Map;
  * then calls {@code SolidObjectTop} with d1=$A0, d2=$10, d3=$10.
  */
 public final class AizTransitionFloorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, RomObjectCodePointerProvider, ZeroArgRewindRecreatable {
     private static final int X = 0x2FB0;
     private static final int Y = 0x03A0;
     private static final int OBJECT_ID = 0x00;

@@ -13,10 +13,13 @@ import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 
@@ -38,7 +41,7 @@ import java.util.List;
  * <p>ROM reference: Obj_TensionBridge (sonic3k.asm:75496+)
  */
 public class TensionBridgeObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener {
+        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private enum Variant { NORMAL, TRIGGER_COLLAPSE, ICZ_ROPE }
 
@@ -114,10 +117,10 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
 
     // --- Instance state ---
 
-    private final boolean negativeSubtype;
-    private final int segmentCount;
-    private final int triggerIndex;
-    private final int baseY;
+    private boolean negativeSubtype;
+    private int segmentCount;
+    private int triggerIndex;
+    private int baseY;
 
     // Lazily resolved (can't call services() in constructor)
     private Variant variant;
@@ -494,11 +497,11 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
      * Individual bridge segment that falls with gravity after a staggered delay.
      * ROM: no initial velocity, just MoveSprite gravity.
      */
-    private static final class BridgeFragment extends GravityDebrisChild {
-        private final int frameIndex;
+    private static final class BridgeFragment extends GravityDebrisChild implements RewindRecreatable {
+        private int frameIndex;
         private int delay;
-        private final String artKey;
-        private final boolean highPri;
+        private String artKey;
+        private boolean highPri;
 
         private BridgeFragment(int x, int y, int frameIndex, int delay,
                                String artKey, boolean highPri) {
@@ -508,6 +511,24 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
             this.delay = delay;
             this.artKey = artKey;
             this.highPri = highPri;
+        }
+
+        private BridgeFragment() {
+            this(0, 0, 0, 0, Sonic3kObjectArtKeys.TENSION_BRIDGE_HCZ, false);
+        }
+
+        @Override
+        public BridgeFragment recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            int x = capturedSpawn != null ? capturedSpawn.x() : 0;
+            int y = capturedSpawn != null ? capturedSpawn.y() : 0;
+            return new BridgeFragment(
+                    x,
+                    y,
+                    0,
+                    0,
+                    Sonic3kObjectArtKeys.TENSION_BRIDGE_HCZ,
+                    false);
         }
 
         @Override

@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 
 /**
  * CNZ-local wrapper for the standard upright egg capsule.
@@ -16,13 +17,14 @@ import com.openggf.level.objects.ObjectSpawn;
  * button/open/results behavior and reports completion back to the CNZ boss
  * sequence, which owns the later cannon launch into ICZ1.
  */
-public final class CnzEggCapsuleInstance extends AbstractS3kUprightEggCapsuleInstance {
+public final class CnzEggCapsuleInstance extends AbstractS3kUprightEggCapsuleInstance
+        implements SpawnRewindRecreatable {
     public enum CompletionContinuation {
         NONE,
         CNZ_END_BOSS_SEQUENCE
     }
 
-    private final CompletionContinuation completionContinuation;
+    private CompletionContinuation completionContinuation;
     private boolean resultsCompleteNotified;
 
     public CnzEggCapsuleInstance(ObjectSpawn spawn) {

@@ -12,6 +12,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -79,7 +81,7 @@ import java.util.List;
  * Anim 0: delay 3, frames {2, 3, 4, 5, 1}, $FF (loop to frame 1)
  */
 public class BreakablePlatingObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
     // ========================================================================
     // ROM Constants
@@ -141,8 +143,8 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
         BREAKUP   // routine 4: fragment falling with gravity + animation
     }
 
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
     private Routine routine;
 
     // Grab state (objoff_30: timer, objoff_32: grabbed flag)
@@ -151,7 +153,7 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
     private boolean collisionProperty; // ROM collision_property signal set by Touch_Special
     private boolean playerWasJumpPressed; // Track edge-trigger for A/B/C release
     private int collisionFlags;      // Current collision flags (cleared on grab/breakup)
-    private AbstractPlayableSprite lastNativeMainPlayer;
+    private transient AbstractPlayableSprite lastNativeMainPlayer;
 
     // Fragment state (only used when routine == BREAKUP)
     private boolean isFragment;
@@ -184,6 +186,11 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
 
         // Mapping frame 0 = full intact plating
         this.mappingFrame = 0;
+    }
+
+    @Override
+    public BreakablePlatingObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BreakablePlatingObjectInstance(ctx.spawn(), getName());
     }
 
     /**

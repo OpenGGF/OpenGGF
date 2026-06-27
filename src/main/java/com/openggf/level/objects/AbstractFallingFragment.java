@@ -30,10 +30,10 @@ public abstract class AbstractFallingFragment extends AbstractObjectInstance {
     /** Off-screen margin for destroy check (pixels beyond camera viewport). */
     private static final int OFF_SCREEN_MARGIN = 128;
 
-    private final int x;
+    private int x;
     private final SubpixelMotion.State motion;
     private int delayTimer;
-    private final int priority;
+    private int priority;
 
     /**
      * @param spawn      spawn point (typically parent position)

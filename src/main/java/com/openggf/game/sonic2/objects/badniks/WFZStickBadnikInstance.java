@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -17,7 +19,7 @@ import java.util.List;
  * {@code LoadSubObject}; main runs {@code AnimateSprite} with
  * {@code Ani_objBF = dc.b 1,0,1,2,$FF}, then {@code MarkObjGone}.
  */
-public class WFZStickBadnikInstance extends AbstractBadnikInstance {
+public class WFZStickBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x04;
     private static final int WIDTH_PIXELS = 4;
@@ -33,6 +35,11 @@ public class WFZStickBadnikInstance extends AbstractBadnikInstance {
         this.animFrame = 0;
         this.animTimer = ANIMATION_DELAY;
         this.animationIndex = 0;
+    }
+
+    @Override
+    public WFZStickBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new WFZStickBadnikInstance(ctx.spawn());
     }
 
     @Override

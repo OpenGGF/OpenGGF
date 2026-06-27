@@ -120,8 +120,8 @@ public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
     private int moveType;
 
     // Visual properties
-    private final int activeWidth;   // obActWid
-    private final int mappingFrame;  // obFrame
+    private int activeWidth;   // obActWid
+    private int mappingFrame;  // obFrame
 
     // Routine state: 2 = MBlock_Platform, 4 = MBlock_StandOn
     // In routine 4, the player is standing on the platform

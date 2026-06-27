@@ -1,9 +1,5 @@
 package com.openggf.level.objects;
 
-import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.TestEnvironment;
@@ -21,15 +17,12 @@ class TestObjectTouchResponseRewindCapture {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
     }
 
     @AfterEach
     void tearDown() {
-        SessionManager.clear();
-        GameModuleRegistry.reset();
+        TestEnvironment.resetAll();
     }
 
     @Test

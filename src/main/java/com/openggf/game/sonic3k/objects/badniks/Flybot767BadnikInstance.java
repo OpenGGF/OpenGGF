@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
@@ -15,7 +16,7 @@ import java.util.List;
  * The badnik chases Player 1, dives when below/near the player, rebounds
  * above its attack origin, then waits before returning to the chase loop.
  */
-public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance {
+public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x1A; // ObjSlot_Flybot767 collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjSlot_Flybot767 priority $280.
 

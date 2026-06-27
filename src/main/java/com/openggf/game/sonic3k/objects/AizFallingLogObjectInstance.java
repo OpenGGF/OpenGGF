@@ -38,7 +38,7 @@ import java.util.logging.Logger;
  * loc_2B5D4 (spawner loop), loc_2B6A0 (log falling), loc_2B6BC (log at water),
  * loc_2B6D8 (solid + draw), loc_2B72C (splash animation).
  */
-public class AizFallingLogObjectInstance extends AbstractObjectInstance {
+public class AizFallingLogObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(AizFallingLogObjectInstance.class.getName());
 
@@ -61,10 +61,10 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
     // past initial state, indicating dynamic level changes are active.
     private static final int EVENT_TRIGGER_ROUTINE_THRESHOLD = 2;
 
-    private final int timingMask;   // $32(a0): AND mask for Level_frame_counter
-    private final int phaseOffset;  // $34(a0): added to frame counter before masking
-    private final int spawnX;
-    private final int spawnY;
+    private int timingMask;   // $32(a0): AND mask for Level_frame_counter
+    private int phaseOffset;  // $34(a0): added to frame counter before masking
+    private int spawnX;
+    private int spawnY;
     private String logArtKey;
     private String splashArtKey;
     private boolean initialized;
@@ -84,6 +84,11 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
         // Phase offset: high nibble shifted left by max(periodIndex - 3, 0)
         int shift = Math.max(periodIndex - 3, 0);
         this.phaseOffset = ((subtype >> 4) & 0x0F) << shift;
+    }
+
+    @Override
+    public AizFallingLogObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizFallingLogObjectInstance(ctx.spawn());
     }
 
     /**

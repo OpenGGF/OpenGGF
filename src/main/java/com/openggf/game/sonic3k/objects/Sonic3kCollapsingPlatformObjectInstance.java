@@ -12,11 +12,14 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -41,7 +44,7 @@ import java.util.logging.Logger;
  * ROM references: Obj_CollapsingPlatform (sonic3k.asm), loc_20594, loc_205CE.
  */
 public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, RomObjectCodePointerProvider {
+        implements SlopedSolidProvider, SolidObjectListener, RomObjectCodePointerProvider, SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(Sonic3kCollapsingPlatformObjectInstance.class.getName());
 
@@ -136,8 +139,8 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     // ===== Instance state =====
 
     private final ZoneConfig config;
-    private final int mappingFrame;  // subtype selects intact variant
-    private final boolean hFlip;
+    private int mappingFrame;  // subtype selects intact variant
+    private boolean hFlip;
 
     private int x;
     private int y;
@@ -661,12 +664,12 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
      * <p>
      * ROM: loc_205CE (fragment routine in Obj_CollapsingPlatform).
      */
-    public static class CollapsingPlatformFragment extends AbstractFallingFragment {
+    public static class CollapsingPlatformFragment extends AbstractFallingFragment implements RewindRecreatable {
 
-        private final int fragmentFrameIndex;
-        private final int pieceIndex;
-        private final String artKey;
-        private final boolean hFlip;
+        private int fragmentFrameIndex;
+        private int pieceIndex;
+        private String artKey;
+        private boolean hFlip;
 
         public CollapsingPlatformFragment(int parentX, int parentY,
                                           int fragmentFrameIndex, int pieceIndex,
@@ -677,6 +680,26 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
             this.pieceIndex = pieceIndex;
             this.artKey = artKey;
             this.hFlip = hFlip;
+        }
+
+        private CollapsingPlatformFragment() {
+            this(0, 0, 0, 0, 0, Sonic3kObjectArtKeys.COLLAPSING_PLATFORM_AIZ1, false);
+        }
+
+        @Override
+        public CollapsingPlatformFragment recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            int x = capturedSpawn != null ? capturedSpawn.x() : 0;
+            int y = capturedSpawn != null ? capturedSpawn.y() : 0;
+            boolean capturedHFlip = capturedSpawn != null && (capturedSpawn.renderFlags() & 1) != 0;
+            return new CollapsingPlatformFragment(
+                    x,
+                    y,
+                    0,
+                    0,
+                    0,
+                    Sonic3kObjectArtKeys.COLLAPSING_PLATFORM_AIZ1,
+                    capturedHFlip);
         }
 
         @Override

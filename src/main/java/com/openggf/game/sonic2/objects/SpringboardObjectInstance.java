@@ -43,7 +43,7 @@ import java.util.List;
  * standing bit) rather than relying on onSolidContact() receiving STANDING every frame.
  */
 public class SpringboardObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, RewindRecreatable {
 
     // Animation IDs (from Ani_obj40)
     private static final int ANIM_IDLE = 0;       // byte_265EC: delay=0xF, frames=[0], LOOP
@@ -119,6 +119,11 @@ public class SpringboardObjectInstance extends BoxObjectInstance
     public SpringboardObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name, COLLISION_HALF_WIDTH, COLLISION_HEIGHT, 1.0f, 0.85f, 0.1f, false);
         this.mappingFrame = 0;
+    }
+
+    @Override
+    public SpringboardObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SpringboardObjectInstance(ctx.spawn(), "Springboard");
     }
 
     private void ensureInitialized() {

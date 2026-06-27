@@ -481,6 +481,22 @@ For S3K work specifically, also keep the S3K must-keep-green tests green:
 
 If a fix is genuinely game-divergent (different games' ROMs really do behave differently), add a flag to `PhysicsFeatureSet`, set the right value on each game's `SONIC_1`/`SONIC_2`/`SONIC_3K` constant, and branch on the flag at the call site.
 
+## Do NOT bounce a frontier as "RAM-gated" without a PC-execute probe first
+
+**Hard rule (hard-won, repeatedly violated):** a bounce that concludes a frontier is "BizHawk/RAM-gated", "needs hardware RAM", or that the deciding value is a "mid-frame register / sub-frame spawn order / slot-occupancy cadence / sub-pixel that no per-VBlank trace can capture" is **NOT valid** until you have built a targeted **PC-execute probe** (see *BizHawk Live Diagnostic Capture* above — `diag_template_fast.lua` + `event.onmemoryexecute`) and captured the exact mid-frame 68k state at the divergence instruction.
+
+**Why:** the recorder samples RAM once per VBlank, but the recorder is *Lua inside BizHawk* — `event.onmemoryexecute(cb, addr, "system")` fires at ANY 68k instruction and `emu.getregister("M68K <reg>")` / `mainmemory` read state **mid-frame, at that exact PC**. "The per-VBlank trace can't see it" is a recorder limitation, **never** a BizHawk one. Mid-frame registers, the slot a `FindFreeObj` returns, the `x_sub` at a `SpeedToPos`, a counter at its update — all directly capturable.
+
+**Proof this matters:** SYZ1 f4430 was bounced THREE times as "RAM-gated on ROM mid-frame obVelY". A PC-probe at the `Sonic_FloorUp` branch PCs (0x13DF0/0x13DF2/0x13E02), gated to `a0==v_player` in the divergence window, captured `obRoutine=0x04` (Sonic_Hurt) + which branch fired — revealing the engine missed `Sonic_HurtStop`'s velocity-zeroing on the *angled-ceiling* hurt-land. Object-local fix, universal S1/S2/S3K, commit `42bb2fe22`, 554→406 errors. The "uncapturable" wall was an error, not a fact.
+
+**Recipe by gate type** (build a standalone probe lua per *BizHawk Live Diagnostic Capture*; gate callbacks to `a0==0xFFD000` for the player or the target object slot + a `bk2_offset+frame` window; read-only):
+- **mid-frame register** → hook the computing instruction (the `move`/`btst`/branch); dump the register/field + which branch fired. Either find the engine's divergent branch/value (fix) or prove engine==ROM at every step (real bounce).
+- **slot-cadence / slot-interleave** → hook `FindFreeObj`/`FindNextFreeObj` (slot returned in an address reg → `slot=(areg-0xFFD000)/0x40`) + `DeleteObject` + the spawn site; capture the per-frame spawn/free→slot timeline; diff vs the engine to find the FIRST object that takes a wrong slot and WHY (spawned/freed at the wrong frame). Turns "irreducible slot-occupancy" into a decodable spawn/free-cadence diff — sometimes a fixable object-lifetime bug.
+- **sub-pixel** → hook `SpeedToPos` / the position-update instruction; capture `x_sub`/`y_sub` mid-frame.
+- **counter-phase** → hook the counter's update instruction.
+
+Only after the probe shows the engine's mid-frame value matches ROM at every inspectable step is a "gated" bounce honest — and then quote the captured values, not "ROM unknown". See memory `bizhawk-pc-execute-hook-lever`.
+
 ## When to Stop and Plan
 
 Per mission rule 3, hand work off when scope expands beyond a clean fix:

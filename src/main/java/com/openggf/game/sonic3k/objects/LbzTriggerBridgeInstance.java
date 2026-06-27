@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -19,7 +20,8 @@ import java.util.List;
  *
  * <p>ROM reference: {@code Obj_LBZTriggerBridge} (sonic3k.asm:51653-51804).
  */
-public final class LbzTriggerBridgeInstance extends AbstractObjectInstance implements SolidObjectProvider {
+public final class LbzTriggerBridgeInstance extends AbstractObjectInstance
+        implements SolidObjectProvider, SpawnRewindRecreatable {
     private static final int TABLE_ENTRY_SIZE = 8;
     private static final int TRIGGERED_TABLE_OFFSET = 4;
     private static final int TABLE_INDEX_MASK = 0x38;
@@ -49,11 +51,11 @@ public final class LbzTriggerBridgeInstance extends AbstractObjectInstance imple
             { -0x48, 0x00, 0x08, 0x40, 0x06, 0x00, 0x04, 0x08 }
     };
 
-    private final int baseX;
-    private final int baseY;
-    private final int triggerIndex;
-    private final int widthPixels;
-    private final int heightPixels;
+    private int baseX;
+    private int baseY;
+    private int triggerIndex;
+    private int widthPixels;
+    private int heightPixels;
 
     private int routine;
     private int mappingFrame;

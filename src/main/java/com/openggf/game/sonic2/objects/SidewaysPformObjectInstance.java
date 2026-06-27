@@ -12,6 +12,8 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -41,7 +43,7 @@ import java.util.logging.Logger;
  * - Subtype 0x12: Single platform, offset right
  */
 public class SidewaysPformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(SidewaysPformObjectInstance.class.getName());
 
@@ -91,6 +93,11 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
     public SidewaysPformObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         this.isChild = false;
+    }
+
+    @Override
+    public SidewaysPformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SidewaysPformObjectInstance(ctx.spawn(), getName());
     }
 
     /**

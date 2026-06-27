@@ -6,10 +6,13 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -29,7 +32,7 @@ import java.util.List;
  * parent paces horizontally, raises status byte {@code $38} bit 1 when ready to
  * fire, and waits until the child nozzle clears that bit after the shot cycle.
  */
-public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
+public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_Corkey collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_Corkey priority $280.
     private static final int NOZZLE_Y_OFFSET = 0x0C;      // ChildObjDat_8C90E.
@@ -138,7 +141,7 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
 
     // Public so cross-package rewind recreate can name the nozzle type for
     // relinking the fired shot's script on a held-rewind restore.
-    public static final class CorkeyNozzleChild extends AbstractObjectInstance {
+    public static final class CorkeyNozzleChild extends AbstractObjectInstance implements RewindRecreatable {
         private static final int PRIORITY_BUCKET = 5;       // word_8C900 priority $280.
         private static final int DEFAULT_FRAME = 1;         // word_8C900 mapping_frame.
         private static final int RETRACT_FRAME = 2;         // loc_8C88C.
@@ -169,6 +172,40 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
             this.parent = parent;
             this.currentX = spawn.x();
             this.currentY = spawn.y();
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            CorkeyBadnikInstance liveParent = findNearestLiveParentForRewind(ctx);
+            if (liveParent == null) {
+                return null;
+            }
+            return new CorkeyNozzleChild(ctx.spawn(), liveParent);
+        }
+
+        private static CorkeyBadnikInstance findNearestLiveParentForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            CorkeyBadnikInstance best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (!(instance instanceof CorkeyBadnikInstance candidate) || candidate.isDestroyed()) {
+                    continue;
+                }
+                if (spawn == null) {
+                    return candidate;
+                }
+                long dx = candidate.getX() - spawn.x();
+                long dy = candidate.getY() + NOZZLE_Y_OFFSET - spawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = candidate;
+                }
+            }
+            return best;
         }
 
         @Override

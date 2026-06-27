@@ -18,6 +18,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SlopedSolidProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
@@ -45,7 +46,7 @@ import java.util.List;
  * pixels (player launched right), set = target {@code +16} (launched left).
  */
 public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_DASH_TRIGGER;
 
@@ -84,9 +85,9 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
-    private final int triggerIndex;
+    private int triggerIndex;
     /** Trigger facing direction: false = bit 0 clear (right), true = bit 0 set (left). */
-    private final boolean facingLeft;
+    private boolean facingLeft;
 
     // ROM: $30(a0) -- arm timer countdown (0 = idle, 60 = freshly armed)
     private int armTimer;

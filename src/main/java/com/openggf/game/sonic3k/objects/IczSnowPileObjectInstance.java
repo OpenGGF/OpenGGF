@@ -13,6 +13,10 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -29,7 +33,7 @@ import java.util.List;
  * and spawns two pieces, {@code $10} launches Sonic, spawns four pieces, and
  * optionally starts LBZ when bit 7 is set, {@code $18} is the snowdust emitter.
  */
-public class IczSnowPileObjectInstance extends AbstractObjectInstance {
+public class IczSnowPileObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_SNOW_PILE;
     private static final int DRAW_PALETTE = 2;
     private static final int PRIORITY_BUCKET = 1; // ObjDat3 priority $80.
@@ -84,9 +88,9 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
 
     private int x;
     private int y;
-    private final int variant;
-    private final boolean startsNextLevel;
-    private final boolean hFlip;
+    private int variant;
+    private boolean startsNextLevel;
+    private boolean hFlip;
     private boolean destroyedByTrigger;
     private int snowdustTimer;
     private int activeSnowdustCount;
@@ -99,6 +103,11 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
         this.variant = (spawn.subtype() & 0x7F);
         this.startsNextLevel = (spawn.subtype() & 0x80) != 0;
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public IczSnowPileObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczSnowPileObjectInstance(ctx.spawn());
     }
 
     @Override
@@ -337,15 +346,23 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
     public record SnowPileDebrisSpec(int subtype, int x, int y, int xVel, int yVel, boolean hFlip) {
     }
 
-    public static final class SnowPileDebris extends AbstractObjectInstance {
+    public static final class SnowPileDebris extends AbstractObjectInstance
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private final SubpixelMotion.State motion;
-        private final boolean hFlip;
+        private boolean hFlip;
 
         private SnowPileDebris(SnowPileDebrisSpec spec) {
-            super(new ObjectSpawn(spec.x(), spec.y(), OBJECT_ID, spec.subtype(), 0, false, spec.y()),
+            super(new ObjectSpawn(spec.x(), spec.y(), OBJECT_ID, spec.subtype(),
+                            spec.hFlip() ? 1 : 0, false, spec.y()),
                     "ICZSnowPileDebris");
             this.motion = new SubpixelMotion.State(spec.x(), spec.y(), 0, 0, spec.xVel(), spec.yVel());
             this.hFlip = spec.hFlip();
+        }
+
+        private SnowPileDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZSnowPileDebris");
+            this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+            this.hFlip = (spawn.renderFlags() & 0x01) != 0;
         }
 
         @Override
@@ -383,12 +400,12 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
     private record SnowdustSpec(int x, int y, int mappingFrame, int priorityBucket, int xVel, int yVel) {
     }
 
-    private static final class SnowdustParticle extends AbstractObjectInstance {
+    private static final class SnowdustParticle extends AbstractObjectInstance implements RewindRecreatable {
         @RewindTransient(reason = "structural parent link used only to mirror Hyudoro_count on particle expiry")
         private final IczSnowPileObjectInstance parent;
         private final SubpixelMotion.State motion;
-        private final int mappingFrame;
-        private final int priorityBucket;
+        private int mappingFrame;
+        private int priorityBucket;
         private boolean enteredScreen;
         private boolean flickerBit;
         private boolean drawThisFrame = true;
@@ -399,6 +416,33 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
             this.motion = new SubpixelMotion.State(spec.x(), spec.y(), 0, 0, spec.xVel(), spec.yVel());
             this.mappingFrame = spec.mappingFrame();
             this.priorityBucket = spec.priorityBucket();
+        }
+
+        private SnowdustParticle(IczSnowPileObjectInstance parent, ObjectSpawn spawn) {
+            super(spawn, "ICZSnowdustParticle");
+            this.parent = parent;
+            this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+            this.mappingFrame = FRAME_SNOWDUST;
+            this.priorityBucket = PRIORITY_BUCKET;
+        }
+
+        private SnowdustParticle(ObjectSpawn spawn) {
+            this(new IczSnowPileObjectInstance(new ObjectSpawn(
+                    spawn.x(), spawn.y(), OBJECT_ID, 0x18, 0, false, spawn.y())), spawn);
+        }
+
+        @Override
+        public SnowdustParticle recreateForRewind(RewindRecreateContext ctx) {
+            IczSnowPileObjectInstance liveParent =
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, IczSnowPileObjectInstance.class);
+            if (liveParent == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            if (spawn == null) {
+                spawn = new ObjectSpawn(liveParent.getX(), liveParent.getY(), OBJECT_ID, 0, 0, false, liveParent.getY());
+            }
+            return new SnowdustParticle(liveParent, spawn);
         }
 
         @Override

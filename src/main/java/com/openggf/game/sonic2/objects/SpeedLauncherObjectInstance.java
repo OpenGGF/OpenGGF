@@ -9,6 +9,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -58,7 +60,7 @@ import java.util.Set;
  * </ul>
  */
 public class SpeedLauncherObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // ========================================================================
     // ROM Constants (s2.asm lines 80259-80373)
@@ -103,15 +105,15 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     // Current X position (changes during movement)
     private int currentX;
     // Home X position (objoff_34 in ROM)
-    private final int homeX;
+    private int homeX;
     // Destination X position (objoff_32 in ROM)
-    private final int destX;
+    private int destX;
     // Current X velocity (8.8 fixed point)
     private int xVel;
     // Acceleration value (signed, direction-dependent) (objoff_30 in ROM)
-    private final int accel;
+    private int accel;
     // Whether the object has x_flip set
-    private final boolean xFlipped;
+    private boolean xFlipped;
     // Current state machine state (routine_secondary in ROM)
     private int state;
     // Sub-pixel X accumulator for ObjectMove
@@ -154,6 +156,11 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
         this.solidParams = new SolidObjectParams(
                 PLATFORM_HALF_WIDTH, PLATFORM_HALF_HEIGHT_AIR, PLATFORM_HALF_HEIGHT_GROUND);
+    }
+
+    @Override
+    public SpeedLauncherObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SpeedLauncherObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

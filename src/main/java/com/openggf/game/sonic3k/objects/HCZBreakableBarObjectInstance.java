@@ -13,6 +13,8 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -46,7 +48,7 @@ import java.util.logging.Logger;
  * loc_1EDB0 (vertical update), loc_1EF64 (horizontal update), sub_1EDEC (vertical capture),
  * sub_1EFA0 (horizontal capture), loc_1EEEC (vertical break), loc_1F09A (horizontal break).
  */
-public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
+public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(HCZBreakableBarObjectInstance.class.getName());
 
@@ -107,26 +109,26 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
 
     // ===== Instance state =====
 
-    private final int x;
-    private final int y;
-    private final int subtype;
-    private final boolean isHorizontal;
-    private final boolean nonDestructiveRelease;
-    private final int sizeIndex;
+    private int x;
+    private int y;
+    private int subtype;
+    private boolean isHorizontal;
+    private boolean nonDestructiveRelease;
+    private int sizeIndex;
 
     // From size table
-    private final int halfExtent;
-    private final int totalExtent;
-    private final int widthOrHeight;
-    private final int mappingFrame;
+    private int halfExtent;
+    private int totalExtent;
+    private int widthOrHeight;
+    private int mappingFrame;
 
     // Effective collision dimensions
-    private final int widthPixels;
-    private final int heightPixels;
+    private int widthPixels;
+    private int heightPixels;
 
     // Timer: counts down per frame while any player is captured
     private int breakTimer;
-    private final boolean hasTimer;
+    private boolean hasTimer;
 
     // Per-player capture state — ROM: $32/$33 (captured flag), $34/$35 (cooldown)
     private final boolean[] captured = new boolean[2];   // $32(a0), $33(a0)
@@ -600,24 +602,34 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
      * ROM: sub_1F188 spawns children; loc_1EF3E handles debris update
      * (frame delay countdown, MoveSprite2 + gravity of 8/frame).
      */
-    public static class BreakableBarDebris extends AbstractObjectInstance {
+    public static class BreakableBarDebris extends AbstractObjectInstance
+            implements SpawnTrailingZeroIntsRewindRecreatable {
 
         private int currentX;
         private int currentY;
-        private final int debrisFrame;
+        private int debrisFrame;
         private int frameDelay;
         private final SubpixelMotion.State motionState;
 
         public BreakableBarDebris(int spawnX, int spawnY, int debrisFrame,
                                   int xVel, int yVel, int frameDelay) {
             super(new ObjectSpawn(spawnX, spawnY, Sonic3kObjectIds.HCZ_BREAKABLE_BAR,
-                    0, 0, false, 0), "BreakableBarDebris");
+                    debrisFrame, 0, false, 0), "BreakableBarDebris");
             this.currentX = spawnX;
             this.currentY = spawnY;
             this.debrisFrame = debrisFrame;
             this.frameDelay = frameDelay;
             this.motionState = new SubpixelMotion.State(
                     spawnX, spawnY, 0, 0, xVel, yVel);
+        }
+
+        private BreakableBarDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "BreakableBarDebris");
+            this.currentX = spawn.x();
+            this.currentY = spawn.y();
+            this.debrisFrame = spawn.subtype() & 0xFF;
+            this.frameDelay = 0;
+            this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
         }
 
         @Override

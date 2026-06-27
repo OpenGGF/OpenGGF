@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -24,7 +26,7 @@ import static com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBre
  * the shared HCZ tunnel/bar block state and keeps cycling its 5-frame animation
  * while playing the big fan SFX every 16 frames.
  */
-public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
+public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int PRIORITY = 4; // ROM: priority = $200
     private static final int FAN_FRAME_COUNT = 5;
@@ -43,7 +45,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
     private static final int PHASE_LOADING_ART = 1;
     private static final int PHASE_ACTIVE = 2;
 
-    private final int x;
+    private int x;
     private int y;
     private int phase;
     private int artWaitFramesRemaining;
@@ -56,6 +58,11 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
         this.x = spawn.x();
         this.y = spawn.y();
         this.phase = PHASE_WAITING;
+    }
+
+    @Override
+    public HCZLargeFanObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HCZLargeFanObjectInstance(ctx.spawn());
     }
 
     @Override

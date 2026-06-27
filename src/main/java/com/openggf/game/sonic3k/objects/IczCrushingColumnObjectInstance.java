@@ -7,10 +7,14 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -27,7 +31,7 @@ import java.util.List;
  * the previous frame and consumed by the next update.
  */
 public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN;
 
@@ -69,11 +73,11 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
     private static final int ROUTINE_RETURN_DOWN = 0x16;
     private static final int ROUTINE_WAIT_CLEAR_TO_RETURN_UP = 0x18;
 
-    private final int spawnY;
-    private final int subtype;
-    private final boolean xFlip;
-    private final boolean yFlip;
-    private final boolean hasBottomDecoration;
+    private int spawnY;
+    private int subtype;
+    private boolean xFlip;
+    private boolean yFlip;
+    private boolean hasBottomDecoration;
 
     private int x;
     private int y;
@@ -393,7 +397,7 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
         return hasBottomDecoration;
     }
 
-    private static final class BottomDecoration extends AbstractObjectInstance {
+    private static final class BottomDecoration extends AbstractObjectInstance implements RewindRecreatable {
         private final IczCrushingColumnObjectInstance parent;
 
         private BottomDecoration(IczCrushingColumnObjectInstance parent) {
@@ -401,6 +405,16 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
                     parent.spawn.objectId(), parent.subtype, parent.spawn.renderFlags(), false,
                     parent.y + BOTTOM_DECORATION_Y_OFFSET), "ICZCrushingColumnDecoration");
             this.parent = parent;
+        }
+
+        @Override
+        public BottomDecoration recreateForRewind(RewindRecreateContext ctx) {
+            IczCrushingColumnObjectInstance liveParent =
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, IczCrushingColumnObjectInstance.class);
+            if (liveParent == null) {
+                return null;
+            }
+            return new BottomDecoration(liveParent);
         }
 
         @Override

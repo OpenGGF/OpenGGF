@@ -43,10 +43,10 @@ import java.util.List;
 public class Sonic1ConveyorBeltObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     /** Belt speed in pixels/frame, signed. From subtype upper nibble via ext.w/asr.w #4. */
-    private final int convSpeed;
+    private int convSpeed;
 
     /** Half-width of the activation zone in pixels. 128 or 56. */
-    private final int convWidth;
+    private int convWidth;
 
     public Sonic1ConveyorBeltObjectInstance(ObjectSpawn spawn) {
         super(spawn, "ConveyorBelt");

@@ -34,7 +34,7 @@ import java.util.List;
  * ROM references: Obj_AIZSpikedLog (sonic3k.asm:60038-60196).
  */
 public class AizSpikedLogObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // Collision params: d1 = width_pixels(0x18) + 0x0B = 0x23, d2 = 0x08, d3 = 0x09
     private static final int SOLID_HALF_WIDTH = 35;
@@ -63,7 +63,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         -12, -12, 0, 0, 0, 0, 0, 12, 12, 12, 0, 0, 0, 0, 0, -12
     };
 
-    private final int baseY;              // $30: initial Y position (swing center)
+    private int baseY;              // $30: initial Y position (swing center)
     private int swingAngle;               // $32: current swing angle (0 to 0x40)
     private int swingState;               // $34: state flag (signed byte semantics)
     private int savedAnimFrame;           // $35: saved idle animation frame index
@@ -80,6 +80,11 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         this.baseY = spawn.y();
         this.currentY = spawn.y();
         // ROM zero-initializes all fields; first idle animation tick sets mapping_frame
+    }
+
+    @Override
+    public AizSpikedLogObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizSpikedLogObjectInstance(ctx.spawn());
     }
 
     private void ensureInitialized() {

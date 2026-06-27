@@ -11,6 +11,9 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -31,7 +34,7 @@ import java.util.List;
  * {@code CreateChild1_Normal} ice debris pieces.
  */
 public class IczIceCubeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
     private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_ICE_CUBE;
@@ -47,9 +50,9 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
     // loc_8B3D2: move.w #-$300,y_vel(a1).
     private static final int SHATTER_Y_SPEED = -0x300;
 
-    private final int x;
-    private final int y;
-    private final boolean hFlip;
+    private int x;
+    private int y;
+    private boolean hFlip;
     private boolean shattered;
 
     public IczIceCubeObjectInstance(ObjectSpawn spawn) {
@@ -57,6 +60,11 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
         this.x = spawn.x();
         this.y = spawn.y();
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public IczIceCubeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczIceCubeObjectInstance(ctx.spawn());
     }
 
     @Override
@@ -181,7 +189,8 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
     public record IceCubeDebrisSpec(int subtype, int x, int y, int xVel, int yVel) {
     }
 
-    public static final class IceCubeDebris extends GravityDebrisChild {
+    public static final class IceCubeDebris extends GravityDebrisChild
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private static final int GRAVITY = 0x38; // MoveSprite gravity.
         private static final int INITIAL_MAPPING_FRAME = 0x12; // word_8B478.
         private static final int[] RAW_ANIMATION_LARGE = {
@@ -201,6 +210,12 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
                     "ICZIceCubeDebris", spec.xVel(), spec.yVel(), GRAVITY);
             // loc_8B432 switches from byte_8AB34 to byte_8AB3E when subtype >= $C.
             this.rawAnimation = spec.subtype() >= 0x0C ? RAW_ANIMATION_UPPER : RAW_ANIMATION_LARGE;
+            this.animFrame = initialAnimFrame();
+        }
+
+        private IceCubeDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZIceCubeDebris", 0, 0, GRAVITY);
+            this.rawAnimation = (spawn.subtype() & 0xFF) >= 0x0C ? RAW_ANIMATION_UPPER : RAW_ANIMATION_LARGE;
             this.animFrame = initialAnimFrame();
         }
 

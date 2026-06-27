@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.sonic2.scroll.SwScrlDez;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -48,7 +49,7 @@ import java.util.function.Supplier;
  * - Type 2: Jet-Stomp (fly up, target player, stomp down, screen shake)
  * - Type 4: Stomp-Turn-Bombs (walk toward player, drop 2 bombs)
  */
-public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
+public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements RewindRecreatable {
 
     // ========================================================================
     // BODY STATE MACHINE CONSTANTS
@@ -461,11 +462,23 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         bodyXFixed = (long) state.x << 16;
         bodyYFixed = (long) state.y << 16;
 
-        // Spawn 10 permanent children (ROM: loc_3D52A)
-        spawnChildren();
+        if (getSpawn().objectId() == Sonic2ObjectIds.DEATH_EGG_ROBOT) {
+            // Spawn 10 permanent children (ROM: loc_3D52A). Rewind probe construction
+            // uses a zero object id and must not leak child side effects.
+            spawnChildren();
+        }
 
         // Advance to WaitEggman (auto-skip Eggman boarding for now)
         bodyRoutine = BODY_WAIT_EGGMAN;
+    }
+
+    @Override
+    public Sonic2DeathEggRobotInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+            return null;
+        }
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new Sonic2DeathEggRobotInstance(ctx.spawn()));
     }
 
     private void spawnChildren() {
@@ -1483,6 +1496,39 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         this.eggmanBoardedFlag = true;
     }
 
+    private static Sonic2DeathEggRobotInstance nearestLiveBossForRewind(RewindRecreateContext ctx) {
+        ObjectManager objectManager = null;
+        if (ctx != null) {
+            objectManager = ctx.objectManager();
+            if (objectManager == null && ctx.objectServices() != null) {
+                objectManager = ctx.objectServices().objectManager();
+            }
+        }
+        if (objectManager == null || ctx == null || ctx.spawn() == null) {
+            return null;
+        }
+        Sonic2DeathEggRobotInstance nearest = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (instance instanceof Sonic2DeathEggRobotInstance boss && !boss.isDestroyed()) {
+                long dx = boss.getX() - (long) ctx.spawn().x();
+                long dy = boss.getY() - (long) ctx.spawn().y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    nearest = boss;
+                }
+            }
+        }
+        return nearest;
+    }
+
+    private static void addChildComponentOnce(Sonic2DeathEggRobotInstance boss, AbstractBossChild child) {
+        if (boss != null && child != null && !boss.childComponents.contains(child)) {
+            boss.childComponents.add(child);
+        }
+    }
+
     /** Eggman boarding flag, set by Sonic2DEZEggmanInstance when jump starts */
     private boolean eggmanBoardedFlag = false;
 
@@ -1550,7 +1596,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // INNER CLASS: ArticulatedChild - Body part with subpixel position tracking
     // ========================================================================
 
-    static class ArticulatedChild extends AbstractBossChild implements TouchResponseProvider {
+    static class ArticulatedChild extends AbstractBossChild implements TouchResponseProvider, RewindRecreatable {
         int frame;
         long xFixed;  // 32-bit subpixel position (as long for Java sign safety)
         long yFixed;
@@ -1570,6 +1616,17 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             this.fallTimer = 0x80;
             this.xFixed = (long) currentX << 16;
             this.yFixed = (long) currentY << 16;
+        }
+
+        @Override
+        public ArticulatedChild recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2DeathEggRobotInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            ArticulatedChild child = new ArticulatedChild(boss, "RewindArticulated", 4, FRAME_SHOULDER);
+            addChildComponentOnce(boss, child);
+            return child;
         }
 
         void startFalling(int xVel, int yVel) {
@@ -1633,7 +1690,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // ========================================================================
 
     static class ForearmChild extends ArticulatedChild {
-        private final boolean isFront;
+        private boolean isFront;
         private boolean punching;
         private int punchPhase;
         private int punchTimer;
@@ -1651,6 +1708,17 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             this.punchXVel = 0;
             this.punchYVel = 0;
             this.savedY = 0;
+        }
+
+        @Override
+        public ForearmChild recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2DeathEggRobotInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            ForearmChild child = new ForearmChild(boss, "RewindForearm", 4, false);
+            addChildComponentOnce(boss, child);
+            return child;
         }
 
         boolean isPunching() {
@@ -1760,7 +1828,10 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // ROM: Ani_objC7_a: speed 7, $15×8, 0, 1, 2, $FA (loop)
     // ========================================================================
 
-    static class HeadChild extends AbstractBossChild implements com.openggf.level.objects.TouchResponseProvider, com.openggf.level.objects.TouchResponseAttackable {
+    static class HeadChild extends AbstractBossChild
+            implements com.openggf.level.objects.TouchResponseProvider,
+            com.openggf.level.objects.TouchResponseAttackable,
+            RewindRecreatable {
         private int headRoutine;
         private int waitTimer;
         private boolean bodyMiscSignaled; // ROM: head r6 end -> bset misc on body (loc_3DC2A)
@@ -1778,6 +1849,17 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             this.glowIndex = 0;
             this.glowTimer = 0;
             this.glowComplete = false;
+        }
+
+        @Override
+        public HeadChild recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2DeathEggRobotInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            HeadChild child = new HeadChild(boss, 4);
+            addChildComponentOnce(boss, child);
+            return child;
         }
 
         /**
@@ -1908,7 +1990,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // ROM: Ani_objC7_b (4 animations)
     // ========================================================================
 
-    static class JetChild extends AbstractBossChild implements TouchResponseProvider {
+    static class JetChild extends AbstractBossChild implements TouchResponseProvider, RewindRecreatable {
         private int jetRoutine;
         private int jetAnimId;  // Current animation ID (0-3)
         private int jetFrame;
@@ -1922,6 +2004,17 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             this.jetFrame = FRAME_JET_OFF;
             this.animIdx = 0;
             this.animTimer = 0;
+        }
+
+        @Override
+        public JetChild recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2DeathEggRobotInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            JetChild child = new JetChild(boss, 4);
+            addChildComponentOnce(boss, child);
+            return child;
         }
 
         void setJetRoutine(int routine) {
@@ -2016,7 +2109,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // ROM: ObjC7_TargettingSensor (s2.asm:82951-83044)
     // ========================================================================
 
-    static class SensorChild extends AbstractBossChild {
+    static class SensorChild extends AbstractBossChild implements RewindRecreatable {
         private int sensorRoutine;  // 0=init, 2=tracking, 4=lock-on
         private int countdown;      // ROM: objoff_2A
         private int beepInterval;   // ROM: angle — current beep interval
@@ -2055,6 +2148,17 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             this.lockOnActive = false;
             this.lockOnPaletteFlip = false;
             this.lockOnFlashCounter = 0;
+        }
+
+        @Override
+        public SensorChild recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2DeathEggRobotInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null || ctx == null || ctx.spawn() == null) {
+                return null;
+            }
+            SensorChild sensor = new SensorChild(boss, ctx.spawn().x(), ctx.spawn().y());
+            boss.sensorChild = sensor;
+            return sensor;
         }
 
         @Override

@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -36,7 +37,7 @@ import java.util.Set;
  * animation-frame gated bounce response.
  */
 public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, SpawnRewindRecreatable {
     private static final int ANIM_IDLE = 0;
     private static final int ANIM_BOUNCE = 1;
     private static final int BOUNCE_MAPPING_FRAME = 3;
@@ -109,11 +110,11 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
             -2, 0
     };
 
-    private final int baseX;
-    private final int baseY;
-    private final int animationPhaseOffset;
-    private final int priorityBucket;
-    private final boolean planePriority;
+    private int baseX;
+    private int baseY;
+    private int animationPhaseOffset;
+    private int priorityBucket;
+    private boolean planePriority;
     private final String artKey;
     private final ObjectAnimationState animationState;
     private final Map<AbstractPlayableSprite, Integer> previousYVelocities = new IdentityHashMap<>();
@@ -137,6 +138,12 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
                 ? Sonic3kObjectArtKeys.MHZ_MUSHROOM_CAP_LIGHT
                 : Sonic3kObjectArtKeys.MHZ_MUSHROOM_CAP_DARK;
         this.animationState = new ObjectAnimationState(buildAnimationSet(), ANIM_IDLE, 0);
+    }
+
+    @Override
+    public void setServices(ObjectServices services) {
+        super.setServices(services);
+        updatePosition(0);
     }
 
     @Override

@@ -13,8 +13,11 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -39,7 +42,7 @@ import java.util.List;
  * until {@code ObjCheckCeilingDist} reports impact.
  */
 public class IczStalagtiteObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, TouchResponseProvider {
+        implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN;
     private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_STALAGTITE;
@@ -79,7 +82,7 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
         LANDED
     }
 
-    private final boolean hFlip;
+    private boolean hFlip;
     private final SubpixelMotion.State motion;
     private Phase phase = Phase.WAITING;
     private int timer;
@@ -88,6 +91,11 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
         super(spawn, "ICZStalagtite");
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+    }
+
+    @Override
+    public IczStalagtiteObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczStalagtiteObjectInstance(ctx.spawn());
     }
 
     @Override
@@ -259,7 +267,8 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
     public record IceDebrisSpec(int subtype, int x, int y, int xVel, int yVel) {
     }
 
-    public static final class StalagtiteDebris extends GravityDebrisChild {
+    public static final class StalagtiteDebris extends GravityDebrisChild
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private static final int GRAVITY = 0x38;
         private static final int INITIAL_MAPPING_FRAME = 0x0F; // ObjDat3_8B286.
         private static final int[] RAW_ANIMATION_UPPER = {
@@ -279,6 +288,12 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
                     "ICZStalagtiteDebris", spec.xVel(), spec.yVel(), GRAVITY);
             // loc_8B230 switches from byte_8AB3E to byte_8AB46 when subtype >= 6.
             this.rawAnimation = spec.subtype() >= 6 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
+            this.animFrame = initialAnimFrame();
+        }
+
+        private StalagtiteDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZStalagtiteDebris", 0, 0, GRAVITY);
+            this.rawAnimation = (spawn.subtype() & 0xFF) >= 6 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
             this.animFrame = initialAnimFrame();
         }
 

@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -32,7 +33,8 @@ import java.util.List;
  * parent waits for the player within {@code $A0}, keeps its busy bit while the
  * child rises/attacks/sinks, then waits 60 frames before arming again.
  */
-public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance implements SolidObjectProvider {
+public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
+        implements SolidObjectProvider, SpawnRewindRecreatable {
 
     private static final int CAP_COLLISION_FLAGS = 0;
     private static final int CAP_MAPPING_FRAME = 0x0D;
@@ -76,7 +78,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
     }
 
     private State state = State.BURIED;
-    private final int homeY;
+    private int homeY;
     private int timer;
     private int animFrame;
     private int animTimer;

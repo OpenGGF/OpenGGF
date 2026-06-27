@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -29,7 +31,7 @@ import java.util.List;
  * settles when released.
  */
 public final class CnzRisingPlatformInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final int HALF_WIDTH = 0x30;
     private static final int HALF_HEIGHT = 0x10;
@@ -50,6 +52,11 @@ public final class CnzRisingPlatformInstance extends AbstractObjectInstance
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
         this.displayFrame = 0;
         updateDynamicSpawn(spawn.x(), spawn.y());
+    }
+
+    @Override
+    public CnzRisingPlatformInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzRisingPlatformInstance(ctx.spawn());
     }
 
     @Override

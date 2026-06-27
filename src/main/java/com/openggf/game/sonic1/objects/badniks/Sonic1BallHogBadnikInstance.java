@@ -79,8 +79,11 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
     private static final int RENDER_PRIORITY = 4;
 
     // --- Animation ---
-    // Single animation from Ani_Hog: speed 9, then frame sequence
-    private static final int ANIM_SPEED = 9 + 1; // ROM speed byte + 1 = ticks per frame step
+    // ROM Ani_Hog speed byte (obTimeFrame reload value). Each step is held for
+    // ANIM_SPEED_BYTE + 1 = 10 game frames via ROM AnimateSprite's "subq.b #1; bpl"
+    // countdown cadence.
+    // docs/s1disasm/_anim/Ball Hog.asm:6, docs/s1disasm/_incObj/sub AnimateSprite.asm:17-23
+    private static final int ANIM_SPEED_BYTE = 9;
     // Frame sequence: 0, 0, 2, 2, 3, 2, 0, 0, 2, 2, 3, 2, 0, 0, 2, 2, 3, 2, 0, 0, 1
     private static final int[] ANIM_FRAMES = {
             0, 0, 2, 2, 3, 2, 0, 0, 2, 2,
@@ -99,9 +102,14 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
     private boolean initialized;
     private boolean destroyed;
 
-    // Animation state
-    private int animTickCounter;
-    private int animStepIndex;
+    // Animation state, mirroring ROM AnimateSprite (docs/s1disasm/_incObj/sub AnimateSprite.asm):
+    //   animTimeFrame   = obTimeFrame  (frame-duration countdown; starts at 0 so the first
+    //                     Anim_Run call underflows immediately and loads frame[0])
+    //   animScriptIndex = obAniFrame   (read-then-increment index into ANIM_FRAMES)
+    //   displayedFrame  = obFrame      (currently displayed frame ID; ROM clears RAM to 0)
+    private int animTimeFrame;
+    private int animScriptIndex;
+    private int displayedFrame;
 
     // hog_launchflag (objoff_32): 0 = ready to launch, nonzero = already launched this cycle
     private boolean launchFlag;
@@ -117,8 +125,9 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
         this.facingLeft = (spawn.renderFlags() & 1) != 0;
         this.initialized = false;
         this.destroyed = false;
-        this.animTickCounter = 0;
-        this.animStepIndex = 0;
+        this.animTimeFrame = 0;
+        this.animScriptIndex = 0;
+        this.displayedFrame = 0;
         this.launchFlag = false;
     }
 
@@ -200,7 +209,7 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
         // AnimateSprite: advance animation
         updateAnimation();
 
-        int currentFrame = ANIM_FRAMES[animStepIndex];
+        int currentFrame = displayedFrame;
 
         if (currentFrame == OPEN_FRAME) {
             // cmpi.b #1,obFrame(a0) / bne.s .setlaunchflag
@@ -223,14 +232,25 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
      * After reaching the end of the frame sequence, it loops back to the start (afEnd).
      */
     private void updateAnimation() {
-        animTickCounter++;
-        if (animTickCounter >= ANIM_SPEED) {
-            animTickCounter = 0;
-            animStepIndex++;
-            if (animStepIndex >= ANIM_FRAMES.length) {
-                animStepIndex = 0; // afEnd - loop animation
-            }
+        // ROM AnimateSprite (docs/s1disasm/_incObj/sub AnimateSprite.asm:17-23,46,58-63):
+        //   subq.b #1,obTimeFrame ; bpl.s Anim_Wait   -> only advance when it underflows.
+        //   On advance: reload obTimeFrame with the script speed byte, read the frame ID at
+        //   obAniFrame, then addq.b #1,obAniFrame. afEnd ($FF) wraps the index back to 0.
+        // obTimeFrame starts at 0, so the first call underflows immediately and shows
+        // frame[0]; every step (including the first) is therefore held for
+        // ANIM_SPEED_BYTE + 1 = 10 game frames. The previous count-up logic held the first
+        // step for only 9 frames, advancing the whole animation one frame early and making
+        // the Ball Hog launch its cannonball a frame ahead of ROM (SBZ1 f6082 early hurt).
+        animTimeFrame--;
+        if (animTimeFrame >= 0) {
+            return; // bpl.s Anim_Wait
         }
+        animTimeFrame = ANIM_SPEED_BYTE; // move.b (a1),obTimeFrame
+        if (animScriptIndex >= ANIM_FRAMES.length) {
+            animScriptIndex = 0; // afEnd: restart the animation from the beginning
+        }
+        displayedFrame = ANIM_FRAMES[animScriptIndex]; // read frame ID at obAniFrame
+        animScriptIndex++;                              // addq.b #1,obAniFrame
     }
 
     /**
@@ -288,7 +308,7 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
      * Returns the current mapping frame index from the animation sequence.
      */
     private int getMappingFrame() {
-        return ANIM_FRAMES[animStepIndex];
+        return displayedFrame;
     }
 
     // --- TouchResponseProvider / TouchResponseAttackable ---
@@ -368,7 +388,7 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
         String state = initialized ? "ACTIVE" : "INIT";
         String dir = facingLeft ? "L" : "R";
         int frame = getMappingFrame();
-        String label = "BallHog " + state + " f" + frame + " s" + animStepIndex + " " + dir;
+        String label = "BallHog " + state + " f" + frame + " s" + animScriptIndex + " " + dir;
         ctx.drawWorldLabel(currentX, currentY, -2, label, DebugColor.YELLOW);
     }
 

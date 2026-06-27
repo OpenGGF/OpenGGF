@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -21,7 +22,7 @@ import java.util.List;
  * This implementation preserves the key gameplay behavior: alternating wait/active
  * cycles, subtype-driven vertical stepping, player-facing checks, and coconut throws.
  */
-public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance {
+public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_MonkeyDude flags $0B
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_MonkeyDude priority $280
 
@@ -66,10 +67,10 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance {
     private static final int ARM_ANGLE_STEP = 2;
     private static final int HELD_COCONUT_Y_OFFSET = -8;
 
-    private final int activeStepCount;
-    private final int firstStepCount;
-    private final int treeAnchorX;
-    private final boolean initialFacingLeft;
+    private int activeStepCount;
+    private int firstStepCount;
+    private int treeAnchorX;
+    private boolean initialFacingLeft;
     private final int[] armSegmentX = new int[ARM_SEGMENT_COUNT];
     private final int[] armSegmentY = new int[ARM_SEGMENT_COUNT];
     private final int[] followerAngle = new int[ARM_FOLLOWER_COUNT];

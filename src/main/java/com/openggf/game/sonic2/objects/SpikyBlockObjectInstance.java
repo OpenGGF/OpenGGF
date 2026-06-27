@@ -9,6 +9,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -38,7 +40,7 @@ import java.util.List;
  * </ul>
  */
 public class SpikyBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // From disassembly: move.w #$1B,d1 / move.w #$10,d2 / move.w #$11,d3
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x1B, 0x10, 0x11);
@@ -56,6 +58,11 @@ public class SpikyBlockObjectInstance extends AbstractObjectInstance
 
     public SpikyBlockObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
+    }
+
+    @Override
+    public SpikyBlockObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SpikyBlockObjectInstance(ctx.spawn(), "SpikyBlock");
     }
 
     @Override

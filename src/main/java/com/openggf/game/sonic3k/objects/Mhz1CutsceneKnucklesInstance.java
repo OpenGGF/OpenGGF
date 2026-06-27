@@ -21,6 +21,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -34,7 +35,8 @@ import java.util.List;
  * object's real routine in the shared event byte {@code _unkFAB8}; the instance
  * mirrors that byte directly so the MHZ1 button can signal the cleanup routine.
  */
-public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
+public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_WAIT_PLAYER = 0x02;
     private static final int ROUTINE_WAIT_LANDING = 0x04;
@@ -53,8 +55,8 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
     private static final int POST_CUTSCENE_RESTART_Y = 0x056C;
     private static final int CUTSCENE_PALETTE_LINE = 1;
 
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
     private int workspaceRoutine = ROUTINE_INIT;
     private int timer;
     private boolean playerTwoStopperSpawned;

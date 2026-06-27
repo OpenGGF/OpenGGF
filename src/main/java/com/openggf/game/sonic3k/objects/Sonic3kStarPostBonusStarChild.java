@@ -67,8 +67,8 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
     // Non-final so the generic field capturer reapplies it after a rewind
     // recreate (the bonus-stage type is not derivable from the spawn/parent).
     private BonusStarVariant variant;
-    private final int centerX;  // $30
-    private final int centerY;  // $32
+    private int centerX;  // $30
+    private int centerY;  // $32
     private int angle;          // $34
     private int lifetime;       // $36
     private int animFrame;

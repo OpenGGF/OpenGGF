@@ -19,6 +19,7 @@ import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -34,7 +35,7 @@ import java.util.List;
  * same slot to {@code Obj_Explosion}.
  */
 public final class LbzExplodingTriggerInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
 
     // ROM: collision_flags(a0) = $C6. In S3K, $C0 + size $06 is a Touch_Special
     // property latch, not boss collision.
@@ -43,7 +44,7 @@ public final class LbzExplodingTriggerInstance extends AbstractObjectInstance
     private static final int EXPLOSION_FINAL_MAPPING_FRAME = 5;
     private static final int PRIORITY_BUCKET = 5; // ROM priority(a0) = $280
 
-    private final int triggerIndex;
+    private int triggerIndex;
     private int collisionProperty;
     private boolean exploding;
     private int explosionFrame;

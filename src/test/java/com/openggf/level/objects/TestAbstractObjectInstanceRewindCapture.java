@@ -636,14 +636,14 @@ class TestAbstractObjectInstanceRewindCapture {
     }
 
     @Test
-    void defaultBadnikClassPreservesGenericSidecarWhenAddingBadnikExtra() {
+    void defaultBadnikClassPreservesCompactSidecarWhenAddingBadnikExtra() {
         TestBadnikWithGenericState obj = new TestBadnikWithGenericState(spawn(0, 0));
         obj.phase = 7;
 
         PerObjectRewindSnapshot snap = obj.captureRewindState();
 
         assertNotNull(snap.badnikExtra());
-        assertNull(snap.compactGenericState());
-        assertNotNull(snap.genericState());
+        assertNotNull(snap.compactGenericState());
+        assertNull(snap.genericState());
     }
 }

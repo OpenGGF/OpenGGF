@@ -48,7 +48,7 @@ public final class CnzMinibossDebrisChild extends GravityDebrisChild implements 
             {-0x400, -0x300},
     };
 
-    private final int mappingFrame;
+    private int mappingFrame;
     private int flickerCounter;
 
     public CnzMinibossDebrisChild(int parentX, int parentY, int index) {

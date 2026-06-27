@@ -10,6 +10,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -44,7 +46,7 @@ import java.util.List;
  * - Frame 3: Tilted left (16x24 px, two 2x3 pieces)
  */
 public class TiltingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // ==================== Behavior Types ====================
     // From ObjB6_Init: andi.b #6,d0 / addq.b #2,d0
@@ -95,7 +97,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
     private static final int END_LOOP = 0xFF;      // Loop from start
 
     // ==================== State ====================
-    private final int behaviorType;
+    private int behaviorType;
     private int subRoutine;           // routine_secondary(a0) - sub-state within behavior
     private int timer;                // objoff_2A(a0) - countdown/sync timer
     private int mappingFrame;         // mapping_frame(a0) - current display frame
@@ -130,6 +132,11 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
         if (behaviorType == BEHAVIOR_PLAYER_TRIGGERED) {
             initFrame = false;
         }
+    }
+
+    @Override
+    public TiltingPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new TiltingPlatformObjectInstance(ctx.spawn());
     }
 
     @Override

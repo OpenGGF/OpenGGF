@@ -3,13 +3,17 @@ import com.openggf.game.PlayableEntity;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -74,19 +78,19 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
             false, TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     // Zone variant
-    private final boolean isLZ;
+    private boolean isLZ;
 
     // Anchor / pivot position (sball_origX = objoff_3A, sball_origY = objoff_38)
-    private final int origX;
-    private final int origY;
+    private int origX;
+    private int origY;
 
     // Rotation state
     private int angle;        // obAngle: 16-bit angle accumulator (high byte used for CalcSine)
-    private final int speed;  // sball_speed = objoff_3E: angular velocity per frame
+    private int speed;  // sball_speed = objoff_3E: angular velocity per frame
 
     // Chain element data (parent + children, ordered from outermost to innermost)
     // Index 0 = parent (outermost), last index = innermost (closest to pivot)
-    private final int elementCount;
+    private int elementCount;
     private final int[] elementRadius;   // sball_radius per element
     private final int[] elementFrame;    // mapping frame per element
     private final int[] elementColType;  // collision type per element
@@ -225,7 +229,8 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
         for (int i = 0; i < children.length; i++) {
             final int index = i;
             children[i] = spawnFreeChild(() -> new ChainChild(
-                    buildSpawnAt(elementX[index], elementY[index]),
+                    ChainChild.spawnFor(elementX[index], elementY[index], artKey, elementFrame[index],
+                            elementColType[index], origX, index),
                     artKey,
                     elementFrame[index],
                     elementColType[index],
@@ -365,6 +370,12 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
                 origY & 0xFFFF);
     }
 
+    private void adoptRestoredChild(ChainChild child, int childIndex) {
+        if (childIndex >= 0 && childIndex < children.length) {
+            children[childIndex] = child;
+        }
+    }
+
     // ---- Debug rendering ----
 
     @Override
@@ -388,11 +399,26 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
     }
 
     private static final class ChainChild extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, RewindRecreatable {
+        private static final int FRAME_MASK = 0x03;
+        private static final int COLLISION_SHIFT = 2;
+        private static final int COLLISION_MASK = 0x03;
+        private static final int CHILD_INDEX_SHIFT = 4;
+        private static final int CHILD_INDEX_MASK = 0x07;
+        private static final int LZ_FLAG = 0x80;
+
         private final String artKey;
         private final int frame;
         private final int collisionType;
         private final int originX;
+
+        private ChainChild(ObjectSpawn spawn) {
+            this(spawn,
+                    artKey(spawn),
+                    frame(spawn),
+                    collisionType(spawn),
+                    originX(spawn));
+        }
 
         private ChainChild(ObjectSpawn spawn, String artKey, int frame, int collisionType,
                            int originX) {
@@ -401,6 +427,29 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
             this.frame = frame;
             this.collisionType = collisionType;
             this.originX = originX;
+        }
+
+        private static ObjectSpawn spawnFor(int x, int y, String artKey, int frame, int collisionType,
+                                            int originX, int childIndex) {
+            int subtype = (frame & FRAME_MASK)
+                    | (collisionCode(collisionType) << COLLISION_SHIFT)
+                    | ((childIndex & CHILD_INDEX_MASK) << CHILD_INDEX_SHIFT);
+            if (ObjectArtKeys.LZ_SPIKEBALL_CHAIN.equals(artKey)) {
+                subtype |= LZ_FLAG;
+            }
+            return new ObjectSpawn(x, y, Sonic1ObjectIds.SPIKED_BALL_CHAIN,
+                    subtype, 0, false, originX);
+        }
+
+        @Override
+        public ChainChild recreateForRewind(RewindRecreateContext ctx) {
+            ChainChild child = new ChainChild(ctx.spawn());
+            Sonic1SpikedBallChainObjectInstance parent = nearestParent(ctx, child.originX);
+            if (parent == null) {
+                return null;
+            }
+            parent.adoptRestoredChild(child, childIndex(ctx.spawn()));
+            return child;
         }
 
         private void setPosition(int x, int y) {
@@ -456,6 +505,60 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
                     frame,
                     collisionType & 0xFF,
                     originX & 0xFFFF);
+        }
+
+        private static Sonic1SpikedBallChainObjectInstance nearestParent(
+                RewindRecreateContext ctx, int originX) {
+            Sonic1SpikedBallChainObjectInstance nearest = null;
+            int bestDistance = Integer.MAX_VALUE;
+            ObjectManager objectManager = ctx.objectServices().objectManager();
+            for (ObjectInstance object : objectManager.getActiveObjects()) {
+                if (object instanceof Sonic1SpikedBallChainObjectInstance parent
+                        && !parent.isDestroyed()) {
+                    int distance = Math.abs(parent.origX - originX);
+                    if (distance < bestDistance) {
+                        nearest = parent;
+                        bestDistance = distance;
+                    }
+                }
+            }
+            return nearest;
+        }
+
+        private static String artKey(ObjectSpawn spawn) {
+            return (spawn.subtype() & LZ_FLAG) != 0
+                    ? ObjectArtKeys.LZ_SPIKEBALL_CHAIN
+                    : ObjectArtKeys.SYZ_SPIKEBALL_CHAIN;
+        }
+
+        private static int frame(ObjectSpawn spawn) {
+            return spawn.subtype() & FRAME_MASK;
+        }
+
+        private static int collisionType(ObjectSpawn spawn) {
+            return switch ((spawn.subtype() >> COLLISION_SHIFT) & COLLISION_MASK) {
+                case 1 -> SYZ_COLLISION_TYPE;
+                case 2 -> LZ_PARENT_COLLISION_TYPE;
+                default -> 0;
+            };
+        }
+
+        private static int originX(ObjectSpawn spawn) {
+            return spawn.rawYWord();
+        }
+
+        private static int childIndex(ObjectSpawn spawn) {
+            return (spawn.subtype() >> CHILD_INDEX_SHIFT) & CHILD_INDEX_MASK;
+        }
+
+        private static int collisionCode(int collisionType) {
+            if (collisionType == SYZ_COLLISION_TYPE) {
+                return 1;
+            }
+            if (collisionType == LZ_PARENT_COLLISION_TYPE) {
+                return 2;
+            }
+            return 0;
         }
     }
 

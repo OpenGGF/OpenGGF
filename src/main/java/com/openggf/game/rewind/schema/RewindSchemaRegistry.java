@@ -6,6 +6,7 @@ import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -95,6 +96,10 @@ public final class RewindSchemaRegistry {
             }
             for (Field field : sortedDeclaredFields(cls)) {
                 RewindFieldPolicy configuredPolicy = DefaultObjectRewindPolicies.policyFor(field);
+                if (configuredPolicy == RewindFieldPolicy.TRANSIENT
+                        || configuredPolicy == RewindFieldPolicy.DEFERRED) {
+                    continue;
+                }
                 if (!GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(field)
                         && configuredPolicy != RewindFieldPolicy.CAPTURED
                         && !isObjectRefFieldAllowedInSchema(field, configuredPolicy)) {
@@ -204,10 +209,15 @@ public final class RewindSchemaRegistry {
         if (finalField && !codec.capturesFinalFields()) {
             return RewindFieldPolicy.UNSUPPORTED;
         }
-        if (!finalField && codec.requiresExistingTargetValue()) {
+        if (!finalField && codec.requiresExistingTargetValue() && !isObjectRefArrayField(field)) {
             return RewindFieldPolicy.UNSUPPORTED;
         }
         return RewindFieldPolicy.CAPTURED;
+    }
+
+    private static boolean isObjectRefArrayField(Field field) {
+        Class<?> type = field.getType();
+        return type.isArray() && ObjectInstance.class.isAssignableFrom(type.getComponentType());
     }
 
     private RewindSchemaRegistry() {}

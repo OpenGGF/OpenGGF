@@ -91,8 +91,8 @@ public class Sonic1SawObjectInstance extends AbstractObjectInstance
     private static final DebugColor DEBUG_COLOR_INACTIVE = new DebugColor(180, 180, 100);
 
     // ---- Instance state ----
-    private final int sawType;           // subtype & 7 (0-4)
-    private final boolean xFlipped;      // obStatus bit 0
+    private int sawType;           // subtype & 7 (0-4)
+    private boolean xFlipped;      // obStatus bit 0
 
     // Dynamic position
     private int x;

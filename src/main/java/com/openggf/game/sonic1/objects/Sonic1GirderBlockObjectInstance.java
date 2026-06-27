@@ -87,8 +87,8 @@ public class Sonic1GirderBlockObjectInstance extends AbstractObjectInstance
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
 
     // Original position for out-of-range deletion check (gird_origX = objoff_32, gird_origY = objoff_30)
-    private final int origX;
-    private final int origY;
+    private int origX;
+    private int origY;
 
     // Current X and Y velocities (obVelX, obVelY) — 8.8 fixed-point
     private int velX;

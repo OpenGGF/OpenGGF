@@ -7,6 +7,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -20,7 +22,7 @@ import java.util.List;
  * <p>Invisible controller for the spiral descent after the top-platform launcher.
  * ROM reference: Obj_MGZTwistingLoop (sonic3k.asm:70187-70387).
  */
-public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance {
+public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int CAPTURE_X_BIAS = 0x24;
     private static final int CAPTURE_Y_RANGE = 0x20;
     private static final int ACTIVE_RELEASE_COOLDOWN = 8;
@@ -53,10 +55,10 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance {
         boolean compensateReleaseHandoff;
     }
 
-    private final int centerX;
-    private final int centerY;
-    private final int captureThreshold;
-    private final boolean flipped;
+    private int centerX;
+    private int centerY;
+    private int captureThreshold;
+    private boolean flipped;
     private final PlayerState player1 = new PlayerState();
     private final PlayerState player2 = new PlayerState();
 
@@ -66,6 +68,11 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance {
         this.centerY = spawn.y();
         this.captureThreshold = (spawn.subtype() & 0xFF) << 4;
         this.flipped = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public MGZTwistingLoopObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MGZTwistingLoopObjectInstance(ctx.spawn());
     }
 
     @Override

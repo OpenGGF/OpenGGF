@@ -10,6 +10,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -57,7 +58,7 @@ import java.util.logging.Logger;
  * ROM collision size: 0xD7 &amp; 0x3F = 0x17 (size index 23).
  */
 public class GumballItemObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(GumballItemObjectInstance.class.getName());
 
@@ -119,16 +120,16 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     private final SubpixelMotion.State motionState;
 
     /** Motion profile: static, gumball-ejected gravity, or pachinko float-up. */
-    private final MotionMode motionMode;
+    private MotionMode motionMode;
 
     /** Reward dispatch mode: direct gumball subtype table vs pachinko translated subtype table. */
-    private final RewardMode rewardMode;
+    private RewardMode rewardMode;
 
     /** Subtype determining reward behavior. */
-    private final int subtype;
+    private int subtype;
 
     /** Mapping frame for rendering. */
-    private final int mappingFrame;
+    private int mappingFrame;
 
 
     /** Set true when player touches this item; triggers deletion next frame. */

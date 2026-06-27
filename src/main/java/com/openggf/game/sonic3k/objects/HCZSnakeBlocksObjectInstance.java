@@ -11,6 +11,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 
@@ -35,7 +36,7 @@ import java.util.List;
  * {@code ArtTile_HCZ2BlockPlat} (tile 0x0028, palette 0).
  */
 public class HCZSnakeBlocksObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // ROM: make_art_tile(ArtTile_HCZ2BlockPlat, 0, 0) — palette 0, not the floating platform art
     private static final String ART_KEY = Sonic3kObjectArtKeys.HCZ_SNAKE_BLOCK;
@@ -64,9 +65,9 @@ public class HCZSnakeBlocksObjectInstance extends AbstractObjectInstance
     // ROM: cmpi.b #$80,d0 — angles below this are clamped, creating the corner wait.
     private static final int ANGLE_CLAMP_MIN = 0x80;
 
-    private final int baseX;
-    private final int baseY;
-    private final int direction; // +1 CW, -1 CCW (ROM: $40(a0))
+    private int baseX;
+    private int baseY;
+    private int direction; // +1 CW, -1 CCW (ROM: $40(a0))
     private int x;
     private int y;
     private int angle;   // ROM: angle(a0), 0x00-0xFF byte

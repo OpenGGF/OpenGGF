@@ -3,14 +3,11 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
- * Verifies that {@link Sonic2ObjectRegistry} (unioned with the shared codecs)
- * no longer exposes explicit dynamic rewind recreate codecs for batch-inner1 S2
- * children that now restore through generic recreate.
+ * Verifies that batch-inner1 S2 children now restore through generic recreate
+ * and do not regain explicit dynamic codecs.
  *
  * <p>These are static nested children keyed by their JVM binary name
  * ({@code Outer$Inner}):
@@ -29,31 +26,24 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  *       by the capturer after recreate.</li>
  * </ul>
  *
- * <p>Pure registry-content test: it constructs a registry and reads
- * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
- * session. Full session round-trip coverage is enforced by the rewind coverage
- * guard ({@code TestRewindCoverageGuard}).
+ * <p>Pure metadata test: it reads deleted-codec state without a ROM, OpenGL, or
+ * an active gameplay session. Full session round-trip coverage is enforced by
+ * the rewind coverage guard ({@code TestRewindCoverageGuard}).
  */
 class TestRewindFixS2InnerBatch1Codecs {
 
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
-
     @Test
     void batchInner1S2ChildrenHaveExpectedCodecCoverage() {
-        Set<String> names = codecClassNames();
-
-        assertFalse(names.contains(
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
                         "com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance"
                                 + "$SmallMetalPformChildInstance"),
                 "SmallMetalPform child must restore through RewindRecreatable generic recreate, "
                         + "not a batch-inner1 codec");
-        assertFalse(names.contains(
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
                         "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall"),
                 "DEZ barrier wall must restore through RewindRecreatable generic recreate, "
                         + "not a batch-inner1 codec");
-        assertFalse(names.contains(
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
                         "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossLaser"),
                 "MTZ boss laser must restore through RewindRecreatable generic recreate, "
                         + "not a batch-inner1 codec");

@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -26,7 +28,7 @@ import java.util.List;
  * <p>ROM reference: Obj_HCZSpinningColumn (sonic3k.asm:68108-68179).
  */
 public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.HCZ_SPINNING_COLUMN;
     private static final int PRIORITY = 5; // ROM: move.w #$280,priority(a0)
@@ -57,12 +59,12 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         private int horizontalDistance;
     }
 
-    private final int baseX;
-    private final int baseY;
-    private final boolean xFlipped;
+    private int baseX;
+    private int baseY;
+    private boolean xFlipped;
     private final RiderState[] riders = {new RiderState(), new RiderState()};
 
-    private final int motionMode;
+    private int motionMode;
     private int motionOffset;
     private int motionStep;
     private int currentX;
@@ -85,6 +87,11 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         this.currentY = baseY;
         this.mappingFrame = 0;
         this.animFrameTimer = 0;
+    }
+
+    @Override
+    public HCZSpinningColumnObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HCZSpinningColumnObjectInstance(ctx.spawn());
     }
 
     @Override

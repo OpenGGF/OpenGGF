@@ -11,8 +11,12 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -29,7 +33,8 @@ import java.util.List;
  * <p>ROM reference: {@code Obj_LBZCupElevator} and
  * {@code LBZCupElevator_Action} (sonic3k.asm:52537-53149).
  */
-public final class LbzCupElevatorInstance extends AbstractObjectInstance implements SolidObjectProvider {
+public final class LbzCupElevatorInstance extends AbstractObjectInstance
+        implements SolidObjectProvider, SpawnRewindRecreatable {
     private static final int WIDTH_PIXELS = 0x20;
     private static final int HEIGHT_PIXELS = 0x10;
     private static final int SOLID_SIDE_PADDING = 0x0B;
@@ -64,8 +69,8 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance impleme
 
     private final PlayerState p1 = new PlayerState();
     private final PlayerState p2 = new PlayerState();
-    private final boolean hFlip;
-    private final boolean flingAtEnd;
+    private boolean hFlip;
+    private boolean flingAtEnd;
 
     private int x;
     private int y;
@@ -246,6 +251,14 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance impleme
         } catch (IllegalStateException ignored) {
             // Direct object tests run without ObjectServices.
         }
+    }
+
+    void rewindAttachChild(AttachChild child) {
+        attachChild = child;
+    }
+
+    void rewindAttachChild(BaseChild child) {
+        baseChild = child;
     }
 
     private void updateAction() {
@@ -687,7 +700,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance impleme
         }
     }
 
-    private static final class AttachChild extends AbstractObjectInstance {
+    private static final class AttachChild extends AbstractObjectInstance implements RewindRecreatable {
         @RewindTransient(reason = "Structural parent pointer; attachment position and lifetime derive from parent state.")
         private final LbzCupElevatorInstance parent;
         private int x;
@@ -696,6 +709,18 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance impleme
             super(parent.getSpawn(), "LBZCupElevatorAttach");
             this.parent = parent;
             this.x = attachX(parent.spawn.x(), parent.angleByte());
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            LbzCupElevatorInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                    ctx, LbzCupElevatorInstance.class);
+            if (liveParent == null) {
+                return null;
+            }
+            AttachChild restored = new AttachChild(liveParent);
+            liveParent.rewindAttachChild(restored);
+            return restored;
         }
 
         @Override
@@ -732,13 +757,25 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance impleme
         }
     }
 
-    private static final class BaseChild extends AbstractObjectInstance {
+    private static final class BaseChild extends AbstractObjectInstance implements RewindRecreatable {
         @RewindTransient(reason = "Structural parent pointer; base position and lifetime derive from parent state.")
         private final LbzCupElevatorInstance parent;
 
         private BaseChild(LbzCupElevatorInstance parent) {
             super(parent.getSpawn(), "LBZCupElevatorBase");
             this.parent = parent;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            LbzCupElevatorInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                    ctx, LbzCupElevatorInstance.class);
+            if (liveParent == null) {
+                return null;
+            }
+            BaseChild restored = new BaseChild(liveParent);
+            liveParent.rewindAttachChild(restored);
+            return restored;
         }
 
         @Override

@@ -7,6 +7,8 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -17,7 +19,7 @@ import java.util.List;
  * ROM Reference: s2.asm:63176-63231 (loc_2F54E - Obj56_Propeller normal)
  * ROM Reference: s2.asm:63166-63173 (loc_2F52A - Obj56_PropellerReloaded after defeat)
  */
-public class EHZBossPropeller extends AbstractBossChild {
+public class EHZBossPropeller extends AbstractBossChild implements RewindRecreatable {
     private static final int HELICOPTER_SOUND_INTERVAL = 32;
     private static final int OBJOFF_FLAGS = 0x2D;
     private static final int FLAG_GROUNDED = 0x01;
@@ -40,6 +42,12 @@ public class EHZBossPropeller extends AbstractBossChild {
         this.timer = 0;
         this.reloading = false;
         this.renderFlags = 0;
+    }
+
+    @Override
+    public EHZBossPropeller recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2EHZBossInstance boss = EhzBossRewindLinks.requireNearestBoss(ctx, "EHZ boss propeller");
+        return new EHZBossPropeller(boss);
     }
 
     @Override

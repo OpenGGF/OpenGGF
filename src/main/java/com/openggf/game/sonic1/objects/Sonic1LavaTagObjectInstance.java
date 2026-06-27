@@ -89,10 +89,10 @@ public class Sonic1LavaTagObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     /** Cached collision flags based on subtype. */
-    private final int collisionFlags;
+    private int collisionFlags;
 
     /** Subtype index (0, 1, or 2), clamped to valid range. */
-    private final int subtypeIndex;
+    private int subtypeIndex;
 
     public Sonic1LavaTagObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LavaTag");

@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -33,7 +35,7 @@ import java.util.List;
  * stays solid. The one-shot is enforced by clearing the arm flag.
  */
 public final class CnzWaterLevelButtonInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener {
 
     /** ROM: {@code move.w #$A58,(Target_water_level).w}. */
     private static final int SECOND_WATER_TARGET_Y = 0x0A58;
@@ -45,8 +47,8 @@ public final class CnzWaterLevelButtonInstance extends AbstractObjectInstance
     private static final int FRAME_UNPRESSED = 0;
     private static final int FRAME_PRESSED = 1;
 
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
 
     private boolean contactStanding;
     private boolean pressedForTest;
@@ -56,6 +58,11 @@ public final class CnzWaterLevelButtonInstance extends AbstractObjectInstance
         super(spawn, "CNZWaterLevelButton");
         this.x = spawn.x();
         this.y = spawn.y() + INIT_Y_OFFSET;
+    }
+
+    @Override
+    public CnzWaterLevelButtonInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzWaterLevelButtonInstance(ctx.spawn());
     }
 
     /**

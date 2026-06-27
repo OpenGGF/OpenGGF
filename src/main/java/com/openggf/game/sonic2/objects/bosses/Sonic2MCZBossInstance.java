@@ -10,6 +10,7 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -39,7 +40,7 @@ import java.util.List;
  * - SUBA (0x0A): Hover down after defeat
  * - SUBC (0x0C): Escape right
  */
-public class Sonic2MCZBossInstance extends AbstractBossInstance {
+public class Sonic2MCZBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
 
     // State machine constants (ROM: boss_routine values)
     private static final int SUB0_RISING = 0x00;

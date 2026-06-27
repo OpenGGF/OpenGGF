@@ -11,6 +11,8 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -31,7 +33,7 @@ import java.util.List;
  * - SUBA: Defeat bounce/settle
  * - SUBC: Flee off-screen
  */
-public class Sonic2ARZBossInstance extends AbstractBossInstance {
+public class Sonic2ARZBossInstance extends AbstractBossInstance implements RewindRecreatable {
 
     private static final int RENDER_X_FLIP = 0x01;
 
@@ -112,6 +114,11 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance {
 
     public Sonic2ARZBossInstance(ObjectSpawn spawn) {
         super(spawn, "ARZ Boss");
+    }
+
+    @Override
+    public Sonic2ARZBossInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic2ARZBossInstance(ctx.spawn());
     }
 
     @Override

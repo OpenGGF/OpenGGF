@@ -36,8 +36,8 @@ public class CheckpointDongleInstance extends AbstractObjectInstance implements 
             + "with matching captured center on rewind recreate. Scalar orbit state is "
             + "reapplied by the generic field capturer.")
     private final CheckpointObjectInstance parent;
-    private final int centerX;
-    private final int centerY;
+    private int centerX;
+    private int centerY;
     private int lifetime;
     private int angle;
     private int currentX;

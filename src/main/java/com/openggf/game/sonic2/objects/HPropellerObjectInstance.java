@@ -10,6 +10,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -41,7 +42,7 @@ import java.util.List;
  *   <li>0x68: SCZ mode - animates only, no player interaction (routine 4 = ObjB5_Animate)</li>
  * </ul>
  */
-public class HPropellerObjectInstance extends AbstractObjectInstance {
+public class HPropellerObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     // ========== Subtype constants ==========
 
@@ -132,7 +133,7 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
 
     // ========== Instance state ==========
 
-    private final int routineMode;
+    private int routineMode;
 
     // Animation state
     private int currentAnim;

@@ -9,6 +9,8 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -21,7 +23,7 @@ import java.util.List;
  * from {@code sub_3FBC4} and the object-controlled mushroom-parachute path at
  * {@code loc_3FC76}.
  */
-public final class UpdraftObjectInstance extends AbstractObjectInstance {
+public final class UpdraftObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int X_BIAS = 0x40;
     private static final int X_RANGE = 0x80;
     private static final int MAIN_Y_BIAS = 0x40;
@@ -34,9 +36,9 @@ public final class UpdraftObjectInstance extends AbstractObjectInstance {
     private static final int PLAYER_FLIP_SPEED = 8;
     private static final int ALTERNATE_UPDRAFT_ANIMATION = 0x0F;
 
-    private final int innerRange;
-    private final int outerRange;
-    private final boolean negativeSubtype;
+    private int innerRange;
+    private int outerRange;
+    private boolean negativeSubtype;
     private boolean carrierObjectLiftedThisUpdate;
 
     public UpdraftObjectInstance(ObjectSpawn spawn) {
@@ -44,6 +46,11 @@ public final class UpdraftObjectInstance extends AbstractObjectInstance {
         this.innerRange = (spawn.subtype() & 0x7F) << 3;
         this.outerRange = innerRange + 0x10;
         this.negativeSubtype = (spawn.subtype() & 0x80) != 0;
+    }
+
+    @Override
+    public UpdraftObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new UpdraftObjectInstance(ctx.spawn());
     }
 
     @Override

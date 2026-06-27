@@ -28,7 +28,7 @@ public class SpikerDrillObjectInstance extends AbstractObjectInstance
     private int yVelocity;
     private final SubpixelMotion.State motionState;
     private boolean hFlip;
-    private final boolean vFlip;
+    private boolean vFlip;
 
     private SpikerDrillObjectInstance() {
         this(new ObjectSpawn(0, 0, 0x93, 0, 0, false, 0), 0, 0, false, false);

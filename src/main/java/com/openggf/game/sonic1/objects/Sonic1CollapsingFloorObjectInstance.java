@@ -15,6 +15,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -103,7 +105,7 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
     };
 
     // The subtype byte from ROM placement
-    private final int subtype;
+    private int subtype;
 
     // The art key for rendering (zone-specific)
     private final String artKey;
@@ -577,22 +579,43 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
      *   <li>Falls via ObjectFall when delay reaches 0</li>
      * </ul>
      */
-    public static class CollapsingFloorFragmentInstance extends AbstractFallingFragment {
+    public static class CollapsingFloorFragmentInstance extends AbstractFallingFragment
+            implements RewindRecreatable {
 
-        private final int smashFrameIndex;
-        private final int pieceIndex;
-        private final boolean hFlip;
-        private final String artKey;
+        private static final int PIECE_MASK = 0x0F;
+        private static final int FRAME_SHIFT = 4;
+        private static final int FRAME_MASK = 0x03;
+        private static final int ART_SHIFT = 6;
+        private static final int ART_MASK = 0x03;
+
+        private int smashFrameIndex;
+        private int pieceIndex;
+        private boolean hFlip;
+        private String artKey;
+
+        CollapsingFloorFragmentInstance(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(),
+                    smashFrameIndex(spawn),
+                    pieceIndex(spawn),
+                    spawn.rawYWord(),
+                    (spawn.renderFlags() & 0x01) != 0,
+                    artKey(spawn));
+        }
 
         public CollapsingFloorFragmentInstance(int parentX, int parentY,
                                                int smashFrameIndex, int pieceIndex,
                                                int delay, boolean hFlip, String artKey) {
-            super(new ObjectSpawn(parentX, parentY, Sonic1ObjectIds.COLLAPSING_FLOOR,
-                    0, 0, false, 0), "CFloFragment", delay, PRIORITY);
+            super(fragmentSpawn(parentX, parentY, smashFrameIndex, pieceIndex, delay, hFlip, artKey),
+                    "CFloFragment", delay, PRIORITY);
             this.smashFrameIndex = smashFrameIndex;
             this.pieceIndex = pieceIndex;
             this.hFlip = hFlip;
             this.artKey = artKey;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new CollapsingFloorFragmentInstance(ctx.spawn());
         }
 
         @Override
@@ -606,6 +629,53 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
             }
 
             renderer.drawFramePieceByIndex(smashFrameIndex, pieceIndex, getX(), getY(), hFlip, false);
+        }
+
+        private static ObjectSpawn fragmentSpawn(
+                int x,
+                int y,
+                int smashFrameIndex,
+                int pieceIndex,
+                int delay,
+                boolean hFlip,
+                String artKey) {
+            return new ObjectSpawn(x, y, Sonic1ObjectIds.COLLAPSING_FLOOR,
+                    fragmentSubtype(smashFrameIndex, pieceIndex, artKey),
+                    hFlip ? 0x01 : 0,
+                    false,
+                    delay);
+        }
+
+        private static int fragmentSubtype(int smashFrameIndex, int pieceIndex, String artKey) {
+            return ((artCode(artKey) & ART_MASK) << ART_SHIFT)
+                    | ((smashFrameIndex & FRAME_MASK) << FRAME_SHIFT)
+                    | (pieceIndex & PIECE_MASK);
+        }
+
+        private static int smashFrameIndex(ObjectSpawn spawn) {
+            return (spawn.subtype() >> FRAME_SHIFT) & FRAME_MASK;
+        }
+
+        private static int pieceIndex(ObjectSpawn spawn) {
+            return spawn.subtype() & PIECE_MASK;
+        }
+
+        private static String artKey(ObjectSpawn spawn) {
+            return switch ((spawn.subtype() >> ART_SHIFT) & ART_MASK) {
+                case 1 -> ObjectArtKeys.SLZ_COLLAPSING_FLOOR;
+                case 2 -> ObjectArtKeys.SBZ_COLLAPSING_FLOOR;
+                default -> ObjectArtKeys.MZ_COLLAPSING_FLOOR;
+            };
+        }
+
+        private static int artCode(String artKey) {
+            if (ObjectArtKeys.SLZ_COLLAPSING_FLOOR.equals(artKey)) {
+                return 1;
+            }
+            if (ObjectArtKeys.SBZ_COLLAPSING_FLOOR.equals(artKey)) {
+                return 2;
+            }
+            return 0;
         }
     }
 }

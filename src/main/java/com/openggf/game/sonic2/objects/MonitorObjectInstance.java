@@ -13,6 +13,8 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -38,7 +40,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 public class MonitorObjectInstance extends AbstractMonitorObjectInstance implements TouchResponseProvider, TouchResponseListener,
-        SolidObjectProvider, SolidObjectListener {
+        SolidObjectProvider, SolidObjectListener, RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(MonitorObjectInstance.class.getName());
     private static final int HALF_RADIUS = 0x0E;
     private static final int BROKEN_FRAME = 0x0B;
@@ -48,7 +50,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     private static final int FALLING_INITIAL_VEL = -0x180;  // Upward pop velocity when hit from below
     private static final int FALLING_GRAVITY = 0x38;        // Same gravity as other objects
 
-    private final MonitorType type;
+    private MonitorType type;
     private ObjectAnimationState animationState;
     private boolean broken;
     private int mappingFrame;
@@ -90,6 +92,11 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         // Initialize position tracking for falling behavior
         this.currentY = spawn.y();
         this.yFixed = spawn.y() << 8;
+    }
+
+    @Override
+    public MonitorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MonitorObjectInstance(ctx.spawn(), "Monitor");
     }
 
     private void ensureInitialized() {

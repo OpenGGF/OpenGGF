@@ -11,6 +11,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -36,7 +38,7 @@ import java.util.Set;
  * <p>ROM: {@code Obj_SinkingMud} / {@code SolidObjectTop_1P} (sonic3k.asm:68500-68661)
  */
 public class SinkingMudObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final int PRIORITY = 4;
     private static final int MAX_RAW_SURFACE = 0x30;
@@ -45,7 +47,7 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
     private static final float DEBUG_G = 1.0f;
     private static final float DEBUG_B = 1.0f;
 
-    private final int halfWidth;
+    private int halfWidth;
     private final Map<PlayableEntity, Integer> rawSurfaceByPlayer = new IdentityHashMap<>();
     private final Map<PlayableEntity, Boolean> standingNextUpdate = new IdentityHashMap<>();
     private final Set<PlayableEntity> killedThisFrame =
@@ -55,6 +57,11 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
     public SinkingMudObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SinkingMud");
         this.halfWidth = (spawn.subtype() & 0xFF) << 3;
+    }
+
+    @Override
+    public SinkingMudObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SinkingMudObjectInstance(ctx.spawn());
     }
 
     @Override

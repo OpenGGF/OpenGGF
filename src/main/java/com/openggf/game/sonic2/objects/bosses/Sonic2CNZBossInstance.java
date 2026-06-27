@@ -11,6 +11,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -36,7 +37,7 @@ import java.util.List;
  * - 8: Bounce/settle after defeat
  * - A: Flee off-screen
  */
-public class Sonic2CNZBossInstance extends AbstractBossInstance {
+public class Sonic2CNZBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
 
     // Boss routine states (ROM: boss_routine)
     private static final int ROUTINE_PATROL = 0x00;

@@ -11,29 +11,45 @@ import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance;
 import com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance;
+import com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1LavaGeyserMakerObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1LavaGeyserObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1RingFlashObjectInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance;
+import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance;
+import com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance;
 import com.openggf.game.sonic1.objects.bosses.FZCylinder;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaBall;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher;
 import com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall;
 import com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance;
+import com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance;
+import com.openggf.game.sonic1.objects.bosses.Sonic1GHZBossInstance;
+import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball;
+import com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance;
+import com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance;
 import com.openggf.game.sonic2.objects.BombPrizeObjectInstance;
 import com.openggf.game.sonic2.objects.CheckpointDongleInstance;
 import com.openggf.game.sonic2.objects.CheckpointStarInstance;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.ConveyorObjectInstance;
 import com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance;
+import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.game.sonic2.objects.OOZBurnerFlameObjectInstance;
+import com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance;
 import com.openggf.game.sonic2.objects.PointsObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
@@ -55,8 +71,14 @@ import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
 import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2MCZBossInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance;
 import com.openggf.game.sonic2.objects.GrounderRockProjectile;
 import com.openggf.game.sonic2.objects.GrounderWallInstance;
+import com.openggf.game.sonic2.objects.NutObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance;
@@ -70,6 +92,15 @@ import com.openggf.game.sonic3k.objects.AizEndBossInstance;
 import com.openggf.game.sonic3k.objects.AizEndBossPropellerChild;
 import com.openggf.game.sonic3k.objects.AizEndBossShipChild;
 import com.openggf.game.sonic3k.objects.AizEndBossSmokeChild;
+import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
+import com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance;
+import com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance;
+import com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance;
+import com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance;
+import com.openggf.game.sonic3k.objects.Aiz1TreeObjectInstance;
+import com.openggf.game.sonic3k.objects.Aiz1ZiplinePegObjectInstance;
+import com.openggf.game.sonic3k.objects.AizForegroundPlantInstance;
+import com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild;
 import com.openggf.game.sonic3k.objects.AizIntroPlaneChild;
 import com.openggf.game.sonic3k.objects.AizIntroWaveChild;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -79,20 +110,85 @@ import com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild;
 import com.openggf.game.sonic3k.objects.AizMinibossBodyChild;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameChild;
+import com.openggf.game.sonic3k.objects.AizMinibossInstance;
 import com.openggf.game.sonic3k.objects.AizMinibossNapalmController;
+import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.objects.AizShipBombInstance;
+import com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance;
+import com.openggf.game.sonic3k.objects.AnimatedStillSpriteInstance;
+import com.openggf.game.sonic3k.objects.AutoSpinObjectInstance;
+import com.openggf.game.sonic3k.objects.AutomaticTunnelObjectInstance;
+import com.openggf.game.sonic3k.objects.BubblerObjectInstance;
+import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
+import com.openggf.game.sonic3k.objects.CnzBalloonInstance;
+import com.openggf.game.sonic3k.objects.CnzBarberPoleObjectInstance;
+import com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance;
+import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
+import com.openggf.game.sonic3k.objects.CnzGiantWheelInstance;
+import com.openggf.game.sonic3k.objects.CnzHoverFanInstance;
+import com.openggf.game.sonic3k.objects.CnzLightBulbInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossTopInstance;
+import com.openggf.game.sonic3k.objects.HczMinibossInstance;
+import com.openggf.game.sonic3k.objects.IczMinibossInstance;
+import com.openggf.game.sonic3k.objects.CnzRisingPlatformInstance;
+import com.openggf.game.sonic3k.objects.CnzSpiralTubeInstance;
+import com.openggf.game.sonic3k.objects.CnzTeleporterBeamInstance;
+import com.openggf.game.sonic3k.objects.CnzTeleporterInstance;
+import com.openggf.game.sonic3k.objects.CnzTrapDoorInstance;
+import com.openggf.game.sonic3k.objects.CnzTriangleBumperObjectInstance;
+import com.openggf.game.sonic3k.objects.CnzVacuumTubeInstance;
+import com.openggf.game.sonic3k.objects.CnzWaterLevelButtonInstance;
+import com.openggf.game.sonic3k.objects.DoorObjectInstance;
+import com.openggf.game.sonic3k.objects.FloatingPlatformObjectInstance;
+import com.openggf.game.sonic3k.objects.GumballTriangleBumperObjectInstance;
+import com.openggf.game.sonic3k.objects.HCZBlockObjectInstance;
+import com.openggf.game.sonic3k.objects.HCZConveyorSpikeObjectInstance;
+import com.openggf.game.sonic3k.objects.HCZLargeFanObjectInstance;
+import com.openggf.game.sonic3k.objects.HCZSpinningColumnObjectInstance;
+import com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance;
+import com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance;
+import com.openggf.game.sonic3k.objects.HCZWaterSplashObjectInstance;
+import com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance;
+import com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance;
+import com.openggf.game.sonic3k.objects.IczIceBlockObjectInstance;
+import com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance;
+import com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance;
+import com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance;
+import com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance;
+import com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance;
+import com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance;
+import com.openggf.game.sonic3k.objects.LbzAlarmObjectInstance;
+import com.openggf.game.sonic3k.objects.LbzInvisibleBarrierInstance;
 import com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance;
+import com.openggf.game.sonic3k.objects.Mgz2PostBossPaletteFadeController;
+import com.openggf.game.sonic3k.objects.Mgz2PostBossSequenceController;
+import com.openggf.game.sonic3k.objects.MgzMinibossInstance;
+import com.openggf.game.sonic3k.objects.MhzMinibossInstance;
+import com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance;
+import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
+import com.openggf.game.sonic3k.objects.PachinkoBumperObjectInstance;
+import com.openggf.game.sonic3k.objects.PachinkoMagnetOrbObjectInstance;
+import com.openggf.game.sonic3k.objects.PachinkoPlatformObjectInstance;
+import com.openggf.game.sonic3k.objects.PachinkoTriangleBumperObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kSignpostStubChild;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
+import com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.Sonic3kPathSwapObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kSpikeObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild;
 import com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild;
+import com.openggf.game.sonic3k.objects.Sonic3kTwistedRampObjectInstance;
+import com.openggf.game.sonic3k.objects.SinkingMudObjectInstance;
+import com.openggf.game.sonic3k.objects.StillSpriteInstance;
+import com.openggf.game.sonic3k.objects.UpdraftObjectInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
@@ -119,6 +215,7 @@ import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
 import com.openggf.level.objects.SkidDustObjectInstance;
@@ -130,6 +227,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Modifier;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -174,6 +272,7 @@ public class TestScalarOnlyCodecDeletion {
             "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance");
 
     private record CodecDeletionCandidate(String fqn, GameId gameId) {}
+    private record MutableFieldCoverageCandidate(String fqn, String... fieldNames) {}
 
     private static final List<CodecDeletionCandidate> BATCH3_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
@@ -231,6 +330,11 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> BATCH10_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(ConveyorObjectInstance.class.getName(), GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH10_MUTABLE_FIELDS =
+            List.of(new MutableFieldCoverageCandidate(
+                    ConveyorObjectInstance.class.getName(),
+                    "baseX", "baseY", "xFlip"));
 
     private static final List<CodecDeletionCandidate> BATCH11_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
@@ -403,6 +507,11 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance",
                     GameId.S2));
 
+    private static final List<MutableFieldCoverageCandidate> BATCH25_MUTABLE_FIELDS =
+            List.of(new MutableFieldCoverageCandidate(
+                    "com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance",
+                    "positionX", "positionY"));
+
     private static final List<CodecDeletionCandidate> BATCH26_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.level.objects.boss.BossExplosionObjectInstance",
@@ -427,6 +536,764 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.MonitorContentsObjectInstance",
                     GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH33_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MTZSpinTubeObjectInstance",
+                            "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MonitorContentsObjectInstance",
+                            "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SteamPuffObjectInstance",
+                            "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.VerticalLaserObjectInstance",
+                            "posX", "posY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance",
+                            "type"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance",
+                            "vFlip"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH134_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance",
+                            "baseY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance",
+                            "blockFrame", "fullSubtype", "isTall", "moveType"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance",
+                            "isTall", "reflectSubtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance",
+                            "switchIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LavaGeyserMakerObjectInstance",
+                            "subtype", "timerReload"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LavaGeyserObjectInstance",
+                            "behindPriority", "role"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LavaWallObjectInstance",
+                            "currentY", "role"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH135_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance",
+                            "accel", "destX", "homeX", "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance$SmallMetalPformChildInstance",
+                            "xFlipped"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH136_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizBombExplosionInstance",
+                            "posY"),
+                    new MutableFieldCoverageCandidate(
+                            AizCollapsingLogBridgeObjectInstance.class.getName(),
+                            "hFlip", "halfWidth", "isFireBridge", "subtypeBase", "totalTimer", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance$CollapsingLogSegment",
+                            "fixedX", "isFireVariant"),
+                    new MutableFieldCoverageCandidate(
+                            AizDisappearingFloorObjectInstance.class.getName(),
+                            "periodMask", "phaseOffset", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild",
+                            "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            AizFallingLogObjectInstance.class.getName(),
+                            "phaseOffset", "spawnX", "spawnY", "timingMask"),
+                    new MutableFieldCoverageCandidate(
+                            AizFlippingBridgeObjectInstance.class.getName(),
+                            "animDirection", "animPeriod", "hFlip", "maxFrame", "x", "y"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH137_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizForegroundPlantInstance",
+                            "mappingFrame", "origX", "origY", "scrollRate"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance",
+                            "currentX", "currentY", "phaseOffset", "segmentCount"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance",
+                            "treeX", "treeY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild",
+                            "worldX", "worldY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizRideVineObjectInstance",
+                            "subtype", "targetX"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizShipBombInstance",
+                            "initialWorldY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance",
+                            "baseY"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH138_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AnimatedStillSpriteInstance",
+                            "animDelay"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AutoSpinObjectInstance",
+                            "groundOnly", "lockControls", "noSpinLock", "snapToWall", "verticalMode", "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AutomaticTunnelObjectInstance",
+                            "lbz2Mode", "maintainVelocity", "pathId", "reversePath", "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.BreakableWallObjectInstance",
+                            "triggerControlled", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.BubblerObjectInstance",
+                            "maker", "originalX", "originalY"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH139_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzBalloonInstance",
+                            "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzBarberPoleObjectInstance",
+                            "mirrored"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzBumperObjectInstance",
+                            "initialAngle", "originX", "originY", "reverseOrbit"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzGiantWheelInstance",
+                            "flipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzHoverFanInstance",
+                            "activeVariant", "baseX", "baseY", "initialFrame", "liftWindowMax",
+                            "liftWindowMin", "subtype", "xFlipped", "xWindowMax", "xWindowMin"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzTeleporterBeamInstance",
+                            "centreX", "centreY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzTriangleBumperObjectInstance",
+                            "fullWidth", "halfWidth", "launchDown", "launchLeft"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzVacuumTubeInstance",
+                            "configuredLiftFrames", "facingRight", "liftMode"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzWaterLevelButtonInstance",
+                            "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzWireCageObjectInstance",
+                            "verticalOffset", "verticalRange", "verticalVelocity"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH140_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.DoorObjectInstance",
+                            "baseX", "baseY", "halfHeight", "halfWidth", "horizontal", "priority",
+                            "triggerMax", "triggerMin", "xFlipped", "yFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.FloatingPlatformObjectInstance",
+                            "baseX", "baseY", "halfHeight", "halfWidth", "mappingFrame", "moveType",
+                            "outOfRangeLimit", "outOfRangeReferenceX", "xFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.GumballItemObjectInstance",
+                            "mappingFrame", "motionMode", "rewardMode", "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZBlockObjectInstance",
+                            "halfHeight", "halfWidth", "mappingFrame", "x", "y"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH141_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance",
+                            "cutsceneOverride", "pivotX", "pivotY", "reverseVertical", "settledAngle", "xFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance",
+                            "mappingFrame"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance",
+                            "baseX", "baseY", "behaviorBits", "displayFrame", "knucklesOnly",
+                            "knucklesOnlyStanding", "sizeIndex", "variant"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH142_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance",
+                            "halfExtent", "hasTimer", "heightPixels", "isHorizontal", "mappingFrame",
+                            "nonDestructiveRelease", "sizeIndex", "subtype", "totalExtent",
+                            "widthOrHeight", "widthPixels", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance$BreakableBarDebris",
+                            "debrisFrame"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH143_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZConveyorBeltObjectInstance",
+                            "activeLeftBound", "activeRightBound", "flipped", "leftBound", "objY",
+                            "rawSubtype", "rightBound", "subtypeIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZConveyorSpikeObjectInstance",
+                            "centerY", "leftBound", "rightBound"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZLargeFanObjectInstance",
+                            "x"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZSnakeBlocksObjectInstance",
+                            "baseX", "baseY", "direction"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH144_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.AbstractS3kBadnikInstance",
+                            "collisionSizeIndex", "priorityBucket", "planePriority"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerAnimatedParticle",
+                            "priorityBucket"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH145_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$BreathDebrisChild",
+                            "bigLeaf", "hFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance$PenguinatorSnowdustInstance",
+                            "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild",
+                            "originX", "originY", "visualIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterCoverChild",
+                            "xOffset", "yOffset"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild",
+                            "verticalFlipShot", "xOffset", "yOffset"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild",
+                            "leftSide"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm",
+                            "xOffset", "yOffset"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotDebris",
+                            "frame"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance",
+                            "hiddenVariant", "turnResetTimer"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerAnimatedParticle",
+                            "currentX", "currentY", "frameDelay", "playSound"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH146_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance",
+                            "subtype", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzCannonInstance$CannonLaunchPuff",
+                            "xVelocity", "yVelocity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzCylinderInstance",
+                            "angleStep", "baseX", "baseY", "circularRoute", "motionSelector",
+                            "speedCap"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance",
+                            "centreX", "centreY", "completionContinuation"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance",
+                            "centreX", "centreY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance",
+                            "centreX", "centreY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzMinibossDebrisChild",
+                            "mappingFrame"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzTeleporterInstance",
+                            "centreY"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH147_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.AizRockFragmentChild",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CnzMinibossDebrisChild",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance$IczBreakableWallDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$IceDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance$IceDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance$IceCubeDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$BreakDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance$StalagtiteDebris",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.RockDebrisChild",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment",
+                            "gravity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild",
+                            "gravity"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH148_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance",
+                            "innerRange", "isUnderwater", "originalX", "outerRange", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanBubbleChild",
+                            "x", "yVelocity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild",
+                            "facingLeft", "maxSlideDistance", "originalX", "y"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH149_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczFreezerObjectInstance",
+                            "hFlip", "verticalFlip", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud",
+                            "hFlip", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrostPuff",
+                            "originX", "originY", "verticalFlip"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH150_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CorkFloorObjectInstance",
+                            "hFlip", "mode", "subtype", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CorkFloorObjectInstance$CorkFloorFragment",
+                            "fragmentFrameIndex", "hFlip", "pieceIndex"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH151_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment",
+                            "fragmentFrameIndex", "hFlip", "highPriority", "pieceIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris",
+                            "frameIndex", "hFlip", "pieceIndex"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH152_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance",
+                            "direction", "frameIndex", "heightPixels", "mode",
+                            "stepPerFrame", "totalFrames", "triggerIndex", "widthPixels"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH153_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance",
+                            "baseY", "hFlip", "halfHeight", "halfWidth",
+                            "liftDistance", "mappingFrame", "originalBaseX"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH154_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance",
+                            "anchorX", "anchorY", "releaseOnSwing",
+                            "spawnX", "spawnY", "xFlip"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH155_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance",
+                            "baseX", "baseY", "hFlip", "vFlip", "verticalMode"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH156_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance",
+                            "adjustedY", "toggleMode", "topSolid", "triggerBit", "triggerIndex"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH157_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZSpinningColumnObjectInstance",
+                            "baseX", "baseY", "motionMode", "xFlipped"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH158_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZTwistingLoopObjectInstance",
+                            "objectFlippedX", "reverseEntry", "subtype"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH159_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance",
+                            "spawnInterval", "spawnX", "spawnY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZWaterSplashObjectInstance",
+                            "x", "y"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH160_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance",
+                            "isHorizontal"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSplashChild",
+                            "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSprayChild",
+                            "useBubbleArt"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH161_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Hcz2CutsceneButtonInstance",
+                            "x", "y"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH162_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance",
+                            "hFlip", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance",
+                            "breakOnTouch", "hFlip", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczIceBlockObjectInstance",
+                            "hFlip", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance",
+                            "hFlip", "x", "y"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH163_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance",
+                            "hasBottomDecoration", "spawnY", "subtype", "xFlip", "yFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance",
+                            "hFlip", "spawnX", "spawnY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance",
+                            "hFlip"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH164_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance",
+                            "hFlip", "startsNextLevel", "variant"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowPileDebris",
+                            "hFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance",
+                            "xVel", "yVel"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH165_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance",
+                            "baseY", "hFlip", "x"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.LbzAlarmObjectInstance",
+                            "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.LbzCupElevatorPoleInstance",
+                            "halfHeight", "mappingFrame"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.LbzExplodingTriggerInstance",
+                            "triggerIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.LbzFlameThrowerFlameInstance",
+                            "hFlip", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.LbzFlameThrowerObjectInstance",
+                            "hFlip", "subtype"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH166_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance",
+                            "facingLeft", "launchSpeed"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.LbzRideGrappleInstance",
+                            "ejectAtPathEnd", "pathLeft", "pathRight"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.LbzRollingDrumInstance",
+                            "leftBound", "rightBound"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH167_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZDashTriggerObjectInstance",
+                            "facingLeft", "triggerIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance",
+                            "flipped", "triggerIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZHeadTriggerProjectileInstance",
+                            "worldY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZLBZSmashingPillarObjectInstance",
+                            "baseY", "targetDistance"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZMovingSpikePlatformObjectInstance",
+                            "baseX", "baseY"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH168_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZSwingingPlatformObjectInstance",
+                            "angleStep", "pivotFrame", "pivotX", "pivotY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance",
+                            "captureThreshold", "centerX", "centerY", "flipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild",
+                            "flipX", "index", "xVel", "yVel"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH169_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance",
+                            "hFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance",
+                            "animationPhaseOffset", "baseX", "baseY", "planePriority", "priorityBucket"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance",
+                            "baseX", "baseY", "childX"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance",
+                            "fallingSubtype", "hFlip", "vFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MhzShipPropellerInstance",
+                            "propellerIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance",
+                            "upperVariant"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH170_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance",
+                            "triggerIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance",
+                            "homeY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.badniks.MonkeyDudeBadnikInstance",
+                            "activeStepCount", "firstStepCount", "initialFacingLeft", "treeAnchorX"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLeafParticle",
+                            "yVelocity"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH171_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MhzShipSequenceControllerInstance",
+                            "initialShipMotion", "initialSwingSpeed"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance",
+                            "monitorSubtype", "monitorX", "monitorY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.SinkingMudObjectInstance",
+                            "halfWidth"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance",
+                            "bitIndex", "hiddenPalaceRoute"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance",
+                            "redSpring"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Sonic3kTwistedRampObjectInstance",
+                            "facingLeft"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.UpdraftObjectInstance",
+                            "innerRange", "negativeSubtype", "outerRange"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH172_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance",
+                            "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance$MhzMinibossTreeChipInstance",
+                            "bounceEnabled"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow",
+                            "signpostX"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance",
+                            "cutsceneOverride", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance",
+                            "hFlip", "mappingFrame"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance",
+                            "cameraLockFlag", "checkpointIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.level.objects.SkidDustObjectInstance",
+                            "facingLeft"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH173_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance",
+                            "origY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.FlipperObjectInstance",
+                            "idleAnimId"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.LauncherBallObjectInstance",
+                            "renderXFlip", "renderYFlip", "reverseAnim", "startFrame"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.OOZLauncherObjectInstance",
+                            "isVertical"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH174_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance",
+                            "baseX", "baseY", "facingLeft"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance",
+                            "hFlip", "originalX", "originalY", "subtypeZero", "vFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.LbzCupElevatorInstance",
+                            "flingAtEnd", "hFlip"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH175_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.level.objects.BreathingBubbleInstance",
+                            "maxBubbleFrame", "riseVelocity"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.level.objects.SplashObjectInstance",
+                            "facingLeft"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment",
+                            "fragmentFrameIndex", "pieceIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild",
+                            "flipX", "frame"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance",
+                            "fixedX", "fixedY"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH176_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance",
+                            "baseX", "baseY", "heightPixels", "triggerIndex", "widthPixels"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild",
+                            "frame", "vortexX", "vortexY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle",
+                            "mappingFrame", "priorityBucket"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment",
+                            "fragmentFrameIndex", "hFlip", "pieceIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment",
+                            "frameIndex", "highPri"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH177_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$EjectionEffectChild",
+                            "drawX", "drawY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild",
+                            "mappingFrame", "offsetFromMachine"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$BodyOverlayChild",
+                            "offsetFromMachine"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DefeatFragmentChild",
+                            "mappingFrame"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MgzMinibossInstance$MgzBossCameraScrollHelper",
+                            "targetX"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH178_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1CollapseChild",
+                            "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper",
+                            "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild",
+                            "centerX", "centerY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild",
+                            "centerX", "centerY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild",
+                            "spark", "subtype"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH179_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance",
+                            "segmentCount", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild",
+                            "hFlip", "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance",
+                            "anchorX", "baseY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine",
+                            "xOffset", "yOffset"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH180_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance",
+                            "hFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance",
+                            "baseY", "negativeSubtype", "segmentCount", "triggerIndex"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH181_MUTABLE_FIELDS =
+            List.of(new MutableFieldCoverageCandidate(
+                    "com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance",
+                    "anchorX", "anchorY", "flipped", "targetExtension"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH182_MUTABLE_FIELDS =
+            List.of(new MutableFieldCoverageCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild",
+                    "baseX", "baseY", "facingLeft", "nativeP1"));
+
+    private static final List<MutableFieldCoverageCandidate> BATCH183_MUTABLE_FIELDS =
+            List.of(new MutableFieldCoverageCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance",
+                    "closedOnly"));
 
     private static final List<CodecDeletionCandidate> BATCH31_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(BombPrizeObjectInstance.class.getName(), GameId.S2));
@@ -580,6 +1447,55 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> SHARED_SPARKLE_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(SignpostSparkleObjectInstance.class.getName(), GameId.S2));
 
+    private static final List<CodecDeletionCandidate> SHARED_PLACEHOLDER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(PlaceholderObjectInstance.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> SHARED_WATER_EFFECT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.level.objects.BreathingBubbleInstance", GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.level.objects.SplashObjectInstance", GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_SPEED_LAUNCHER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance", GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_MTZ_SPIN_TUBE_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MTZSpinTubeObjectInstance", GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_CPZ_SPIN_TUBE_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance", GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_CPZ_SPIN_TUBE_RECREATE_MUTABLE_FIELDS =
+            List.of(new MutableFieldCoverageCandidate(
+                    "com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance",
+                    "collisionDistance"));
+
+    private static final List<CodecDeletionCandidate> S2_MTZ_LONG_PLATFORM_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MTZLongPlatformObjectInstance", GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_COLLAPSING_PLATFORM_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance", GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_COLLAPSING_PLATFORM_RECREATE_MUTABLE_FIELDS =
+            List.of(new MutableFieldCoverageCandidate(
+                    "com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance",
+                    "hFlip", "vFlip"));
+
+    private static final List<CodecDeletionCandidate> S2_COLLAPSING_PLATFORM_FRAGMENT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$CollapsingPlatformFragmentInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_COLLAPSING_PLATFORM_FRAGMENT_RECREATE_MUTABLE_FIELDS =
+            List.of(new MutableFieldCoverageCandidate(
+                    "com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$CollapsingPlatformFragmentInstance",
+                    "fragmentIndex", "hFlip", "vFlip", "pieceOffsetX", "pieceOffsetY", "priority", "x"));
+
     private static final List<CodecDeletionCandidate> CPZ_GRAPH_BATCH_A_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(CPZBossContainer.class.getName(), GameId.S2),
             new CodecDeletionCandidate(CPZBossFlame.class.getName(), GameId.S2),
@@ -595,6 +1511,15 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(CPZBossPipePump.class.getName(), GameId.S2),
             new CodecDeletionCandidate(CPZBossPipeSegment.class.getName(), GameId.S2));
 
+    private static final List<CodecDeletionCandidate> S2_BOSS_GRAPH_PARENT_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic2CPZBossInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(Sonic2EHZBossInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(Sonic2HTZBossInstance.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_BOSS_CONTROLLER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic2CNZBossInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(Sonic2MCZBossInstance.class.getName(), GameId.S2));
+
     private static final List<CodecDeletionCandidate> AIZ_MINIBOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(AizMinibossBodyChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizMinibossArmChild.class.getName(), GameId.S3K),
@@ -603,6 +1528,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(AizMinibossFlameChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizMinibossBarrelShotChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizMinibossBarrelShotFlareChild.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_MINIBOSS_PARENT_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizMinibossInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> AIZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(AizEndBossInstance.class.getName(), GameId.S3K),
@@ -618,17 +1546,121 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(AizShipBombInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> AIZ_SPIKED_LOG_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizSpikedLogObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild",
                     GameId.S3K));
 
     private static final List<CodecDeletionCandidate> AIZ_FALLING_LOG_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizFallingLogObjectInstance.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild",
                     GameId.S3K),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild",
                     GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_DISAPPEARING_FLOOR_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizDisappearingFloorObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_COLLAPSING_LOG_BRIDGE_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizCollapsingLogBridgeObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance$CollapsingLogSegment",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_FLIPPING_BRIDGE_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(AizFlippingBridgeObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ1_STATIC_SCENERY_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Aiz1TreeObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(Aiz1ZiplinePegObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_DECORATIVE_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(AizForegroundPlantInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AnimatedStillSpriteInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_STATIC_HAZARD_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(StillSpriteInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(Sonic3kSpikeObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_BUTTON_PATH_SWAP_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic3kButtonObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(Sonic3kPathSwapObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_UTILITY_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(S3kHiddenMonitorInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(SinkingMudObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(Sonic3kSSEntryRingObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_CNZ_LOCAL_MECHANICS_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(CnzBalloonInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(CnzRisingPlatformInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(CnzLightBulbInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(CnzBarberPoleObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_CNZ_MECHANISM_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(CnzGiantWheelInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(CnzHoverFanInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(CnzSpiralTubeInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(CnzTeleporterBeamInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(CnzTeleporterInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(CnzTrapDoorInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(CnzTriangleBumperObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(CnzVacuumTubeInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(CnzWaterLevelButtonInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_ICZ_ICE_OBJECT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(IczBreakableWallObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(IczHarmfulIceObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(IczIceBlockObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(IczIceCubeObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_HCZ_MECHANISM_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(HCZBlockObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HCZConveyorSpikeObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HCZLargeFanObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HCZSpinningColumnObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HCZWaterSplashObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_ICZ_PLATFORM_HAZARD_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(IczPathFollowPlatformObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(IczSwingingPlatformObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(IczStalagtiteObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(IczSnowPileObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_UTILITY_MOTION_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(AutomaticTunnelObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AutoSpinObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(BubblerObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(DoorObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_PACHINKO_STANDALONE_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(FloatingPlatformObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(GumballTriangleBumperObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(PachinkoBumperObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(PachinkoMagnetOrbObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(PachinkoPlatformObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(PachinkoTriangleBumperObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_CONTROLLER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic3kTwistedRampObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(UpdraftObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HCZTwistingLoopObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(MGZTwistingLoopObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(MhzTwistedVineObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> STANDALONE_CONTROLLER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(NutObjectInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(LbzInvisibleBarrierInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(LbzAlarmObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(HCZWaterDropObjectInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(MhzPollenSpawnerInstance.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(Mgz2PostBossPaletteFadeController.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(Mgz2PostBossSequenceController.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> HCZ_END_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HczEndBossRobotnikShip.class.getName(), GameId.S3K),
@@ -640,16 +1672,32 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> AIZ_INTRO_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(AizIntroPlaneChild.class.getName(), GameId.S3K),
-            new CodecDeletionCandidate(AizIntroWaveChild.class.getName(), GameId.S3K));
+            new CodecDeletionCandidate(AizIntroWaveChild.class.getName(), GameId.S3K),
+            new CodecDeletionCandidate(AizIntroEmeraldGlowChild.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> AIZ_INTRO_PARENT_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(AizPlaneIntroInstance.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> S2_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(GrounderRockProjectile.class.getName(), GameId.S2),
             new CodecDeletionCandidate(GrounderWallInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(BalkiryJetObjectInstance.class.getName(), GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild",
+                    GameId.S2),
             new CodecDeletionCandidate(RexonHeadObjectInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(ShellcrackerClawInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(SlicerPincerInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(SolFireballObjectInstance.class.getName(), GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_BADNIK_PARENT_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance", GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance", GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance", GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.ShellcrackerBadnikInstance", GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance", GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.SolBadnikInstance", GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance", GameId.S2));
 
     private static final List<CodecDeletionCandidate> CHECKPOINT_STARPOST_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(Sonic1LamppostTwirlInstance.class.getName(), GameId.S1),
@@ -659,10 +1707,22 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(Sonic3kStarPostBonusStarChild.class.getName(), GameId.S3K));
 
     private static final List<CodecDeletionCandidate> S1_MZ_GLASS_REFLECTION_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1GlassBlockObjectInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(Sonic1GlassReflectionInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> S1_RING_FLASH_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(Sonic1RingFlashObjectInstance.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_BOSS_GRAPH_PARENT_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1FZBossInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1GHZBossInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1SLZBossInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1SYZBossInstance.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_SYZ_BOSS_SPIKE_GRAPH_BATCH246_RECREATE_CLASSES =
+            List.of(new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.SYZBossSpike",
+                    GameId.S1));
 
     private static final List<CodecDeletionCandidate> S1_FZ_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(FZCylinder.class.getName(), GameId.S1),
@@ -679,9 +1739,12 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(Sonic1EndingSonicObjectInstance.class.getName(), GameId.S1));
 
     private static final List<CodecDeletionCandidate> S1_GRASS_FIRE_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1LargeGrassyPlatformObjectInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(Sonic1GrassFireObjectInstance.class.getName(), GameId.S1));
 
-    private static final List<CodecDeletionCandidate> S1_BADNIK_CHILD_GRAPH_DELETED_CODECS = List.of(
+    private static final List<CodecDeletionCandidate> S1_BADNIK_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic1CaterkillerBadnikInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1OrbinautBadnikInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(Sonic1BombFuseInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(Sonic1CaterkillerBodyInstance.class.getName(), GameId.S1),
             new CodecDeletionCandidate(
@@ -698,21 +1761,1039 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S2),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformReleaser",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserShooter",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaser",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnik",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnikPlatform",
                     GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_WFZ_BOSS_PARENT_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Sonic2WFZBossInstance.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> S2_HTZ_BOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(HTZBossFlamethrower.class.getName(), GameId.S2),
-            new CodecDeletionCandidate(HTZBossLavaBall.class.getName(), GameId.S2));
+            new CodecDeletionCandidate(HTZBossLavaBall.class.getName(), GameId.S2),
+            new CodecDeletionCandidate("com.openggf.game.sonic2.objects.bosses.HTZBossSmokeParticle", GameId.S2));
 
     private static final List<CodecDeletionCandidate> S2_DEZ_BOMB_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$BombChild",
                     GameId.S2));
 
-    private static final List<CodecDeletionCandidate> SEESAW_BALL_GRAPH_DELETED_CODECS = List.of(
+    private static final List<CodecDeletionCandidate> S2_DEZ_EGGMAN_GRAPH_COVERED_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$ExhaustPuff",
+                    GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S1_SCRAP_EGGMAN_GRAPH_COVERED_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic1ScrapEggmanInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton",
+                    GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_GARGOYLE_FIREBALL_GRAPH_COVERED_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance$Fireball",
+                    GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_JUNCTION_CHILD_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic1JunctionObjectInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance",
+                    GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_LAVA_WALL_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic1LavaWallObjectInstance.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_LAVA_GEYSER_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic1LavaGeyserMakerObjectInstance.class.getName(), GameId.S1),
+            new CodecDeletionCandidate(Sonic1LavaGeyserObjectInstance.class.getName(), GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_RUNTIME_SPAWN_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1BubblesObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1BumperObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1RunningDiscObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance",
+                    GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_SCALAR_SPAWN_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1ButtonObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1ConveyorBeltObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1EdgeWallObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1ElectrocuterObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1FanObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1GirderBlockObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1LZConveyorObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1LamppostObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1LavaBallMakerObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1LavaTagObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1MovingBlockObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1LavaBallObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1PlatformObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SawObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SceneryObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SmallDoorObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SpikeObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SpringObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SpinConveyorObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1StaircaseObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1ChainedStomperObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SpikedPoleHelixObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1ChopperBadnikInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1JawsBadnikInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1NewtronBadnikInstance",
+                    GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_COLLAPSING_FRAGMENT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance",
+                    GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_DESTRUCTION_FRAGMENT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance$WallFragmentInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance$SmashBlockFragmentInstance",
+                    GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_SPIKED_BALL_CHAIN_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild",
+                    GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_FALSE_FLOOR_FRAGMENT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorFragment",
+                    GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_BOSS_CONTROLLER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1LZBossInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1MZBossInstance",
+                    GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S1_EFFECT_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance",
+                    GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1MotobugSmokeInstance",
+                    GameId.S1));
+
+    private static final List<MutableFieldCoverageCandidate> S1_EFFECT_SCALAR_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance",
+                            "posX"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1MotobugSmokeInstance",
+                            "facingLeft", "posX", "posY"));
+
+    private static final List<CodecDeletionCandidate> S1_BOSS_FIRE_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1BossFireInstance",
+                    GameId.S1));
+
+    private static final List<CodecDeletionCandidate> S2_SCALAR_NAMED_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.ArrowShooterObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.BarrierObjectInstance",
+                    GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_CNZ_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.BumperObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.HexBumperObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.BonusBlockObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.BubbleGeneratorObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CloudObjectInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_CNZ_SCALAR_RECREATE_MUTABLE_FIELDS =
+            List.of(new MutableFieldCoverageCandidate(
+                    "com.openggf.game.sonic2.objects.CloudObjectInstance",
+                    "mappingFrame", "xVelocity"));
+
+    private static final List<CodecDeletionCandidate> S2_UTILITY_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.ButtonObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CluckerBaseObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.FanObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.LavaMarkerObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.BridgeStakeObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.EHZWaterfallObjectInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_UTILITY_SCALAR_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.ButtonObjectInstance",
+                            "adjustedY", "switchId", "triggerBit"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.CluckerBaseObjectInstance",
+                            "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.FanObjectInstance",
+                            "alwaysOn", "isVertical", "reverseDirection", "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.LavaMarkerObjectInstance",
+                            "collisionFlags", "subtypeIndex"));
+
+    private static final List<CodecDeletionCandidate> S2_PLATFORM_VISUAL_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CPZPylonObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.LaserObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.WallTurretObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MTZLavaBubbleObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CPZPlatformObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MTZPlatformObjectInstance",
+                    GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_MECHANISM_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.ARZPlatformObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.BlueBallsObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CPZStaircaseObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.HPropellerObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.RisingPillarObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.Sonic2LayerSwitcherObjectInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_MECHANISM_SCALAR_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance",
+                            "initialX", "initialY", "speed"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.BlueBallsObjectInstance",
+                            "arcMotion", "initialX", "initialY", "siblingCount", "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.CPZStaircaseObjectInstance",
+                            "baseX", "baseY", "xFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.HPropellerObjectInstance",
+                            "routineMode"));
+
+    private static final List<CodecDeletionCandidate> S2_BOX_SOLID_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.BridgeObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CheckpointObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.ForcedSpinObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.PipeExitSpringObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.PlatformObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SpringObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.BreakableBlockObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CNZBigBlockObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CNZRectBlocksObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.ElevatorObjectInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_BOX_SOLID_SCALAR_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.BridgeObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority", "logCount"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.CheckpointObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority",
+                            "checkpointIndex", "cameraLockFlag"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.ForcedSpinObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority",
+                            "verticalMode", "triggerWidth", "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.PipeExitSpringObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority", "fullStrength"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.PlatformObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SpringObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority",
+                            "redSpring", "idleAnimId", "triggeredAnimId"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.BreakableBlockObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.CNZBigBlockObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority",
+                            "targetX", "targetY", "moveType"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.CNZRectBlocksObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority", "baseX", "baseY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.ElevatorObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority"));
+
+    private static final List<CodecDeletionCandidate> S2_TRIGGER_MOTION_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CNZConveyorBeltObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.FloorSpikeObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.HTZLiftObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.LargeRotPformObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.LateralCannonObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MCZBrickObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MCZBridgeObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MCZDrawbridgeObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MTZSpringWallObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MTZTwinStompersObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.RisingLavaObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SlidingSpikesObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SpeedBoosterObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SpikeObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.StomperObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.TippingFloorObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.VineSwitchObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.VPropellerObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.WFZShipFireObjectInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_TRIGGER_MOTION_SCALAR_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.CNZConveyorBeltObjectInstance",
+                            "widthPixels", "heightPixels", "velocityX"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.FloorSpikeObjectInstance",
+                            "initialX", "initialY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.HTZLiftObjectInstance",
+                            "baseX", "baseY", "flippedX"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.LargeRotPformObjectInstance",
+                            "baseX", "baseY", "widthPixels", "yRadius", "mappingFrame",
+                            "isIndent", "mirrorMotion", "rotateMotion", "priority"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.LateralCannonObjectInstance",
+                            "x", "y", "phaseMask"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance",
+                            "collisionHalfWidth", "collisionHalfHeight"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MCZBrickObjectInstance",
+                            "mode", "initialX", "initialY", "chainCount", "speed"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MCZBridgeObjectInstance",
+                            "switchId"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MCZDrawbridgeObjectInstance",
+                            "switchId", "originalX", "originalY", "direction", "xFlipped", "yFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MTZSpringWallObjectInstance",
+                            "yRadius", "xFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MTZTwinStompersObjectInstance",
+                            "widthPixels", "collisionYRadius", "maxTravel", "mappingFrame", "xFlip",
+                            "renderYRadius", "baseX", "baseY", "moveMode"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.RisingLavaObjectInstance",
+                            "subtype", "widthPixels", "baseY", "baseX"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SlidingSpikesObjectInstance",
+                            "baseX", "hFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SpeedBoosterObjectInstance",
+                            "boostSpeed"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SpikeObjectInstance",
+                            "baseX", "baseY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.StomperObjectInstance",
+                            "baseY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.TippingFloorObjectInstance",
+                            "delay", "durationInitial"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.VineSwitchObjectInstance",
+                            "switchId"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.VPropellerObjectInstance",
+                            "currentX", "currentY", "collisionFlags", "yFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance",
+                            "halfWidth", "halfHeight", "r", "g", "b", "highPriority",
+                            "triggerHalfHeight", "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.WFZShipFireObjectInstance",
+                            "initialX", "currentY"));
+
+    private static final List<CodecDeletionCandidate> S2_BADNIK_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.AsteronBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.ChopChopBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.CluckerBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.CoconutsBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.CrawltonBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.CrawlBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.FlasherBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.MasherBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.NebulaBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.OctusBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.SpikerBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.SpinyBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.SpinyOnWallBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.WFZStickBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.WFZUnknownBadnikInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.WhispBadnikInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_BADNIK_SCALAR_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.badniks.ChopChopBadnikInstance",
+                            "startX"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.badniks.OctusBadnikInstance",
+                            "startY", "xFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.badniks.SpikerBadnikInstance",
+                            "yFlipFlag"));
+
+    private static final List<CodecDeletionCandidate> S2_MISC_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SignpostObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SteamSpringObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.TornadoSmokeObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.WFZWheelObjectInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_MISC_SCALAR_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.HtzFireShooterObjectInstance",
+                            "currentX", "currentY", "projectileVel", "reloadTime"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SteamSpringObjectInstance",
+                            "baseY"));
+
+    private static final List<CodecDeletionCandidate> S2_MECHANISM_TAIL_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MonitorObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SpikyBlockObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SpringboardObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_MECHANISM_TAIL_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MonitorObjectInstance",
+                            "type"));
+
+    private static final List<CodecDeletionCandidate> S2_MECHANISM_FRAGMENT_PARENT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SmashableGroundObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.TiltingPlatformObjectInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_MECHANISM_FRAGMENT_PARENT_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance",
+                            "x", "y"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.TiltingPlatformObjectInstance",
+                            "behaviorType"));
+
+    private static final List<CodecDeletionCandidate> S2_DEBRIS_FRAGMENT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.RisingPillarObjectInstance$RisingPillarDebrisInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_DEBRIS_FRAGMENT_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.RisingPillarObjectInstance$RisingPillarDebrisInstance",
+                            "currentX", "currentY", "subX", "subY", "velX", "velY", "delay",
+                            "mappingFrame", "pieceIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance",
+                            "currentX", "currentY", "subX", "subY", "velX", "velY",
+                            "frameIndex", "pieceIndex"));
+
+    private static final List<CodecDeletionCandidate> S2_INTERACTION_SCALAR_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.GrabObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SwingingPformObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MovingVineObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.RivetObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.PointPokeyObjectInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_INTERACTION_SCALAR_RECREATE_MUTABLE_FIELDS =
+            List.of();
+
+    private static final List<CodecDeletionCandidate> S2_MCZ_ROT_PFORMS_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance",
+                    GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_SIDEWAYS_PFORM_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SidewaysPformObjectInstance",
+                    GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_FALLING_PILLAR_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.FallingPillarObjectInstance",
+                    GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_SWINGING_PLATFORM_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance$SwingingPlatformDisplayChild",
+                    GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_SWINGING_PLATFORM_GRAPH_RECREATE_ROUND_TRIP_CLASSES =
+            List.of(
+                    new CodecDeletionCandidate(
+                            "com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance",
+                            GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_COG_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CogObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.CogObjectInstance$CogSlotChildInstance",
+                    GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_COG_GRAPH_RECREATE_ROUND_TRIP_CLASSES =
+            List.of(
+                    new CodecDeletionCandidate(
+                            "com.openggf.game.sonic2.objects.CogObjectInstance",
+                            GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_LAUNCHER_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.LauncherBallObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.LauncherSpringObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.OOZLauncherObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.OOZLauncherObjectInstance$LauncherFragmentInstance",
+                    GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_FLIPPER_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.FlipperObjectInstance",
+                    GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S2_SPIRAL_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SpiralObjectInstance",
+                    GameId.S2));
+
+    private static final List<MutableFieldCoverageCandidate> S2_TORNADO_GRAPH_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.TornadoObjectInstance",
+                            "subtype"));
+
+    private static final List<MutableFieldCoverageCandidate> S2_MCZ_ROT_PFORMS_GRAPH_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance",
+                            "baseX", "baseY", "xFlip", "yFlip"));
+
+    private static final List<MutableFieldCoverageCandidate> S2_FALLING_PILLAR_GRAPH_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.FallingPillarObjectInstance",
+                            "isChild"));
+
+    private static final List<MutableFieldCoverageCandidate> S2_SWINGING_PLATFORM_GRAPH_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance",
+                            "baseX", "baseY", "zoneConfig", "behaviorMode", "chainCount", "displayOnly"));
+
+    private static final List<MutableFieldCoverageCandidate> S2_COG_GRAPH_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic2.objects.CogObjectInstance",
+                            "baseX", "baseY", "ccw"));
+
+    private static final List<MutableFieldCoverageCandidate> S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS =
+            List.of(
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance",
+                            "pointsValue", "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1BigSpikedBallObjectInstance",
+                            "flipped", "moveType", "origX", "origY", "speed"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1ButtonObjectInstance",
+                            "adjustedY", "blockPressable", "flashMode", "switchBit", "switchIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1ConveyorBeltObjectInstance",
+                            "convSpeed", "convWidth"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1EdgeWallObjectInstance",
+                            "frameIndex", "solid"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1ElectrocuterObjectInstance",
+                            "frequencyMask"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1FanObjectInstance",
+                            "alwaysOn", "facingRight", "reverseDirection"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1FlamethrowerObjectInstance",
+                            "dangerFrame", "flamingDuration", "isValve", "pauseDuration"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1GargoyleObjectInstance",
+                            "facingRight", "spitDelay"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1GirderBlockObjectInstance",
+                            "origX", "origY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LargeGrassyPlatformObjectInstance",
+                            "baseX", "baseY", "invertOscillation", "mappingFrame", "moveType", "platformWidth"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LZConveyorObjectInstance",
+                            "mode"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LabyrinthBlockObjectInstance",
+                            "halfHeight", "halfWidth", "mappingFrame", "origX"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance",
+                            "halfWidth", "isSpawner", "origX", "origY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1FloatingBlockObjectInstance",
+                            "halfHeight", "halfWidth", "isLZ", "mappingFrame", "origX", "origY", "zoneIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LamppostObjectInstance",
+                            "cameraLockFlag", "checkpointIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LavaBallMakerObjectInstance",
+                            "ballSubtype", "rateIndex", "spawnDelay"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LavaTagObjectInstance",
+                            "collisionFlags", "subtypeIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1MovingBlockObjectInstance",
+                            "activeWidth", "mappingFrame"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1LavaBallObjectInstance",
+                            "bossDroppedVariant", "isHorizontal", "originY", "priorityBucket"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1PlatformObjectInstance",
+                            "baseX", "baseY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SawObjectInstance",
+                            "sawType", "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SceneryObjectInstance",
+                            "frameIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SmallDoorObjectInstance",
+                            "openFromRight"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SpikeObjectInstance",
+                            "actWidth", "baseX", "baseY", "frameIndex", "movementType"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SpringObjectInstance",
+                            "springType", "strength", "yellow"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SpinConveyorObjectInstance",
+                            "mode"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SpinPlatformObjectInstance",
+                            "frameCounterMask", "isSpinner", "spinTimelen"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1StaircaseObjectInstance",
+                            "baseX", "baseY", "xFlip"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1VanishingPlatformObjectInstance",
+                            "phaseMask", "phaseOffset", "timerLength"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1BreakableWallObjectInstance",
+                            "frameIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1ChainedStomperObjectInstance",
+                            "blockActiveWidth", "blockFrame", "ceilingY", "chainBaseY",
+                            "maxFallDistance", "origY", "spikesHaveCollision"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1CirclingPlatformObjectInstance",
+                            "negateBoth", "origX", "origY", "rotated", "type04"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance",
+                            "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance",
+                            "mappingFrame", "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1CollapsingFloorObjectInstance$CollapsingFloorFragmentInstance",
+                            "artKey", "hFlip", "pieceIndex", "priority", "smashFrameIndex", "x"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance$CollapsingLedgeFragmentInstance",
+                            "hFlip", "pieceIndex", "priority", "smashFrameIndex", "x"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance",
+                            "type"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1MonitorPowerUpObjectInstance",
+                            "subtype"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SmashBlockObjectInstance",
+                            "frameIndex"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance",
+                            "activeWidth", "frameIndex", "spawnX", "spawnY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance",
+                            "elementCount", "isLZ", "origX", "origY", "speed"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SpikedPoleHelixObjectInstance",
+                            "parentIndex", "spikeCount", "spikeY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance",
+                            "actWidth", "bgRender", "height", "isSbz3", "mappingFrame",
+                            "moveDistance", "origY", "switchIndex", "xFlipped"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance",
+                            "pointsAllocatedBeforeAnimal", "pointsValue"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.level.objects.ExplosionObjectInstance",
+                            "pointsAllocatedBeforeAnimal", "pointsValue"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance",
+                            "baseX", "baseY", "chainCount"),
+                    new MutableFieldCoverageCandidate(
+                            Sonic1LamppostTwirlInstance.class.getName(),
+                            "centerX", "centerY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance",
+                            "currentX", "currentY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance",
+                            "collisionSizeIndex", "gravity", "offScreenMargin"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance",
+                            "collisionSizeIndex", "gravity", "offScreenMargin"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.level.objects.AbstractProjectileInstance",
+                            "collisionSizeIndex", "gravity", "offScreenMargin"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1ChopperBadnikInstance",
+                            "origY"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1JawsBadnikInstance",
+                            "turnTimeDelay"),
+                    new MutableFieldCoverageCandidate(
+                            "com.openggf.game.sonic1.objects.badniks.Sonic1NewtronBadnikInstance",
+                            "isType1"));
+
+    private static final List<CodecDeletionCandidate> SEESAW_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic1.objects.Sonic1SeesawObjectInstance",
+                    GameId.S1),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic1.objects.Sonic1SeesawBallObjectInstance",
                     GameId.S1),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.SeesawObjectInstance",
+                    GameId.S2),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.SeesawBallObjectInstance",
                     GameId.S2));
@@ -728,6 +2809,519 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_DRAGONFLY_GRAPH_BATCH219_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$WingChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_SPIKER_GRAPH_BATCH220_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_TURBO_SPIKER_GRAPH_BATCH221_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MEGA_CHOPPER_BATCH222_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_CLUCKOID_ARROW_BATCH223_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$ArrowChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MUSHMEANIE_GRAPH_BATCH224_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance$ShellChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MANTIS_GRAPH_BATCH225_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance$MantisChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_RIBOT_VISUAL_GRAPH_BATCH226_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_SNALE_BLASTER_GRAPH_BATCH227_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterCoverChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_CATERKILLER_JR_GRAPH_BATCH228_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_TUNNELBOT_GRAPH_BATCH229_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotDebris",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_COLLAPSING_BRIDGE_BATCH230_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$BridgeFragment",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance$MgzStompDebris",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_TENSION_BRIDGE_BATCH231_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance$BridgeFragment",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_DESTRUCTIBLE_FRAGMENT_BATCH232_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.BreakableWallObjectInstance$BreakableWallFragment",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CorkFloorObjectInstance$CorkFloorFragment",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$CollapsingPlatformFragment",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_GUMBALL_GRAPH_BATCH233_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$DispenserChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ContainerDisplayChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$EjectionEffectChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$BodyOverlayChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_PACHINKO_TRAP_GRAPH_BATCH234_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_ICZ_SUPPORT_GRAPH_BATCH235_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_ICZ_SNOW_GRAPH_BATCH236_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MGZ_MECHANISM_GRAPH_BATCH245_RECREATE_CLASSES =
+            List.of(
+                    new CodecDeletionCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance",
+                            GameId.S3K),
+                    new CodecDeletionCandidate(
+                            "com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance",
+                            GameId.S3K),
+                    new CodecDeletionCandidate(
+                            "com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance",
+                            GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MINIBOSS_ROOT_GRAPH_BATCH247_RECREATE_CLASSES =
+            List.of(
+                    new CodecDeletionCandidate(CnzMinibossInstance.class.getName(), GameId.S3K),
+                    new CodecDeletionCandidate(HczMinibossInstance.class.getName(), GameId.S3K),
+                    new CodecDeletionCandidate(IczMinibossInstance.class.getName(), GameId.S3K),
+                    new CodecDeletionCandidate(MgzMinibossInstance.class.getName(), GameId.S3K),
+                    new CodecDeletionCandidate(MhzMinibossInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> SHARED_BOX_BATCH237_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate("com.openggf.level.objects.BoxObjectInstance", GameId.S2));
+
+    private static final List<CodecDeletionCandidate> S3K_LBZ_TRIGGER_BRIDGE_BATCH238_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzTriggerBridgeInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_AIZ_EMERALD_SCATTER_BATCH240_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(AizEmeraldScatterInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.BloominatorBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.BubblesBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.ButterdroidBadnikInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_BATCH87_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.Flybot767BadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.JawzBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_BADNIK_PARENT_BATCH88_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.MonkeyDudeBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.PoindexterBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.RhinobotBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_OBJECT_PARENT_BATCH89_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzExplodingTriggerInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzFlameThrowerObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzRollingDrumInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MGZDashTriggerObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MGZLBZSmashingPillarObjectInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_OBJECT_PARENT_BATCH90_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HCZSnakeBlocksObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzCupElevatorPoleInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzFlameThrowerFlameInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzRideGrappleInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MGZMovingSpikePlatformObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MGZTriggerPlatformObjectInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_OBJECT_PARENT_BATCH91_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizRideVineObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.BreakableWallObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MGZSwingingPlatformObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_OBJECT_PARENT_BATCH92_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_ICZ_DEBRIS_BATCH93_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczBreakableWallObjectInstance$IczBreakableWallDebris",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczHarmfulIceObjectInstance$IceDebris",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance$IceCubeDebris",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$BreakDebris",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance$StalagtiteDebris",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_DYNAMIC_CHILD_BATCH94_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowPileDebris",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$IceDebris",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.ClamerObjectInstance$ClamerAutoCloseProjectile",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_DYNAMIC_CHILD_BATCH95_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance$BreakableBarDebris",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$BreathDebrisChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance$PenguinatorSnowdustInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_WATER_WALL_CHILD_BATCH96_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallDebrisChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSprayChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance$WaterWallSplashChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_PARTICLE_CHILD_BATCH97_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CnzCannonInstance$CannonLaunchPuff",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance$SnowboardDustInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene$GeyserDebrisChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_TURBO_SPIKER_PARTICLE_BATCH98_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerAnimatedParticle",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellDripParticle",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterSplashParticle",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MHZ_TREE_CHIP_BATCH99_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance$MhzMinibossTreeChipInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MHZ2_LEAF_PARTICLE_BATCH100_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLeafParticle",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_ICZ_FROST_PUFF_BATCH101_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrostPuff",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_AIZ_DRAW_BRIDGE_BATCH102_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance$FallingBridgeSegment",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_AIZ_LRZ_ROCK_BATCH218_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_SPARKLE_CHILD_BATCH103_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance$SparkleLightningWarningChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance$SparkleProjectileChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MHZ_SWING_BAR_BATCH104_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzSwingBarVerticalObjectInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MHZ_MECHANISM_BATCH105_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MECHANISM_BATCH106_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CnzWireCageObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.GumballItemObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_LBZ_MECHANISM_BATCH107_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzMinibossBoxInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_MHZ_MGZ_MECHANISM_BATCH108_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzMinibossTreeInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MhzShipPropellerInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_CORKEY_NOZZLE_GRAPH_BATCH109_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyNozzleChild",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_SIGNPOST_STUB_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(S3kSignpostStubChild.class.getName(), GameId.S3K));
 
@@ -740,6 +3334,15 @@ public class TestScalarOnlyCodecDeletion {
                     GameId.S3K));
 
     private static final List<CodecDeletionCandidate> S3K_MHZ_CUTSCENE_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1PeerInstance",
+                    GameId.S3K),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.Mhz1CutsceneDoorInstance",
                     GameId.S3K),
@@ -760,9 +3363,38 @@ public class TestScalarOnlyCodecDeletion {
                     "com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardInstance",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_MHZ_END_BOSS_CONTROLLER_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossSidekickLockChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossPlayerTwoCarryChild",
+                    GameId.S3K));
+
     private static final List<CodecDeletionCandidate> S3K_NESTED_HURTBOX_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingDebrisChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DefeatFragmentChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$MgzBossCameraScrollHelper",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild",
                     GameId.S3K),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild",
@@ -770,24 +3402,95 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> S3K_CUTSCENE_KNUCKLES_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.CutsceneKnucklesRockChild",
                     GameId.S3K),
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance",
                     GameId.S3K));
 
+    private static final List<CodecDeletionCandidate> S3K_KNUCKLES_CUTSCENE_CONTROLLER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesAiz2Instance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2BInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesHcz2Instance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1Instance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_STANDALONE_CUTSCENE_CONTROLLER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizMinibossCutsceneInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Hcz2CutsceneButtonInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Lbz1RobotnikEventController",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.S3kCutsceneButtonObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesSkIntroInstance",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_STAGE_CONTROLLER_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.HCZ2WallObjectInstance",
+                    GameId.S3K),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.IczMinibossPostBossPaletteController",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S1_EGG_PRISON_BUTTON_GRAPH_RECREATE_CLASSES = List.of(
+            new CodecDeletionCandidate(Sonic1EggPrisonButtonObjectInstance.class.getName(), GameId.S1));
+
     private static final List<CodecDeletionCandidate> S2_EGG_PRISON_BUTTON_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(EggPrisonObjectInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(EggPrisonButtonObjectInstance.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> S2_OOZ_BURNER_FLAME_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(OOZPoppingPlatformObjectInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(OOZBurnerFlameObjectInstance.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> S2_ARZ_ARROW_GRAPH_SUPPORT = List.of(
+            new CodecDeletionCandidate(Sonic2ARZBossInstance.class.getName(), GameId.S2),
             new CodecDeletionCandidate(ARZBossArrow.class.getName(), GameId.S2),
             new CodecDeletionCandidate(ARZBossEyes.class.getName(), GameId.S2));
 
     private static final List<CodecDeletionCandidate> S3K_SS_ENTRY_FLASH_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(Sonic3kSSEntryFlashObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_CNZ2_CUTSCENE_BUTTON_GRAPH_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(Cnz2CutsceneButtonInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> S3K_CNZ_WATER_LEVEL_CORK_FLOOR_GRAPH_DELETED_CODECS =
+            List.of(
+                    new CodecDeletionCandidate(CnzWaterLevelCorkFloorInstance.class.getName(), GameId.S3K),
+                    new CodecDeletionCandidate(CorkFloorObjectInstance.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -1340,6 +4043,23 @@ public class TestScalarOnlyCodecDeletion {
                 "Conveyor generic recreate must preserve captured baseX, not derive it from spawn.x");
         assertEquals(capturedBaseY, readIntRecordComponent(extra, "baseY"),
                 "Conveyor generic recreate must preserve captured baseY, not derive it from spawn.y");
+    }
+
+    @Test
+    void batch10ConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH10_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
     }
 
     // =====================================================================
@@ -2059,6 +4779,890 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
+        }
+    }
+
+    @Test
+    void batch25ConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH25_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch33ConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH33_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch134S1GraphConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH134_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch135S2LauncherConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH135_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch136S3kAizConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH136_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch137S3kAizConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH137_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch138S3kMechanismConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH138_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch139S3kCnzMechanismConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH139_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch140S3kSharedMechanismConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH140_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch141S3kAizLrzMechanismConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH141_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch142S3kHczBreakableBarConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH142_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch143S3kHczConveyorMechanismConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH143_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch144S3kBadnikInheritedConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH144_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch145S3kBadnikChildConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH145_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch146S3kCnzConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH146_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch147S3kGravityDebrisConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH147_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch148S3kHczCgzFanConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH148_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch149S3kIczFreezerConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH149_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch150S3kCorkFloorConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH150_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch151S3kCollapsingBridgeChildScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH151_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch152S3kMgzTriggerPlatformConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH152_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch153S3kLbzMovingPlatformConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH153_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch154S3kIczSwingingPlatformConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH154_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch155S3kMgzSwingingSpikeBallConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH155_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch156S3kButtonConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH156_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch157S3kHczSpinningColumnConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH157_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch158S3kHczTwistingLoopConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH158_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch159S3kHczWaterEffectConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH159_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch160S3kHczWaterWallConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH160_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch161S3kHcz2CutsceneButtonConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH161_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch162S3kIczIceObjectConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH162_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch163S3kIczPlatformHazardConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH163_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch164S3kIczSnowConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH164_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch165S3kIczLbzConstructorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH165_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch166S3kLbzLauncherGrappleDrumScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH166_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch167S3kMgzTriggerPillarPlatformScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH167_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch168S3kMgzSwingLoopDebrisScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH168_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch169S3kMhzMechanismScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH169_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch170S3kBadnikCutsceneScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH170_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch171S3kObjectScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH171_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch172S3kControllerPlatformStarpostScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH172_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch173S1S2ObjectScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH173_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch174S3kMechanismScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH174_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch175EffectFragmentAndCapsuleScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH175_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch176BridgeAndParticleScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH176_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch177GumballAndMgzHelperScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH177_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch178GraphHelperScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH178_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch179MechanismGraphScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH179_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch180MechanismRootScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH180_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch181PulleyRootScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH181_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch182LbzLauncherArmScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH182_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void batch183LbzTubeElevatorScalarsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : BATCH183_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
         }
     }
 
@@ -4206,6 +7810,302 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     // =====================================================================
+    // Shared placeholder generic recreate: unmapped object fallback
+    // =====================================================================
+
+    @Test
+    void sharedPlaceholderClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : SHARED_PLACEHOLDER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after shared placeholder coverage");
+        }
+    }
+
+    @Test
+    void sharedPlaceholderClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : SHARED_PLACEHOLDER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through shared placeholder generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void sharedPlaceholderClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : SHARED_PLACEHOLDER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through shared placeholder generic recreate");
+        }
+    }
+
+    // =====================================================================
+    // Shared water-effect generic recreate
+    // =====================================================================
+
+    @Test
+    void sharedWaterEffectClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : SHARED_WATER_EFFECT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after shared water-effect coverage");
+        }
+    }
+
+    @Test
+    void sharedWaterEffectClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : SHARED_WATER_EFFECT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through shared water-effect generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void sharedWaterEffectClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : SHARED_WATER_EFFECT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through shared water-effect generic recreate");
+        }
+    }
+
+    // =====================================================================
+    // S2 Speed Launcher generic recreate
+    // =====================================================================
+
+    @Test
+    void s2SpeedLauncherClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_SPEED_LAUNCHER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after Speed Launcher coverage");
+        }
+    }
+
+    @Test
+    void s2SpeedLauncherClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_SPEED_LAUNCHER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through Speed Launcher generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2SpeedLauncherClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : S2_SPEED_LAUNCHER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through Speed Launcher generic recreate");
+        }
+    }
+
+    // =====================================================================
+    // S2 MTZ Spin Tube generic recreate
+    // =====================================================================
+
+    @Test
+    void s2MtzSpinTubeClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_MTZ_SPIN_TUBE_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after MTZ Spin Tube coverage");
+        }
+    }
+
+    @Test
+    void s2MtzSpinTubeClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_MTZ_SPIN_TUBE_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through MTZ Spin Tube generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2MtzSpinTubeClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : S2_MTZ_SPIN_TUBE_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through MTZ Spin Tube generic recreate");
+        }
+    }
+
+    // =====================================================================
+    // S2 CPZ Spin Tube generic recreate
+    // =====================================================================
+
+    @Test
+    void s2CpzSpinTubeClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_CPZ_SPIN_TUBE_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after CPZ Spin Tube coverage");
+        }
+    }
+
+    @Test
+    void s2CpzSpinTubeClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_CPZ_SPIN_TUBE_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through CPZ Spin Tube generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2CpzSpinTubeClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : S2_CPZ_SPIN_TUBE_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through CPZ Spin Tube generic recreate");
+        }
+    }
+
+    @Test
+    void s2CpzSpinTubeFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_CPZ_SPIN_TUBE_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    // =====================================================================
+    // S2 MTZ Long Platform generic recreate
+    // =====================================================================
+
+    @Test
+    void s2MtzLongPlatformClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_MTZ_LONG_PLATFORM_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after MTZ Long Platform coverage");
+        }
+    }
+
+    @Test
+    void s2MtzLongPlatformClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_MTZ_LONG_PLATFORM_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through MTZ Long Platform generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2MtzLongPlatformClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : S2_MTZ_LONG_PLATFORM_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through MTZ Long Platform generic recreate");
+        }
+    }
+
+    // =====================================================================
+    // S2 collapsing platform generic recreate
+    // =====================================================================
+
+    @Test
+    void s2CollapsingPlatformClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_COLLAPSING_PLATFORM_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after collapsing-platform coverage");
+        }
+    }
+
+    @Test
+    void s2CollapsingPlatformClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_COLLAPSING_PLATFORM_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through collapsing-platform generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2CollapsingPlatformClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : S2_COLLAPSING_PLATFORM_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through collapsing-platform generic recreate");
+        }
+    }
+
+    @Test
+    void s2CollapsingPlatformFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_COLLAPSING_PLATFORM_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2CollapsingPlatformFragmentClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_COLLAPSING_PLATFORM_FRAGMENT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after collapsing-platform fragment coverage");
+        }
+    }
+
+    @Test
+    void s2CollapsingPlatformFragmentClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_COLLAPSING_PLATFORM_FRAGMENT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through collapsing-platform fragment generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2CollapsingPlatformFragmentClassesRoundTripThroughGenericRecreate() {
+        for (CodecDeletionCandidate candidate : S2_COLLAPSING_PLATFORM_FRAGMENT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn() + " should round-trip through collapsing-platform fragment generic recreate");
+        }
+    }
+
+    @Test
+    void s2CollapsingPlatformFragmentFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_COLLAPSING_PLATFORM_FRAGMENT_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    // =====================================================================
     // CPZ graph batch A: main-boss-linked children, graph harness covers restore
     // =====================================================================
 
@@ -4245,6 +8145,24 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    @Test
+    void s2BossGraphParentClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_BOSS_GRAPH_PARENT_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 boss graph parent batch");
+        }
+    }
+
+    @Test
+    void s2BossGraphParentClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_BOSS_GRAPH_PARENT_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 boss graph parent generic recreate, not a dynamic codec");
+        }
+    }
+
     // =====================================================================
     // AIZ miniboss graph batch: parent/sibling-linked children, graph harness covers restore
     // =====================================================================
@@ -4264,6 +8182,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through AIZ miniboss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void aizMinibossParentClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_MINIBOSS_PARENT_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ miniboss parent batch");
+        }
+    }
+
+    @Test
+    void aizMinibossParentClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_MINIBOSS_PARENT_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ miniboss parent generic recreate, not a dynamic codec");
         }
     }
 
@@ -4356,6 +8292,530 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     // =====================================================================
+    // AIZ disappearing-floor graph batch: parent-linked border child
+    // =====================================================================
+
+    @Test
+    void aizDisappearingFloorGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_DISAPPEARING_FLOOR_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after AIZ disappearing-floor graph batch");
+        }
+    }
+
+    @Test
+    void aizDisappearingFloorGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_DISAPPEARING_FLOOR_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ disappearing-floor graph generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ collapsing-log bridge graph batch: parent and falling segment
+    // =====================================================================
+
+    @Test
+    void aizCollapsingLogBridgeGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_COLLAPSING_LOG_BRIDGE_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after AIZ collapsing-log bridge graph batch");
+        }
+    }
+
+    @Test
+    void aizCollapsingLogBridgeGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_COLLAPSING_LOG_BRIDGE_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ collapsing-log bridge graph generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ flipping bridge scalar batch: parent object
+    // =====================================================================
+
+    @Test
+    void aizFlippingBridgeClassImplementsRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_FLIPPING_BRIDGE_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after AIZ flipping-bridge batch");
+        }
+    }
+
+    @Test
+    void aizFlippingBridgeClassHasNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_FLIPPING_BRIDGE_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ flipping-bridge generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // AIZ1 static scenery scalar batch: tree and zipline peg
+    // =====================================================================
+
+    @Test
+    void aiz1StaticSceneryClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ1_STATIC_SCENERY_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after AIZ1 static scenery batch");
+        }
+    }
+
+    @Test
+    void aiz1StaticSceneryClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ1_STATIC_SCENERY_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ1 static scenery generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K decorative scalar batch: AIZ foreground plant and animated still sprite
+    // =====================================================================
+
+    @Test
+    void s3kDecorativeClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_DECORATIVE_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K decorative batch");
+        }
+    }
+
+    @Test
+    void s3kDecorativeClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_DECORATIVE_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K decorative generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K static/hazard scalar batch: still sprite and S3K spike object
+    // =====================================================================
+
+    @Test
+    void s3kStaticHazardClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_STATIC_HAZARD_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K static hazard batch");
+        }
+    }
+
+    @Test
+    void s3kStaticHazardClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_STATIC_HAZARD_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K static hazard generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kStaticHazardClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_STATIC_HAZARD_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K button/path-swap scalar batch: trigger buttons and path-swap markers
+    // =====================================================================
+
+    @Test
+    void s3kButtonPathSwapClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_BUTTON_PATH_SWAP_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K button/path-swap batch");
+        }
+    }
+
+    @Test
+    void s3kButtonPathSwapClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_BUTTON_PATH_SWAP_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K button/path-swap generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kButtonPathSwapClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_BUTTON_PATH_SWAP_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K utility scalar batch: hidden monitor, sinking mud, and SS-entry ring
+    // =====================================================================
+
+    @Test
+    void s3kUtilityClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_UTILITY_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K utility batch");
+        }
+    }
+
+    @Test
+    void s3kUtilityClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_UTILITY_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K utility generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kUtilityClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_UTILITY_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K CNZ local mechanics batch: balloon, rising platform, light bulb, barber pole
+    // =====================================================================
+
+    @Test
+    void s3kCnzLocalMechanicsClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ_LOCAL_MECHANICS_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K CNZ local mechanics batch");
+        }
+    }
+
+    @Test
+    void s3kCnzLocalMechanicsClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ_LOCAL_MECHANICS_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K CNZ local mechanics generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kCnzLocalMechanicsClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ_LOCAL_MECHANICS_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K CNZ mechanism batch: controller and local mechanism restores
+    // =====================================================================
+
+    @Test
+    void s3kCnzMechanismClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ_MECHANISM_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K CNZ mechanism batch");
+        }
+    }
+
+    @Test
+    void s3kCnzMechanismClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ_MECHANISM_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K CNZ mechanism generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kCnzMechanismClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ_MECHANISM_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K ICZ ice-object batch: top-level ice/wall object-manager restores
+    // =====================================================================
+
+    @Test
+    void s3kIczIceObjectClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_ICE_OBJECT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K ICZ ice-object batch");
+        }
+    }
+
+    @Test
+    void s3kIczIceObjectClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_ICE_OBJECT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K ICZ ice-object generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kIczIceObjectClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_ICE_OBJECT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K HCZ mechanism batch: top-level block/hazard/effect object-manager restores
+    // =====================================================================
+
+    @Test
+    void s3kHczMechanismClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_HCZ_MECHANISM_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K HCZ mechanism batch");
+        }
+    }
+
+    @Test
+    void s3kHczMechanismClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_HCZ_MECHANISM_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K HCZ mechanism generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kHczMechanismClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_HCZ_MECHANISM_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K ICZ platform/hazard batch: top-level platform/hazard object-manager restores
+    // =====================================================================
+
+    @Test
+    void s3kIczPlatformHazardClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_PLATFORM_HAZARD_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K ICZ platform/hazard batch");
+        }
+    }
+
+    @Test
+    void s3kIczPlatformHazardClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_PLATFORM_HAZARD_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K ICZ platform/hazard generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kIczPlatformHazardClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_PLATFORM_HAZARD_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K utility/motion batch: top-level invisible/utility object-manager restores
+    // =====================================================================
+
+    @Test
+    void s3kUtilityMotionClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_UTILITY_MOTION_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K utility/motion batch");
+        }
+    }
+
+    @Test
+    void s3kUtilityMotionClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_UTILITY_MOTION_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K utility/motion generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kUtilityMotionClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_UTILITY_MOTION_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K pachinko/standalone batch: scalar object-manager restores
+    // =====================================================================
+
+    @Test
+    void s3kPachinkoStandaloneClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_PACHINKO_STANDALONE_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K pachinko standalone batch");
+        }
+    }
+
+    @Test
+    void s3kPachinkoStandaloneClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_PACHINKO_STANDALONE_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K pachinko standalone generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kPachinkoStandaloneClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_PACHINKO_STANDALONE_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K controller batch: invisible/route controller object-manager restores
+    // =====================================================================
+
+    @Test
+    void s3kControllerClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CONTROLLER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K controller batch");
+        }
+    }
+
+    @Test
+    void s3kControllerClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CONTROLLER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K controller generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kControllerClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CONTROLLER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // Standalone controller batch: no live object refs, object-manager restores covered
+    // =====================================================================
+
+    @Test
+    void standaloneControllerClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : STANDALONE_CONTROLLER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after standalone controller batch");
+        }
+    }
+
+    @Test
+    void standaloneControllerClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : STANDALONE_CONTROLLER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through standalone controller generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void standaloneControllerClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : STANDALONE_CONTROLLER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
     // HCZ end-boss graph batch: parent/sibling-linked children, graph harness covers restore
     // =====================================================================
 
@@ -4399,6 +8859,24 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    @Test
+    void aizIntroParentClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : AIZ_INTRO_PARENT_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ intro parent batch");
+        }
+    }
+
+    @Test
+    void aizIntroParentClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : AIZ_INTRO_PARENT_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ intro parent generic recreate, not a dynamic codec");
+        }
+    }
+
     // =====================================================================
     // S2 badnik child graph batch: parent/sibling-linked dynamics, graph harness covers restore
     // =====================================================================
@@ -4418,6 +8896,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S2 badnik child graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2BadnikParentGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_BADNIK_PARENT_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 badnik parent graph batch");
+        }
+    }
+
+    @Test
+    void s2BadnikParentGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_BADNIK_PARENT_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 badnik parent graph generic recreate, not a dynamic codec");
         }
     }
 
@@ -4484,6 +8980,64 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S1 ring flash graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S1 boss graph parent batch: boss roots whose graph harnesses cover child relinks
+    // =====================================================================
+
+    @Test
+    void s1BossGraphParentClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_GRAPH_PARENT_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 boss graph parent batch");
+        }
+    }
+
+    @Test
+    void s1BossGraphParentClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_GRAPH_PARENT_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 boss graph parent generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1SyzBossSpikeGraphBatch246ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_SYZ_BOSS_SPIKE_GRAPH_BATCH246_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 SYZ spike batch 246");
+        }
+    }
+
+    @Test
+    void s1SyzBossSpikeGraphBatch246ClassesHaveNoRegisteredS1Codec() {
+        for (CodecDeletionCandidate candidate : S1_SYZ_BOSS_SPIKE_GRAPH_BATCH246_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 SYZ spike batch 246 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMinibossRootGraphBatch247ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MINIBOSS_ROOT_GRAPH_BATCH247_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K miniboss root batch 247");
+        }
+    }
+
+    @Test
+    void s3kMinibossRootGraphBatch247ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MINIBOSS_ROOT_GRAPH_BATCH247_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K miniboss root batch 247 generic recreate, not a dynamic codec");
         }
     }
 
@@ -4606,19 +9160,19 @@ public class TestScalarOnlyCodecDeletion {
 
     @Test
     void s1BadnikChildGraphClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_BADNIK_CHILD_GRAPH_DELETED_CODECS) {
+        for (CodecDeletionCandidate candidate : S1_BADNIK_GRAPH_DELETED_CODECS) {
             Class<?> cls = loadClass(candidate.fqn());
             assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 badnik child graph batch");
+                    candidate.fqn() + " must implement RewindRecreatable after S1 badnik graph batch");
         }
     }
 
     @Test
     void s1BadnikChildGraphClassesHaveNoRegisteredS1Codec() {
-        for (CodecDeletionCandidate candidate : S1_BADNIK_CHILD_GRAPH_DELETED_CODECS) {
+        for (CodecDeletionCandidate candidate : S1_BADNIK_GRAPH_DELETED_CODECS) {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
-                            + " must restore through S1 badnik child graph generic recreate, not a dynamic codec");
+                            + " must restore through S1 badnik graph generic recreate, not a dynamic codec");
         }
     }
 
@@ -4641,6 +9195,24 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S2 WFZ boss graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2WfzBossParentClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_WFZ_BOSS_PARENT_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 WFZ boss parent batch");
+        }
+    }
+
+    @Test
+    void s2WfzBossParentClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_WFZ_BOSS_PARENT_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 WFZ boss parent generic recreate, not a dynamic codec");
         }
     }
 
@@ -4667,24 +9239,24 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     // =====================================================================
-    // S1/S2 seesaw ball graph batch: parent-linked child dynamics
+    // S1/S2 seesaw graph batch: parent-linked child dynamics
     // =====================================================================
 
     @Test
-    void seesawBallGraphClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : SEESAW_BALL_GRAPH_DELETED_CODECS) {
+    void seesawGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : SEESAW_GRAPH_DELETED_CODECS) {
             Class<?> cls = loadClass(candidate.fqn());
             assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after seesaw ball graph batch");
+                    candidate.fqn() + " must implement RewindRecreatable after seesaw graph batch");
         }
     }
 
     @Test
-    void seesawBallGraphClassesHaveNoRegisteredCodec() {
-        for (CodecDeletionCandidate candidate : SEESAW_BALL_GRAPH_DELETED_CODECS) {
+    void seesawGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : SEESAW_GRAPH_DELETED_CODECS) {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
-                            + " must restore through seesaw ball graph generic recreate, not a dynamic codec");
+                            + " must restore through seesaw graph generic recreate, not a dynamic codec");
         }
     }
 
@@ -4707,6 +9279,1306 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K badnik child graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kDragonflyGraphBatch219ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_DRAGONFLY_GRAPH_BATCH219_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Dragonfly graph batch 219");
+        }
+    }
+
+    @Test
+    void s3kDragonflyGraphBatch219ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_DRAGONFLY_GRAPH_BATCH219_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Dragonfly graph batch 219 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kDragonflyGraphBatch219ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_DRAGONFLY_GRAPH_BATCH219_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kSpikerGraphBatch220ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_SPIKER_GRAPH_BATCH220_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Spiker graph batch 220");
+        }
+    }
+
+    @Test
+    void s3kSpikerGraphBatch220ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_SPIKER_GRAPH_BATCH220_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Spiker graph batch 220 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kSpikerGraphBatch220ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_SPIKER_GRAPH_BATCH220_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kTurboSpikerGraphBatch221ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_TURBO_SPIKER_GRAPH_BATCH221_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Turbo Spiker graph batch 221");
+        }
+    }
+
+    @Test
+    void s3kTurboSpikerGraphBatch221ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_TURBO_SPIKER_GRAPH_BATCH221_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Turbo Spiker graph batch 221 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kTurboSpikerGraphBatch221ParentRoundTripsPassedWithoutCodec() {
+        CodecDeletionCandidate candidate = S3K_TURBO_SPIKER_GRAPH_BATCH221_RECREATE_CLASSES.getFirst();
+        RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+        assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                candidate.fqn()
+                        + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                        + result);
+    }
+
+    @Test
+    void s3kMegaChopperBatch222ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MEGA_CHOPPER_BATCH222_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K MegaChopper batch 222");
+        }
+    }
+
+    @Test
+    void s3kMegaChopperBatch222ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MEGA_CHOPPER_BATCH222_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MegaChopper batch 222 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMegaChopperBatch222ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MEGA_CHOPPER_BATCH222_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kCluckoidArrowBatch223ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CLUCKOID_ARROW_BATCH223_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Cluckoid arrow batch 223");
+        }
+    }
+
+    @Test
+    void s3kCluckoidArrowBatch223ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CLUCKOID_ARROW_BATCH223_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Cluckoid arrow batch 223 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kCluckoidArrowBatch223ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CLUCKOID_ARROW_BATCH223_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kMushmeanieGraphBatch224ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MUSHMEANIE_GRAPH_BATCH224_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Mushmeanie graph batch 224");
+        }
+    }
+
+    @Test
+    void s3kMushmeanieGraphBatch224ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MUSHMEANIE_GRAPH_BATCH224_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Mushmeanie graph batch 224 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMushmeanieGraphBatch224ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MUSHMEANIE_GRAPH_BATCH224_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kMantisGraphBatch225ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MANTIS_GRAPH_BATCH225_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Mantis graph batch 225");
+        }
+    }
+
+    @Test
+    void s3kMantisGraphBatch225ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MANTIS_GRAPH_BATCH225_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Mantis graph batch 225 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMantisGraphBatch225ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MANTIS_GRAPH_BATCH225_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kRibotVisualGraphBatch226ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_RIBOT_VISUAL_GRAPH_BATCH226_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Ribot visual graph batch 226");
+        }
+    }
+
+    @Test
+    void s3kRibotVisualGraphBatch226ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_RIBOT_VISUAL_GRAPH_BATCH226_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Ribot visual graph batch 226 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kRibotVisualGraphBatch226ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_RIBOT_VISUAL_GRAPH_BATCH226_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kSnaleBlasterGraphBatch227ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_SNALE_BLASTER_GRAPH_BATCH227_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K SnaleBlaster graph batch 227");
+        }
+    }
+
+    @Test
+    void s3kSnaleBlasterGraphBatch227ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_SNALE_BLASTER_GRAPH_BATCH227_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K SnaleBlaster graph batch 227 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kSnaleBlasterGraphBatch227ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_SNALE_BLASTER_GRAPH_BATCH227_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kCaterkillerJrGraphBatch228ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CATERKILLER_JR_GRAPH_BATCH228_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Caterkiller Jr graph batch 228");
+        }
+    }
+
+    @Test
+    void s3kCaterkillerJrGraphBatch228ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CATERKILLER_JR_GRAPH_BATCH228_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Caterkiller Jr graph batch 228 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kCaterkillerJrGraphBatch228ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CATERKILLER_JR_GRAPH_BATCH228_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kTunnelbotGraphBatch229ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_TUNNELBOT_GRAPH_BATCH229_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Tunnelbot graph batch 229");
+        }
+    }
+
+    @Test
+    void s3kTunnelbotGraphBatch229ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_TUNNELBOT_GRAPH_BATCH229_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Tunnelbot graph batch 229 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kTunnelbotGraphBatch229ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_TUNNELBOT_GRAPH_BATCH229_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kCollapsingBridgeBatch230ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_COLLAPSING_BRIDGE_BATCH230_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K collapsing bridge batch 230");
+        }
+    }
+
+    @Test
+    void s3kCollapsingBridgeBatch230ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_COLLAPSING_BRIDGE_BATCH230_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K collapsing bridge batch 230 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kCollapsingBridgeBatch230ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_COLLAPSING_BRIDGE_BATCH230_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kTensionBridgeBatch231ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_TENSION_BRIDGE_BATCH231_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K tension bridge batch 231");
+        }
+    }
+
+    @Test
+    void s3kTensionBridgeBatch231ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_TENSION_BRIDGE_BATCH231_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K tension bridge batch 231 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kTensionBridgeBatch231ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_TENSION_BRIDGE_BATCH231_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kDestructibleFragmentBatch232ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_DESTRUCTIBLE_FRAGMENT_BATCH232_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K fragment batch 232");
+        }
+    }
+
+    @Test
+    void s3kDestructibleFragmentBatch232ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_DESTRUCTIBLE_FRAGMENT_BATCH232_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K fragment batch 232 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kDestructibleFragmentBatch232ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_DESTRUCTIBLE_FRAGMENT_BATCH232_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kGumballGraphBatch233ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_GUMBALL_GRAPH_BATCH233_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K gumball graph batch 233");
+        }
+    }
+
+    @Test
+    void s3kGumballGraphBatch233ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_GUMBALL_GRAPH_BATCH233_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K gumball graph batch 233 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kPachinkoTrapGraphBatch234ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_PACHINKO_TRAP_GRAPH_BATCH234_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K pachinko trap graph batch 234");
+        }
+    }
+
+    @Test
+    void s3kPachinkoTrapGraphBatch234ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_PACHINKO_TRAP_GRAPH_BATCH234_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K pachinko trap graph batch 234 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kIczSupportGraphBatch235ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_SUPPORT_GRAPH_BATCH235_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K ICZ support graph batch 235");
+        }
+    }
+
+    @Test
+    void s3kIczSupportGraphBatch235ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_SUPPORT_GRAPH_BATCH235_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K ICZ support graph batch 235 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kIczSnowGraphBatch236ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_SNOW_GRAPH_BATCH236_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K ICZ snow graph batch 236");
+        }
+    }
+
+    @Test
+    void s3kIczSnowGraphBatch236ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_SNOW_GRAPH_BATCH236_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K ICZ snow graph batch 236 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMgzMechanismGraphBatch245ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MGZ_MECHANISM_GRAPH_BATCH245_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K MGZ mechanism batch 245");
+        }
+    }
+
+    @Test
+    void s3kMgzMechanismGraphBatch245ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MGZ_MECHANISM_GRAPH_BATCH245_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MGZ mechanism batch 245 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void sharedBoxBatch237ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : SHARED_BOX_BATCH237_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after shared box batch 237");
+        }
+    }
+
+    @Test
+    void sharedBoxBatch237ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : SHARED_BOX_BATCH237_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through shared box batch 237 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void sharedBoxBatch237ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : SHARED_BOX_BATCH237_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kLbzTriggerBridgeBatch238ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ_TRIGGER_BRIDGE_BATCH238_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after LBZ trigger bridge batch 238");
+        }
+    }
+
+    @Test
+    void s3kLbzTriggerBridgeBatch238ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ_TRIGGER_BRIDGE_BATCH238_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through LBZ trigger bridge batch 238 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kLbzTriggerBridgeBatch238ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ_TRIGGER_BRIDGE_BATCH238_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kAizEmeraldScatterBatch240ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_EMERALD_SCATTER_BATCH240_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after AIZ emerald scatter batch 240");
+        }
+    }
+
+    @Test
+    void s3kAizEmeraldScatterBatch240ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_EMERALD_SCATTER_BATCH240_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through AIZ emerald scatter batch 240 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kAizEmeraldScatterBatch240ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_EMERALD_SCATTER_BATCH240_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K badnik parent batch: standalone spawn-constructible badnik heads
+    // =====================================================================
+
+    @Test
+    void s3kBadnikParentClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K badnik parent coverage");
+        }
+    }
+
+    @Test
+    void s3kBadnikParentClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K badnik parent generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kBadnikParentClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kBadnikParentBatch87ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_BATCH87_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K badnik parent batch 87");
+        }
+    }
+
+    @Test
+    void s3kBadnikParentBatch87ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_BATCH87_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K badnik parent batch 87 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kBadnikParentBatch87ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_BATCH87_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kBadnikParentBatch88ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_BATCH88_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K badnik parent batch 88");
+        }
+    }
+
+    @Test
+    void s3kBadnikParentBatch88ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_BATCH88_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K badnik parent batch 88 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kBadnikParentBatch88ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_BATCH88_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch89ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH89_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K object parent batch 89");
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch89ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH89_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K object parent batch 89 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch89ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH89_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch90ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH90_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K object parent batch 90");
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch90ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH90_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K object parent batch 90 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch90ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH90_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch91ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH91_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K object parent batch 91");
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch91ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH91_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K object parent batch 91 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch91ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH91_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch92ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH92_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K object parent batch 92");
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch92ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH92_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K object parent batch 92 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kObjectParentBatch92ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH92_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kIczDebrisBatch93ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_DEBRIS_BATCH93_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K ICZ debris batch 93");
+        }
+    }
+
+    @Test
+    void s3kIczDebrisBatch93ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_DEBRIS_BATCH93_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K ICZ debris batch 93 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kIczDebrisBatch93ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_DEBRIS_BATCH93_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kDynamicChildBatch94ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_DYNAMIC_CHILD_BATCH94_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K dynamic child batch 94");
+        }
+    }
+
+    @Test
+    void s3kDynamicChildBatch94ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_DYNAMIC_CHILD_BATCH94_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K dynamic child batch 94 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kDynamicChildBatch94ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_DYNAMIC_CHILD_BATCH94_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kDynamicChildBatch95ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_DYNAMIC_CHILD_BATCH95_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K dynamic child batch 95");
+        }
+    }
+
+    @Test
+    void s3kDynamicChildBatch95ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_DYNAMIC_CHILD_BATCH95_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K dynamic child batch 95 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kDynamicChildBatch95ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_DYNAMIC_CHILD_BATCH95_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kWaterWallChildBatch96ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_WATER_WALL_CHILD_BATCH96_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K water-wall child batch 96");
+        }
+    }
+
+    @Test
+    void s3kWaterWallChildBatch96ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_WATER_WALL_CHILD_BATCH96_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K water-wall child batch 96 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kWaterWallChildBatch96ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_WATER_WALL_CHILD_BATCH96_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kParticleChildBatch97ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_PARTICLE_CHILD_BATCH97_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K particle child batch 97");
+        }
+    }
+
+    @Test
+    void s3kParticleChildBatch97ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_PARTICLE_CHILD_BATCH97_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K particle child batch 97 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kParticleChildBatch97ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_PARTICLE_CHILD_BATCH97_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kTurboSpikerParticleBatch98ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_TURBO_SPIKER_PARTICLE_BATCH98_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Turbo Spiker batch 98");
+        }
+    }
+
+    @Test
+    void s3kTurboSpikerParticleBatch98ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_TURBO_SPIKER_PARTICLE_BATCH98_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Turbo Spiker particle batch 98 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kTurboSpikerParticleBatch98ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_TURBO_SPIKER_PARTICLE_BATCH98_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kMhzTreeChipBatch99ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_TREE_CHIP_BATCH99_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K MHZ tree-chip batch 99");
+        }
+    }
+
+    @Test
+    void s3kMhzTreeChipBatch99ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_TREE_CHIP_BATCH99_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MHZ tree-chip batch 99 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMhzTreeChipBatch99ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_TREE_CHIP_BATCH99_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kMhz2LeafParticleBatch100ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ2_LEAF_PARTICLE_BATCH100_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K MHZ2 leaf batch 100");
+        }
+    }
+
+    @Test
+    void s3kMhz2LeafParticleBatch100ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ2_LEAF_PARTICLE_BATCH100_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MHZ2 leaf batch 100 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMhz2LeafParticleBatch100ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ2_LEAF_PARTICLE_BATCH100_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kIczFrostPuffBatch101ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_FROST_PUFF_BATCH101_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K ICZ frost puff batch 101");
+        }
+    }
+
+    @Test
+    void s3kIczFrostPuffBatch101ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_FROST_PUFF_BATCH101_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K ICZ frost puff batch 101 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kIczFrostPuffBatch101ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_ICZ_FROST_PUFF_BATCH101_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kAizDrawBridgeBatch102ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_DRAW_BRIDGE_BATCH102_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K AIZ draw bridge batch 102");
+        }
+    }
+
+    @Test
+    void s3kAizDrawBridgeBatch102ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_DRAW_BRIDGE_BATCH102_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K AIZ draw bridge batch 102 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kAizDrawBridgeBatch102ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_DRAW_BRIDGE_BATCH102_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kAizLrzRockBatch218ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_LRZ_ROCK_BATCH218_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K AIZ/LRZ rock batch 218");
+        }
+    }
+
+    @Test
+    void s3kAizLrzRockBatch218ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_LRZ_ROCK_BATCH218_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K AIZ/LRZ rock batch 218 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kAizLrzRockBatch218ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_AIZ_LRZ_ROCK_BATCH218_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kSparkleChildBatch103ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_SPARKLE_CHILD_BATCH103_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K Sparkle child batch 103");
+        }
+    }
+
+    @Test
+    void s3kSparkleChildBatch103ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_SPARKLE_CHILD_BATCH103_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Sparkle child batch 103 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kSparkleChildBatch103ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_SPARKLE_CHILD_BATCH103_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kMhzSwingBarBatch104ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_SWING_BAR_BATCH104_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K MHZ swing-bar batch 104");
+        }
+    }
+
+    @Test
+    void s3kMhzSwingBarBatch104ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_SWING_BAR_BATCH104_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MHZ swing-bar batch 104 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMhzSwingBarBatch104ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_SWING_BAR_BATCH104_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kMhzMechanismBatch105ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MECHANISM_BATCH105_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K MHZ mechanism batch 105");
+        }
+    }
+
+    @Test
+    void s3kMhzMechanismBatch105ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MECHANISM_BATCH105_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MHZ mechanism batch 105 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMhzMechanismBatch105ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MECHANISM_BATCH105_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kMechanismBatch106ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MECHANISM_BATCH106_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K mechanism batch 106");
+        }
+    }
+
+    @Test
+    void s3kMechanismBatch106ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MECHANISM_BATCH106_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K mechanism batch 106 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMechanismBatch106ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MECHANISM_BATCH106_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kLbzMechanismBatch107ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ_MECHANISM_BATCH107_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K LBZ mechanism batch 107");
+        }
+    }
+
+    @Test
+    void s3kLbzMechanismBatch107ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ_MECHANISM_BATCH107_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K LBZ mechanism batch 107 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kLbzMechanismBatch107ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_LBZ_MECHANISM_BATCH107_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kMhzMgzMechanismBatch108ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MGZ_MECHANISM_BATCH108_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K batch 108");
+        }
+    }
+
+    @Test
+    void s3kMhzMgzMechanismBatch108ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MGZ_MECHANISM_BATCH108_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K batch 108 generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kMhzMgzMechanismBatch108ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_MGZ_MECHANISM_BATCH108_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s3kCorkeyNozzleGraphBatch109ClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CORKEY_NOZZLE_GRAPH_BATCH109_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K batch 109");
+        }
+    }
+
+    @Test
+    void s3kCorkeyNozzleGraphBatch109ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CORKEY_NOZZLE_GRAPH_BATCH109_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Corkey nozzle graph generic recreate, not a dynamic codec");
         }
     }
 
@@ -4822,6 +10694,29 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     // =====================================================================
+    // S3K MHZ end-boss controller graph batch: invisible control helpers
+    // =====================================================================
+
+    @Test
+    void s3kMhzEndBossControllerGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_END_BOSS_CONTROLLER_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K MHZ end-boss controller graph batch");
+        }
+    }
+
+    @Test
+    void s3kMhzEndBossControllerGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_MHZ_END_BOSS_CONTROLLER_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K MHZ end-boss controller generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
     // S3K nested hurtbox graph batch: parent-linked MGZ/ICZ hurt children
     // =====================================================================
 
@@ -4862,6 +10757,178 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K cutscene Knuckles graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K Knuckles cutscene controller batch: standalone ObjectSpawn controllers
+    // =====================================================================
+
+    @Test
+    void s3kKnucklesCutsceneControllersAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_KNUCKLES_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K Knuckles cutscene controller coverage");
+        }
+    }
+
+    @Test
+    void s3kKnucklesCutsceneControllersHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_KNUCKLES_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K Knuckles cutscene controller generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kKnucklesCutsceneControllersRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_KNUCKLES_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K standalone cutscene controller batch: scalar-only cutscene controllers
+    // =====================================================================
+
+    @Test
+    void s3kStandaloneCutsceneControllersAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_STANDALONE_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K standalone cutscene coverage");
+        }
+    }
+
+    @Test
+    void s3kStandaloneCutsceneControllersHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_STANDALONE_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K standalone cutscene generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kStandaloneCutsceneControllersRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_STANDALONE_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S3K stage controller batch: zero-arg/spawn controller recreate coverage
+    // =====================================================================
+
+    @Test
+    void s3kStageControllersAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_STAGE_CONTROLLER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K stage controller coverage");
+        }
+    }
+
+    @Test
+    void s3kStageControllersHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_STAGE_CONTROLLER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K stage controller generic recreate, "
+                            + "not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s3kStageControllersRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S3K_STAGE_CONTROLLER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S2 boss controller batch: scalar parent-controller recreate coverage
+    // =====================================================================
+
+    @Test
+    void s2BossControllersImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_BOSS_CONTROLLER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S2 boss controller coverage");
+        }
+    }
+
+    @Test
+    void s2BossControllersHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_BOSS_CONTROLLER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 boss controller generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2BossControllersRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_BOSS_CONTROLLER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // S1 Egg Prison button graph batch: placed button/body back-reference relink
+    // =====================================================================
+
+    @Test
+    void s1EggPrisonButtonGraphClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_EGG_PRISON_BUTTON_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 Egg Prison button graph batch");
+        }
+    }
+
+    @Test
+    void s1EggPrisonButtonGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_EGG_PRISON_BUTTON_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 Egg Prison button graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1EggPrisonButtonGraphClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_EGG_PRISON_BUTTON_GRAPH_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via S1 Egg Prison button graph recreate; got: "
+                            + result);
         }
     }
 
@@ -4952,6 +11019,1323 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    @Test
+    void s2DezEggmanGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_DEZ_EGGMAN_GRAPH_COVERED_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 DEZ Eggman graph coverage");
+        }
+    }
+
+    @Test
+    void s2DezEggmanGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_DEZ_EGGMAN_GRAPH_COVERED_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 DEZ Eggman graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1ScrapEggmanGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_SCRAP_EGGMAN_GRAPH_COVERED_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 Scrap Eggman graph coverage");
+        }
+    }
+
+    @Test
+    void s1ScrapEggmanGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_SCRAP_EGGMAN_GRAPH_COVERED_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 Scrap Eggman graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1ScrapEggmanGraphClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_SCRAP_EGGMAN_GRAPH_COVERED_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via S1 Scrap Eggman graph recreate; got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1GargoyleFireballGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_GARGOYLE_FIREBALL_GRAPH_COVERED_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 Gargoyle fireball graph coverage");
+        }
+    }
+
+    @Test
+    void s1GargoyleFireballGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_GARGOYLE_FIREBALL_GRAPH_COVERED_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 Gargoyle fireball graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1JunctionChildClassImplementsRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_JUNCTION_CHILD_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 junction child coverage");
+        }
+    }
+
+    @Test
+    void s1JunctionChildClassHasNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_JUNCTION_CHILD_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 junction child generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1JunctionChildClassRoundTripsWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_JUNCTION_CHILD_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1LavaWallGraphClassImplementsRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_LAVA_WALL_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 lava wall graph coverage");
+        }
+    }
+
+    @Test
+    void s1LavaWallGraphClassHasNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_LAVA_WALL_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 lava wall graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1LavaWallGraphClassRoundTripsWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_LAVA_WALL_GRAPH_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1LavaGeyserGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_LAVA_GEYSER_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 lava geyser graph coverage");
+        }
+    }
+
+    @Test
+    void s1LavaGeyserGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_LAVA_GEYSER_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 lava geyser graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1LavaGeyserGraphClassesRoundTripWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_LAVA_GEYSER_GRAPH_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1RuntimeSpawnRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_RUNTIME_SPAWN_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 runtime spawn recreate coverage");
+        }
+    }
+
+    @Test
+    void s1RuntimeSpawnRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_RUNTIME_SPAWN_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 runtime spawn generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1ScalarSpawnRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_SCALAR_SPAWN_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 scalar spawn coverage");
+        }
+    }
+
+    @Test
+    void s1ScalarSpawnRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_SCALAR_SPAWN_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 scalar spawn generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1EffectScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_EFFECT_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 effect scalar coverage");
+        }
+    }
+
+    @Test
+    void s1EffectScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_EFFECT_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 effect scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1EffectScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_EFFECT_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1BossFireScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_FIRE_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 boss-fire scalar coverage");
+        }
+    }
+
+    @Test
+    void s1BossFireScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_FIRE_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 boss-fire scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1BossFireScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_FIRE_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1CollapsingFragmentsImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_COLLAPSING_FRAGMENT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 collapsing fragment coverage");
+        }
+    }
+
+    @Test
+    void s1CollapsingFragmentsHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_COLLAPSING_FRAGMENT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 collapsing fragment generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1CollapsingFragmentsRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_COLLAPSING_FRAGMENT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via S1 collapsing fragment generic recreate; got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1CollapsingFragmentFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS) {
+            if (!candidate.fqn().contains("CollapsingFloorFragmentInstance")
+                    && !candidate.fqn().contains("CollapsingLedgeFragmentInstance")) {
+                continue;
+            }
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s1DestructionFragmentsImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_DESTRUCTION_FRAGMENT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 destruction fragment coverage");
+        }
+    }
+
+    @Test
+    void s1DestructionFragmentsHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_DESTRUCTION_FRAGMENT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 destruction fragment generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1DestructionFragmentsRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_DESTRUCTION_FRAGMENT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1SpikedBallChainChildrenImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_SPIKED_BALL_CHAIN_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 chain graph coverage");
+        }
+    }
+
+    @Test
+    void s1SpikedBallChainChildrenHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_SPIKED_BALL_CHAIN_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 chain graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1SpikedBallChainChildrenRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_SPIKED_BALL_CHAIN_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1FalseFloorFragmentImplementsRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_FALSE_FLOOR_FRAGMENT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 false-floor fragment coverage");
+        }
+    }
+
+    @Test
+    void s1FalseFloorFragmentHasNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_FALSE_FLOOR_FRAGMENT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 false-floor fragment generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1FalseFloorFragmentRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_FALSE_FLOOR_FRAGMENT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s1BossControllersImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_CONTROLLER_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S1 boss controller coverage");
+        }
+    }
+
+    @Test
+    void s1BossControllersHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_CONTROLLER_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S1 boss controller generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s1BossControllersRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S1_BOSS_CONTROLLER_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2ScalarNamedRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_SCALAR_NAMED_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 scalar named coverage");
+        }
+    }
+
+    @Test
+    void s2ScalarNamedRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_SCALAR_NAMED_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 scalar named generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2CnzScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_CNZ_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 CNZ scalar coverage");
+        }
+    }
+
+    @Test
+    void s2CnzScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_CNZ_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 CNZ scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2CnzScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_CNZ_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2CnzScalarRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_CNZ_SCALAR_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2UtilityScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_UTILITY_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 utility scalar coverage");
+        }
+    }
+
+    @Test
+    void s2UtilityScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_UTILITY_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 utility scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2UtilityScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_UTILITY_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2UtilityScalarRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_UTILITY_SCALAR_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2PlatformVisualRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_PLATFORM_VISUAL_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 platform/visual coverage");
+        }
+    }
+
+    @Test
+    void s2PlatformVisualRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_PLATFORM_VISUAL_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 platform/visual generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2PlatformVisualRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_PLATFORM_VISUAL_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2MechanismScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_MECHANISM_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 mechanism scalar coverage");
+        }
+    }
+
+    @Test
+    void s2MechanismScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_MECHANISM_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 mechanism scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2MechanismScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_MECHANISM_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2MechanismScalarRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_MECHANISM_SCALAR_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2BoxSolidScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_BOX_SOLID_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 box/solid scalar coverage");
+        }
+    }
+
+    @Test
+    void s2BoxSolidScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_BOX_SOLID_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 box/solid scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2BoxSolidScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_BOX_SOLID_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2BoxSolidScalarRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_BOX_SOLID_SCALAR_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2TriggerMotionScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_TRIGGER_MOTION_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 trigger/motion scalar coverage");
+        }
+    }
+
+    @Test
+    void s2TriggerMotionScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_TRIGGER_MOTION_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 trigger/motion scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2TriggerMotionScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_TRIGGER_MOTION_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2TriggerMotionScalarRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_TRIGGER_MOTION_SCALAR_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2BadnikScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_BADNIK_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 badnik scalar coverage");
+        }
+    }
+
+    @Test
+    void s2BadnikScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_BADNIK_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 badnik scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2BadnikScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_BADNIK_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2BadnikScalarRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_BADNIK_SCALAR_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2MiscScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_MISC_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 misc scalar coverage");
+        }
+    }
+
+    @Test
+    void s2MiscScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_MISC_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 misc scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2MiscScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_MISC_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2MiscScalarRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_MISC_SCALAR_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2MechanismTailRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_MECHANISM_TAIL_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 mechanism tail coverage");
+        }
+    }
+
+    @Test
+    void s2MechanismTailRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_MECHANISM_TAIL_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 mechanism tail generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2MechanismTailRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_MECHANISM_TAIL_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2MechanismTailRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_MECHANISM_TAIL_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2MechanismFragmentParentRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_MECHANISM_FRAGMENT_PARENT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S2 mechanism fragment-parent coverage");
+        }
+    }
+
+    @Test
+    void s2MechanismFragmentParentRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_MECHANISM_FRAGMENT_PARENT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 mechanism fragment-parent generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2MechanismFragmentParentRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_MECHANISM_FRAGMENT_PARENT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2MechanismFragmentParentRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_MECHANISM_FRAGMENT_PARENT_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2DebrisFragmentRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_DEBRIS_FRAGMENT_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 debris fragment coverage");
+        }
+    }
+
+    @Test
+    void s2DebrisFragmentRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_DEBRIS_FRAGMENT_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 debris fragment generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2DebrisFragmentRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_DEBRIS_FRAGMENT_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2DebrisFragmentRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_DEBRIS_FRAGMENT_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2InteractionScalarRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_INTERACTION_SCALAR_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 interaction scalar coverage");
+        }
+    }
+
+    @Test
+    void s2InteractionScalarRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_INTERACTION_SCALAR_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 interaction scalar generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2InteractionScalarRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_INTERACTION_SCALAR_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2InteractionScalarRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_INTERACTION_SCALAR_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2MczRotPformsGraphRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_MCZ_ROT_PFORMS_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 MCZ graph coverage");
+        }
+    }
+
+    @Test
+    void s2MczRotPformsGraphRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_MCZ_ROT_PFORMS_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 MCZ graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2MczRotPformsGraphRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_MCZ_ROT_PFORMS_GRAPH_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2MczRotPformsGraphRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_MCZ_ROT_PFORMS_GRAPH_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2SidewaysPformGraphRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_SIDEWAYS_PFORM_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 Sideways graph coverage");
+        }
+    }
+
+    @Test
+    void s2SidewaysPformGraphRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_SIDEWAYS_PFORM_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 Sideways graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2SidewaysPformGraphRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_SIDEWAYS_PFORM_GRAPH_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2FallingPillarGraphRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_FALLING_PILLAR_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 Falling Pillar graph coverage");
+        }
+    }
+
+    @Test
+    void s2FallingPillarGraphRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_FALLING_PILLAR_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 Falling Pillar graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2FallingPillarGraphRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_FALLING_PILLAR_GRAPH_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2FallingPillarGraphRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_FALLING_PILLAR_GRAPH_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2SwingingPlatformGraphRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_SWINGING_PLATFORM_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 Swinging Platform graph coverage");
+        }
+    }
+
+    @Test
+    void s2SwingingPlatformGraphRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_SWINGING_PLATFORM_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 Swinging Platform graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2SwingingPlatformGraphRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_SWINGING_PLATFORM_GRAPH_RECREATE_ROUND_TRIP_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2SwingingPlatformGraphRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_SWINGING_PLATFORM_GRAPH_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2CogGraphRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_COG_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 Cog graph coverage");
+        }
+    }
+
+    @Test
+    void s2CogGraphRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_COG_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 Cog graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2CogGraphRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_COG_GRAPH_RECREATE_ROUND_TRIP_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2CogGraphRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_COG_GRAPH_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s2LauncherGraphRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_LAUNCHER_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 launcher graph coverage");
+        }
+    }
+
+    @Test
+    void s2LauncherGraphRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_LAUNCHER_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 launcher graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2LauncherGraphRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_LAUNCHER_GRAPH_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2FlipperGraphRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_FLIPPER_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 flipper graph coverage");
+        }
+    }
+
+    @Test
+    void s2FlipperGraphRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_FLIPPER_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 flipper graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2FlipperGraphRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_FLIPPER_GRAPH_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2SpiralGraphRecreateClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S2_SPIRAL_GRAPH_RECREATE_CLASSES) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S2 spiral graph coverage");
+        }
+    }
+
+    @Test
+    void s2SpiralGraphRecreateClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S2_SPIRAL_GRAPH_RECREATE_CLASSES) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S2 spiral graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    @Test
+    void s2SpiralGraphRecreateClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : S2_SPIRAL_GRAPH_RECREATE_CLASSES) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void s2TornadoGraphRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S2_TORNADO_GRAPH_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s1ScalarSpawnRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S1_SCALAR_SPAWN_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
+    @Test
+    void s1EffectScalarRecreateFieldsAreMutableForCompactRestore() {
+        for (MutableFieldCoverageCandidate candidate : S1_EFFECT_SCALAR_RECREATE_MUTABLE_FIELDS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            for (String fieldName : candidate.fieldNames()) {
+                try {
+                    var field = findField(cls, fieldName);
+                    assertFalse(Modifier.isFinal(field.getModifiers()),
+                            cls.getName() + "#" + fieldName
+                                    + " must be mutable so compact restore can replay captured scalars");
+                } catch (NoSuchFieldException e) {
+                    throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
+                }
+            }
+        }
+    }
+
     // =====================================================================
     // S3K SS-entry flash graph support: layout-ring-linked special-stage flash
     // =====================================================================
@@ -4971,6 +12355,51 @@ public class TestScalarOnlyCodecDeletion {
             assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
                     candidate.fqn()
                             + " must restore through S3K SS-entry flash graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =====================================================================
+    // S3K CNZ2 cutscene button graph support: parent-side spawned-flash link
+    // =====================================================================
+
+    @Test
+    void s3kCnz2CutsceneButtonGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ2_CUTSCENE_BUTTON_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable after S3K CNZ2 button graph deletion");
+        }
+    }
+
+    @Test
+    void s3kCnz2CutsceneButtonGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ2_CUTSCENE_BUTTON_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K CNZ2 button graph generic recreate, not a dynamic codec");
+        }
+    }
+
+    // =========================================================================
+    // S3K CNZ water-level cork-floor graph support: helper-side cork-floor link
+    // =========================================================================
+
+    @Test
+    void s3kCnzWaterLevelCorkFloorGraphClassesImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ_WATER_LEVEL_CORK_FLOOR_GRAPH_DELETED_CODECS) {
+            Class<?> cls = loadClass(candidate.fqn());
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn()
+                            + " must implement RewindRecreatable after S3K CNZ cork-floor graph deletion");
+        }
+    }
+
+    @Test
+    void s3kCnzWaterLevelCorkFloorGraphClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : S3K_CNZ_WATER_LEVEL_CORK_FLOOR_GRAPH_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn()
+                            + " must restore through S3K CNZ cork-floor graph generic recreate, not a dynamic codec");
         }
     }
 

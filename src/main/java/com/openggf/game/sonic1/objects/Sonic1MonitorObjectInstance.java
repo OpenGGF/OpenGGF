@@ -64,10 +64,26 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
     // Standard object gravity
     private static final int FALLING_GRAVITY = 0x38;
 
-    private final MonitorType type;
+    private MonitorType type;
     private ObjectAnimationState animationState;
     private boolean broken;
     private int mappingFrame;
+
+    // ROM Mon_BreakOpen (the monitor's own routine 4) performs the FindFreeObj
+    // spawns of the power-up + explosion children — NOT ReactToItem. ReactToItem
+    // (run during the player's slot-0 collision pass) only bounces the player and
+    // sets the monitor's routine to 4. The break-open spawn therefore happens when
+    // the monitor executes in its own (high) SST slot, so the lower-slot explosion
+    // child defers its first ExecuteObjects pass to the next frame
+    // (docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:181-198). The engine
+    // runs touch responses BEFORE the object exec loop for S1, so spawning the
+    // children directly in onTouchResponse would execute the explosion one frame
+    // early (it would be swept into the same frame's rebuilt execOrder), expiring
+    // it a frame ahead of ROM and freeing its slot a frame early — the S1 LZ2
+    // f6418 -1 slot cascade. Deferring the spawn to update() (the monitor's own
+    // slot execution) lets ObjectManager's slot-relative deferral run the child
+    // next frame, matching ROM.
+    private boolean pendingBreakSpawn;
 
     // Falling state (ob2ndRout = 4 in disassembly)
     private boolean falling;
@@ -116,6 +132,15 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        // ROM Mon_BreakOpen runs in the monitor's own SST slot (this update),
+        // after ReactToItem set the break in the player's collision pass. Spawning
+        // here (not in onTouchResponse) keeps the explosion/power-up children's
+        // first ExecuteObjects pass deferred to next frame when they land in a
+        // lower slot than the monitor — see pendingBreakSpawn field comment.
+        if (pendingBreakSpawn) {
+            pendingBreakSpawn = false;
+            spawnBreakChildren(player);
+        }
         if (falling) {
             updateFalling();
         }
@@ -186,20 +211,33 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
     }
 
     /**
-     * Break the monitor: spawn explosion, start icon rising, mark persistence.
-     * ROM: Mon_BreakOpen
+     * Trigger the monitor break from the player's touch pass (ROM ReactToItem):
+     * bounce the player and mark the monitor broken, but defer the child spawns to
+     * the monitor's own {@link #update} execution (ROM Mon_BreakOpen runs in the
+     * monitor's SST slot, not in ReactToItem). See {@link #pendingBreakSpawn}.
      */
     private void breakMonitor(AbstractPlayableSprite player) {
         broken = true;
 
-        // Mark as broken in persistence table
+        // Mark as broken in persistence table (ROM Mon_RememberBroken).
         ObjectManager objectManager = services().objectManager();
         ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
-        // Bounce player: neg.w obVelY(a0)
+        // Bounce player: neg.w obVelY(a0) — ROM ReactToItem.
         player.setYSpeed((short) -player.getYSpeed());
 
         mappingFrame = BROKEN_FRAME;
+        // Defer the FindFreeObj spawns to the monitor's own update (Mon_BreakOpen).
+        pendingBreakSpawn = true;
+    }
+
+    /**
+     * ROM Mon_BreakOpen body: allocate the power-up contents object and the
+     * explosion via FindFreeObj. Runs during the monitor's own ExecuteObjects
+     * slot so a child landing in a lower slot defers its first update one frame.
+     */
+    private void spawnBreakChildren(AbstractPlayableSprite player) {
+        ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
             spawnFreeChild(() -> new Sonic1MonitorPowerUpObjectInstance(
                     spawn.x(), currentY, type.id, player));

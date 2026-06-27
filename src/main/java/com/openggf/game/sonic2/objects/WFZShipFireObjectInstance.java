@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -40,7 +42,7 @@ import java.util.List;
  * <p>
  * <b>Disassembly Reference:</b> s2.asm lines 79894-79932 (ObjBC)
  */
-public class WFZShipFireObjectInstance extends AbstractObjectInstance {
+public class WFZShipFireObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     /**
      * BG X offset threshold at which the ship fire is deleted.
@@ -49,13 +51,13 @@ public class WFZShipFireObjectInstance extends AbstractObjectInstance {
     private static final int BG_X_OFFSET_DELETE_THRESHOLD = 0x380;
 
     /** Initial X position saved during init (ROM: objoff_2C). */
-    private final int initialX;
+    private int initialX;
 
     /** Current computed X position (initialX + Camera_BG_X_offset). */
     private int currentX;
 
     /** Current Y position (constant, from spawn). */
-    private final int currentY;
+    private int currentY;
 
     /**
      * Flicker toggle - alternates each frame to create flickering effect.
@@ -71,6 +73,11 @@ public class WFZShipFireObjectInstance extends AbstractObjectInstance {
         this.initialX = spawn.x();
         this.currentX = spawn.x();
         this.currentY = spawn.y();
+    }
+
+    @Override
+    public WFZShipFireObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new WFZShipFireObjectInstance(ctx.spawn());
     }
 
     @Override

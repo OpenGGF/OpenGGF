@@ -9,6 +9,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -36,7 +38,7 @@ import java.util.List;
  * ROM reference: Obj_Door (sonic3k.asm:66036), loc_30FD2 (horizontal variant).
  */
 public class DoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final int VERTICAL_HEIGHT = 0x20;
     private static final int VERTICAL_PRIORITY = 3;
@@ -56,17 +58,17 @@ public class DoorObjectInstance extends AbstractObjectInstance
     private static final int HORIZONTAL_TRIGGER_FAR = 0x100;
     private static final int HORIZONTAL_TRIGGER_HALF_WIDTH = 0x20;
 
-    private final boolean horizontal;
-    private final boolean xFlipped;
-    private final boolean yFlipped;
-    private final int baseX;
-    private final int baseY;
-    private final int halfWidth;
-    private final int halfHeight;
-    private final int priority;
+    private boolean horizontal;
+    private boolean xFlipped;
+    private boolean yFlipped;
+    private int baseX;
+    private int baseY;
+    private int halfWidth;
+    private int halfHeight;
+    private int priority;
     private final String artKey;
-    private final int triggerMin;
-    private final int triggerMax;
+    private int triggerMin;
+    private int triggerMax;
 
     private int slideOffset;
     private boolean playerInTriggerPreviousFrame;
@@ -106,6 +108,11 @@ public class DoorObjectInstance extends AbstractObjectInstance
 
         this.slideOffset = 0;
         this.playerInTriggerPreviousFrame = false;
+    }
+
+    @Override
+    public DoorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new DoorObjectInstance(ctx.spawn());
     }
 
     private VerticalDoorVariant resolveVerticalVariant(int subtype) {

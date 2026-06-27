@@ -11,7 +11,10 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -45,7 +48,7 @@ import java.util.List;
  * </ul>
  */
 public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // ROM: move.b #$10,width_pixels(a0)
     private static final int WIDTH_PIXELS = 0x10;
@@ -69,16 +72,16 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
     private static final int FRAME_PRESSED = 1;
 
     // Subtype-derived state
-    private final int triggerIndex;   // subtype & 0x0F
-    private final int triggerBit;     // 0 or 7
-    private final boolean toggleMode; // subtype bit 4
-    private final boolean topSolid;   // subtype bit 5
+    private int triggerIndex;   // subtype & 0x0F
+    private int triggerBit;     // 0 or 7
+    private boolean toggleMode; // subtype bit 4
+    private boolean topSolid;   // subtype bit 5
 
     // Zone-resolved art key
     private final String artKey;
 
     // Adjusted Y position (after init offset)
-    private final int adjustedY;
+    private int adjustedY;
 
     // Standing detection via SolidObjectListener callback
     private boolean contactStanding;
@@ -108,6 +111,12 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
 
         // Resolve zone-specific art key
         this.artKey = resolveArtKey();
+    }
+
+    @Override
+    public Sonic3kButtonObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new Sonic3kButtonObjectInstance(ctx.spawn()));
     }
 
     /**

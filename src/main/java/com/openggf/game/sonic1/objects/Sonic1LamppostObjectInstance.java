@@ -55,8 +55,8 @@ public class Sonic1LamppostObjectInstance extends AbstractObjectInstance impleme
     // From disassembly: subi.w #$18,lamp_origY(a1)
     static final int TWIRL_Y_OFFSET = 0x18;
 
-    private final int checkpointIndex;
-    private final boolean cameraLockFlag;
+    private int checkpointIndex;
+    private boolean cameraLockFlag;
     private int mappingFrame;
     private boolean activated;
     private boolean twirlActive;

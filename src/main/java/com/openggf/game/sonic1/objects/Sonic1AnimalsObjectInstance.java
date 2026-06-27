@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -29,7 +30,7 @@ import java.util.List;
  *   <li>Subtype 0x0A-0x14: ending animals ("Anml_Ending" subtype path)</li>
  * </ul>
  */
-public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
+public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int OBJECT_FALL_GRAVITY = 0x38;
     private static final int FLIGHT_GRAVITY = 0x18;
     private static final int FLOOR_CHECK_HEIGHT = 12;
@@ -95,8 +96,8 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
 
     private PatternSpriteRenderer zoneAnimalRenderer;
     private PatternSpriteRenderer endingAnimalRenderer;
-    private final int subtype;
-    private final int pointsValue;
+    private int subtype;
+    private int pointsValue;
 
     private int currentX;
     private int currentY;
@@ -202,7 +203,22 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        ensureInitialized();
+        if (!initialized) {
+            ensureInitialized();
+            // ROM Anml_Main (routine 0) sets obRoutine (addq.b #2,obRoutine for
+            // from-enemy / obSubtype*2 for ending) and then falls through to
+            // DisplaySprite WITHOUT running the resolved routine on the same
+            // frame (docs/s1disasm/_incObj/28, 29 Animals and Points.asm:130,
+            // 177,183). The resolved routine (Anml_ChkFloor fall / ending
+            // movement) runs only from the NEXT frame. Running it on the init
+            // frame put the animal one frame ahead, so it crossed the
+            // BuildSprites off-left bound and self-deleted one frame early,
+            // freeing its SST slot a frame early and shifting the S1 LZ2
+            // ObjPosLoad/FindFreeObj allocation cadence (LZ2 complete-run
+            // internal f361 -> f1068 frontier: a waterfall+burrobot took the
+            // animal's freed slot 0x20 instead of slots 0x24/0x25).
+            return;
+        }
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
             case 0x02 -> updateRoutine912A(frameCounter);

@@ -9,6 +9,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -72,13 +74,13 @@ public class Sonic1GargoyleObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     /** Spit delay in frames, from Gar_SpitRate. Stored in obDelayAni. */
-    private final int spitDelay;
+    private int spitDelay;
 
     /** Countdown timer. Stored in obTimeFrame. */
     private int timer;
 
     /** Whether gargoyle faces right (obStatus bit 0: 0=left, 1=right). */
-    private final boolean facingRight;
+    private boolean facingRight;
 
     public Sonic1GargoyleObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Gargoyle");
@@ -191,7 +193,7 @@ public class Sonic1GargoyleObjectInstance extends AbstractObjectInstance
      * Reference: docs/s1disasm/_incObj/62 Gargoyle.asm, Gar_FireBall / Gar_AniFire
      */
     public static class Fireball extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, RewindRecreatable {
 
         // ====================================================================
         // ROM Constants
@@ -254,13 +256,13 @@ public class Sonic1GargoyleObjectInstance extends AbstractObjectInstance
         private int currentY;
 
         /** X velocity ($200 or -$200). */
-        private final int velX;
+        private int velX;
 
         /** Subpixel accumulators (xSub / ySub) for ROM-accurate 16:8 fixed-point integration. */
         private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
 
         /** Whether fireball is moving right. */
-        private final boolean movingRight;
+        private boolean movingRight;
 
         /** Current animation frame (toggles between FIREBALL_FRAME_1 and FIREBALL_FRAME_2). */
         private int currentFrame;
@@ -287,6 +289,16 @@ public class Sonic1GargoyleObjectInstance extends AbstractObjectInstance
             this.currentFrame = FIREBALL_FRAME_1;
 
             // Sound is played by the parent Gargoyle after construction
+        }
+
+        private Fireball() {
+            this(0, 0, false);
+        }
+
+        @Override
+        public Fireball recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            return new Fireball(spawn.x(), spawn.y() - FIREBALL_Y_OFFSET, false);
         }
 
         @Override

@@ -61,8 +61,8 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     // Position state (anchor/pivot point)
-    private final int baseX;  // swing_origX = objoff_3A
-    private final int baseY;  // swing_origY = objoff_38
+    private int baseX;  // swing_origX = objoff_3A
+    private int baseY;  // swing_origY = objoff_38
 
     // Current platform position (end of chain)
     private int x;
@@ -70,7 +70,7 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
 
     // Zone variant and configuration
     private ZoneVariant variant;
-    private final int chainCount;     // Number of chain segments (bits 0-3 of subtype)
+    private int chainCount;     // Number of chain segments (bits 0-3 of subtype)
     private int halfWidth;      // obActWid
     private int halfHeight;     // obHeight
     private int continuedRideSurfaceHeight; // Swing_Action2 passes obHeight+1 to MvSonicOnPtfm
@@ -459,6 +459,28 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM Swing_SetSolid (routine 2) lands a new rider through Swing_Solid,
+        // which ends with `move.w obY(a0),d0 / sub.w d3,d0 / bra Plat_NoXCheck_AltY`
+        // (docs/s1disasm/_incObj/sub PlatformObject.asm:165-179). Plat_NoXCheck_AltY
+        // is the shared PlatformObject Y land band: `sub.w d1,d0 / bhi Plat_Exit`
+        // (reject d0>0) then `cmpi.w #-16,d0 / blo Plat_Exit` (sub PlatformObject.asm:
+        // 36-52). `blo` is unsigned lower-than 0xFFF0, so d0=0x0000 <u 0xFFF0 is
+        // rejected: the standable band is d0 in [-16,-1] (strict penetration, feet
+        // at least 1px below the surface) -- exactly the PlatformObject_ChkYRange
+        // contract, NOT the SolidObject_Landed `blo #$10` band that accepts d3=0.
+        // The engine's shared top-solid default accepts detectionDistY=0, so a
+        // fast-falling player whose feet reach exactly the swing-platform surface
+        // seated one frame early vs ROM. Swing_Solid is a PlatformObject-family
+        // landing routine (same Plat_NoXCheck_AltY band as Obj 18/52/53/59/5A/63/6C/
+        // 1A, which already reject d0=0); this brings Obj15 in line. The override
+        // takes precedence over allowsZeroDistanceTopSolidLanding() (which the
+        // usesPlatformObjectLandingSnap()=false continued-ride model would otherwise
+        // leave permissive) because the resolver ORs in this explicit reject.
+        return true;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return true;
     }
@@ -542,10 +564,11 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
      * links carry no collision. Modelling them as real OST-slot children keeps
      * the engine's FindFreeObj occupancy aligned with ROM.
      */
-    public static final class SwingChainLinkChild extends AbstractObjectInstance {
-        private final String linkArtKey;
-        private final int frame;
-        private final int linkPriority;
+    public static final class SwingChainLinkChild extends AbstractObjectInstance
+            implements SpawnRewindRecreatable {
+        private String linkArtKey;
+        private int frame;
+        private int linkPriority;
         private int posX;
         private int posY;
 
@@ -557,6 +580,10 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
             this.linkPriority = priority;
             this.posX = x;
             this.posY = y;
+        }
+
+        SwingChainLinkChild(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(), ObjectArtKeys.SWING_GHZ, 0, 0);
         }
 
         void setLinkPosition(int x, int y) {

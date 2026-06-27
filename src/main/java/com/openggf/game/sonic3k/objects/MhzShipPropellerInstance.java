@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -17,12 +18,12 @@ import java.util.List;
  * {@code loc_54E9C}. Uses {@code Map_MHZEndBossMisc} and
  * {@code Ani_MHZEndPropellers}.
  */
-public class MhzShipPropellerInstance extends AbstractObjectInstance {
+public class MhzShipPropellerInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int OBJECT_ID = 0;
     private static final int[] ANIMATION_FRAMES = {5, 6, 7};
     private static final int ANIMATION_DELAY = 2;
 
-    private final int propellerIndex;
+    private int propellerIndex;
     private int animationIndex;
     private int animationTimer = ANIMATION_DELAY;
     private int mappingFrame = ANIMATION_FRAMES[0];
@@ -32,8 +33,16 @@ public class MhzShipPropellerInstance extends AbstractObjectInstance {
     }
 
     public MhzShipPropellerInstance(int propellerIndex) {
-        super(new ObjectSpawn(0, 0, OBJECT_ID, 0, 0, false, 0), "MHZShipPropeller");
-        this.propellerIndex = propellerIndex & 1;
+        this(spawnForIndex(propellerIndex));
+    }
+
+    public MhzShipPropellerInstance(ObjectSpawn spawn) {
+        super(spawn, "MHZShipPropeller");
+        this.propellerIndex = spawn.subtype() & 1;
+    }
+
+    private static ObjectSpawn spawnForIndex(int propellerIndex) {
+        return new ObjectSpawn(0, 0, OBJECT_ID, propellerIndex & 1, 0, false, 0);
     }
 
     public int getPropellerIndex() {

@@ -9,6 +9,8 @@ import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -31,7 +33,7 @@ import java.util.List;
  * one log at a time toward the sidekick index while Tails is standing.
  */
 public class BridgeObjectInstance extends BoxObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener {
+        implements SlopedSolidProvider, SolidObjectListener, RewindRecreatable {
 
     private static final int LOG_WIDTH = 16;
     private static final int LOG_HALF_HEIGHT = 8;
@@ -85,7 +87,7 @@ public class BridgeObjectInstance extends BoxObjectInstance
     };
     // @formatter:on
 
-    private final int logCount;
+    private int logCount;
     private final int[] logYOffsets;
 
     private byte[] slopeData;
@@ -100,6 +102,11 @@ public class BridgeObjectInstance extends BoxObjectInstance
         this.logCount = Math.max(1, Math.min(MAX_LOGS, spawn.subtype() & 0x1F));
         this.logYOffsets = new int[logCount];
         this.slopeData = new byte[getHalfWidth() + 1];
+    }
+
+    @Override
+    public BridgeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BridgeObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

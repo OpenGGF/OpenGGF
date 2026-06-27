@@ -26,8 +26,8 @@ public final class CutsceneKnucklesLbz1RangeHelper extends AbstractObjectInstanc
     private static final int BOTTOM = 0x60;
 
     private final CutsceneKnucklesLbz1Instance parent;
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
 
     CutsceneKnucklesLbz1RangeHelper(CutsceneKnucklesLbz1Instance parent, int x, int y) {
         super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "CutsceneKnuxLBZ1RangeHelper");

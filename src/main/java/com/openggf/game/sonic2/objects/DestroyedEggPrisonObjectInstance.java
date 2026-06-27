@@ -39,8 +39,8 @@ public class DestroyedEggPrisonObjectInstance extends AbstractObjectInstance
     private static final int BODY_HALF_WIDTH = 0x2B;  // 43 pixels
     private static final int BODY_HALF_HEIGHT = 0x18; // 24 pixels
 
-    private final int positionX;
-    private final int positionY;
+    private int positionX;
+    private int positionY;
 
     /**
      * Create a static destroyed capsule visual at the given position.

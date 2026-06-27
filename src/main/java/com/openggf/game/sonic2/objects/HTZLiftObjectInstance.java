@@ -9,6 +9,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -47,7 +49,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class HTZLiftObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(HTZLiftObjectInstance.class.getName());
 
@@ -75,8 +77,8 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
     private static final int PLATFORM_Y_OFFSET = -0x28; // -40 pixels
 
     // Position state (8.8 fixed-point for sub-pixel accuracy)
-    private final int baseX;
-    private final int baseY;
+    private int baseX;
+    private int baseY;
     private int xFixed;     // 8.8 fixed-point X position
     private int yFixed;     // 8.8 fixed-point Y position
 
@@ -90,7 +92,7 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
     private int mappingFrame;       // 0=main, 2=rope-only
 
     // Flip flag
-    private final boolean flippedX;
+    private boolean flippedX;
 
     // Track if scenery spawned
     private boolean scenerySpawned;
@@ -119,6 +121,11 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
         LOGGER.fine(() -> String.format(
                 "HTZLift init: pos=(%d,%d), subtype=0x%02X, duration=%d frames, flipped=%b",
                 baseX, baseY, subtype, slideTimer, flippedX));
+    }
+
+    @Override
+    public HTZLiftObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HTZLiftObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

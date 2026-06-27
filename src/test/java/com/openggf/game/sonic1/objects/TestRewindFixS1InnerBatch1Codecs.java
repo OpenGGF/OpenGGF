@@ -4,17 +4,13 @@ import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link Sonic1ObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate path for every batch-inner1 S1
- * inner-class hazard/solid/cutscene child that was previously dropped on a
- * held-rewind restore (no codec matched their JVM binary name).
+ * Verifies that every batch-inner1 S1 inner-class hazard/solid/cutscene child
+ * that was previously dropped on a held-rewind restore now exposes a generic
+ * recreate path.
  *
  * <p>These are static nested children keyed by their JVM binary name
  * ({@code Outer$Inner}). Parent-owned children either keep an explicit codec or
@@ -37,31 +33,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * rewind restore (1 → 2) because boss reconstruction already re-adds it.
  * See {@code TestBossChildNoDoubleSpawnParity} and {@code docs/KNOWN_DISCREPANCIES.md}.
  *
- * <p>The other batch-inner1 child
- * ({@code Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance}) is intentionally
- * accept-drop (display-only, parent re-emits when {@code childInstance == null}), so it
- * is documented in {@code docs/KNOWN_DISCREPANCIES.md} and is NOT asserted here.
+ * <p>The SBZ rotating-junction display child now uses spawn-based generic recreate and
+ * is asserted by {@code TestScalarOnlyCodecDeletion}.
  *
- * <p>Pure registry-content test: it constructs a registry and reads
- * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
- * session. Full session round-trip coverage is enforced by the rewind coverage
- * guard ({@code TestRewindCoverageGuard}).
+ * <p>Pure metadata test: it reads class opt-ins without a ROM, OpenGL, or an
+ * active gameplay session. Full session round-trip coverage is enforced by the
+ * rewind coverage guard ({@code TestRewindCoverageGuard}).
  */
 class TestRewindFixS1InnerBatch1Codecs {
 
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
-
     @Test
     void orbSpikeUsesRewindRecreatableInsteadOfExplicitCodec() throws Exception {
-        Set<String> names = codecClassNames();
-
         String orbSpike = "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance"
                 + "$OrbSpikeObjectInstance";
         Class<?> orbSpikeClass = Class.forName(orbSpike);
 
-        assertFalse(names.contains(orbSpike),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(orbSpike),
                 "OrbSpikeObjectInstance should restore via RewindRecreatable genericRecreate, "
                         + "not a Sonic1ObjectRegistry explicit codec");
         assertTrue(RewindRecreatable.class.isAssignableFrom(orbSpikeClass),
@@ -74,7 +61,7 @@ class TestRewindFixS1InnerBatch1Codecs {
                 "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance"
                         + "$FalseFloorBlock";
 
-        assertFalse(codecClassNames().contains(falseFloorBlock),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(falseFloorBlock),
                 "FalseFloorBlock should restore via RewindRecreatable genericRecreate, "
                         + "not a Sonic1ObjectRegistry explicit codec");
         assertTrue(RewindRecreatable.class.isAssignableFrom(

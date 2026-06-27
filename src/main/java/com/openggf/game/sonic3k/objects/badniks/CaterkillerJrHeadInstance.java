@@ -3,7 +3,10 @@ package com.openggf.game.sonic3k.objects.badniks;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -25,7 +28,8 @@ import java.util.List;
  *   <li>Routine 8: Continue swing, at next peak: return to step 1</li>
  * </ol>
  */
-public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance {
+public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
+        implements SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x17;
     private static final int PRIORITY_BUCKET = 5;
@@ -96,6 +100,35 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance {
             }
         }
         bodySpawned = true;
+    }
+
+    void attachBodySegmentForRewind(CaterkillerJrBodyInstance segment) {
+        if (!bodySegments.contains(segment)) {
+            bodySegments.add(segment);
+        }
+        bodySpawned = true;
+    }
+
+    static CaterkillerJrHeadInstance findLiveHeadForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
+                || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        CaterkillerJrHeadInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (!(instance instanceof CaterkillerJrHeadInstance head) || head.isDestroyed()) {
+                continue;
+            }
+            long dx = head.getX() - ctx.spawn().x();
+            long dy = head.getY() - ctx.spawn().y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = head;
+            }
+        }
+        return best;
     }
 
     /** Routine 4: swing with counter. Skip movement on transition to phase 2. */

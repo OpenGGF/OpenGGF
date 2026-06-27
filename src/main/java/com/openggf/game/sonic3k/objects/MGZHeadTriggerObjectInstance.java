@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -48,7 +49,7 @@ import java.util.List;
  * back up already shattered (ROM loc_34364 early-out).
  */
 public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_HEAD_TRIGGER;
 
@@ -123,13 +124,13 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
 
     // ===== Per-instance state =====
 
-    private final int triggerIndex;
+    private int triggerIndex;
     /**
      * ROM status(a0) bit 0 (mirrored in ObjectSpawn.renderFlags bit 0).
      * When false, head watches the left side and fires left (ROM: $30 = $C0).
      * When true, head watches the right side and fires right (ROM: $30 = 0).
      */
-    private final boolean flipped;
+    private boolean flipped;
 
     // ROM: $34(a0). Permanent-destruction flag; survives respawn via Level_trigger_array.
     private boolean triggered;

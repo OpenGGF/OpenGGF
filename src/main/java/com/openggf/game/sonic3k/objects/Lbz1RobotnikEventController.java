@@ -15,6 +15,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -33,7 +34,7 @@ import java.util.List;
  * {@code LBZ1_EventVScroll} ownership, and the handoff into {@code Obj_LBZMiniboss}.
  */
 public final class Lbz1RobotnikEventController extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_APPROACH_HOVER = 0x02;
     private static final int ROUTINE_FIRST_RISE = 0x04;

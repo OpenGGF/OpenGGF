@@ -57,12 +57,12 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         private boolean jumpPressedLastFrame;
     }
 
-    private final int baseX;
-    private final int baseY;
-    private final int motionSelector;
-    private final int speedCap;
-    private final boolean circularRoute;
-    private final int angleStep;
+    private int baseX;
+    private int baseY;
+    private int motionSelector;
+    private int speedCap;
+    private boolean circularRoute;
+    private int angleStep;
     private final RiderSlot playerOneSlot = new RiderSlot();
     private final RiderSlot playerTwoSlot = new RiderSlot();
     private AbstractPlayableSprite releasedJumpSolidSkipPlayer;

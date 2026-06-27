@@ -5,35 +5,27 @@ import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that every batch-6 S3K object that was previously dropped on a
- * held-rewind restore still exposes a dynamic rewind recreate path: either a
- * registered codec or the Phase-2 {@link RewindRecreatable} generic path.
+ * held-rewind restore still exposes the Phase-2 {@link RewindRecreatable}
+ * generic path.
  *
  * <p>Batch 6 has no accept-drop objects: each listed class is genuinely recreated
  * on restore (gameplay-critical cutscene/terrain/boss objects, or a one-shot
  * cosmetic spark that lives many frames), so there are no documented
  * transient-cosmetic drops to exclude here.
  *
- * <p>Pure registry-content test: it constructs a registry and reads
- * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
- * session. Full session round-trip is handled by the rewind coverage guard.
+ * <p>Pure metadata test: it reads class opt-ins without a ROM, OpenGL, or an
+ * active gameplay session. Full session round-trip is handled by the rewind
+ * coverage guard.
  */
 class TestRewindFixS3KBatch6Codecs {
 
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
-
-    private static boolean hasDynamicRecreatePath(String className, Set<String> codecNames) {
-        if (codecNames.contains(className)) {
-            return true;
-        }
+    private static boolean hasDynamicRecreatePath(String className) {
         try {
             return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
         } catch (ClassNotFoundException e) {
@@ -42,9 +34,7 @@ class TestRewindFixS3KBatch6Codecs {
     }
 
     @Test
-    void registersCodecsForReleaseSliceBatch6Objects() {
-        Set<String> names = codecClassNames();
-
+    void releaseSliceBatch6ObjectsHaveGenericRecreatePaths() {
         List<String> required = List.of(
                 // LBZ1 Knuckles cutscene family.
                 CutsceneKnucklesLbz1CollapseChild.class.getName(),
@@ -70,18 +60,18 @@ class TestRewindFixS3KBatch6Codecs {
                 MhzShipSequenceControllerInstance.class.getName());
 
         for (String name : required) {
-            assertTrue(hasDynamicRecreatePath(name, names),
+            assertTrue(hasDynamicRecreatePath(name),
                     "missing rewind recreate path for " + name);
         }
 
-        assertGenericOnly(names, CutsceneKnucklesRockChild.class);
-        assertGenericOnly(names, CutsceneKnuxCnz2WallInstance.class);
+        assertGenericOnly(CutsceneKnucklesRockChild.class);
+        assertGenericOnly(CutsceneKnuxCnz2WallInstance.class);
     }
 
-    private static void assertGenericOnly(Set<String> codecNames, Class<?> type) {
+    private static void assertGenericOnly(Class<?> type) {
         assertTrue(RewindRecreatable.class.isAssignableFrom(type),
                 type.getName() + " must use RewindRecreatable generic recreate");
-        assertFalse(codecNames.contains(type.getName()),
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(type.getName()),
                 type.getName() + " must not keep an explicit dynamic rewind codec");
     }
 }

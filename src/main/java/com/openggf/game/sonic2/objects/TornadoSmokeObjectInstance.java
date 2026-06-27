@@ -11,6 +11,8 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -22,7 +24,7 @@ import java.util.List;
  * routine. The smoke uses explosion mappings/art, drifts up-left at -$100/-$100,
  * advances frames every eight ticks, then deletes after frame 4.
  */
-public class TornadoSmokeObjectInstance extends AbstractObjectInstance {
+public class TornadoSmokeObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int ANIM_DELAY = 7;
     private static final int MAX_FRAME = 4;
     private static final int PRIORITY = 5;
@@ -48,6 +50,11 @@ public class TornadoSmokeObjectInstance extends AbstractObjectInstance {
         if (forcedRandomOffset != null) {
             initializeWithOffset(forcedRandomOffset);
         }
+    }
+
+    @Override
+    public TornadoSmokeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new TornadoSmokeObjectInstance(ctx.spawn());
     }
 
     @Override

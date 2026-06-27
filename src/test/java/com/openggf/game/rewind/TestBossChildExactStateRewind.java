@@ -1,6 +1,8 @@
 package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
+import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
@@ -8,6 +10,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import org.junit.jupiter.api.AfterEach;
@@ -256,6 +259,95 @@ public class TestBossChildExactStateRewind {
         assertEquals(newY, restoredWheel.getCurrentY(), "EHZ wheel currentY restored exactly");
     }
 
+    @Test
+    void syzBossSpikeExactNonInitStateRestoredWithReferenceIntact() throws Exception {
+        final String syzBossClass = "com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance";
+        final String syzSpikeClass = "com.openggf.game.sonic1.objects.bosses.SYZBossSpike";
+
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        ObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+        };
+
+        ObjectSpawn bossSpawn = new ObjectSpawn(160, 240,
+                Sonic1ObjectIds.SYZ_BOSS, 0, 0, false, 0);
+        Sonic1ObjectRegistry registry = new Sonic1ObjectRegistry();
+        ObjectManager om = new ObjectManager(
+                List.of(bossSpawn), registry,
+                0, null, null,
+                GraphicsManager.getInstance(), camera, services);
+        holder[0] = om;
+        om.reset(0);
+
+        ObjectInstance boss = findActiveByClass(om, syzBossClass);
+        assertNotNull(boss, "SYZ boss must be materialised as an active object");
+        List<AbstractBossChild> components = readChildComponents(boss);
+        AbstractBossChild spike = null;
+        for (AbstractBossChild c : components) {
+            if (c.getClass().getName().equals(syzSpikeClass)) {
+                spike = c;
+                break;
+            }
+        }
+        assertNotNull(spike, "SYZ boss must hold a SYZBossSpike in childComponents");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(spike.getClass()),
+                "SYZBossSpike must restore through RewindRecreatable generic recreate");
+
+        invoke(spike, "setSpikeActive", new Class<?>[]{boolean.class}, new Object[]{true});
+        invoke(spike, "setBossState", new Class<?>[]{int.class, int.class, int.class},
+                new Object[]{4, 0, 0});
+        for (int i = 0; i < 5; i++) {
+            invoke(spike, "updateExtension", new Class<?>[]{}, new Object[]{});
+        }
+        int expectedExtensionDepth = readInt(spike, "extensionDepth");
+        boolean expectedSpikeActive = readBoolean(spike, "spikeActive");
+        int expectedRoutineSecondary = readInt(spike, "bossRoutineSecondary");
+        int expectedDropSubPhase = readInt(spike, "bossDropSubPhase");
+        int expectedBossTimer = readInt(spike, "bossTimer");
+        assertTrue(expectedExtensionDepth > 0,
+                "precondition: spike extension depth must move away from init state");
+        int countBefore = countByClass(om, syzSpikeClass);
+
+        RewindRegistry rr = new RewindRegistry();
+        rr.register(om.rewindSnapshottable());
+        CompositeSnapshot snap = rr.capture();
+        rr.restore(snap);
+
+        int countAfter = countByClass(om, syzSpikeClass);
+        assertEquals(countBefore, countAfter,
+                "SYZBossSpike count changed across rewind round-trip: before=" + countBefore
+                        + " after=" + countAfter);
+
+        ObjectInstance restoredBoss = findActiveByClass(om, syzBossClass);
+        assertNotNull(restoredBoss, "SYZ boss must remain active after restore");
+        List<AbstractBossChild> restoredComponents = readChildComponents(restoredBoss);
+        AbstractBossChild restoredSpike = null;
+        for (AbstractBossChild c : restoredComponents) {
+            if (c.getClass().getName().equals(syzSpikeClass)) {
+                restoredSpike = c;
+                break;
+            }
+        }
+        assertNotNull(restoredSpike,
+                "boss must hold (via childComponents) a restored SYZBossSpike");
+        assertSame(restoredSpike, findRegisteredSame(om, restoredSpike),
+                "SYZ spike boss reference must be the SAME live registered instance");
+        assertSame(restoredBoss, readObject(restoredSpike, "parent", ObjectInstance.class),
+                "SYZ spike parent field must relink to the restored boss");
+        assertEquals(expectedExtensionDepth, readInt(restoredSpike, "extensionDepth"),
+                "SYZ spike extensionDepth restored exactly");
+        assertEquals(expectedSpikeActive, readBoolean(restoredSpike, "spikeActive"),
+                "SYZ spike active flag restored exactly");
+        assertEquals(expectedRoutineSecondary, readInt(restoredSpike, "bossRoutineSecondary"),
+                "SYZ spike cached boss routine restored exactly");
+        assertEquals(expectedDropSubPhase, readInt(restoredSpike, "bossDropSubPhase"),
+                "SYZ spike cached boss drop sub-phase restored exactly");
+        assertEquals(expectedBossTimer, readInt(restoredSpike, "bossTimer"),
+                "SYZ spike cached boss timer restored exactly");
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -316,6 +408,12 @@ public class TestBossChildExactStateRewind {
         Field f = findField(target.getClass(), field);
         f.setAccessible(true);
         return f.getInt(target);
+    }
+
+    private static <T> T readObject(Object target, String field, Class<T> fieldType) throws Exception {
+        Field f = findField(target.getClass(), field);
+        f.setAccessible(true);
+        return fieldType.cast(f.get(target));
     }
 
     private static ObjectInstance findActiveByClass(ObjectManager om, String className) {

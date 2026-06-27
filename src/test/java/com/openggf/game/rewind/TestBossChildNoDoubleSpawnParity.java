@@ -18,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -36,9 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  *
  * <h2>Invariant</h2>
  * Construction-spawned children (those emitted during {@code initializeBossState()}
- * or the constructor, not from an update/attack routine) must NOT have a codec in
- * {@code DYNAMIC_REWIND_CODECS}. Reconstruction re-establishes them; the codec
- * would only add duplicates.
+ * or the constructor, not from an update/attack routine) must NOT opt into an
+ * explicit per-child dynamic recreate path. Reconstruction re-establishes them;
+ * restoring them separately would only add duplicates.
  *
  * <h2>Bosses covered</h2>
  * <ul>
@@ -291,12 +290,10 @@ public class TestBossChildNoDoubleSpawnParity {
      */
     @Test
     void mtzBossConstructionChildrenHaveNoCodecs() {
-        Set<String> codecClassNames = DeletedDynamicRewindCodecs.classNames();
-
-        assertNoCodec(codecClassNames,
+        assertNoCodec(
                 "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb",
                 "MTZBossOrb is spawned in initializeBossState() (spawnOrbs) — construction child");
-        assertNoCodec(codecClassNames,
+        assertNoCodec(
                 "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZLaserShooter",
                 "MTZLaserShooter is spawned in initializeBossState() — construction child");
     }
@@ -314,15 +311,13 @@ public class TestBossChildNoDoubleSpawnParity {
      */
     @Test
     void mechaSonicConstructionChildrenHaveNoCodecs() {
-        Set<String> codecClassNames = DeletedDynamicRewindCodecs.classNames();
-
-        assertNoCodec(codecClassNames,
+        assertNoCodec(
                 "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicLEDWindow",
                 "MechaSonicLEDWindow is spawned in initializeBossState() — construction child");
-        assertNoCodec(codecClassNames,
+        assertNoCodec(
                 "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicTargetingSensor",
                 "MechaSonicTargetingSensor is spawned in initializeBossState() — construction child");
-        assertNoCodec(codecClassNames,
+        assertNoCodec(
                 "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicDEZWindow",
                 "MechaSonicDEZWindow is spawned in initializeBossState() — construction child");
     }
@@ -332,9 +327,8 @@ public class TestBossChildNoDoubleSpawnParity {
     // =========================================================================
 
     /** Assert that the given construction-child class has NO registered codec. */
-    private static void assertNoCodec(Set<String> codecClassNames, String childClassName,
-            String why) {
-        assertFalse(codecClassNames.contains(childClassName),
+    private static void assertNoCodec(String childClassName, String why) {
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(childClassName),
                 "Construction-spawned boss child must NOT have a rewind codec (double-spawn): "
                         + childClassName + " — " + why
                         + ". Reconstruction re-establishes it; a codec adds a duplicate.");

@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -22,7 +23,8 @@ import java.util.List;
  * {@code Obj_AutoSpin460} flame child when
  * {@code (V_int_run_count+3 + subtype) & $7F == 0}.
  */
-public final class LbzFlameThrowerObjectInstance extends AbstractObjectInstance implements SolidObjectProvider {
+public final class LbzFlameThrowerObjectInstance extends AbstractObjectInstance
+        implements SolidObjectProvider, SpawnRewindRecreatable {
     private static final int WIDTH_PIXELS = 0x10;       // sub_263AA: width_pixels=$10
     private static final int HEIGHT_PIXELS = 0x10;      // sub_263AA: height_pixels=$10
     private static final int SOLID_HALF_WIDTH = WIDTH_PIXELS + 0x0B;
@@ -33,8 +35,8 @@ public final class LbzFlameThrowerObjectInstance extends AbstractObjectInstance 
     private static final SolidObjectParams SOLID_PARAMS =
             new SolidObjectParams(SOLID_HALF_WIDTH, HEIGHT_PIXELS, SOLID_GROUND_HALF_HEIGHT);
 
-    private final int subtype;
-    private final boolean hFlip;
+    private int subtype;
+    private boolean hFlip;
 
     public LbzFlameThrowerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LBZFlameThrower");

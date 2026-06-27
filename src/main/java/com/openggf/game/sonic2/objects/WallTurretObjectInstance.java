@@ -8,6 +8,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -34,7 +36,7 @@ import java.util.logging.Logger;
  * mappings = ObjB8_Obj98_MapUnc_3BA46, art_tile = ArtTile_ArtNem_WfzWallTurret (palette 0),
  * render_flags = level_fg, priority = 4, width_pixels = 0x10, collision_flags = 0.
  */
-public class WallTurretObjectInstance extends AbstractObjectInstance {
+public class WallTurretObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(WallTurretObjectInstance.class.getName());
 
     // From ObjB8_SubObjData: priority = 4, width_pixels = $10
@@ -83,6 +85,11 @@ public class WallTurretObjectInstance extends AbstractObjectInstance {
         this.routine = 2;  // LoadSubObject advances routine to 2
         this.mappingFrame = 0;
         this.fireTimer = 0;
+    }
+
+    @Override
+    public WallTurretObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new WallTurretObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

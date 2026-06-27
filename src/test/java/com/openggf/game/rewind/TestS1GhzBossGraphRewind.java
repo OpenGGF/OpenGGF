@@ -135,6 +135,15 @@ class TestS1GhzBossGraphRewind {
                 "GHZ wrecking ball must not keep an explicit S1 dynamic rewind codec");
     }
 
+    @Test
+    void ghzBossParentUsesGenericRecreateWithoutExplicitS1DynamicCodec() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1GHZBossInstance.class),
+                "Sonic1GHZBossInstance must restore through RewindRecreatable graph recreate");
+
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(Sonic1GHZBossInstance.class.getName()),
+                "Sonic1GHZBossInstance must not keep an explicit S1 dynamic rewind codec");
+    }
+
     private static void spawnWreckingBallThroughBossUpdate(
             Sonic1GHZBossInstance boss,
             TestablePlayableSprite player) {

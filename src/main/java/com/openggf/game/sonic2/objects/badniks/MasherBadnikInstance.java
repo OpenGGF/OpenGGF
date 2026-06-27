@@ -12,6 +12,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -20,7 +22,7 @@ import java.util.List;
  * Masher (0x5C) - Leaping piranha fish Badnik from EHZ.
  * Jumps up and down from a waterfall spawn point.
  */
-public class MasherBadnikInstance extends AbstractBadnikInstance {
+public class MasherBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x09; // collision_flags(a0)
     private static final int INITIAL_Y_VEL = -0x400; // move.w #-$400,y_vel(a0)
     private static final int JUMP_Y_VEL = -0x500; // move.w #-$500,y_vel(a0)
@@ -36,6 +38,11 @@ public class MasherBadnikInstance extends AbstractBadnikInstance {
         this.initialYPos = spawn.y();
         this.xVelocity = 0;
         this.yVelocity = INITIAL_Y_VEL;
+    }
+
+    @Override
+    public MasherBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MasherBadnikInstance(ctx.spawn());
     }
 
     @Override

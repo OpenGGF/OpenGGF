@@ -6,14 +6,21 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractSpikeObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
-public class SpikeObjectInstance extends AbstractSpikeObjectInstance {
+public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements RewindRecreatable {
 
     public SpikeObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
+    }
+
+    @Override
+    public SpikeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SpikeObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

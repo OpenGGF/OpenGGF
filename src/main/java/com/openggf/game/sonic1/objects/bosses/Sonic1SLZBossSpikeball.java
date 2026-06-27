@@ -19,6 +19,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -70,9 +71,6 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
 
     // ROM: obColType = $8B (enemy type $8, size $B)
     private static final int COLLISION_FLAGS = 0x8B;
-
-    // ROM: move.b #$C,obActWid(a0)
-    private static final int WIDTH_PIXELS = 0x0C;
 
     // ROM: move.b #4,obPriority(a0)
     private static final int PRIORITY = 4;
@@ -310,8 +308,12 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
         if (currentY >= landingY) {
             // Landed on seesaw
             yPos = landingY << 16;
-            xVel = 0;
-            yVel = 0;
+            // ROM BossSpikeball_Fall does NOT clear obVelY before loc_18FA2 — the
+            // launch reads the ball's post-ObjectFall vertical speed and only
+            // loc_19008 (after the launch) clears it. transitionToSeesawResting
+            // performs that post-launch clear, so the falling speed survives into
+            // launchStandingPlayer (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and
+            // Spike Balls.asm:546-573,776-806).
 
             // Determine landing side and set seesaw tilt
             int landingSide = (currentX >= seesawX) ? 0 : 2;
@@ -627,15 +629,38 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
             return;
         }
 
+        // ROM loc_18FA2: player velY = -ball velY, then halved (asr.w) when the
+        // seesaw is in its flat mapping frame (obFrame == 1). asr.w is a signed
+        // 16-bit arithmetic shift, so cast to short before shifting.
+        // (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:786-790)
+        short launchVel = (short) -yVel;
+        if (seesaw.getMappingFrame() == 1) {
+            launchVel = (short) (launchVel >> 1);
+        }
         // move.w obVelY(a0),obVelY(a2) / neg.w obVelY(a2)
-        player.setYSpeed((short) -yVel);
+        player.setYSpeed(launchVel);
+        // ROM loc_18FDC: bset #1 (in air), bclr #3 (off object), clr.b jumping.
         player.setAir(true);
         player.setOnObject(false);
-        // ROM: Boss seesaw sets roll animation (not spring) so Sonic is in ball form
-        // and can damage Robotnik. Regular seesaws (5E) use id_Spring instead.
-        player.setRolling(true);
-        player.setJumping(true);
-        player.setAnimationId(Sonic1AnimationIds.ROLL);
+        player.setJumping(false);
+
+        // ROM: jsr Sonic_ChkRoll — the boss seesaw puts Sonic into ball form (not a
+        // spring) so he can damage Robotnik. Sonic_ChkRoll only rolls when Sonic is
+        // not already rolling (btst #2,obStatus) and, on entry, shifts y_pos DOWN by
+        // the standing/rolling radius difference (addq.w #sonic_height-sonic_roll_height,
+        // obY) so his feet stay planted, and forces inertia to $200 when stopped.
+        // (docs/s1disasm/_incObj/01 Sonic.asm:1143-1171). Without the y_pos shift the
+        // box shrank in place and Sonic launched 5px too high (SLZ3 f6113).
+        if (!player.getRolling()) {
+            short preRollCentreX = player.getCentreX();
+            player.setRolling(true);
+            NativePositionOps.writeXPosPreserveSubpixel(player, preRollCentreX);
+            player.setY((short) (player.getY() + player.getRollHeightAdjustment()));
+            player.setAnimationId(Sonic1AnimationIds.ROLL);
+            if (player.getGSpeed() == 0) {
+                player.setGSpeed((short) 0x200);
+            }
+        }
         seesaw.clearPlayerStanding();
 
         try {
@@ -708,14 +733,22 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
 
     // ---- Position ----
 
+    // ROM obX/obY are the object CENTRE (sub ReactToItem.asm uses obX(a1)/obY(a1)
+    // directly against the ball's React_Sizes half-extents). obActWid ($C) is the
+    // render-cull half-width only, NOT a position offset — getX()/getY() must
+    // return the centre so the shared touch overlap (which reads getX()/getY() as
+    // the object centre, matching every other S1 object) places the hurt box
+    // correctly. Subtracting WIDTH_PIXELS shifted the col_16x16 hurt box 12px
+    // up-left, so a rolling player rising into the falling ball missed the hurt
+    // (SLZ3 trace f5917).
     @Override
     public int getX() {
-        return (xPos >> 16) - WIDTH_PIXELS;
+        return xPos >> 16;
     }
 
     @Override
     public int getY() {
-        return (yPos >> 16) - 0x0C;
+        return yPos >> 16;
     }
 
     @Override

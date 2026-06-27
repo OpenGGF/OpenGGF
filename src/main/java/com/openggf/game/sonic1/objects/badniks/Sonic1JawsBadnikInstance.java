@@ -62,7 +62,7 @@ public class Sonic1JawsBadnikInstance extends AbstractBadnikInstance implements 
     private static final int ANIM_FRAME_COUNT = 4;
 
     private int turnTimeCount;       // jaws_timecount (objoff_30): current countdown timer
-    private final int turnTimeDelay; // jaws_timedelay (objoff_32): reload value for timer
+    private int turnTimeDelay;       // jaws_timedelay (objoff_32): reload value for timer
     private final SubpixelMotion.State motionState; // Subpixel position/velocity state
     private int animTickCounter;     // Ticks within current animation frame
     private int prevAnim;            // obPrevAni: tracks animation reset trigger

@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects.badniks;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 
 /**
  * S3K SKL Obj $8F - Butterdroid.
@@ -12,7 +13,7 @@ import com.openggf.level.objects.ObjectSpawn;
  * max speed {@code $100} and acceleration {@code 4}, then runs the raw
  * eight-step wing animation.
  */
-public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance {
+public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x17;
     private static final int PRIORITY_BUCKET = 5;

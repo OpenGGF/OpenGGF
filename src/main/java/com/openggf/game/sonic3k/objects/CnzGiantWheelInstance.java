@@ -4,6 +4,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.IdentityHashMap;
@@ -18,18 +20,23 @@ import java.util.Map;
  * the grounded player enters, and clamps {@code ground_vel} while the player
  * remains grounded inside the wheel.
  */
-public final class CnzGiantWheelInstance extends AbstractObjectInstance {
+public final class CnzGiantWheelInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int RANGE = 0x60;
     private static final int MIN_SPEED = 0x0400;
     private static final int MAX_SPEED = 0x0F00;
 
     private final Map<PlayableEntity, Boolean> attachedPlayers = new IdentityHashMap<>();
-    private final boolean flipped;
+    private boolean flipped;
 
     public CnzGiantWheelInstance(ObjectSpawn spawn) {
         super(spawn, "CNZGiantWheel");
         this.flipped = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public CnzGiantWheelInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzGiantWheelInstance(ctx.spawn());
     }
 
     @Override

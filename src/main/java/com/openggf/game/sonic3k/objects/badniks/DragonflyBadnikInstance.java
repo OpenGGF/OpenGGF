@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.SwingMotion;
@@ -22,7 +23,8 @@ import java.util.List;
  * {@code Swing_LeftAndRight}, {@code Swing_UpAndDown}, and {@code MoveSprite2}
  * path before pausing at the vertical midpoint.
  */
-public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
+public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
+        implements SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x17;
     private static final int PRIORITY_BUCKET = 5;
@@ -232,11 +234,23 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
         return state == State.WAITING;
     }
 
-    public static final class WingChild extends AbstractObjectInstance {
+    private static DragonflyBadnikInstance findLiveDragonflyParent(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (instance instanceof DragonflyBadnikInstance dragonfly && !dragonfly.isDestroyed()) {
+                return dragonfly;
+            }
+        }
+        return null;
+    }
+
+    public static final class WingChild extends AbstractObjectInstance implements RewindRecreatable {
         private static final int RENDER_HALF_WIDTH = 0x20;
         private static final int RENDER_HALF_HEIGHT = 0x08;
 
-        private final DragonflyBadnikInstance parent;
+        private DragonflyBadnikInstance parent;
         private int animationIndex;
         private boolean setupFrame = true;
 
@@ -244,6 +258,12 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
             super(new ObjectSpawn(parent.getX(), parent.getY(), 0, 0, 0, false, 0),
                     "DragonflyWingChild");
             this.parent = parent;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            DragonflyBadnikInstance liveParent = findLiveDragonflyParent(ctx);
+            return liveParent == null ? null : new WingChild(liveParent);
         }
 
         @Override
@@ -493,18 +513,6 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
                 int frame = subtype == 0x0C ? 6 : 5;
                 renderer.drawFrameIndexForcedPriority(frame, getX(), getY(), false, verticalRenderFlip, -1, true);
             }
-        }
-
-        private static DragonflyBadnikInstance findLiveDragonflyParent(RewindRecreateContext ctx) {
-            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
-                return null;
-            }
-            for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
-                if (instance instanceof DragonflyBadnikInstance dragonfly && !dragonfly.isDestroyed()) {
-                    return dragonfly;
-                }
-            }
-            return null;
         }
     }
 }

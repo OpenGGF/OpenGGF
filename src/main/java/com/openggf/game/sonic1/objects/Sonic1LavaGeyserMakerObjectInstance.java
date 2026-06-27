@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -43,7 +44,8 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/4C &amp; 4D Lava Geyser Maker.asm
  */
-public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance {
+public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
 
     // ========================================================================
     // Animation Data (from Ani_Geyser)
@@ -89,10 +91,10 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance 
     private int timer;
 
     /** Timer reload value (gmake_time / objoff_34). */
-    private final int timerReload;
+    private int timerReload;
 
     /** Object subtype (0 = geyser, != 0 = lavafall). */
-    private final int subtype;
+    private int subtype;
 
     /** Reference to parent push block (gmake_parent / objoff_3C), may be null. */
     private Sonic1PushBlockObjectInstance parentBlock;

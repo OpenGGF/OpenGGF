@@ -5,16 +5,24 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameId;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
+import com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance;
+import com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance;
 import com.openggf.game.sonic3k.objects.MhzMinibossInstance;
+import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -78,6 +86,422 @@ public final class RewindRoundTripHarness {
     /** Representative spawn used by the class sweep when no specific ID is known. */
     private static final ObjectSpawn PROBE_SPAWN =
             new ObjectSpawn(0x100, 0x100, 1, 0, 0, false, 0);
+
+    private static final Map<String, String> GRAPH_COVERED_ISOLATED_PROBE_CLASSES = Map.ofEntries(
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance",
+                    "TestS1BadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance",
+                    "TestS1BadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance",
+                    "TestS1BadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.FZCylinder",
+                    "TestS1FzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.FZPlasmaBall",
+                    "TestS1FzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher",
+                    "TestS1FzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall",
+                    "TestS1GhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance",
+                    "TestS1SyzBossBlockGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.SYZBossSpike",
+                    "TestBossChildExactStateRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorBlock",
+                    "com.openggf.game.sonic1.objects.TestFalseFloorBlockRewindGenericRestore"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance",
+                    "com.openggf.game.sonic1.objects.TestSonic1GlassReflectionGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.Sonic1LamppostTwirlInstance",
+                    "TestCheckpointStarpostGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.Sonic1SeesawBallObjectInstance",
+                    "TestSeesawBallGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild",
+                    "TestS2BadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance",
+                    "TestS2BadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance",
+                    "TestS2BadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance",
+                    "TestS2BadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance",
+                    "TestS2BadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.ARZBossArrow",
+                    "TestS2ArzArrowGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossContainer",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossDripper",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossFlame",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossGunk",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossPipe",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossPipePump",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossPump",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle",
+                    "TestS2EhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.EHZBossPropeller",
+                    "TestS2EhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.EHZBossSpike",
+                    "TestS2EhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.EHZBossVehicleTop",
+                    "TestS2EhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.EHZBossWheel",
+                    "TestS2EhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance",
+                    "TestS2EhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.CheckpointDongleInstance",
+                    "TestCheckpointStarpostGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.CheckpointStarInstance",
+                    "TestCheckpointStarpostGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.CogObjectInstance$CogSlotChildInstance",
+                    "com.openggf.game.sonic2.objects.TestS2CogGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.OOZBurnerFlameObjectInstance",
+                    "TestS2OozBurnerFlameGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.SeesawBallObjectInstance",
+                    "TestSeesawBallGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance$SwingingPlatformDisplayChild",
+                    "com.openggf.game.sonic2.objects.TestS2SwingingPlatformGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ForearmChild",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$HeadChild",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$JetChild",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$SensorChild",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2DeathEggRobotGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$BombChild",
+                    "TestS2DezBombGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicDEZWindow",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicLEDWindow",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicTargetingSensor",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2MTZBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZLaserShooter",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2MTZBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZFloatingPlatform",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaser",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserShooter",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserWall",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformReleaser",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnik",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnikPlatform",
+                    "com.openggf.game.sonic2.objects.bosses.TestS2WfzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossArmChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossPropellerChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossFlameChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossBombChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossSmokeChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossFlameColumnChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossShipChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizIntroPlaneChild",
+                    "TestS3kAizIntroGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizIntroWaveChild",
+                    "TestS3kAizIntroGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild",
+                    "TestS3kAizIntroGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossArmChild",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossBodyChild",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossFlameChild",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizMinibossNapalmController",
+                    "TestS3kAizMinibossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizShipBombInstance",
+                    "com.openggf.game.sonic3k.objects.TestAizShipBombGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance",
+                    "TestS3kCutsceneKnucklesGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild",
+                    "com.openggf.game.sonic3k.objects.TestAizDisappearingFloorGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1CollapseChild",
+                    "com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper",
+                    "com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild",
+                    "com.openggf.game.sonic3k.objects.TestHczMinibossRocketTouchRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild",
+                    "TestS3kHczCgzFanGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.IczBigSnowPileInstance",
+                    "com.openggf.game.sonic3k.objects.TestRewindFixS3KIczBigSnowPileCodec"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild",
+                    "TestS3kNestedHurtboxGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance",
+                    "com.openggf.game.sonic3k.events.TestSonic3kMgz2CollapseEvents"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
+                    "TestS3kNestedHurtboxGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardInstance",
+                    "com.openggf.game.sonic3k.objects.TestMhzMinibossEscapeShardGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild",
+                    "TestS3kBadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment",
+                    "TestS3kIczSegmentColumnGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.S3kSignpostStubChild",
+                    "TestS3kSignpostStubGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance",
+                    "TestS3kSlotBonusGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance",
+                    "TestS3kSlotBonusGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance",
+                    "TestS3kSlotBonusGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild",
+                    "TestCheckpointStarpostGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild",
+                    "TestCheckpointStarpostGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter",
+                    "TestS3kBadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.level.objects.InvincibilityStarsObjectInstance",
+                    "com.openggf.game.sonic2.objects.TestS2SelfContainedTransientRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance",
+                    "com.openggf.game.sonic3k.objects.TestMhzEndBossArenaHelperRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossHitProxyRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild",
+                    "TestS3kMhzEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikHeadChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossRobotnikHeadRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossSpikeRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossVisualRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherMachineRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherVisualRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.FireShieldObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.InstaShieldObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.LightningShieldObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance",
+                    "com.openggf.game.sonic2.objects.TestS2MtzLongPlatformCogGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyNozzleChild",
+                    "com.openggf.game.sonic3k.objects.badniks.TestS3kCorkeyNozzleGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.ClamerObjectInstance$ClamerSpringChild",
+                    "TestS3kClamerGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild",
+                    "com.openggf.game.sonic3k.objects.TestS3kMhzCutsceneGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ContainerDisplayChild",
+                    "TestS3kBadnikChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance$HandLauncherArmChild",
+                    "TestS3kHczHandLauncherGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance$WaterRushBlockChild",
+                    "TestS3kHczWaterRushGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud",
+                    "TestS3kIczFreezerGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$AttachChild",
+                    "TestS3kLbzCupElevatorGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$BaseChild",
+                    "TestS3kLbzCupElevatorGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance$LauncherArmChild",
+                    "TestS3kLbzPlayerLauncherGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.LbzTubeElevatorInstance$OverlayChild",
+                    "TestS3kLbzTubeElevatorGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild",
+                    "TestS3kNestedHurtboxGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance$PulleyChainChild",
+                    "TestS3kMgzPulleyGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot",
+                    "TestS3kMonitorGraphRewind"),
+            Map.entry(
+                    "com.openggf.level.objects.ShieldObjectInstance",
+                    "com.openggf.level.objects.TestShieldRewindPendingRestore"));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -314,6 +738,7 @@ public final class RewindRoundTripHarness {
      */
     public sealed interface RoundTripSweepResult
             permits RoundTripSweepResult.Passed,
+                    RoundTripSweepResult.GraphCovered,
                     RoundTripSweepResult.Unprobed,
                     RoundTripSweepResult.CountMismatch,
                     RoundTripSweepResult.ScalarMismatch {
@@ -322,6 +747,12 @@ public final class RewindRoundTripHarness {
          * Round-trip succeeded: object count unchanged and all scalar fields identical.
          */
         record Passed() implements RoundTripSweepResult {}
+
+        /**
+         * The isolated class probe cannot honestly construct or relink this object
+         * alone, but a focused object-graph/session test covers its restore path.
+         */
+        record GraphCovered(String evidence) implements RoundTripSweepResult {}
 
         /**
          * Object could not be constructed headlessly (ROM/OpenGL required) or added
@@ -387,6 +818,10 @@ public final class RewindRoundTripHarness {
         if (!hasRegisteredCodec(fqn)) {
             return new RoundTripSweepResult.Unprobed("no dynamic recreate path (no codec registered)");
         }
+        String graphEvidence = GRAPH_COVERED_ISOLATED_PROBE_CLASSES.get(fqn);
+        if (graphEvidence != null) {
+            return new RoundTripSweepResult.GraphCovered(graphEvidence);
+        }
 
         // 1. Resolve the class.
         Class<?> rawClass;
@@ -446,6 +881,11 @@ public final class RewindRoundTripHarness {
         try {
             instance = tryConstruct(cls, stub);
         } catch (Throwable t) {
+            RoundTripSweepResult retried =
+                    tryRoundTripWithSeededParent(fqn, cls, gameId, Map.of());
+            if (retried != null) {
+                return retried;
+            }
             return new RoundTripSweepResult.Unprobed(describeThrowable(t));
         }
 
@@ -664,10 +1104,16 @@ public final class RewindRoundTripHarness {
         return switch (parentFqn) {
             case "com.openggf.game.sonic3k.objects.CnzMinibossInstance",
                  "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance",
+                 "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance",
+                 "com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance",
+                 "com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance",
                  "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance",
+                 "com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance",
+                 "com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance",
                  "com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance",
                  "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance",
-                 "com.openggf.game.sonic3k.objects.MhzMinibossInstance" -> true;
+                 "com.openggf.game.sonic3k.objects.MhzMinibossInstance",
+                 "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance" -> true;
             default -> false;
         };
     }
@@ -682,9 +1128,29 @@ public final class RewindRoundTripHarness {
                     spawn.objectId() == Sonic3kObjectIds.DRAGONFLY
                             ? new DragonflyBadnikInstance(spawn)
                             : null;
+            case "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.CLUCKOID
+                            ? new CluckoidBadnikInstance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.MANTIS
+                            ? new MantisBadnikInstance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.MUSHMEANIE
+                            ? new MushmeanieBadnikInstance(spawn)
+                            : null;
             case "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance" ->
                     spawn.objectId() == Sonic3kObjectIds.CUTSCENE_KNUCKLES
                             ? new CutsceneKnucklesMhz2Instance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.ICZ_CRUSHING_COLUMN
+                            ? new IczCrushingColumnObjectInstance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.ICZ_TENSION_PLATFORM
+                            ? new IczTensionPlatformObjectInstance(spawn)
                             : null;
             case "com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance" ->
                     spawn.objectId() == Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON
@@ -697,6 +1163,10 @@ public final class RewindRoundTripHarness {
             case "com.openggf.game.sonic3k.objects.MhzMinibossInstance" ->
                     spawn.objectId() == Sonic3kObjectIds.MHZ_MINIBOSS
                             ? new MhzMinibossInstance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance" ->
+                    spawn.objectId() == Sonic3kObjectIds.PACHINKO_ENERGY_TRAP
+                            ? new PachinkoEnergyTrapObjectInstance(spawn)
                             : null;
             default -> null;
         };
@@ -876,8 +1346,8 @@ public final class RewindRoundTripHarness {
         // (ObjectSpawn, ParentType), (ParentType), (ParentType, String),
         // (ParentType, int, int), (ParentType, AbstractObjectInstance, int, int),
         // (ObjectSpawn, int, int, ParentType), (ObjectSpawn, ParentType, int),
-        // and (ObjectSpawn, ParentType, int, int, int). Build a stub parent of that type
-        // headlessly (using simple strategies only to avoid recursion), then
+        // (ObjectSpawn, ParentType, int, int), and (ObjectSpawn, ParentType, int, int, int).
+        // Build a stub parent of that type headlessly (using simple strategies only to avoid recursion), then
         // construct the child with the matching placeholder arguments.
         AbstractObjectInstance constructedWithParent = tryConstructWithInferredParent(cls, stub);
         if (constructedWithParent != null) {
@@ -896,6 +1366,7 @@ public final class RewindRoundTripHarness {
                         + " (ParentType,AbstractObjectInstance,int,int),"
                         + " (ObjectSpawn,int,int,ParentType),"
                         + " (ObjectSpawn,ParentType,int),"
+                        + " (ObjectSpawn,ParentType,int,int),"
                         + " (ObjectSpawn,ParentType,int,int,int))");
     }
 
@@ -929,11 +1400,18 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild",
                 "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild",
+                "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild");
         m.put("com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance$OrbitingPointInstance",
                 "com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance");
         // S3K GumballMachine exit trigger — parent: GumballMachineObjectInstance (placed, objectId 0x86)
         m.put("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ExitTriggerChild",
                 "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance");
+        // S3K pachinko energy-trap children — parent is placed ObjE8 and spawns children lazily.
+        m.put("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild",
+                "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance");
+        m.put("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild",
+                "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance");
         // S3K AIZ spiked-log collision child — parent: AizSpikedLogObjectInstance (placed, objectId 0x2E)
         m.put("com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild",
                 "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance");
@@ -972,10 +1450,30 @@ public final class RewindRoundTripHarness {
         // not spawn these children; their update routines do.
         m.put("com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild",
                 "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$WingChild",
+                "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild",
+                "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild",
                 "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",
                 "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerTrailEmitter",
+                "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild");
+        m.put("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerWaterfallOverlayChild",
+                "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance$ArrowChild",
+                "com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance$MantisChild",
+                "com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance$ShellChild",
+                "com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterCoverChild",
+                "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild",
+                "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm",
+                "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance");
         // S3K MHZ cutscene/miniboss children. The parent object IDs are zone-set
         // dependent, so registryForSeededParent supplies exact parent factories.
         m.put("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
@@ -988,6 +1486,16 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.MhzMinibossInstance");
         m.put("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance",
                 "com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance");
+        // S3K ICZ support children — parents are placed objects that spawn children lazily.
+        m.put("com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration",
+                "com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance");
+        m.put("com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance$SupportChild",
+                "com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance");
+        m.put("com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle",
+                "com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance");
+        // S1 spiked-ball chain child — parent is placed Obj57 and spawns children lazily.
+        m.put("com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild",
+                "com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance");
         // NOTE: BalkiryBadnikInstance OMITTED: its ctor calls spawnJetChild() immediately,
         // which would add a BalkiryJetObjectInstance to the OM before we add our probe child,
         // causing a double-jet on restore. BalkiryJetObjectInstance stays parent-dependent.
@@ -1026,6 +1534,8 @@ public final class RewindRoundTripHarness {
             Map.entry("com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance", 0xC0),
             // GumballMachineObjectInstance: Sonic3kObjectIds.GUMBALL_MACHINE = 0x86
             Map.entry("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", 0x86),
+            // PachinkoEnergyTrapObjectInstance: Sonic3kObjectIds.PACHINKO_ENERGY_TRAP = 0xE8
+            Map.entry("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance", 0xE8),
             // AizSpikedLogObjectInstance: Sonic3kObjectIds.AIZ_SPIKED_LOG = 0x2E
             Map.entry("com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance", 0x2E),
             // TurtloidBadnikInstance: Sonic2ObjectIds.TURTLOID = 0x9A (lazy child spawn)
@@ -1044,6 +1554,16 @@ public final class RewindRoundTripHarness {
             Map.entry("com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance", 0x96),
             // SpikerBadnikInstance: Sonic3kObjectIds.SPIKER = 0x9C (lazy child spawn)
             Map.entry("com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance", 0x9C),
+            // CluckoidBadnikInstance: Sonic3kObjectIds.CLUCKOID = 0x90 (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance", 0x90),
+            // MantisBadnikInstance: Sonic3kObjectIds.MANTIS = 0x9D (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance", 0x9D),
+            // MushmeanieBadnikInstance: Sonic3kObjectIds.MUSHMEANIE = 0x8D (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance", 0x8D),
+            // SnaleBlasterBadnikInstance: Sonic3kObjectIds.SNALE_BLASTER = 0xBE (lazy child spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance", 0xBE),
+            // TunnelbotBadnikInstance: Sonic3kObjectIds.TUNNELBOT = 0x9E (lazy arm spawn)
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance", 0x9E),
             // CutsceneKnucklesMhz2Instance: Sonic3kObjectIds.CUTSCENE_KNUCKLES = 0x82
             Map.entry("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance", 0x82),
             // Mhz1CutsceneButtonInstance: Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON = 0xA9
@@ -1052,8 +1572,17 @@ public final class RewindRoundTripHarness {
             Map.entry("com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance", 0xA8),
             // MhzMinibossInstance: Sonic3kObjectIds.MHZ_MINIBOSS = 0x92
             Map.entry("com.openggf.game.sonic3k.objects.MhzMinibossInstance", 0x92),
+            // IczCrushingColumnObjectInstance: Sonic3kObjectIds.ICZ_CRUSHING_COLUMN = 0xAF
+            Map.entry("com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance", 0xAF),
+            // IczTensionPlatformObjectInstance: Sonic3kObjectIds.ICZ_TENSION_PLATFORM = 0xBA
+            Map.entry("com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance", 0xBA),
+            // IczSnowPileObjectInstance: Sonic3kObjectIds.ICZ_SNOW_PILE = 0xB9
+            Map.entry("com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance", 0xB9),
             // Sonic3kSSEntryRingObjectInstance: Sonic3kObjectIds.SS_ENTRY_RING = 0x85
-            Map.entry("com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance", 0x85)
+            Map.entry("com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance", 0x85),
+            // Sonic1SpikedBallChainObjectInstance: Sonic1ObjectIds.SPIKED_BALL_CHAIN = 0x57
+            Map.entry("com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance",
+                    Sonic1ObjectIds.SPIKED_BALL_CHAIN)
             // Omitted: BalkiryBadnikInstance (spawns jet in ctor — would pollute OM)
             // Omitted: Sonic2CPZBossInstance (spawns 5 children in ctor — would pollute OM)
     );
@@ -1081,6 +1610,9 @@ public final class RewindRoundTripHarness {
             Class<? extends AbstractObjectInstance> cls,
             GameId gameId,
             Map<String, String> beforeFields) {
+        if ("com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild".equals(fqn)) {
+            return tryRoundTripRibotVisualChild(cls);
+        }
         String parentFqn = PARENT_SEED_TABLE.get(fqn);
         if (parentFqn == null) {
             return null; // Not in the well-known table; stay Unprobed.
@@ -1199,13 +1731,88 @@ public final class RewindRoundTripHarness {
         return new RoundTripSweepResult.Passed();
     }
 
+    private static RoundTripSweepResult tryRoundTripRibotVisualChild(
+            Class<? extends AbstractObjectInstance> cls) {
+        String fqn = cls.getName();
+        GraphicsManager.getInstance().initHeadless();
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        StubObjectServices stub = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+        };
+        ObjectManager om = new ObjectManager(
+                List.of(new ObjectSpawn(160, 240, Sonic3kObjectIds.RIBOT, 4, 0, false, 0)),
+                registryFor(GameId.S3K),
+                0,
+                null,
+                null,
+                GraphicsManager.getInstance(),
+                camera,
+                stub);
+        holder[0] = om;
+        om.reset(0);
+
+        AbstractObjectInstance ribot = findFirstByClass(om, RibotBadnikInstance.class);
+        if (ribot == null) return null;
+        ribot.update(0, new com.openggf.tests.TestablePlayableSprite("sonic", (short) 160, (short) 240));
+        AbstractObjectInstance activeChild = findFirstByClassName(
+                om,
+                "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild");
+        if (activeChild == null) return null;
+        AbstractObjectInstance child = tryConstructChildWithLiveParent(cls, stub, activeChild);
+        if (child == null) return null;
+        try {
+            om.addDynamicObject(child);
+        } catch (Throwable t) {
+            return null;
+        }
+
+        Map<String, String> seededBeforeFields = captureScalarFields(child, cls);
+        RewindRegistry rr = new RewindRegistry();
+        rr.register(om.rewindSnapshottable());
+        CompositeSnapshot snap;
+        try {
+            snap = rr.capture();
+            rr.restore(snap);
+        } catch (Throwable t) {
+            return null;
+        }
+
+        Map<String, Integer> afterCounts = countByTypeFrom(om);
+        int childAfter = afterCounts.getOrDefault(fqn, 0);
+        if (childAfter == 0) {
+            return null;
+        }
+        AbstractObjectInstance restored = findFirstByClass(om, cls);
+        if (restored == null) return null;
+        Map<String, String> afterFields = captureScalarFields(restored, cls);
+        List<ScalarDiff> diffs = new ArrayList<>();
+        for (Map.Entry<String, String> entry : seededBeforeFields.entrySet()) {
+            String key = entry.getKey();
+            String beforeVal = entry.getValue();
+            String afterVal = afterFields.get(key);
+            if (!Objects.equals(beforeVal, afterVal)) {
+                boolean isFinal = isFieldFinal(cls, key);
+                diffs.add(new ScalarDiff(fqn, key, beforeVal, afterVal, isFinal));
+            }
+        }
+        if (!diffs.isEmpty()) {
+            return new RoundTripSweepResult.ScalarMismatch(diffs);
+        }
+        return new RoundTripSweepResult.Passed();
+    }
+
     /**
      * Attempts to construct a child of {@code cls} by finding a constructor of the form
      * {@code (ObjectSpawn, ParentType)}, {@code (ParentType)},
      * {@code (ParentType, String)}, {@code (ParentType, int, int)},
      * {@code (ParentType, AbstractObjectInstance, int, int)},
      * {@code (ObjectSpawn, int, int, ParentType)}, {@code (ObjectSpawn, ParentType, int)},
-     * or {@code (ObjectSpawn, ParentType, int, int, int)} where {@code ParentType} is
+     * {@code (ObjectSpawn, ParentType, int, int)}, or
+     * {@code (ObjectSpawn, ParentType, int, int, int)} where {@code ParentType} is
      * assignment-compatible with {@code liveParent}, then invoking it directly with the
      * live parent instance.
      *
@@ -1237,6 +1844,11 @@ public final class RewindRoundTripHarness {
                     && params[0].isAssignableFrom(liveParent.getClass())
                     && params[1] == int.class
                     && params[2] == int.class;
+            boolean parentIntIntBoolean = params.length == 4
+                    && params[0].isAssignableFrom(liveParent.getClass())
+                    && params[1] == int.class
+                    && params[2] == int.class
+                    && params[3] == boolean.class;
             boolean parentAnchorIntInt = params.length == 4
                     && params[0].isAssignableFrom(liveParent.getClass())
                     && params[1].isAssignableFrom(liveParent.getClass())
@@ -1251,6 +1863,11 @@ public final class RewindRoundTripHarness {
                     && params[0] == ObjectSpawn.class
                     && params[1].isAssignableFrom(liveParent.getClass())
                     && params[2] == int.class;
+            boolean spawnParentIntInt = params.length == 4
+                    && params[0] == ObjectSpawn.class
+                    && params[1].isAssignableFrom(liveParent.getClass())
+                    && params[2] == int.class
+                    && params[3] == int.class;
             boolean spawnParentIntIntInt = params.length == 5
                     && params[0] == ObjectSpawn.class
                     && params[1].isAssignableFrom(liveParent.getClass())
@@ -1258,8 +1875,8 @@ public final class RewindRoundTripHarness {
                     && params[3] == int.class
                     && params[4] == int.class;
             if (!spawnAndParent && !parentOnly && !parentString && !parentIntInt
-                    && !parentAnchorIntInt && !spawnIntIntParent
-                    && !spawnParentInt && !spawnParentIntIntInt) continue;
+                    && !parentIntIntBoolean && !parentAnchorIntInt && !spawnIntIntParent
+                    && !spawnParentInt && !spawnParentIntInt && !spawnParentIntIntInt) continue;
             Constructor<? extends AbstractObjectInstance> ctor =
                     (Constructor<? extends AbstractObjectInstance>) rawCtor;
             ctor.setAccessible(true);
@@ -1277,6 +1894,10 @@ public final class RewindRoundTripHarness {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, parent, 0, 0));
                 }
+                if (parentIntIntBoolean) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, parent, 0, 0, false));
+                }
                 if (parentAnchorIntInt) {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, parent, parent, 0, 0));
@@ -1288,6 +1909,10 @@ public final class RewindRoundTripHarness {
                 if (spawnParentInt) {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, PROBE_SPAWN, parent, 0));
+                }
+                if (spawnParentIntInt) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, parent, 0, 0));
                 }
                 if (spawnParentIntIntInt) {
                     return ObjectConstructionContext.construct(stub,
@@ -1311,6 +1936,7 @@ public final class RewindRoundTripHarness {
      * {@code (ParentType, AbstractObjectInstance, int, int)},
      * {@code (ObjectSpawn, int, int, ParentType)},
      * {@code (ObjectSpawn, ParentType, int)}, or
+     * {@code (ObjectSpawn, ParentType, int, int)}, or
      * {@code (ObjectSpawn, ParentType, int, int, int)} where {@code ParentType} is
      * a concrete, non-abstract
      * {@link AbstractObjectInstance} subclass. When found:
@@ -1337,6 +1963,10 @@ public final class RewindRoundTripHarness {
             boolean parentIntInt = params.length == 3
                     && params[1] == int.class
                     && params[2] == int.class;
+            boolean parentIntIntBoolean = params.length == 4
+                    && params[1] == int.class
+                    && params[2] == int.class
+                    && params[3] == boolean.class;
             boolean parentAnchorIntInt = params.length == 4
                     && AbstractObjectInstance.class.isAssignableFrom(params[1])
                     && params[2] == int.class
@@ -1348,15 +1978,19 @@ public final class RewindRoundTripHarness {
             boolean spawnParentInt = params.length == 3
                     && params[0] == ObjectSpawn.class
                     && params[2] == int.class;
+            boolean spawnParentIntInt = params.length == 4
+                    && params[0] == ObjectSpawn.class
+                    && params[2] == int.class
+                    && params[3] == int.class;
             boolean spawnParentIntIntInt = params.length == 5
                     && params[0] == ObjectSpawn.class
                     && params[2] == int.class
                     && params[3] == int.class
                     && params[4] == int.class;
             if (!spawnAndParent && !parentOnly && !parentString && !parentIntInt
-                    && !parentAnchorIntInt && !spawnIntIntParent
-                    && !spawnParentInt && !spawnParentIntIntInt) continue;
-            Class<?> parentType = (spawnIntIntParent || spawnParentIntIntInt)
+                    && !parentIntIntBoolean && !parentAnchorIntInt && !spawnIntIntParent
+                    && !spawnParentInt && !spawnParentIntInt && !spawnParentIntIntInt) continue;
+            Class<?> parentType = (spawnIntIntParent || spawnParentIntInt || spawnParentIntIntInt)
                     ? (spawnIntIntParent ? params[3] : params[1])
                     : (spawnAndParent || spawnParentInt ? params[1] : params[0]);
             if (!AbstractObjectInstance.class.isAssignableFrom(parentType)) continue;
@@ -1385,6 +2019,10 @@ public final class RewindRoundTripHarness {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, finalParent, 0, 0));
                 }
+                if (parentIntIntBoolean) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, finalParent, 0, 0, false));
+                }
                 if (parentAnchorIntInt) {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, finalParent, finalParent, 0, 0));
@@ -1396,6 +2034,10 @@ public final class RewindRoundTripHarness {
                 if (spawnParentInt) {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, PROBE_SPAWN, finalParent, 0));
+                }
+                if (spawnParentIntInt) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, finalParent, 0, 0));
                 }
                 if (spawnParentIntIntInt) {
                     return ObjectConstructionContext.construct(stub,
@@ -1516,6 +2158,15 @@ public final class RewindRoundTripHarness {
             ObjectManager om, Class<? extends AbstractObjectInstance> cls) {
         for (ObjectInstance o : om.getActiveObjects()) {
             if (cls.isInstance(o) && !o.isDestroyed()) {
+                return (AbstractObjectInstance) o;
+            }
+        }
+        return null;
+    }
+
+    private static AbstractObjectInstance findFirstByClassName(ObjectManager om, String className) {
+        for (ObjectInstance o : om.getActiveObjects()) {
+            if (o.getClass().getName().equals(className) && !o.isDestroyed()) {
                 return (AbstractObjectInstance) o;
             }
         }

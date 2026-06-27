@@ -665,6 +665,19 @@ public class DivergenceReport {
         if (vObjState != null) {
             diagnostics.add(vObjState);
         }
+        // v3.10 S1 diagnostic context: global oscillation state (osc-phase cluster,
+        // e.g. SLZ2 f3353). Comparison-only.
+        TraceEvent.VOscillate vOscillate = traceData.vOscillateForFrame(frame);
+        if (vOscillate != null) {
+            diagnostics.add(vOscillate);
+        }
+        // v3.11 S1 diagnostic context: BizHawk authoritative lag state (confirms
+        // the counter/oscillation skip-frame vs emulator-lag coincidence).
+        // Comparison-only.
+        TraceEvent.LagState lagState = traceData.lagStateForFrame(frame);
+        if (lagState != null) {
+            diagnostics.add(lagState);
+        }
         TraceEvent.CameraBoundary cameraBoundary = traceData.cameraBoundaryForFrame(frame);
         if (cameraBoundary != null) {
             diagnostics.add(cameraBoundary);

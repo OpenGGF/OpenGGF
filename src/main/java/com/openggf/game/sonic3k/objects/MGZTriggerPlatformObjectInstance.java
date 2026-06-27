@@ -17,6 +17,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -39,7 +40,7 @@ import java.util.List;
  * and vertical variants.
  */
 public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_TRIGGER_PLATFORM;
     private static final int PRIORITY_BUCKET = 5; // ROM: priority = $280
@@ -57,14 +58,14 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         VERTICAL_MOVE
     }
 
-    private final int triggerIndex;
-    private final int frameIndex;
-    private final int widthPixels;
-    private final int heightPixels;
-    private final int totalFrames;
-    private final int stepPerFrame;
-    private final int direction;
-    private final Mode mode;
+    private int triggerIndex;
+    private int frameIndex;
+    private int widthPixels;
+    private int heightPixels;
+    private int totalFrames;
+    private int stepPerFrame;
+    private int direction;
+    private Mode mode;
 
     private int currentX;
     private int currentY;

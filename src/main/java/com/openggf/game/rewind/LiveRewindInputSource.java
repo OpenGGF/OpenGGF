@@ -24,8 +24,7 @@ public final class LiveRewindInputSource implements InputSource {
     private int baseFrame;
 
     public LiveRewindInputSource() {
-        frames.add(new Bk2FrameInput(0, 0, 0, false, 0, 0, false,
-                false, false, false, "live:0"));
+        frames.add(neutralFrameInput(0));
     }
 
     public void appendFrame(InputHandler input, SonicConfigurationService config) {
@@ -72,6 +71,23 @@ public final class LiveRewindInputSource implements InputSource {
         baseFrame += removeCount;
     }
 
+    public void resetToFrameZero() {
+        frames.clear();
+        baseFrame = 0;
+        frames.add(neutralFrameInput(0));
+    }
+
+    public void retainOnlyFrame(int frame) {
+        if (frame < earliestFrame() || frame >= frameCount()) {
+            resetToSingleNeutralFrame(frame);
+            return;
+        }
+        Bk2FrameInput retained = read(frame);
+        frames.clear();
+        baseFrame = frame;
+        frames.add(retained);
+    }
+
     public int earliestFrame() {
         return baseFrame;
     }
@@ -89,6 +105,17 @@ public final class LiveRewindInputSource implements InputSource {
                     + " outside " + baseFrame + ".." + (frameCount() - 1));
         }
         return frames.get(index);
+    }
+
+    private void resetToSingleNeutralFrame(int frame) {
+        frames.clear();
+        baseFrame = frame;
+        frames.add(neutralFrameInput(frame));
+    }
+
+    private static Bk2FrameInput neutralFrameInput(int frame) {
+        return new Bk2FrameInput(frame, 0, 0, false, 0, 0, false,
+                false, false, false, "live:" + frame);
     }
 
     private static int heldMask(InputHandler input, SonicConfigurationService config,

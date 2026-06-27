@@ -12,7 +12,13 @@ import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -40,7 +46,8 @@ import java.util.List;
  * toggles the jet every 0x40 frames, spawns visible frost puffs every other
  * active frame, and creates a delayed capture cloud that freezes nearby players.
  */
-public class IczFreezerObjectInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public class IczFreezerObjectInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, SpawnRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
     private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_FREEZER;
@@ -60,10 +67,10 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
 
-    private final int x;
-    private final int y;
-    private final boolean hFlip;
-    private final boolean verticalFlip;
+    private int x;
+    private int y;
+    private boolean hFlip;
+    private boolean verticalFlip;
 
     private boolean frostCycleActive;
     private boolean freezeJetActive;
@@ -270,7 +277,26 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         return new FrostPuff(x, y, verticalFlip);
     }
 
-    public static final class CaptureCloud extends AbstractObjectInstance {
+    private static IczFreezerObjectInstance nearestLiveFreezer(RewindRecreateContext ctx) {
+        ObjectManager manager = ctx.objectServices() != null ? ctx.objectServices().objectManager() : null;
+        if (manager == null) {
+            return null;
+        }
+        IczFreezerObjectInstance nearest = null;
+        int nearestDistance = Integer.MAX_VALUE;
+        for (ObjectInstance object : manager.getActiveObjects()) {
+            if (object instanceof IczFreezerObjectInstance freezer && !freezer.isDestroyed()) {
+                int distance = Math.abs(freezer.getX() - ctx.spawn().x());
+                if (distance < nearestDistance) {
+                    nearest = freezer;
+                    nearestDistance = distance;
+                }
+            }
+        }
+        return nearest;
+    }
+
+    public static final class CaptureCloud extends AbstractObjectInstance implements RewindRecreatable {
         // loc_8A748 starts at $1F, then scans after the underflow.
         private static final int CAPTURE_DELAY_FRAMES = 0x1F;
         private static final int OFF_PHASE_DELETE_DELAY = 0x1F;
@@ -280,9 +306,9 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         private static final int CAPTURE_MAX_Y = 0x50;
 
         private final IczFreezerObjectInstance parent;
-        private final int x;
-        private final int y;
-        private final boolean hFlip;
+        private int x;
+        private int y;
+        private boolean hFlip;
 
         private int captureDelay = CAPTURE_DELAY_FRAMES;
         private int offPhaseDelay;
@@ -295,6 +321,26 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
             this.y = y;
             this.hFlip = hFlip;
             this.parent = parent;
+        }
+
+        private CaptureCloud(ObjectSpawn spawn) {
+            super(spawn, "ICZFreezerCaptureCloud");
+            this.x = spawn.x();
+            this.y = spawn.y();
+            this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+            this.parent = null;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            IczFreezerObjectInstance liveParent = nearestLiveFreezer(ctx);
+            return liveParent == null
+                    ? null
+                    : new CaptureCloud(
+                            ctx.spawn().x(),
+                            ctx.spawn().y(),
+                            (ctx.spawn().renderFlags() & 0x01) != 0,
+                            liveParent);
         }
 
         @Override
@@ -398,7 +444,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
     }
 
-    public static final class FrozenPlayerBlock extends AbstractObjectInstance {
+    public static final class FrozenPlayerBlock extends AbstractObjectInstance implements RewindRecreatable {
         // ObjDat3_8AAAA: priority $80, width $14, height $10, frame 2.
         private static final int PRIORITY_BUCKET = 1;
         private static final int MAPPING_FRAME = 2;
@@ -411,7 +457,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         private static final int GRAVITY = 0x38;
         private static final int FLOOR_Y_RADIUS = 0x10;
 
-        private final AbstractPlayableSprite capturedPlayer;
+        private AbstractPlayableSprite capturedPlayer;
         private final List<IceDebris> debris = new ArrayList<>(DEBRIS_COUNT);
         private final SubpixelMotion.State motion;
 
@@ -425,6 +471,24 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
             this.capturedPlayer = capturedPlayer;
             int xSpeed = capturedX >= parentX ? INITIAL_X_SPEED : -INITIAL_X_SPEED;
             this.motion = new SubpixelMotion.State(capturedX, capturedY, 0, 0, xSpeed, INITIAL_Y_SPEED);
+        }
+
+        private FrozenPlayerBlock(ObjectSpawn spawn) {
+            super(spawn, "ICZFreezerFrozenPlayer");
+            this.capturedPlayer = null;
+            this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, INITIAL_Y_SPEED);
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            IczFreezerObjectInstance liveParent = nearestLiveFreezer(ctx);
+            int parentX = liveParent != null ? liveParent.getX() : ctx.spawn().x();
+            return new FrozenPlayerBlock(
+                    null,
+                    ctx.spawn().x(),
+                    ctx.spawn().y(),
+                    parentX,
+                    (ctx.spawn().renderFlags() & 0x01) != 0);
         }
 
         @Override
@@ -561,7 +625,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
     }
 
-    private static final class FrostPuff extends AbstractObjectInstance {
+    private static final class FrostPuff extends AbstractObjectInstance implements SpawnRewindRecreatable {
         private static final int PRIORITY_BUCKET = 1;
         private static final int PALETTE = 2;
         private static final int SCRIPT_END_OFFSET = 0x48;
@@ -587,9 +651,9 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
                 {0x38, 0x16, 0x0F}
         };
 
-        private final boolean verticalFlip;
-        private final int originX;
-        private final int originY;
+        private boolean verticalFlip;
+        private int originX;
+        private int originY;
         private int x;
         private int y;
         private int scriptOffset;
@@ -599,12 +663,23 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         private boolean drawThisFrame;
 
         private FrostPuff(int x, int y, boolean verticalFlip) {
-            super(new ObjectSpawn(x, y, OBJECT_ID, 0, 0, false, y), "ICZFreezerFrostPuff");
+            super(new ObjectSpawn(x, y, OBJECT_ID, 0, verticalFlip ? 0x2 : 0, false, y),
+                    "ICZFreezerFrostPuff");
             this.verticalFlip = verticalFlip;
             this.originX = x;
             this.originY = y + (verticalFlip ? 0x0C : -0x0C);
             this.x = x;
             this.y = y;
+        }
+
+        private FrostPuff(ObjectSpawn spawn) {
+            super(spawn, "ICZFreezerFrostPuff");
+            boolean verticalFlip = (spawn.renderFlags() & 0x2) != 0;
+            this.verticalFlip = verticalFlip;
+            this.originX = spawn.x();
+            this.originY = spawn.y() + (verticalFlip ? 0x0C : -0x0C);
+            this.x = spawn.x();
+            this.y = spawn.y();
         }
 
         @Override
@@ -670,7 +745,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
     }
 
-    private static final class IceDebris extends GravityDebrisChild {
+    private static final class IceDebris extends GravityDebrisChild
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private static final int PRIORITY_BUCKET = 5;
         private static final int PALETTE = 2;
         private static final int GRAVITY = 0x38;
@@ -690,6 +766,11 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
             super(new ObjectSpawn(x, y, OBJECT_ID, subtype, 0, false, y),
                     "ICZFreezerIceDebris", xVel, yVel, GRAVITY);
             this.rawAnimation = subtype >= 8 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
+        }
+
+        private IceDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZFreezerIceDebris", 0, 0, GRAVITY);
+            this.rawAnimation = (spawn.subtype() & 0xFF) >= 8 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
         }
 
         @Override

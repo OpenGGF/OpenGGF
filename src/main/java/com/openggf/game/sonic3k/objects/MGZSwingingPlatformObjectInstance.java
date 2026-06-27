@@ -12,6 +12,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 
@@ -30,7 +31,7 @@ import java.util.List;
  * Status bit 1 (y-flip) selects chain link visual (frame 0 vs frame 1).
  */
 public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_SWINGING_PLATFORM;
 
@@ -51,10 +52,10 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
     // ROM: move.b height_pixels(a0),d3; addq.w #1,d3 -> $0C + 1 = $0D
     private static final int SOLID_HALF_HEIGHT = 0x0D;
 
-    private final int pivotX;
-    private final int pivotY;
-    private final int pivotFrame; // ROM: child mapping_frame (1 default, 0 if y-flip)
-    private final int angleStep;  // +1 or -1
+    private int pivotX;
+    private int pivotY;
+    private int pivotFrame; // ROM: child mapping_frame (1 default, 0 if y-flip)
+    private int angleStep;  // +1 or -1
 
     private final int[] linkX = new int[LINK_COUNT];
     private final int[] linkY = new int[LINK_COUNT];

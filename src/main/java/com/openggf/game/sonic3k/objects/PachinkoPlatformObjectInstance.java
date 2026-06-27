@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
@@ -21,12 +23,17 @@ import java.util.List;
  * D3 = height_pixels + 1.
  */
 public class PachinkoPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider {
+        implements SolidObjectProvider, RewindRecreatable {
 
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x2B, 0x0C, 0x0D);
 
     public PachinkoPlatformObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PachinkoPlatform");
+    }
+
+    @Override
+    public PachinkoPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new PachinkoPlatformObjectInstance(ctx.spawn());
     }
 
     @Override

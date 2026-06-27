@@ -46,8 +46,8 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     private static final int BUTTON_RECESS = 8;
     private static final int POST_OPEN_DELAY = 0x40;
 
-    private final int centreX;
-    private final int centreY;
+    private int centreX;
+    private int centreY;
     private boolean buttonTriggered;
     private boolean opened;
     private boolean resultsStarted;

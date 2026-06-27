@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -51,7 +53,7 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm Obj69, lines 53465-53663
  */
 public class NutObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // Solid object collision dimensions (from disassembly lines 53532-53534)
     // d1 = $2B (half-width = 43), d2 = $C (y_radius = 12), d3 = $D (ground height = 13)
@@ -118,6 +120,11 @@ public class NutObjectInstance extends AbstractObjectInstance
     public NutObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         init();
+    }
+
+    @Override
+    public NutObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new NutObjectInstance(ctx.spawn(), "Nut");
     }
 
     private void init() {

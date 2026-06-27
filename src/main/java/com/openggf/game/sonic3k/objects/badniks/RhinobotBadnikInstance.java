@@ -5,6 +5,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -13,7 +14,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * S3K Obj $8D - Rhinobot (AIZ).
  * Core routine mapping: Obj_Rhinobot (sonic3k.asm loc_86E7E..loc_8714A).
  */
-public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance {
+public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjSlot_Rhinobot flags $0B
     private static final int PRIORITY_BUCKET = 5;         // ObjSlot_Rhinobot priority $280
 

@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -25,7 +26,7 @@ import java.util.List;
  * instance keeps those child coordinates as local state because the child only
  * renders and supplies the held-player handle position.
  */
-public final class LbzRideGrappleInstance extends AbstractObjectInstance {
+public final class LbzRideGrappleInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int[][] PATH_RANGES = {
             {0x0A08, 0x0C78},
             {0x1208, 0x14F8},
@@ -66,9 +67,9 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance {
     };
 
     private final SubpixelMotion.State motion;
-    private final int pathLeft;
-    private final int pathRight;
-    private final boolean ejectAtPathEnd;
+    private int pathLeft;
+    private int pathRight;
+    private boolean ejectAtPathEnd;
     private final PlayerState p1 = new PlayerState();
     private final PlayerState p2 = new PlayerState();
     private final int[] chainX = new int[CHAIN_POINT_COUNT];

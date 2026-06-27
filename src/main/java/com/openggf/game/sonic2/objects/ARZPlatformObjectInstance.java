@@ -9,9 +9,13 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PlatformBobHelper;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -30,7 +34,7 @@ import java.util.logging.Logger;
  * Implements movement behaviors and rendering from the disassembly.
  */
 public class ARZPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(ARZPlatformObjectInstance.class.getName());
 
     private static final int[] WIDTH_PIXELS = {
@@ -71,6 +75,12 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
     public ARZPlatformObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         init();
+    }
+
+    @Override
+    public ARZPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new ARZPlatformObjectInstance(ctx.spawn(), getName()));
     }
 
     @Override
@@ -310,7 +320,7 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
 
         int cameraMaxY = services().camera().getMaxY();
         if ((baseYFixed >> 8) > cameraMaxY + OFFSCREEN_Y_MARGIN) {
-            setDestroyed(true);
+            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
         }
     }
 

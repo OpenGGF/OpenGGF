@@ -26,7 +26,7 @@ public final class MonitorContentsObjectInstance extends AbstractMonitorObjectIn
         implements SpawnNullableReferenceRewindRecreatable {
     private static final int ICON_FRAME_OFFSET = 1;
 
-    private final int subtype;
+    private int subtype;
 
     public MonitorContentsObjectInstance(int x, int y, int subtype, PlayableEntity player) {
         this(new ObjectSpawn(x, y, Sonic2ObjectIds.MONITOR_CONTENTS, subtype, 0, false, 0), player);

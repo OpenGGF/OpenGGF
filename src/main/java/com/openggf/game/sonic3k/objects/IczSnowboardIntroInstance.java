@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -24,7 +25,7 @@ import java.util.List;
  * the two ROM slope tables, and releases Sonic after the crash at the end of
  * the snowboard route.
  */
-public class IczSnowboardIntroInstance extends AbstractObjectInstance {
+public class IczSnowboardIntroInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     public static final int INITIAL_SNOWBOARD_X = 0x00C0;
     public static final int INITIAL_SNOWBOARD_Y = 0x0170;
 
@@ -437,7 +438,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
             int x = player.getCentreX() - (random & 0x0F);
             int y = player.getCentreY() + 0x14 - ((random >>> 16) & 0x0F);
             int yVel = -(random & 0x01FF);
-            ObjectSpawn spawn = new ObjectSpawn(x, y, 0, 0, 0, false, y);
+            ObjectSpawn spawn = new ObjectSpawn(x, y, 0, 0, 0, false, yVel);
             final int dustX = x;
             final int dustY = y;
             final int dustYVel = yVel;
@@ -602,22 +603,26 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         return Math.min(frame, frameCount - 1);
     }
 
-    private static final class SnowboardDustInstance extends AbstractObjectInstance {
+    private static final class SnowboardDustInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
         private int x;
         private int y;
         private int xSub;
         private int ySub;
-        private final int xVel;
-        private final int yVel;
+        private int xVel;
+        private int yVel;
         private int frame;
 
         private SnowboardDustInstance(ObjectSpawn spawn, int x, int y, int xVel, int yVel) {
-            super(spawn, "ICZSnowboardDust");
-            this.x = x;
-            this.y = y;
-            this.xVel = xVel;
-            this.yVel = yVel;
+            this(spawn);
             updateDynamicSpawn(x, y);
+        }
+
+        private SnowboardDustInstance(ObjectSpawn spawn) {
+            super(spawn, "ICZSnowboardDust");
+            this.x = spawn.x();
+            this.y = spawn.y();
+            this.xVel = -0x0100;
+            this.yVel = (short) spawn.rawYWord();
         }
 
         @Override

@@ -11,6 +11,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -45,12 +47,12 @@ import java.util.logging.Logger;
  *   <li>objoff_30 != 0: Frame 1 (either player grabbed)</li>
  * </ul>
  */
-public class VineSwitchObjectInstance extends AbstractObjectInstance {
+public class VineSwitchObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(VineSwitchObjectInstance.class.getName());
 
     // === Object Configuration ===
-    private final int switchId;  // subtype & 0x0F: Switch ID for ButtonVine_Trigger
+    private int switchId;  // subtype & 0x0F: Switch ID for ButtonVine_Trigger
 
     // === Per-Player Grab State ===
     // ROM uses objoff_30 (player 1 byte) and objoff_31 (player 2 byte)
@@ -98,6 +100,11 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
 
         LOGGER.fine(() -> String.format("VineSwitch init: pos=(%d,%d), switchId=%d",
                 spawn.x(), spawn.y(), switchId));
+    }
+
+    @Override
+    public VineSwitchObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new VineSwitchObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

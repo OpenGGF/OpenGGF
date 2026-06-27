@@ -22,6 +22,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -44,7 +45,7 @@ import java.util.List;
  * shared Tunnelbot routines for swing motion, drill animation, ceiling contact,
  * debris, hit flash, and defeat flow.
  */
-public final class MgzMinibossInstance extends AbstractBossInstance {
+public final class MgzMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
 
     private static final int ROUTINE_INIT = 0;
     private static final int ROUTINE_WAIT_CAMERA = 2;
@@ -896,7 +897,8 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         }
     }
 
-    private static class CeilingDebrisChild extends AbstractObjectInstance {
+    private static class CeilingDebrisChild extends AbstractObjectInstance
+            implements SpawnCoordinateZeroScalarArgsRewindRecreatable {
         private static final int PRIORITY_BUCKET = 4;
         private static final int GRAVITY = 0x18;
         private static final int LIFE = 0x5F;
@@ -976,16 +978,21 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         }
     }
 
-    private static final class DefeatFragmentChild extends AbstractObjectInstance {
+    private static final class DefeatFragmentChild extends AbstractObjectInstance
+            implements SpawnCoordinateZeroScalarArgsRewindRecreatable {
         private static final int PRIORITY_BUCKET = 5;
         private static final int GRAVITY = 0x38;
 
-        private final int mappingFrame;
+        private int mappingFrame;
         private int xFixed;
         private int yFixed;
         private int xVel;
         private int yVel;
         private int life = 0x5F;
+
+        private DefeatFragmentChild(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(), 0, 0, 0);
+        }
 
         private DefeatFragmentChild(int x, int y, int mappingFrame, int xVel, int yVel) {
             super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "MGZMinibossFragment");
@@ -1023,7 +1030,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
     }
 
     private static final class KnucklesSpikePlatformChild extends AbstractObjectInstance
-            implements SolidObjectProvider, SolidObjectListener {
+            implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
         private static final int PRIORITY_BUCKET = 5;
         private static final int HALF_WIDTH = 0x18;
         private static final int HALF_HEIGHT = 0x30;
@@ -1034,9 +1041,9 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         private static final int ROUTINE_SWING = 4;
         private static final int ROUTINE_WAIT_END = 6;
         private static final int ROUTINE_DESCEND = 8;
-        private final MgzMinibossInstance parent;
-        private final boolean mirrored;
-        private final int baseY;
+        private MgzMinibossInstance parent;
+        private boolean mirrored;
+        private int baseY;
         private int currentX;
         private int currentY;
         private int routine;
@@ -1049,6 +1056,15 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         private int mappingFrame;
         private int animTimer;
 
+        private KnucklesSpikePlatformChild(ObjectSpawn spawn) {
+            super(spawn, "MgzKnucklesSpikePlatform");
+            this.parent = null;
+            this.mirrored = spawn.subtype() != 0;
+            this.currentX = spawn.x();
+            this.currentY = spawn.y();
+            this.baseY = spawn.y();
+        }
+
         private KnucklesSpikePlatformChild(MgzMinibossInstance parent, boolean mirrored, int cameraX, int cameraY) {
             super(new ObjectSpawn(parent.state.x, parent.state.y, 0, 0, mirrored ? 1 : 0, false, 0),
                     "MgzKnucklesSpikePlatform");
@@ -1059,6 +1075,18 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
             this.baseY = currentY;
             this.routine = ROUTINE_RISE;
             this.timer = 0x0F;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            MgzMinibossInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                    ctx, MgzMinibossInstance.class);
+            if (liveParent == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            boolean capturedMirrored = spawn != null && spawn.subtype() != 0;
+            return new KnucklesSpikePlatformChild(liveParent, capturedMirrored, 0, 0);
         }
 
         @Override
@@ -1192,8 +1220,12 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         }
     }
 
-    static final class MgzBossCameraScrollHelper extends AbstractObjectInstance {
-        private final int targetX;
+    static final class MgzBossCameraScrollHelper extends AbstractObjectInstance implements SpawnRewindRecreatable {
+        private int targetX;
+
+        private MgzBossCameraScrollHelper(ObjectSpawn spawn) {
+            this(spawn.x());
+        }
 
         MgzBossCameraScrollHelper(int targetX) {
             super(new ObjectSpawn(targetX, 0, 0, 0, 0, false, 0), "MgzBossCameraScrollHelper");

@@ -33,8 +33,8 @@ public class Sonic1BuzzBomberMissileDissolveInstance extends AbstractObjectInsta
     // Total frames in dissolve animation
     private static final int TOTAL_FRAMES = 4;
 
-    private final int currentX;
-    private final int currentY;
+    private int currentX;
+    private int currentY;
     private int animFrame;
     private int frameTimer;
 

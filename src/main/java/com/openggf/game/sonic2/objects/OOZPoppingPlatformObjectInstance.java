@@ -13,6 +13,8 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -36,7 +38,7 @@ import java.util.List;
  * </table>
  */
 public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // ========================================================================
     // ROM Constants
@@ -127,6 +129,11 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         this.mode = isPlayerTriggered ? Mode.WAIT_FOR_PLAYER : Mode.POP_PHYSICS;
 
         updateDynamicSpawn(x, currentY);
+    }
+
+    @Override
+    public OOZPoppingPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new OOZPoppingPlatformObjectInstance(ctx.spawn(), "OOZPoppingPform");
     }
 
     private void ensureFlameChildSpawned() {

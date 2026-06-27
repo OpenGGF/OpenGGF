@@ -88,7 +88,12 @@ class TestSonic1MonitorObjectInstance {
         when(player.getCentreX()).thenReturn((short) 0x0248);
         when(player.getCentreY()).thenReturn((short) 0x0330);
 
+        // ROM ReactToItem (the touch pass) only bounces the player and queues the
+        // break; the FindFreeObj spawns of the PowerUp + ExplosionItem happen in the
+        // monitor's own routine 4 (Mon_BreakOpen), which the engine runs from
+        // update(). docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:181-198.
         monitor.onTouchResponse(player, new TouchResponseResult(0x46, 0x0E, 0x0E, TouchCategory.SPECIAL), 0);
+        monitor.update(0, player);
 
         AbstractObjectInstance powerUp = findByObjectId(manager.getActiveObjects(), 0x2E);
         AbstractObjectInstance explosion = findByObjectId(manager.getActiveObjects(), 0x27);

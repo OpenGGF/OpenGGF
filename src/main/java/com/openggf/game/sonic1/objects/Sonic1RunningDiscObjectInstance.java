@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -38,7 +39,7 @@ import java.util.List;
  * <p>
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/67 Running Disc.asm
  */
-public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance {
+public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     // From disassembly: move.b #4,obRender(a0) — render flags (screen-relative coords)
     // From disassembly: move.b #4,obPriority(a0)
@@ -64,17 +65,17 @@ public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance {
     private static final int SMALL_RADIUS = 0x38;
 
     // disc_origX = objoff_32, disc_origY = objoff_30
-    private final int origX;
-    private final int origY;
+    private int origX;
+    private int origY;
 
     // disc_spot_distance = objoff_34: radius for spot orbit (in 8.8 fixed: shifted left 8)
-    private final int spotDistance;
+    private int spotDistance;
 
     // disc_radius = objoff_38: detection radius for attaching Sonic
-    private final int detectionRadius;
+    private int detectionRadius;
 
     // objoff_36: angular speed (16-bit, added to angle word each frame)
-    private final int angularSpeed;
+    private int angularSpeed;
 
     // 16-bit angle accumulator (high byte used for CalcSine index)
     // Initialized from obAngle which is set from obStatus bits 0-1

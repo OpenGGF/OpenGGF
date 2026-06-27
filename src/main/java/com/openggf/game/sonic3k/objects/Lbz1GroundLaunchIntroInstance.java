@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.managers.SpindashDustController;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -26,7 +27,8 @@ import java.util.List;
  * then applies the upward spring launch and releases control once y_pos rises
  * above {@code $05C0}.
  */
-public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance {
+public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final int PRE_LAUNCH_DELAY_FRAMES = 30;
     private static final int RELEASE_Y = 0x05C0;
     private static final short LAUNCH_Y_SPEED = (short) -0x0B00;

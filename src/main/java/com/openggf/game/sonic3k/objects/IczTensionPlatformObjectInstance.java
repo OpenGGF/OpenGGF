@@ -14,11 +14,15 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -34,7 +38,7 @@ import java.util.List;
  * vertical response before its inline {@code SolidObjectTop} call.
  */
 public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final String PLATFORM_ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS_MISC2;
     private static final String SUPPORT_ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
@@ -63,9 +67,9 @@ public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
     private static final int FAR_DISTANCE = 0x50;
     private static final int FAR_REBOUND_Y_VELOCITY = -0x0100;
 
-    private final int x;
-    private final int baseY;
-    private final boolean hFlip;
+    private int x;
+    private int baseY;
+    private boolean hFlip;
 
     private int y;
     private int ySub;
@@ -318,12 +322,12 @@ public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
         return value >= 0x8000 ? value - 0x10000 : value;
     }
 
-    public static final class SupportChild extends AbstractObjectInstance {
+    public static final class SupportChild extends AbstractObjectInstance implements RewindRecreatable {
         @RewindTransient(reason = "Structural parent pointer; support positions are derived from live parent state.")
         private final IczTensionPlatformObjectInstance parent;
-        private final int x;
-        private final int y;
-        private final boolean hFlip;
+        private int x;
+        private int y;
+        private boolean hFlip;
 
         private SupportChild(IczTensionPlatformObjectInstance parent, int x, int y, boolean hFlip) {
             super(new ObjectSpawn(x, y, OBJECT_ID, 0, hFlip ? 1 : 0, false, y),
@@ -332,6 +336,20 @@ public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
             this.x = x;
             this.y = y;
             this.hFlip = hFlip;
+        }
+
+        @Override
+        public SupportChild recreateForRewind(RewindRecreateContext ctx) {
+            IczTensionPlatformObjectInstance liveParent =
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, IczTensionPlatformObjectInstance.class);
+            if (liveParent == null) {
+                return null;
+            }
+            ObjectSpawn spawn = ctx.spawn();
+            int restoredX = spawn != null ? spawn.x() : liveParent.x;
+            int restoredY = spawn != null ? spawn.y() : liveParent.baseY;
+            boolean restoredHFlip = spawn != null && (spawn.renderFlags() & 0x01) != 0;
+            return new SupportChild(liveParent, restoredX, restoredY, restoredHFlip);
         }
 
         @Override

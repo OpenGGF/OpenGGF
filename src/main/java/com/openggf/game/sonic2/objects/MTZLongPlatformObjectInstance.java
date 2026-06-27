@@ -17,6 +17,8 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpritePieceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -57,7 +59,7 @@ import java.util.List;
  * Bit 7 of initial subtype triggers child cog spawn via AllocateObjectAfterCurrent.
  */
 public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // Obj65_Properties table (s2.asm line 52362)
     // {width_pixels, y_radius, movementData, childSubtype}
@@ -143,6 +145,11 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     public MTZLongPlatformObjectInstance(ObjectSpawn spawn) {
         super(spawn, "MTZLongPlatform");
         init();
+    }
+
+    @Override
+    public MTZLongPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MTZLongPlatformObjectInstance(ctx.spawn());
     }
 
     @Override

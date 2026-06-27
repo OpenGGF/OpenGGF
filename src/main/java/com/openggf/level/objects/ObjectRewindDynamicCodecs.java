@@ -121,6 +121,8 @@ public final class ObjectRewindDynamicCodecs {
      *   <li>{@code (ObjectSpawn, ParentType)} — spawn plus a live parent</li>
      *   <li>{@code (ObjectSpawn, ParentType, int)} — spawn, a live parent, and a
      *       harmless zero placeholder</li>
+     *   <li>{@code (ObjectSpawn, ParentType, int, int)} — spawn, a live parent, and
+     *       harmless zero offset placeholders</li>
      *   <li>{@code (ObjectSpawn, ParentType, int, int, int)} — spawn, a live parent,
      *       and harmless zero coordinate/index placeholders</li>
      *   <li>{@code (ObjectSpawn, int, int, ParentType)} — spawn, coordinate
@@ -252,6 +254,12 @@ public final class ObjectRewindDynamicCodecs {
                 constructSpawnParentIntProbe(cls, spawn, ctx);
         if (spawnParentIntProbe != null) {
             return spawnParentIntProbe;
+        }
+
+        AbstractObjectInstance spawnParentIntIntProbe =
+                constructSpawnParentIntIntProbe(cls, spawn, ctx);
+        if (spawnParentIntIntProbe != null) {
+            return spawnParentIntIntProbe;
         }
 
         AbstractObjectInstance spawnParentIntIntIntProbe =
@@ -386,6 +394,32 @@ public final class ObjectRewindDynamicCodecs {
                     (Constructor<? extends AbstractObjectInstance>) rawCtor;
             ctor.setAccessible(true);
             return invokeProbeCtor(cls, ctor, ctx, spawn, parent, 0);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructSpawnParentIntIntProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            ObjectSpawn spawn,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 4
+                    || params[0] != ObjectSpawn.class
+                    || !ObjectInstance.class.isAssignableFrom(params[1])
+                    || params[2] != int.class
+                    || params[3] != int.class) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[1], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, spawn, parent, 0, 0);
         }
         return null;
     }

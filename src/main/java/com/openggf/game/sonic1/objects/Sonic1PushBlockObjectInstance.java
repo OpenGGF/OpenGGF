@@ -111,14 +111,14 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
     private int y;
 
     // Saved spawn position (objoff_34, objoff_36) for reset
-    private final int spawnX;
-    private final int spawnY;
+    private int spawnX;
+    private int spawnY;
 
     // Active width from PushB_Var (obActWid)
-    private final int activeWidth;
+    private int activeWidth;
 
     // Mapping frame (0=single, 1=four)
-    private final int frameIndex;
+    private int frameIndex;
 
     // Routine state (0=init, 2=active, 4=offscreen/reset)
     private int routine;

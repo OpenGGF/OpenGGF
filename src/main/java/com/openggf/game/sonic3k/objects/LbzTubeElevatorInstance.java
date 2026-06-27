@@ -3,14 +3,19 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
@@ -28,7 +33,8 @@ import java.util.List;
  * reuses {@code AutoTunnel_GetPath}; path data comes from
  * {@link AutomaticTunnelObjectInstance#PATHS}.
  */
-public final class LbzTubeElevatorInstance extends AbstractObjectInstance implements SolidObjectProvider {
+public final class LbzTubeElevatorInstance extends AbstractObjectInstance
+        implements SolidObjectProvider, SpawnRewindRecreatable {
     private static final int WIDTH_PIXELS = 0x18;
     private static final int HEIGHT_PIXELS = 0x30;
     private static final int SOLID_SIDE_PADDING = 0x0B;
@@ -70,7 +76,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance implem
 
     private final PlayerTubeState p1 = new PlayerTubeState();
     private final PlayerTubeState p2 = new PlayerTubeState();
-    private final boolean closedOnly;
+    private boolean closedOnly;
 
     private int x;
     private int y;
@@ -92,7 +98,8 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance implem
     private int mappingFrame;
     private int angle;
     private int endSpinTimer;
-    private OverlayChild overlayChild;
+    @RewindTransient(reason = "structural overlay child relinked during generic graph recreate")
+    private transient OverlayChild overlayChild;
 
     public LbzTubeElevatorInstance(ObjectSpawn spawn) {
         super(spawn, "LBZTubeElevator");
@@ -163,6 +170,10 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance implem
             return;
         }
         overlayChild = spawnChild(() -> new OverlayChild(this));
+    }
+
+    void rewindAttachOverlayChild(OverlayChild child) {
+        overlayChild = child;
     }
 
     private void updateAction(PlayableEntity playerEntity) {
@@ -533,12 +544,29 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance implem
         int phase;
     }
 
-    private static final class OverlayChild extends AbstractObjectInstance {
-        private final LbzTubeElevatorInstance parent;
+    private static final class OverlayChild extends AbstractObjectInstance implements RewindRecreatable {
+        private LbzTubeElevatorInstance parent;
+
+        private OverlayChild(ObjectSpawn spawn) {
+            super(spawn, "LBZTubeElevatorOverlay");
+            this.parent = null;
+        }
 
         private OverlayChild(LbzTubeElevatorInstance parent) {
             super(parent.getSpawn(), "LBZTubeElevatorOverlay");
             this.parent = parent;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            LbzTubeElevatorInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                    ctx, LbzTubeElevatorInstance.class);
+            if (liveParent == null) {
+                return null;
+            }
+            OverlayChild restored = new OverlayChild(liveParent);
+            liveParent.rewindAttachOverlayChild(restored);
+            return restored;
         }
 
         @Override

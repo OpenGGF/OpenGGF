@@ -140,13 +140,13 @@ public final class RewindPolicyRegistry {
                 && hasNoStateFields(declaredType)) {
             return Optional.of(RewindFieldPolicy.TRANSIENT);
         }
-        if (isFinalStructuralList(field)) {
-            return Optional.of(RewindFieldPolicy.TRANSIENT);
-        }
 
         RewindFieldPolicy defaultObjectPolicy = DefaultObjectRewindPolicies.policyFor(field);
         if (defaultObjectPolicy != null) {
             return Optional.of(defaultObjectPolicy);
+        }
+        if (isFinalStructuralList(field)) {
+            return Optional.of(RewindFieldPolicy.TRANSIENT);
         }
 
         return Optional.empty();

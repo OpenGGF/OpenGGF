@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -17,7 +18,7 @@ import java.util.List;
  * child sprites created by {@code ChildObjDat_8946C} have collision flags 0
  * and are therefore visual-only for gameplay and headless trace replay.
  */
-public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance {
+public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE = 0x0D;
     private static final int PRIORITY_BUCKET = 5;

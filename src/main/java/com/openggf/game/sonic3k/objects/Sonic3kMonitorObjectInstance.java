@@ -17,6 +17,9 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -54,7 +57,7 @@ import java.util.logging.Logger;
  */
 public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         implements TouchResponseProvider, TouchResponseListener,
-        SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
+        SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kMonitorObjectInstance.class.getName());
 
     // From disassembly: solid params d1=$19, d2=$10, d3=$11
@@ -93,7 +96,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     private static final int P2_CONTACT_MASK = P2_STANDING | P2_PUSHING;
     private static final int PLAYER_CONTACT_MASK = P1_CONTACT_MASK | P2_CONTACT_MASK;
 
-    private final MonitorType type;
+    private MonitorType type;
     private ObjectAnimationState animationState;
     private boolean broken;
     private int mappingFrame;
@@ -115,7 +118,13 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     public Sonic3kMonitorObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Monitor");
         this.type = MonitorType.fromSubtype(spawn.subtype());
+        this.animationState = new ObjectAnimationState(currentMonitorAnimations(), type.animId, 0);
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+    }
+
+    @Override
+    public Sonic3kMonitorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic3kMonitorObjectInstance(ctx.spawn());
     }
 
     /**
@@ -189,15 +198,17 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         // Initialize animation: animId = subtype
         int initialAnim = type.animId;
         int initialFrame = broken ? BROKEN_FRAME : 0;
-        ObjectRenderManager renderManager = services().renderManager();
-        this.animationState = new ObjectAnimationState(
-                renderManager != null ? renderManager.getMonitorAnimations() : null,
-                initialAnim,
-                initialFrame);
+        this.animationState = new ObjectAnimationState(currentMonitorAnimations(), initialAnim, initialFrame);
         this.mappingFrame = initialFrame;
         if (broken) {
             effectApplied = true;
         }
+    }
+
+    private com.openggf.sprites.animation.SpriteAnimationSet currentMonitorAnimations() {
+        var ctx = tryServices();
+        ObjectRenderManager renderManager = ctx != null ? ctx.renderManager() : null;
+        return renderManager != null ? renderManager.getMonitorAnimations() : null;
     }
 
     @Override
@@ -720,12 +731,23 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         }
     }
 
-    private static final class MonitorContentsSlot extends AbstractObjectInstance {
+    private static final class MonitorContentsSlot extends AbstractObjectInstance implements RewindRecreatable {
         private final Sonic3kMonitorObjectInstance parent;
 
         private MonitorContentsSlot(Sonic3kMonitorObjectInstance parent, ObjectSpawn spawn) {
             super(spawn, "MonitorContents");
             this.parent = parent;
+        }
+
+        private MonitorContentsSlot(Sonic3kMonitorObjectInstance parent) {
+            this(parent, parent.buildSpawnAt(parent.posX(), parent.posY()));
+        }
+
+        @Override
+        public MonitorContentsSlot recreateForRewind(RewindRecreateContext ctx) {
+            Sonic3kMonitorObjectInstance restoredParent =
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, Sonic3kMonitorObjectInstance.class);
+            return restoredParent == null ? null : new MonitorContentsSlot(restoredParent, ctx.spawn());
         }
 
         @Override

@@ -14,6 +14,8 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -48,7 +50,7 @@ import java.util.logging.Logger;
  * </table>
  */
 public class OOZLauncherObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(OOZLauncherObjectInstance.class.getName());
 
     // ========================================================================
@@ -104,7 +106,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     // State
     // ========================================================================
 
-    private final boolean isVertical;    // subtype == 0 → vertical (launch right)
+    private boolean isVertical;    // subtype == 0 → vertical (launch right)
     private boolean broken = false;
     private boolean launcherActive = false;
 
@@ -117,6 +119,11 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         super(spawn, name);
         this.isVertical = (spawn.subtype() & 0xFF) == 0;
         this.solidParams = new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HEIGHT_D2, SOLID_HALF_HEIGHT);
+    }
+
+    @Override
+    public OOZLauncherObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new OOZLauncherObjectInstance(ctx.spawn(), "OOZLauncher");
     }
 
     @Override
@@ -505,7 +512,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
      * Fragment piece spawned when the launcher block breaks.
      * Follows ballistic trajectory with gravity (ROM: Obj3D_Fragment, routine 4).
      */
-    public static class LauncherFragmentInstance extends AbstractObjectInstance {
+    public static class LauncherFragmentInstance extends AbstractObjectInstance implements RewindRecreatable {
 
         private static final int GRAVITY = 0x18;  // ROM: addi.w #$18,y_vel(a0)
 
@@ -531,6 +538,15 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             this.piece = piece;
             this.renderer = renderer;
             this.pieceList = piece != null ? List.of(piece) : List.of();
+        }
+
+        public LauncherFragmentInstance(int x, int y, int velX, int velY) {
+            this(x, y, velX, velY, null, null);
+        }
+
+        @Override
+        public LauncherFragmentInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new LauncherFragmentInstance(ctx.spawn().x(), ctx.spawn().y(), 0, 0, null, null);
         }
 
         @Override

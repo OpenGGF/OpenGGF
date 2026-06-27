@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -20,7 +21,7 @@ import java.util.List;
  * <p>Primary disassembly references:
  * Obj_AIZHollowTree / sub_1F7CE / AIZTree_SetPlayerPos (sonic3k.asm:43601-43820).
  */
-public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
+public class AizHollowTreeObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int TREE_CAPTURE_MIN_X = 0x2C99;
     private static final int TREE_CAPTURE_MAX_X = 0x2D66;
 
@@ -45,8 +46,8 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
     // ROM global event word used by Obj_AIZ1TreeRevealControl and AIZ1_ScreenEvent.
     private static int eventsFg4;
 
-    private final int treeX;
-    private final int treeY;
+    private int treeX;
+    private int treeY;
     private final int[] progress = new int[2];
     private final boolean[] riding = new boolean[2];
     private final boolean[] releaseObjectControlPending = new boolean[2];

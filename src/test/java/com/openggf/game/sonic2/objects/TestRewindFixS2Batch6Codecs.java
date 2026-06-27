@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SplashObjectInstance;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -15,14 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>Batch-6 adds parent/sibling relink for the HTZ seesaw ball
  * (relinked to its placed parent seesaw) and the CPZ boss container extend
  * (relinked to its live boss + container parents). The CNZ slot-machine ring
- * prize and MTZ steam puff now restore through generic recreate.
+ * prize, MTZ steam puff, and shared water splash now restore through generic
+ * recreate.
  *
- * <p>The two cosmetic transient children evaluated in this batch —
- * {@code SuperSonicStarsObjectInstance} (Super Sonic sparkle, re-emitted each frame
- * from the live player) and {@code com.openggf.level.objects.SplashObjectInstance}
- * (water splash, re-emitted on water entry/exit) — are intentionally accept-drop and
- * are documented in {@code docs/KNOWN_DISCREPANCIES.md}; they are deliberately
- * not required to have a recreate path here.
+ * <p>The remaining cosmetic transient child evaluated in this batch,
+ * {@code SuperSonicStarsObjectInstance}, is still intentionally accept-drop and
+ * documented in {@code docs/KNOWN_DISCREPANCIES.md}.
  */
 class TestRewindFixS2Batch6Codecs {
 
@@ -32,7 +31,8 @@ class TestRewindFixS2Batch6Codecs {
                 CPZBossContainerExtend.class,
                 SeesawBallObjectInstance.class,
                 SteamPuffObjectInstance.class,
-                RingPrizeObjectInstance.class);
+                RingPrizeObjectInstance.class,
+                SplashObjectInstance.class);
 
         for (Class<?> type : covered) {
             assertTrue(RewindRecreatable.class.isAssignableFrom(type),

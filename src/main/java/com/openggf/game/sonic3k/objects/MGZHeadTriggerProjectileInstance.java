@@ -60,7 +60,7 @@ public class MGZHeadTriggerProjectileInstance extends AbstractObjectInstance
     private int worldX;
     private int xSub;
     /** Y position is fixed — ROM {@code MoveSprite2} with y_vel = 0. */
-    private final int worldY;
+    private int worldY;
     /**
      * ROM x_vel in 16:8 fixed-point subpixels (e.g. $400 = 4px/frame).
      * Non-final so the generic field capturer reapplies it after a rewind

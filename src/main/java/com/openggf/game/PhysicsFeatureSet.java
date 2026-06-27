@@ -292,6 +292,17 @@ public record PhysicsFeatureSet(
          */
         boolean useScreenYWrapValueForVisibility,
         /**
+         * Whether player control paths apply the active vertical-wrap mask to
+         * {@code y_pos} after movement/control.
+         * <p>S2: {@code true} — {@code Obj01_Control} masks {@code y_pos} with
+         * {@code $7FF} when the vertical-wrap loop is active.
+         * <p>S3K: {@code true} — player control masks with
+         * {@code Screen_Y_wrap_value}.
+         * <p>S1: {@code false}. Its LZ3/SBZ2 wrap is handled at camera
+         * boundary crossing instead of every control frame.
+         */
+        boolean playerControlAppliesVerticalWrapMask,
+        /**
          * Whether the sidekick CPU despawn check fires on an object-id mismatch
          * (Tails moves between two distinct object types while off-screen).
          * <p>S2: {@code true} — {@code TailsCPU_CheckDespawn}
@@ -1000,7 +1011,33 @@ public record PhysicsFeatureSet(
          * ordering and trace baselines are unaffected; gating keeps the existing
          * same-frame unseat behavior for those games by construction).
          */
-        boolean solidObjectKeepsOnObjWhenJumpedOffSameFrame
+        boolean solidObjectKeepsOnObjWhenJumpedOffSameFrame,
+        /**
+         * Selects which game-state flag gates removal of the 64px right
+         * level-boundary extension in {@code Sonic_LevelBound} (the engine's
+         * {@code doLevelBoundary} {@code strict} term).
+         *
+         * <p>S1: {@code true}. ROM {@code Sonic_LevelBound} gates the
+         * {@code addi.w #64,d0} on {@code tst.b (f_lockscreen).w}
+         * (s1disasm/_incObj/01 Sonic.asm:1047-1049). {@code f_lockscreen} is a
+         * persistent screen-lock flag set at boss spawn by the dynamic level
+         * events ({@code move.b #1,(f_lockscreen).w}, e.g. {@code DLE_FZ_Boss}
+         * s1disasm/_inc/DynamicLevelEvents.asm:777) and cleared ONLY by the Egg
+         * Prison (s1disasm/_incObj/3E Prison Capsule.asm:97) or the LZ boss
+         * (s1disasm/_incObj/77 Boss - LZ Main.asm:288). It therefore stays set
+         * through and after boss defeat in the Final Zone (which has no Egg
+         * Prison), so the engine consumes {@code GameStateManager.isScreenLocked()}.
+         *
+         * <p>S2: {@code false}. ROM {@code Sonic_LevelBound} gates the same
+         * {@code addi.w #$40,d0} on {@code tst.b (Current_Boss_ID).w}
+         * (s2.asm:37247-37250) — i.e. boss-alive, cleared on boss defeat. The
+         * engine consumes {@code isBossFightActive()} for S2.
+         *
+         * <p>S3K: {@code false} (irrelevant). {@code levelBoundaryRightStrict}
+         * is {@code true} for S3K, so the +64 extension is never added and this
+         * gate is never consulted.
+         */
+        boolean levelBoundaryLockUsesScreenLockFlag
 ) {
     /** S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp directly modifies v_lookshift). */
     public static final short LOOK_SCROLL_DELAY_NONE = 0;
@@ -1174,6 +1211,7 @@ public record PhysicsFeatureSet(
                     source.sidekickPanicTreatsPinballModeAsSpindashFlag(),
                     source.sidekickSpawningRequiresGroundedLeader(),
                     source.useScreenYWrapValueForVisibility(),
+                    source.playerControlAppliesVerticalWrapMask(),
                     source.sidekickDespawnUsesObjectIdMismatch(),
                     source.sidekickFlyLandStatusBlockerMask(),
                     source.sidekickFlyLandRequiresLeaderAlive(),
@@ -1215,7 +1253,8 @@ public record PhysicsFeatureSet(
                     source.speedShoesTimerDecimation(),
                     source.mouthBubbleTimerBias(),
                     source.mouthBubbleRiseVelocity(),
-                    source.solidObjectKeepsOnObjWhenJumpedOffSameFrame()
+                    source.solidObjectKeepsOnObjWhenJumpedOffSameFrame(),
+                    source.levelBoundaryLockUsesScreenLockFlag()
             );
         }
     }
@@ -1240,6 +1279,7 @@ public record PhysicsFeatureSet(
             false /* sidekickDelayedJumpPressUsesHistoryEdge: S1 has no Tails CPU */,
             false /* sidekickPanicTreatsPinballModeAsSpindashFlag: S1 has no Tails CPU */,
             true /* sidekickSpawningRequiresGroundedLeader: S1 has no Tails CPU */, false /* useScreenYWrapValueForVisibility: S1 keeps 32-margin */,
+            false /* playerControlAppliesVerticalWrapMask: S1 LZ3/SBZ2 masks y_pos only on camera wrap crossing */,
             true /* sidekickDespawnUsesObjectIdMismatch: S1 has no Tails CPU; symmetric with S2 */,
             SIDEKICK_FLY_LAND_BLOCKERS_NONE, false /* sidekickFlyLandRequiresLeaderAlive: S1 has no CPU sidekick */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
@@ -1277,7 +1317,8 @@ public record PhysicsFeatureSet(
             1 /* speedShoesTimerDecimation: S1 per-frame word timer */,
             0 /* mouthBubbleTimerBias: S1 LZ Obj64 air bubbles use a distinct bubble-maker structure with no (RandomNumber&$F)+8 mouth-bubble delay */,
             -0x88 /* mouthBubbleRiseVelocity: S1 Obj0A small bubbles use y_vel=-$88 with SpeedToPos */,
-            false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S1 unaffected (no CPU sidekick; existing same-frame unseat ordering preserved by gating) */);
+            false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S1 unaffected (no CPU sidekick; existing same-frame unseat ordering preserved by gating) */,
+            true /* levelBoundaryLockUsesScreenLockFlag: S1 Sonic_LevelBound gates the +64 right-extension on f_lockscreen (s1disasm/_incObj/01 Sonic.asm:1047-1049), which persists past boss defeat (FZ has no Egg Prison) */);
 
     /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
      *  preserves high ground speed on input (s2.asm:36610-36616),
@@ -1305,6 +1346,7 @@ public record PhysicsFeatureSet(
             false /* sidekickDelayedJumpPressUsesHistoryEdge: preserve S2 delayed low-byte press replay baseline */,
             true /* sidekickPanicTreatsPinballModeAsSpindashFlag: S2 TailsCPU_Panic reads spin_dash_flag, but the engine's S2 rolling-only/pinball representation must feed that branch for the $7F release cadence; HTZ2 f1023 exits panic at Level_frame_counter $0400 while inertia remains nonzero (s2.asm:39458-39491). */,
             true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
+            true /* playerControlAppliesVerticalWrapMask: S2 Obj01_Control applies the active $7FF y_pos mask in vertical-wrap loops */,
             true /* sidekickDespawnUsesObjectIdMismatch: S2 cmp.b id(a3),d0 in TailsCPU_CheckDespawn (s2.asm:39067) */,
             SIDEKICK_FLY_LAND_BLOCKERS_S2, false /* sidekickFlyLandRequiresLeaderAlive: S2 TailsCPU_Flying_Part2 has no Sonic-routine check */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
@@ -1342,7 +1384,8 @@ public record PhysicsFeatureSet(
             1 /* speedShoesTimerDecimation: S2 per-frame word timer (s2.asm:36008-36025) */,
             8 /* mouthBubbleTimerBias: S2 Obj0A_Animate next mouth-bubble delay = (RandomNumber&$F)+8 (s2.asm:42201-42204) */,
             -0x88 /* mouthBubbleRiseVelocity: S2 Obj0A small bubbles use y_vel=-$88 with SpeedToPos (s2.asm:41899,41941-41942) */,
-            false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S2 unaffected; existing same-frame unseat ordering preserved by gating */);
+            false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S2 unaffected; existing same-frame unseat ordering preserved by gating */,
+            false /* levelBoundaryLockUsesScreenLockFlag: S2 Sonic_LevelBound gates the +$40 right-extension on Current_Boss_ID (s2.asm:37247-37250), i.e. boss-alive; engine uses isBossFightActive() */);
 
     /** Sonic 3&K: spindash with same speed table as S2, dual collision paths, delayed look scroll,
      *  preserves high ground speed on input, elemental shields,
@@ -1372,6 +1415,7 @@ public record PhysicsFeatureSet(
             true /* sidekickDelayedJumpPressUsesHistoryEdge: HCZ f2893/f2894 shows held A/B/C carried while low-byte jump press clears on the next delayed sample */,
             true /* sidekickPanicTreatsPinballModeAsSpindashFlag: S3K AutoSpin is represented by engine pinballMode, while ROM sub_13EF0 tests spin_dash_flag (sonic3k.asm:26858) */,
             false, true /* useScreenYWrapValueForVisibility: S3K Render_Sprites height_pixels=0x18 */,
+            true /* playerControlAppliesVerticalWrapMask: S3K player control applies Screen_Y_wrap_value */,
             false /* sidekickDespawnUsesObjectIdMismatch: S3K cmp.w (a3),d0 in sub_13EFC (sonic3k.asm:26823) compares routine-pointer high word; all gameplay objects share the same high word so the check almost never fires */,
             SIDEKICK_FLY_LAND_BLOCKERS_S3K, true /* sidekickFlyLandRequiresLeaderAlive: sonic3k.asm:26629 cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42 */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
@@ -1409,7 +1453,8 @@ public record PhysicsFeatureSet(
             8 /* speedShoesTimerDecimation: S3K byte timer decremented every 8th level frame (sonic3k.asm:22072-22078; init 40818) */,
             8 /* mouthBubbleTimerBias: S3K shares the S2 Obj0A mouth-bubble cadence (RandomNumber&$F)+8 */,
             -0x100 /* mouthBubbleRiseVelocity: S3K AirCountdown uses y_vel=-$100 with MoveSprite2 (sonic3k.asm:33312,33347) */,
-            true /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S3K SolidObjectFull runs once/object/frame. A land-and-jump-off frame keeps Status_OnObj|Status_InAir (RideObject_SetRide bset Status_OnObj sonic3k.asm:42033; Tails_Jump bset Status_InAir without clearing OnObj sonic3k.asm:28553-28554); the airborne-rider unseat (loc_1DC98 41016-41035 / loc_1DCF0 41066-41084) fires only on the NEXT frame. AIZ1 f2590 Tails-on-Spikes: ROM 0x0A, engine was 0x02. */);
+            true /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S3K SolidObjectFull runs once/object/frame. A land-and-jump-off frame keeps Status_OnObj|Status_InAir (RideObject_SetRide bset Status_OnObj sonic3k.asm:42033; Tails_Jump bset Status_InAir without clearing OnObj sonic3k.asm:28553-28554); the airborne-rider unseat (loc_1DC98 41016-41035 / loc_1DCF0 41066-41084) fires only on the NEXT frame. AIZ1 f2590 Tails-on-Spikes: ROM 0x0A, engine was 0x02. */,
+            false /* levelBoundaryLockUsesScreenLockFlag: S3K has levelBoundaryRightStrict=true so the +64 extension is never added and this gate is never consulted */);
 
     /** Returns true when the game supports dual collision paths (primary/secondary). */
     public boolean hasDualCollisionPaths() {

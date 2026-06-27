@@ -16,11 +16,14 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
@@ -64,7 +67,8 @@ import java.util.logging.Logger;
  * Check_CollapsePlayerRelease (sonic3k.asm:45349).
  */
 public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
+        SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(CollapsingBridgeObjectInstance.class.getName());
 
@@ -1012,13 +1016,13 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
      * Each fragment renders a single mapping piece from the parent's fragment frame.
      * ROM: Obj_PlatformCollapseWait → Obj_PlatformCollapseFall
      */
-    public static class BridgeFragment extends AbstractFallingFragment {
+    public static class BridgeFragment extends AbstractFallingFragment implements RewindRecreatable {
 
-        private final int fragmentFrameIndex;
-        private final int pieceIndex;
-        private final String artKey;
-        private final boolean hFlip;
-        private final boolean highPriority;
+        private int fragmentFrameIndex;
+        private int pieceIndex;
+        private String artKey;
+        private boolean hFlip;
+        private boolean highPriority;
 
         public BridgeFragment(int parentX, int parentY,
                               int fragmentFrameIndex, int pieceIndex,
@@ -1031,6 +1035,20 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
             this.artKey = artKey;
             this.hFlip = hFlip;
             this.highPriority = highPriority;
+        }
+
+        private BridgeFragment() {
+            this(0, 0, 0, 0, 0, Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_MGZ, false, false);
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            boolean hFlip = spawn != null && (spawn.renderFlags() & 0x01) != 0;
+            int x = spawn != null ? spawn.x() : 0;
+            int y = spawn != null ? spawn.y() : 0;
+            return new BridgeFragment(
+                    x, y, 0, 0, 0, Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_MGZ, hFlip, false);
         }
 
         @Override
@@ -1057,12 +1075,12 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
      * initial velocity and falls with gravity ($18/frame, lighter than standard $38).
      * ROM: loc_20A56 — MoveSprite2 + manual gravity $18/frame
      */
-    public static class MgzStompDebris extends GravityDebrisChild {
+    public static class MgzStompDebris extends GravityDebrisChild implements RewindRecreatable {
 
-        private final int frameIndex;
-        private final int pieceIndex;
-        private final String artKey;
-        private final boolean hFlip;
+        private int frameIndex;
+        private int pieceIndex;
+        private String artKey;
+        private boolean hFlip;
 
         public MgzStompDebris(int parentX, int parentY,
                               int frameIndex, int pieceIndex,
@@ -1075,6 +1093,20 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
             this.pieceIndex = pieceIndex;
             this.artKey = artKey;
             this.hFlip = hFlip;
+        }
+
+        private MgzStompDebris() {
+            this(0, 0, 0, 0, 0, 0, Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_MGZ, false);
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            boolean hFlip = spawn != null && (spawn.renderFlags() & 0x01) != 0;
+            int x = spawn != null ? spawn.x() : 0;
+            int y = spawn != null ? spawn.y() : 0;
+            return new MgzStompDebris(
+                    x, y, 0, 0, 0, 0, Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_MGZ, hFlip);
         }
 
         @Override

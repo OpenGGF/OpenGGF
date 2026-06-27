@@ -177,13 +177,13 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     private int y;
 
     // Original Y position of main block (objoff_30 for sub-objects, spawn Y for main)
-    private final int origY;
+    private int origY;
 
     // Current Y offset from origY (objoff_32) - in subpixels for fall distance tracking
     private int yOffset;
 
     // Max fall distance for this instance (objoff_34)
-    private final int maxFallDistance;
+    private int maxFallDistance;
 
     // Y velocity (obVelY, 16-bit signed)
     private int yVelocity;
@@ -204,21 +204,21 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     private int waitTimer;
 
     // Block rendering: active width and mapping frame for the main block
-    private final int blockActiveWidth;
-    private final int blockFrame;
+    private int blockActiveWidth;
+    private int blockFrame;
 
     // Whether spikes have collision (only for wide/medium blocks, not when subtype $20)
-    private final boolean spikesHaveCollision;
+    private boolean spikesHaveCollision;
 
     // Spike sub-object Y position (follows block)
     private int spikeY;
 
     // Chain sub-object base Y and current Y (routine 8: dynamic chain frame)
-    private final int chainBaseY;
+    private int chainBaseY;
     private int chainY;
 
     // Ceiling sub-object Y (routine 6: static display)
-    private final int ceilingY;
+    private int ceilingY;
 
     // ROM: CStom_Main's CStom_Loop runs with d1=3 -> 4 iterations. The first
     // iteration writes the main block into the object's own SST slot (a1=a0);

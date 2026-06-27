@@ -5,6 +5,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -31,7 +32,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  *  12: COOLDOWN      — Timer countdown, then high-speed escape
  *  14: CAMERA_EXPAND — Expand right camera boundary, delete when off-screen
  */
-public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance {
+public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implements SpawnRewindRecreatable {
 
     // State constants (routineSecondary, incremented by 2 matching ROM)
     private static final int STATE_ENTRY = 0;
@@ -438,8 +439,12 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance {
         services().playMusic(Sonic1Music.LZ.id);
 
         // ROM (Revision != 0): clr.b (f_lockscreen).w — unlock horizontal scrolling
-        // Clear the left boundary lock set at boss spawn, allowing free camera movement
+        // (s1disasm/_incObj/77 Boss - LZ Main.asm:288). Clear the left boundary
+        // lock set at boss spawn, allowing free camera movement, and release the
+        // persistent screen lock that Sonic_LevelBound consumes for its +64
+        // right-boundary extension gate.
         services().camera().setMinX((short) 0);
+        services().gameState().setScreenLocked(false);
 
         // ROM: bset #0,obStatus(a0) — face right
         state.renderFlags |= 1;

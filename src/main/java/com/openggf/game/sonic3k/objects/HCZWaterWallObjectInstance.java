@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -34,7 +35,7 @@ import java.util.logging.Logger;
  * Mappings: Map_HCZWaterWall, Map_HCZWaterWallDebris.
  * Art: ArtKosM_HCZGeyserHorz (0x390C02), ArtKosM_HCZGeyserVert (0x391394).
  */
-public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
+public class HCZWaterWallObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(HCZWaterWallObjectInstance.class.getName());
 
@@ -106,7 +107,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
     }
 
     // Instance state
-    private final boolean isHorizontal;
+    private boolean isHorizontal;
     private int x;
     private int y;
     private int timer;
@@ -618,7 +619,40 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
     }
 
     private static ObjectSpawn createChildSpawn(int x, int y) {
-        return new ObjectSpawn(x, y, 0x3B, 0, 4, false, 0);
+        return new ObjectSpawn(x, y, 0x3B, 0, 0, false, y);
+    }
+
+    private static ObjectSpawn createDebrisSpawn(int x, int y, int xVel, int yVel, int initialFrame) {
+        return new ObjectSpawn(x, y, 0x3B, debrisSubtype(xVel, yVel, initialFrame), 0, false, y);
+    }
+
+    private static int debrisSubtype(int xVel, int yVel, int initialFrame) {
+        for (int i = 0; i < HORZ_DEBRIS_TABLE.length; i++) {
+            int[] entry = HORZ_DEBRIS_TABLE[i];
+            if (entry[2] == xVel && entry[3] == yVel && initialFrame == 7 - i) {
+                return i;
+            }
+        }
+        for (int i = 0; i < VERT_DEBRIS_TABLE.length; i++) {
+            int[] entry = VERT_DEBRIS_TABLE[i];
+            if (entry[2] == xVel && entry[3] == yVel && initialFrame == i) {
+                return 0x80 | i;
+            }
+        }
+        return initialFrame & 7;
+    }
+
+    private static ObjectSpawn createSpraySpawn(int x, int y, int xVel, int yVel,
+            boolean useBubbleArt, int animId, int initialAnimTimer) {
+        int subtype = ((initialAnimTimer - 2) & 0x03)
+                | ((animId & 0x03) << 2)
+                | (useBubbleArt ? 0x40 : 0)
+                | (yVel < 0 ? 0x80 : 0);
+        return new ObjectSpawn(x, y, 0x3B, subtype, 0, false, xVel);
+    }
+
+    private static int signedRawYWord(ObjectSpawn spawn) {
+        return (short) spawn.rawYWord();
     }
 
     private static void appendDebugBox(List<GLCommand> commands, int cx, int cy,
@@ -653,7 +687,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
      * When y &gt; Water_level: stops y_vel, halves x_vel twice, spawns splash,
      * then continues sinking until it goes off-screen.
      */
-    static class WaterWallDebrisChild extends AbstractObjectInstance {
+    static class WaterWallDebrisChild extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
         private static final int GRAVITY = 0x38;
         private static final int SLOW_GRAVITY = 8;
@@ -665,14 +699,26 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
         private int animTimer = ANIM_RESET_TIMER;
         private DebrisState state = DebrisState.FLYING;
         private boolean splashSpawned;
-        private final String parentArtKey;
 
         WaterWallDebrisChild(int x, int y, int xVel, int yVel,
                 int initialFrame, String parentArtKey) {
-            super(createChildSpawn(x, y), "WaterWallDebris");
+            this(createDebrisSpawn(x, y, xVel, yVel, initialFrame));
+        }
+
+        private WaterWallDebrisChild(ObjectSpawn spawn) {
+            super(spawn, "WaterWallDebris");
+            int subtype = spawn.subtype();
+            boolean vertical = (subtype & 0x80) != 0;
+            int tableIndex = subtype & 7;
+            int[] entry = vertical
+                    ? VERT_DEBRIS_TABLE[tableIndex]
+                    : HORZ_DEBRIS_TABLE[tableIndex];
+            int x = spawn.x();
+            int y = spawn.y();
+            int xVel = entry[2];
+            int yVel = entry[3];
             this.motion = new SubpixelMotion.State(x, y, 0, 0, xVel, yVel);
-            this.mappingFrame = initialFrame & 7;
-            this.parentArtKey = parentArtKey;
+            this.mappingFrame = vertical ? tableIndex : 7 - tableIndex;
         }
 
         @Override
@@ -716,8 +762,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
                 // Spawn water splash at water level
                 if (!splashSpawned) {
                     splashSpawned = true;
-                    WaterWallSplashChild splash = new WaterWallSplashChild(
-                            motion.x, waterLevel, parentArtKey);
+                    WaterWallSplashChild splash = new WaterWallSplashChild(motion.x, waterLevel);
                     spawnDynamicObject(splash);
                 }
 
@@ -771,7 +816,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
      * When y &gt; Water_level: snaps to water level, advances anim by 4,
      * transitions to surface animation. Deletes when anim ends.
      */
-    static class WaterWallSprayChild extends AbstractObjectInstance {
+    static class WaterWallSprayChild extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
         private static final int GRAVITY = 0x28;
 
@@ -782,18 +827,23 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
         private int animId;
         private int animTimer;
         private int animFrame;
-        private final boolean useBubbleArt;
-        private final String parentArtKey;
+        private boolean useBubbleArt;
         private int surfaceFrameCount;
 
         WaterWallSprayChild(int x, int y, int xVel, int yVel,
                 boolean useBubbleArt, int animId, String parentArtKey, int initialAnimTimer) {
-            super(createChildSpawn(x, y), "WaterWallSpray");
-            this.motion = new SubpixelMotion.State(x, y, 0, 0, xVel, yVel);
-            this.useBubbleArt = useBubbleArt;
-            this.animId = animId;
-            this.parentArtKey = parentArtKey;
-            this.animTimer = initialAnimTimer;
+            this(createSpraySpawn(x, y, xVel, yVel, useBubbleArt, animId, initialAnimTimer));
+        }
+
+        private WaterWallSprayChild(ObjectSpawn spawn) {
+            super(spawn, "WaterWallSpray");
+            int subtype = spawn.subtype();
+            int xVel = signedRawYWord(spawn);
+            int yVel = (subtype & 0x80) != 0 ? -0x700 : 0;
+            this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, xVel, yVel);
+            this.useBubbleArt = (subtype & 0x40) != 0;
+            this.animId = (subtype >> 2) & 0x03;
+            this.animTimer = 2 + (subtype & 0x03);
         }
 
         @Override
@@ -910,21 +960,27 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
      * ROM: loc_3023E - Uses Map_HCZWaterWall with ArtTile_HCZGeyser+$30, palette 1.
      * Animates through splash frames, then deletes.
      */
-    static class WaterWallSplashChild extends AbstractObjectInstance {
+    static class WaterWallSplashChild extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
         private static final int TOTAL_FRAMES = 8;
 
-        private final int x;
-        private final int y;
+        private int x;
+        private int y;
         private int animTimer = 3;
         private int totalFramesPlayed;
-        private final String parentArtKey;
 
         WaterWallSplashChild(int x, int y, String parentArtKey) {
-            super(createChildSpawn(x, y), "WaterWallSplash");
-            this.x = x;
-            this.y = y;
-            this.parentArtKey = parentArtKey;
+            this(createChildSpawn(x, y));
+        }
+
+        WaterWallSplashChild(int x, int y) {
+            this(createChildSpawn(x, y));
+        }
+
+        private WaterWallSplashChild(ObjectSpawn spawn) {
+            super(spawn, "WaterWallSplash");
+            this.x = spawn.x();
+            this.y = spawn.y();
         }
 
         @Override

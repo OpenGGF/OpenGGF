@@ -11,12 +11,18 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -30,7 +36,8 @@ import java.util.List;
  * The visible/solid pieces are child objects produced by
  * {@code CreateChild8_TreeListRepeated}; the root object only owns the cascade.
  */
-public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
+public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
 
     private static final int OBJECT_ID = 0xB3;
     private static final int NORMAL_SEGMENT_COUNT = 3;
@@ -52,9 +59,9 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
             {0x400, -0x300}, {-0x200, -0x200}, {0x200, -0x200}, {0, -0x100}
     };
 
-    private final int x;
-    private final int y;
-    private final int segmentCount;
+    private int x;
+    private int y;
+    private int segmentCount;
     private boolean spawnedSegments;
     private int screenShakeFrames;
     private boolean ownsScreenShakeFlag;
@@ -87,8 +94,8 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
         List<SegmentSpec> specs = new ArrayList<>(segmentCount);
         for (int i = 0; i < segmentCount; i++) {
             int subtype = i * SEGMENT_SUBTYPE_STEP;
-            int mappingFrame = subtype == 6 ? TOP_CAP_MAPPING_FRAME : NORMAL_MAPPING_FRAME;
-            specs.add(new SegmentSpec(subtype, x, y - (subtype << SEGMENT_Y_SHIFT), mappingFrame));
+            specs.add(new SegmentSpec(subtype, x, y - (subtype << SEGMENT_Y_SHIFT),
+                    mappingFrameForSubtype(subtype)));
         }
         return List.copyOf(specs);
     }
@@ -131,8 +138,12 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
         return List.copyOf(specs);
     }
 
+    private static int mappingFrameForSubtype(int subtype) {
+        return subtype == 6 ? TOP_CAP_MAPPING_FRAME : NORMAL_MAPPING_FRAME;
+    }
+
     public static final class Segment extends AbstractObjectInstance
-            implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
+            implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, RewindRecreatable {
 
         private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN;
         private static final int PRIORITY = 5; // ROM: priority $280
@@ -175,9 +186,58 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
             this.previous = previous;
         }
 
+        private Segment(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(), spawn.subtype() & 0xFF,
+                    mappingFrameForSubtype(spawn.subtype() & 0xFF), null, null);
+        }
+
         static Segment forTesting(int x, int y, int subtype, Segment previous) {
-            int mappingFrame = subtype == 6 ? TOP_CAP_MAPPING_FRAME : NORMAL_MAPPING_FRAME;
-            return new Segment(x, y, subtype, mappingFrame, null, previous);
+            return new Segment(x, y, subtype, mappingFrameForSubtype(subtype), null, previous);
+        }
+
+        @Override
+        public Segment recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            int restoredSubtype = spawn.subtype() & 0xFF;
+            IczSegmentColumnObjectInstance restoredRoot =
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, IczSegmentColumnObjectInstance.class);
+            if (restoredRoot == null) {
+                throw new IllegalStateException("Missing restored ICZ segment-column root");
+            }
+            Segment restoredPrevious = restoredSubtype == 0 ? null : previousSegmentForRewind(ctx, spawn, restoredSubtype);
+            return new Segment(spawn.x(), spawn.y(), restoredSubtype, mappingFrameForSubtype(restoredSubtype),
+                    restoredRoot, restoredPrevious);
+        }
+
+        private static Segment previousSegmentForRewind(
+                RewindRecreateContext ctx,
+                ObjectSpawn spawn,
+                int subtype) {
+            int expectedSubtype = subtype - SEGMENT_SUBTYPE_STEP;
+            Segment best = null;
+            long bestDistance = Long.MAX_VALUE;
+            ObjectServices services = ctx.objectServices();
+            if (services == null || services.objectManager() == null) {
+                throw new IllegalStateException("Missing object manager for ICZ segment-column previous link");
+            }
+            for (ObjectInstance object : services.objectManager().getActiveObjects()) {
+                if (!(object instanceof Segment candidate) || candidate.isDestroyed()
+                        || candidate.subtype != expectedSubtype) {
+                    continue;
+                }
+                long dx = candidate.getX() - spawn.x();
+                long dy = candidate.getY() - (spawn.y() + (SEGMENT_SUBTYPE_STEP << SEGMENT_Y_SHIFT));
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = candidate;
+                }
+            }
+            if (best == null) {
+                throw new IllegalStateException(
+                        "Missing restored ICZ segment-column previous segment for subtype " + subtype);
+            }
+            return best;
         }
 
         @Override
@@ -348,7 +408,8 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
         }
     }
 
-    public static final class BreakDebris extends GravityDebrisChild {
+    public static final class BreakDebris extends GravityDebrisChild
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
         private static final int GRAVITY = 0x38;
         private static final int[] RAW_ANIMATION_LOWER = {
@@ -368,6 +429,12 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
                     "ICZSegmentColumnDebris", spec.xVel(), spec.yVel(), GRAVITY);
             this.rawAnimation = spec.subtype() >= 8 ? RAW_ANIMATION_UPPER : RAW_ANIMATION_LOWER;
             this.mappingFrame = spec.initialMappingFrame();
+            this.animFrame = initialAnimFrame();
+        }
+
+        private BreakDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZSegmentColumnDebris", 0, 0, GRAVITY);
+            this.rawAnimation = (spawn.subtype() & 0xFF) >= 8 ? RAW_ANIMATION_UPPER : RAW_ANIMATION_LOWER;
             this.animFrame = initialAnimFrame();
         }
 

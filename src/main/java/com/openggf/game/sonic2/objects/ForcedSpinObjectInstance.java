@@ -10,6 +10,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -45,7 +47,7 @@ import java.util.List;
  * in the opposite direction, state resets and the OPPOSITE action is applied.
  * </p>
  */
-public class ForcedSpinObjectInstance extends BoxObjectInstance {
+public class ForcedSpinObjectInstance extends BoxObjectInstance implements RewindRecreatable {
 
     // Width lookup table from disassembly word_211E8
     private static final int[] WIDTH_TABLE = {0x20, 0x40, 0x80, 0x100};
@@ -62,9 +64,9 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance {
     private static final float DISABLE_G = 0.0f;
     private static final float DISABLE_B = 0.0f;
 
-    private final boolean verticalMode;    // bit 2 of subtype: 0=horizontal, 1=vertical
-    private final int triggerWidth;        // half-width from WIDTH_TABLE
-    private final boolean xFlipped;        // x_flip bit from spawn (determines action direction)
+    private boolean verticalMode;    // bit 2 of subtype: 0=horizontal, 1=vertical
+    private int triggerWidth;        // half-width from WIDTH_TABLE
+    private boolean xFlipped;        // x_flip bit from spawn (determines action direction)
 
     // Per-character crossing state (true = player is past the trigger line)
     // Matches objoff_34 (Sonic) and objoff_35 (Tails) from disassembly
@@ -88,6 +90,11 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance {
         this.verticalMode = (spawn.subtype() & 0x04) != 0;
         this.triggerWidth = WIDTH_TABLE[spawn.subtype() & 0x03];
         this.xFlipped = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public ForcedSpinObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new ForcedSpinObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

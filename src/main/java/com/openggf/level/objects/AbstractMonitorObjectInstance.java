@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
 
@@ -130,8 +131,8 @@ public abstract class AbstractMonitorObjectInstance extends AbstractObjectInstan
     }
 
     @Override
-    public PerObjectRewindSnapshot captureRewindState() {
-        PerObjectRewindSnapshot snapshot = super.captureRewindState();
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        PerObjectRewindSnapshot snapshot = super.captureRewindState(context);
         if (snapshot.genericState() == null && snapshot.compactGenericState() == null) {
             var genericState = GenericFieldCapturer.captureObjectSubclassScalars(this);
             if (!genericState.keys().isEmpty()) {
@@ -144,8 +145,8 @@ public abstract class AbstractMonitorObjectInstance extends AbstractObjectInstan
     }
 
     @Override
-    public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
-        super.restoreRewindState(snapshot);
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
         // Default to null so a missing/unmatched extra leaves no stale recipient.
         effectTarget = null;
         if (snapshot.objectSubclassExtra()

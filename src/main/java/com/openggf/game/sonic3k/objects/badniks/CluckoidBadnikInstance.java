@@ -7,8 +7,13 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
@@ -24,7 +29,7 @@ import java.util.List;
  * then runs the raw breath animation. Wind pressure starts once the mapping
  * frame reaches 7 and breath child particles are emitted every 8 frames.
  */
-public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance {
+public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x1A;
     private static final int PRIORITY_BUCKET = 5;
@@ -287,12 +292,13 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance {
                 childBigLeaf));
     }
 
-    static final class BreathDebrisChild extends AbstractObjectInstance {
+    static final class BreathDebrisChild extends AbstractObjectInstance
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private static final int RENDER_HALF_WIDTH = 0x08;
         private static final int RENDER_HALF_HEIGHT = 0x08;
 
-        private final boolean bigLeaf;
-        private final boolean hFlip;
+        private boolean bigLeaf;
+        private boolean hFlip;
         private int x;
         private int y;
         private int xSubpixel;
@@ -308,7 +314,8 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance {
 
         BreathDebrisChild(ObjectSpawn ownerSpawn, int x, int y, int xVelocity, int yVelocity,
                 int xAcceleration, boolean hFlip, boolean bigLeaf) {
-            super(ownerSpawn, "CluckoidBreathDebris");
+            super(new ObjectSpawn(x, y, ownerSpawn.objectId(), ownerSpawn.subtype(),
+                    (hFlip ? 1 : 0) | (bigLeaf ? 2 : 0), false, y), "CluckoidBreathDebris");
             this.x = x;
             this.y = y;
             this.xVelocity = xVelocity;
@@ -316,6 +323,14 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance {
             this.xAcceleration = xAcceleration;
             this.hFlip = hFlip;
             this.bigLeaf = bigLeaf;
+        }
+
+        BreathDebrisChild(ObjectSpawn spawn, int ignored) {
+            super(spawn, "CluckoidBreathDebris");
+            this.x = spawn.x();
+            this.y = spawn.y();
+            this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+            this.bigLeaf = (spawn.renderFlags() & 0x02) != 0;
         }
 
         @Override
@@ -446,7 +461,32 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
-    static final class ArrowChild extends AbstractObjectInstance {
+    private static CluckoidBadnikInstance findLiveCluckoidParentForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        CluckoidBadnikInstance nearest = null;
+        int nearestDistance = Integer.MAX_VALUE;
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (!(instance instanceof CluckoidBadnikInstance cluckoid) || cluckoid.isDestroyed()) {
+                continue;
+            }
+            ObjectSpawn candidateSpawn = cluckoid.getSpawn();
+            if (spawn.layoutIndex() >= 0 && candidateSpawn.layoutIndex() == spawn.layoutIndex()) {
+                return cluckoid;
+            }
+            int distance = Math.abs(candidateSpawn.x() - spawn.x())
+                    + Math.abs(candidateSpawn.y() - spawn.y());
+            if (distance < nearestDistance) {
+                nearest = cluckoid;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
+    }
+
+    static final class ArrowChild extends AbstractObjectInstance implements RewindRecreatable {
         private static final int RENDER_HALF_WIDTH = 0x10;
         private static final int RENDER_HALF_HEIGHT = 0x0C;
 
@@ -456,6 +496,12 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance {
         ArrowChild(CluckoidBadnikInstance parent) {
             super(parent.getSpawn(), "CluckoidArrow");
             this.parent = parent;
+        }
+
+        @Override
+        public ArrowChild recreateForRewind(RewindRecreateContext ctx) {
+            CluckoidBadnikInstance liveParent = findLiveCluckoidParentForRewind(ctx);
+            return liveParent == null ? null : new ArrowChild(liveParent);
         }
 
         @Override

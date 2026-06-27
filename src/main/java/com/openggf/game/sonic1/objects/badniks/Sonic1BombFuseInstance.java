@@ -43,7 +43,7 @@ public class Sonic1BombFuseInstance extends AbstractObjectInstance implements Re
     private final Sonic1BombBadnikInstance parent;
     private int currentX;
     private int currentY;
-    private final int origY;        // bom_origY (objoff_34): original Y position
+    private int origY;              // bom_origY (objoff_34): original Y position
     private int yVelocity;
     private final SubpixelMotion.State motionState;
     private int timer;              // bom_time
@@ -110,7 +110,7 @@ public class Sonic1BombFuseInstance extends AbstractObjectInstance implements Re
         if (capturedSpawn == null || restoredParent == null) {
             return null;
         }
-        // Non-final scalars are restored after recreate; origY is final and equals spawn.y().
+        // Scalars are restored after recreate.
         return new Sonic1BombFuseInstance(
                 capturedSpawn.x(), capturedSpawn.y(), false, false, 0, 0, restoredParent);
     }

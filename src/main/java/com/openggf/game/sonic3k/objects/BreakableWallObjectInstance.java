@@ -20,11 +20,14 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
@@ -38,7 +41,7 @@ import java.util.logging.Logger;
  * Object 0x0D - Breakable Wall (Sonic 3 & Knuckles).
  */
 public class BreakableWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(BreakableWallObjectInstance.class.getName());
 
@@ -115,9 +118,9 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
     }
 
     private final ZoneConfig config;
-    private final boolean triggerControlled;
-    private final int x;
-    private final int y;
+    private boolean triggerControlled;
+    private int x;
+    private int y;
     private int mappingFrame;
     private boolean broken;
 
@@ -459,13 +462,13 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         };
     }
 
-    public static class BreakableWallFragment extends AbstractObjectInstance {
+    public static class BreakableWallFragment extends AbstractObjectInstance implements RewindRecreatable {
 
         private int currentX;
         private int currentY;
-        private final int fragmentFrameIndex;
-        private final int pieceIndex;
-        private final String artKey;
+        private int fragmentFrameIndex;
+        private int pieceIndex;
+        private String artKey;
         private final SubpixelMotion.State motionState;
 
         public BreakableWallFragment(int parentX, int parentY,
@@ -480,6 +483,25 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             this.artKey = artKey;
             this.motionState = new SubpixelMotion.State(
                     currentX, currentY, 0, 0, xVel, yVel);
+        }
+
+        private BreakableWallFragment() {
+            this(0, 0, 0, 0, 0, 0, Sonic3kObjectArtKeys.BREAKABLE_WALL_AIZ);
+        }
+
+        @Override
+        public BreakableWallFragment recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            int x = capturedSpawn != null ? capturedSpawn.x() : 0;
+            int y = capturedSpawn != null ? capturedSpawn.y() : 0;
+            return new BreakableWallFragment(
+                    x,
+                    y,
+                    0,
+                    0,
+                    0,
+                    0,
+                    Sonic3kObjectArtKeys.BREAKABLE_WALL_AIZ);
         }
 
         @Override

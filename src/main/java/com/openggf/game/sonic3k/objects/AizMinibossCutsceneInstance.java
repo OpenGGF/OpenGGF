@@ -12,6 +12,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -33,7 +34,8 @@ import java.util.logging.Logger;
  * - loc_6862E pre-exit (explosion + wait)
  * - loc_68646/loc_68690 exit + cleanup
  */
-public class AizMinibossCutsceneInstance extends AbstractBossInstance {
+public class AizMinibossCutsceneInstance extends AbstractBossInstance
+        implements SpawnRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizMinibossCutsceneInstance.class.getName());
     private static final int ROUTINE_INIT = 0;
     private static final int ROUTINE_WAIT_TRIGGER = 2;

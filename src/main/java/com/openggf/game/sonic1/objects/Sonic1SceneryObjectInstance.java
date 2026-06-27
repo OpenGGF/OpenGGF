@@ -32,7 +32,7 @@ public class Sonic1SceneryObjectInstance extends AbstractObjectInstance implemen
 
     // Art key and frame index resolved from subtype
     private final String artKey;
-    private final int frameIndex;
+    private int frameIndex;
 
     public Sonic1SceneryObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Scenery");

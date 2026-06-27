@@ -11,6 +11,9 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -32,7 +35,7 @@ import java.util.List;
  * with the ROM's fixed launch speeds.
  */
 public class MGZPulleyObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_PULLEY;
 
@@ -73,10 +76,10 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
     private static final int PLAYER_SLOT_COUNT = 2;
     private static final int PLAYER_HANG_ANIM = Sonic3kAnimationIds.GET_UP.id();
 
-    private final int anchorX;
-    private final int anchorY;
-    private final boolean flipped;
-    private final int targetExtension;
+    private int anchorX;
+    private int anchorY;
+    private boolean flipped;
+    private int targetExtension;
     private final PulleyChainChild chainChild;
     private final AbstractPlayableSprite[] grabbedPlayers = new AbstractPlayableSprite[PLAYER_SLOT_COUNT];
     private final boolean[] grabbed = new boolean[PLAYER_SLOT_COUNT];
@@ -89,16 +92,27 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
     private int wheelAnimTimer;
 
     public MGZPulleyObjectInstance(ObjectSpawn spawn) {
+        this(spawn, true);
+    }
+
+    private MGZPulleyObjectInstance(ObjectSpawn spawn, boolean spawnChain) {
         super(spawn, "MGZPulley");
         this.anchorX = spawn.x();
         this.anchorY = spawn.y();
         this.flipped = (spawn.renderFlags() & 0x01) != 0;
         this.targetExtension = (spawn.subtype() & 0xFF) << 3;
         this.currentExtension = targetExtension;
-        this.chainChild = spawnChild(() -> new PulleyChainChild(
-                new ObjectSpawn(anchorX, anchorY, spawn.objectId(), spawn.subtype(),
-                        spawn.renderFlags(), false, 0),
-                this));
+        this.chainChild = spawnChain
+                ? spawnChild(() -> new PulleyChainChild(
+                        new ObjectSpawn(anchorX, anchorY, spawn.objectId(), spawn.subtype(),
+                                spawn.renderFlags(), false, 0),
+                        this))
+                : null;
+    }
+
+    @Override
+    public MGZPulleyObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MGZPulleyObjectInstance(ctx.spawn(), false);
     }
 
     @Override
@@ -135,7 +149,9 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
 
     private void cleanupForRemoval() {
         releaseAllGrabbedPlayers();
-        chainChild.setDestroyed(true);
+        if (chainChild != null) {
+            chainChild.setDestroyed(true);
+        }
     }
 
     private void tickReleaseCooldowns() {
@@ -412,12 +428,19 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         ctx.drawLine(anchorX, anchorY, computeHandleX(), computeHandleY(), 0.9f, 0.7f, 0.1f);
     }
 
-    private static final class PulleyChainChild extends AbstractObjectInstance {
+    private static final class PulleyChainChild extends AbstractObjectInstance implements RewindRecreatable {
         private final MGZPulleyObjectInstance parent;
 
         PulleyChainChild(ObjectSpawn spawn, MGZPulleyObjectInstance parent) {
             super(spawn, "MGZPulleyChain");
             this.parent = parent;
+        }
+
+        @Override
+        public PulleyChainChild recreateForRewind(RewindRecreateContext ctx) {
+            MGZPulleyObjectInstance restoredParent =
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, MGZPulleyObjectInstance.class);
+            return new PulleyChainChild(ctx.spawn(), restoredParent);
         }
 
         @Override

@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -61,7 +62,8 @@ import java.util.List;
  * 7. WFZRobotnik - fixed position, watches fight
  * 8. RobotnikPlatform - follows Robotnik Y+$26
  */
-public class Sonic2WFZBossInstance extends AbstractBossInstance {
+public class Sonic2WFZBossInstance extends AbstractBossInstance
+        implements SpawnConstructionContextRewindRecreatable {
 
     // State machine routine constants (16 sub-routines, $00-$1E)
     private static final int ROUTINE_INIT = 0x00;
@@ -862,6 +864,66 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
         addChildComponentForRewind(boss, hurt);
     }
 
+    private static void relinkPlatformReleaserForRewind(
+            Sonic2WFZBossInstance boss,
+            WFZPlatformReleaser platformReleaser) {
+        if (boss == null || platformReleaser == null) {
+            return;
+        }
+        boss.platformReleaser = platformReleaser;
+        addChildComponentForRewind(boss, platformReleaser);
+    }
+
+    private static void relinkLaserShooterForRewind(
+            Sonic2WFZBossInstance boss,
+            WFZLaserShooter laserShooter) {
+        if (boss == null || laserShooter == null) {
+            return;
+        }
+        boss.laserShooter = laserShooter;
+        addChildComponentForRewind(boss, laserShooter);
+    }
+
+    private static void relinkLaserForRewind(Sonic2WFZBossInstance boss, WFZLaser laser) {
+        if (boss == null || laser == null) {
+            return;
+        }
+        boss.laser = laser;
+        addChildComponentForRewind(boss, laser);
+    }
+
+    private static void relinkRobotnikForRewind(Sonic2WFZBossInstance boss, WFZRobotnik robotnik) {
+        if (boss == null || robotnik == null) {
+            return;
+        }
+        boss.robotnik = robotnik;
+        addChildComponentForRewind(boss, robotnik);
+    }
+
+    private static void relinkRobotnikPlatformForRewind(
+            Sonic2WFZBossInstance boss,
+            WFZRobotnik robotnik,
+            WFZRobotnikPlatform robotnikPlatform) {
+        if (boss == null || robotnik == null || robotnikPlatform == null) {
+            return;
+        }
+        robotnik.robotnikPlatform = robotnikPlatform;
+        addChildComponentForRewind(boss, robotnikPlatform);
+    }
+
+    private static WFZRobotnik findRestoredRobotnikForRewind(RewindRecreateContext ctx) {
+        ObjectManager objectManager = objectManagerForRewind(ctx);
+        if (objectManager == null) {
+            return null;
+        }
+        for (ObjectInstance inst : objectManager.getActiveObjects()) {
+            if (inst instanceof WFZRobotnik robotnik && !robotnik.isDestroyed()) {
+                return robotnik;
+            }
+        }
+        return null;
+    }
+
     private static void addChildComponentForRewind(Sonic2WFZBossInstance boss, AbstractBossChild child) {
         if (!boss.childComponents.contains(child)) {
             boss.childComponents.add(child);
@@ -1004,7 +1066,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
      * Spawns platforms cyclically (max 3, interval $80 frames).
      * On defeat: spawn explosions then delete.
      */
-    static class WFZPlatformReleaser extends AbstractBossChild {
+    static class WFZPlatformReleaser extends AbstractBossChild implements RewindRecreatable {
         private static final int PLATFORM_SPAWN_INTERVAL = 0x80;
         /**
          * ROM ObjC5_PlatformReleaserStop stores $10 in objoff_2A before entering
@@ -1038,6 +1100,17 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
             this.currentY = parent.getY() + 8;
             this.yFixed = currentY << 16;
             updateDynamicSpawn();
+        }
+
+        @Override
+        public WFZPlatformReleaser recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2WFZBossInstance boss = findNearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            WFZPlatformReleaser platformReleaser = new WFZPlatformReleaser(boss);
+            relinkPlatformReleaserForRewind(boss, platformReleaser);
+            return platformReleaser;
         }
 
         void signalStart() {
@@ -1392,12 +1465,23 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
      * mapping_frame=4, follows parent position.
      * Controlled by parent (lowered/raised during laser phases).
      */
-    static class WFZLaserShooter extends AbstractBossChild {
+    static class WFZLaserShooter extends AbstractBossChild implements RewindRecreatable {
         private int yOffset;
 
         WFZLaserShooter(Sonic2WFZBossInstance parent) {
             super(parent, "Laser Shooter", 3, Sonic2ObjectIds.WFZ_BOSS);
             this.yOffset = 0;
+        }
+
+        @Override
+        public WFZLaserShooter recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2WFZBossInstance boss = findNearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            WFZLaserShooter laserShooter = new WFZLaserShooter(boss);
+            relinkLaserShooterForRewind(boss, laserShooter);
+            return laserShooter;
         }
 
         void moveDown() {
@@ -1465,7 +1549,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
      * Flicker via bchg #0,objoff_2F toggles visibility each frame.
      * Signals parent when fully extended.
      */
-    static class WFZLaser extends AbstractBossChild {
+    static class WFZLaser extends AbstractBossChild implements RewindRecreatable {
         private static final int[] LASER_MAPPING_FRAMES = {0x0E, 0x0F, 0x10, 0x11, 0x12};
         private static final int[] LASER_COLLISION_FLAGS = {0x86, 0xAB, 0xAC, 0xAD, 0xAE};
         /** ROM: ObjC5_LaseNext - move.w #$40,objoff_2A(a0) */
@@ -1499,6 +1583,17 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
             this.waitTimer = 0;
             this.shootStage = 0;
             this.forceHide = false;
+        }
+
+        @Override
+        public WFZLaser recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2WFZBossInstance boss = findNearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            WFZLaser laser = new WFZLaser(boss);
+            relinkLaserForRewind(boss, laser);
+            return laser;
         }
 
         @Override
@@ -1633,7 +1728,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
      * Spawns RobotnikPlatform child.
      * On defeat: timer=$C0, move down 1px/frame, then delete.
      */
-    static class WFZRobotnik extends AbstractBossChild {
+    static class WFZRobotnik extends AbstractBossChild implements RewindRecreatable {
         private static final int ROBOTNIK_X = 0x2C60;
         private static final int ROBOTNIK_Y = 0x04E6;
         private static final int DEFEAT_MOVE_TIMER = 0xC0;
@@ -1659,6 +1754,17 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
             this.animSpeedCounter = ROBOTNIK_ANIM_SPEED;
             this.currentMappingFrame = ROBOTNIK_ANIM_FRAMES[0];
 
+        }
+
+        @Override
+        public WFZRobotnik recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2WFZBossInstance boss = findNearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            WFZRobotnik robotnik = new WFZRobotnik(boss);
+            relinkRobotnikForRewind(boss, robotnik);
+            return robotnik;
         }
 
         private void spawnPlatformChild(Sonic2WFZBossInstance wfzParent) {
@@ -1749,7 +1855,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
      * Robotnik Platform child (subtype $A2, routine $12).
      * Uses FloatingPlatform mappings (0x3CEBC), follows Robotnik Y+$26.
      */
-    static class WFZRobotnikPlatform extends AbstractBossChild {
+    static class WFZRobotnikPlatform extends AbstractBossChild implements RewindRecreatable {
         private static final int Y_OFFSET = 0x26;
         private final WFZRobotnik robotnikParent;
 
@@ -1757,6 +1863,29 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
             super(bossParent, "Robotnik Platform", 5, Sonic2ObjectIds.WFZ_BOSS);
             this.robotnikParent = robotnikParent;
             syncToRobotnik(robotnikParent.getCurrentX(), robotnikParent.getCurrentY());
+        }
+
+        private WFZRobotnikPlatform(Sonic2WFZBossInstance bossParent) {
+            this(bossParent, new WFZRobotnik(bossParent));
+        }
+
+        private WFZRobotnikPlatform(
+                Sonic2WFZBossInstance bossParent,
+                WFZRobotnik robotnikParent,
+                int ignored) {
+            this(bossParent, robotnikParent);
+        }
+
+        @Override
+        public WFZRobotnikPlatform recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2WFZBossInstance boss = findNearestLiveBossForRewind(ctx);
+            WFZRobotnik robotnik = findRestoredRobotnikForRewind(ctx);
+            if (boss == null || robotnik == null) {
+                return null;
+            }
+            WFZRobotnikPlatform robotnikPlatform = new WFZRobotnikPlatform(boss, robotnik);
+            relinkRobotnikPlatformForRewind(boss, robotnik, robotnikPlatform);
+            return robotnikPlatform;
         }
 
         void syncToRobotnik(int robotnikX, int robotnikY) {

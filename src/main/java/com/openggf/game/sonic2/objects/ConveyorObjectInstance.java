@@ -135,8 +135,8 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
     private int y;
 
     /** Base position (objoff_30, objoff_32) - original spawn position. */
-    private final int baseX;
-    private final int baseY;
+    private int baseX;
+    private int baseY;
 
     /** Target waypoint position (objoff_34, objoff_36). */
     private int targetX;
@@ -172,7 +172,7 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
 
     /** X-flip from status byte. */
-    private final boolean xFlip;
+    private boolean xFlip;
 
     /** Collision params: half-width = width_pixels, d3 = 8. */
     private static final SolidObjectParams SOLID_PARAMS =

@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -35,10 +37,15 @@ import java.util.List;
  * <p>
  * Art: ArtNem_WfzConveyorBeltWheel at ROM 0x8D7D8, ArtTile $03EA, palette line 2, priority set.
  */
-public class WFZWheelObjectInstance extends AbstractObjectInstance {
+public class WFZWheelObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     public WFZWheelObjectInstance(ObjectSpawn spawn) {
         super(spawn, "WFZWheel");
+    }
+
+    @Override
+    public WFZWheelObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new WFZWheelObjectInstance(ctx.spawn());
     }
 
     @Override

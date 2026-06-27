@@ -12,6 +12,8 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
@@ -29,7 +31,8 @@ import java.util.List;
  * triggers the capsule opening sequence via parent callback.
  */
 public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener,
+        RewindRecreatable {
 
     // From disassembly: move.w #$17,d1 / moveq #8,d2 / moveq #8,d3
     private static final int HALF_WIDTH = 0x17;
@@ -47,7 +50,7 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
     private static final int FRAME_SWITCH_1 = 1;
     private static final int FRAME_SWITCH_2 = 3;
 
-    private final int baseY;
+    private int baseY;
     private int currentY;
     private boolean triggered;
     private Sonic1EggPrisonObjectInstance parent;
@@ -60,11 +63,25 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
      * Parent body is resolved on first update by scanning active objects.
      */
     public Sonic1EggPrisonButtonObjectInstance(ObjectSpawn spawn) {
+        this(spawn, null);
+    }
+
+    public Sonic1EggPrisonButtonObjectInstance(ObjectSpawn spawn, Sonic1EggPrisonObjectInstance parent) {
         super(spawn, "EggPrison Button");
         this.baseY = spawn.y();
         this.currentY = spawn.y();
         this.triggered = false;
         this.animTimer = ANIM_DELAY;
+        this.parent = parent;
+        if (parent != null) {
+            this.parentResolved = true;
+            parent.registerButton(this);
+        }
+    }
+
+    @Override
+    public Sonic1EggPrisonButtonObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1EggPrisonButtonObjectInstance(ctx.spawn(), nearestParent(ctx));
     }
 
     @Override
@@ -84,8 +101,8 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * Scans active objects for the EggPrison body (subtype 0) at the same X position.
-     * Registers this button with the body so onButtonTriggered() can fire.
+     * Scans active objects for the nearest EggPrison body and registers this button
+     * with it so onButtonTriggered() can fire.
      */
     private void resolveParent() {
         parentResolved = true;
@@ -93,13 +110,33 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
         if (objectManager == null) {
             return;
         }
+        this.parent = nearestParent(objectManager, spawn.x());
+        if (parent != null) {
+            parent.registerButton(this);
+        }
+    }
+
+    private static Sonic1EggPrisonObjectInstance nearestParent(RewindRecreateContext ctx) {
+        ObjectManager objectManager = ctx.objectServices().objectManager();
+        if (objectManager == null) {
+            return null;
+        }
+        return nearestParent(objectManager, ctx.spawn().x());
+    }
+
+    private static Sonic1EggPrisonObjectInstance nearestParent(ObjectManager objectManager, int spawnX) {
+        Sonic1EggPrisonObjectInstance nearest = null;
+        int nearestDistance = Integer.MAX_VALUE;
         for (var obj : objectManager.getActiveObjects()) {
             if (obj instanceof Sonic1EggPrisonObjectInstance body && !obj.isDestroyed()) {
-                this.parent = body;
-                body.registerButton(this);
-                return;
+                int distance = Math.abs(body.getSpawn().x() - spawnX);
+                if (distance < nearestDistance) {
+                    nearest = body;
+                    nearestDistance = distance;
+                }
             }
         }
+        return nearest;
     }
 
     @Override

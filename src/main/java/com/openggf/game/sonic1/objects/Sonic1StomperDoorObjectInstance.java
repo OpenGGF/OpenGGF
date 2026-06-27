@@ -123,10 +123,10 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
     // ---- Instance state ----
 
     // Visual properties from Sto_Var
-    private final int actWidth;       // obActWid
-    private final int height;         // obHeight
-    private final int moveDistance;    // objoff_3C - maximum travel distance
-    private final int mappingFrame;   // obFrame
+    private int actWidth;       // obActWid
+    private int height;         // obHeight
+    private int moveDistance;    // objoff_3C - maximum travel distance
+    private int mappingFrame;   // obFrame
 
     // Position (mutable - this object moves)
     private int x;
@@ -134,7 +134,7 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
 
     // Original positions saved for movement and range checks
     private int origX;                // sto_origX = objoff_34
-    private final int origY;          // sto_origY = objoff_30
+    private int origY;          // sto_origY = objoff_30
 
     // Movement state
     private int moveType;             // Current movement type (obSubtype low nybble, may change)
@@ -144,19 +144,19 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
     private boolean firstUpdate = true;
 
     // Switch index for type 1 and type 5 (from original subtype low nybble when bit 7 set)
-    private final int switchIndex;    // objoff_3E
+    private int switchIndex;    // objoff_3E
 
     // obStatus bit 0 for flip direction
-    private final boolean xFlipped;
+    private boolean xFlipped;
 
     // Whether this is an SBZ3 instance (zone == LZ)
-    private final boolean isSbz3;
+    private boolean isSbz3;
 
     /** Subpixel accumulators (xSub / ySub) for ROM-accurate 16.16 fixed-point integration. */
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
 
     // Whether render flags bit 4 is set (SBZ3 bigdoor uses bg render)
-    private final boolean bgRender;
+    private boolean bgRender;
 
     // SolidObject params computed from width/height
     private final SolidObjectParams solidParams;

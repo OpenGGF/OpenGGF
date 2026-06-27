@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -48,7 +49,7 @@ import java.util.logging.Logger;
  */
 public class Sonic1FalseFloorInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener,
-        Sonic1ScrapEggmanInstance.Disintegratable {
+        Sonic1ScrapEggmanInstance.Disintegratable, SpawnRewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(Sonic1FalseFloorInstance.class.getName());
 
@@ -490,16 +491,16 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
      * <p>
      * ROM: routine $A - ObjectFall + DisplaySprite, deleted when off-screen.
      */
-    public static class FalseFloorFragment extends AbstractObjectInstance {
+    public static class FalseFloorFragment extends AbstractObjectInstance implements RewindRecreatable {
 
         // ROM: ObjectFall gravity = addi.w #$38,obVelY(a0)
         private static final int GRAVITY = 0x38;
 
-        private final int currentX;
+        private int currentX;
         private int currentY;
         private int subY; // 16.8 fixed-point Y position
         private int yVel; // 8.8 fixed-point Y velocity
-        private final int mappingFrame;
+        private int mappingFrame;
 
         public FalseFloorFragment(int x, int y, int initialYVel, int frame) {
             super(new ObjectSpawn(x, y, 0x83, 0, 0, false, 0), "FalseFloorFragment");
@@ -508,6 +509,11 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
             this.subY = y << 8;
             this.yVel = initialYVel;
             this.mappingFrame = frame;
+        }
+
+        @Override
+        public FalseFloorFragment recreateForRewind(RewindRecreateContext ctx) {
+            return new FalseFloorFragment(ctx.spawn().x(), ctx.spawn().y(), 0, 0);
         }
 
         @Override

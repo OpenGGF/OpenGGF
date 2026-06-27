@@ -89,9 +89,9 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
     private int timer;              // objoff_34 — countdown timer
     private boolean playerOnTop;    // objoff_36 == 1 (standing on top)
     private boolean playerBelow;    // objoff_36 < 0 (d4 negative from SolidObject)
-    private final int baseX;        // stair_origX
-    private final int baseY;        // stair_origY
-    private final boolean xFlip;    // obStatus bit 0
+    private int baseX;              // stair_origX
+    private int baseY;              // stair_origY
+    private boolean xFlip;          // obStatus bit 0
 
     // Y offsets for each piece: objoff_38..objoff_3B stored as bytes
     // Index 0 is the "master" counter, 1-3 are interpolated

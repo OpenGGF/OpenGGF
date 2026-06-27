@@ -24,7 +24,7 @@ import java.util.List;
  * Art key and countdown frame mapping are data-driven, allowing this class to work
  * with both Sonic 1 (LZ_BUBBLES) and Sonic 2 (BUBBLES) bubble art sheets.
  */
-public class BreathingBubbleInstance extends AbstractObjectInstance {
+public class BreathingBubbleInstance extends AbstractObjectInstance implements RewindRecreatable {
     /**
      * ROM Obj0A/AirCountdown wobble table. S1/S2 use this as
      * Drown_WobbleData/Obj0A_WobbleData; S3K AirCountdown uses the same
@@ -43,6 +43,16 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
 
     /** Frame delay per animation sub-frame for countdown bubbles */
     private static final int COUNTDOWN_FRAME_DELAY = 5;
+
+    private static final int COUNTDOWN_NONE = 0x0F;
+    private static final int COUNTDOWN_MASK = 0x0F;
+    private static final int ART_PROFILE_SHIFT = 4;
+    private static final int ART_PROFILE_MASK = 0x03;
+    private static final int ART_PROFILE_S2 = 0;
+    private static final int ART_PROFILE_S1 = 1;
+
+    private static final int[] S2_COUNTDOWN_FRAMES = {11, 10, 9, 8, 7, 6};
+    private static final int[] S1_COUNTDOWN_FRAMES = {13, 18, 17, 16, 15, 14};
 
     /** Total frames for countdown bubble animation before number forms. */
     private static final int COUNTDOWN_BUBBLE_FRAMES = 3;
@@ -74,7 +84,7 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
     private int yPos16;
 
     /** ROM signed y_vel word, where 0x100 is one pixel/frame. */
-    private final int riseVelocity;
+    private int riseVelocity;
 
     /** ROM angle byte used to index the 7-bit wobble table. */
     private int wobbleAngle;
@@ -115,7 +125,7 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
     private final int[] countdownFrameMap;
 
     /** Maximum frame index for regular bubble growth animation */
-    private final int maxBubbleFrame;
+    private int maxBubbleFrame;
 
     /**
      * Creates a breathing bubble with game-specific art configuration.
@@ -132,7 +142,8 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
     public BreathingBubbleInstance(int x, int y, boolean startsFacingLeft, int countdownNumber,
                                    String artKey, int[] countdownFrameMap, int maxBubbleFrame,
                                    int riseVelocity) {
-        super(new ObjectSpawn(x, y, 0x0A, 0, 0, false, 0), "BreathingBubble");
+        super(buildSpawn(x, y, startsFacingLeft, countdownNumber, artKey, riseVelocity),
+                "BreathingBubble");
         this.currentX = x;
         this.currentY = y;
         this.baseX = x;
@@ -146,6 +157,67 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
         this.artKey = artKey;
         this.countdownFrameMap = countdownFrameMap;
         this.maxBubbleFrame = maxBubbleFrame;
+    }
+
+    public BreathingBubbleInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), startsFacingLeft(spawn), countdownNumber(spawn),
+                artKey(spawn), countdownFrameMap(spawn), maxBubbleFrame(spawn),
+                riseVelocity(spawn));
+    }
+
+    @Override
+    public BreathingBubbleInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BreathingBubbleInstance(ctx.spawn());
+    }
+
+    private static ObjectSpawn buildSpawn(
+            int x,
+            int y,
+            boolean startsFacingLeft,
+            int countdownNumber,
+            String artKey,
+            int riseVelocity) {
+        int subtype = ((artProfile(artKey) & ART_PROFILE_MASK) << ART_PROFILE_SHIFT)
+                | encodeCountdown(countdownNumber);
+        return new ObjectSpawn(x, y, 0x0A, subtype, startsFacingLeft ? 1 : 0,
+                false, riseVelocity);
+    }
+
+    private static int encodeCountdown(int countdownNumber) {
+        return countdownNumber >= 0 && countdownNumber <= 5 ? countdownNumber : COUNTDOWN_NONE;
+    }
+
+    private static int countdownNumber(ObjectSpawn spawn) {
+        int encoded = spawn.subtype() & COUNTDOWN_MASK;
+        return encoded <= 5 ? encoded : -1;
+    }
+
+    private static boolean startsFacingLeft(ObjectSpawn spawn) {
+        return (spawn.renderFlags() & 1) != 0;
+    }
+
+    private static int riseVelocity(ObjectSpawn spawn) {
+        return (short) spawn.rawYWord();
+    }
+
+    private static int artProfile(String artKey) {
+        return ObjectArtKeys.LZ_BUBBLES.equals(artKey) ? ART_PROFILE_S1 : ART_PROFILE_S2;
+    }
+
+    private static int artProfile(ObjectSpawn spawn) {
+        return (spawn.subtype() >> ART_PROFILE_SHIFT) & ART_PROFILE_MASK;
+    }
+
+    private static String artKey(ObjectSpawn spawn) {
+        return artProfile(spawn) == ART_PROFILE_S1 ? ObjectArtKeys.LZ_BUBBLES : ObjectArtKeys.BUBBLES;
+    }
+
+    private static int[] countdownFrameMap(ObjectSpawn spawn) {
+        return artProfile(spawn) == ART_PROFILE_S1 ? S1_COUNTDOWN_FRAMES : S2_COUNTDOWN_FRAMES;
+    }
+
+    private static int maxBubbleFrame(ObjectSpawn spawn) {
+        return artProfile(spawn) == ART_PROFILE_S1 ? 5 : 3;
     }
 
     @Override

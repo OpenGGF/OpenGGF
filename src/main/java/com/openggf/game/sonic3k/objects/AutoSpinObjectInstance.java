@@ -10,6 +10,8 @@ import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -41,7 +43,7 @@ import java.util.logging.Logger;
  *   <li>Flipped: crossing R→L / bottom→top enables spin (-0x580 ground_vel)</li>
  * </ul>
  */
-public class AutoSpinObjectInstance extends BoxObjectInstance {
+public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(AutoSpinObjectInstance.class.getName());
 
@@ -64,12 +66,12 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
     private static final boolean DEBUG_VIEW_ENABLED = staticDebugViewEnabled();
     private static final DebugOverlayManager OVERLAY_MANAGER = staticDebugOverlay();
 
-    private final boolean verticalMode;     // subtype bit 2
-    private final boolean noSpinLock;       // subtype bit 4
-    private final boolean groundOnly;       // subtype bit 5
-    private final boolean snapToWall;       // subtype bit 6 (vertical only)
-    private final boolean lockControls;     // subtype bit 7
-    private final boolean xFlipped;         // render_flags bit 0
+    private boolean verticalMode;     // subtype bit 2
+    private boolean noSpinLock;       // subtype bit 4
+    private boolean groundOnly;       // subtype bit 5
+    private boolean snapToWall;       // subtype bit 6 (vertical only)
+    private boolean lockControls;     // subtype bit 7
+    private boolean xFlipped;         // render_flags bit 0
 
     // Per-character crossing state (matches objoff_34/objoff_35 in disassembly)
     private boolean sonicPastTrigger;
@@ -94,6 +96,11 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
         this.snapToWall = (subtype & 0x40) != 0;
         this.lockControls = (subtype & 0x80) != 0;
         this.xFlipped = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public AutoSpinObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AutoSpinObjectInstance(ctx.spawn());
     }
 
     @Override

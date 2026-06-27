@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -16,7 +17,7 @@ import java.util.List;
  * {@code Map_MGZEndBoss} frames $2E-$30 and {@code Set_IndexedVelocity}
  * starting at velocity index $28.
  */
-public class MgzEndBossDefeatDebrisChild extends AbstractObjectInstance {
+public class MgzEndBossDefeatDebrisChild extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int[][] OFFSETS = {
             {0x0C, -0x14},
             {-0x10, 0x08},
@@ -31,25 +32,37 @@ public class MgzEndBossDefeatDebrisChild extends AbstractObjectInstance {
     private static final int SUBPIXEL_SHIFT = 8;
     private static final int OFFSCREEN_MARGIN = 0x40;
 
-    private final int index;
-    private final boolean flipX;
+    private int index;
+    private boolean flipX;
     private int xFixed;
     private int yFixed;
-    private final int xVel;
-    private final int yVel;
+    private int xVel;
+    private int yVel;
 
     public MgzEndBossDefeatDebrisChild(int parentX, int parentY, int index, boolean flipX) {
-        super(new ObjectSpawn(
-                parentX + renderOffsetX(OFFSETS[index][0], flipX),
-                parentY + OFFSETS[index][1],
-                0, index, 0, false, 0),
-                "MGZEndBossDefeatDebris");
-        this.index = index;
-        this.flipX = flipX;
+        this(spawnFor(parentX, parentY, index, flipX));
+    }
+
+    public MgzEndBossDefeatDebrisChild(ObjectSpawn spawn) {
+        super(spawn, "MGZEndBossDefeatDebris");
+        this.index = normalizedIndex(spawn.subtype());
+        this.flipX = (spawn.renderFlags() & 1) != 0;
         this.xFixed = spawn.x() << SUBPIXEL_SHIFT;
         this.yFixed = spawn.y() << SUBPIXEL_SHIFT;
-        this.xVel = renderOffsetX(VELOCITIES[index][0], flipX);
-        this.yVel = VELOCITIES[index][1];
+        this.xVel = renderOffsetX(VELOCITIES[this.index][0], this.flipX);
+        this.yVel = VELOCITIES[this.index][1];
+    }
+
+    private static ObjectSpawn spawnFor(int parentX, int parentY, int index, boolean flipX) {
+        int normalizedIndex = normalizedIndex(index);
+        return new ObjectSpawn(
+                parentX + renderOffsetX(OFFSETS[normalizedIndex][0], flipX),
+                parentY + OFFSETS[normalizedIndex][1],
+                0, normalizedIndex, flipX ? 1 : 0, false, 0);
+    }
+
+    private static int normalizedIndex(int index) {
+        return Math.max(0, Math.min(index, OFFSETS.length - 1));
     }
 
     @Override

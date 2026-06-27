@@ -8,8 +8,12 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -45,7 +49,7 @@ import java.util.List;
  * (the tooth appears thinner when rotated to top/bottom position).
  */
 public class CogObjectInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider, SolidObjectListener {
+        implements MultiPieceSolidProvider, SolidObjectListener, RewindRecreatable {
 
     // Number of teeth on the cog
     private static final int NUM_TEETH = 8;
@@ -133,9 +137,9 @@ public class CogObjectInstance extends AbstractObjectInstance
     };
 
     // Instance state
-    private final int baseX;      // objoff_32 - center X position
-    private final int baseY;      // objoff_30 - center Y position
-    private final boolean ccw;    // Counter-clockwise rotation (status.npc.x_flip)
+    private int baseX;      // objoff_32 - center X position
+    private int baseY;      // objoff_30 - center Y position
+    private boolean ccw;    // Counter-clockwise rotation (status.npc.x_flip)
 
     // Rotation state
     private int rotationPhase;    // objoff_36 - current rotation phase (0, $18, $30, $48)
@@ -169,6 +173,11 @@ public class CogObjectInstance extends AbstractObjectInstance
 
         // Calculate initial positions
         updateToothPositions();
+    }
+
+    @Override
+    public CogObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CogObjectInstance(ctx.spawn(), getName());
     }
 
     @Override
@@ -219,6 +228,34 @@ public class CogObjectInstance extends AbstractObjectInstance
             slotChildren.add(child);
         }
         childrenSpawned = true;
+    }
+
+    private void attachSlotChildForRewind(CogSlotChildInstance child) {
+        if (!slotChildren.contains(child)) {
+            slotChildren.add(child);
+        }
+    }
+
+    private static CogObjectInstance nearestParentForRewind(RewindRecreateContext ctx) {
+        ObjectManager manager = ctx.objectManager();
+        if (manager == null && ctx.objectServices() != null) {
+            manager = ctx.objectServices().objectManager();
+        }
+        if (manager == null) {
+            return null;
+        }
+        return manager.getActiveObjects().stream()
+                .filter(CogObjectInstance.class::isInstance)
+                .map(CogObjectInstance.class::cast)
+                .filter(parent -> !parent.isDestroyed())
+                .min((a, b) -> Integer.compare(
+                        distanceFromChildSpawn(a, ctx.spawn()),
+                        distanceFromChildSpawn(b, ctx.spawn())))
+                .orElse(null);
+    }
+
+    private static int distanceFromChildSpawn(CogObjectInstance parent, ObjectSpawn spawn) {
+        return Math.abs(parent.getX() - spawn.x()) + Math.abs(parent.getY() - spawn.y());
     }
 
     private ObjectSpawn buildCogChildSpawn(int x, int y) {
@@ -297,13 +334,16 @@ public class CogObjectInstance extends AbstractObjectInstance
     @Override
     public PerObjectRewindSnapshot captureRewindState() {
         return super.captureRewindState().withObjectSubclassExtra(
-                new CogRewindExtra(rotationPhase, toothOffset.clone(), childrenSpawned));
+                new CogRewindExtra(baseX, baseY, ccw, rotationPhase, toothOffset.clone(), childrenSpawned));
     }
 
     @Override
     public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
         super.restoreRewindState(snapshot);
         if (snapshot.objectSubclassExtra() instanceof CogRewindExtra extra) {
+            baseX = extra.baseX();
+            baseY = extra.baseY();
+            ccw = extra.ccw();
             rotationPhase = extra.rotationPhase();
             int[] restoredOffsets = extra.toothOffset();
             System.arraycopy(restoredOffsets, 0, toothOffset, 0, Math.min(restoredOffsets.length, toothOffset.length));
@@ -478,18 +518,32 @@ public class CogObjectInstance extends AbstractObjectInstance
     }
 
     private record CogRewindExtra(
+            int baseX,
+            int baseY,
+            boolean ccw,
             int rotationPhase,
             int[] toothOffset,
             boolean childrenSpawned
     ) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {
     }
 
-    private static final class CogSlotChildInstance extends AbstractObjectInstance {
+    private static final class CogSlotChildInstance extends AbstractObjectInstance implements RewindRecreatable {
         private final CogObjectInstance parent;
 
         CogSlotChildInstance(ObjectSpawn spawn, CogObjectInstance parent) {
             super(spawn, "CogSlot");
             this.parent = parent;
+        }
+
+        @Override
+        public CogSlotChildInstance recreateForRewind(RewindRecreateContext ctx) {
+            CogObjectInstance parent = nearestParentForRewind(ctx);
+            if (parent == null) {
+                throw new IllegalStateException("Cannot recreate Cog slot child without a live Cog parent");
+            }
+            CogSlotChildInstance child = new CogSlotChildInstance(ctx.spawn(), parent);
+            parent.attachSlotChildForRewind(child);
+            return child;
         }
 
         @Override

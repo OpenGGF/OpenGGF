@@ -7,6 +7,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -26,19 +28,24 @@ import java.util.Map;
  * {@code GetSineCosine}.
  */
 public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
-        implements RomObjectCodePointerProvider {
+        implements RomObjectCodePointerProvider, RewindRecreatable {
 
     private static final int TRACK_LIMIT = 0xA0;
     private static final int TRACK_FRACTION_MASK = 0xFFFF;
     private static final int MIN_GROUND_SPEED_TO_STAY_ATTACHED = 0x118;
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0003;
 
-    private final boolean mirrored;
+    private boolean mirrored;
     private final Map<AbstractPlayableSprite, RiderState> riders = new IdentityHashMap<>();
 
     public CnzBarberPoleObjectInstance(ObjectSpawn spawn) {
         super(spawn, "CNZBarberPoleSprite");
         this.mirrored = spawn.subtype() != 0;
+    }
+
+    @Override
+    public CnzBarberPoleObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzBarberPoleObjectInstance(ctx.spawn());
     }
 
     @Override

@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.GrounderRockProjectile;
 import com.openggf.game.sonic2.objects.GrounderWallInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.GrounderBadnikInstance;
@@ -20,6 +21,9 @@ import com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.SlicerPincerInstance;
 import com.openggf.game.sonic2.objects.badniks.SolBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance;
+import com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance;
+import com.openggf.game.sonic2.objects.badniks.TurtloidJetInstance;
+import com.openggf.game.sonic2.objects.badniks.TurtloidRiderInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -58,6 +62,12 @@ class TestS2BadnikChildGraphRewind {
             new ObjectSpawn(0x0240, 0x0170, Sonic2ObjectIds.SOL, 0, 0, false, 50);
     private static final ObjectSpawn BALKIRY_SPAWN =
             new ObjectSpawn(0x0260, 0x0180, Sonic2ObjectIds.BALKIRY, 0, 0, false, 60);
+    private static final ObjectSpawn TURTLOID_SPAWN =
+            new ObjectSpawn(0x02A0, 0x0190, Sonic2ObjectIds.TURTLOID, 0, 0, false, 70);
+    private static final ObjectSpawn AQUIS_SPAWN =
+            new ObjectSpawn(0x02D0, 0x01A0, Sonic2ObjectIds.AQUIS, 0, 0, false, 75);
+    private static final String AQUIS_WING_CLASS =
+            "com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild";
 
     @BeforeEach
     void initHeadless() {
@@ -185,6 +195,10 @@ class TestS2BadnikChildGraphRewind {
         assertSame(graph.slicer(), readObjectField(graph.slicerPincer0(), "parent"));
         assertSame(graph.sol(), readObjectField(graph.solFireball0(), "parent"));
         assertSame(graph.sol(), readObjectField(graph.solFireball1(), "parent"));
+        assertSame(graph.aquis(), readObjectField(graph.aquisWing(), "parent"));
+        assertSame(graph.aquisWing(), readObjectField(graph.aquis(), "wingChild"));
+        assertSame(graph.turtloid(), readObjectField(graph.turtloidRider(), "parent"));
+        assertSame(graph.turtloid(), readObjectField(graph.turtloidJet(), "parent"));
 
         List<?> heads = readListField(graph.rexon(), "heads");
         assertEquals(5, heads.size(), "Rexon parent head list must be restored");
@@ -227,6 +241,17 @@ class TestS2BadnikChildGraphRewind {
                 "hFlip", "animIndex", "animTimer");
         assertScalarFieldsEqual(before.solFireball0(), restored.solFireball0(),
                 "state", "angle", "currentX", "currentY", "xVelocity");
+        assertScalarFieldsEqual(before.aquis(), restored.aquis(),
+                "state", "timer", "shotsRemaining", "shootingFlag", "currentX", "currentY",
+                "xVelocity", "yVelocity", "wingSpawned");
+        assertScalarFieldsEqual(before.aquisWing(), restored.aquisWing(),
+                "wingX", "wingY", "wingFacingLeft");
+        assertScalarFieldsEqual(before.turtloid(), restored.turtloid(),
+                "state", "timer", "xVelocity", "animFrame", "childrenSpawned");
+        assertScalarFieldsEqual(before.turtloidRider(), restored.turtloidRider(),
+                "currentX", "currentY", "mappingFrame", "destroyed");
+        assertScalarFieldsEqual(before.turtloidJet(), restored.turtloidJet(),
+                "currentX", "currentY", "animFrame", "animTimer");
     }
 
     private record Harness(ObjectManager objectManager) {
@@ -276,11 +301,16 @@ class TestS2BadnikChildGraphRewind {
             SlicerBadnikInstance slicer,
             SolBadnikInstance sol,
             BalkiryBadnikInstance balkiry,
+            AquisBadnikInstance aquis,
+            TurtloidBadnikInstance turtloid,
             GrounderWallInstance grounderWall0,
             GrounderWallInstance grounderWall1,
             GrounderRockProjectile grounderRock0,
             GrounderRockProjectile grounderRock1,
             BalkiryJetObjectInstance balkiryJet,
+            ObjectInstance aquisWing,
+            TurtloidRiderInstance turtloidRider,
+            TurtloidJetInstance turtloidJet,
             RexonHeadObjectInstance rexonHead0,
             RexonHeadObjectInstance rexonHead1,
             RexonHeadObjectInstance rexonHead2,
@@ -302,6 +332,8 @@ class TestS2BadnikChildGraphRewind {
             SlicerBadnikInstance slicer = only(objectManager, SlicerBadnikInstance.class);
             SolBadnikInstance sol = only(objectManager, SolBadnikInstance.class);
             BalkiryBadnikInstance balkiry = only(objectManager, BalkiryBadnikInstance.class);
+            AquisBadnikInstance aquis = ensureAquisParent(objectManager);
+            TurtloidBadnikInstance turtloid = ensureTurtloidParent(objectManager);
 
             invokePrivate(grounder, "spawnWalls");
             invokePrivate(grounder, "spawnRocks");
@@ -315,6 +347,10 @@ class TestS2BadnikChildGraphRewind {
             if (liveObjects(objectManager, BalkiryJetObjectInstance.class).isEmpty()) {
                 invokePrivate(balkiry, "spawnJetChild");
             }
+            setObjectField(aquis, "wingChild", null);
+            setBooleanField(aquis, "wingSpawned", false);
+            invokePrivate(aquis, "spawnWingChildOnce");
+            invokePrivate(turtloid, "ensureChildrenSpawned");
 
             BadnikChildGraph graph = fromLiveObjects(objectManager);
             seedDistinctState(graph);
@@ -325,6 +361,24 @@ class TestS2BadnikChildGraphRewind {
             return spawnRepresentativeFamily(objectManager);
         }
 
+        private static TurtloidBadnikInstance ensureTurtloidParent(ObjectManager objectManager) {
+            List<TurtloidBadnikInstance> existing = liveObjects(objectManager, TurtloidBadnikInstance.class);
+            if (existing.isEmpty()) {
+                return objectManager.createDynamicObject(() -> new TurtloidBadnikInstance(TURTLOID_SPAWN));
+            }
+            assertEquals(1, existing.size(), "expected at most one live TurtloidBadnikInstance");
+            return existing.getFirst();
+        }
+
+        private static AquisBadnikInstance ensureAquisParent(ObjectManager objectManager) {
+            List<AquisBadnikInstance> existing = liveObjects(objectManager, AquisBadnikInstance.class);
+            if (existing.isEmpty()) {
+                return objectManager.createDynamicObject(() -> new AquisBadnikInstance(AQUIS_SPAWN));
+            }
+            assertEquals(1, existing.size(), "expected at most one live AquisBadnikInstance");
+            return existing.getFirst();
+        }
+
         static BadnikChildGraph fromLiveObjects(ObjectManager objectManager) {
             List<GrounderWallInstance> walls = liveObjects(objectManager, GrounderWallInstance.class);
             List<GrounderRockProjectile> rocks = liveObjects(objectManager, GrounderRockProjectile.class);
@@ -332,6 +386,9 @@ class TestS2BadnikChildGraphRewind {
             List<ShellcrackerClawInstance> claws = liveObjects(objectManager, ShellcrackerClawInstance.class);
             List<SlicerPincerInstance> pincers = liveObjects(objectManager, SlicerPincerInstance.class);
             List<SolFireballObjectInstance> fireballs = liveObjects(objectManager, SolFireballObjectInstance.class);
+            List<ObjectInstance> aquisWings = liveObjectsByName(objectManager, AQUIS_WING_CLASS);
+            List<TurtloidRiderInstance> riders = liveObjects(objectManager, TurtloidRiderInstance.class);
+            List<TurtloidJetInstance> jets = liveObjects(objectManager, TurtloidJetInstance.class);
             SolBadnikInstance sol = only(objectManager, SolBadnikInstance.class);
             List<SolFireballObjectInstance> orderedFireballs = readListFieldUnchecked(sol, "fireballs").stream()
                     .map(SolFireballObjectInstance.class::cast)
@@ -343,6 +400,9 @@ class TestS2BadnikChildGraphRewind {
             assertEquals(2, pincers.size(), "expected two live Slicer pincers");
             assertEquals(4, fireballs.size(), "expected four live Sol fireballs");
             assertEquals(4, orderedFireballs.size(), "expected four parent-owned Sol fireballs");
+            assertEquals(1, aquisWings.size(), "expected one live Aquis wing child");
+            assertEquals(1, riders.size(), "expected one live Turtloid rider");
+            assertEquals(1, jets.size(), "expected one live Turtloid jet");
             return new BadnikChildGraph(
                     only(objectManager, GrounderBadnikInstance.class),
                     only(objectManager, RexonBadnikInstance.class),
@@ -350,9 +410,13 @@ class TestS2BadnikChildGraphRewind {
                     only(objectManager, SlicerBadnikInstance.class),
                     sol,
                     only(objectManager, BalkiryBadnikInstance.class),
+                    only(objectManager, AquisBadnikInstance.class),
+                    only(objectManager, TurtloidBadnikInstance.class),
                     walls.get(0), walls.get(1),
                     rocks.get(0), rocks.get(1),
                     only(objectManager, BalkiryJetObjectInstance.class),
+                    aquisWings.getFirst(),
+                    riders.getFirst(), jets.getFirst(),
                     headByIndex(heads, 0), headByIndex(heads, 2), headByIndex(heads, 4),
                     headByIndex(heads, 6), headByIndex(heads, 8),
                     clawByIndex(claws, 0), clawByIndex(claws, 2),
@@ -381,6 +445,11 @@ class TestS2BadnikChildGraphRewind {
             ids.put("shellcrackerClaw0", table.idFor(shellcrackerClaw0));
             ids.put("slicerPincer0", table.idFor(slicerPincer0));
             ids.put("solFireball0", table.idFor(solFireball0));
+            ids.put("aquis", table.idFor(aquis));
+            ids.put("aquisWing", table.idFor(aquisWing));
+            ids.put("turtloid", table.idFor(turtloid));
+            ids.put("turtloidRider", table.idFor(turtloidRider));
+            ids.put("turtloidJet", table.idFor(turtloidJet));
             return ids;
         }
 
@@ -397,23 +466,31 @@ class TestS2BadnikChildGraphRewind {
             return object instanceof GrounderWallInstance
                     || object instanceof GrounderRockProjectile
                     || object instanceof BalkiryJetObjectInstance
+                    || object instanceof TurtloidBadnikInstance
                     || object instanceof RexonHeadObjectInstance
                     || object instanceof ShellcrackerClawInstance
                     || object instanceof SlicerPincerInstance
-                    || object instanceof SolFireballObjectInstance;
+                    || object instanceof SolFireballObjectInstance
+                    || object instanceof AquisBadnikInstance
+                    || object.getClass().getName().equals(AQUIS_WING_CLASS)
+                    || object instanceof TurtloidRiderInstance
+                    || object instanceof TurtloidJetInstance;
         }
 
         private List<ObjectInstance> allObjects() {
-            return List.of(grounder, rexon, shellcracker, slicer, sol, balkiry,
+            return List.of(grounder, rexon, shellcracker, slicer, sol, balkiry, aquis, turtloid,
                     grounderWall0, grounderWall1, grounderRock0, grounderRock1,
-                    balkiryJet, rexonHead0, rexonHead1, rexonHead2, rexonHead3, rexonHead4,
+                    balkiryJet, aquisWing, turtloidRider, turtloidJet,
+                    rexonHead0, rexonHead1, rexonHead2, rexonHead3, rexonHead4,
                     shellcrackerClaw0, shellcrackerClaw1, slicerPincer0, slicerPincer1,
                     solFireball0, solFireball1, solFireball2, solFireball3);
         }
 
         private List<ObjectInstance> dynamicChildren() {
-            return List.of(grounderWall0, grounderWall1, grounderRock0, grounderRock1,
-                    balkiryJet, rexonHead0, rexonHead1, rexonHead2, rexonHead3, rexonHead4,
+            return List.of(aquis, turtloid,
+                    grounderWall0, grounderWall1, grounderRock0, grounderRock1,
+                    balkiryJet, aquisWing, turtloidRider, turtloidJet,
+                    rexonHead0, rexonHead1, rexonHead2, rexonHead3, rexonHead4,
                     shellcrackerClaw0, shellcrackerClaw1, slicerPincer0, slicerPincer1,
                     solFireball0, solFireball1, solFireball2, solFireball3);
         }
@@ -449,6 +526,22 @@ class TestS2BadnikChildGraphRewind {
         setIntField(graph.slicerPincer0(), "animTimer", 3);
         setIntField(graph.solFireball0(), "angle", 0x12);
         setIntField(graph.solFireball0(), "xVelocity", -0x200);
+        setObjectField(graph.aquis(), "state", enumValue(graph.aquis(), "State", "SHOOTING"));
+        setIntField(graph.aquis(), "timer", 17);
+        setIntField(graph.aquis(), "shotsRemaining", 2);
+        setBooleanField(graph.aquis(), "shootingFlag", true);
+        setIntField(graph.aquis(), "xVelocity", -0x80);
+        setIntField(graph.aquis(), "yVelocity", 0x40);
+        setIntField(graph.aquisWing(), "wingX", 0x02E4);
+        setIntField(graph.aquisWing(), "wingY", 0x0198);
+        setBooleanField(graph.aquisWing(), "wingFacingLeft", true);
+        setObjectField(graph.turtloid(), "state", enumValue(graph.turtloid(), "State", "PAUSE_BEFORE"));
+        setIntField(graph.turtloid(), "timer", 3);
+        setIntField(graph.turtloid(), "xVelocity", 0);
+        setIntField(graph.turtloid(), "animFrame", 1);
+        setIntField(graph.turtloidRider(), "mappingFrame", 3);
+        setIntField(graph.turtloidJet(), "animFrame", 7);
+        setIntField(graph.turtloidJet(), "animTimer", 0);
     }
 
     private static <T extends ObjectInstance> T only(ObjectManager objectManager, Class<T> type) {
@@ -461,6 +554,12 @@ class TestS2BadnikChildGraphRewind {
         return objectManager.getActiveObjects().stream()
                 .filter(object -> object.getClass() == type && !object.isDestroyed())
                 .map(type::cast)
+                .toList();
+    }
+
+    private static List<ObjectInstance> liveObjectsByName(ObjectManager objectManager, String className) {
+        return objectManager.getActiveObjects().stream()
+                .filter(object -> object.getClass().getName().equals(className) && !object.isDestroyed())
                 .toList();
     }
 

@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SpringObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, RewindRecreatable {
     // Subtype constants (shifted >> 3 & 0xE) - matches ROM Obj41_Index
     private static final int TYPE_UP = 0;
     private static final int TYPE_HORIZONTAL = 2;
@@ -55,10 +55,10 @@ public class SpringObjectInstance extends BoxObjectInstance
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
-    private final boolean redSpring;
+    private boolean redSpring;
     private ObjectAnimationState animationState;
-    private final int idleAnimId;
-    private final int triggeredAnimId;
+    private int idleAnimId;
+    private int triggeredAnimId;
     private int mappingFrame;
     private boolean initialized;
     // Frames remaining in which a horizontal spring's loc_18BC6 proximity launch
@@ -78,6 +78,11 @@ public class SpringObjectInstance extends BoxObjectInstance
         this.idleAnimId = resolveIdleAnimId();
         this.triggeredAnimId = resolveTriggeredAnimId();
         this.mappingFrame = resolveIdleMappingFrame();
+    }
+
+    @Override
+    public SpringObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SpringObjectInstance(ctx.spawn(), getName());
     }
 
     private void ensureInitialized() {

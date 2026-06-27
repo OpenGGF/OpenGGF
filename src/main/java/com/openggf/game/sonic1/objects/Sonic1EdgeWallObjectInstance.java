@@ -46,8 +46,8 @@ public class Sonic1EdgeWallObjectInstance extends AbstractObjectInstance
     // From disassembly: move.w #$28,d2
     private static final int HALF_HEIGHT = 0x28;
 
-    private final int frameIndex;
-    private final boolean solid;
+    private int frameIndex;
+    private boolean solid;
 
     public Sonic1EdgeWallObjectInstance(ObjectSpawn spawn) {
         super(spawn, "EdgeWall");

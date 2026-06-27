@@ -10,6 +10,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -33,7 +35,7 @@ import java.util.List;
  * The visible sheet is drawn directly at the spawn center, and the lift window is
  * calculated from the same center-position deltas used by the original routine.
  */
-public final class CnzHoverFanInstance extends AbstractObjectInstance {
+public final class CnzHoverFanInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int PRIORITY = 0x280;
 
@@ -47,16 +49,16 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance {
     private static final int X_OSC_OFFSET = 0x0C;    // ROM Oscillating_table+$0E, minus control word.
     private static final int LIFT_OSC_OFFSET = 0x14; // ROM Oscillating_table+$16, minus control word.
 
-    private final int subtype;
-    private final boolean activeVariant;
-    private final boolean xFlipped;
-    private final int initialFrame;
-    private final int xWindowMin;
-    private final int xWindowMax;
-    private final int liftWindowMin;
-    private final int liftWindowMax;
-    private final int baseX;
-    private final int baseY;
+    private int subtype;
+    private boolean activeVariant;
+    private boolean xFlipped;
+    private int initialFrame;
+    private int xWindowMin;
+    private int xWindowMax;
+    private int liftWindowMin;
+    private int liftWindowMax;
+    private int baseX;
+    private int baseY;
     private int currentX;
     private int renderFrame;
 
@@ -74,6 +76,11 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance {
         this.baseY = spawn.y();
         this.currentX = baseX;
         this.renderFrame = initialFrame;
+    }
+
+    @Override
+    public CnzHoverFanInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzHoverFanInstance(ctx.spawn());
     }
 
     @Override

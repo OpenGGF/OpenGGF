@@ -12,6 +12,9 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategory;
@@ -36,7 +39,7 @@ import java.util.List;
  * {@code loc_8B230} ice debris children and delete.
  */
 public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
     private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_HARMFUL_ICE;
@@ -54,10 +57,10 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
     private static final int BREAK_FRAME = 4;
     private static final int BREAK_COLLISION_FLAGS = 0xD7;
 
-    private final int x;
-    private final int y;
-    private final boolean hFlip;
-    private final boolean breakOnTouch;
+    private int x;
+    private int y;
+    private boolean hFlip;
+    private boolean breakOnTouch;
 
     private boolean broken;
 
@@ -67,6 +70,11 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
         this.y = spawn.y();
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
         this.breakOnTouch = (spawn.subtype() & 0xFF) != 0;
+    }
+
+    @Override
+    public IczHarmfulIceObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczHarmfulIceObjectInstance(ctx.spawn());
     }
 
     @Override
@@ -198,7 +206,8 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
     public record IceDebrisSpec(int subtype, int x, int y, int xVel, int yVel) {
     }
 
-    public static final class IceDebris extends GravityDebrisChild {
+    public static final class IceDebris extends GravityDebrisChild
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private static final int GRAVITY = 0x38; // MoveSprite gravity.
         private static final int INITIAL_MAPPING_FRAME = 0x0F; // ObjDat3_8B286.
         private static final int[] RAW_ANIMATION_UPPER = {
@@ -218,6 +227,12 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
                     "ICZHarmfulIceDebris", spec.xVel(), spec.yVel(), GRAVITY);
             // loc_8B230 switches from byte_8AB3E to byte_8AB46 when subtype >= 6.
             this.rawAnimation = spec.subtype() >= 6 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
+            this.animFrame = initialAnimFrame();
+        }
+
+        private IceDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZHarmfulIceDebris", 0, 0, GRAVITY);
+            this.rawAnimation = (spawn.subtype() & 0xFF) >= 6 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
             this.animFrame = initialAnimFrame();
         }
 

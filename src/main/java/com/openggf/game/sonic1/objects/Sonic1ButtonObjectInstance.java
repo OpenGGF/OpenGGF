@@ -67,16 +67,16 @@ public class Sonic1ButtonObjectInstance extends AbstractObjectInstance
     private static final int ID_PUSH_BLOCK = 0x33;
 
     // Subtype fields
-    private final int switchIndex;
-    private final boolean flashMode;
-    private final int switchBit;
-    private final boolean blockPressable;
+    private int switchIndex;
+    private boolean flashMode;
+    private int switchBit;
+    private boolean blockPressable;
 
     private int flashTimer;
     private int currentFrame;
 
     // Position adjusted by +3 Y as per disassembly: addq.w #3,obY(a0)
-    private final int adjustedY;
+    private int adjustedY;
 
     public Sonic1ButtonObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Button");

@@ -809,17 +809,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		if (!verticalWrapEnabled || sprite == null) {
 			return false;
 		}
-		// ROM masks the PLAYER's y_pos every frame ONLY for games that have a real
-		// Screen_Y_wrap_value (S3K: sonic3k.asm:21989-21992, 26233-26236). S1/S2 have
-		// no such value on the player (useScreenYWrapValueForVisibility is false for
-		// both); their LZ3/SBZ2 vertical wrap masks Sonic's y_pos ONLY in the same
-		// frame the CAMERA crosses the wrap boundary (ScrollVertical
-		// SV_BottomBoundary/SV_TopBoundary), which updatePosition already mirrors via
-		// wrapFocusedSpriteYPositionWord. Applying an unconditional per-frame
-		// y & 0x7FF here wrongly wrapped Sonic at y=0x800 long before the camera
-		// reached the boundary (S1 LZ3 f466: 0x0807 -> 0x0007).
+		// This is separate from the render visibility wrap margin: S2 control
+		// paths apply the $7FF y_pos mask, while S1 LZ3/SBZ2 only masks Sonic on
+		// the camera wrap-crossing frame mirrored by updatePosition().
 		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		if (fs == null || !fs.useScreenYWrapValueForVisibility()) {
+		if (fs == null || !fs.playerControlAppliesVerticalWrapMask()) {
 			return false;
 		}
 		short before = sprite.getCentreY();

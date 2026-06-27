@@ -208,7 +208,7 @@ class TestZoneLayoutMutationPipeline {
     }
 
     @Test
-    void levelFrameStepFlushesQueuedMutationsAfterEventsAndBeforeCamera() {
+    void levelFrameStepFlushesQueuedMutationsAfterCameraScrollAndEventsBeforeBoundary() {
         GameModule module = mock(GameModule.class);
         LevelEventProvider levelEvents = mock(LevelEventProvider.class);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
@@ -260,11 +260,11 @@ class TestZoneLayoutMutationPipeline {
         }).when(levelEvents).update();
 
         LevelFrameStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> { });
-        assertEquals("DEMIBP", log.toString(),
-                "queued gameplay mutations should flush after level events and before camera work");
+        assertEquals("DPEMIB", log.toString(),
+                "queued gameplay mutations should flush after camera scroll and level events, before boundary easing");
 
         LevelFrameStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> { });
-        assertEquals("DEMIBPDEBP", log.toString(),
+        assertEquals("DPEMIBDPEB", log.toString(),
                 "queued mutation batch should be empty on the next frame while processDirtyRegions stays at frame start");
     }
 

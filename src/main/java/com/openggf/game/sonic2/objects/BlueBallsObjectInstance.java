@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -58,7 +60,7 @@ import java.util.List;
  *
  * @see SpeedBoosterObjectInstance Another CPZ-specific object
  */
-public class BlueBallsObjectInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public class BlueBallsObjectInstance extends AbstractObjectInstance implements TouchResponseProvider, RewindRecreatable {
 
     // ========================================================================
     // ROM Constants
@@ -164,10 +166,10 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
     private int yVelocity;
 
     /** Initial/target Y position (returns here after bounce). */
-    private final int initialY;
+    private int initialY;
 
     /** Initial X position (for straight motion reset). */
-    private final int initialX;
+    private int initialX;
 
     /** X velocity delta direction (+/- ARC_X_VEL_DELTA). */
     private int xVelDelta;
@@ -182,16 +184,16 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
     private int waitTimer;
 
     /** Movement type: true = arc motion, false = straight motion. */
-    private final boolean arcMotion;
+    private boolean arcMotion;
 
     /** Whether this ball has already spawned siblings. */
     private boolean hasSpawnedSiblings;
 
     /** Number of siblings to spawn (from subtype low nibble). */
-    private final int siblingCount;
+    private int siblingCount;
 
     /** X-flip status (from Sonic's facing direction at spawn time, stored in renderFlags). */
-    private final boolean xFlipped;
+    private boolean xFlipped;
 
     public BlueBallsObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -227,6 +229,11 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
 
         // Global instance tracking
         activeInstanceCount++;
+    }
+
+    @Override
+    public BlueBallsObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BlueBallsObjectInstance(ctx.spawn(), getName());
     }
 
     /**

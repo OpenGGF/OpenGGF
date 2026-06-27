@@ -7,6 +7,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -30,7 +32,7 @@ import java.util.List;
  * Disassembly reference: docs/s1disasm/_incObj/5E Seesaw.asm
  */
 public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, RewindRecreatable {
 
     // From disassembly: move.b #$30,obActWid(a0)
     private static final int COLLISION_HALF_WIDTH = 0x30;
@@ -68,7 +70,7 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
     };
 
     // Saved original X position (see_origX = objoff_30)
-    private final int origX;
+    private int origX;
 
     // Current target frame (see_frame = objoff_3A)
     // 0 = tilted left (left side up), 1 = flat, 2 = tilted right (right side up)
@@ -105,6 +107,11 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
         }
         // move.b obFrame(a0),see_frame(a0)
         targetFrame = mappingFrame;
+    }
+
+    @Override
+    public Sonic1SeesawObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1SeesawObjectInstance(ctx.spawn());
     }
 
     @Override
@@ -381,6 +388,25 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
+    }
+
+    @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // ROM See_Slope / See_Slope2 pass #96/2 (= 0x30) directly as SlopeObject's
+        // / SlopeObject_AssumeStoodOn's d1 (docs/s1disasm/_incObj/5E SLZ
+        // Seesaw.asm:66-67,79-83), and obActWid is itself #96/2 (line 33). SlopeObject
+        // does its X-range check on that d1 with no narrowing (docs/s1disasm/_incObj/
+        // sub PlatformObject.asm:133-139), then bra's to Plat_NoXCheck_AltY which skips
+        // any further X check. COLLISION_HALF_WIDTH (0x30) is therefore already the
+        // standable top-landing width and must NOT receive the generic SolidObjectFull
+        // +$B narrowing (which would shrink it to 0x25). Without this, a player falling
+        // onto the raised end of the seesaw near its edge is rejected as out-of-width and
+        // never lands (SLZ3 f6364: a rolling-jump Sonic arcs back down onto the seesaw at
+        // relX=90 -- 42px right of centre, inside the full +/-0x30 range but outside the
+        // narrowed +/-0x25 -- so ROM re-lands him while the engine kept him falling).
+        // Matches the sibling SlopeObject users Sonic1CollapsingLedgeObjectInstance and
+        // Sonic1CollapsingFloorObjectInstance, which opt in for the same reason.
+        return true;
     }
 
     // ---- SlopedSolidProvider ----

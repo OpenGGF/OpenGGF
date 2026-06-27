@@ -5,6 +5,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -28,7 +30,7 @@ import java.util.logging.Logger;
  * <p>Two instances at the HCZ1 boss arena (X=$3418/$3440, Y=$07F4, subtype $38)
  * carry Sonic downward into the Act 2 starting area after the miniboss.
  */
-public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance {
+public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(HCZTwistingLoopObjectInstance.class.getName());
 
     // =========================================================================
@@ -147,9 +149,9 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance {
     // Instance state
     // =========================================================================
 
-    private final int subtype;
-    private final boolean reverseEntry;  // bit 7 of subtype
-    private final boolean objectFlippedX;  // ROM: status bit 0 from layout render_flags
+    private int subtype;
+    private boolean reverseEntry;  // bit 7 of subtype
+    private boolean objectFlippedX;  // ROM: status bit 0 from layout render_flags
     private final LoopDef loopDef;
     private final PlayerState p1State = new PlayerState();
     private final PlayerState p2State = new PlayerState();
@@ -171,6 +173,11 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance {
                 + " tableIndex=" + tableIndex
                 + " loopCenter=(" + loopDef.centerX + "," + loopDef.topY + ")"
                 + " reverseEntry=" + reverseEntry + " flipped=" + objectFlippedX);
+    }
+
+    @Override
+    public HCZTwistingLoopObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HCZTwistingLoopObjectInstance(ctx.spawn());
     }
 
     @Override

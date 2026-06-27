@@ -16,6 +16,8 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SplashObjectInstance;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -44,7 +46,7 @@ import java.util.logging.Logger;
  * loop with orbiting rockets, the suction phase, custom palette flashing, and
  * a signpost-style defeat handoff.
  */
-public class HczMinibossInstance extends AbstractBossInstance {
+public class HczMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(HczMinibossInstance.class.getName());
 
     private static final int ROUTINE_INIT = 0;
@@ -1368,20 +1370,25 @@ public class HczMinibossInstance extends AbstractBossInstance {
      * Phase 3 ($1F frames): dying pull, then delete.
      */
     private static final class VortexBubbleChild extends com.openggf.level.objects.AbstractObjectInstance
-            implements com.openggf.game.rewind.RewindStateful<VortexBubbleChild.RewindState> {
+            implements com.openggf.game.rewind.RewindStateful<VortexBubbleChild.RewindState>,
+            SpawnCoordinateZeroScalarArgsRewindRecreatable {
         private static final int PHASE_TIMER = 0x1F;
         private static final int PHASE_PULL = 0;
         private static final int PHASE_HOLD = 1;
         private static final int PHASE_DYING = 2;
-        private final int vortexX;
-        private final int vortexY;
-        private final int frame;
+        private int vortexX;
+        private int vortexY;
+        private int frame;
         private int phase;
         private int timer;
         private short xVel;
         private boolean vortexEnded;
 
         private record RewindState(int x, int y, int phase, int timer, short xVel, boolean vortexEnded) {}
+
+        private VortexBubbleChild(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(), 0, 0, 0);
+        }
 
         VortexBubbleChild(int x, int y, int frame, int vortexX, int vortexY) {
             super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "VortexBubble");

@@ -11,11 +11,14 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -35,7 +38,7 @@ import java.util.logging.Logger;
  * Object 0x2A - Cork Floor (Sonic 3 & Knuckles).
  */
 public class CorkFloorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(CorkFloorObjectInstance.class.getName());
 
@@ -104,12 +107,12 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
     }
 
     private final ZoneConfig config;
-    private final Mode mode;
-    private final int subtype;
-    private final boolean hFlip;
+    private Mode mode;
+    private int subtype;
+    private boolean hFlip;
     private int mappingFrame;
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
     private final int[][] effectiveVelTable;
 
     private boolean broken;
@@ -138,6 +141,13 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         this.effectiveVelTable = config.iczPlaneMode && (subtype & 0x10) != 0
                 ? VEL_TABLE_SMALL
                 : config.velTable;
+    }
+
+    @Override
+    public CorkFloorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.construct(
+                ctx.objectServices(),
+                () -> new CorkFloorObjectInstance(ctx.spawn()));
     }
 
     public boolean isBroken() {
@@ -407,14 +417,14 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         return AIZ1_CONFIG;
     }
 
-    public static class CorkFloorFragment extends AbstractObjectInstance {
+    public static class CorkFloorFragment extends AbstractObjectInstance implements RewindRecreatable {
 
         private int currentX;
         private int currentY;
-        private final int fragmentFrameIndex;
-        private final int pieceIndex;
-        private final String artKey;
-        private final boolean hFlip;
+        private int fragmentFrameIndex;
+        private int pieceIndex;
+        private String artKey;
+        private boolean hFlip;
         private final SubpixelMotion.State motionState;
 
         public CorkFloorFragment(int parentX, int parentY,
@@ -431,6 +441,27 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
             this.hFlip = hFlip;
             this.motionState = new SubpixelMotion.State(
                     currentX, currentY, 0, 0, xVel, yVel);
+        }
+
+        private CorkFloorFragment() {
+            this(0, 0, 0, 0, 0, 0, Sonic3kObjectArtKeys.CORK_FLOOR_AIZ1, false);
+        }
+
+        @Override
+        public CorkFloorFragment recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            int x = capturedSpawn != null ? capturedSpawn.x() : 0;
+            int y = capturedSpawn != null ? capturedSpawn.y() : 0;
+            boolean capturedHFlip = capturedSpawn != null && (capturedSpawn.renderFlags() & 1) != 0;
+            return new CorkFloorFragment(
+                    x,
+                    y,
+                    0,
+                    0,
+                    0,
+                    0,
+                    Sonic3kObjectArtKeys.CORK_FLOOR_AIZ1,
+                    capturedHFlip);
         }
 
         @Override

@@ -5,6 +5,7 @@ import com.openggf.debug.DebugColor;
 
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.rewind.GenericRewindEligibility;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.game.PlayableEntity;
 
@@ -255,7 +256,12 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
      */
     @Override
     public PerObjectRewindSnapshot captureRewindState() {
-        PerObjectRewindSnapshot base = super.captureRewindState();
+        return captureRewindState(RewindCaptureContext.none());
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        PerObjectRewindSnapshot base = super.captureRewindState(context);
         PerObjectRewindSnapshot.BadnikRewindExtra badnikExtra =
                 new PerObjectRewindSnapshot.BadnikRewindExtra(
                         currentX, currentY, xVelocity, yVelocity,
@@ -263,9 +269,14 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
         if (GenericRewindEligibility.usesDefaultBadnikSubclassCapture(getClass())
                 && base.genericState() == null
                 && base.compactGenericState() == null) {
-            var genericState = GenericFieldCapturer.captureObjectSubclassScalars(this);
-            if (!genericState.keys().isEmpty()) {
-                base = base.withGenericState(genericState);
+            var compactState = GenericFieldCapturer.captureObjectSubclassScalarsCompact(this, context);
+            if (compactState.isPresent()) {
+                base = base.withCompactGenericState(compactState.get());
+            } else {
+                var genericState = GenericFieldCapturer.captureObjectSubclassScalars(this);
+                if (!genericState.keys().isEmpty()) {
+                    base = base.withGenericState(genericState);
+                }
             }
         }
         // The record constructor with badnikExtra parameter; playerExtra is null for badniks
@@ -302,7 +313,12 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
      */
     @Override
     public void restoreRewindState(PerObjectRewindSnapshot s) {
-        super.restoreRewindState(s);
+        restoreRewindState(s, RewindCaptureContext.none());
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot s, RewindCaptureContext context) {
+        super.restoreRewindState(s, context);
         if (s.badnikExtra() != null) {
             PerObjectRewindSnapshot.BadnikRewindExtra extra = s.badnikExtra();
             this.currentX = extra.currentX();

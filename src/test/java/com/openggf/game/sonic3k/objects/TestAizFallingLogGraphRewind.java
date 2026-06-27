@@ -130,11 +130,17 @@ class TestAizFallingLogGraphRewind {
     @Test
     void fallingLogGraphClassesUseRewindRecreatableWithoutExplicitCodec() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(
+                        AizFallingLogObjectInstance.class),
+                "AizFallingLogObjectInstance must restore through RewindRecreatable generic recreate");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(
                         AizFallingLogObjectInstance.FallingLogChild.class),
                 "FallingLogChild must restore through RewindRecreatable generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(
                         AizFallingLogObjectInstance.SplashChild.class),
                 "SplashChild must restore through RewindRecreatable generic recreate");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        AizFallingLogObjectInstance.class.getName()),
+                "AizFallingLogObjectInstance must not keep an explicit S3K dynamic codec");
         assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
                         AizFallingLogObjectInstance.FallingLogChild.class.getName()),
                 "FallingLogChild must not keep an explicit S3K dynamic codec");

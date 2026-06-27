@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -28,7 +29,7 @@ import java.util.List;
  * routine table, hit handling, defeat explosion controller, and act-end
  * signpost handoff while reusing the engine's shared boss touch-response path.
  */
-public final class MhzMinibossInstance extends AbstractBossInstance {
+public final class MhzMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
     private static final int HIT_COUNT = 6;
     private static final int COLLISION_SIZE = 0x0F;
     private static final int PRIORITY_BUCKET = 4; // ObjDat_MHZMiniboss priority $200

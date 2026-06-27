@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -42,7 +44,7 @@ import java.util.logging.Logger;
  *   0x18 - Monitor approach: wait until player.x>=0x1240, y_pos-=0x20
  *   0x1A - Explosion: wait until player.x>=0x13D0, release player, scatter emeralds, delete
  */
-public class AizPlaneIntroInstance extends AbstractObjectInstance {
+public class AizPlaneIntroInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(AizPlaneIntroInstance.class.getName());
 
@@ -270,6 +272,11 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
         this.mappingFrame = INTRO_MAPPING_FRAME;
         this.lastFrameCounter = 0;
         this.renderersLoaded = false;
+    }
+
+    @Override
+    public AizPlaneIntroInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizPlaneIntroInstance(ctx.spawn());
     }
 
     // -----------------------------------------------------------------------
@@ -1092,4 +1099,3 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
         }
     }
 }
-

@@ -12,6 +12,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.Level;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.TouchResponseProvider.TouchRegion;
@@ -30,7 +31,7 @@ import java.util.List;
  * around {@code loc_711EC..loc_713D2}; the orb/projectile children are modeled
  * as owned state so rewind captures the encounter with the parent.
  */
-public final class IczMinibossInstance extends AbstractBossInstance {
+public final class IczMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
 
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_DESCEND = 0x02;

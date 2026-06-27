@@ -53,8 +53,8 @@ public class Sonic1GlassReflectionInstance extends AbstractObjectInstance implem
     // Shine frame index (frame 1 in mappings)
     private static final int SHINE_FRAME = 1;
     private final Sonic1GlassBlockObjectInstance parent;
-    private final int reflectSubtype;
-    private final boolean isTall;
+    private int reflectSubtype;
+    private boolean isTall;
 
     // Dynamic position
     private int x;

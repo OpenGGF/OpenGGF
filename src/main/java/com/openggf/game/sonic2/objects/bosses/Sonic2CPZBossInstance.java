@@ -11,6 +11,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -40,7 +41,8 @@ import java.util.List;
  * - STOP_EXPLODING: Post-explosion bounce
  * - RETREAT: Flee off-screen
  */
-public class Sonic2CPZBossInstance extends AbstractBossInstance {
+public class Sonic2CPZBossInstance extends AbstractBossInstance
+        implements SpawnConstructionContextRewindRecreatable {
 
     // Boss routine states
     private static final int MAIN_DESCEND = 0x00;

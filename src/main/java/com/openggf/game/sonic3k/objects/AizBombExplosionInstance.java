@@ -34,7 +34,7 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
 
     /** World-space X position. */
     private int posX;
-    private final int posY;
+    private int posY;
     // animIndex/initialDelay are non-final so the rewind field capturer reapplies
     // them after spawn-coordinate recreate uses placeholders 0.
     private int animIndex;

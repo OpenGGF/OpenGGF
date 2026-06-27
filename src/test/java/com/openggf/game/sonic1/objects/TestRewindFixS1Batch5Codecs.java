@@ -4,16 +4,12 @@ import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link Sonic1ObjectRegistry} (unioned with the shared codecs)
- * still exposes only the remaining explicit dynamic rewind recreate codecs from
- * the old batch-5 S1 fix, while objects deleted in later Phase-2 batches stay on
- * generic recreate instead of regressing to registry codecs.
+ * Verifies that objects deleted in later Phase-2 S1 batches stay on generic
+ * recreate instead of regressing to explicit dynamic codecs.
  *
  * <p>The batch-5 accept-drop object {@code Sonic1TryAgainEmeraldsObjectInstance}
  * is intentionally excluded: it is a {@code GameMode.TRY_AGAIN_END} display
@@ -22,20 +18,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * docs/KNOWN_DISCREPANCIES.md "Batch-5 Rewind: Transient Cosmetic Children Not
  * Rewound"), so it must NOT have a codec.
  *
- * <p>Pure registry-content test: it constructs a registry and reads
- * {@code deleted dynamic-codec registry API} without a ROM, OpenGL, or an active gameplay
- * session. Full session round-trip is handled by the rewind coverage guard.
+ * <p>Pure metadata test: it reads deleted-codec state without a ROM, OpenGL, or
+ * an active gameplay session. Full session round-trip is handled by the rewind
+ * coverage guard.
  */
 class TestRewindFixS1Batch5Codecs {
 
-    private static Set<String> codecClassNames() {
-        return DeletedDynamicRewindCodecs.classNames();
-    }
-
     @Test
-    void registersOnlyRemainingExplicitReleaseSliceBatch5Codecs() {
-        Set<String> names = codecClassNames();
-
+    void deletedReleaseSliceBatch5ObjectsStayGenericOnly() {
         List<String> deleted = List.of(
                 Sonic1EndingSonicObjectInstance.class.getName(),
                 Sonic1EndingEmeraldsObjectInstance.class.getName(),
@@ -43,7 +33,7 @@ class TestRewindFixS1Batch5Codecs {
                 Sonic1GrassFireObjectInstance.class.getName());
 
         for (String name : deleted) {
-            assertFalse(names.contains(name),
+            assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(name),
                     name + " must restore through generic recreate, not the old explicit codec");
         }
     }

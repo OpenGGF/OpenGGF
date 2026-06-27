@@ -8,9 +8,12 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlatformBobHelper;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -56,7 +59,7 @@ import java.util.logging.Logger;
  * sub_24FDE (line 50229), Platform_Rising (line 50462), loc_252B8 (line 50556).
  */
 public class FloatingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(FloatingPlatformObjectInstance.class.getName());
 
@@ -110,18 +113,18 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     // ===== Instance state =====
 
     private final ZoneConfig config;
-    private final int halfWidth;
-    private final int halfHeight;
-    private final int mappingFrame;
-    private final int moveType;
-    private final boolean xFlip;
+    private int halfWidth;
+    private int halfHeight;
+    private int mappingFrame;
+    private int moveType;
+    private boolean xFlip;
 
     private int x;
     private int y;
-    private final int baseX;  // objoff_30: saved X position
-    private final int baseY;  // objoff_34: saved Y position
-    private final int outOfRangeReferenceX; // objoff_44: saved deletion anchor
-    private final int outOfRangeLimit;      // objoff_42: deletion range
+    private int baseX;  // objoff_30: saved X position
+    private int baseY;  // objoff_34: saved Y position
+    private int outOfRangeReferenceX; // objoff_44: saved deletion anchor
+    private int outOfRangeLimit;      // objoff_42: deletion range
     // Stationary bob state (type 0) — sine-based vertical nudge when player stands
     private final PlatformBobHelper bobHelper = new PlatformBobHelper();
 
@@ -191,6 +194,12 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
         this.config = resolveConfig();
 
         updateDynamicSpawn(x, y);
+    }
+
+    @Override
+    public FloatingPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new FloatingPlatformObjectInstance(ctx.spawn()));
     }
 
     // ===== SolidObjectProvider =====

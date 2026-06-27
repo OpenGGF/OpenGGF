@@ -1,14 +1,14 @@
 package com.openggf.game.sonic1.objects.badniks;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
-import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.game.PlayableEntity;
 
 import java.util.List;
 
@@ -24,7 +24,7 @@ import java.util.List;
  * <p>
  * Based on docs/s1disasm/_incObj/40 Moto Bug.asm and _anim/Moto Bug.asm.
  */
-public class Sonic1MotobugSmokeInstance extends AbstractObjectInstance {
+public class Sonic1MotobugSmokeInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // Smoke animation sequence from _anim/Moto Bug.asm .smoke:
     // dc.b 1, 3, 6, 3, 6, 4, 6, 4, 6, 4, 6, 5, afRoutine
@@ -34,15 +34,19 @@ public class Sonic1MotobugSmokeInstance extends AbstractObjectInstance {
     // it for one more update before advancing on the following AnimateSprite call.
     private static final int FRAME_HOLD_TICKS = 1;
 
-    private final int posX;
-    private final int posY;
-    private final boolean facingLeft;
+    private int posX;
+    private int posY;
+    private boolean facingLeft;
     private int scriptIndex;
     private int frameHoldRemaining;
     private int renderedFrame;
     private boolean initialized;
     private boolean deletePending;
     private boolean finished;
+
+    public Sonic1MotobugSmokeInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), false);
+    }
 
     public Sonic1MotobugSmokeInstance(int x, int y, boolean facingLeft) {
         super(new ObjectSpawn(x, y, 0x40, 0, 0, false, 0), "MotobugSmoke");
@@ -56,6 +60,11 @@ public class Sonic1MotobugSmokeInstance extends AbstractObjectInstance {
         this.initialized = false;
         this.deletePending = false;
         this.finished = false;
+    }
+
+    @Override
+    public Sonic1MotobugSmokeInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1MotobugSmokeInstance(ctx.spawn());
     }
 
     @Override

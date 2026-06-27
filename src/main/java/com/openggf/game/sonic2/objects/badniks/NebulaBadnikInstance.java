@@ -10,6 +10,8 @@ import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProfile;
@@ -34,7 +36,7 @@ import java.util.List;
  *
  * SCZ objects also have Tornado_Velocity_X/Y added each frame (loc_36776).
  */
-public class NebulaBadnikInstance extends AbstractBadnikInstance {
+public class NebulaBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     // Obj99_SubObjData2: collision_flags = 6
     private static final int COLLISION_SIZE_INDEX = 6;
 
@@ -76,6 +78,11 @@ public class NebulaBadnikInstance extends AbstractBadnikInstance {
         this.bombDropped = false;
         this.initialized = false;
         this.facingLeft = true; // Always flies left
+    }
+
+    @Override
+    public NebulaBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new NebulaBadnikInstance(ctx.spawn());
     }
 
     @Override

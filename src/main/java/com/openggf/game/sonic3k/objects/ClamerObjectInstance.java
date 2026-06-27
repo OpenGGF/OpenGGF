@@ -16,6 +16,10 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchCategory;
@@ -39,7 +43,7 @@ import java.util.List;
  * the parent close flag.
  */
 public final class ClamerObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseListener, TouchResponseAttackable, RewindRecreatable {
 
     /*
      * ROM Clamer spring child collision_flags = $D7 ($C0 | $17), set once at
@@ -109,9 +113,9 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
      */
     private enum SpringRoutine { LIVE, COOLDOWN_DRAIN, COOLDOWN_DONE }
 
-    private final int currentX;
-    private final int currentY;
-    private final boolean facingRight;
+    private int currentX;
+    private int currentY;
+    private boolean facingRight;
 
     private int routine = ROUTINE_IDLE;
     private int mappingFrame;
@@ -153,6 +157,11 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         this.currentX = spawn.x();
         this.currentY = spawn.y();
         this.facingRight = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public ClamerObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new ClamerObjectInstance(ctx.spawn());
     }
 
     @Override
@@ -700,12 +709,19 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     private record ClosestPlayer(AbstractPlayableSprite player, int dx) {
     }
 
-    private static final class ClamerSpringChild extends AbstractObjectInstance {
+    private static final class ClamerSpringChild extends AbstractObjectInstance implements RewindRecreatable {
         private final ClamerObjectInstance parent;
 
         private ClamerSpringChild(ClamerObjectInstance parent) {
             super(parent.buildSpawnAt(parent.currentX, parent.currentY + SPRING_OFFSET_Y), "ClamerSpringChild");
             this.parent = parent;
+        }
+
+        @Override
+        public ClamerSpringChild recreateForRewind(RewindRecreateContext ctx) {
+            ClamerObjectInstance restoredParent =
+                    RewindRecreateObjectLinks.nearestLiveObject(ctx, ClamerObjectInstance.class);
+            return restoredParent == null ? null : new ClamerSpringChild(restoredParent);
         }
 
         @Override
@@ -735,7 +751,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     private static final class ClamerAutoCloseProjectile extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, SpawnTrailingZeroIntsRewindRecreatable {
         private final SubpixelMotion.State motion;
         private boolean collisionEnabled = true;
         private boolean deleteNextFrame;

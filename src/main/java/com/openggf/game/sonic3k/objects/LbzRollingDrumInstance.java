@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
@@ -26,7 +27,7 @@ import java.util.List;
  * {@code _unkF7B0+0/+1} store native P1/P2 angle bytes while riding.
  */
 public final class LbzRollingDrumInstance extends AbstractObjectInstance
-        implements RomObjectCodePointerProvider {
+        implements RomObjectCodePointerProvider, SpawnRewindRecreatable {
     private static final int TOP_BOTTOM_Y_BIAS = 0x53;
     private static final int VERTICAL_RANGE = 0xA6;
     private static final int LOWER_HALF_Y = 0x53;
@@ -47,8 +48,8 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     // Obj_LBZRollingDrum installs loc_2C3CA in word 0 (sonic3k.asm:60585-60594).
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0002;
 
-    private final int leftBound;
-    private final int rightBound;
+    private int leftBound;
+    private int rightBound;
     private boolean p1Riding;
     private int fallbackP1Angle;
     private boolean p2Riding;

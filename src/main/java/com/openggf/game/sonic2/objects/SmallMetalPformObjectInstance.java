@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -53,7 +55,7 @@ import java.util.List;
  *   </li>
  * </ul>
  */
-public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
+public class SmallMetalPformObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // ========================================================================
     // ROM Constants
@@ -68,6 +70,11 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
     public SmallMetalPformObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         this.spawnTimer = INITIAL_SPAWN_DELAY;
+    }
+
+    @Override
+    public SmallMetalPformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SmallMetalPformObjectInstance(ctx.spawn(), getName());
     }
 
     // ========================================================================
@@ -201,7 +208,7 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
         }
 
         private ChildState state;
-        private final boolean xFlipped;
+        private boolean xFlipped;
         private int yVelocity;       // 8.8 fixed-point (e.g., $100 = 1 pixel/frame)
         private int currentX;
         private int currentY;

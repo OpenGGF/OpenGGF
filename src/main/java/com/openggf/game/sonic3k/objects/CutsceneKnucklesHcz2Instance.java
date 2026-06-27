@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -35,7 +36,8 @@ import java.util.logging.Logger;
  *   <li>12: Laugh until off-screen → restore palette, fade to level music, unlock camera, delete</li>
  * </ul>
  */
-public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance {
+public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(CutsceneKnucklesHcz2Instance.class.getName());
 
     // --- ROM constants ---

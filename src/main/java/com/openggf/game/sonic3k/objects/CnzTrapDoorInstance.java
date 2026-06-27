@@ -9,6 +9,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -35,7 +37,7 @@ import java.util.List;
  * is applied here.
  */
 public final class CnzTrapDoorInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener {
 
     private static final int PRIORITY = 0x80;
 
@@ -56,6 +58,11 @@ public final class CnzTrapDoorInstance extends AbstractObjectInstance
 
     public CnzTrapDoorInstance(ObjectSpawn spawn) {
         super(spawn, "CNZTrapDoor");
+    }
+
+    @Override
+    public CnzTrapDoorInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzTrapDoorInstance(ctx.spawn());
     }
 
     @Override

@@ -14,6 +14,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -29,7 +30,7 @@ import java.util.List;
  * directly from the parent for simplicity.
  */
 public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final int PRIORITY = 5;
     private static final int SEGMENT_COUNT = 14;
@@ -40,12 +41,12 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     private static final int COLLAPSE_DELAY = 0x0E;
     private static final int[] FALL_DELAYS = {8, 0x10, 0x0C, 0x0E, 6, 0x0A, 4, 2, 8, 0x10, 0x0C, 0x0E, 6, 0x0A};
 
-    private final int pivotX;
-    private final int pivotY;
-    private final boolean xFlip;
-    private final boolean reverseVertical;
-    private final int settledAngle;
-    private final boolean cutsceneOverride;
+    private int pivotX;
+    private int pivotY;
+    private boolean xFlip;
+    private boolean reverseVertical;
+    private int settledAngle;
+    private boolean cutsceneOverride;
 
     private int currentX;
     private int currentY;
@@ -244,17 +245,25 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private static final class FallingBridgeSegment extends AbstractObjectInstance {
+    private static final class FallingBridgeSegment extends AbstractObjectInstance implements SpawnRewindRecreatable {
         private int x;
         private int y;
         private int delay;
         private final SubpixelMotion.State motion;
 
         private FallingBridgeSegment(int x, int y, int delay) {
-            super(new ObjectSpawn(x, y, 0x32, 0, 0, false, 0), "AIZDrawBridgeSegment");
+            super(new ObjectSpawn(x, y, 0x32, 0, 0, false, delay), "AIZDrawBridgeSegment");
             this.x = x;
             this.y = y;
             this.delay = delay;
+            this.motion = new SubpixelMotion.State(x, y, 0, 0, 0, 0);
+        }
+
+        private FallingBridgeSegment(ObjectSpawn spawn) {
+            super(spawn, "AIZDrawBridgeSegment");
+            this.x = spawn.x();
+            this.y = spawn.y();
+            this.delay = spawn.rawYWord();
             this.motion = new SubpixelMotion.State(x, y, 0, 0, 0, 0);
         }
 

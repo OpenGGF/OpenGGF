@@ -9,6 +9,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -37,7 +39,7 @@ import java.util.List;
  * Direction is determined by renderFlags bit 0 (status bit 0 in ROM):
  * 0 = facing right, 1 = facing left.
  */
-public class Sonic3kTwistedRampObjectInstance extends AbstractObjectInstance {
+public class Sonic3kTwistedRampObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     /** Minimum horizontal speed required to trigger (0x400 = 1024 subpixels). */
     private static final int SPEED_THRESHOLD = 0x400;
@@ -66,12 +68,17 @@ public class Sonic3kTwistedRampObjectInstance extends AbstractObjectInstance {
     private static final float DEBUG_B = 0.8f;
 
     /** true when renderFlags bit 0 is set (ramp faces left). */
-    private final boolean facingLeft;
+    private boolean facingLeft;
 
     public Sonic3kTwistedRampObjectInstance(ObjectSpawn spawn) {
         super(spawn, "TwistedRamp");
         // ROM: btst #0,status(a0) - bit 0 of render flags determines direction
         this.facingLeft = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public Sonic3kTwistedRampObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic3kTwistedRampObjectInstance(ctx.spawn());
     }
 
     @Override

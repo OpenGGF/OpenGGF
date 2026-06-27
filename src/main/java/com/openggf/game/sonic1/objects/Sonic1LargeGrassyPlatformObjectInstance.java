@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -55,7 +56,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/2F MZ Large Grassy Platforms.asm
  */
 public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable {
 
     // From disassembly: move.b #5,obPriority(a0)
     private static final int PRIORITY = 5;
@@ -138,23 +139,23 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
     private int y;
 
     // Saved base positions (lgrass_origX = objoff_2A, lgrass_origY = objoff_2C)
-    private final int baseX;
-    private final int baseY;
+    private int baseX;
+    private int baseY;
 
     // Visual frame (0=wide, 1=sloped, 2=narrow)
-    private final int mappingFrame;
+    private int mappingFrame;
 
     // Platform half-width ($40 or $20)
-    private final int platformWidth;
+    private int platformWidth;
 
     // Collision slope data for this variant
     private final byte[] slopeData;
 
     // Movement type (low 3 bits of subtype after masking)
-    private final int moveType;
+    private int moveType;
 
     // Bit 3 of original subtype: inverts oscillation direction
-    private final boolean invertOscillation;
+    private boolean invertOscillation;
 
     // Type 5 state: sinking angle (objoff_34)
     private int sinkAngle;

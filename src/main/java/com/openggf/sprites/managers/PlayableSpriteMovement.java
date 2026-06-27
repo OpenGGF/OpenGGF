@@ -1856,6 +1856,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (prePhysicsAngle == (sprite.getAngle() & 0xFF)) {
 			return;
 		}
+		// ROM's walking slope-resist routine runs BEFORE Sonic_Move with the
+		// FRAME-START inertia, and `tst.w inertia / beq return` skips the
+		// resist entirely when the player was stationary at frame start
+		// (S1 Sonic_SlopeResistWalk 01 Sonic.asm:1308-1309; S2 Sonic_SlopeResist
+		// s2.asm:37718-37719 / Tails_SlopeResist s2.asm:40620-40621; S3K
+		// Player_SlopeResist sonic3k.asm:23830-23831). This replay must observe
+		// that same frame-start inertia — using the post-Move inertia here would
+		// inject a slope resist ROM never applied (SYZ1 f4431: ROM lands with
+		// inertia 0, holds Right, Sonic_Move sets inertia +$C and AngleSpeed
+		// yields y_vel=-$A; SlopeRepel then detaches without touching velocity,
+		// so the ROM-recorded y_vel stays -$A). The S3K at-rest slope kick
+		// (|force| >= $D at inertia 0, sonic3k.asm:23847-23856) is owned by
+		// doSlopeResist, which sets slopeResistAppliedThisFrame and short-circuits
+		// this path, so the zero-inertia skip below is safe for all three games.
+		if (sprite.getPrePhysicsGSpeed() == 0) {
+			return;
+		}
 		// S1/S2/S3K run walking slope resist before SpeedToPos/MoveSprite2 and
 		// before AnglePos can detach the player (S1 01 Sonic.asm:283-291,
 		// 1246-1263; S2 s2.asm:36464-36477,37703-37723; S3K
@@ -2461,8 +2478,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// (sonic3k.asm:23183-23186, 28418-28421). This reproduces +$128 / +$128+$40
 		// exactly: $128 = 320 - 24 = LEVEL_DESIGN_WIDTH - SONIC_WIDTH. The boundary
 		// is viewport-independent — it tracks the level's right wall, not the screen.
+		// The +64 right-boundary extension is removed during a boss/screen lock.
+		// ROM gates that on different flags per game: S1 uses the persistent
+		// f_lockscreen (set at boss spawn, cleared only by Egg Prison / LZ boss,
+		// so it survives boss defeat in the Final Zone — s1disasm/_incObj/01
+		// Sonic.asm:1047-1049); S2 uses Current_Boss_ID, i.e. boss-alive
+		// (s2.asm:37247-37250). PhysicsFeatureSet.levelBoundaryLockUsesScreenLockFlag
+		// selects which. S3K never adds the +64 (levelBoundaryRightStrict).
+		boolean lockActive = (featureSet != null && featureSet.levelBoundaryLockUsesScreenLockFlag())
+				? gameState().isScreenLocked()
+				: gameState().isBossFightActive();
 		boolean strict = (featureSet != null && featureSet.levelBoundaryRightStrict())
-				|| gameState().isBossFightActive() || gameState().isEndOfLevelActive();
+				|| lockActive || gameState().isEndOfLevelActive();
 		int rightBoundary = RightBoundary.compute(maxX, LEVEL_DESIGN_WIDTH, SONIC_WIDTH, RIGHT_EXTRA, strict);
 
 		// ROM comparison: left is always bhi.s (<). S1/S2 right uses bls.s

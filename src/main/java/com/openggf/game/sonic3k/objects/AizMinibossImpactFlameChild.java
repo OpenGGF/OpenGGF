@@ -24,8 +24,8 @@ public class AizMinibossImpactFlameChild extends AbstractObjectInstance
     private static final int[] FRAMES = {0, 0, 1, 2, 3, 4};
     private static final int[] DURATIONS = {1, 1, 2, 2, 4, 4};
 
-    private final int worldX;
-    private final int worldY;
+    private int worldX;
+    private int worldY;
     // hazardous is non-final so the rewind field capturer reapplies it after the
     // recreate hook rebuilds the impact flame from its spawn (placeholder false).
     private boolean hazardous;

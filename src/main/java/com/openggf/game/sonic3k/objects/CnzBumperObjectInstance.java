@@ -46,10 +46,10 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
     private static final int LIST_ADD_WINDOW = 0x280;
     private static final int CAMERA_COARSE_BACK_OFFSET = 0x80;
 
-    private final int originX;
-    private final int originY;
-    private final int initialAngle;
-    private final boolean reverseOrbit;
+    private int originX;
+    private int originY;
+    private int initialAngle;
+    private boolean reverseOrbit;
 
     private int currentX;
     private int currentY;
@@ -76,7 +76,7 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
     /**
      * {@inheritDoc}
      *
-     * <p>Self-contained: all state (including the {@code final} origin/angle/orbit fields)
+     * <p>Self-contained: all state (including the origin/angle/orbit fields)
      * is derived deterministically from the captured spawn. Mutable scalar fields are
      * reapplied by the standard scalar-restore pass after recreate; pending player-touch
      * back-references are not wired here (they were not captured by the deleted explicit

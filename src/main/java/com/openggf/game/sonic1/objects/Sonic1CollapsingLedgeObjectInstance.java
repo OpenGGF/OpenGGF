@@ -11,6 +11,8 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
@@ -98,10 +100,10 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     private int y;
 
     // Subtype determines facing: 0 = left, 1 = right
-    private final int subtype;
+    private int subtype;
 
     // Mapping frame index: 0=left, 1=right (from obSubtype -> obFrame in init)
-    private final int mappingFrame;
+    private int mappingFrame;
 
     // Collapse timer (ledge_timedelay = objoff_38)
     private int collapseDelay;
@@ -500,20 +502,38 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
      * - ledge_timedelay = delay from CFlo_Data1
      * - Falls via ObjectFall when delay reaches 0
      */
-    public static class CollapsingLedgeFragmentInstance extends AbstractFallingFragment {
+    public static class CollapsingLedgeFragmentInstance extends AbstractFallingFragment
+            implements RewindRecreatable {
 
-        private final int smashFrameIndex;
-        private final int pieceIndex;
-        private final boolean hFlip;
+        private static final int PIECE_MASK = 0x1F;
+        private static final int FRAME_SHIFT = 5;
+        private static final int FRAME_MASK = 0x03;
+
+        private int smashFrameIndex;
+        private int pieceIndex;
+        private boolean hFlip;
+
+        CollapsingLedgeFragmentInstance(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(),
+                    smashFrameIndex(spawn),
+                    pieceIndex(spawn),
+                    spawn.rawYWord(),
+                    spawn.renderFlags());
+        }
 
         public CollapsingLedgeFragmentInstance(int parentX, int parentY,
                                                int smashFrameIndex, int pieceIndex,
                                                int delay, int renderFlags) {
-            super(new ObjectSpawn(parentX, parentY, Sonic1ObjectIds.COLLAPSING_LEDGE,
-                    0, renderFlags, false, 0), "LedgeFragment", delay, PRIORITY);
+            super(fragmentSpawn(parentX, parentY, smashFrameIndex, pieceIndex, delay, renderFlags),
+                    "LedgeFragment", delay, PRIORITY);
             this.smashFrameIndex = smashFrameIndex;
             this.pieceIndex = pieceIndex;
             this.hFlip = (renderFlags & 0x01) != 0;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new CollapsingLedgeFragmentInstance(ctx.spawn());
         }
 
         @Override
@@ -525,6 +545,33 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
 
             // Render just this piece from the smash frame (inheriting parent's X-flip)
             renderer.drawFramePieceByIndex(smashFrameIndex, pieceIndex, getX(), getY(), hFlip, false);
+        }
+
+        private static ObjectSpawn fragmentSpawn(
+                int x,
+                int y,
+                int smashFrameIndex,
+                int pieceIndex,
+                int delay,
+                int renderFlags) {
+            return new ObjectSpawn(x, y, Sonic1ObjectIds.COLLAPSING_LEDGE,
+                    fragmentSubtype(smashFrameIndex, pieceIndex),
+                    renderFlags,
+                    false,
+                    delay);
+        }
+
+        private static int fragmentSubtype(int smashFrameIndex, int pieceIndex) {
+            return ((smashFrameIndex & FRAME_MASK) << FRAME_SHIFT)
+                    | (pieceIndex & PIECE_MASK);
+        }
+
+        private static int smashFrameIndex(ObjectSpawn spawn) {
+            return (spawn.subtype() >> FRAME_SHIFT) & FRAME_MASK;
+        }
+
+        private static int pieceIndex(ObjectSpawn spawn) {
+            return spawn.subtype() & PIECE_MASK;
         }
     }
 }

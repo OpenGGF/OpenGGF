@@ -47,8 +47,8 @@ public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance i
 
     @RewindTransient(reason = "Structural parent link; child position derives from the weather-machine parent.")
     private final MhzEndBossWeatherMachineChild parent;
-    private final int subtype;
-    private final boolean spark;
+    private int subtype;
+    private boolean spark;
     private int x;
     private int y;
     private int frameIndex;

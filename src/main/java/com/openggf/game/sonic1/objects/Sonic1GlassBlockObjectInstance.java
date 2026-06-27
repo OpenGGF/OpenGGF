@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -52,7 +53,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/30 MZ Large Green Glass Blocks.asm
  */
 public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // --- Collision parameters ---
 
@@ -96,16 +97,16 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
     // --- Object state ---
 
     // Whether this is the tall variant (subtypes 0-2) or short (subtypes 3-4)
-    private final boolean isTall;
+    private boolean isTall;
 
     // Movement subtype (low 3 bits of obSubtype, masked to 0-4)
-    private final int moveType;
+    private int moveType;
 
     // Full subtype byte for switch index extraction
-    private final int fullSubtype;
+    private int fullSubtype;
 
     // Block frame: 0 = tall, 2 = short
-    private final int blockFrame;
+    private int blockFrame;
 
     // Dynamic position
     private int x;

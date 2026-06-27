@@ -20,11 +20,14 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.ArrayList;
@@ -40,7 +43,7 @@ import java.util.List;
  * trigger box from {@code word_8A2FC}.
  */
 public class IczBreakableWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN;
     private static final int PRIORITY_BUCKET = 5; // ObjDat priority $280.
@@ -60,9 +63,9 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
-    private final int x;
-    private final int y;
-    private final boolean hFlip;
+    private int x;
+    private int y;
+    private boolean hFlip;
     private boolean broken;
 
     public IczBreakableWallObjectInstance(ObjectSpawn spawn) {
@@ -70,6 +73,11 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
         this.x = spawn.x();
         this.y = spawn.y();
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+    }
+
+    @Override
+    public IczBreakableWallObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczBreakableWallObjectInstance(ctx.spawn());
     }
 
     @Override
@@ -249,7 +257,8 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
     public record IczBreakableWallDebrisSpec(int subtype, int x, int y, int xVel, int yVel) {
     }
 
-    public static final class IczBreakableWallDebris extends GravityDebrisChild {
+    public static final class IczBreakableWallDebris extends GravityDebrisChild
+            implements SpawnTrailingZeroIntsRewindRecreatable {
         private static final int GRAVITY = 0x70; // MoveSprite gravity.
         private static final int DELETE_TIMER = 0x5F; // loc_8A20C: move.w #$5F,$2E(a0).
         private static final int INITIAL_MAPPING_FRAME = 0x1C; // ObjDat3_8A41E.
@@ -264,6 +273,10 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
             super(new ObjectSpawn(spec.x(), spec.y(), Sonic3kObjectIds.ICZ_BREAKABLE_WALL,
                     spec.subtype(), 0, false, spec.y()),
                     "ICZBreakableWallDebris", spec.xVel(), spec.yVel(), GRAVITY);
+        }
+
+        private IczBreakableWallDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZBreakableWallDebris", 0, 0, GRAVITY);
         }
 
         @Override

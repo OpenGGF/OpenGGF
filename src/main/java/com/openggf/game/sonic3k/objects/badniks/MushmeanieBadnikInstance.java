@@ -4,7 +4,11 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -21,7 +25,8 @@ import java.util.List;
  * first clears collision for {@code $20} frames and pops the shell, the second
  * runs the normal badnik defeat path.
  */
-public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance {
+public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance
+        implements SpawnRewindRecreatable {
 
     private static final int COLLISION_FLAGS = 0xD7;
     private static final int COLLISION_SIZE_INDEX = COLLISION_FLAGS & 0x3F;
@@ -308,12 +313,37 @@ public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance {
         return getCollisionSizeIndex();
     }
 
-    public static final class ShellChild extends AbstractObjectInstance {
+    private static MushmeanieBadnikInstance findLiveMushmeanieParentForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        MushmeanieBadnikInstance nearest = null;
+        int nearestDistance = Integer.MAX_VALUE;
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (!(instance instanceof MushmeanieBadnikInstance mushmeanie) || mushmeanie.isDestroyed()) {
+                continue;
+            }
+            ObjectSpawn candidateSpawn = mushmeanie.getSpawn();
+            if (spawn.layoutIndex() >= 0 && candidateSpawn.layoutIndex() == spawn.layoutIndex()) {
+                return mushmeanie;
+            }
+            int distance = Math.abs(candidateSpawn.x() - spawn.x())
+                    + Math.abs(candidateSpawn.y() - spawn.y());
+            if (distance < nearestDistance) {
+                nearest = mushmeanie;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
+    }
+
+    public static final class ShellChild extends AbstractObjectInstance implements RewindRecreatable {
         private static final int RENDER_HALF_WIDTH = 0x0C;
         private static final int RENDER_HALF_HEIGHT = 0x08;
         private static final int PRIORITY_BUCKET = 4;
 
-        private final MushmeanieBadnikInstance parent;
+        private MushmeanieBadnikInstance parent;
         private int x;
         private int y;
         private int xSubpixel;
@@ -328,6 +358,12 @@ public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance {
             this.parent = parent;
             this.x = parent.currentX;
             this.y = parent.currentY;
+        }
+
+        @Override
+        public ShellChild recreateForRewind(RewindRecreateContext ctx) {
+            MushmeanieBadnikInstance liveParent = findLiveMushmeanieParentForRewind(ctx);
+            return liveParent == null ? null : new ShellChild(liveParent);
         }
 
         @Override

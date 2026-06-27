@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Tails;
 
@@ -42,7 +44,7 @@ import java.util.Map;
  * same inline controller flow to a small per-player state map rather than
  * pretending the object uses an external waypoint family.
  */
-public final class CnzVacuumTubeInstance extends AbstractObjectInstance {
+public final class CnzVacuumTubeInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int HORIZONTAL_RANGE = 0x50;
     private static final int HORIZONTAL_HEIGHT_OFFSET = 0x20;
     private static final int LIFT_HALF_WIDTH = 0x18;
@@ -54,9 +56,9 @@ public final class CnzVacuumTubeInstance extends AbstractObjectInstance {
     private static final int BOOST_SPEED = 0x1000;
     private static final int LIFT_ANIMATION_ID = 0x0F;
 
-    private final boolean liftMode;
-    private final boolean facingRight;
-    private final int configuredLiftFrames;
+    private boolean liftMode;
+    private boolean facingRight;
+    private int configuredLiftFrames;
     private final Map<AbstractPlayableSprite, Integer> activeLiftFrames = new IdentityHashMap<>();
     private int tunnelBoosterSfxCounter;
 
@@ -65,6 +67,11 @@ public final class CnzVacuumTubeInstance extends AbstractObjectInstance {
         this.liftMode = spawn.subtype() != 0;
         this.facingRight = (spawn.renderFlags() & 0x01) != 0;
         this.configuredLiftFrames = CnzTubePathTables.configuredVacuumLiftFrames(spawn.subtype());
+    }
+
+    @Override
+    public CnzVacuumTubeInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzVacuumTubeInstance(ctx.spawn());
     }
 
     @Override

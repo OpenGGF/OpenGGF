@@ -149,7 +149,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance
     private int routine;
 
     /** Whether this is a bubble maker (subtype >= 0x80). */
-    private final boolean isMaker;
+    private boolean isMaker;
 
     // ---- Regular bubble state ----
 
@@ -187,7 +187,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance
     private transient boolean lastCollisionPlayerInWater;
     private transient boolean lastCollisionHit;
     private boolean regularBubbleNeedsInitialRandom;
-    private final int spawnSubtype;
+    private int spawnSubtype;
     private final String spawnDebug;
 
     // ---- Bubble maker state ----
@@ -195,7 +195,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance
     /** Spawn timer countdown. (bub_time) */
     private int spawnTime;
     /** Spawn frequency reset value. (bub_freq) */
-    private final int spawnFreq;
+    private int spawnFreq;
     /** Bubble type counter within production sequence. (objoff_34) */
     private int typeCounter;
     /** Production state flags. Bit 7 = production active, bit 6 = large-spawned flag. (objoff_36) */

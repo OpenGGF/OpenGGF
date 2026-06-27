@@ -39,7 +39,7 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
     private static final int BUTTON_DEPRESS_DISTANCE = 8; // How far button moves when pressed
 
     // Button state
-    private final int baseY;           // Original Y position (40px above parent)
+    private int baseY;                 // Original Y position (40px above parent)
     private int currentY;              // Current Y position (depresses when triggered)
     private boolean triggered;         // Has button been pressed?
     private EggPrisonObjectInstance parent; // Parent capsule to notify

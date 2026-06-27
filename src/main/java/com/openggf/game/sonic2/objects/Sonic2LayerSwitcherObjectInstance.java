@@ -3,6 +3,8 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 
 import java.util.List;
 
@@ -15,9 +17,14 @@ import java.util.List;
  * preserves native slot layout for Tails' interact slot and other SST-indexed
  * state without rendering or duplicating the behavior manager.
  */
-public class Sonic2LayerSwitcherObjectInstance extends AbstractObjectInstance {
+public class Sonic2LayerSwitcherObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     public Sonic2LayerSwitcherObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
+    }
+
+    @Override
+    public Sonic2LayerSwitcherObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic2LayerSwitcherObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

@@ -93,8 +93,8 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
     private int y;
 
     // Saved base positions (objoff_32 = spawn X, objoff_34 = spawn Y)
-    private final int baseX;
-    private final int baseY;
+    private int baseX;
+    private int baseY;
     // objoff_2C: working Y position (modified by vertical movement + nudge)
     private int workingY;
 

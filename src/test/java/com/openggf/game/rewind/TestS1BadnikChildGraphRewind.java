@@ -138,6 +138,19 @@ class TestS1BadnikChildGraphRewind {
                 "Orbinaut spike must not keep an explicit S1 dynamic rewind codec");
     }
 
+    @Test
+    void s1BadnikGraphParentsUseRewindRecreatableWithoutExplicitS1DynamicCodecs() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1CaterkillerBadnikInstance.class));
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic1OrbinautBadnikInstance.class));
+
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic1CaterkillerBadnikInstance.class.getName()),
+                "Caterkiller parent must not keep an explicit S1 dynamic rewind codec");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic1OrbinautBadnikInstance.class.getName()),
+                "Orbinaut parent must not keep an explicit S1 dynamic rewind codec");
+    }
+
     private static ObjectInstance genericRecreate(
             ObjectManager objectManager,
             String className,

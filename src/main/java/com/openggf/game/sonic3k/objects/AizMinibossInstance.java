@@ -17,6 +17,8 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
@@ -38,7 +40,7 @@ import java.util.logging.Logger;
  * - loc_68ACC/loc_68AFE attack cycle
  * - loc_68B34/loc_68B92 movement variants
  */
-public class AizMinibossInstance extends AbstractBossInstance {
+public class AizMinibossInstance extends AbstractBossInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizMinibossInstance.class.getName());
     private static final int ROUTINE_INIT = 0;
     private static final int ROUTINE_WAIT_TRIGGER = 2;
@@ -120,6 +122,11 @@ public class AizMinibossInstance extends AbstractBossInstance {
 
     public AizMinibossInstance(ObjectSpawn spawn) {
         super(spawn, "AIZMiniboss");
+    }
+
+    @Override
+    public AizMinibossInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizMinibossInstance(ctx.spawn());
     }
 
     @Override

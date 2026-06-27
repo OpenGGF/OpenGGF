@@ -5,6 +5,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -20,13 +22,13 @@ import java.util.List;
  * Plays 3-frame animation (4 game ticks per frame) then deletes itself.
  * Uses Nem_Splash art at ArtTile_LZ_Splash ($259), palette line 2.
  */
-public class Sonic1SplashObjectInstance extends AbstractObjectInstance {
+public class Sonic1SplashObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // Ani_Splash: dc.b 4, 0, 1, 2, afRoutine
     private static final int FRAME_COUNT = 3;
     private static final int FRAME_DELAY = 4; // duration byte value from animation script
 
-    private final int posX;
+    private int posX;
     private int posY;
     private int animTimer;
     private int frameIndex;
@@ -43,6 +45,11 @@ public class Sonic1SplashObjectInstance extends AbstractObjectInstance {
         this.posY = waterY;
         this.animTimer = FRAME_DELAY;
         this.frameIndex = 0;
+    }
+
+    @Override
+    public Sonic1SplashObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1SplashObjectInstance(ctx.spawn().x(), ctx.spawn().y());
     }
 
     @Override

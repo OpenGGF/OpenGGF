@@ -6,9 +6,14 @@ import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -44,7 +49,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/4C &amp; 4D Lava Geyser Maker.asm
  */
 public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     // ========================================================================
     // Constants from disassembly
@@ -107,7 +112,7 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
     // Instance State
     // ========================================================================
 
-    private final Role role;
+    private Role role;
     /** Mutable subtype: cleared from 1→0 on head after creating lavafall third piece. */
     private int subtype;
 
@@ -156,7 +161,7 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
     private boolean pendingDelete;
 
     /** Whether this is the behind-priority third piece (lavafall). */
-    private final boolean behindPriority;
+    private boolean behindPriority;
 
     // ========================================================================
     // Constructors
@@ -185,6 +190,97 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
         this.parentGeyser = parentHead;
         this.makerParent = maker;
         this.behindPriority = behindPriority;
+    }
+
+    @Override
+    public Sonic1LavaGeyserObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn capturedSpawn = ctx != null && ctx.spawn() != null ? ctx.spawn() : getSpawn();
+        Sonic1LavaGeyserMakerObjectInstance maker = restoredMaker(ctx, capturedSpawn);
+        Sonic1LavaGeyserObjectInstance parentHead = restoredParentHeadForBody(ctx, capturedSpawn);
+        boolean body = parentHead != null;
+        boolean thirdPiece = !body && isRestoredLavafallThirdPiece(ctx, capturedSpawn, maker);
+        return new Sonic1LavaGeyserObjectInstance(
+                capturedSpawn,
+                body ? Role.BODY : Role.HEAD,
+                parentHead,
+                maker,
+                thirdPiece);
+    }
+
+    private static Sonic1LavaGeyserMakerObjectInstance restoredMaker(
+            RewindRecreateContext ctx,
+            ObjectSpawn capturedSpawn) {
+        ObjectManager objectManager = restoredObjectManager(ctx);
+        if (objectManager == null || capturedSpawn == null) {
+            return null;
+        }
+        Sonic1LavaGeyserMakerObjectInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof Sonic1LavaGeyserMakerObjectInstance maker && !maker.isDestroyed()) {
+                ObjectSpawn makerSpawn = maker.getSpawn();
+                long dx = makerSpawn.x() - capturedSpawn.x();
+                long dy = makerSpawn.y() - capturedSpawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = maker;
+                }
+            }
+        }
+        return best;
+    }
+
+    private static Sonic1LavaGeyserObjectInstance restoredParentHeadForBody(
+            RewindRecreateContext ctx,
+            ObjectSpawn capturedSpawn) {
+        ObjectManager objectManager = restoredObjectManager(ctx);
+        if (objectManager == null || capturedSpawn == null) {
+            return null;
+        }
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof Sonic1LavaGeyserObjectInstance geyser
+                    && !geyser.isDestroyed()
+                    && geyser.role == Role.HEAD
+                    && !geyser.behindPriority
+                    && geyser.currentX == capturedSpawn.x()
+                    && geyser.currentY + BODY_Y_OFFSET == capturedSpawn.y()) {
+                return geyser;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isRestoredLavafallThirdPiece(
+            RewindRecreateContext ctx,
+            ObjectSpawn capturedSpawn,
+            Sonic1LavaGeyserMakerObjectInstance maker) {
+        ObjectManager objectManager = restoredObjectManager(ctx);
+        if (objectManager == null || capturedSpawn == null || (capturedSpawn.subtype() & 0xFF) == 0) {
+            return false;
+        }
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof Sonic1LavaGeyserObjectInstance geyser
+                    && !geyser.isDestroyed()
+                    && geyser.role == Role.BODY
+                    && geyser.currentX == capturedSpawn.x()
+                    && (maker == null || geyser.makerParent == maker)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static ObjectManager restoredObjectManager(RewindRecreateContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
+        ObjectManager objectManager = ctx.objectManager();
+        if (objectManager != null) {
+            return objectManager;
+        }
+        ObjectServices services = ctx.objectServices();
+        return services != null ? services.objectManager() : null;
     }
 
     private boolean initialized;

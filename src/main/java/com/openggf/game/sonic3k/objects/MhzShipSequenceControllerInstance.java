@@ -25,8 +25,8 @@ public class MhzShipSequenceControllerInstance extends AbstractObjectInstance im
     private static final int SWING_INITIAL_SPEED = 0x00002800;
     private static final int SWING_ACCELERATION = 0x000000C0;
 
-    private final int initialSwingSpeed;
-    private final int initialShipMotion;
+    private int initialSwingSpeed;
+    private int initialShipMotion;
     private int frameCounterByte;
     private int motionAccumulator;
     private int swingVelocity;

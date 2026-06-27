@@ -1,10 +1,6 @@
 package com.openggf.game.rewind;
 
 import com.openggf.debug.playback.Bk2FrameInput;
-import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.rewind.snapshot.SpriteManagerSnapshot;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
@@ -39,15 +35,12 @@ class TestRewindManySidekickPerformanceTrace {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
     }
 
     @AfterEach
     void tearDown() {
-        SessionManager.clear();
-        GameModuleRegistry.reset();
+        TestEnvironment.resetAll();
     }
 
     @Test

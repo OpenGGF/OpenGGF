@@ -16,6 +16,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -43,7 +44,7 @@ import java.util.List;
  * remaining CNZ end-boss choreography is implemented.
  */
 public final class CnzEndBossInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
     /**
      * Task 8 approximation for the post-defeat camera release.
      *
@@ -64,8 +65,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private static final int COLLISION_FLAGS = 0x06;
     private static final int HIT_INVULNERABILITY_FRAMES = 0x20;
 
-    private final int centreX;
-    private final int centreY;
+    private int centreX;
+    private int centreY;
 
     private boolean defeatHandoffComplete;
     private int hitCount = HIT_COUNT;

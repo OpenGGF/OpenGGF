@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -37,7 +39,7 @@ import java.util.List;
  * </ul>
  */
 public class VPropellerObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     // From disassembly: collision_flags = $A8
     // Upper 2 bits 0x80 = HURT category, lower 6 bits = 0x28 = size index 40
@@ -54,10 +56,10 @@ public class VPropellerObjectInstance extends AbstractObjectInstance
     private static final int SOUND_INTERVAL_MASK = 0x1F;
     private static final int VINT_RUNCOUNT_OFFSET = 3;
 
-    private final int currentX;
-    private final int currentY;
-    private final int collisionFlags;
-    private final boolean yFlipped;
+    private int currentX;
+    private int currentY;
+    private int collisionFlags;
+    private boolean yFlipped;
 
     // Animation state
     private int animFrameIndex;
@@ -79,6 +81,11 @@ public class VPropellerObjectInstance extends AbstractObjectInstance
 
         this.animFrameIndex = 0;
         this.animTimer = ANIM_DURATION;
+    }
+
+    @Override
+    public VPropellerObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new VPropellerObjectInstance(ctx.spawn());
     }
 
     @Override

@@ -65,7 +65,7 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
     /** Ship object that owns the live secondary-camera translation. */
     private final AizBattleshipInstance sourceShip;
     /** Initial world Y used as a fallback when the source ship is unavailable. */
-    private final int initialWorldY;
+    private int initialWorldY;
 
     private int state;
     private int portYOffset;    // ROM: $30(a0) — Y offset within the bomb port

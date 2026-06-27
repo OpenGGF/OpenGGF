@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -27,7 +28,7 @@ import java.util.List;
  * $80 pixels, then alternates firing lightning vertically up/down while
  * releasing two diagonal spark children.
  */
-public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
+public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B;
     private static final int PRIORITY_BUCKET = 5;
     private static final int ACTIVATION_RANGE = 0x80;
@@ -206,7 +207,8 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
-    private static final class SparkleLightningWarningChild extends SparkleHazardChild {
+    private static final class SparkleLightningWarningChild extends SparkleHazardChild
+            implements SpawnRewindRecreatable {
         private static final int COLLISION_FLAGS = 0xAB;
         private static final int PRIORITY_BUCKET = 4;
         private static final int Y_OFFSET = 0x34;
@@ -223,6 +225,12 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
             super(spawn, "SparkleLightningWarning");
             currentX = parent.getX();
             currentY = parent.getY() + (parent.warningBelowParent() ? Y_OFFSET : -Y_OFFSET);
+        }
+
+        private SparkleLightningWarningChild(ObjectSpawn spawn) {
+            super(spawn, "SparkleLightningWarning");
+            this.currentX = spawn.x();
+            this.currentY = spawn.y();
         }
 
         @Override
@@ -279,7 +287,8 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
-    private static final class SparkleProjectileChild extends SparkleHazardChild {
+    private static final class SparkleProjectileChild extends SparkleHazardChild
+            implements SpawnRewindRecreatable {
         private static final int COLLISION_FLAGS = 0x98;
         private static final int PRIORITY_BUCKET = 5;
         private static final int INITIAL_SPEED = 0x600;
@@ -305,6 +314,12 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
             this.currentY = parent.getY();
             this.yVelocity = parent.isFiringDown() ? INITIAL_SPEED : -INITIAL_SPEED;
             this.xVelocity = right ? INITIAL_SPEED : -INITIAL_SPEED;
+        }
+
+        private SparkleProjectileChild(ObjectSpawn spawn) {
+            super(spawn, "SparkleProjectile");
+            this.currentX = spawn.x();
+            this.currentY = spawn.y();
         }
 
         @Override

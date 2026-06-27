@@ -35,8 +35,11 @@ class TestRewindArchitectureGuard {
     private static final Map<String, Integer> OBJECT_REWIND_OVERRIDE_BASELINE = Map.ofEntries(
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#captureRewindState", 2),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#restoreRewindState", 2),
-            Map.entry("src/main/java/com/openggf/level/objects/AbstractBadnikInstance.java#captureRewindState", 1),
-            Map.entry("src/main/java/com/openggf/level/objects/AbstractBadnikInstance.java#restoreRewindState", 1),
+            // Shared badnik base keeps the no-arg compatibility overrides and
+            // adds context-aware overloads so default badnik compact sidecars can
+            // resolve captured player/object references through the restore table.
+            Map.entry("src/main/java/com/openggf/level/objects/AbstractBadnikInstance.java#captureRewindState", 2),
+            Map.entry("src/main/java/com/openggf/level/objects/AbstractBadnikInstance.java#restoreRewindState", 2),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractMonitorObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractMonitorObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/ARZPlatformObjectInstance.java#captureRewindState", 1),
@@ -70,6 +73,7 @@ class TestRewindArchitectureGuard {
             // reference is object-graph structure rebuilt when the parent re-spawns its
             // children, not rewindable state. Same triage precedent as the entries above.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzCupElevatorInstance.java#@RewindTransient", 4),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzTubeElevatorInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/IczSnowPileObjectInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/IczTensionPlatformObjectInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Mhz1CutsceneKnucklesInstance.java#@RewindTransient", 1),
@@ -84,6 +88,7 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic1/objects/Sonic1LamppostTwirlInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/CheckpointDongleInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/CheckpointStarInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/MTZLongPlatformCogInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Sonic3kStarPostBonusStarChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Sonic3kStarPostStarChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kSignpostStubChild.java#@RewindTransient", 1),

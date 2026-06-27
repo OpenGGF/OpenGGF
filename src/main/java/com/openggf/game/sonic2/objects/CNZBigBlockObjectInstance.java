@@ -31,7 +31,7 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm lines 58279-58366 (ObjD4)
  */
 public class CNZBigBlockObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // Constants from disassembly
     private static final int INITIAL_OFFSET = 0x60;      // 96 pixels initial offset from spawn
@@ -53,10 +53,10 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
     // The ROM uses 32-bit positions with 16-bit integer and 16-bit fractional parts
     private int x, y;           // Current position (integer part)
     private int xSub, ySub;     // Sub-pixel (fractional part)
-    private final int targetX;  // Original spawn = target X
-    private final int targetY;  // Original spawn = target Y
+    private int targetX;  // Original spawn = target X
+    private int targetY;  // Original spawn = target Y
     private int xVel, yVel;     // Velocity (16-bit signed)
-    private final int moveType; // 0 = horizontal, 2 = vertical
+    private int moveType; // 0 = horizontal, 2 = vertical
     private int updateCount;
 
     public CNZBigBlockObjectInstance(ObjectSpawn spawn, String name) {
@@ -98,6 +98,11 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
         this.ySub = 0x8000;
         this.xVel = 0;
         this.yVel = 0;
+    }
+
+    @Override
+    public CNZBigBlockObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CNZBigBlockObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

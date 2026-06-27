@@ -10,6 +10,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -44,7 +46,7 @@ import java.util.List;
  *   but detection is skipped (loc_38B10 bra.w loc_38B2C). During the 40-frame
  *   attack window itself, no movement, no direction timer decrement.
  */
-public class SpinyBadnikInstance extends AbstractBadnikInstance {
+public class SpinyBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B;
 
     // Movement constants
@@ -107,6 +109,11 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance {
         this.hasFired = false;
         this.facingLeft = true;
         this.subPixelX = 0;          // Start with no subpixel offset
+    }
+
+    @Override
+    public SpinyBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SpinyBadnikInstance(ctx.spawn());
     }
 
     @Override

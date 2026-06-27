@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -32,7 +34,7 @@ import java.util.List;
  * sprite choreography because the parent handoff is the only contract covered
  * by the bounded slice and its headless tests.
  */
-public final class CnzTeleporterBeamInstance extends AbstractObjectInstance {
+public final class CnzTeleporterBeamInstance extends AbstractObjectInstance implements RewindRecreatable {
     /**
      * Verified handoff seam: the parent checks for beam counter 8 before
      * forcing object control.
@@ -52,14 +54,19 @@ public final class CnzTeleporterBeamInstance extends AbstractObjectInstance {
      */
     private static final int DESTROY_COUNTER = 0x20;
 
-    private final int centreX;
-    private final int centreY;
+    private int centreX;
+    private int centreY;
     private int beamCounter;
 
     public CnzTeleporterBeamInstance(ObjectSpawn spawn) {
         super(spawn, "CNZTeleporterBeam");
         this.centreX = spawn.x();
         this.centreY = spawn.y();
+    }
+
+    @Override
+    public CnzTeleporterBeamInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzTeleporterBeamInstance(ctx.spawn());
     }
 
     /**

@@ -14,6 +14,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -46,7 +48,7 @@ import java.util.List;
  * </ul>
  */
 public class SteamSpringObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // ROM: move.w #-$A00,y_vel(a1) at loc_26798
     private static final int SPRING_VELOCITY = SpringBounceHelper.STRENGTH_YELLOW;
@@ -77,7 +79,7 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
     private static final int STATE_SINKING = 3;
 
     // Position tracking
-    private final int baseY;     // objoff_34: original Y position (before +16 offset)
+    private int baseY;           // objoff_34: original Y position (before +16 offset)
     private int yOffset;         // objoff_36: current Y offset from baseY (16 = fully lowered, 0 = fully risen)
     private int timer;           // objoff_32: countdown timer for wait states
     private int state;           // routine_secondary / 2
@@ -91,6 +93,11 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
         this.timer = 0;
         this.state = STATE_WAIT_BEFORE_RISE;
         updateDynamicSpawn(spawn.x(), baseY + yOffset);
+    }
+
+    @Override
+    public SteamSpringObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SteamSpringObjectInstance(ctx.spawn());
     }
 
     @Override

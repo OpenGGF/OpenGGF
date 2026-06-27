@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.camera.Camera;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -33,7 +35,7 @@ import java.util.List;
  * - Escape velocity: x=-0x200, y=-0x200 (flies up-left at 45°)
  * - Initial chase Y velocity: -0x100 (upward momentum)
  */
-public class WhispBadnikInstance extends AbstractBadnikInstance {
+public class WhispBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
 
     private enum State {
         INIT,              // Routine 0: Initialize
@@ -106,6 +108,11 @@ public class WhispBadnikInstance extends AbstractBadnikInstance {
         // Initial facing based on render_flags
         boolean xFlip = (spawn.renderFlags() & 0x01) != 0;
         this.facingLeft = !xFlip;
+    }
+
+    @Override
+    public WhispBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new WhispBadnikInstance(ctx.spawn());
     }
 
     @Override

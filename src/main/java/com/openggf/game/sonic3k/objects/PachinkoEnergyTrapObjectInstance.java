@@ -8,6 +8,9 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -286,8 +289,9 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         renderer.drawFrameIndex(0, currentX, currentY, hFlip, vFlip);
     }
 
-    private static final class EnergyTrapColumnChild extends AbstractObjectInstance {
-        private final PachinkoEnergyTrapObjectInstance parent;
+    private static final class EnergyTrapColumnChild extends AbstractObjectInstance
+            implements RewindRecreatable {
+        private PachinkoEnergyTrapObjectInstance parent;
         private int currentX;
         private int currentY;
 
@@ -296,6 +300,11 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
             this.parent = parent;
             currentX = spawn.x();
             currentY = spawn.y();
+        }
+
+        @Override
+        public EnergyTrapColumnChild recreateForRewind(RewindRecreateContext ctx) {
+            return new EnergyTrapColumnChild(ctx.spawn(), nearestTrap(ctx));
         }
 
         @Override
@@ -331,10 +340,11 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private static final class EnergyTrapBeamChild extends AbstractObjectInstance {
+    private static final class EnergyTrapBeamChild extends AbstractObjectInstance
+            implements RewindRecreatable {
 
         private static final int[] ANIMATION = {0, 1, 2, 3, 4, 3, 2, 1};
-        private final PachinkoEnergyTrapObjectInstance parent;
+        private PachinkoEnergyTrapObjectInstance parent;
         private int beamAngle;
         private int currentX;
         private int currentY;
@@ -345,6 +355,11 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
             this.beamAngle = beamAngle & 0xFF;
             currentX = spawn.x();
             currentY = spawn.y();
+        }
+
+        @Override
+        public EnergyTrapBeamChild recreateForRewind(RewindRecreateContext ctx) {
+            return new EnergyTrapBeamChild(ctx.spawn(), nearestTrap(ctx), 0);
         }
 
         @Override
@@ -383,5 +398,9 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
             int frame = ANIMATION[((beamAngle + 0x10) >> 5) & 0x7];
             renderer.drawFrameIndex(frame, currentX, currentY, false, false);
         }
+    }
+
+    private static PachinkoEnergyTrapObjectInstance nearestTrap(RewindRecreateContext ctx) {
+        return RewindRecreateObjectLinks.nearestLiveObject(ctx, PachinkoEnergyTrapObjectInstance.class);
     }
 }

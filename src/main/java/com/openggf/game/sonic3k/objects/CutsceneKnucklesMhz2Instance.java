@@ -19,6 +19,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
@@ -34,7 +35,8 @@ import java.util.List;
  * X=$3D0, takes player control, runs the press animation timing, and lifts the
  * players through the leaf-blower handoff.
  */
-public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance {
+public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_CAMERA_LOCK = 0x02;
     private static final int ROUTINE_WAIT_GROUNDED = 0x04;
@@ -437,17 +439,26 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance {
     private record LeafParticleSpec(int x, int y, int yVelocity) {
     }
 
-    private static final class Mhz2KnucklesLeafParticle extends AbstractObjectInstance {
+    private static final class Mhz2KnucklesLeafParticle extends AbstractObjectInstance
+            implements SpawnRewindRecreatable {
         private int x;
         private int y;
-        private final int yVelocity;
+        private int yVelocity;
 
         private Mhz2KnucklesLeafParticle(LeafParticleSpec spec) {
-            super(new ObjectSpawn(spec.x(), spec.y(), Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0),
+            super(new ObjectSpawn(spec.x(), spec.y(), Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0,
+                    false, spec.yVelocity()),
                     "MHZ2KnucklesLeaf");
             this.x = spec.x();
             this.y = spec.y();
             this.yVelocity = spec.yVelocity();
+        }
+
+        private Mhz2KnucklesLeafParticle(ObjectSpawn spawn) {
+            super(spawn, "MHZ2KnucklesLeaf");
+            this.x = spawn.x();
+            this.y = spawn.y();
+            this.yVelocity = (short) spawn.rawYWord();
         }
 
         @Override
@@ -490,9 +501,10 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance {
         }
     }
 
-    private static final class Mhz2KnucklesLiftChild extends AbstractObjectInstance {
+    private static final class Mhz2KnucklesLiftChild extends AbstractObjectInstance
+            implements RewindRecreatable {
         private final CutsceneKnucklesMhz2Instance parent;
-        private final AbstractPlayableSprite player;
+        private AbstractPlayableSprite player;
         private boolean initialized;
 
         private Mhz2KnucklesLiftChild(CutsceneKnucklesMhz2Instance parent, AbstractPlayableSprite player) {
@@ -503,14 +515,27 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance {
             this.player = player;
         }
 
+        private Mhz2KnucklesLiftChild(CutsceneKnucklesMhz2Instance parent) {
+            super(new ObjectSpawn(parent.getX(), parent.getY(),
+                    Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0),
+                    "MHZ2KnucklesLift");
+            this.parent = parent;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            CutsceneKnucklesMhz2Instance liveParent = Mhz2KnucklesRouteSwitchChild.findNearestLiveParent(ctx);
+            return liveParent == null ? null : new Mhz2KnucklesLiftChild(liveParent);
+        }
+
         @Override
         public int getX() {
-            return player.getCentreX() & 0xFFFF;
+            return player != null ? player.getCentreX() & 0xFFFF : getSpawn().x();
         }
 
         @Override
         public int getY() {
-            return player.getCentreY() & 0xFFFF;
+            return player != null ? player.getCentreY() & 0xFFFF : getSpawn().y();
         }
 
         @Override
@@ -520,6 +545,10 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance {
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (player == null) {
+                setDestroyed(true);
+                return;
+            }
             if (!initialized) {
                 initialized = true;
                 player.setYSpeed((short) PLAYER_LAUNCH_Y_VEL);

@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -16,12 +17,12 @@ import java.util.List;
  *
  * <p>ROM reference: {@code Obj_LBZCupElevatorPole} (sonic3k.asm:53187-53211).
  */
-public final class LbzCupElevatorPoleInstance extends AbstractObjectInstance {
+public final class LbzCupElevatorPoleInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int SHORT_HEIGHT = 0x30;
     private static final int LONG_HEIGHT = 0x60;
 
-    private final int mappingFrame;
-    private final int halfHeight;
+    private int mappingFrame;
+    private int halfHeight;
 
     public LbzCupElevatorPoleInstance(ObjectSpawn spawn) {
         super(spawn, "LBZCupElevatorPole");

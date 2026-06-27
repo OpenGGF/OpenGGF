@@ -13,6 +13,8 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -51,7 +53,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class LargeRotPformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(LargeRotPformObjectInstance.class.getName());
 
@@ -82,15 +84,15 @@ public class LargeRotPformObjectInstance extends AbstractObjectInstance
     private static final LazyMappingHolder MAPPINGS = new LazyMappingHolder();
 
     // Instance state
-    private final int baseX;       // objoff_34 - original X position
-    private final int baseY;       // objoff_30 - original Y position
-    private final int widthPixels;
-    private final int yRadius;
-    private final int mappingFrame;
-    private final boolean isIndent; // Subtype 3 (routine 4) - no solid collision, half amplitude
-    private final boolean mirrorMotion;  // Bit 0 of subtype
-    private final boolean rotateMotion;  // Bit 1 of subtype
-    private final int priority;
+    private int baseX;       // objoff_34 - original X position
+    private int baseY;       // objoff_30 - original Y position
+    private int widthPixels;
+    private int yRadius;
+    private int mappingFrame;
+    private boolean isIndent; // Subtype 3 (routine 4) - no solid collision, half amplitude
+    private boolean mirrorMotion;  // Bit 0 of subtype
+    private boolean rotateMotion;  // Bit 1 of subtype
+    private int priority;
 
     // Current position (updated each frame from oscillation)
     private int x;
@@ -136,6 +138,11 @@ public class LargeRotPformObjectInstance extends AbstractObjectInstance
 
         // Calculate initial position
         updatePosition();
+    }
+
+    @Override
+    public LargeRotPformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new LargeRotPformObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

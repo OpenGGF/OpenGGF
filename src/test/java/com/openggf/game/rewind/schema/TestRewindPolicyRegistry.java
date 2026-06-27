@@ -8,6 +8,17 @@ import com.openggf.game.PowerUpObject;
 import com.openggf.game.PowerUpSpawner;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.sonic2.objects.TornadoObjectInstance;
+import com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance;
+import com.openggf.game.sonic3k.objects.CnzCannonInstance;
+import com.openggf.game.sonic3k.objects.CnzCylinderInstance;
+import com.openggf.game.sonic3k.objects.IczFreezerObjectInstance;
+import com.openggf.game.sonic3k.objects.LbzMinibossInstance;
+import com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance;
+import com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance;
+import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
+import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
+import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -22,6 +33,7 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.util.BitSet;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
@@ -30,6 +42,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindPolicyRegistry {
+    private static final String MHZ2_LIFT_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild";
+    private static final String MADMOLE_SIDE_DRILL_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild";
+
     @AfterEach
     void clearRegistry() {
         RewindSchemaRegistry.clearForTest();
@@ -162,12 +179,95 @@ class TestRewindPolicyRegistry {
         assertTrue(schema.unsupportedFields().isEmpty());
     }
 
+    @Test
+    void defaultObjectPolicyTreatsSnaleBlasterCoverCacheAsTransient() throws NoSuchFieldException {
+        Field cover = SnaleBlasterBadnikInstance.class.getDeclaredField("cover");
+
+        assertEquals(RewindFieldPolicy.TRANSIENT, RewindPolicyRegistry.policyForAudit(cover).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesLbzMinibossKnucklesParentReference() throws NoSuchFieldException {
+        Field parent = LbzMinibossInstance.class.getDeclaredField("knucklesFightParent");
+
+        assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(parent).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesCnzEndBossCannonReference() throws NoSuchFieldException {
+        Field endCannon = CnzEndBossInstance.class.getDeclaredField("endCannon");
+
+        assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(endCannon).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesIczEndBossSnowdustEmitterReference() throws NoSuchFieldException {
+        Field snowdustEmitter = IczEndBossInstance.class.getDeclaredField("bossSnowdustEmitter");
+
+        assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(snowdustEmitter).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesCnzTraversalReleasedPlayerReferences() throws NoSuchFieldException {
+        Field cannonReleasedPlayer = CnzCannonInstance.class.getDeclaredField("releasedPlayer");
+        Field cylinderReleasedPlayer = CnzCylinderInstance.class.getDeclaredField("releasedJumpSolidSkipPlayer");
+
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(cannonReleasedPlayer).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(cylinderReleasedPlayer).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesTornadoThrusterFollowerReference() throws NoSuchFieldException {
+        Field thrusterFollowerChild = TornadoObjectInstance.class.getDeclaredField("thrusterFollowerChild");
+
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(thrusterFollowerChild).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesPlayerReferenceFields() throws NoSuchFieldException {
+        Field grabberPendingPlayer = GrabberBadnikInstance.class.getDeclaredField("pendingGrabPlayer");
+        Field parachuteGrabbedPlayer = MhzMushroomParachuteObjectInstance.class.getDeclaredField("grabbedPlayer");
+        Field parachuteNativeP2Player =
+                MhzMushroomParachuteObjectInstance.class.getDeclaredField("nativeP2GrabbedPlayer");
+        Field stickyVineCapturedPlayer = MhzStickyVineObjectInstance.class.getDeclaredField("capturedPlayer");
+        Field mhz2LiftPlayer = classForName(MHZ2_LIFT_CHILD_CLASS).getDeclaredField("player");
+        Field sideDrillCapturedPlayer = classForName(MADMOLE_SIDE_DRILL_CLASS).getDeclaredField("capturedPlayer");
+        Field iczFrozenBlockCapturedPlayer =
+                IczFreezerObjectInstance.FrozenPlayerBlock.class.getDeclaredField("capturedPlayer");
+
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(grabberPendingPlayer).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(parachuteGrabbedPlayer).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(parachuteNativeP2Player).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(stickyVineCapturedPlayer).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(mhz2LiftPlayer).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(sideDrillCapturedPlayer).orElse(null));
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                RewindPolicyRegistry.policyForAudit(iczFrozenBlockCapturedPlayer).orElse(null));
+    }
+
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {
         RewindFieldPlan plan = schema.fields().stream()
                 .filter(field -> field.key().fieldName().equals(fieldName))
                 .findFirst()
                 .orElseThrow();
         assertEquals(policy, plan.policy());
+    }
+
+    private static Class<?> classForName(String className) {
+        try {
+            return Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private static class BaseUnsupportedValue {

@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -38,7 +40,7 @@ import java.util.List;
  *   <li>After burst completes, add 128-255 frame delay before next burst</li>
  * </ol>
  */
-public class BubbleGeneratorObjectInstance extends AbstractObjectInstance {
+public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // Bubble sequence table (byte_1FAF0 from ROM, line 45055 of s2.asm)
     // 18-entry overlapping table with 4 sequences at offsets 0, 4, 8, 12
@@ -91,6 +93,11 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance {
         this.frameTimer = 0;
         this.bubblesRemainingInBurst = 0;
         this.sequenceOffset = 0;
+    }
+
+    @Override
+    public BubbleGeneratorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BubbleGeneratorObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

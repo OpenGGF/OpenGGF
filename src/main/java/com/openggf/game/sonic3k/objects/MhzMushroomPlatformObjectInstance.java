@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -28,7 +29,7 @@ import java.util.List;
  * {@code MoveSprite2 + addi.w #$28,y_vel}.
  */
 public final class MhzMushroomPlatformObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener {
+        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
     private static final int ANIM_IDLE = 0;
     private static final int ANIM_PRESSED = 1;
     private static final int HALF_WIDTH = 0x20;
@@ -43,9 +44,9 @@ public final class MhzMushroomPlatformObjectInstance extends AbstractObjectInsta
             0x13, 0x12, 0x11, 0x10, 0x0F, 0x0E, 0x0D, 0x0C
     };
 
-    private final boolean fallingSubtype;
-    private final boolean hFlip;
-    private final boolean vFlip;
+    private boolean fallingSubtype;
+    private boolean hFlip;
+    private boolean vFlip;
     private final SubpixelMotion.State motion;
     private final ObjectAnimationState animationState;
     private boolean standingContact;

@@ -10,6 +10,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -30,7 +32,7 @@ import java.util.List;
  * floor follower, inert platform, or a stand-triggered sink/rebound platform.
  */
 public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private enum Phase {
         WAIT_STANDING(0x02),
@@ -81,9 +83,9 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     private static final int REVEALED_SPRING_X = 0x5D5A;
     private static final int REVEALED_SPRING_Y = 0x027A;
 
-    private final int spawnX;
-    private final int spawnY;
-    private final boolean hFlip;
+    private int spawnX;
+    private int spawnY;
+    private boolean hFlip;
 
     private Phase phase;
     private int x;
@@ -108,6 +110,11 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
         this.phase = initialPhase(spawn.subtype());
         updateDynamicSpawn(x, y);
+    }
+
+    @Override
+    public IczPathFollowPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new IczPathFollowPlatformObjectInstance(ctx.spawn());
     }
 
     @Override

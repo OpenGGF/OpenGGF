@@ -38,6 +38,23 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     private int currentBossId;
 
     /**
+     * Screen-lock flag (ROM: {@code f_lockscreen} at $FFFFF7AA).
+     *
+     * <p>S1 {@code Sonic_LevelBound} gates the +64 right level-boundary
+     * extension on this flag (s1disasm/_incObj/01 Sonic.asm:1047-1049). The ROM
+     * sets it at boss spawn via the dynamic level events
+     * ({@code move.b #1,(f_lockscreen).w}) and clears it ONLY at the Egg Prison
+     * (s1disasm/_incObj/3E Prison Capsule.asm:97) or the LZ boss
+     * (s1disasm/_incObj/77 Boss - LZ Main.asm:288). Unlike {@link #currentBossId}
+     * (which is cleared on every boss defeat), it therefore stays set through and
+     * after boss defeat in the Final Zone (no Egg Prison), keeping Sonic clamped
+     * to the locked arena edge. Set automatically when a boss id is assigned via
+     * {@link #setCurrentBossId(int)} (the ROM's per-boss
+     * {@code move.b #1,(f_lockscreen).w}); never auto-cleared on defeat.
+     */
+    private boolean screenLocked;
+
+    /**
      * Screen shake flag (ROM: Screen_Shaking_Flag at $FFFFF72C).
      * When active, scroll handlers should apply shake offsets from ripple data.
      * Used by boss fights and events like pillar rising in ARZ.
@@ -155,6 +172,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         }
 
         this.currentBossId = 0;
+        this.screenLocked = false;
         this.screenShakeActive = false;
         this.backgroundCollisionFlag = false;
         this.bigRingCollected = false;
@@ -185,6 +203,10 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         endOfLevelActive = false;
         endOfLevelFlag = false;
         gamePaused = false;
+        // ROM clears f_lockscreen at level load; the per-act boss DLE re-sets it
+        // when the boss spawns. Resetting here prevents a prior act's screen lock
+        // from leaking into the next act's free-scroll approach.
+        screenLocked = false;
     }
 
     public int getScore() {
@@ -448,6 +470,14 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      */
     public void setCurrentBossId(int bossId) {
         this.currentBossId = bossId;
+        if (bossId != 0) {
+            // ROM: each boss's dynamic-level-event spawn does
+            // move.b #1,(f_lockscreen).w alongside loading the boss object.
+            // Setting the boss id is the engine's spawn point, so latch the
+            // persistent screen lock here. It is NOT cleared when bossId is set
+            // back to 0 on defeat — only the Egg Prison / LZ boss clear it.
+            this.screenLocked = true;
+        }
     }
 
     /**
@@ -455,6 +485,22 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      */
     public boolean isBossFightActive() {
         return currentBossId != 0;
+    }
+
+    /**
+     * Returns the ROM {@code f_lockscreen} state. See {@link #screenLocked}.
+     */
+    public boolean isScreenLocked() {
+        return screenLocked;
+    }
+
+    /**
+     * Sets the ROM {@code f_lockscreen} state. Call with {@code false} at the
+     * ROM clear sites (Egg Prison Obj3E, LZ boss) where the ROM does
+     * {@code clr.b (f_lockscreen).w}.
+     */
+    public void setScreenLocked(boolean locked) {
+        this.screenLocked = locked;
     }
 
     /**
@@ -675,7 +721,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
                 gotEmeralds, gotSuperEmeralds, currentBossId,
                 screenShakeActive, backgroundCollisionFlag, bigRingCollected,
                 wfzFireToggle, itemBonus, reverseGravityActive,
-                collectedSpecialRings, endOfLevelActive, endOfLevelFlag);
+                collectedSpecialRings, endOfLevelActive, endOfLevelFlag, screenLocked);
     }
 
     @Override
@@ -697,5 +743,6 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         this.collectedSpecialRings = snapshot.collectedSpecialRings();
         this.endOfLevelActive = snapshot.endOfLevelActive();
         this.endOfLevelFlag = snapshot.endOfLevelFlag();
+        this.screenLocked = snapshot.screenLocked();
     }
 }

@@ -2,8 +2,10 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -135,6 +137,10 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
             super(spawn, delay, artVariant);
         }
 
+        private HighPriorityAnimal(ObjectSpawn spawn) {
+            this(spawn, 0, 0);
+        }
+
         @Override
         public boolean isHighPriority() {
             return true;
@@ -144,6 +150,16 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     private static final class Aiz2ResultsScreenObjectInstance extends S3kResultsScreenObjectInstance {
         Aiz2ResultsScreenObjectInstance(PlayerCharacter character, int act) {
             super(character, act);
+        }
+
+        private Aiz2ResultsScreenObjectInstance() {
+            this(PlayerCharacter.SONIC_AND_TAILS, 0);
+        }
+
+        @Override
+        public Aiz2ResultsScreenObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return ObjectConstructionContext.construct(ctx.objectServices(),
+                    () -> new Aiz2ResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
         }
 
         @Override

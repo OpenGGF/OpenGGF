@@ -12,6 +12,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -40,7 +41,7 @@ import java.util.List;
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/5A SLZ Circling Platform.asm
  */
 public class Sonic1CirclingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // From disassembly: move.b #$18,obActWid(a0)
     private static final int HALF_WIDTH = 0x18;
@@ -63,17 +64,17 @@ public class Sonic1CirclingPlatformObjectInstance extends AbstractObjectInstance
     private static final int OSC_Y_OFFSET = 0x24; // v_oscillate+$26 = oscillator 9 value high byte
 
     // Saved original positions (circ_origX = objoff_32, circ_origY = objoff_30)
-    private final int origX;
-    private final int origY;
+    private int origX;
+    private int origY;
 
     // Current dynamic position
     private int x;
     private int y;
 
     // Subtype configuration
-    private final boolean negateBoth;   // Bit 0: negate both offsets
-    private final boolean rotated;      // Bit 1: negate X, exchange X/Y
-    private final boolean type04;       // Bits 2-3: type04 additionally negates X
+    private boolean negateBoth;   // Bit 0: negate both offsets
+    private boolean rotated;      // Bit 1: negate X, exchange X/Y
+    private boolean type04;       // Bits 2-3: type04 additionally negates X
 
     public Sonic1CirclingPlatformObjectInstance(ObjectSpawn spawn) {
         super(spawn, "CirclingPlatform");
@@ -245,6 +246,28 @@ public class Sonic1CirclingPlatformObjectInstance extends AbstractObjectInstance
         // HALF_HEIGHT=9 modelling the obY-9 ride surface, this -1 recovers the
         // obY-8 first-landing detect/snap. Same as Obj 18.
         return -1;
+    }
+
+    @Override
+    public boolean carriesAirborneRiderAfterExitPlatform() {
+        // ROM Circ_Action (routine 4, docs/s1disasm/_incObj/5A SLZ Circling
+        // Platform.asm:38-45) calls ExitPlatform first -- which clears the rider's
+        // on-object bit when he passes the pre-move X edge (docs/s1disasm/_incObj/
+        // sub ExitPlatform.asm:24-29) -- then runs Circ_Types to move the platform,
+        // then UNCONDITIONALLY calls MvSonicOnPtfm2 (asm:45). MvSonicOnPtfm2 does
+        // not test the on-object bit, so on the exit frame it still pulls the
+        // rider's y_pos to platformY-9-obHeight using the platform's post-move
+        // position and carries the platform's X delta (docs/s1disasm/_incObj/sub
+        // MvSonicOnPtfm.asm:18-41). This is structurally identical to Obj18
+        // Plat_Action2 / Obj52 MBlock_StandOn / Obj59 Elev_Action, which all opt in.
+        //
+        // Without this, when the descending circling platform's edge slides past
+        // the rider on the exit frame, the engine drops the ride before the final
+        // seat, leaving the rider 1px high (SLZ2 f3353: platformY post-move 0x013C,
+        // ROM seats centre 0x013C-9-0x13 = 0x0120; the engine kept the pre-exit
+        // 0x011F). The carry is applied in
+        // ObjectSolidContactController.processInlineRidingObject's exit branch.
+        return true;
     }
 
     @Override

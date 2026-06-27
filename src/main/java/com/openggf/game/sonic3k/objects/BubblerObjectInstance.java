@@ -10,6 +10,8 @@ import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -24,7 +26,7 @@ import java.util.List;
  * <p>
  * ROM: Obj_Bubbler (sonic3k.asm:64446-64736)
  */
-public class BubblerObjectInstance extends AbstractObjectInstance {
+public class BubblerObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int ROUTINE_INIT = 0;
     private static final int ROUTINE_ANIMATE = 2;
     private static final int ROUTINE_CHK_WATER = 4;
@@ -70,10 +72,10 @@ public class BubblerObjectInstance extends AbstractObjectInstance {
             ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private int routine = ROUTINE_INIT;
-    private final boolean maker;
+    private boolean maker;
 
-    private final int originalX;
-    private final int originalY;
+    private int originalX;
+    private int originalY;
 
     private int x;
     private int y;
@@ -105,6 +107,11 @@ public class BubblerObjectInstance extends AbstractObjectInstance {
         this.x = spawn.x();
         this.y = spawn.y();
         this.posY16 = spawn.y() << 16;
+    }
+
+    @Override
+    public BubblerObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BubblerObjectInstance(ctx.spawn());
     }
 
     @Override

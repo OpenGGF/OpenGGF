@@ -66,17 +66,17 @@ public class Sonic1BigSpikedBallObjectInstance extends AbstractObjectInstance
     private static final int CIRCLE_RADIUS = 0x50;
 
     // Stored original position (bball_origX = objoff_3A, bball_origY = objoff_38)
-    private final int origX;
-    private final int origY;
+    private int origX;
+    private int origY;
 
     // Current position
     private int x;
     private int y;
 
     // Movement configuration from subtype
-    private final int moveType;       // Low nibble bits 0-2: movement type (0-3)
-    private final int speed;          // bball_speed = high nibble << 3
-    private final boolean flipped;    // obStatus bit 0 (from spawn renderFlags)
+    private int moveType;       // Low nibble bits 0-2: movement type (0-3)
+    private int speed;          // bball_speed = high nibble << 3
+    private boolean flipped;    // obStatus bit 0 (from spawn renderFlags)
 
     // Type 3 circular motion angle (bball_radius already fixed at CIRCLE_RADIUS)
     private int angle;                // obAngle: accumulating angle for circular motion

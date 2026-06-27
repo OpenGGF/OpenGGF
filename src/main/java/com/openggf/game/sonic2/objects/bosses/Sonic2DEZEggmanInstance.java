@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -36,7 +37,7 @@ import java.util.List;
  * Animation: Ani_objC5_objC6 anim 0 = speed 5, frames {2, 3, 4} looping.
  * Art: Combined RobotnikUpper + RobotnikRunning + RobotnikLower, mappings ObjC6_MapUnc_3D0EE.
  */
-public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
+public class Sonic2DEZEggmanInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // ========================================================================
     // STATE CONSTANTS
@@ -158,6 +159,12 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
         this.currentFrame = FRAME_STANDING;
         this.animFrameIndex = 0;
         this.animTimer = RUNNING_ANIM_SPEED;
+    }
+
+    @Override
+    public Sonic2DEZEggmanInstance recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new Sonic2DEZEggmanInstance(ctx.spawn()));
     }
 
     // ========================================================================
@@ -422,7 +429,7 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
      * x_vel=-$100, y_pos-= $18, objoff_2A=$08. ObjC6_State4 decrements the
      * timer, deletes on BMI, then applies +$10 y velocity before ObjectMove.
      */
-    static class ExhaustPuff extends AbstractObjectInstance {
+    static class ExhaustPuff extends AbstractObjectInstance implements RewindRecreatable {
 
         private static final int FRAME_EXHAUST_PUFF = 5;
         private static final int INITIAL_X_VEL = -0x100;
@@ -436,7 +443,7 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
         private int xVel;
         private int yVel;
         private int timer;
-        private final int currentFrame;
+        private int currentFrame;
 
         ExhaustPuff(int x, int y) {
             super(new ObjectSpawn(x, y, 0xC6, 0xAA, 0, false, 0), "DEZ Eggman Exhaust Puff");
@@ -448,6 +455,12 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
             this.yVel = INITIAL_Y_VEL;
             this.timer = INITIAL_TIMER;
             this.currentFrame = FRAME_EXHAUST_PUFF;
+        }
+
+        @Override
+        public ExhaustPuff recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            return new ExhaustPuff(spawn.x(), spawn.y());
         }
 
         @Override

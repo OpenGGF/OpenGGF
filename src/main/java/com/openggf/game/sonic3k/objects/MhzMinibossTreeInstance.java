@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -26,7 +27,7 @@ import java.util.List;
  * mapping frame and emits the falling log chips used during the trunk break
  * animation.
  */
-public final class MhzMinibossTreeInstance extends AbstractObjectInstance {
+public final class MhzMinibossTreeInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int BOSS_TREE_FRAME_OFFSET = 0x42;
     private static final int DEFAULT_MAPPING_FRAME = 5;
     private static final int PRIORITY_BUCKET = 7; // ObjDat_MHZMinibossTree priority $380
@@ -116,7 +117,7 @@ public final class MhzMinibossTreeInstance extends AbstractObjectInstance {
     }
 
     private static final class MhzMinibossTreeChipInstance extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, SpawnRewindRecreatable {
         private static final int[] Y_OFFSETS = { 0x40, 0x20, 0x00, -0x20, -0x40, 0x00 };
         private static final int[] ANIMATION_FRAMES = { 0, 1, 2, 3, 4, 5, 6, 7 };
         private static final int ANIMATION_DELAY = 1;
@@ -128,18 +129,26 @@ public final class MhzMinibossTreeInstance extends AbstractObjectInstance {
         private static final int RENDER_HALF_HEIGHT = 0x14;
         private static final int COLLISION_FLAGS = 0x86;
         private final SubpixelMotion.State motion;
-        private final boolean bounceEnabled;
+        private boolean bounceEnabled;
         private int animationTimer = ANIMATION_DELAY;
         private int animationIndex;
         private int chipMappingFrame = ANIMATION_FRAMES[0];
 
         private MhzMinibossTreeChipInstance(int parentX, int parentY, int parentFrame, boolean bounceEnabled) {
             super(new ObjectSpawn(parentX, parentY + yOffset(parentFrame),
-                    Sonic3kObjectIds.MHZ_MINIBOSS_TREE, 0, 0, false, 0),
+                    Sonic3kObjectIds.MHZ_MINIBOSS_TREE, parentFrame, bounceEnabled ? 1 : 0, false, parentY),
                     "MHZMinibossTreeChip");
             this.bounceEnabled = bounceEnabled;
             this.motion = new SubpixelMotion.State(
                     parentX, parentY + yOffset(parentFrame), 0, 0,
+                    bounceEnabled ? SLOW_X_VELOCITY : DEFAULT_X_VELOCITY, 0);
+        }
+
+        private MhzMinibossTreeChipInstance(ObjectSpawn spawn) {
+            super(spawn, "MHZMinibossTreeChip");
+            this.bounceEnabled = (spawn.renderFlags() & 1) != 0;
+            this.motion = new SubpixelMotion.State(
+                    spawn.x(), spawn.y(), 0, 0,
                     bounceEnabled ? SLOW_X_VELOCITY : DEFAULT_X_VELOCITY, 0);
         }
 

@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -24,7 +25,7 @@ import java.util.List;
  * {@link GumballItemObjectInstance} Pachinko reward object.
  */
 public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
 
     private static final int COLLISION_FLAGS = 0x40 | 0x17;
     private static final int[] ANIMATION = {0, 1, 2, 3, 4, 3, 2, 1};

@@ -24,6 +24,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -60,7 +61,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/66 Rotating Junction.asm
  */
 public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // ========================================================================
     // ROM Constants
@@ -157,7 +158,7 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     private boolean switchReversed;
 
     /** Switch index from subtype (jun_switch). */
-    private final int switchIndex;
+    private int switchIndex;
 
     /** Frame animation timer (counts down from FRAME_TIMER_PERIOD). */
     private int frameTimer;
@@ -570,7 +571,8 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
      * behind the main junction disc. In the ROM, this is a separate SST entry created
      * by Jun_Main with obRoutine=4 (Jun_Display), which just calls RememberState.
      */
-    static class Sonic1JunctionChildInstance extends AbstractObjectInstance {
+    static class Sonic1JunctionChildInstance extends AbstractObjectInstance
+            implements SpawnRewindRecreatable {
 
         Sonic1JunctionChildInstance(ObjectSpawn parentSpawn) {
             super(parentSpawn, "JunctionChild");

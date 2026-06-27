@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -16,7 +18,7 @@ import java.util.List;
  * <p>ROM: {@code Obj_MHZ_Pollen_Spawner}, installed in
  * {@code Dynamic_object_RAM+object_size} during MHZ level init.
  */
-public class MhzPollenSpawnerInstance extends AbstractObjectInstance {
+public class MhzPollenSpawnerInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int TOP_SOLID_REQUIRED = 0x0C;
     private static final int MAX_PARTICLES = 0x10;
     private static final int NORMAL_SPAWN_MIN_X_SPEED = 0x0500;
@@ -39,6 +41,11 @@ public class MhzPollenSpawnerInstance extends AbstractObjectInstance {
 
     public MhzPollenSpawnerInstance() {
         this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0));
+    }
+
+    @Override
+    public MhzPollenSpawnerInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MhzPollenSpawnerInstance(ctx.spawn());
     }
 
     @Override

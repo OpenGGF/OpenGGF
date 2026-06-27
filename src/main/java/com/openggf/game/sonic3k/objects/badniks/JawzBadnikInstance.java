@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects.badniks;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -13,7 +14,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * sets its initial horizontal velocity toward the player, animates with a
  * two-frame raw loop, and otherwise uses the shared badnik destruction path.
  */
-public final class JawzBadnikInstance extends AbstractS3kBadnikInstance {
+public final class JawzBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
     // ObjDat_Jawz: collision_flags = $D7 -> size index $17, standard badnik body.
     private static final int COLLISION_SIZE_INDEX = 0x17;

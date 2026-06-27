@@ -18,12 +18,14 @@ import com.openggf.game.sonic2.objects.bosses.CPZBossPipePump;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPump;
 import com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik;
+import com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,10 +37,12 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS2CpzBossGraphRewind {
 
@@ -86,6 +90,15 @@ class TestS2CpzBossGraphRewind {
     }
 
     @Test
+    void cpzBossParentUsesGenericRecreateWithoutExplicitS2Codec() {
+        assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic2CPZBossInstance.class),
+                "Sonic2CPZBossInstance must restore through RewindRecreatable graph recreate");
+        assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(
+                        Sonic2CPZBossInstance.class.getName()),
+                "Sonic2CPZBossInstance must not keep an explicit S2 dynamic codec");
+    }
+
+    @Test
     void missingRequiredObjectReferencesStillFailWhenTargetHasNoRewindIdentity() {
         Harness externalHarness = Harness.createWithBoss();
         CPZBossFlame externalFlame = only(externalHarness.objectManager(), CPZBossFlame.class);
@@ -97,6 +110,46 @@ class TestS2CpzBossGraphRewind {
                 () -> CompactFieldCapturer.capture(fixture, context));
         assertEquals(true, thrown.getMessage().contains("no registered id for object reference"),
                 "non-null required object references must still require registered rewind identities");
+    }
+
+    @Test
+    void smokePuffRestoresWithLiveBossReferenceAndExactScalarState() throws Exception {
+        Harness harness = Harness.createWithBoss();
+        ObjectManager objectManager = harness.objectManager();
+        Sonic2CPZBossInstance boss = only(objectManager, Sonic2CPZBossInstance.class);
+        CPZBossSmokePuff beforeSmoke = objectManager.createDynamicObject(
+                () -> new CPZBossSmokePuff(spawn(0x2B58, 0x04B4, 22), boss));
+        setIntField(beforeSmoke, "mappingFrame", 2);
+        setIntField(beforeSmoke, "animFrameDuration", 3);
+
+        ObjectRefId beforeId = objectManager.captureIdentityContext()
+                .requireIdentityTable()
+                .idFor(beforeSmoke);
+        RewindRegistry rewindRegistry = new RewindRegistry();
+        rewindRegistry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.removeDynamicObject(beforeSmoke);
+        CPZBossSmokePuff replacement = objectManager.createDynamicObject(
+                () -> new CPZBossSmokePuff(spawn(0x2C00, 0x04C0, 23), boss));
+        assertNotEquals(beforeId, objectManager.captureIdentityContext()
+                .requireIdentityTable()
+                .idFor(replacement));
+
+        rewindRegistry.restore(snapshot);
+
+        Sonic2CPZBossInstance restoredBoss = only(objectManager, Sonic2CPZBossInstance.class);
+        CPZBossSmokePuff restoredSmoke = only(objectManager, CPZBossSmokePuff.class);
+        assertNotSame(beforeSmoke, restoredSmoke);
+        assertSame(restoredBoss, readObjectField(restoredSmoke, "mainBoss"));
+        assertNotSame(boss, readObjectField(restoredSmoke, "mainBoss"));
+        assertEquals(beforeId, objectManager.captureIdentityContext()
+                .requireIdentityTable()
+                .idFor(restoredSmoke));
+        assertEquals(0x2B58, restoredSmoke.getX());
+        assertEquals(0x04B4, restoredSmoke.getY());
+        assertEquals(2, readIntField(restoredSmoke, "mappingFrame"));
+        assertEquals(3, readIntField(restoredSmoke, "animFrameDuration"));
     }
 
     private static void assertAllReferencesPointAtRestoredGraph(CpzGraph graph) throws Exception {
@@ -302,12 +355,28 @@ class TestS2CpzBossGraphRewind {
     }
 
     private static Object readObjectField(Object target, String fieldName) throws Exception {
+        Field field = findField(target, fieldName);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static int readIntField(Object target, String fieldName) throws Exception {
+        Field field = findField(target, fieldName);
+        field.setAccessible(true);
+        return field.getInt(target);
+    }
+
+    private static void setIntField(Object target, String fieldName, int value) throws Exception {
+        Field field = findField(target, fieldName);
+        field.setAccessible(true);
+        field.setInt(target, value);
+    }
+
+    private static Field findField(Object target, String fieldName) throws NoSuchFieldException {
         Class<?> type = target.getClass();
         while (type != null) {
             try {
-                Field field = type.getDeclaredField(fieldName);
-                field.setAccessible(true);
-                return field.get(target);
+                return type.getDeclaredField(fieldName);
             } catch (NoSuchFieldException ignored) {
                 type = type.getSuperclass();
             }

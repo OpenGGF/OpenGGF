@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -27,7 +28,7 @@ import java.util.Map;
  * horizontal auto-release path.
  */
 public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable {
     private static final int PRIORITY_BUCKET = 1;
     private static final int HALF_WIDTH = 4;
     private static final int HALF_HEIGHT = 0x20;

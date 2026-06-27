@@ -218,12 +218,308 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-22: raised to 219 after adding RewindRecreatable-only
  *       (ObjectSpawn,int) probe support, making the S1 ROM-zone constructor
  *       family and AizBattleship headlessly verified.</li>
+ *   <li>2026-06-23: raised to 220 after HTZ boss smoke particles moved to
+ *       spawn-based generic recreate and joined the HTZ graph restore proof.</li>
+ *   <li>2026-06-23: raised to 221 after DEZ Eggman exhaust puffs moved to
+ *       spawn-based generic recreate and shed their final scalar baseline.</li>
+ *   <li>2026-06-23: raised to 222 after S1 Gargoyle fireballs moved to
+ *       spawn-based generic recreate and shed their final scalar baseline.</li>
+ *   <li>2026-06-23: raised to 224 after S1 Bumper and Running Disc moved to
+ *       spawn-based generic recreate, while Bubbles and Teleporter shed stale
+ *       scalar baselines.</li>
+ *   <li>2026-06-23: raised to 225 after S1 Circling Platform moved to
+ *       spawn-based generic recreate and shed its final scalar baseline.</li>
+ *   <li>2026-06-23: raised to 226 after S1 Large Grassy Platform moved to
+ *       spawn-based generic recreate and shed its final scalar baseline.</li>
+ *   <li>2026-06-23: raised to 227 after S1 Animals moved to spawn-based
+ *       generic recreate and shed its final scalar baseline.</li>
+ *   <li>2026-06-23: raised to 229 after S2 Arrow Shooter and Barrier moved to
+ *       name-preserving generic recreate and shed stale recreate baselines.</li>
+ *   <li>2026-06-23: raised to 234 after S2 CNZ bumper/block/cloud/bubble-generator
+ *       objects moved to generic recreate and shed stale scalar/recreate baselines.</li>
+ *   <li>2026-06-23: raised to 254 after S2 mechanism/platform objects moved to
+ *       generic recreate and shed stale scalar/recreate baselines.</li>
+ *   <li>2026-06-24: raised to 315 after S1 effect scalar objects moved to
+ *       generic recreate and shed stale scalar/recreate baselines.</li>
+ *   <li>2026-06-24: raised to 316 after S1 boss-fire scalar restore moved to
+ *       generic recreate and shed its stale recreate baseline.</li>
+ *   <li>2026-06-24: raised to 317 after S2 Crawl scalar restore moved to
+ *       generic recreate and shed its stale recreate baseline.</li>
+ *   <li>2026-06-24: raised to 321 after S2 badnik parent graph restores moved
+ *       to generic recreate and shed stale recreate baselines.</li>
+ *   <li>2026-06-24: raised to 322 after S2 Turtloid parent graph restore moved
+ *       to generic recreate and shed its stale recreate baseline.</li>
+ *   <li>2026-06-24: raised to 323 after S2 Aquis parent graph restore moved to
+ *       generic recreate and its private wing moved under graph-covered parent-dependent restore.</li>
+ *   <li>2026-06-24: raised to 325 after S1 Caterkiller and Orbinaut graph
+ *       parent restores moved to generic recreate under badnik graph coverage.</li>
+ *   <li>2026-06-24: raised to 327 after S1 and S2 seesaw parent restores moved
+ *       to generic recreate under seesaw ball graph coverage.</li>
+ *   <li>2026-06-24: raised to 328 after S2 Egg Prison parent restore moved
+ *       to generic recreate under button graph coverage.</li>
+ *   <li>2026-06-24: raised to 330 after S2 ARZ boss and OOZ popping-platform
+ *       parents moved to generic recreate under graph coverage.</li>
+ *   <li>2026-06-24: raised to 331 after S2 boss graph parent restores moved
+ *       to generic recreate and HTZ joined the standalone round-trip pass set.</li>
+ *   <li>2026-06-24: raised to 334 after S1 FZ, GHZ, and SLZ boss graph parent
+ *       restores moved to generic recreate and joined the standalone pass set.</li>
+ *   <li>2026-06-24: raised to 335 after AIZ miniboss parent graph restore moved
+ *       to generic recreate and joined the standalone pass set.</li>
+ *   <li>2026-06-24: raised to 336 after AIZ intro parent graph restore moved
+ *       to generic recreate and joined the standalone pass set.</li>
+ *   <li>2026-06-24: raised to 337 after AIZ spiked-log parent graph restore moved
+ *       to generic recreate and joined the standalone pass set.</li>
+ *   <li>2026-06-24: raised to 338 after AIZ falling-log parent restore moved
+ *       to generic recreate and joined the standalone pass set.</li>
+ *   <li>2026-06-24: raised to 339 after AIZ disappearing-floor parent restore moved
+ *       to generic recreate under border-child graph coverage.</li>
+ *   <li>2026-06-24: raised to 341 after AIZ collapsing-log bridge parent and
+ *       segment restores moved to generic recreate under graph coverage.</li>
+ *   <li>2026-06-24: raised to 342 after AIZ flipping bridge restore moved
+ *       to generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 344 after AIZ1 tree and zipline peg static
+ *       scenery restores moved to generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 346 after AIZ foreground plant and animated
+ *       still sprite restores moved to generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 348 after StillSprite and S3K spike restores
+ *       moved to generic recreate under static hazard object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 350 after S3K button and path-swap marker restores
+ *       moved to generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 353 after S3K hidden monitor, sinking mud, and
+ *       SS-entry ring restores moved to generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 357 after S3K CNZ balloon, rising platform,
+ *       light bulb, and barber pole restores moved to generic recreate under
+ *       object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 365 after S3K CNZ giant wheel, hover fan,
+ *       spiral tube, teleporter beam, trap door, triangle bumper, vacuum tube,
+ *       and water-level button restores moved to generic recreate under
+ *       object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 369 after S3K ICZ breakable wall,
+ *       harmful ice, ice block, and ice cube restores moved to generic
+ *       recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 374 after S3K HCZ block, conveyor spike,
+ *       large fan, spinning column, and water splash restores moved to
+ *       generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 378 after S3K ICZ path-follow platform,
+ *       swinging platform, stalagtite, and snow pile restores moved to
+ *       generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 382 after S3K automatic tunnel, auto-spin,
+ *       bubbler, and door restores moved to generic recreate under
+ *       object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 388 after S3K floating platform, gumball triangle
+ *       bumper, and pachinko standalone restores moved to generic recreate under
+ *       object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 393 after S3K twisted ramp, updraft,
+ *       HCZ/MGZ twisting loop, and MHZ twisted vine controller restores moved
+ *       to generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 400 after S2 MTZ nut plus S3K LBZ
+ *       barrier/alarm, HCZ water-drop, MHZ pollen, and MGZ post-boss
+ *       controller restores moved to generic recreate under object-manager
+ *       coverage.</li>
+ *   <li>2026-06-24: raised to 401 after the S1 false-floor falling fragment
+ *       moved to generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 402 after the S2 Moving Vine restore moved to
+ *       generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 403 after the S2 Point Pokey restore moved to
+ *       generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 404 after the shared placeholder object fallback
+ *       moved to generic recreate under object-manager coverage.</li>
+ *   <li>2026-06-24: raised to 405 after the S2 Speed Launcher moved to
+ *       spawn/name-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 406 after the S2 MTZ Spin Tube moved to
+ *       spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 407 after the S2 MTZ Long Platform moved to
+ *       spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 408 after the S2 collapsing-platform parent moved
+ *       to spawn/name-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 409 after the S1 junction display child moved
+ *       to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 414 after S3K Knuckles cutscene controllers
+ *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 421 after standalone S3K cutscene controllers
+ *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 424 after S1 false-floor, LZ boss, and MZ boss
+ *       controllers moved to generic recreate.</li>
+ *   <li>2026-06-24: raised to 428 after S3K transition floor, CNZ capsule,
+ *       HCZ2 wall, and ICZ palette controllers moved to generic recreate.</li>
+ *   <li>2026-06-24: raised to 430 after S2 CNZ and MCZ boss controllers moved
+ *       to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 435 after five S3K standalone badnik parents moved
+ *       to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 441 after six more S3K standalone badnik parents
+ *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 449 after eight more S3K standalone badnik parents
+ *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 455 after six S3K LBZ/MGZ object parents moved
+ *       to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 463 after eight S3K HCZ/LBZ/MGZ object parents
+ *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 471 after eight S3K AIZ/HCZ/MGZ object parents
+ *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 476 after five S3K ICZ/static object parents
+ *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 481 after five S3K ICZ debris children
+ *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 484 after three S3K dynamic child effects
+ *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 487 after three S3K debris particle children
+ *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 490 after three S3K HCZ water-wall children
+ *       moved to spawn-based generic recreate.</li>
+ *   <li>2026-06-24: raised to 493 after three S3K particle child effects
+ *       moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 496 after three S3K Turbo Spiker particles
+ *       moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 497 after the S3K MHZ miniboss tree chip
+ *       moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 498 after the S3K MHZ2 leaf particle
+ *       moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 499 after the S3K ICZ freezer frost puff
+ *       moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 500 after the S3K AIZ draw-bridge falling segment
+ *       moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 502 after the S3K Sparkle warning/projectile
+ *       children moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 504 after the S3K MHZ horizontal/vertical swing
+ *       bars moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 507 after the S3K MHZ curled vine, mushroom cap,
+ *       and mushroom platform moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 511 after S3K wire cage, gumball item, MHZ
+ *       mushroom catapult, and S3K springs moved to spawn-encoded generic
+ *       recreate.</li>
+ *   <li>2026-06-24: raised to 513 after the S3K LBZ miniboss box controllers
+ *       moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 516 after MHZ tree/ship mechanisms and MGZ
+ *       end-boss debris moved to spawn-encoded generic recreate.</li>
+ *   <li>2026-06-24: raised to 517 after S1 MZ glass blocks moved to
+ *       spawn-based generic recreate with graph-tested reflection relinking.</li>
+ *   <li>2026-06-24: raised to 518 after S1 SBZ junction parents moved to
+ *       spawn-based generic recreate with graph-tested display-child relinking.</li>
+ *   <li>2026-06-24: raised to 519 after S1 MZ lava wall main/trail restore
+ *       moved to graph-tested generic recreate.</li>
+ *   <li>2026-06-24: raised to 521 after S1 MZ lava geyser maker/head/body/
+ *       third-piece restore moved to graph-tested generic recreate.</li>
+ *   <li>2026-06-24: raised to 523 after S1 breakable-wall and smash-block
+ *       fragments moved to graph-tested generic recreate.</li>
+ *   <li>2026-06-24: raised to 524 after S1 spiked-ball chain children moved
+ *       to graph-tested generic recreate.</li>
+ *   <li>2026-06-24: raised to 526 after S1 collapsing floor/ledge fragments
+ *       gained spawn-based generic recreate coverage.</li>
+ *   <li>2026-06-24: raised to 527 after S1 Egg Prison buttons gained
+ *       graph-tested generic recreate coverage with parent relinking.</li>
+ *   <li>2026-06-24: raised to 528 after S2 Breakable Plating gained generic
+ *       recreate coverage and removed stale final-scalar/player-cache gaps.</li>
+ *   <li>2026-06-24: raised to 529 after S2 Rivets gained generic recreate
+ *       coverage and removed their stale player-cache/recreate gaps.</li>
+ *   <li>2026-06-24: raised to 530 after S2 MCZ rotating platforms gained
+ *       graph-tested generic recreate coverage with child-list relinking.</li>
+ *   <li>2026-06-24: raised to 531 after S2 Sideways platform pairs gained
+ *       graph-tested generic recreate coverage with sibling relinking.</li>
+    *   <li>2026-06-24: raised to 532 after S2 Falling Pillars gained
+    *       graph-tested generic recreate coverage with child relinking.</li>
+    *   <li>2026-06-24: raised to 533 after S2 Swinging Platforms gained
+    *       graph-tested generic recreate coverage with display-child relinking.</li>
+    *   <li>2026-06-24: raised to 534 after S2 Cogs gained graph-tested generic
+    *       recreate coverage with slot-child relinking.</li>
+    *   <li>2026-06-24: raised to 535 after S2 breakable-block fragments gained
+    *       graph-tested generic recreate coverage.</li>
+    *   <li>2026-06-24: raised to 536 after S2 CPZ spin tubes gained generic
+    *       recreate coverage.</li>
+    *   <li>2026-06-24: raised to 537 after S2 collapsing-platform fragments
+    *       gained graph-tested generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 541 after S3K LBZ tube/cup elevator,
+    *       HCZ hand-launcher, and HCZ water-rush graph restores gained
+    *       generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 543 after S3K HCZ/CGZ fan parent
+    *       and bubble restores gained generic recreate coverage under the
+    *       fan graph proof.</li>
+    *   <li>2026-06-25: raised to 544 after S3K MGZ pulley parent restore
+    *       gained generic recreate coverage under the pulley-chain graph proof.</li>
+    *   <li>2026-06-25: raised to 572 after S2 launcher objects gained
+    *       graph-tested generic recreate coverage with player-state map relinking.</li>
+    *   <li>2026-06-25: raised to 573 after S2 flippers gained graph-tested
+    *       generic recreate coverage with player-state map relinking.</li>
+    *   <li>2026-06-25: raised to 574 after S2 spirals gained graph-tested
+    *       generic recreate coverage with rider/cylinder player-link relinking.</li>
+    *   <li>2026-06-25: raised to 575 after the S3K AIZ draw-bridge parent
+    *       gained generic spawn recreate coverage.</li>
+    *   <li>2026-06-25: raised to 576 after the S3K AIZ/LRZ rock gained
+    *       generic spawn recreate coverage.</li>
+    *   <li>2026-06-25: raised to 578 after S3K Dragonfly parent and wing
+    *       child graph restores gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 580 after S3K Spiker parent and side-launcher
+    *       graph restores gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 582 after S3K Turbo Spiker parent and
+    *       waterfall-overlay graph restores gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 583 after S3K MegaChopper gained generic
+    *       spawn recreate coverage.</li>
+    *   <li>2026-06-25: raised to 584 after S3K Cluckoid arrow gained
+    *       generic graph recreate coverage.</li>
+    *   <li>2026-06-25: raised to 586 after S3K Mushmeanie parent/shell
+    *       graph restores gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 588 after S3K Mantis parent/child graph
+    *       restores gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 589 after S3K Ribot visual children gained
+    *       generic graph recreate coverage.</li>
+    *   <li>2026-06-25: raised to 592 after S3K SnaleBlaster parent, cover,
+    *       and shooter graph restores gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 593 after S3K Caterkiller Jr head/body graph
+    *       restores gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 596 after S3K Tunnelbot parent/arm/debris graph
+    *       restores gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 599 after S3K Collapsing Bridge root,
+    *       wave fragment, and MGZ stomp debris gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 601 after S3K Tension Bridge root and
+    *       falling fragment gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 604 after S3K Breakable Wall, Cork Floor,
+    *       and Collapsing Platform fragments gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 609 after S3K Gumball Machine root,
+    *       dispenser, ejection effect, exit trigger, and platform children
+    *       gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 611 after S3K Pachinko Energy Trap beam
+    *       and column children gained generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 614 after S3K ICZ ice-spike root,
+    *       tension-platform support, and crushing-column decoration gained
+    *       generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 616 after S3K ICZ snowdust particles
+    *       gained parent-seeded generic recreate coverage and the ICZ
+    *       snowboard intro gained spawn-based recreate coverage.</li>
+    *   <li>2026-06-25: raised to 617 after shared BoxObjectInstance
+    *       gained exact-class generic recreate coverage.</li>
+    *   <li>2026-06-25: raised to 618 after S3K LBZ Trigger Bridge
+    *       gained spawn-based generic recreate coverage.</li>
+   *   <li>2026-06-25: raised to 619 after S3K CNZ Teleporter
+   *       gained graph-backed generic recreate coverage.</li>
+   *   <li>2026-06-25: raised to 620 after S3K AIZ Emerald Scatter
+   *       gained spawn-based generic recreate coverage.</li>
+   *   <li>2026-06-25: raised to 622 after S2 rising-pillar and
+   *       smashable-ground debris fragments gained spawn-encoded generic
+   *       recreate coverage.</li>
+   *   <li>2026-06-25: raised to 624 after shared breathing-bubble and
+   *       water-splash effects gained spawn-encoded generic recreate
+   *       coverage.</li>
+   *   <li>2026-06-25: raised to 627 after S3K MGZ top launcher/platform
+   *       and Pachinko item orb objects gained generic recreate coverage.</li>
+   *   <li>2026-06-25: raised to 632 after S3K miniboss roots gained
+   *       spawn-based generic recreate coverage.</li>
+   *   <li>2026-06-25: raised to 635 after MGZ miniboss debris, defeat
+   *       fragments, and camera scroll helper gained generic recreate coverage.</li>
+   *   <li>2026-06-25: raised to 639 after HCZ vortex bubbles, ICZ defeat
+   *       debris, and MHZ end-boss controllers gained graph-backed generic
+   *       recreate coverage.</li>
+   *   <li>2026-06-25: raised to 642 after the final S1 try-again and S2
+   *       Super Sonic Stars recreate baseline gaps moved onto generic recreate.</li>
+   *   <li>2026-06-26: raised to 643 after the S2 WFZ boss root moved onto
+   *       spawn-construction-context generic recreate.</li>
+   *   <li>2026-06-27: raised to 646 after S1 swinging-platform chain-link
+   *       children gained spawn-based generic recreate coverage.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 219;
+    // 2026-06-27: raised to 646 after S1 swing-chain children gained generic recreate.
+    static final int RATCHET_FLOOR = 646;
 
     @BeforeEach
     void initHeadless() {
@@ -261,6 +557,7 @@ public class TestRewindHarnessCoverageRatchet {
 
         int total = classes.size();
         int passed = 0;
+        int graphCovered = 0;
         int noCodec = 0;
         int noProbeCtor = 0;
         int parentDependent = 0;
@@ -278,6 +575,7 @@ public class TestRewindHarnessCoverageRatchet {
                     passed++;
                     passedNames.add(sc.fqn());
                 }
+                case RoundTripSweepResult.GraphCovered g -> graphCovered++;
                 case RoundTripSweepResult.Unprobed u -> {
                     String reason = u.reason();
                     if (reason.startsWith("no dynamic recreate path")) {
@@ -300,6 +598,7 @@ public class TestRewindHarnessCoverageRatchet {
 
         System.out.println("[ratchet] total=" + total
                 + " passed=" + passed
+                + " graph-covered=" + graphCovered
                 + " no-codec=" + noCodec
                 + " no-probe-ctor=" + noProbeCtor
                 + " parent-dependent=" + parentDependent

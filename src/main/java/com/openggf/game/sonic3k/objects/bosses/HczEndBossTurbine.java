@@ -84,9 +84,9 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
     // =========================================================================
     private final HczEndBossInstance boss;
     /** X offset from boss center (0 — turbine is directly below). */
-    private final int xOffset;
+    private int xOffset;
     /** Y offset from boss center (0x24 pixels below). */
-    private final int yOffset;
+    private int yOffset;
 
     private int routine;
     private int animFrame;

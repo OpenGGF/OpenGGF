@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -30,7 +31,7 @@ import java.util.List;
  * downward legs ({@code 0}), side legs ({@code 2}), or a single top appendage
  * ({@code >= 4}). Children use the ROM hurt collision byte {@code $97}.
  */
-public final class RibotBadnikInstance extends AbstractS3kBadnikInstance {
+public final class RibotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_Ribot collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_Ribot priority $280.
     private static final int ANIM_DELAY = 7;              // byte_8C626 / byte_8C62C.
@@ -420,14 +421,15 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
-    private static final class RibotVisualChild extends AbstractObjectInstance {
+    private static final class RibotVisualChild extends AbstractObjectInstance
+            implements RewindRecreatable {
         private static final int PRIORITY_BUCKET = 4; // word_8C5DC priority $200.
         private static final int VISUAL_FRAME = 6;
 
         private final transient RibotActiveChild parent;
-        private final int visualIndex;
-        private final int originX;
-        private final int originY;
+        private int visualIndex;
+        private int originX;
+        private int originY;
         private int currentX;
         private int currentY;
 
@@ -440,6 +442,43 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance {
             this.originY = originY;
             this.currentX = originX;
             this.currentY = originY;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+                return null;
+            }
+            RibotActiveChild liveParent =
+                    findNearestLiveActiveChildForRewind(ctx.objectServices().objectManager(), ctx.spawn());
+            if (liveParent == null) {
+                return null;
+            }
+            ObjectSpawn capturedSpawn = ctx.spawn();
+            return new RibotVisualChild(capturedSpawn, liveParent, 0, capturedSpawn.x(), capturedSpawn.y());
+        }
+
+        private static RibotActiveChild findNearestLiveActiveChildForRewind(
+                ObjectManager objectManager,
+                ObjectSpawn spawn) {
+            if (objectManager == null || spawn == null) {
+                return null;
+            }
+            RibotActiveChild best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance instance : objectManager.getActiveObjects()) {
+                if (!(instance instanceof RibotActiveChild activeChild) || activeChild.isDestroyed()) {
+                    continue;
+                }
+                long dx = activeChild.getX() - spawn.x();
+                long dy = activeChild.getY() - spawn.y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = activeChild;
+                }
+            }
+            return best;
         }
 
         @Override

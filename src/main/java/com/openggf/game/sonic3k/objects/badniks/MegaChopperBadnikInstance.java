@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -21,7 +22,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * (loc_87F88..sub_881FE).
  */
 public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
-        implements TouchResponseListener {
+        implements TouchResponseListener, SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x17;   // ObjDat_MegaChopper flags $D7
     // Engine-special category equivalent of the ROM's $D7 Touch_Special route.

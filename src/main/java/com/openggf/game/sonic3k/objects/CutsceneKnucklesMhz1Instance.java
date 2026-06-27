@@ -7,7 +7,10 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -22,7 +25,8 @@ import java.util.List;
  * The visible peering sprite is a later {@code ChildObjDat_665B0} child, not
  * the subtype $1C object itself.
  */
-public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance {
+public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance
+        implements RewindRecreatable {
     private static final int INITIAL_X = 0x02B0;
     private static final int INITIAL_Y = 0x066C;
     private static final int WALK_TARGET_X = 0x0360;
@@ -66,6 +70,12 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance {
     CutsceneKnucklesMhz1Instance(ObjectSpawn spawn, Mhz1CutsceneButtonInstance parentButton) {
         super(spawn, "CutsceneKnuxMHZ1");
         this.parentButton = parentButton;
+    }
+
+    @Override
+    public CutsceneKnucklesMhz1Instance recreateForRewind(RewindRecreateContext ctx) {
+        Mhz1CutsceneButtonInstance liveParent = findNearestLiveButton(ctx);
+        return new CutsceneKnucklesMhz1Instance(ctx.spawn(), liveParent);
     }
 
     @Override
@@ -233,6 +243,31 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance {
             return 0x0380 - BUTTON_APPROACH_X_OFFSET;
         }
         return parentButton.getX() - BUTTON_APPROACH_X_OFFSET;
+    }
+
+    private static Mhz1CutsceneButtonInstance findNearestLiveButton(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        Mhz1CutsceneButtonInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (!(object instanceof Mhz1CutsceneButtonInstance candidate) || candidate.isDestroyed()) {
+                continue;
+            }
+            if (spawn == null) {
+                return candidate;
+            }
+            long dx = candidate.getX() - spawn.x();
+            long dy = candidate.getY() - spawn.y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+        return best;
     }
 
     private void spawnPeerOnce() {

@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -54,7 +55,8 @@ import java.util.logging.Logger;
  *   <li>Frame 4: Pole + blue ball (active/visited)</li>
  * </ul>
  */
-public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance {
+public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kStarPostObjectInstance.class.getName());
 
     // Activation zone dimensions (ROM: dx + 8 < $10, dy + $40 < $68)
@@ -139,8 +141,8 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance {
     private static final int FRAME_HEAD = 3;      // Head alone
     private static final int FRAME_BLUE_BALL = 4; // Pole + blue ball
 
-    private final int checkpointIndex;
-    private final boolean cameraLockFlag;
+    private int checkpointIndex;
+    private boolean cameraLockFlag;
     private int animId;
     private int mappingFrame;
     private int animTimer;

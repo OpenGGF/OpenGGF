@@ -64,9 +64,9 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
     // docs/s1disasm/s1disasm/_anim/Springs.asm:8-15
     private static final int POST_TRIGGER_INACTIVE_FRAMES = 11;
 
-    private final int springType;
-    private final boolean yellow;
-    private final int strength;
+    private int springType;
+    private boolean yellow;
+    private int strength;
     private ObjectAnimationState animationState;
     private int mappingFrame;
     private int postTriggerInactiveFrames;

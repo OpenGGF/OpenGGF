@@ -21,6 +21,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.CollisionSystem;
@@ -62,7 +63,8 @@ import java.util.Map;
  * solid collision + standing state machine but no autonomous motion.
  */
 public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, ObjectControlledSolidContactController {
+        implements SolidObjectProvider, SolidObjectListener, ObjectControlledSolidContactController,
+        SpawnRewindRecreatable {
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_TOP_PLATFORM;
 
     // ROM: move.w #$280, priority(a0)

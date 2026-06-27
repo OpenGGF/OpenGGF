@@ -4,6 +4,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -22,7 +24,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  *
  * Face and flame are rendered as overlays on the ship (not separate object instances).
  */
-public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance {
+public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implements RewindRecreatable {
 
     // State machine constants (routineSecondary values, matching ROM's even-numbered index)
     private static final int STATE_DESCENT = 0;
@@ -61,6 +63,11 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance {
 
     public Sonic1GHZBossInstance(ObjectSpawn spawn) {
         super(spawn, "GHZ Boss");
+    }
+
+    @Override
+    public Sonic1GHZBossInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1GHZBossInstance(ctx.spawn());
     }
 
     @Override

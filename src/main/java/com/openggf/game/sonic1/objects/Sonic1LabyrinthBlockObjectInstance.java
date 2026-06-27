@@ -104,13 +104,13 @@ public class Sonic1LabyrinthBlockObjectInstance extends AbstractObjectInstance
     private int y;
 
     // Saved base positions (lblk_origX = objoff_34, lblk_origY = objoff_30)
-    private final int origX;
+    private int origX;
     private int origY;
 
     // Visual properties
-    private final int halfWidth;    // obActWid
-    private final int halfHeight;   // obHeight
-    private final int mappingFrame; // obFrame
+    private int halfWidth;    // obActWid
+    private int halfHeight;   // obHeight
+    private int mappingFrame; // obFrame
 
     // lblk_time (objoff_36): countdown timer for delayed activation
     private int delayTimer;

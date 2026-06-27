@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -37,7 +39,7 @@ import java.util.List;
  * sub_2AA7E, sub_2ABF2, sub_2AC08, SolidObjSloped2.
  */
 public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener {
+        implements SlopedSolidProvider, SolidObjectListener, RewindRecreatable {
 
     // ===== Constants =====
     private static final int SEGMENT_COUNT = 8;
@@ -82,14 +84,14 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
     }
 
     // ===== Instance fields =====
-    private final int x;
-    private final int y;
-    private final boolean hFlip;
+    private int x;
+    private int y;
+    private boolean hFlip;
     private final byte[] heightTable;
     private final byte[] negatedHeightTable;
-    private final int animPeriod;        // ROM: $25(a0) — timer reload value
-    private final int maxFrame;          // ROM: $37(a0) — wrap limit
-    private final int animDirection;     // ROM: $36(a0) — +1 or -1
+    private int animPeriod;        // ROM: $25(a0) — timer reload value
+    private int maxFrame;          // ROM: $37(a0) — wrap limit
+    private int animDirection;     // ROM: $36(a0) — +1 or -1
 
     private int animTimer;               // ROM: anim_frame_timer
     private final int[] segmentX = new int[SEGMENT_COUNT];
@@ -133,6 +135,11 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
         }
 
         initSegments(subtype);
+    }
+
+    @Override
+    public AizFlippingBridgeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizFlippingBridgeObjectInstance(ctx.spawn());
     }
 
     private void initSegments(int subtype) {

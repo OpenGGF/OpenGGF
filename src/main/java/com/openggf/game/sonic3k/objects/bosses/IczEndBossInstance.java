@@ -21,7 +21,9 @@ import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider.TouchRegion;
 import com.openggf.level.objects.TouchResponseResult;
@@ -42,7 +44,8 @@ import java.util.List;
  * entry gate, descent, swing/frost-puff attack loop, hit flash, and the fixed
  * egg-capsule handoff after defeat.
  */
-public final class IczEndBossInstance extends AbstractBossInstance implements MultiPieceSolidProvider {
+public final class IczEndBossInstance extends AbstractBossInstance
+        implements MultiPieceSolidProvider, SpawnRewindRecreatable {
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_DESCEND = 0x02;
     private static final int ROUTINE_SWING = 0x04;
@@ -1268,12 +1271,17 @@ public final class IczEndBossInstance extends AbstractBossInstance implements Mu
         return getBottomChildYForTesting();
     }
 
-    private static final class IczEndBossDefeatDebrisChild extends GravityDebrisChild {
+    private static final class IczEndBossDefeatDebrisChild extends GravityDebrisChild
+            implements SpawnCoordinateZeroScalarArgsRewindRecreatable {
         private static final int GRAVITY = 0x38;
 
-        private final int frame;
-        private final boolean flipX;
+        private int frame;
+        private boolean flipX;
         private boolean visible = true;
+
+        private IczEndBossDefeatDebrisChild(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(), 0, 0, 0, false);
+        }
 
         private IczEndBossDefeatDebrisChild(int x, int y, int xVel, int yVel, int frame, boolean flipX) {
             super(new ObjectSpawn(x, y, Sonic3kObjectIds.ICZ_END_BOSS, 0, 0, false, 0),

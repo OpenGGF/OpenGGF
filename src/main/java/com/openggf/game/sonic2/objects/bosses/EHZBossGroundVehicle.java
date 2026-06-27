@@ -6,6 +6,8 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -15,7 +17,7 @@ import java.util.List;
  * EHZ Boss - Ground vehicle body.
  * ROM Reference: Obj56 routine 0x06
  */
-public class EHZBossGroundVehicle extends AbstractBossChild {
+public class EHZBossGroundVehicle extends AbstractBossChild implements RewindRecreatable {
     private static final int APPROACH_TARGET_X = 0x29D0;
     private static final int APPROACH_START_X = 0x2AF0;
     private static final int CAMERA_GATE_X = 0x28F0;
@@ -24,7 +26,7 @@ public class EHZBossGroundVehicle extends AbstractBossChild {
     private static final int FLAG_FLYING_OFF = 0x04;
     private static final int VEHICLE_FRAME_OFFSET = 7;
 
-    private final int initialY;
+    private int initialY;
     private int routineSecondary;
     private int renderFlags;
 
@@ -34,6 +36,12 @@ public class EHZBossGroundVehicle extends AbstractBossChild {
         this.initialY = parent.getInitialY();
         this.currentX = APPROACH_START_X;
         this.currentY = initialY;
+    }
+
+    @Override
+    public EHZBossGroundVehicle recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2EHZBossInstance boss = EhzBossRewindLinks.requireNearestBoss(ctx, "EHZ boss ground vehicle");
+        return new EHZBossGroundVehicle(boss);
     }
 
     @Override

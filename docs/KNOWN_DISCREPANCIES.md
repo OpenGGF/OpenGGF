@@ -328,7 +328,7 @@ The ROM allocates a single fixed RAM slot for the sidekick character. `Tails_CPU
 
 The engine supports an arbitrary number of CPU-controlled sidekicks configured via comma-separated `SIDEKICK_CHARACTER_CODE` (e.g. `"tails,knuckles,sonic,sonic"`). Key divergences:
 
-**Daisy chain following.** Each sidekick follows the one in front of it rather than all following Sonic. The chain uses the same 17-frame history delay per link. When a middle sidekick despawns, downstream sidekicks self-heal to the nearest settled leader via `getEffectiveLeader()`.
+**Daisy chain following.** Each sidekick follows the one in front of it rather than all following Sonic. The chain uses the same 17-frame history delay per link. A direct CPU leader already in NORMAL is used immediately; the settled-leader threshold is only for healing past broken or not-yet-normal links via `getEffectiveLeader()`.
 
 **Duplicate characters.** The same character can appear multiple times (e.g. five Sonics). Each duplicate gets a separate DPLC pattern bank in the virtual `0x38000+` range to prevent atlas corruption. The `PlayerSpriteRenderer` uses `renderPatternWithId()` to bypass the VDP's 11-bit pattern index limit.
 
@@ -1112,10 +1112,10 @@ now have rewind codecs in `Sonic1ObjectRegistry` and are restored on a backward 
 
 ## Batch-6 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
 
-Two batch-6 cosmetic transient children are intentionally **not** captured/recreated across
-a held-rewind boundary (no rewind codec; their `#recreate` / `#finalScalar` keys stay in
-`src/test/resources/rewind/coverage-baseline.txt`). Both self-regenerate, hold no
-player/score/terrain state, and are structurally awkward to codec because their only
+One batch-6 cosmetic transient child is intentionally **not** captured/recreated across
+a held-rewind boundary (no rewind codec; its `#recreate` key stays in
+`src/test/resources/rewind/coverage-baseline.txt`). It self-regenerates, holds no
+player/score/terrain state, and is structurally awkward to codec because its only
 constructor takes the live player rather than an `ObjectSpawn`. This mirrors the AIZ2
 transient-children precedent and the batch-2/3/4/5 cosmetic cases above.
 
@@ -1128,11 +1128,10 @@ transient-children precedent and the batch-2/3/4/5 cosmetic cases above.
   `Sonic2SuperStateController` (not the power-up spawner), so a deferred player-bound codec
   would orphan the pending entry. Dropping it causes at most a brief cosmetic absence that
   naturally re-emits.
-- `com.openggf.level.objects.SplashObjectInstance` (water splash; spawned on the S2 power-up path
-  and the S3K HCZ miniboss path): a ~30-frame animation (10 frames x 3 ticks) that self-expires
-  via `ObjectLifetimeOps.expireDynamic(this)`, re-emitted on every water entry/exit. Its direct
-  S1 sibling `Sonic1SplashObjectInstance` is already an established accept-drop with the same
-  rationale. `facingLeft` is spawn-derivable and the renderer is transient.
+
+`com.openggf.level.objects.SplashObjectInstance` was originally classified here, but as of
+2026-06-25 it restores through generic recreate with `facingLeft` encoded in `ObjectSpawn`
+render flags and a transient renderer lookup from the focused player's dust controller.
 
 All other batch-6 S2 objects that were previously dropped now have rewind codecs in
 `Sonic2ObjectRegistry` and are restored on a backward seek: `RingPrizeObjectInstance` (CNZ
@@ -1166,19 +1165,11 @@ precedent and the batch-2/3/4/5/6 cosmetic cases above.
   not spawn-constructible anyway (super ctor passes `null` spawn, fixed screen-space coords, and it
   holds a live sibling `emeralds` ref + a renderer), so even if wired up it would need a sibling-relink
   codec, not an `exactSpawnCodec`. Accept-drop-as-baseline rather than adding a codec for dead code.
-- `com.openggf.level.objects.BreathingBubbleInstance` (game-agnostic underwater drowning bubble,
-  spawned by the shared `com.openggf.sprites.playable.DrowningController` for both S1 LZ Obj0A and S2
-  drowning; reported as S1 because its disasm refs/primary use are S1 LZ): a short-lived cosmetic
-  bubble/particle continuously re-emitted (every `nextBubbleTimer` frames) by `DrowningController`
-  while the player is submerged, holding no player/score/terrain state (the air timer lives on the
-  player). An `exactSpawnCodec` is impossible: the ctor takes 6 non-spawn args (`startsFacingLeft`,
-  `countdownNumber`, `artKey`, `countdownFrameMap`, `maxBubbleFrame`, `riseVelocity`) while
-  `ObjectSpawn` only carries x/y/objectId=0x0A/subtype=0 — the per-game art config and the RNG-gated
-  `countdownNumber` (a one-time snapshot of player air at spawn) are not spawn-derivable, and it is not
-  parent/sibling-linked. Its baseline keys (`#recreate` + `#finalScalar#maxBubbleFrame` +
-  `#finalScalar#riseVelocity`) stay in the baseline. Dropping it on rewind only briefly blanks bubbles
-  until the next in-frame emit, directly analogous to the accepted `Sonic1SplashObjectInstance`
-  precedent ("Batch-3 Rewind: Transient Cosmetic Children Not Rewound"). Accept-drop.
+
+`com.openggf.level.objects.BreathingBubbleInstance` was originally classified here, but as of
+2026-06-25 it restores through generic recreate. Its spawn now encodes the one-shot constructor
+state needed for faithful reconstruction: facing direction, countdown number, S1/S2 art profile,
+and rise velocity.
 
 All other batch-7 objects now have rewind codecs and are restored on a backward seek:
 `com.openggf.level.objects.boss.BossExplosionObjectInstance` (shared boss-defeat explosion,
@@ -1187,28 +1178,12 @@ registered per-game in `Sonic1ObjectRegistry`/`Sonic2ObjectRegistry`) and
 in `ObjectRewindDynamicCodecs.sharedCodecs()`; its non-final `worldX`/`worldY` are reapplied after
 recreate). S3K's signpost sparkle (`S3kSignpostSparkleChild`) is already codec'd separately.
 
-## Batch-inner1 Rewind: Inner-Class Children Re-Established By Parent
+## Batch-inner1 Rewind: Inner-Class Children
 
-Static nested children whose restored parent deterministically re-emits/re-positions them on the
-next update are intentionally **not** captured/recreated across a held-rewind boundary (no rewind
-codec; their `#recreate` key stays in `src/test/resources/rewind/coverage-baseline.txt`).
-
-- `com.openggf.game.sonic1.objects.Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance` (SBZ
-  Rotating Junction object 0x66, display-only `Jun_Display` backdrop child): a static nested class
-  spawned lazily by the parent via `childInstance = spawnFreeChild(() -> new
-  Sonic1JunctionChildInstance(spawn))` whenever `childInstance == null` (parent `update()`). It does
-  not implement `TouchResponseProvider` or `SolidObjectProvider`, owns no boss/cutscene state machine,
-  and its `update()` is empty (ROM `Jun_Display` routine 4 = display only) — it renders only the
-  full-circle backdrop sprite behind the disc, so dropping it loses a purely visual backdrop, never a
-  hazard or a ridable platform (the HURT/grab/solid behavior all lives on the parent). It is fully
-  parent-derived from `spawn` (no independent trajectory), so the parent re-emits it for free every
-  frame its `childInstance` reference is null. After a held rewind drops the child, the parent is
-  re-established via placed-object respawn (its ctor leaves `childInstance == null`), so the lazy
-  re-emit fires naturally. Accept-drop-as-baseline rather than registering a codec for a deterministically
-  re-emitted display-only child.
-
-Two batch-inner1 S1 inner-class children now have parent-relink rewind codecs in
-`Sonic1ObjectRegistry` and are restored on a backward seek:
+Batch-inner1 S1 inner-class children now use generic recreate or parent-relink rewind coverage and
+are restored on a backward seek:
+`Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance` (SBZ rotating-junction display child;
+spawn-based generic recreate),
 `Sonic1FalseFloorInstance$FalseFloorBlock` (SBZ2 boss collapsing-floor tile; un-finaled
 `currentX`/`currentY`/`blockIndex`, re-registered into the master's `childBlocks`),
 `Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance` (Orbinaut HURT satellite/projectile;

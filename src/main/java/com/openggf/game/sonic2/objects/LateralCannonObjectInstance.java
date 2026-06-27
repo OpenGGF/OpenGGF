@@ -11,6 +11,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -57,7 +59,7 @@ import java.util.List;
  * </ul>
  */
 public class LateralCannonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // ========================================================================
     // ROM Constants
@@ -108,9 +110,9 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
     // Instance State
     // ========================================================================
 
-    private final int x;
-    private final int y;
-    private final int phaseMask; // Upper nibble of subtype: (subtype & 0xF0)
+    private int x;
+    private int y;
+    private int phaseMask; // Upper nibble of subtype: (subtype & 0xF0)
 
     private Routine routine;
     private int timer;           // objoff_2A: countdown timer
@@ -140,6 +142,11 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
         this.mappingFrame = 0;
         this.animIndex = 0;
         this.animTimer = ANIM_DELAY;
+    }
+
+    @Override
+    public LateralCannonObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new LateralCannonObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

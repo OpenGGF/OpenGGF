@@ -217,6 +217,51 @@ The hit response typically:
 4. Sets invulnerability timer
 5. May trigger behavior change (some bosses speed up at low health)
 
+#### Shared defeat / escape / camera-unlock pitfalls (all 5 Eggman-ship bosses)
+
+The GHZ/MZ/SYZ/SLZ/LZ bosses (`AbstractS1EggmanBossInstance`) share three ROM
+behaviours that each caused a distinct trace divergence in the post-boss
+camera-unlock tail (SYZ3 f12490 -> GREEN, commit on `bugfix/ai-syz3-f12490`;
+GHZ3 had the same defeat-deferral fix earlier):
+
+1. **Defeat routine is dispatched read-once — defer the first defeat frame.**
+   The killing hit sets the defeated flag, but the boss only acts on it when its
+   own routine reaches its status-update tail, where `B*_Defeated` does
+   `move.b #<explode>,ob2ndRout` + `move.w #<timer>,GenericTimer` then **`rts`**
+   (it does NOT fall through to the explode routine). `B*_ShipMain` re-reads
+   `ob2ndRout` at the top of its dispatch next frame, so the defeat countdown's
+   first decrement lands one frame after the hit. The engine selects the defeat
+   routine in the touch-response pass that runs *before* the boss's own
+   `update()`, so set `defeatDeferralAppliesToThisBoss()=true` to restore that
+   one-frame offset (otherwise the whole defeat→ascent→escape sequence — and the
+   escape's `addq.w #2,(v_limitright2)` camera scroll — runs one frame early).
+   Watch the per-boss defeat timer value (GHZ `$B3`, SYZ `$B4=180`).
+   (`docs/s1disasm/_incObj/75, 76 Boss - SYZ Main and Blocks.asm:70-74,154-160`.)
+
+2. **Eggman bosses are never `out_of_range`-culled — make them persistent.**
+   `B*_ShipMain` ends with `jmp (DisplaySprite).l`, never `MarkObjGone` /
+   `out_of_range`; the boss owns its whole lifecycle and self-deletes only from
+   its escape routine once `v_limitright2` reaches `boss_*_end`. During the
+   escape the ship flies right at 8px/frame (two BossMoves) and outruns the
+   2px/frame camera, so the generic engine off-screen unload culls it mid-escape
+   and freezes the right-boundary scroll short of `boss_*_end` (SYZ3 f12575:
+   `maxX` stuck at 0x2CA4 instead of 0x2D40). `AbstractS1EggmanBossInstance`
+   returns `isPersistent()=true` for the whole family. (asm:84.)
+
+3. **Defeat does NOT clear `f_lockscreen` — the Egg Prison does.**
+   `B*_Explode .transition` clears velocities and the defeated status bit but
+   never touches `f_lockscreen`; the screen lock stays set through the ascent,
+   escape, and the run to the egg capsule, and is cleared only by the Egg Prison
+   (Obj3E `clr.b (f_lockscreen).w`). The engine models `f_lockscreen` via
+   `currentBossId` (which the Egg Prison clears). Do NOT call
+   `setCurrentBossId(0)` from the boss's defeat code — clearing it early drops
+   the strict right-boundary (the `RIGHT_EXTRA` +0x40 in `doLevelBoundary` is
+   re-enabled), letting the player overrun `v_limitright2+0x128` before reaching
+   the capsule (SYZ3 f12767: ROM wall-stops the player, engine kept running).
+   NOTE: as of `bugfix/ai-syz3-f12490` only the SYZ boss had this `setCurrentBossId(0)`
+   removed; GHZ/MZ/SLZ still call it at defeat (latent — their players don't reach
+   the boundary band in that window). Remove it there too if a trace exposes it.
+
 ### Phase 6: Art Loading
 
 **PLC-based art loading:** S1 boss art has dedicated PLC IDs in ArtLoadCues. Use the shared `PlcParser` API for standalone decompression to avoid VRAM tile conflicts. See `plc-system` skill. Use `RomOffsetFinder plc <name>` to inspect PLC contents from the CLI.
@@ -377,6 +422,7 @@ Report any discrepancies with specific line references.
 - Drops spikes from above
 - Retracting platforms in arena
 - Spike timing pattern from disassembly
+- **objoff_3C/3D word/byte aliasing trap:** the block-drop hold/break shake reads `btst #1/#0,PhaseTimer` where `PhaseTimer` (objoff_3D) is the LOW BYTE of the WORD timer `GenericTimer` (objoff_3C). The `subq.w #1,GenericTimer` each frame overwrites objoff_3D, so the ±2 shake alternates with the decrementing timer's low bits — it is NOT a separate persistent flag (objoff_3D doubles as a patrol "already attacked" flag, but only because the word ops clobber it during the drop). If you model objoff_3D as its own field, the shake freezes and the ship's collision Y stops oscillating, mistiming the rolling-player boss-hit bounce by a frame (SYZ3 f11169, commit on `bugfix/ai-syz3-f11169`). Read the timer's low byte for the shake: `(timer & 2)` / `(timer & 1)`. (`docs/s1disasm/_incObj/75, 76 Boss - SYZ Main and Blocks.asm:20-21,264-295`.) General lesson: any S1 boss that decrements a WORD timer while also `btst`-ing an adjacent BYTE at the timer's low offset is using ROM memory aliasing — model them as one storage location.
 
 ### LZ Boss (0x77) - Rising Water
 - Unique chase boss (not arena-based)

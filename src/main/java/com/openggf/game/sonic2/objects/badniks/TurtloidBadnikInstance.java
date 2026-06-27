@@ -14,6 +14,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -34,7 +36,7 @@ import java.util.List;
  * Based on disassembly Obj9A (s2.asm:74332-74418).
  */
 public class TurtloidBadnikInstance extends AbstractBadnikInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
@@ -98,6 +100,11 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
         // PlatformObject: d1=$18 (half-width), d2=$8 (air half-height), d3=$E (ground half-height)
         this.platformParams = new SolidObjectParams(
                 PLATFORM_HALF_WIDTH, PLATFORM_Y_RADIUS, PLATFORM_Y_OFFSET);
+    }
+
+    @Override
+    public TurtloidBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new TurtloidBadnikInstance(ctx.spawn());
     }
 
     private void ensureChildrenSpawned() {

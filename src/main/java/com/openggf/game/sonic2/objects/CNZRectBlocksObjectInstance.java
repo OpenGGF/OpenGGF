@@ -30,7 +30,7 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm lines 58068-58201 (ObjD2)
  */
 public class CNZRectBlocksObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     /**
      * Animation frame data from byte_2B654.
@@ -59,8 +59,8 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
     private static final int FRAMES_PER_TICK = 16; // objoff_3A reset value + 1
 
     // Base position (stored during init, from spawn location)
-    private final int baseX;
-    private final int baseY;
+    private int baseX;
+    private int baseY;
 
     // Animation state
     private int mappingFrame = 0;
@@ -92,6 +92,11 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
 
         // Compute initial position
         updatePosition();
+    }
+
+    @Override
+    public CNZRectBlocksObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CNZRectBlocksObjectInstance(ctx.spawn(), getName());
     }
 
     /**

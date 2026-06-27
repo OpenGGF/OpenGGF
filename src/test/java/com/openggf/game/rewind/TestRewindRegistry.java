@@ -130,4 +130,30 @@ class TestRewindRegistry {
         assertEquals(7, callbackSaw.get(),
                 "post-restore callbacks must see fully restored subsystem state");
     }
+
+    @Test
+    void delayedGameRngRestoreRunsAfterReconstructionSideEffectsAndBeforeCallbacks() {
+        RewindRegistry reg = new RewindRegistry();
+        AtomicInteger rngSeed = new AtomicInteger(7);
+        AtomicInteger callbackSaw = new AtomicInteger(-1);
+        reg.register(intSnap("gamerng", rngSeed));
+        reg.register(new RewindSnapshottable<Integer>() {
+            @Override public String key() { return "object-manager"; }
+            @Override public Integer capture() { return 1; }
+            @Override public void restore(Integer snapshot) {
+                rngSeed.set(99);
+            }
+        });
+        reg.registerPostRestoreCallback("observer", () -> callbackSaw.set(rngSeed.get()));
+
+        CompositeSnapshot cs = reg.capture();
+        rngSeed.set(123);
+
+        reg.restore(cs);
+
+        assertEquals(7, rngSeed.get(),
+                "gamerng should be restored after reconstruction-time RNG side effects");
+        assertEquals(7, callbackSaw.get(),
+                "post-restore callbacks must observe delayed gamerng restore");
+    }
 }

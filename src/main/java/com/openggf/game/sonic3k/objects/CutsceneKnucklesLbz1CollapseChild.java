@@ -32,7 +32,7 @@ public final class CutsceneKnucklesLbz1CollapseChild extends AbstractObjectInsta
     private static final int EXPLOSION_Y_RANGE = 0x20;
 
     private final CutsceneKnucklesLbz1Instance parent;
-    private final int subtype;
+    private int subtype;
     private int x;
     private int y;
     private int explosionTimer = EXPLOSION_TIMER;

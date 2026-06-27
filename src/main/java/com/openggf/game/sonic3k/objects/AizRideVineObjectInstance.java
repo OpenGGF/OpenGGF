@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PostPlayerUpdateHook;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -22,7 +23,8 @@ import java.util.List;
  * <p>Primary disassembly references:
  * Obj_AIZRideVine / Obj_AIZRideVineHandle (sonic3k.asm:46098-46748).
  */
-public class AizRideVineObjectInstance extends AbstractObjectInstance implements PostPlayerUpdateHook {
+public class AizRideVineObjectInstance extends AbstractObjectInstance
+        implements PostPlayerUpdateHook, SpawnRewindRecreatable {
     private static final int ROOT_FRAME = 0x21;
     private static final int HANDLE_FRAME = 0x20;
     private static final int PRIORITY_BUCKET = 4; // priority $200
@@ -50,8 +52,8 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance implements
         int mappingFrame;
     }
 
-    private final int subtype;
-    private final int targetX;
+    private int subtype;
+    private int targetX;
 
     private int currentX;
     private int currentY;

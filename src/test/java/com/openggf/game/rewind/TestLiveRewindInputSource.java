@@ -172,4 +172,59 @@ class TestLiveRewindInputSource {
         assertEquals(6, source.read(6).frameIndex());
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, source.read(6).p1InputMask());
     }
+
+    @Test
+    void resetToFrameZeroClearsOldRowsAndBaseFrame() {
+        InputHandler input = new InputHandler();
+        LiveRewindInputSource source = new LiveRewindInputSource();
+
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LEFT), GLFW_PRESS);
+        source.appendFrame(input, config);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LEFT), GLFW_RELEASE);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.RIGHT), GLFW_PRESS);
+        source.appendFrame(input, config);
+        source.discardBefore(2);
+
+        source.resetToFrameZero();
+
+        assertEquals(0, source.earliestFrame());
+        assertEquals(1, source.frameCount());
+        Bk2FrameInput frame = source.read(0);
+        assertEquals(0, frame.frameIndex());
+        assertEquals(0, frame.p1InputMask());
+        assertEquals(0, frame.p1ActionMask());
+    }
+
+    @Test
+    void retainOnlyFrameKeepsRequestedExistingFrame() {
+        InputHandler input = new InputHandler();
+        LiveRewindInputSource source = new LiveRewindInputSource();
+
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LEFT), GLFW_PRESS);
+        source.appendFrame(input, config);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LEFT), GLFW_RELEASE);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.RIGHT), GLFW_PRESS);
+        source.appendFrame(input, config);
+
+        source.retainOnlyFrame(2);
+
+        assertEquals(2, source.earliestFrame());
+        assertEquals(3, source.frameCount());
+        Bk2FrameInput frame = source.read(2);
+        assertEquals(2, frame.frameIndex());
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT, frame.p1InputMask());
+    }
+
+    @Test
+    void retainOnlyFrameCreatesNeutralRowWhenFrameIsAbsent() {
+        LiveRewindInputSource source = new LiveRewindInputSource();
+
+        source.retainOnlyFrame(9);
+
+        assertEquals(9, source.earliestFrame());
+        assertEquals(10, source.frameCount());
+        assertEquals(9, source.read(9).frameIndex());
+        assertEquals(0, source.read(9).p1InputMask());
+        assertEquals(0, source.read(9).p1ActionMask());
+    }
 }
