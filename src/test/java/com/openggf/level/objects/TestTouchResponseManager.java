@@ -925,9 +925,10 @@ public class TestTouchResponseManager {
         when(sidekick.getInvulnerable()).thenReturn(false);
         when(sidekick.getCode()).thenReturn("tails");
 
-        MockTouchObject obj = new MockTouchObject(160, 112, 0x48);
+        MockSnapshotTouchObject obj = new MockSnapshotTouchObject(160, 112, 0x48);
         setupTableSize(8, 16, 16);
         objectManager.addDynamicObject(obj);
+        objectManager.snapshotTouchResponseState();
 
         ObjectTouchResponseController controller = new ObjectTouchResponseController(objectManager, table);
         controller.updateSidekick(sidekick, 1);
@@ -1408,5 +1409,4 @@ public class TestTouchResponseManager {
         }
     }
 }
-
 

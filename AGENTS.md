@@ -177,7 +177,7 @@ The engine extends the ROM's single CPU-controlled sidekick (Tails at `$FFFFB040
 
 ### Daisy Chain
 
-Each sidekick follows the one in front via a 17-frame position/input history delay. When a middle sidekick despawns, `getEffectiveLeader()` walks up the chain to the nearest settled leader (or main player). `isSettled()` returns true after 15 consecutive frames in NORMAL state.
+Each sidekick follows the one in front via a 17-frame position/input history delay. When the direct CPU leader is already in NORMAL, `getEffectiveLeader()` uses that leader immediately; the 15-frame `isSettled()` threshold is only for healing past broken or not-yet-normal chain links. If a middle sidekick despawns before settling, `getEffectiveLeader()` walks up to the nearest settled leader (or main player).
 
 ### VRAM Banks
 

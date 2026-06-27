@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PlatformBobHelper;
@@ -77,7 +79,8 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public ARZPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new ARZPlatformObjectInstance(ctx.spawn(), getName());
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new ARZPlatformObjectInstance(ctx.spawn(), getName()));
     }
 
     @Override
@@ -317,7 +320,7 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
 
         int cameraMaxY = services().camera().getMaxY();
         if ((baseYFixed >> 8) > cameraMaxY + OFFSCREEN_Y_MARGIN) {
-            setDestroyed(true);
+            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
         }
     }
 

@@ -4673,10 +4673,10 @@ public class SidekickCpuController {
     }
 
     /**
-     * Walks up the leader chain to find the nearest settled leader (or the main
-     * player). If the direct leader is not CPU-controlled or is settled, it is
-     * returned immediately. Otherwise the chain is walked until a settled
-     * sidekick or the main player is found.
+     * Walks up the leader chain to find the nearest usable leader (or the main
+     * player). A CPU leader already in NORMAL is usable immediately; the
+     * settled-frame threshold only decides whether to heal past a broken or
+     * not-yet-normal chain link.
      */
     public AbstractPlayableSprite getEffectiveLeader() {
         AbstractPlayableSprite current = leader;
@@ -4686,7 +4686,7 @@ public class SidekickCpuController {
             if (ctrl == null) {
                 return current;
             }
-            if (ctrl.isSettled()) {
+            if (ctrl.state == State.NORMAL || ctrl.isSettled()) {
                 return current;
             }
             current = ctrl.getLeader();

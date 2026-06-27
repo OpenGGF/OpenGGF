@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
@@ -290,8 +291,8 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
         // UNTOUCHED. setCentreX/setCentreY zero the sub-pixel; use the
         // preserve-subpixel setters so the captured player keeps his accumulated
         // fraction, matching the ROM move.w.
-        player.setCentreXPreserveSubpixel((short) getX());
-        player.setCentreYPreserveSubpixel((short) getY());
+        NativePositionOps.writeXPosPreserveSubpixel(player, getX());
+        NativePositionOps.writeYPosPreserveSubpixel(player, getY());
 
         // clr.b objoff_32(a0)
         sineAngle = 0;

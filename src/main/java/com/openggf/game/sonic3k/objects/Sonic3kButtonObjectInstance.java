@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -114,7 +115,8 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
 
     @Override
     public Sonic3kButtonObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new Sonic3kButtonObjectInstance(ctx.spawn());
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new Sonic3kButtonObjectInstance(ctx.spawn()));
     }
 
     /**

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Full-suite non-trace cleanup:** preserved ROM-order level-frame camera/event sequencing while flushing queued layout mutations before boundary easing, split player-control vertical-wrap masking from render visibility, and aligned multi-sidekick direct-leader behavior with tests/docs.
 - **Rewind object-reference arrays:** compact rewind capture now preserves object-reference arrays and restores the shared ROM RNG after object graph reconstruction but before post-restore callbacks.
 - **S1 swinging-platform chain-link rewind:** render-only chain-link children now restore through spawn-based generic recreate with compact-restored render state, closing the last reconciled rewind sweep gap.
 - **S3K AIZ2 capsule private-child rewind:** AIZ2 end-capsule private animal/results children now restore through exact-class generic recreate, clearing the last no-probe constructor tail entries.

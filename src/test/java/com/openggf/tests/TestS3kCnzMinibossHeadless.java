@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.camera.DeadzoneGeometry;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -43,7 +44,7 @@ class TestS3kCnzMinibossHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
+        positionAtMinibossArenaGate(fixture);
         fixture.stepFrame(false, false, false, false, false);
 
         assertTrue(getCnzEvents().isBossFlag(),
@@ -55,7 +56,7 @@ class TestS3kCnzMinibossHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
+        positionAtMinibossArenaGate(fixture);
         GameServices.camera().setY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
         for (int i = 0; i < 123; i++) fixture.stepFrame(false, false, false, false, false);
 
@@ -70,7 +71,7 @@ class TestS3kCnzMinibossHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
+        positionAtMinibossArenaGate(fixture);
         GameServices.camera().setY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
 
         fixture.stepFrame(false, false, false, false, false);
@@ -94,7 +95,7 @@ class TestS3kCnzMinibossHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
+        positionAtMinibossArenaGate(fixture);
         GameServices.camera().setY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
         // Run past the 2-second Obj_Wait release so Obj_CNZMinibossInit has created
         // the dynamic spinning top child (ROM sonic3k.asm:144885-144895) before we
@@ -120,7 +121,7 @@ class TestS3kCnzMinibossHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
+        positionAtMinibossArenaGate(fixture);
         GameServices.camera().setY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
 
         // Stub four top-to-coil hits across the fight window by nudging the boss's simulateHitForTest
@@ -153,7 +154,7 @@ class TestS3kCnzMinibossHeadless {
                 .build();
 
         // Trigger arena entry so the camera bounds are locked to the arena box.
-        GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
+        positionAtMinibossArenaGate(fixture);
         fixture.stepFrame(false, false, false, false, false);
 
         // Confirm arena lock is active and that the locked max X really is the arena
@@ -188,6 +189,15 @@ class TestS3kCnzMinibossHeadless {
         Sonic3kLevelEventManager events =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
         return events.getCnzEvents();
+    }
+
+    private static void positionAtMinibossArenaGate(HeadlessTestFixture fixture) {
+        int cameraX = Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X;
+        int playerX = cameraX + DeadzoneGeometry.rightEdge(fixture.camera().getWidth());
+        fixture.sprite().setCentreX((short) playerX);
+        fixture.camera().updatePosition(true);
+        assertEquals(cameraX, fixture.camera().getX() & 0xFFFF,
+                "Precondition: player/camera setup must leave camera at the CNZ miniboss gate");
     }
 
     private static Optional<CnzMinibossInstance> findBoss() {
