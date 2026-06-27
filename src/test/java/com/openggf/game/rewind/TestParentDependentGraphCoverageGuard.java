@@ -66,7 +66,7 @@ class TestParentDependentGraphCoverageGuard {
         long sessionTail = baseline.values().stream()
                 .filter(entry -> entry.status() == Status.SESSION_TAIL)
                 .count();
-        assertTrue(covered > 0, "baseline must record existing graph-tested families");
+        assertTrue(sessionTail > 0, "baseline must record remaining session-tail families");
         assertEquals(baseline.size(), covered + sessionTail,
                 "baseline rows must be accounted for as covered or session-tail");
 

@@ -1,9 +1,9 @@
 package com.openggf.game.rewind;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -22,13 +22,16 @@ class TestRemainingOtherFailureGraphClassification {
     }
 
     @Test
-    void graphCoveredOtherFailuresAreParentDependentInIsolatedSweep() {
-        for (String className : List.of(GUMBALL_SPRING, ICZ_SEGMENT)) {
+    void formerGraphOnlyRowsAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                GUMBALL_SPRING, "TestS3kBadnikChildGraphRewind",
+                ICZ_SEGMENT, "TestS3kIczSegmentColumnGraphRewind");
+
+        expected.forEach((className, evidence) -> {
             RewindRoundTripHarness.RoundTripSweepResult result = RewindRoundTripHarness.probeClass(className);
-            RewindRoundTripHarness.RoundTripSweepResult.Unprobed unprobed =
-                    assertInstanceOf(RewindRoundTripHarness.RoundTripSweepResult.Unprobed.class, result, className);
-            assertTrue(unprobed.reason().startsWith("parent-dependent"),
-                    className + " must stay in graph-only inventory; reason was " + unprobed.reason());
-        }
+            RewindRoundTripHarness.RoundTripSweepResult.GraphCovered covered =
+                    assertInstanceOf(RewindRoundTripHarness.RoundTripSweepResult.GraphCovered.class, result, className);
+            assertEquals(evidence, covered.evidence());
+        });
     }
 }

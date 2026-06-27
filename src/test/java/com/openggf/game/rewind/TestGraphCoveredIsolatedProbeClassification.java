@@ -50,6 +50,8 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS1SyzBossBlockGraphRewind";
     private static final String SEESAW_GRAPH_TEST =
             "TestSeesawBallGraphRewind";
+    private static final String CHECKPOINT_STARPOST_GRAPH_TEST =
+            "TestCheckpointStarpostGraphRewind";
     private static final String AIZ_DISAPPEARING_FLOOR_GRAPH_TEST =
             "com.openggf.game.sonic3k.objects.TestAizDisappearingFloorGraphRewind";
     private static final String LBZ1_CUTSCENE_GRAPH_TEST =
@@ -62,6 +64,18 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS3kNestedHurtboxGraphRewind";
     private static final String MGZ2_COLLAPSE_GRAPH_TEST =
             "com.openggf.game.sonic3k.events.TestSonic3kMgz2CollapseEvents";
+    private static final String S3K_BADNIK_CHILD_GRAPH_TEST =
+            "TestS3kBadnikChildGraphRewind";
+    private static final String ICZ_SEGMENT_COLUMN_GRAPH_TEST =
+            "TestS3kIczSegmentColumnGraphRewind";
+    private static final String S3K_SIGNPOST_STUB_GRAPH_TEST =
+            "TestS3kSignpostStubGraphRewind";
+    private static final String S3K_SLOT_BONUS_GRAPH_TEST =
+            "TestS3kSlotBonusGraphRewind";
+    private static final String S3K_SELF_CONTAINED_TRANSIENT_GRAPH_TEST =
+            "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind";
+    private static final String S2_SELF_CONTAINED_TRANSIENT_GRAPH_TEST =
+            "com.openggf.game.sonic2.objects.TestS2SelfContainedTransientRewind";
 
     @BeforeEach
     void initHeadless() {
@@ -324,6 +338,33 @@ class TestGraphCoveredIsolatedProbeClassification {
                 MGZ2_COLLAPSE_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild",
                 S3K_NESTED_HURTBOX_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void remainingCoveredParentDependentRowsAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild",
+                S3K_BADNIK_CHILD_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment",
+                ICZ_SEGMENT_COLUMN_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.S3kSignpostStubChild",
+                S3K_SIGNPOST_STUB_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance",
+                S3K_SLOT_BONUS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance",
+                S3K_SLOT_BONUS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance",
+                S3K_SLOT_BONUS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance",
+                S3K_SELF_CONTAINED_TRANSIENT_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild",
+                CHECKPOINT_STARPOST_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.Sonic3kStarPostStarChild",
+                CHECKPOINT_STARPOST_GRAPH_TEST,
+                "com.openggf.level.objects.InvincibilityStarsObjectInstance",
+                S2_SELF_CONTAINED_TRANSIENT_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }
