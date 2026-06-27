@@ -182,12 +182,10 @@ public final class LevelFrameStep {
         //    step, and writing v_limitbtm2 / f_bgscrollvert for the NEXT frame.
         //
         //    So per frame: (4a) camera move/clamp, (4b) zone event handler reading
-        //    the post-scroll camera, (4c) boundary easing. The engine previously
-        //    inverted this (event handler + boundary easing before the camera
-        //    move), which applied the airborne +8 boundary acceleration to the
-        //    same frame's camera one frame early (S1 MZ1 f2101) and fed the zone
-        //    handlers (SBZ/FZ camera-X gates, left-boundary lock) a pre-scroll
-        //    camera-X one frame stale.
+        //    the post-scroll camera, (4c) flush layout mutations queued by those
+        //    events, (4d) boundary easing. This keeps gameplay mutations visible
+        //    before post-camera placement/level scroll without moving event writes
+        //    ahead of the ROM camera scroll.
         LevelEventProvider levelEvents = context.levelEventProvider();
         boolean cameraDrivenScroll = levelManager.advanceCameraDrivenScrollForFrame();
 
@@ -212,14 +210,16 @@ public final class LevelFrameStep {
             levelEvents.update();
         }
 
-        // 4c. Boundary easing (ROM DynamicLevelEvents boundary tail): ease the
+        // 4c. Flush gameplay layout mutations queued by zone events before
+        //     boundary easing and post-camera systems observe the changed level.
+        levelManager.flushQueuedLayoutMutations();
+
+        // 4d. Boundary easing (ROM DynamicLevelEvents boundary tail): ease the
         //     bottom boundary toward target reading the post-scroll camera, and
         //     record the boundary state for the NEXT frame's scroll clamp.
         if (!suppressDefaultCamera && !cameraDrivenScroll) {
             wrapper.wrap("camera-boundary", camera::updateBoundaryEasing);
         }
-
-        levelManager.flushQueuedLayoutMutations();
 
         if (levelManager.isLevelInactiveForTransition()) {
             return;

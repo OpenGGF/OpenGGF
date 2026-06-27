@@ -328,7 +328,7 @@ The ROM allocates a single fixed RAM slot for the sidekick character. `Tails_CPU
 
 The engine supports an arbitrary number of CPU-controlled sidekicks configured via comma-separated `SIDEKICK_CHARACTER_CODE` (e.g. `"tails,knuckles,sonic,sonic"`). Key divergences:
 
-**Daisy chain following.** Each sidekick follows the one in front of it rather than all following Sonic. The chain uses the same 17-frame history delay per link. When a middle sidekick despawns, downstream sidekicks self-heal to the nearest settled leader via `getEffectiveLeader()`.
+**Daisy chain following.** Each sidekick follows the one in front of it rather than all following Sonic. The chain uses the same 17-frame history delay per link. A direct CPU leader already in NORMAL is used immediately; the settled-leader threshold is only for healing past broken or not-yet-normal links via `getEffectiveLeader()`.
 
 **Duplicate characters.** The same character can appear multiple times (e.g. five Sonics). Each duplicate gets a separate DPLC pattern bank in the virtual `0x38000+` range to prevent atlas corruption. The `PlayerSpriteRenderer` uses `renderPatternWithId()` to bypass the VDP's 11-bit pattern index limit.
 

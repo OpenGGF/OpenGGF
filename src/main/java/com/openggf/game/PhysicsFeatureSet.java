@@ -292,6 +292,17 @@ public record PhysicsFeatureSet(
          */
         boolean useScreenYWrapValueForVisibility,
         /**
+         * Whether player control paths apply the active vertical-wrap mask to
+         * {@code y_pos} after movement/control.
+         * <p>S2: {@code true} — {@code Obj01_Control} masks {@code y_pos} with
+         * {@code $7FF} when the vertical-wrap loop is active.
+         * <p>S3K: {@code true} — player control masks with
+         * {@code Screen_Y_wrap_value}.
+         * <p>S1: {@code false}. Its LZ3/SBZ2 wrap is handled at camera
+         * boundary crossing instead of every control frame.
+         */
+        boolean playerControlAppliesVerticalWrapMask,
+        /**
          * Whether the sidekick CPU despawn check fires on an object-id mismatch
          * (Tails moves between two distinct object types while off-screen).
          * <p>S2: {@code true} — {@code TailsCPU_CheckDespawn}
@@ -1200,6 +1211,7 @@ public record PhysicsFeatureSet(
                     source.sidekickPanicTreatsPinballModeAsSpindashFlag(),
                     source.sidekickSpawningRequiresGroundedLeader(),
                     source.useScreenYWrapValueForVisibility(),
+                    source.playerControlAppliesVerticalWrapMask(),
                     source.sidekickDespawnUsesObjectIdMismatch(),
                     source.sidekickFlyLandStatusBlockerMask(),
                     source.sidekickFlyLandRequiresLeaderAlive(),
@@ -1267,6 +1279,7 @@ public record PhysicsFeatureSet(
             false /* sidekickDelayedJumpPressUsesHistoryEdge: S1 has no Tails CPU */,
             false /* sidekickPanicTreatsPinballModeAsSpindashFlag: S1 has no Tails CPU */,
             true /* sidekickSpawningRequiresGroundedLeader: S1 has no Tails CPU */, false /* useScreenYWrapValueForVisibility: S1 keeps 32-margin */,
+            false /* playerControlAppliesVerticalWrapMask: S1 LZ3/SBZ2 masks y_pos only on camera wrap crossing */,
             true /* sidekickDespawnUsesObjectIdMismatch: S1 has no Tails CPU; symmetric with S2 */,
             SIDEKICK_FLY_LAND_BLOCKERS_NONE, false /* sidekickFlyLandRequiresLeaderAlive: S1 has no CPU sidekick */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
@@ -1333,6 +1346,7 @@ public record PhysicsFeatureSet(
             false /* sidekickDelayedJumpPressUsesHistoryEdge: preserve S2 delayed low-byte press replay baseline */,
             true /* sidekickPanicTreatsPinballModeAsSpindashFlag: S2 TailsCPU_Panic reads spin_dash_flag, but the engine's S2 rolling-only/pinball representation must feed that branch for the $7F release cadence; HTZ2 f1023 exits panic at Level_frame_counter $0400 while inertia remains nonzero (s2.asm:39458-39491). */,
             true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
+            true /* playerControlAppliesVerticalWrapMask: S2 Obj01_Control applies the active $7FF y_pos mask in vertical-wrap loops */,
             true /* sidekickDespawnUsesObjectIdMismatch: S2 cmp.b id(a3),d0 in TailsCPU_CheckDespawn (s2.asm:39067) */,
             SIDEKICK_FLY_LAND_BLOCKERS_S2, false /* sidekickFlyLandRequiresLeaderAlive: S2 TailsCPU_Flying_Part2 has no Sonic-routine check */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
@@ -1401,6 +1415,7 @@ public record PhysicsFeatureSet(
             true /* sidekickDelayedJumpPressUsesHistoryEdge: HCZ f2893/f2894 shows held A/B/C carried while low-byte jump press clears on the next delayed sample */,
             true /* sidekickPanicTreatsPinballModeAsSpindashFlag: S3K AutoSpin is represented by engine pinballMode, while ROM sub_13EF0 tests spin_dash_flag (sonic3k.asm:26858) */,
             false, true /* useScreenYWrapValueForVisibility: S3K Render_Sprites height_pixels=0x18 */,
+            true /* playerControlAppliesVerticalWrapMask: S3K player control applies Screen_Y_wrap_value */,
             false /* sidekickDespawnUsesObjectIdMismatch: S3K cmp.w (a3),d0 in sub_13EFC (sonic3k.asm:26823) compares routine-pointer high word; all gameplay objects share the same high word so the check almost never fires */,
             SIDEKICK_FLY_LAND_BLOCKERS_S3K, true /* sidekickFlyLandRequiresLeaderAlive: sonic3k.asm:26629 cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42 */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,

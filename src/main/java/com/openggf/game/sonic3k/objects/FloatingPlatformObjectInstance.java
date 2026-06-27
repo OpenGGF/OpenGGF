@@ -8,6 +8,7 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlatformBobHelper;
@@ -197,7 +198,8 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public FloatingPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new FloatingPlatformObjectInstance(ctx.spawn());
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new FloatingPlatformObjectInstance(ctx.spawn()));
     }
 
     // ===== SolidObjectProvider =====

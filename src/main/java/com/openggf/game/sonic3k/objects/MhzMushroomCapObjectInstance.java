@@ -141,6 +141,12 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void setServices(ObjectServices services) {
+        super.setServices(services);
+        updatePosition(0);
+    }
+
+    @Override
     public int getX() {
         return x;
     }

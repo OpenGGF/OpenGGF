@@ -10,8 +10,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
+import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class TestServiceRequiredBossRootRewindRoundTrip {
@@ -37,18 +38,21 @@ class TestServiceRequiredBossRootRewindRoundTrip {
 
     @Test
     void constructorSpawningBossRootsStayGraphOnlyInTheIsolatedSweep() {
-        for (String className : constructorSpawningBossRoots()) {
+        for (Map.Entry<String, String> expectedCoverage : constructorSpawningBossRoots().entrySet()) {
+            String className = expectedCoverage.getKey();
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(className);
 
-            assertInstanceOf(RoundTripSweepResult.Unprobed.class, result,
-                    className + " needs the graph harness because its constructor spawns children");
+            RoundTripSweepResult.GraphCovered covered =
+                    assertInstanceOf(RoundTripSweepResult.GraphCovered.class, result,
+                            className + " needs graph harness coverage because its constructor spawns children");
+            assertEquals(expectedCoverage.getValue(), covered.evidence());
         }
     }
 
-    private static List<String> constructorSpawningBossRoots() {
-        return List.of(
-                Sonic1SYZBossInstance.class.getName(),
-                Sonic2CPZBossInstance.class.getName(),
-                Sonic2EHZBossInstance.class.getName());
+    private static Map<String, String> constructorSpawningBossRoots() {
+        return Map.of(
+                Sonic1SYZBossInstance.class.getName(), "TestS1SyzBossBlockGraphRewind",
+                Sonic2CPZBossInstance.class.getName(), "TestS2CpzBossGraphRewind",
+                Sonic2EHZBossInstance.class.getName(), "TestS2EhzBossGraphRewind");
     }
 }

@@ -180,7 +180,7 @@ public class TestMultiSidekickSpawn {
     }
 
     @Test
-    public void testTrailingTailsUsesRootLeaderWhileFreshSonicLeaderHistoryWarms() {
+    public void testTrailingTailsUsesFreshNormalSonicLeaderImmediately() {
         mainPlayer.setCentreX((short) 160);
         mainPlayer.setCentreY((short) 655);
         mainPlayer.setAir(false);
@@ -212,12 +212,16 @@ public class TestMultiSidekickSpawn {
         tailsController.setInitialState(SidekickCpuController.State.NORMAL);
         trailingTails.setCpuController(tailsController);
 
+        assertSame(freshSonicLeader, tailsController.getEffectiveLeader(),
+                "A direct CPU leader in NORMAL is usable before the settled-frame threshold; "
+                        + "history warmup only affects the leader's delayed follow sample");
+
         tailsController.update(2);
 
         assertEquals(SidekickCpuController.State.NORMAL, tailsController.getState());
-        assertTrue(tailsController.getInputRight(),
-                "Trailing Tails should temporarily follow root Sonic while the direct Sonic sidekick's "
-                        + "16-frame history warms; generatedInput=0x"
+        assertFalse(tailsController.getInputRight(),
+                "Trailing Tails should follow the direct NORMAL Sonic sidekick immediately, not fall back "
+                        + "to root Sonic while the direct leader's 16-frame history warms; generatedInput=0x"
                         + Integer.toHexString(tailsController.getDiagnosticGeneratedHeldInput())
                         + ", directLeaderTargetX=" + (freshSonicLeader.getCentreX(16) & 0xFFFF)
                         + ", rootTargetX=" + (mainPlayer.getCentreX(16) & 0xFFFF)

@@ -34,7 +34,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     // Frames 0x11-0x14 have empty DPLCs and reuse tiles from frame 0x15.
     private static final int PRELOAD_DPLC_FRAME = 0x15;
 
-    private final PlayerSpriteRenderer renderer;
+    private PlayerSpriteRenderer renderer;
     private int animTimer;
     private int frameIndex;
     private int deleteRoutineDelay = -1;
@@ -58,8 +58,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     }
 
     public SkidDustObjectInstance(ObjectSpawn spawn, ObjectServices services) {
-        this(spawn.x(), spawn.y(), findRewindRenderer(services),
-                (spawn.renderFlags() & 1) != 0);
+        this(spawn.x(), spawn.y(), null, (spawn.renderFlags() & 1) != 0);
     }
 
     private static PlayerSpriteRenderer findRewindRenderer(ObjectServices services) {
@@ -122,7 +121,8 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (isDestroyed() || renderer == null) {
+        PlayerSpriteRenderer activeRenderer = resolveRenderer();
+        if (isDestroyed() || activeRenderer == null) {
             return;
         }
 
@@ -130,14 +130,21 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         // We must "draw" frame 0x15 first to trigger its DPLC load (it has no mapping
         // pieces, so nothing visible is drawn), then the animation frames will work.
         if (!dplcPreloaded) {
-            renderer.drawFrame(PRELOAD_DPLC_FRAME, spawn.x(), spawn.y(), facingLeft, false);
+            activeRenderer.drawFrame(PRELOAD_DPLC_FRAME, spawn.x(), spawn.y(), facingLeft, false);
             dplcPreloaded = true;
         }
 
         if (frameIndex >= 0 && frameIndex < SKID_FRAMES.length) {
             int mappingFrame = SKID_FRAMES[frameIndex];
-            renderer.drawFrame(mappingFrame, spawn.x(), spawn.y(), facingLeft, false);
+            activeRenderer.drawFrame(mappingFrame, spawn.x(), spawn.y(), facingLeft, false);
         }
+    }
+
+    private PlayerSpriteRenderer resolveRenderer() {
+        if (renderer == null) {
+            renderer = findRewindRenderer(tryServices());
+        }
+        return renderer;
     }
 
     /**
