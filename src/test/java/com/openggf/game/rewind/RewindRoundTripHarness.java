@@ -145,10 +145,28 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic2.objects.bosses.CPZBossContainer",
                     "TestS2CpzBossGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossDripper",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic2.objects.bosses.CPZBossFlame",
                     "TestS2CpzBossGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossGunk",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic2.objects.bosses.CPZBossPipe",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossPipePump",
+                    "TestS2CpzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment",
                     "TestS2CpzBossGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic2.objects.bosses.CPZBossPump",

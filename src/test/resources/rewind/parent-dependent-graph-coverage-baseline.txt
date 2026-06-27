@@ -1,12 +1,6 @@
 # status|class|evidence
 # covered = focused graph/object-manager rewind test exists for this family.
 # session-tail = still needs a real session/family harness before claiming graph-safe restore.
-covered|com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend|TestS2CpzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor|TestS2CpzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.bosses.CPZBossDripper|TestS2CpzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.bosses.CPZBossGunk|TestS2CpzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.bosses.CPZBossPipePump|TestS2CpzBossGraphRewind
-covered|com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment|TestS2CpzBossGraphRewind
 covered|com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance$BorderChild|com.openggf.game.sonic3k.objects.TestAizDisappearingFloorGraphRewind
 covered|com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1CollapseChild|com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind
 covered|com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper|com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind

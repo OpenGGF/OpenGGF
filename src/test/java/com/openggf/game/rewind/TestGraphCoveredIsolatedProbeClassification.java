@@ -275,6 +275,25 @@ class TestGraphCoveredIsolatedProbeClassification {
     }
 
     @Test
+    void sonic2CpzBossSecondaryParentDependentRowsAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend",
+                S2_CPZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor",
+                S2_CPZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.CPZBossDripper",
+                S2_CPZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.CPZBossGunk",
+                S2_CPZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.CPZBossPipePump",
+                S2_CPZ_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment",
+                S2_CPZ_BOSS_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
     void mechaSonicNoProbeAndParentDependentChildrenAreReportedAsGraphCovered() {
         Map<String, String> expected = Map.of(
                 "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicDEZWindow",
