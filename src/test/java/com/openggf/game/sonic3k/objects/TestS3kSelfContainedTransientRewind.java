@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -65,6 +66,10 @@ class TestS3kSelfContainedTransientRewind {
             "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild";
     private static final String ICZ_END_BOSS_ESCAPE_SHIP_CLASS =
             "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossRobotnikEscapeShip";
+    private static final String AIZ2_HIGH_PRIORITY_ANIMAL_CLASS =
+            "com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$HighPriorityAnimal";
+    private static final String AIZ2_RESULTS_SCREEN_CLASS =
+            "com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$Aiz2ResultsScreenObjectInstance";
 
     @AfterEach
     void cleanup() {
@@ -103,6 +108,8 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(BubbleShieldObjectInstance.class);
         assertNoRegisteredS3kDynamicCodec(InstaShieldObjectInstance.class);
         assertNoRegisteredS3kDynamicCodec(Sonic3kInvincibilityStarsObjectInstance.class);
+        assertNoRegisteredS3kDynamicCodec(classForName(AIZ2_HIGH_PRIORITY_ANIMAL_CLASS));
+        assertNoRegisteredS3kDynamicCodec(classForName(AIZ2_RESULTS_SCREEN_CLASS));
     }
 
     @Test
@@ -196,6 +203,74 @@ class TestS3kSelfContainedTransientRewind {
         assertFalse(restoredShield.isDestroyed(), "restored insta-shield must remain live");
         assertSame(player, shieldPlayer(restoredShield),
                 "restored insta-shield must remain bound to the same live player");
+    }
+
+    @Test
+    void aiz2CapsulePrivateChildrenRestoreThroughSessionSnapshot() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_AIZ, ACT_2)
+                .build();
+
+        RewindRegistry registry = fixture.gameplayMode().getRewindRegistry();
+        assertNotNull(registry, "RewindRegistry must be available after AIZ2 boot");
+
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        assertNotNull(objectManager, "ObjectManager must be available for AIZ2");
+
+        AbstractPlayableSprite player = fixture.sprite();
+        player.setAir(false);
+        player.setXSpeed((short) 0);
+        player.setYSpeed((short) 0);
+        player.setGSpeed((short) 0);
+
+        Class<? extends AbstractObjectInstance> highPriorityAnimalClass =
+                classForName(AIZ2_HIGH_PRIORITY_ANIMAL_CLASS);
+        Class<? extends AbstractObjectInstance> aiz2ResultsScreenClass =
+                classForName(AIZ2_RESULTS_SCREEN_CLASS);
+
+        Aiz2EndEggCapsuleInstance capsule = objectManager.createDynamicObject(
+                () -> new Aiz2EndEggCapsuleInstance(0x49EA, 0x0162));
+
+        invokeOpenCapsule(capsule);
+        assertEquals(9, countLive(objectManager, highPriorityAnimalClass),
+                "AIZ2 capsule open must spawn the high-priority animal family");
+
+        setIntFieldInHierarchy(capsule, "postOpenTimer", 0);
+        capsule.update(0, player);
+        assertEquals(1, countLive(objectManager, aiz2ResultsScreenClass),
+                "AIZ2 capsule must spawn its specialized results-screen child");
+
+        Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
+        capturedState.put(highPriorityAnimalClass,
+                simpleRewindFieldValues(firstLive(objectManager, highPriorityAnimalClass)));
+        capturedState.put(aiz2ResultsScreenClass,
+                simpleRewindFieldValues(firstLive(objectManager, aiz2ResultsScreenClass)));
+
+        CompositeSnapshot snapshot = registry.capture();
+        assertNotNull(snapshot, "capture() must return a snapshot");
+
+        removeLiveObjects(objectManager, highPriorityAnimalClass);
+        removeLiveObjects(objectManager, aiz2ResultsScreenClass);
+        objectManager.removeDynamicObject(capsule);
+        assertEquals(0, countLive(objectManager, highPriorityAnimalClass),
+                "diverge step must remove the AIZ2 high-priority animals");
+        assertEquals(0, countLive(objectManager, aiz2ResultsScreenClass),
+                "diverge step must remove the AIZ2 results child");
+
+        registry.restore(snapshot);
+
+        assertEquals(9, countLive(objectManager, highPriorityAnimalClass),
+                "restore must recreate all AIZ2 high-priority animal children");
+        assertEquals(1, countLive(objectManager, aiz2ResultsScreenClass),
+                "restore must recreate the specialized AIZ2 results child");
+        assertEquals(0, countLive(objectManager, S3kResultsScreenObjectInstance.class),
+                "AIZ2 results child must not collapse to the base S3K results type");
+        assertEquals(capturedState.get(highPriorityAnimalClass),
+                simpleRewindFieldValues(firstLive(objectManager, highPriorityAnimalClass)),
+                "restored high-priority animal scalar state must match the captured state");
+        assertEquals(capturedState.get(aiz2ResultsScreenClass),
+                simpleRewindFieldValues(firstLive(objectManager, aiz2ResultsScreenClass)),
+                "restored AIZ2 results scalar state must match the captured state");
     }
 
     @Test
@@ -752,6 +827,18 @@ class TestS3kSelfContainedTransientRewind {
         return liveObjects(objectManager, type).size();
     }
 
+    private static AbstractObjectInstance firstLive(
+            ObjectManager objectManager, Class<? extends AbstractObjectInstance> type) {
+        return liveObjects(objectManager, type).get(0);
+    }
+
+    private static void removeLiveObjects(ObjectManager objectManager, Class<?> type) {
+        List<?> live = List.copyOf(liveObjects(objectManager, type));
+        for (Object object : live) {
+            objectManager.removeDynamicObject((ObjectInstance) object);
+        }
+    }
+
     private static <T> List<T> liveObjects(ObjectManager objectManager, Class<T> type) {
         return objectManager.getActiveObjects().stream()
                 .filter(o -> o.getClass() == type && !o.isDestroyed())
@@ -825,6 +912,12 @@ class TestS3kSelfContainedTransientRewind {
         field.setInt(instance, value);
     }
 
+    private static void setIntFieldInHierarchy(Object instance, String fieldName, int value) throws Exception {
+        Field field = fieldInHierarchy(instance.getClass(), fieldName);
+        field.setAccessible(true);
+        field.setInt(instance, value);
+    }
+
     private static int[] intArrayField(Object instance, String fieldName) throws Exception {
         Field field = instance.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -842,5 +935,22 @@ class TestS3kSelfContainedTransientRewind {
         var method = ShieldObjectInstance.class.getDeclaredMethod("getPlayer");
         method.setAccessible(true);
         return method.invoke(shield);
+    }
+
+    private static void invokeOpenCapsule(Aiz2EndEggCapsuleInstance capsule) throws Exception {
+        Method openCapsule = AbstractS3kFloatingEndEggCapsuleInstance.class.getDeclaredMethod("openCapsule");
+        openCapsule.setAccessible(true);
+        openCapsule.invoke(capsule);
+    }
+
+    private static Field fieldInHierarchy(Class<?> type, String fieldName) throws NoSuchFieldException {
+        for (Class<?> current = type; current != null; current = current.getSuperclass()) {
+            try {
+                return current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException ignored) {
+                // Continue searching superclasses.
+            }
+        }
+        throw new NoSuchFieldException(fieldName);
     }
 }

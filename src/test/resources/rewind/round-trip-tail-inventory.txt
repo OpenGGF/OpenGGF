@@ -1,13 +1,11 @@
 # bucket|class
 # Snapshot from the headless ObjectManager round-trip sweep.
-# Summary: total=783 passed=643 graph-covered=123 no-codec=0 no-probe-ctor=2 parent-dependent=15 other-failure=0 count-mismatch=0 scalar-mismatch=0
+# Summary: total=783 passed=645 graph-covered=123 no-codec=0 no-probe-ctor=0 parent-dependent=15 other-failure=0 count-mismatch=0 scalar-mismatch=0
 #
 # Parent-dependent classes live in parent-dependent-graph-coverage-baseline.txt
 # because that file also records graph-test evidence or session-tail status.
 #
 # Suggested next batches:
-# - no-probe boss children: prioritize the remaining S1/FZ and S2/S3K constructor-only graph families.
+# - parent-dependent children are the remaining tail; prioritize coherent session graph families.
 # - constructor-spawning boss roots and graph-only children are covered by focused graph tests, but still need
 #   parent-before-child/session ordering before they can pass the isolated sweep.
-no-probe-ctor|com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$Aiz2ResultsScreenObjectInstance
-no-probe-ctor|com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$HighPriorityAnimal
