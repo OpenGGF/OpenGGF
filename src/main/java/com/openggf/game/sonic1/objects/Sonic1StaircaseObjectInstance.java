@@ -181,13 +181,27 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
         }
         childSlotsReserved = true;
         ObjectServices svc = tryServices();
-        if (svc == null || svc.objectManager() == null || getSpawn() == null) {
+        if (svc == null || svc.objectManager() == null || spawn == null) {
             return;
         }
         // ROM FindNextFreeObj scans forward from the parent slot
         // (docs/s1disasm/_incObj/sub FindFreeObj.asm:32-48).
+        //
+        // Key the reservation by the stable placement spawn (the field, not
+        // getSpawn()). getSpawn() returns the per-frame dynamicSpawn that
+        // updateDynamicSpawn() rebuilds each time the staircase moves, so using
+        // it as the reservation key would NOT match the placement spawn the
+        // ObjectManager passes to freeAllReservedChildSlots on unload
+        // (instanceToSpawn maps the instance to the construction-time spawn).
+        // That identity mismatch leaked the 3 reserved child slots every time a
+        // staircase scrolled out of range -- with five SLZ1 staircases reloading
+        // across the act this exhausted the 96-slot dynamic pool, starving
+        // ObjPosLoad's FindFreeObj so the SLZ fireball maker (Obj13) reloaded a
+        // chunk late and its fireball reached the player ~55 frames behind ROM.
+        // ChainedStomper, RingInstance, AizGiantRideVine and MGZSwingingPlatform
+        // all already key by the stable spawn field.
         int[] childSlots = svc.objectManager().allocateChildSlotsAfter(
-                getSpawn(), CHILD_SLOT_COUNT, getSlotIndex());
+                spawn, CHILD_SLOT_COUNT, getSlotIndex());
         if (childSlots.length > 0 && childSlots[childSlots.length - 1] >= 0) {
             executionSlot = childSlots[childSlots.length - 1];
         }
