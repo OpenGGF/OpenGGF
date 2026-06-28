@@ -12,11 +12,14 @@ branch-local measurements.
   corrected the launch-side ROM semantics without taking the documented
   net-negative inclusive-right-edge path.
 - Fixes: the launch snap now writes the native X word while preserving `x_sub`,
-  clears `Status_OnObj`, and releases `obj_control`; Obj33 keeps positive
-  `obj_control=1` riders eligible for its own SolidObject support; its solid
-  state latch is instance-scoped across the dynamic spawn rebuild; the
-  compatibility carry bridge keeps only vertical seating, so it no longer pins
-  the rider's horizontal offset during the rise.
+  clears `Status_OnObj`, and releases `obj_control`; Obj33 launches any
+  currently standing/riding player at the apex even if its Java lock latch has
+  already cleared; Obj33 keeps positive `obj_control=1` riders eligible for its
+  own SolidObject support; its solid state latch is instance-scoped across the
+  dynamic spawn rebuild; the compatibility carry bridge keeps only rising-frame
+  vertical seating, so it no longer pins the rider's horizontal offset during
+  the rise and no longer rewrites the rider's native `y_pos` on the apex launch
+  frame.
 - Rejected during verification: `usesInclusiveRightEdge()` reproduces the
   known OOZ1 regression to f1251 (`tails_status_byte`), matching the 2026-06-21
   M1/v1-v5 findings, so it remains out until the broader side-contact phase
@@ -26,8 +29,16 @@ branch-local measurements.
   passed 89/0; focused OOZ replay remains expected-red but does not regress the
   documented frontier:
   `s2_ooz1` holds at f1782 `tails_x` (`0x0CE4` vs `0x0CE3`), while `s2_ooz2`
-  now reaches f1086 `y` (`0x046D` vs `0x047B`) instead of the logged f1070
-  baseline.
+  first advanced from f1070 to f1086 and now reaches f1109
+  `tails_y_speed` (`0x0000` vs `-0AB8`). At the new frontier ROM Tails has
+  latched the next object interaction near Obj48 at `09C0,0330`, while the
+  engine still carries the Obj33 interaction and upward launch velocity, so the
+  remaining owner is the post-launch Obj48 handoff/landing interaction rather
+  than another Obj33 launch write.
+  This worktree additionally reran `TestSonic2TriggerParticipation` (46/0) and
+  the requested OOZ pair with `-Ds2.rom.path=.worktrees/trace-s2-ooz-obj33/s2.gen`:
+  `s2_ooz1` held f1782 / 1303 errors and `s2_ooz2` advanced f1086 -> f1109 /
+  1101 errors.
 
 ### Current authoritative state
 
@@ -117,6 +128,7 @@ branch-local measurements.
 | `s2_mtz2` / `TestS2Mtz2LevelSelectTraceReplay` | `1277` | Tails `tails_x` | `0x047D` | `0x047F` | advanced from f1265 by the Obj70 full `width_pixels` top-landing fix | Tails movement / Obj70 interaction |
 | `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1973` | Tails `tails_x` | `0x07C9` | `0x07CA` | true headline refined from same-frame status byte | Tails movement after CPU/status |
 | `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1782` | Tails `tails_x` | `0x0CE4` | `0x0CE3` | advanced from f1779 S2 Obj36 negative-inertia riding push bridge movement delta | movement downstream of Tails CPU |
+| `s2_ooz2` / `TestS2Ooz2LevelSelectTraceReplay` | `1109` | Tails `tails_y_speed` | `0x0000` | `-0AB8` | advanced from f1086 by Obj33 standing-bit apex launch and native-Y preservation | post-launch Obj48 handoff / landing interaction |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2889` | Tails `tails_x` | `0x10E8` | `0x10F0` | held after Obj1E source/destination handoff hypotheses failed to advance | movement downstream of Tails CPU |
 | `s2_arz2` / `TestS2Arz2LevelSelectTraceReplay` | `549` | `obj_extra_s18_x` | absent | `0x0679` | accepted advance from f523 after Obj24 bubble lifetime frees slot 19 and Obj91 init returns before first ObjectMove | post-ChopChop destruction animal spawn/motion |
 | `s2_cnz1` / `TestS2CnzLevelSelectTraceReplay` | `3906` | Tails `tails_y` | `0x06C0` | `0x06C1` | advanced from f1691 by the slot-machine packed-target order fix; later held-only Ctrl2 diagnostics no longer own the frontier | movement downstream of Tails CPU |

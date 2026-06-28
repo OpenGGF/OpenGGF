@@ -530,6 +530,74 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void oozPoppingPlatformApexLaunchesStandingSidekickWithoutJavaLockLatch() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x0F83);
+        tails.setCpuControlled(true);
+        tails.setOnObject(true);
+        tails.setAir(false);
+
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of(tails));
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        services.withObjectManager(objectManager);
+        OOZPoppingPlatformObjectInstance platform = objectManager.createDynamicObject(
+                () -> new OOZPoppingPlatformObjectInstance(
+                        new ObjectSpawn(0x1000, 0x1000, 0x33, 1, 0, false, 0),
+                        "OOZPoppingPlatform"));
+        objectManager.forceRidingObjectForBootstrap(tails, platform);
+        setField(platform, "mode", oozPoppingPlatformMode("RISE_AND_LAUNCH"));
+        setField(platform, "currentY", 0x0F83);
+        setField(platform, "velocity", 0);
+        setField(platform, "mainCharLocked", false);
+        setField(platform, "sidekickLocked", false);
+
+        platform.update(17, main);
+
+        assertFalse(tails.isOnObject(), "Obj33 loc_23D60 clears Status_OnObj for any standing P2 bit");
+        assertTrue(tails.getAir(), "Obj33 loc_23D60 sets Status_InAir from the platform status bit");
+        assertEquals(0x1000, tails.getCentreX() & 0xFFFF);
+        assertEquals(0x800, tails.getGSpeed() & 0xFFFF);
+        assertEquals(0xF000, tails.getYSpeed() & 0xFFFF);
+        assertEquals(Sonic2AnimationIds.ROLL.id(), tails.getAnimationId());
+    }
+
+    @Test
+    void oozPoppingPlatformApexLaunchPreservesRiderNativeY() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1020, 0x0F75);
+        main.setOnObject(true);
+        main.setAir(false);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(main);
+
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of());
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        services.withObjectManager(objectManager);
+        OOZPoppingPlatformObjectInstance platform = objectManager.createDynamicObject(
+                () -> new OOZPoppingPlatformObjectInstance(
+                        new ObjectSpawn(0x1000, 0x1000, 0x33, 1, 0, false, 0),
+                        "OOZPoppingPlatform"));
+        objectManager.forceRidingObjectForBootstrap(main, platform);
+        setField(platform, "mode", oozPoppingPlatformMode("RISE_AND_LAUNCH"));
+        setField(platform, "currentY", 0x0F83);
+        setField(platform, "velocity", 0);
+        setField(platform, "mainCharLocked", true);
+        setField(platform, "sidekickLocked", false);
+
+        platform.update(17, main);
+
+        assertEquals(0x0F75, main.getCentreY() & 0xFFFF,
+                "ROM Obj33 launch does not write y_pos(a1) at the apex");
+        assertFalse(main.isOnObject(), "ROM clears Status_OnObj when Obj33 launches the rider");
+        assertFalse(main.isObjectControlled(), "ROM clears obj_control after Obj33 launch");
+        assertTrue(main.getAir(), "ROM sets Status_InAir on Obj33 launch");
+        assertEquals(0x1000, main.getCentreX() & 0xFFFF);
+        assertEquals(0x800, main.getGSpeed() & 0xFFFF);
+        assertEquals(0xF000, main.getYSpeed() & 0xFFFF);
+        assertEquals(Sonic2AnimationIds.ROLL.id(), main.getAnimationId());
+    }
+
+    @Test
     void flipperAppliesCheckpointContactToQueryOnlySidekick() {
         TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x1010, 0x1000);
@@ -955,6 +1023,19 @@ class TestSonic2TriggerParticipation {
                 PreContactState.ZERO,
                 new PostContactState((short) 0, (short) 0, false, true, false),
                 0);
+    }
+
+    private static void setField(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Enum<?> oozPoppingPlatformMode(String name) throws Exception {
+        Class<?> modeClass = Class.forName(
+                "com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance$Mode");
+        return Enum.valueOf((Class) modeClass, name);
     }
 
     private static final class QueryOnlyPlayerServices extends TestObjectServices {
