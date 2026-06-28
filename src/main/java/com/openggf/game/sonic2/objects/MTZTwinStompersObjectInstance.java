@@ -163,11 +163,10 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
 
         if (moveMode == 1) {
             // S2 placement materializes new objects between slot-loop passes.
-            // Prime the one Obj64_Main tick that the ROM has consumed before
+            // Prime the two Obj64_Main ticks that the ROM has consumed before
             // this moving solid first participates in the following frame's
-            // player/object contact window. Obj64_Init seeds objoff_36 at 0,
-            // and the first Obj64_Main dispatch underflows it to $5A while
-            // staying at base y_pos (s2.asm:52699-52723, 52766-52780).
+            // player/object contact window.
+            updateStomperMovement();
             updateStomperMovement();
         }
 
