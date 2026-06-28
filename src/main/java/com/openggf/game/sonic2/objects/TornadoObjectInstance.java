@@ -623,7 +623,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         if (scriptTimer == WFZ_PREPARE_TO_JUMP_FRAMES) {
             routineSecondary = 8;
             jumpTimer = player.isSuperSonic() ? WFZ_JUMP_TIMER_SUPER : WFZ_JUMP_TIMER_NORMAL;
-            applyScriptInput(player, INPUT_JUMP, true);
+            // ObjB2_Prepare_to_jump writes Ctrl_1_Logical here, after Sonic's player step
+            // has already run for this frame (docs/s2disasm/s2.asm:79007-79023).
+            player.setControlLocked(true);
+            ownsPlayerControl = true;
         }
 
         alignPlaneAndSolid();
@@ -633,12 +636,12 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
     private void wfzJumpToPlane(AbstractPlayableSprite player) {
         scriptTimer++;
-        jumpTimer--;
         if (jumpTimer >= 0) {
             applyScriptInput(player, INPUT_RIGHT | INPUT_JUMP, true);
         } else {
             applyScriptInput(player, 0, true);
         }
+        jumpTimer--;
 
         alignPlaneAndSolid();
         renderThisFrame = true;

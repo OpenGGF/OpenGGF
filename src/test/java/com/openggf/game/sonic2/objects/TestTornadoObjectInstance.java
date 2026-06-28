@@ -170,6 +170,38 @@ public class TestTornadoObjectInstance {
     }
 
     @Test
+    public void wfzPrepareToJumpDefersScriptedJumpInputUntilJumpRoutine() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2E58, 0x066C, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2E31, (short) 0x05EC);
+
+        setField(tornado, "routineSecondary", 6);
+        setField(tornado, "scriptTimer", 0x2F);
+
+        tornado.update(0, main);
+
+        assertEquals(8, getField(tornado, "routineSecondary"));
+        assertEquals(0x38, getField(tornado, "jumpTimer"));
+        assertEquals(0, main.getForcedInputMask());
+        assertTrue(main.isControlLocked());
+    }
+
+    @Test
+    public void wfzJumpToPlaneKeepsScriptedInputOnFinalTimerFrame() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2EC1, 0x0603, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2EA4, (short) 0x05D0);
+
+        setField(tornado, "routineSecondary", 8);
+        setField(tornado, "jumpTimer", 0);
+
+        tornado.update(0, main);
+
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
+                main.getForcedInputMask());
+        assertEquals(-1, getField(tornado, "jumpTimer"));
+        assertTrue(main.isControlLocked());
+    }
+
+    @Test
     public void tornadoSczMainReadsStandingStateFromManualCheckpointBeforeFollowMotion() throws Exception {
         TornadoObjectInstance tornado = new TornadoObjectInstance(new ObjectSpawn(
                 100, 0x100, Sonic2ObjectIds.TORNADO, 0x50, 0, false, 0));
@@ -515,5 +547,3 @@ public class TestTornadoObjectInstance {
         }
     }
 }
-
-

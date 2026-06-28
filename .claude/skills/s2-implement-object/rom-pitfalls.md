@@ -2220,6 +2220,50 @@ frames). See `s1-implement-object/rom-pitfalls.md` P10.
 
 ---
 
+## P54 — Object-written logical input may be consumed one player step later
+
+**Symptom.** A scripted object launches, jumps, or steers the player one frame
+early or stops steering one frame early even though the object's routine,
+timer, and stored state match ROM. Trace context shows the player velocity or
+`air`/`rolling` state diverging on the frame the object writes or clears
+`Ctrl_1_Logical`, while the object's own `routine_secondary` and countdown
+bytes match.
+
+**Root cause.** ROM object routines can write `Ctrl_1_Logical` /
+`Ctrl_2_Logical` during the object pass. Depending on the frame edge, the
+player may consume the previous logical byte for that player step and observe
+the new object-written byte on the following step. The engine often runs object
+script code before player physics and exposes `forcedInputMask` immediately, so
+the same write affects the current physics step and shifts scripted jumps by one
+frame. The inverse edge appears when a ROM routine clears the logical input at
+the end of a countdown: the stored timer is already negative in the trace, but
+the player still received the final frame of logical input.
+
+**What to check.** For any object that writes `Ctrl_1_Logical` or
+`Ctrl_2_Logical`:
+1. Compare the player step that consumes the logical input, not only the object
+   timer field. A matching `objoff_2E` with a one-frame player velocity mismatch
+   usually means the forced input is being exposed on the wrong side of the
+   engine's object/player ordering.
+2. On a prepare/transition frame, do not apply the newly written mask early if
+   ROM's player step has already run. Lock control or update object state
+   separately from the forced input mask when needed.
+3. On a countdown-clear edge, choose the current frame's forced mask from the
+   timer value at routine entry, then decrement the stored timer so the aux
+   state still matches ROM after the object update.
+4. Keep the compensation local to the object routine that writes the logical
+   controller bytes. Do not add zone, route, frame-number, or trace-name gates.
+
+**ROM citation.** S2 WFZ Tornado ObjB2 prepare/jump script
+(`docs/s2disasm/s2.asm:79007-79023`): `ObjB2_Prepare_to_jump` writes
+`Ctrl_1_Logical` and seeds `objoff_2E=$38`; `ObjB2_Jump_to_plane` clears then
+rewrites `Ctrl_1_Logical` around the countdown edge.
+
+**Originating commit.** `<pending>` S2 WFZ Tornado scripted-input ordering:
+`TestS2WfzLevelSelectTraceReplay` advances f13978 -> f14038.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
