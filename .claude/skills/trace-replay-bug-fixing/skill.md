@@ -106,7 +106,7 @@ Lua-side schema versioning:
 
 - `metadata.json` — game, zone, act, BK2 frame offset, trace frame count, oscillation pre-advance, character set, lua/recorder version, ROM checksum, profile, `aux_schema_extras`.
 - `physics.csv` — one row per recorded frame. Frame numbers are hex; fields documented in the recorder's CSV header function.
-- `aux_state.jsonl` — one JSON object per line. Standard event types: `zone_act_state`, `checkpoint`, `state_snapshot`, `mode_change`, `slot_dump`, `object_appeared`, `object_near`, `object_removed`. Plus opt-in events declared in `aux_schema_extras` (e.g. `cpu_state` per-frame for sidekick CPU state).
+- `aux_state.jsonl` — one JSON object per line. Standard event types: `zone_act_state`, `checkpoint`, `state_snapshot`, `mode_change`, `slot_dump`, `object_appeared`, `object_near`, `object_removed`. Plus opt-in events declared in `aux_schema_extras` (e.g. `cpu_state` per-frame for sidekick CPU state). The S1 complete-run recorder (`s1_complete_run_recorder.lua`) is at **v3.13**: beyond the standard set it carries `objoff_32/34/36/38` (maker/collapse/approach timers), `v_oscillate` (the osc array @`0xFFFE5E`), `lag_state` (`emu.islagged`/`lagcount`), and conveyor-specific `s1_obj64_state`/`tracked_obj`. Before claiming a counter/osc/lag/maker-timer frontier is gated, check whether the field is ALREADY captured here; if a needed field is missing, extend the recorder and regen (it is byte-identical physics + new aux — verify, then swap aux+metadata only).
 - `*.bk2` — the BK2 movie. Bizhawk replays this against the ROM to drive the recording. `bk2_frame_offset` in metadata is where recording starts inside the BK2.
 
 Pre-trace setup events (frame `-1`) capture starting state for one-time bootstrap (player position history, RNG seed, oscillator phase, object snapshots).
@@ -429,6 +429,30 @@ object RAM (SST) occupancy has drifted from ROM. Diagnose, don't assume RAM:
   `physics.csv` + `metadata.json`) — they must be regenerated before this method
   applies; without the aux you cannot diff ROM-side occupancy.
 
+- **Full-OST first-divergence hunt (the structural lever for deep slot-cadence
+  clusters).** When several reds share "the engine ends up with object X in the
+  wrong slot N frames later" (S1 MZ2/MZ3/SBZ2 were all one root), do NOT keep
+  decoding the *symptom* frame. Instead diff the **entire** OST occupancy
+  engine-vs-ROM from level start and find the FIRST frame `F0` any slot's
+  occupant diverges — that is the real bug; everything after is permutation.
+  - **Diff the authoritative `SlotAllocator` bitset (active + reserved), NOT
+    `getActiveObjects()`.** Bare slot *reservations* (e.g. ChainedStomper /
+    multi-piece children allocated but not yet constructed) are invisible to
+    `getActiveObjects()` but DO occupy the allocator — diffing the visible-object
+    list produces false "missing object" pins (this mis-led two MZ3 decodes into
+    chasing already-implemented objects). Instrument `ObjectManager`/`SlotAllocator`
+    for a per-frame `slot -> objId` dump of all 96 slots (temporary; revert).
+  - **Lag-frame-filter the ROM `slot_dump`.** A `slot_dump` whose `vfc` equals the
+    NEXT frame's is a mid-`ObjPosLoad` VBlank sample (the load is still running) —
+    skip it or it shows false transient divergences.
+  - **`FindFreeObj` is lowest-free, so identical occupancy ⇒ identical slot pick.**
+    Therefore a slot divergence is ALWAYS upstream spawn/free **timing**, never the
+    allocator itself: find the object that spawned or freed one frame off, not "why
+    did FindFreeObj pick differently". The engine packing slots *contiguously*
+    while ROM carries *gaps from freed objects* is the classic tell — ROM freed a
+    slot (a placed object scrolled off, an object self-deleted) that the engine
+    still holds, or vice-versa.
+
 - **Triage reframe: "slot-cadence" is OFTEN a single tractable object bug, not
   genuine RAM.** Before declaring a slot divergence RAM-gated, trace the
   responsible object-lifetime event. Classify:
@@ -441,7 +465,33 @@ object RAM (SST) occupancy has drifted from ROM. Diagnose, don't assume RAM:
     (col_none — P7/P11/S2 P51/S3K P23), or a wrong allocation function
     (`FindFreeObj` lowest-free per ring vs `FindNextFreeObj`/`allocateSlotAfter`
     chaining — the S1 lost-ring scatter; `25, 37 Rings.asm:251` uses `FindFreeObj`
-    each iteration).
+    each iteration). Newer tractable patterns proven this way:
+    - **Maker reuses its OWN slot for child #0** (`movea.l a0,a1` keeps the maker's
+      routine 0 so the first child moves NEXT frame): LZ Conveyor `LCon_Main`
+      loc_12460, Lava Geyser maker. Engine spawning all children as fresh
+      `FindFreeObj` made the ridden platform out-rank the maker → moved 1f early.
+      Fix: `detachSlotForTransfer` + force child #0 into the maker slot.
+    - **In-place object→object transfer** (`move.b #id_X,obID(a0)` mutates the
+      object in its slot — e.g. Walking Bomb → Explosion): use
+      `detachSlotForTransfer` + `addReplacementAtTransferredSlot`, NOT a lowest-free
+      spawn of the replacement.
+    - **`remember` destruction only for respawn-tracked entries.** ROM persists an
+      object's destruction across re-entry ONLY via the respawn table (`obRespawnNo
+      != 0`, set by `OPL_MakeItem` when the layout id-byte remember bit is set);
+      `RememberState` deletes a non-tracked object with NO bit set, so the
+      ObjPosLoad cursor RE-CREATES a fresh copy on the next crossing (incl. during
+      a leftward `OPL_MovedLeft` backtrack). Engine `markRemembered` must be a
+      no-op for non-respawn-tracked spawns or below-screen objects never reappear
+      during backtrack (S1 MZ3 SmashBlocks; `sub RememberState.asm:16-21`).
+    - **Off-screen despawn via the ROM `out_of_range` macro, not `isOnScreenX`.**
+      Objects whose routine tail is `bra RememberState` despawn on the chunk-aligned
+      X-only `out_of_range` (Macros.asm:273-289 → engine `isInRange()`), not a
+      pixel-margin on-screen test (SpinPlatform, Walking Bomb).
+    - **Multi-piece assemblies delete EN MASSE keyed on the parent**, not per-piece:
+      Swinging-Platform chain links run `Swing_Display` (no `out_of_range`) and are
+      all deleted by the parent's `Swing_ChkDel out_of_range ...,swing_origX`. A
+      link self-despawning on its own swung-out X frees a slot early (S1 MZ3 f9917;
+      fix: child `getOutOfRangeReferenceX()` returns the parent pivot).
   - **RAM-gated** (bounce with the exact first-divergent slot/frame/obID + the
     `v_objstate`/remember-bit index): subpixel/position-accumulation, the
     `v_objstate` remember-bit byte-array, or coupled multi-object spawn cadence
@@ -464,6 +514,35 @@ object RAM (SST) occupancy has drifted from ROM. Diagnose, don't assume RAM:
   child's `#recreate` + `#finalScalar` keys in `coverage-baseline.txt` (precedent:
   `SpikedBallChain$ChainChild`, `CollapsingLedge$Fragment`), rather than adding a
   bespoke per-child recreate path.
+
+### Touch / hurt timing is slot-order- and render-flag-gated
+
+When the first error is a hurt/bounce velocity (`x_speed`/`y_speed` jump to a
+knockback value) one frame early or late, the cause is usually WHEN the damaging
+object becomes touch-eligible, not its position:
+
+- **ROM `ReactToItem` skips any object whose `obRender` bit 7 is clear**
+  (`tst.b obRender(a1) / bpl .next`, `sub ReactToItem.asm:50-51`). Bit 7 is set by
+  `DisplaySprite` during the object's OWN `ExecuteObjects` pass. So a child spawned
+  mid-loop into a slot at or BELOW the spawner's slot does not run/display until
+  the next frame → is touch-INELIGIBLE for one extra frame (S1 MZ3 f14132: a lava
+  ball dropped into a lower slot hurt the player 1f early). The engine must defer
+  touch eligibility of a lower-or-equal-slot mid-loop child until after its first
+  `update()`.
+- **Tall objects gate touch on their own `obHeight`, not a fixed band.** ROM
+  `BuildSprites` computes the off-screen render-flag bit from `obHeight` when
+  `obRender` bit 4 is set; `ReactToItem` honors it. A fixed ~32px Y touch band
+  misses a tall hazard (256px lavafall column, `obHeight=$80`) whose anchor is
+  above the camera top — model the object's real render height (S1 MZ2 column).
+
+### ROM-revision (REV01 vs REV00) divergences are real — model, don't carve
+
+The recorded S1 traces are REV01. REV01's `FixBugs=0` makes `FindFreeObj`/object
+scans cover a REDUCED slot range (object slots 1..63) in some paths — e.g. the SLZ
+boss spikeball duplicate-check (`BSLZ_MakeBall .checkForBall`) only sees balls in
+slots <64, reproducing ROM's two-balls-on-one-seesaw cadence. When a fix depends
+on REV01 behavior, gate it on the ROM revision (a `FixBugs`/revision predicate),
+never on zone/route/frame.
 
 ## Cross-Game Sanity Checks
 
@@ -494,6 +573,25 @@ If a fix is genuinely game-divergent (different games' ROMs really do behave dif
 - **slot-cadence / slot-interleave** → hook `FindFreeObj`/`FindNextFreeObj` (slot returned in an address reg → `slot=(areg-0xFFD000)/0x40`) + `DeleteObject` + the spawn site; capture the per-frame spawn/free→slot timeline; diff vs the engine to find the FIRST object that takes a wrong slot and WHY (spawned/freed at the wrong frame). Turns "irreducible slot-occupancy" into a decodable spawn/free-cadence diff — sometimes a fixable object-lifetime bug.
 - **sub-pixel** → hook `SpeedToPos` / the position-update instruction; capture `x_sub`/`y_sub` mid-frame.
 - **counter-phase** → hook the counter's update instruction.
+
+**Probe output path:** `tools/bizhawk/` is per-worktree (not shared), so write probe
+output via an env var (`OGGF_DIAG_OUT` for `diag_template_fast.lua`, or
+`OGGF_OUT`) to a stable absolute path rather than a relative one — EmuHawk's CWD
+becomes the lua dir, so relative paths land unpredictably. All probe paths
+(`--lua`, `--movie`, the ROM) must be ABSOLUTE.
+
+**A legitimate bounce category the probe sometimes reveals: chaotic feedback
+loops.** A few frontiers are a sub-frame perturbation amplified over thousands of
+frames — the per-frame logic is byte-faithful, but a tiny initial difference (e.g.
+the engine reads a `playerStanding`/status bit during the player solid pass while
+ROM's object reads the bit set by ANOTHER object the *previous* frame, a
+slot-order read-ordering) tips a boss/object into a different attractor and the
+divergence only becomes visible at one downstream event (S1 SLZ3 f11325: the boss
+phase-lagged ~one seesaw over a ~3000-frame fight; the trace compares only the
+player, so the drift was invisible until a missed launch). This is a HONEST bounce
+ONLY after the probe proves every per-frame step faithful AND a speculative
+read-ordering reorder is shown unsafe (it touches shared code holding other greens
+and the outcome is chaotic/uncertain). Quote the captured boss/object timeline.
 
 Only after the probe shows the engine's mid-frame value matches ROM at every inspectable step is a "gated" bounce honest — and then quote the captured values, not "ROM unknown". See memory `bizhawk-pc-execute-hook-lever`.
 
