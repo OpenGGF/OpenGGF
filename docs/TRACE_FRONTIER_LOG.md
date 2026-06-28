@@ -19761,3 +19761,38 @@ which throws silently on the Windows JVM).
      per-frame slot position/speed diverges from ROM and validates the
      `(Vint_runcount+3)` seed fix.
    - Detail: memory `cnz1-f1691-slotmachine-timing.md`.
+
+## 2026-06-28 -- S2 MTZ1 Obj64 Twin Stompers constructor fall-through (f1267 -> f1840)
+
+Worktree `.worktrees/trace-s2-mtz1`, branch `bugfix/ai-trace-s2-mtz1`.
+
+Target command:
+`cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\trace-s2-mtz1\s2.gen"" ""-Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace"" test"`
+
+Result: expected red, first error advanced from frame 1267 to frame 1840:
+`g_speed` expected `0x0311`, actual `0x0000`; 1277 errors, 0 warnings.
+This is a separate ground-speed/contact frontier after the Obj64 phase mismatch.
+
+Focused unit command:
+`cmd /c "mvn.cmd -q -Dmse=relaxed ""-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes"" test"`
+
+Result: command exited 0; Surefire XML reports
+`TestSonic2ObjectBugFixes` as 30 tests, 0 failures, 0 errors.
+
+Same-game guard command:
+`cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\trace-s2-mtz1\s2.gen"" ""-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay"" test"`
+
+Result: command exited 0; Surefire XML reports ARZ, EHZ1, MCZ, and SCZ
+each as 1 test, 0 failures, 0 errors. No same-game guard regression observed.
+
+Fix: `MTZTwinStompersObjectInstance` now primes exactly one movement-mode tick
+for moving subtypes. ROM `Obj64_Init` sets routine 2 and falls through into
+`Obj64_Main`; the first `loc_269FA` movement tick sees zero extension, decrements
+the wait timer to -1, arms the extending direction, and writes `y_pos = baseY`.
+The next object dispatch is the first tick that moves the stomper to `baseY + 8`.
+The previous engine constructor had consumed two movement ticks, entering the
+contact window one Obj64 main dispatch too far into the ROM phase.
+
+ROM citations: `docs/s2disasm/s2.asm:52699-52726` (`Obj64_Init` fall-through),
+`docs/s2disasm/s2.asm:52726-52743` (`Obj64_Main` movement before SolidObject),
+and `docs/s2disasm/s2.asm:52766-52805` (`loc_269FA` movement/timer state).

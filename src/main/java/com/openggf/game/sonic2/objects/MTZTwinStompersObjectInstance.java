@@ -29,7 +29,7 @@ import java.util.List;
  * MTZ Twin Stompers (Object 0x64) - Crushing pistons from Metropolis Zone.
  * <p>
  * Twin piston stompers that extend and retract on a timer cycle.
- * Based on Obj64 in the Sonic 2 disassembly (s2.asm lines 52202-52335).
+ * Based on Obj64 in the Sonic 2 disassembly (s2.asm lines 52699-52805).
  * <p>
  * Subtypes:
  * <ul>
@@ -162,11 +162,10 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
         timer = 0;
 
         if (moveMode == 1) {
-            // S2 placement materializes new objects between slot-loop passes.
-            // Prime the two Obj64_Main ticks that the ROM has consumed before
-            // this moving solid first participates in the following frame's
-            // player/object contact window.
-            updateStomperMovement();
+            // Obj64_Init sets routine=2 and falls through into Obj64_Main once
+            // on the creation dispatch (s2.asm:52699-52726). The next movement
+            // tick happens on the following object dispatch, after the object
+            // already carries the first tick's state.
             updateStomperMovement();
         }
 
@@ -227,13 +226,13 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) return;
 
-        // ROM Obj64_Main (s2.asm:52254-52278) runs the movement mode first, then
+        // ROM Obj64_Main (s2.asm:52726-52743) runs the movement mode first, then
         // (gated on render_flags.on_screen) JmpTo9_SolidObject, then the
         // coarse-X delete test. Solid participation is provided to the engine via
         // SolidObjectProvider (getSolidParams), so movement runs here first.
         //
-        // Push old x_pos (for SolidObject delta): s2.asm:52251
-        // Execute movement mode: s2.asm:52252-52260
+        // Push old x_pos (for SolidObject delta): s2.asm:52727
+        // Execute movement mode: s2.asm:52728-52732
         if (moveMode == 1) {
             updateStomperMovement();
         }
@@ -277,7 +276,7 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
     /**
      * Stomper movement state machine (mode 1).
      * <p>
-     * s2.asm lines 52290-52330 (loc_269FA through loc_26A50)
+     * s2.asm lines 52766-52805 (loc_269FA through loc_26A50)
      */
     private void updateStomperMovement() {
         if (!extending) {
