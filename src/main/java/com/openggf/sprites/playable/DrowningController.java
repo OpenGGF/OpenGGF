@@ -121,7 +121,8 @@ public class DrowningController {
      */
     public void reset() {
         remainingAir = INITIAL_AIR;
-        frameTimer = FRAMES_PER_SECOND;
+        PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
+        frameTimer = fs != null ? fs.initialDrowningCountdownFrameTimer() : FRAMES_PER_SECOND;
         drowningMusicStarted = false;
         bubbleFlags = 0;
         bubblesRemainingInBurst = -1;
@@ -296,7 +297,7 @@ public class DrowningController {
             bubbleArtKey, bubbleCountdownFrames, bubbleMaxFrame, riseVelocity
         );
 
-        levelManager.getObjectManager().addDynamicObject(bubble);
+        levelManager.getObjectManager().addDynamicObjectNextFrame(bubble);
     }
 
     /**
@@ -318,9 +319,10 @@ public class DrowningController {
             return;
         }
 
-        // Check for S1 bubble art (LZ_BUBBLES)
+        // Check for S1 bubble art (LZ_BUBBLES). Obj0A allocation is ROM object
+        // state, so it is keyed on loaded art metadata, not on GPU cache readiness.
         PatternSpriteRenderer s1Renderer = renderManager.getRenderer(ObjectArtKeys.LZ_BUBBLES);
-        if (s1Renderer != null && s1Renderer.isReady()) {
+        if (s1Renderer != null) {
             bubbleArtKey = ObjectArtKeys.LZ_BUBBLES;
             bubbleCountdownFrames = S1_COUNTDOWN_FRAMES;
             bubbleMaxFrame = S1_MAX_BUBBLE_FRAME;
@@ -329,7 +331,7 @@ public class DrowningController {
 
         // Check for S2 bubble art (BUBBLES)
         PatternSpriteRenderer s2Renderer = renderManager.getRenderer(ObjectArtKeys.BUBBLES);
-        if (s2Renderer != null && s2Renderer.isReady()) {
+        if (s2Renderer != null) {
             bubbleArtKey = ObjectArtKeys.BUBBLES;
             bubbleCountdownFrames = S2_COUNTDOWN_FRAMES;
             bubbleMaxFrame = S2_MAX_BUBBLE_FRAME;

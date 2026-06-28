@@ -964,6 +964,15 @@ public record PhysicsFeatureSet(
          *  Sonic_ChkShoes gates subq.b on (Level_frame_counter+1)&7==0,
          *  sonic3k.asm:22072-22078, init (20*60)/8 at sonic3k.asm:40818). */
         int speedShoesTimerDecimation,
+        /** Initial timer value for the fixed Obj0A/air-countdown sidecar when
+         *  water entry installs it. S1/S2 initialize only the id/subtype/parent
+         *  fields, leaving the sidecar timer at zero; the first countdown pass
+         *  subtracts one, underflows, and can create the first mouth bubble on
+         *  the install frame (S1 Drowning Countdown.asm:31-38, s2.asm:
+         *  36367-36387,39535-39554,42199-42225). S3K zones with fixed
+         *  AirCountdown cadence use level-event managers; the generic fallback
+         *  keeps the prior full-second start. */
+        int initialDrowningCountdownFrameTimer,
         /** Constant bias added to the random Obj0A mouth-bubble respawn timer.
          *  S2/S3K Obj0A_Animate computes the next mouth-bubble delay as
          *  {@code (RandomNumber & $F) + 8} (s2.asm:42201-42204). S1 LZ air
@@ -1274,6 +1283,7 @@ public record PhysicsFeatureSet(
                     source.rightWallDeepProbePreservesPenetration(),
                     source.solidObjectBarelyPokingResolvesAsSide(),
                     source.speedShoesTimerDecimation(),
+                    source.initialDrowningCountdownFrameTimer(),
                     source.mouthBubbleTimerBias(),
                     source.mouthBubbleRiseVelocity(),
                     source.solidObjectKeepsOnObjWhenJumpedOffSameFrame(),
@@ -1339,6 +1349,7 @@ public record PhysicsFeatureSet(
             false /* rightWallDeepProbePreservesPenetration: preserve S1 baseline until right-wall traces are revalidated */,
             true /* solidObjectBarelyPokingResolvesAsSide: S1 Solid_cont sends d1<=4 to Solid_SideAir (s1disasm/_incObj/sub SolidObject.asm:181-184), which returns moveq #1,d4 = side contact (lines 211-214) */,
             1 /* speedShoesTimerDecimation: S1 per-frame word timer */,
+            0 /* initialDrowningCountdownFrameTimer: S1 Drown_Main installs countdown sidecar with objoff_38 left at 0, so Drown_Countdown underflows immediately */,
             0 /* mouthBubbleTimerBias: S1 LZ Obj64 air bubbles use a distinct bubble-maker structure with no (RandomNumber&$F)+8 mouth-bubble delay */,
             -0x88 /* mouthBubbleRiseVelocity: S1 Obj0A small bubbles use y_vel=-$88 with SpeedToPos */,
             false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S1 unaffected (no CPU sidekick; existing same-frame unseat ordering preserved by gating) */,
@@ -1407,6 +1418,7 @@ public record PhysicsFeatureSet(
             false /* rightWallDeepProbePreservesPenetration: preserve S2 baseline until right-wall traces are revalidated */,
             true /* solidObjectBarelyPokingResolvesAsSide: S2 SolidObject_cont sends d1<=4 to SolidObject_SideAir (s2.asm:35404-35412), which returns moveq #1,d4 = side contact (s2.asm:35447-35453); lets MTZ Obj66 Spring Wall fire its in-air -$800,-$800 diagonal bounce (s2.asm:53221-53232,53283-53340) */,
             1 /* speedShoesTimerDecimation: S2 per-frame word timer (s2.asm:36008-36025) */,
+            0 /* initialDrowningCountdownFrameTimer: Sonic_Water/Tails_Water install Obj0A with timer storage left at 0; Obj0A_Countdown underflows before setting #60-1 (s2.asm:36367-36387,39535-39554,42199-42225) */,
             8 /* mouthBubbleTimerBias: S2 Obj0A_Animate next mouth-bubble delay = (RandomNumber&$F)+8 (s2.asm:42201-42204) */,
             -0x88 /* mouthBubbleRiseVelocity: S2 Obj0A small bubbles use y_vel=-$88 with SpeedToPos (s2.asm:41899,41941-41942) */,
             false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S2 unaffected; existing same-frame unseat ordering preserved by gating */,
@@ -1477,6 +1489,7 @@ public record PhysicsFeatureSet(
             true /* rightWallDeepProbePreservesPenetration: Player_AnglePos keeps right-wall angle continuity through deep negative probes before later walk-off checks (sonic3k.asm:18782-18842). */,
             false /* solidObjectBarelyPokingResolvesAsSide: S3K SolidObject_cont sends d1<=4 to loc_1E0D4 (TOP/BOTTOM), not SideAir (sonic3k.asm:41463-41466; loc_1E0D4 at 41541-41546) — keep existing absDistY>4 gate */,
             8 /* speedShoesTimerDecimation: S3K byte timer decremented every 8th level frame (sonic3k.asm:22072-22078; init 40818) */,
+            60 /* initialDrowningCountdownFrameTimer: S3K fixed AirCountdown cadence is owned by zone/event managers; keep generic fallback at the previous full-second reset */,
             8 /* mouthBubbleTimerBias: S3K shares the S2 Obj0A mouth-bubble cadence (RandomNumber&$F)+8 */,
             -0x100 /* mouthBubbleRiseVelocity: S3K AirCountdown uses y_vel=-$100 with MoveSprite2 (sonic3k.asm:33312,33347) */,
             true /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S3K SolidObjectFull runs once/object/frame. A land-and-jump-off frame keeps Status_OnObj|Status_InAir (RideObject_SetRide bset Status_OnObj sonic3k.asm:42033; Tails_Jump bset Status_InAir without clearing OnObj sonic3k.asm:28553-28554); the airborne-rider unseat (loc_1DC98 41016-41035 / loc_1DCF0 41066-41084) fires only on the NEXT frame. AIZ1 f2590 Tails-on-Spikes: ROM 0x0A, engine was 0x02. */,
