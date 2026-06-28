@@ -119,6 +119,30 @@ public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
     }
 
     @Override
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        // ROM: the killing hit sets obStatus bit 7; the boss only acts on it when its
+        // own routine reaches BMZ_ShipUpdate, where BMZ_Defeated does
+        //   move.b #4,ob2ndRout(a0)   ; select BMZ_Explode
+        //   move.w #180,BossMarble_GenericTimer(a0)
+        //   clr.w obVelX(a0)
+        //   rts
+        // (docs/s1disasm/_incObj/73, 74 Boss - MZ Main and Fire.asm:146-153, loc_18392).
+        // BMZ_Defeated returns WITHOUT falling through to BMZ_Explode, so the newly
+        // selected secondary routine — and its first defeat-timer decrement
+        // (BMZ_Explode subq.w #1,GenericTimer at loc_184F6) — is not dispatched until the
+        // next frame (BMZ_ShipMain re-reads ob2ndRout at the top via BMZ_ShipMove_Index).
+        // The engine selects the defeat routine during the touch-response pass that runs
+        // before this object's own update(), so without this one-frame deferral
+        // updateDefeatWait() decrements the $B4 timer on the same frame the routine
+        // changed. The deferral restores that settle frame, which propagates through the
+        // recover fall (BMZ_Recover) to BMZ_Escape so the `addq.w #2,(v_limitright2)`
+        // camera scroll starts on the correct frame (MZ3 trace f16869, not f16868). Same
+        // ROM dispatch shape as the GHZ and SYZ bosses
+        // (Sonic1GHZBossInstance / Sonic1SYZBossInstance.defeatDeferralAppliesToThisBoss).
+        return true;
+    }
+
+    @Override
     protected void onHitTaken(int remainingHits) {
         faceAnim = Sonic1BossAnimations.ANIM_FACE_HIT;
     }
