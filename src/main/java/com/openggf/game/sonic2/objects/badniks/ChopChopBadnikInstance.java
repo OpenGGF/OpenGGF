@@ -137,7 +137,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
             chargeLatched = false; // charge velocities re-latched at Waiting->Charge
         }
 
-        // TODO: Spawn bubbles every 80 frames (requires SmallBubbles object support)
+        // ROM parity gap: Obj91 spawns an Obj0A-style small bubble every 80 frames while patrolling.
     }
 
     /**
