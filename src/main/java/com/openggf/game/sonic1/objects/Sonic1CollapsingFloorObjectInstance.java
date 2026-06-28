@@ -537,6 +537,45 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         return routine == 6 && collapseFlag;
     }
 
+    /**
+     * True on the routine-4 frame where the collapse timer has reached zero and
+     * the floor is about to fragment via {@code Fragmentate_8x2Floor_NoReset}.
+     * <p>
+     * ROM {@code CFlo_OnPlatform} (docs/s1disasm/_incObj/1A, 53 Collapsing
+     * Ledges and Floors.asm:203-205): when {@code collapsible_timedelay} is zero
+     * the routine branches to {@code Fragmentate_8x2Floor_NoReset} and
+     * <em>skips</em> the fall-through to {@code CFlo_WalkOff} (ExitPlatform +
+     * MvSonicOnPtfm2, lines 210-216) that every other routine-4 frame runs. So
+     * on the fragment frame the rider is neither re-seated nor unseated -- it
+     * keeps {@code Status_OnObj} exactly as it was, and is only walked off the
+     * next frame by routine 6's {@code CFlo_FragmentPiece .delayCollapse} path
+     * (lines 228-231). This mirrors the S3K {@code Obj_CollapsingPlatform}
+     * transition-frame skip modelled by
+     * {@code Sonic3kCollapsingPlatformObjectInstance.suppressSlopeSampleThisFrame}.
+     * <p>
+     * The engine evaluates the continued-riding solid pass AFTER each object's
+     * {@code update()}, so {@code updateCollapse} has already decremented the
+     * timer to zero (still routine 4, not yet fragmented) by the time the solid
+     * pass runs on this frame: the predicate is therefore correct precisely on
+     * the frame the rider must be held in place. The discriminator is ROM state
+     * (routine + {@code objoff_38} timer + collapse flag), never zone/encounter:
+     * it fires for SLZ's walk-off rider and MZ's collapse-release rider alike,
+     * and is a no-op for any rider already off the floor's solid band.
+     */
+    private boolean pendingNoResetFragment() {
+        return routine == 4 && collapseFlag && collapseDelay <= 0 && !fragmented;
+    }
+
+    @Override
+    public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
+        return pendingNoResetFragment();
+    }
+
+    @Override
+    public boolean defersAirborneRiderUnseatThisFrame(PlayableEntity player) {
+        return pendingNoResetFragment();
+    }
+
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
