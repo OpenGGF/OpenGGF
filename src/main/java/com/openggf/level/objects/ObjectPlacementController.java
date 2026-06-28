@@ -625,6 +625,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                     + spawn.x() + "," + spawn.y() + ") id=0x" + Integer.toHexString(spawn.objectId()));
             return;
         }
+        if (!persistsDestruction(spawn)) {
+            return;
+        }
         remembered.set(index);
     }
 
@@ -642,10 +645,34 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                     + spawn.x() + "," + spawn.y() + ") id=0x" + Integer.toHexString(spawn.objectId()));
             return;
         }
+        if (!persistsDestruction(spawn)) {
+            return;
+        }
         remembered.set(index);
         if (instance.shouldStayActiveWhenRemembered()) {
             stayActive.set(index);
         }
+    }
+
+    /**
+     * ROM parity: an object's destruction can only be remembered when its layout
+     * entry owns a respawn-table slot.
+     * <p>
+     * S1 {@code ObjPosLoad} assigns {@code obRespawnNo} only when the layout id
+     * byte has its remember bit set (bit 7); non-tracked entries keep
+     * {@code obRespawnNo == 0} (docs/s1disasm/_incObj/ObjPosLoad.asm OPL_MakeItem,
+     * {@code bpl.s .no_respawn_bit} -> {@code move.b d2,obRespawnNo}). When such an
+     * object goes off-screen or is destroyed, {@code RememberState} sees
+     * {@code obRespawnNo == 0} and simply branches to {@code DeleteObject} without
+     * touching any respawn-table bit (docs/s1disasm/_incObj/sub RememberState.asm:16-21),
+     * so the next ObjPosLoad cursor crossing re-creates a fresh copy. S2 mirrors
+     * this with its yWord bit 15 respawn-tracked flag. Marking a non-respawn-tracked
+     * spawn remembered would wrongly suppress that ROM re-creation (e.g. MZ3's
+     * below-screen SmashBlock cluster, which the ROM reloads on the leftward
+     * ObjPosLoad pass).
+     */
+    private boolean persistsDestruction(ObjectSpawn spawn) {
+        return spawn != null && spawn.respawnTracked();
     }
 
     boolean isRemembered(ObjectSpawn spawn) {

@@ -14,7 +14,10 @@ public class TestObjectPlacementManager {
     @Test
     public void testWindowingAndRememberedObjects() {
         ObjectSpawn spawnA = new ObjectSpawn(0, 0, 0x01, 0, 0, false, 0);
-        ObjectSpawn spawnB = new ObjectSpawn(800, 0, 0x02, 0, 0, false, 0);
+        // ROM parity: only respawn-tracked layout entries own a respawn-table
+        // slot (obRespawnNo != 0) and can persist destruction. Use a
+        // respawn-tracked spawn here (id-byte remember bit / yWord bit 15).
+        ObjectSpawn spawnB = new ObjectSpawn(800, 0, 0x02, 0, 0, true, 0x8000);
 
         ObjectPlacementController manager = new ObjectPlacementController(List.of(spawnA, spawnB), () -> 320);
         manager.reset(0);
@@ -39,6 +42,30 @@ public class TestObjectPlacementManager {
         manager.update(0);
         // Spawn not in window at camera X=0
         assertFalse(manager.getActiveSpawns().contains(spawnB));
+    }
+
+    @Test
+    public void testNonRespawnTrackedSpawnIsNotRemembered() {
+        // ROM parity: a layout entry without the remember bit gets obRespawnNo == 0,
+        // so RememberState simply DeleteObjects it without touching any respawn-table
+        // bit (docs/s1disasm/_incObj/sub RememberState.asm:16-21). The next ObjPosLoad
+        // cursor crossing re-creates a fresh copy, so markRemembered must be a no-op
+        // for non-respawn-tracked spawns (e.g. MZ3's below-screen SmashBlock cluster).
+        ObjectSpawn spawn = new ObjectSpawn(500, 0, 0x51, 0, 0, false, 0);
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
+        manager.reset(0);
+        assertTrue(manager.getActiveSpawns().contains(spawn));
+
+        manager.markRemembered(spawn);
+        assertFalse(manager.isRemembered(spawn),
+                "Non-respawn-tracked spawns cannot persist destruction (ROM obRespawnNo == 0)");
+
+        // Scroll away and back: the spawn re-loads fresh because it was never remembered.
+        manager.update(2000);
+        assertFalse(manager.getActiveSpawns().contains(spawn));
+        manager.update(0);
+        assertTrue(manager.getActiveSpawns().contains(spawn),
+                "Non-respawn-tracked spawn re-creates fresh on camera return");
     }
 
     @Test
