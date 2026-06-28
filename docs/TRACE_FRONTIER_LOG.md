@@ -40,6 +40,48 @@ branch-local measurements.
   pre-existing reds MZ2 (1116@f2823) and SLZ3 (22@f12712), both byte-identical
   pre/post fix (matching this log's documented current red states).
 - Files: src/main/java/com/openggf/game/sonic1/objects/Sonic1ResultsScreenObjectInstance.java.
+## 2026-06-29 - S1 SLZ3 f12712 boss-defeat-region spikeball hurt - ENGINE FIX (1 file, 22 -> 4 errors, frontier f12712 -> f12784)
+
+- Command: `mvn -q "-Dtest=TestS1Slz3CompleteRunTraceReplay" test`
+  (worktree off develop a06d53c4f, branch `bugfix/ai-slz3-f12712`).
+- Frontier moved: `TestS1Slz3CompleteRunTraceReplay` 22 -> 4 errors; first
+  error f12712 (`y_speed` exp 0x0000 act -0400) RESOLVED; new first error
+  f12784 (`camera_x` exp 0x2000 act 0x2002).
+- Root: at the SLZ boss DEFEAT the player launched a spikeball (engine slot 41,
+  seesaw @0x2104) on the seesaw immediately after the killing hit. ROM boss
+  defeated at trace f12597; the last ROM 0x7B is gone by ~f12656 (slot 44
+  flew up and exploded against the still-present defeated boss ~f12646; slot 47
+  fragment off-screen). The engine ball instead sailed PAST the boss, arced
+  back down, and hit the standing player's `col_hurt` box at f12712 ->
+  `Sonic_Hurt` (y_speed -0400, x_speed +0200, ring lost, airborne), where ROM
+  has him standing still. Engine root: `Sonic1SLZBossSpikeball.updateFlying`
+  gated the boss-collision check on `!boss.getState().defeated`. ROM
+  `BossSpikeball_HitBoss` (loc_18EAA/loc_18EC0, docs/s1disasm/_incObj/`7A, 7B
+  Boss - SLZ Main and Spike Balls.asm`:665-734) tests the ball/boss hitbox
+  overlap WITHOUT checking the boss defeated flag or `obColType`, so a ball
+  flying into the already-defeated boss still detonates on contact.
+- Evidence: ROM ground truth from the trace aux JSONL (`object_near`/
+  `routine_change`): boss `obStatus` 0x80 at f12597, no 0x7B after ~f12656.
+  Engine side via temporary instrumentation (removed): boss DEFEAT at engine
+  f30530, ball slot 41 launched f30564, FLYING->EXPLODING f30648 at @20d9,2cc
+  after descending onto the player; with the `!defeated` gate removed the ball
+  passes within 32px of the boss (@2112,022A) during ascent and explodes there.
+- Fix (1 file, `Sonic1SLZBossSpikeball.updateFlying`): drop the `!defeated`
+  guard (still require the boss object to exist); call `onSpikeballHit()` (a
+  no-op once `state.defeated`, matching ROM's harmless negative `obBossHits`
+  subq) and clear ball velocity only on the hit that causes defeat
+  (`!wasDefeated && nowDefeated` = ROM `else` branch `bset #7 / clr velX/velY`).
+- New frontier f12784 `camera_x` exp 0x2000 act 0x2002 (engine +2): the
+  boss-escape boundary-unlock (`addq.w #2,(v_limitright2)`) opens one frame
+  early. This is the SAME `camera_x`-by-2 pattern as the separate SBZ2 red
+  (f8941 exp 0x1E40 act 0x1E42), i.e. a SHARED camera/boundary-unlock timing
+  root affecting multiple zones, not SLZ-boss-specific. The f12932 x/x_speed/
+  g_speed cascade flows from it (player escape-run alignment). Deferred as a
+  distinct frontier.
+- Validation: focused `TestS1*CompleteRunTraceReplay` + `TestS2Ehz1*` sweep:
+  no regressions; 16 S1 greens incl. SLZ1/SLZ2 hold, MZ2 f2823 / SBZ2 f8941
+  byte-identical. `TestRewindCoverageGuard` + `TestArchitecturalSourceGuard`
+  green. SLZ-boss-only (S1-only class), comparison-only, no carve-out.
 
 ## 2026-06-28 - S1 SBZ2 f6839 co-located ObjPosLoad spawn-order - ENGINE FIX (2 files, 14 -> 11 errors, frontier f6839 -> f8941)
 
