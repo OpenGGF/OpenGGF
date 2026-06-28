@@ -415,22 +415,22 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
-    void mtzTwinStompersPrimeSingleRomMainTickBeforeFirstContactFrame() throws Exception {
+    void mtzTwinStompersPrimeRomMainTicksBeforeFirstContactFrame() throws Exception {
         MTZTwinStompersObjectInstance stomper = new MTZTwinStompersObjectInstance(
                 new ObjectSpawn(0x0620, 0x05A0, Sonic2ObjectIds.MTZ_TWIN_STOMPERS, 0x01, 0, false, 0),
                 "MTZTwinStompers");
         stomper.setServices(new StubObjectServices());
 
-        assertEquals(0x05A0, stomper.getY(),
-                "Obj64_Init falls through into one Obj64_Main tick before the next dispatch");
-        assertEquals(0, intField(stomper, "extension"));
+        assertEquals(0x05A8, stomper.getY(),
+                "Obj64 must enter the engine contact window with the ROM's first two main ticks consumed");
+        assertEquals(8, intField(stomper, "extension"));
         assertEquals(0x5A, intField(stomper, "timer"));
 
         stomper.update(0, new TestablePlayableSprite("sonic", (short) 0x0600, (short) 0x05F0));
 
-        assertEquals(0x05A8, stomper.getY(),
+        assertEquals(0x05B0, stomper.getY(),
                 "The following Obj64_Main dispatch continues the ROM 8 px/tick extension cadence");
-        assertEquals(8, intField(stomper, "extension"));
+        assertEquals(0x10, intField(stomper, "extension"));
     }
 
     @Test
