@@ -577,6 +577,31 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
         return 0;
     }
 
+    /**
+     * ROM: the body/column piece runs {@code bset #4,obRender(a1)} in
+     * {@code .configureLavaObjects} (docs/s1disasm/_incObj/"4C, 4D MZ Lava
+     * Geyser and Maker.asm":214), so BuildSprites computes its on-screen render
+     * flag from {@code obHeight} ({@code move.b #256/2,obHeight(a1)} -> $80),
+     * not the 32px assumed band. The 256px-tall column's anchor sits above the
+     * camera top yet must keep render_flags bit 7 set so ReactToItem (the
+     * engine's touch-response render-flag gate) still hurts the player. Only the
+     * BODY piece sets the flag and carries collision; the HEAD does not.
+     */
+    @Override
+    protected boolean usesCustomRenderHeight() {
+        return role == Role.BODY;
+    }
+
+    /**
+     * Body column half-height for the custom-height on-screen test:
+     * {@code obHeight = #256/2 = $80} from the disassembly
+     * (docs/s1disasm/_incObj/"4C, 4D MZ Lava Geyser and Maker.asm":213).
+     */
+    @Override
+    public int getOnScreenHalfHeight() {
+        return (role == Role.BODY) ? BODY_HEIGHT : super.getOnScreenHalfHeight();
+    }
+
     // ========================================================================
     // Rendering
     // ========================================================================

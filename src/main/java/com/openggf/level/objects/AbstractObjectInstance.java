@@ -655,6 +655,23 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * ROM parity for the BuildSprites custom-height render path
+     * ({@code docs/s1disasm/_inc/BuildSprites.asm:61-73}): objects that set
+     * {@code obRender} bit 4 ({@code bset #4,obRender}) have their on-screen
+     * render flag computed from the object's own {@code obHeight} half-extent
+     * rather than the 32px {@code .assumeHeight} band. Defaults to
+     * {@code false} (the shared assumed-height path). Tall S1 objects that set
+     * the flag (e.g. the 256px MZ lava geyser column) override this to
+     * {@code true} and supply their half-extent via
+     * {@link #getOnScreenHalfHeight()} so the touch-response render-flag gate
+     * ({@link #isOnScreenForTouch()}) matches the ROM. Not a zone carve-out:
+     * the predicate models the ROM render flag, not a level id.
+     */
+    protected boolean usesCustomRenderHeight() {
+        return false;
+    }
+
+    /**
      * ROM parity for ReactToItem: returns true if the object was on-screen
      * as of the pre-update snapshot (equivalent to obRender bit 7 from
      * the previous frame's BuildSprites).
@@ -697,6 +714,17 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     public boolean isOnScreenForTouch() {
         if (!preUpdateValid) return false; // No snapshot → first frame, skip
         if (resolveTouchResponseUsesRenderFlagYGate()) {
+            if (usesCustomRenderHeight()) {
+                // S1 BuildSprites custom-height path (btst #4 set,
+                // docs/s1disasm/_inc/BuildSprites.asm:61-73): the Y on-screen
+                // test uses the object's own obHeight half-extent instead of the
+                // 32px .assumeHeight band, so a tall object whose anchor sits
+                // above the camera top (e.g. the 256px MZ lava geyser column,
+                // obHeight=$80) keeps render_flags bit 7 set and stays
+                // touchable. Mirror the ROM custom-height bounds test.
+                return cameraBounds.containsRenderSpriteBounds(preUpdateX, preUpdateY,
+                        getOnScreenHalfWidth(), getOnScreenHalfHeight());
+            }
             // S1: include the BuildSprites .assumeHeight Y band.
             return cameraBounds.contains(preUpdateX, preUpdateY,
                     getOnScreenHalfWidth(), TOUCH_RESPONSE_Y_MARGIN);
