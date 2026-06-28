@@ -670,6 +670,24 @@ public class Sonic2ObjectArt {
     }
 
     /**
+     * Load OOZ SlidingSpike sprite sheet (Object 0x43).
+     * ROM: ArtNem_SpikyThing at 0x8007C, mapping Obj43_MapUnc_23FE0.
+     */
+    public ObjectSpriteSheet loadOOZSlidingSpikeSheet() {
+        return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPIKY_THING_ADDR,
+                Sonic2Constants.MAP_UNC_OBJ43_ADDR, 2, 1);
+    }
+
+    /**
+     * Load OOZ pressure spring sprite sheet (Object 0x45).
+     * ROM: ArtNem_PushSpring at 0x80C64, mapping Obj45_MapUnc_2451A.
+     */
+    public ObjectSpriteSheet loadOOZPressureSpringSheet() {
+        return buildArtSheetFromRom(Sonic2Constants.ART_NEM_PUSH_SPRING_ADDR,
+                Sonic2Constants.MAP_UNC_OBJ45_ADDR, 2, 1);
+    }
+
+    /**
      * Load OOZ Fan horizontal sprite sheet (Object 0x3F).
      * Side-blowing fan from Oil Ocean Zone.
      * <p>

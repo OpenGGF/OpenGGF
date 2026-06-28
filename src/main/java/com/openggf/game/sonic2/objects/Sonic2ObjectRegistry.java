@@ -249,6 +249,10 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new FanObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
         registerFactory(Sonic2ObjectIds.OOZ_POPPING_PLATFORM,
                 (spawn, registry) -> new OOZPoppingPlatformObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
+        registerFactory(Sonic2ObjectIds.SLIDING_SPIKE,
+                (spawn, registry) -> new SlidingSpikeObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
+        registerFactory(Sonic2ObjectIds.OOZ_SPRING,
+                (spawn, registry) -> new OOZSpringObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
         registerFactory(Sonic2ObjectIds.SPIRAL,
                 (spawn, registry) -> new SpiralObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
 
