@@ -147,6 +147,39 @@ branch-local measurements.
   failures or errors. MSE again echoed the stale targeted ARZ2 failure in its
   aggregate summary, but that class was not part of the guard invocation.
 
+## 2026-06-28 - S2 MTZ2 Obj70 grounded CPU side-push - ENGINE FIX (Obj70 local + focused test, MTZ2 f1277 -> f1282)
+
+- Scope: independently verified `bugfix/ai-trace-s2-mtz2-r1` in
+  `.worktrees/trace-s2-mtz2-r1`. The code change is limited to Sonic 2 Obj70
+  (`CogObjectInstance.sideContactReturnsNoContact`) and a focused Obj70 test.
+- Root: the prior Obj70 CPU-sidekick suppression correctly preserved the ROM
+  stale-rider no-contact path for airborne sidekicks, but it also suppressed a
+  grounded right-moving CPU sidekick that should enter `SolidObject_cont`
+  against a tooth's left edge. The ROM stale-rider branch is keyed on
+  `Status_InAir` before `SolidObject_cont` (docs/s2disasm/s2.asm:35028-35050,
+  55096-55135), while grounded side contact follows the side-push path that
+  zeroes `x_vel`/`inertia` and sets `Status_Push`
+  (docs/s2disasm/s2.asm:35344-35450).
+- Fix: Obj70 now suppresses fresh CPU side correction only while the CPU
+  sidekick is airborne or not moving right (`x_vel <= 0`). Grounded
+  right-moving CPU sidekicks are allowed through the existing shared side
+  contact path. This is Obj70/ROM-state semantic, not a zone, route, frame, or
+  trace exception.
+- Verification:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Dtest=TestSonic2ObjectBugFixes#mtzCog*"" test"`
+  passed 3/3 focused Obj70 tests.
+  A temporary baseline probe with the old return predicate, using
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace"" test"`,
+  confirmed the prior MTZ2 frontier at f1277 / 3385 errors (`tails_x`
+  expected `0x047D`, actual `0x047F`). With the fix restored, the same target
+  command advances to f1282 / 3456 errors (`tails_x` expected `0x047C`, actual
+  `0x047D`).
+  Same-game green guards passed 4/4 with
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay"" test"`.
+- Regression status: no regressions observed in the requested same-game guard
+  traces. The new MTZ2 f1282 owner is downstream Tails movement/Obj70 contact
+  state, outside this grounded side-push mismatch.
+
 ## 2026-06-28 - S2 ARZ2 Obj28 vertical subpixel carry - ENGINE FIX (2 files, ARZ2 f553 -> f566)
 
 - Scope: continued the ARZ2 ChopChop destruction/animal/points lifetime window
@@ -171,7 +204,7 @@ branch-local measurements.
   ChopChop animal movement root.
 - Verification: focused f553 occupancy test passes; ARZ2 reaches f566; S2 ARZ1,
   EHZ1, MCZ1, and SCZ green guard traces pass; expected-red first errors hold
-  at CNZ1 f3906 `tails_y`, MTZ2 f1277 `tails_x`, and OOZ2 f1109
+  at CNZ1 f3906 `tails_y`, MTZ2 f1282 `tails_x`, and OOZ2 f1109
   `tails_y_speed`. A broader full-XY animal subpixel attempt was rejected during
   verification because it regressed EHZ1 at f1417 by changing animal horizontal
   lifetime/slot cadence.
@@ -357,8 +390,9 @@ branch-local measurements.
 3. Continue the S2 target list with ARZ2 f593 (animal slot/position mismatch
    after clearing the Obj0A breathing-bubble allocation/timing frontier), WFZ
    f14038 (Tornado plane 1px landing/contact mismatch after scripted-input
-   timing), then the movement downstream of Tails CPU cluster: OOZ f1784, MTZ3
-   f1973, CPZ2 f2889, CNZ1 f3906, CNZ2 f4632, MCZ2 f4485, and HTZ f6114.
+   timing), then the movement downstream of Tails CPU cluster: MTZ2 f1282,
+   OOZ f1784, MTZ3 f1973, CPZ2 f2889, CNZ1 f3906, CNZ2 f4632, MCZ2 f4485,
+   and HTZ f6114.
 4. The ARZ2 f523 stale Obj24/Obj91 slot allocation frontier is now integrated on
    `bugfix/ai-s2-trace-develop` as commit `4e8b201a1`; the remaining ARZ2 owner
    was advanced by the Obj28 animal init-display, vertical-carry, and Obj0A
@@ -370,7 +404,7 @@ branch-local measurements.
 | Trace | Frame | Field | ROM | Engine | Status | Next owner |
 |---|---:|---|---:|---:|---|---|
 | `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
-| `s2_mtz2` / `TestS2Mtz2LevelSelectTraceReplay` | `1277` | Tails `tails_x` | `0x047D` | `0x047F` | advanced from f1265 by the Obj70 full `width_pixels` top-landing fix | Tails movement / Obj70 interaction |
+| `s2_mtz2` / `TestS2Mtz2LevelSelectTraceReplay` | `1282` | Tails `tails_x` | `0x047C` | `0x047D` | advanced from f1277 by allowing grounded right-moving CPU sidekicks through Obj70's ROM side-push path | Tails movement / Obj70 interaction |
 | `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1973` | Tails `tails_x` | `0x07C9` | `0x07CA` | true headline refined from same-frame status byte | Tails movement after CPU/status |
 | `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1784` | Tails `tails_x_speed` | `0x000C` | `-000C` | advanced from f1782 by lowering Obj36 negative-inertia CPU sidekick push-grace threshold | movement downstream of Tails CPU |
 | `s2_ooz2` / `TestS2Ooz2LevelSelectTraceReplay` | `1109` | Tails `tails_y_speed` | `0x0000` | `-0AB8` | advanced from f1086 by Obj33 standing-bit apex launch and native-Y preservation | post-launch Obj48 handoff / landing interaction |
