@@ -227,6 +227,8 @@ public record PerObjectRewindSnapshot(
             boolean paletteBlink,
             int cluckerAnimTimer,
             int cluckerAnimIndex,
+            int aquisBulletAnimTimer,
+            int aquisBulletAnimIndex,
             boolean loadSubObjectInitPending
     ) implements ObjectSubclassRewindExtra {}
 

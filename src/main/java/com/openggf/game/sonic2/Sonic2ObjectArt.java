@@ -2990,6 +2990,15 @@ public class Sonic2ObjectArt {
         return new ObjectSpriteSheet(combined, mappings, 0, 0);
     }
 
+    public ObjectSpriteSheet loadOOZBossSheet() {
+        Pattern[] patterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_OOZ_BOSS_ADDR, "OOZBoss");
+        if (patterns.length == 0) {
+            return null;
+        }
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OOZ_BOSS_ADDR);
+        return new ObjectSpriteSheet(patterns, mappings, 0, 1);
+    }
+
     // ========== DEZ Silver Sonic / Mecha Sonic (Object 0xAF) ==========
 
     /**

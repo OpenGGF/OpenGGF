@@ -135,6 +135,9 @@ divergence plus diagnostic context, animated ROM-derived master-title game previ
 bundled title emblem resource, S2 trace-frontier closures (Sky Chase and Casino
 Night
 level-select replays), object-physics standardization onto shared contracts,
+Oil Ocean object parity work covering Obj55 boss/event spawning, launcher and
+launcher-ball capture behavior, Obj15 bit-7 split/falling-child state, OOZ
+badnik projectile/floor-snap fixes, pressure-spring and oil-surface polish,
 Casino Night slot-machine reward/display alignment,
 expanded rewind coverage, and architecture-guard hardening across runtime
 ownership, trace/rewind invariants, and object-service boundaries. A recent

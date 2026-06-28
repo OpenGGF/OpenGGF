@@ -78,6 +78,7 @@ public final class Sonic2ObjectArtKeys {
     // OOZ Badniks
     public static final String OCTUS = "octus";
     public static final String AQUIS = "aquis";
+    public static final String OOZ_BOSS = "ooz_boss";
 
     // EHZ Badniks
     public static final String MASHER = "masher";
