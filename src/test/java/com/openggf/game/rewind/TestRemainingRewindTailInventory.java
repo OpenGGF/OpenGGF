@@ -113,7 +113,7 @@ class TestRemainingRewindTailInventory {
         assertEquals(0, buckets.get(Bucket.COUNT_MISMATCH).size(), "count-mismatch inventory count");
         assertEquals(0, buckets.get(Bucket.SCALAR_MISMATCH).size(), "scalar-mismatch inventory count");
 
-        return new TailInventory(784, 646, 138, 0, buckets);
+        return new TailInventory(787, 649, 138, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

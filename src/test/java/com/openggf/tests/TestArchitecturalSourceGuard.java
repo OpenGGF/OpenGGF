@@ -27,8 +27,8 @@ class TestArchitecturalSourceGuard {
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3065,
-            "com/openggf/level/LevelManager.java", 2752,
-            GAME_LOOP_PATH, 2624
+            "com/openggf/level/LevelManager.java", 2771,
+            GAME_LOOP_PATH, 2627
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;

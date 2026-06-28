@@ -1,7 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.graphics.GLCommand;
@@ -36,7 +35,6 @@ public class SlidingSpikeObjectInstance extends AbstractObjectInstance
     private int direction;
     private boolean childSpawned;
 
-    @RewindTransient(reason = "Obj43 peer pointer mirrors ROM SST linkage and is recreated through child allocation")
     private SlidingSpikeObjectInstance peer;
 
     public SlidingSpikeObjectInstance(ObjectSpawn spawn, String name) {
