@@ -6,6 +6,29 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-28 - S2 OOZ Obj33 popping-platform launch parity cleanup - ENGINE FIX (1 file + focused tests, OOZ traces non-regressing)
+
+- Scope: compared `OOZPoppingPlatformObjectInstance` against Sonic 2 Obj33 and
+  corrected the launch-side ROM semantics without taking the documented
+  net-negative inclusive-right-edge path.
+- Fixes: the launch snap now writes the native X word while preserving `x_sub`,
+  clears `Status_OnObj`, and releases `obj_control`; Obj33 keeps positive
+  `obj_control=1` riders eligible for its own SolidObject support; its solid
+  state latch is instance-scoped across the dynamic spawn rebuild; the
+  compatibility carry bridge keeps only vertical seating, so it no longer pins
+  the rider's horizontal offset during the rise.
+- Rejected during verification: `usesInclusiveRightEdge()` reproduces the
+  known OOZ1 regression to f1251 (`tails_status_byte`), matching the 2026-06-21
+  M1/v1-v5 findings, so it remains out until the broader side-contact phase
+  issue is solved.
+- Verification:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestOOZPlacedObjectGaps,com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.game.rewind.TestS2OozBurnerFlameGraphRewind,com.openggf.level.objects.TestObjectPhysicsStandardizationGuard" test`
+  passed 89/0; focused OOZ replay remains expected-red but does not regress the
+  documented frontier:
+  `s2_ooz1` holds at f1782 `tails_x` (`0x0CE4` vs `0x0CE3`), while `s2_ooz2`
+  now reaches f1086 `y` (`0x046D` vs `0x047B`) instead of the logged f1070
+  baseline.
+
 ### Current authoritative state
 
 | Item | Current value |
