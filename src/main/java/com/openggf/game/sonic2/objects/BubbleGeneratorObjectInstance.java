@@ -127,9 +127,11 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
         // ROM state machine logic (loc_1F9C0)
         if ((stateFlags & FLAG_ACTIVE_BURST) == 0) {
             // No active burst - check if timer expired to start new burst
-            // ROM: tst.w objoff_36(a0) / bne.s loc_1FA22
-            if (frameTimer > 0) {
-                frameTimer--;
+            // ROM: tst.w objoff_36(a0) / bne.s loc_1FA22,
+            //      subq.w #1,objoff_38(a0) / bpl.w loc_1FAC2.
+            // A zero timer spends one frame counting down to -1 before a burst starts.
+            frameTimer--;
+            if (frameTimer >= 0) {
                 return;
             }
             // Timer expired, start new burst

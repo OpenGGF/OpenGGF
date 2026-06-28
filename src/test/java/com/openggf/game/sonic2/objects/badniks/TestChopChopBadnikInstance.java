@@ -20,6 +20,7 @@ class TestChopChopBadnikInstance {
         AbstractPlayableSprite player = playerAt(0x0A7F, 0x0560);
 
         chopChop.step(player);
+        chopChop.step(player);
 
         assertEquals("PATROLLING", stateName(chopChop),
                 "Obj91_TestHorizontalDist uses cmpi.w #$A0 then blo, so exactly 0xA0 must not charge");
@@ -31,9 +32,21 @@ class TestChopChopBadnikInstance {
         AbstractPlayableSprite player = playerAt(0x0A80, 0x0560);
 
         chopChop.step(player);
+        chopChop.step(player);
 
         assertEquals("WAITING", stateName(chopChop),
                 "Obj91 should prepare a charge when the post-ObjectMove distance is 0x9F");
+    }
+
+    @Test
+    void initFrameReturnsBeforeMainObjectMove() {
+        ProbeChopChop chopChop = newChopChop();
+        int initialX = chopChop.getX();
+
+        chopChop.step(playerAt(0x0A80, 0x0560));
+
+        assertEquals(initialX, chopChop.getX(),
+                "Obj91_Init sets timers/x_vel and returns before Obj91_Main can call ObjectMove");
     }
 
     private static ProbeChopChop newChopChop() {

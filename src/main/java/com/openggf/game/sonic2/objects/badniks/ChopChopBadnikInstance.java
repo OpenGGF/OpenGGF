@@ -68,6 +68,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
     private int ySubpixel;           // Subpixel accumulator for y movement during charge
     private boolean chargeLatched;   // Have charge velocities been latched (Obj91_MoveTowardsPlayer)?
     private int startX;              // Initial X position for direction reference
+    private boolean initFrame;        // ROM Obj91_Init returns before Obj91_Main can move
 
     public ChopChopBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "ChopChop", Sonic2BadnikConfig.DESTRUCTION);
@@ -78,6 +79,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
         this.ySubpixel = 0;
         this.chargeLatched = false;
         this.startX = spawn.x();
+        this.initFrame = true;
 
         // Initial facing based on render_flags (status.npc.x_flip bit)
         // From disassembly: if x_flip bit is SET, velocity stays positive (moving RIGHT)
@@ -111,8 +113,15 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
      * - Check for player detection
      */
     private void updatePatrolling(int frameCounter, AbstractPlayableSprite player) {
+        if (initFrame) {
+            // Obj91_Init (s2.asm:73672-73684) sets timers/x_vel and returns.
+            // Obj91_Main's ObjectMove starts on the following ExecuteObjects pass.
+            initFrame = false;
+            return;
+        }
+
         // Apply velocity via ObjectMove-style subpixel integration.
-        // Obj91_Main calls JmpTo26_ObjectMove (s2.asm:73642), and ObjectMove
+        // Obj91_Main calls JmpTo26_ObjectMove (s2.asm:73698), and ObjectMove
         // integrates x_pos(32) += x_vel<<8 (s2.asm:30185-30199): the velocity's
         // low byte accumulates into the sub-pixel and carries into the whole
         // pixel. PATROL_SPEED=0x40 = 0.25px/frame, so a plain `>>8` would

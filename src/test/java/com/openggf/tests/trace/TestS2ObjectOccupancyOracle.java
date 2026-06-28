@@ -213,6 +213,26 @@ public class TestS2ObjectOccupancyOracle {
     private record PushCheck(boolean pushing, int tailsX, int tailsY, String summary) {
     }
 
+    @Test
+    public void arz2ChopChopLoadsIntoRomSlot19AfterBubbleBurstClears() throws Exception {
+        SlotCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 458) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x91, expected.get(19),
+                            "ROM fixture should load the ARZ2 ChopChop into slot 19 at f458");
+                    return new SlotCheck(actual.get(19), describeSlots(actual, 16, 36));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x91, slotCheck.actualId(),
+                "ARZ2 Obj91 must take ROM slot 19; lower slots must not be held by "
+                        + "stale Obj24 bubble children. Actual slots " + slotCheck.summary());
+    }
+
     private static String describeSlots(Map<Integer, Integer> occupancy, int firstSlot, int lastSlot) {
         StringBuilder sb = new StringBuilder();
         for (int slot = firstSlot; slot <= lastSlot; slot++) {

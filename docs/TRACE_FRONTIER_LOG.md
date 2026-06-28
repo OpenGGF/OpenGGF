@@ -106,10 +106,10 @@ branch-local measurements.
    `tails_x_speed` after the S2 Obj36 negative-inertia push bridge fix; CNZ complete-run f1846,
    MTZ3 f1973, CNZ1 f3906, CNZ2 f4418, MCZ2 f4485, and HTZ f6114 are later
    movement/downstream frontiers.
-4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
-   missing Obj91 after the Obj15 child-slot fix, but that entry predates the
-   newest AIZ-focused branch state. Reconfirm before treating it as the next
-   global target.
+4. Known branch-local follow-up from the S2 ARZ2 work now advances again on
+   `bugfix/ai-trace-s2-arz2`: ARZ2 moved from f523 stale Obj24/Obj91 slot
+   allocation to f549 post-ChopChop destruction/animal motion. Reconfirm on the
+   coordinator branch before treating it as global state.
 
 ### Current focused frontier details
 
@@ -120,6 +120,7 @@ branch-local measurements.
 | `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1973` | Tails `tails_x` | `0x07C9` | `0x07CA` | true headline refined from same-frame status byte | Tails movement after CPU/status |
 | `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1782` | Tails `tails_x` | `0x0CE4` | `0x0CE3` | advanced from f1779 S2 Obj36 negative-inertia riding push bridge movement delta | movement downstream of Tails CPU |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
+| `s2_arz2` / `TestS2Arz2LevelSelectTraceReplay` | `549` | `obj_extra_s18_x` | absent | `0x0679` | branch-local advance from f523 after Obj24 bubble lifetime frees slot 19 and Obj91 init returns before first ObjectMove | post-ChopChop destruction animal spawn/motion |
 | `s2_cnz1` / `TestS2CnzLevelSelectTraceReplay` | `3906` | Tails `tails_y` | `0x06C0` | `0x06C1` | advanced from f1691 by the slot-machine packed-target order fix; later held-only Ctrl2 diagnostics no longer own the frontier | movement downstream of Tails CPU |
 | `s2_cnz2` / `TestS2Cnz2LevelSelectTraceReplay` | `4418` | Tails `tails_y` | `0x02F0` | `0x02F1` | advanced from f3691 stationary released push-bit diagnostic | movement downstream of Tails CPU |
 | `s2_htz1` / `TestS2HtzLevelSelectTraceReplay` | `6114` | leader `air` | `1` | `0` | advanced from f4229/f4494 landing interact and push-bit diagnostics | leader/object-riding movement |
@@ -205,6 +206,15 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-28 - S2 ARZ2 f523 -> f549 FIXED (Obj24 bubble lifetime frees the ROM ChopChop slot; Obj91 init returns before first ObjectMove) - ENGINE FIX (3 files + focused tests)
+
+- Branch/worktree: `bugfix/ai-trace-s2-arz2` in `.worktrees/trace-s2-arz2`, based on coordinator `bugfix/ai-s2-trace-develop`.
+- Old focused frontier: `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` first failed at f523 with `obj_extra_s24_x` ROM absent vs engine `0x067F`. ROM had already freed slot 19 before loading ChopChop Obj91; the engine held a stale Obj24 bubble, so the same ChopChop appeared in slot 36.
+- Fix: Obj24 bubble generators now mirror ROM `loc_1F9C0` (`docs/s2disasm/s2.asm:45292-45305`) by pre-decrementing `objoff_38` and only starting a burst when the result is negative (`subq.w #1,objoff_38(a0)` / `bpl.w loc_1FAC2`). Obj24 child bubbles now preserve the init-time `render_flags.on_screen` latch for one execution before updating their render-box bit; ROM `Obj24_Init` sets `render_flags=$84` (`docs/s2disasm/s2.asm:45207-45214`), and both `loc_1F956` and `loc_1F99E` delete only after testing bit 7 clear (`docs/s2disasm/s2.asm:45249-45288`). This lets a newly allocated off-screen bubble execute once, then delete on the ROM frame and free slot 19 for Obj91.
+- The Obj24 slot fix exposed a same-frame Obj91 movement slip: the engine was constructing Obj91 and immediately running its patrolling `ObjectMove` on the creation frame. ROM `Obj91_Init` (`docs/s2disasm/s2.asm:73674-73684`) calls `LoadSubObject`, seeds `Obj91_move_timer=$200`, `Obj91_bubble_timer=$50`, x velocity, then `rts`; only the next `Obj91_Main` pass decrements timers and calls `ObjectMove` (`docs/s2disasm/s2.asm:73687-73699`). `ChopChopBadnikInstance` now returns once on its init frame.
+- New frontier: f549, 3206 errors, first error `obj_extra_s18_x` ROM absent vs engine `0x0679`. The context shows the slot/object cadence through the ChopChop is now aligned (`Explosion` in slot 19 at `0x0679,0x052A`, `Animal` in slot 24), and the next owner is post-ChopChop destruction animal spawn/motion (`Animal` y differs by 4px). No trace data is written into engine state, and the fix is keyed only on ROM object state/routine/lifetime, not zone/route/frame.
+- Verification snapshot: ARZ2 target moved f523 -> f549; `TestS2ObjectOccupancyOracle#arz2ChopChopLoadsIntoRomSlot19AfterBubbleBurstClears` passes; `TestChopChopBadnikInstance` passes; S2 guard traces ARZ1/EHZ1/MCZ1/SCZ pass; CNZ1 remains at its accepted f3906 frontier.
 
 ## 2026-06-28 - S2 CNZ1 f1691 -> f3906 FIXED (slot-machine `slots_targ` uses ROM `slot_index` shifts 0/4/8, not reversed reel order) - ENGINE FIX (1 file + focused unit test)
 - Branch/worktree: `bugfix/ai-trace-s2-cnz1` in `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\trace-s2-cnz1`. Independent verification of the reported fix; no trace-state hydration, no zone/route/frame carve-out, no game-id branch.
