@@ -561,10 +561,9 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         if (!isDiagonal() && isTails(player)) {
             // Vertical Obj85 leaves the player curled after loc_2AE0C launch
             // without making the airborne CPU path behave like Obj84 pinball
-            // mode. Preserve the next landing/zero-speed roll-clear decisions
-            // only for Tails's shorter standing radius handoff observed in
-            // CNZ; Sonic_ResetOnFloor clears rolling normally (s2.asm:37780-37786).
-            player.preserveRollingOnNextLanding();
+            // mode. Preserve only the zero-speed roll-stop handoff; the next
+            // ordinary Tails_ResetOnFloor landing still clears rolling normally
+            // (s2.asm:41020-41033).
             player.preserveRollingOnNextRollStop();
         }
         resetPlayerState(ps);

@@ -57,6 +57,25 @@ branch-local measurements.
   with the frontier above and no OOZ2 regression; selected S2 ARZ/EHZ/MCZ/SCZ
   guard traces passed.
 
+## 2026-06-28 - S2 CNZ2 vertical Obj85 Tails landing roll-clear - ENGINE FIX (1 file, CNZ2 frontier advance)
+
+- Scope: compared Sonic 2 Obj85 vertical launcher release against the Tails
+  floor-reset path and narrowed the existing Tails-only launcher preservation.
+- Fix: after vertical Obj85 launch, the engine still preserves the existing
+  zero-speed Obj85 roll-stop handoff, but it no longer suppresses the next
+  ordinary landing roll-clear. ROM Obj85 release leaves Tails curled, then the
+  later `Tails_ResetOnFloor` landing clears `Status_Roll`, restores Tails'
+  standing radii, and subtracts 1 from `y_pos` (`docs/s2disasm/s2.asm:41020-41033`).
+  This is keyed on the Obj85 release state and Tails' ROM floor-reset behavior,
+  not on a trace/zone/frame carve-out.
+- Frontier: `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` advances
+  from f4418 / 999 errors (`tails_y` `0x02F0` vs `0x02F1`, with rolling/status
+  still set in engine) to f4632 / 1001 errors (`tails_y` `0x02B8` vs `0x02B4`).
+  The new f4632 owner is a downstream Tails-on-Obj86 flipper handoff while the
+  Obj85 release/floor-reset mismatch is cleared.
+- Non-regression: `TestS2CnzLevelSelectTraceReplay#replayMatchesTrace` holds
+  its accepted f3906 first error (`tails_y` `0x06C0` vs `0x06C1`).
+
 ## 2026-06-28 - S2 OOZ Obj33 popping-platform launch parity cleanup - ENGINE FIX (1 file + focused tests, OOZ traces non-regressing)
 
 - Scope: compared `OOZPoppingPlatformObjectInstance` against Sonic 2 Obj33 and
@@ -159,14 +178,15 @@ branch-local measurements.
    first-landing CPU mirror lag from the reported frontier. CNZ1 has now
    advanced from f3675 to f3906 after clearing held-only Ctrl2 diagnostics.
    CNZ2 has now advanced from f3691 to f4418 after clearing a stationary
-   released push-bit diagnostic. HTZ has advanced from f4229 through f4494 to
-   f6114 after clearing landing-frame CPU interact refresh lag and a moving
-   grounded push-bit-only diagnostic. MCZ2 has advanced from f4482 to f4485,
-   where movement now owns the first error.
+   released push-bit diagnostic, and then to f4632 after allowing the ordinary
+   Tails floor reset to clear rolling after vertical Obj85 release. HTZ has
+   advanced from f4229 through f4494 to f6114 after clearing landing-frame CPU
+   interact refresh lag and a moving grounded push-bit-only diagnostic. MCZ2 has
+   advanced from f4482 to f4485, where movement now owns the first error.
 3. Continue the S2 target list with ARZ2 f566 (Obj0A breathing-bubble
    allocation/timing after the ChopChop animal vertical-carry correction), then the movement
-   downstream of Tails CPU cluster: OOZ f1782, MTZ3 f1973, CPZ2 f2889, CNZ1
-   f3906, CNZ2 f4418, MCZ2 f4485, and HTZ f6114.
+   downstream of Tails CPU cluster: OOZ f1784, MTZ3 f1973, CPZ2 f2889, CNZ1
+   f3906, CNZ2 f4632, MCZ2 f4485, and HTZ f6114.
 4. The ARZ2 f523 stale Obj24/Obj91 slot allocation frontier is now integrated on
    `bugfix/ai-s2-trace-develop` as commit `4e8b201a1`; the remaining ARZ2 owner
    was advanced by the Obj28 animal init-display and vertical-carry fixes; the
@@ -184,7 +204,7 @@ branch-local measurements.
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2889` | Tails `tails_x` | `0x10E8` | `0x10F0` | held after Obj1E source/destination handoff hypotheses failed to advance | movement downstream of Tails CPU |
 | `s2_arz2` / `TestS2Arz2LevelSelectTraceReplay` | `566` | `obj_s1A_type` | `0x0A` | missing | advanced from f553 after Obj28 animal vertical `y_sub` carry | Obj0A breathing-bubble allocation/timing |
 | `s2_cnz1` / `TestS2CnzLevelSelectTraceReplay` | `3906` | Tails `tails_y` | `0x06C0` | `0x06C1` | advanced from f1691 by the slot-machine packed-target order fix; later held-only Ctrl2 diagnostics no longer own the frontier | movement downstream of Tails CPU |
-| `s2_cnz2` / `TestS2Cnz2LevelSelectTraceReplay` | `4418` | Tails `tails_y` | `0x02F0` | `0x02F1` | advanced from f3691 stationary released push-bit diagnostic | movement downstream of Tails CPU |
+| `s2_cnz2` / `TestS2Cnz2LevelSelectTraceReplay` | `4632` | Tails `tails_y` | `0x02B8` | `0x02B4` | advanced from f4418 by allowing ordinary Tails_ResetOnFloor to clear rolling after vertical Obj85 release | downstream Obj86 flipper handoff / Tails movement |
 | `s2_htz1` / `TestS2HtzLevelSelectTraceReplay` | `6114` | leader `air` | `1` | `0` | advanced from f4229/f4494 landing interact and push-bit diagnostics | leader/object-riding movement |
 | `s2_mcz2` / `TestS2Mcz2LevelSelectTraceReplay` | `4485` | Tails `tails_x` | `0x0EAB` | `0x0EAC` | advanced from f4482 grounded push-bit diagnostic | movement downstream of Tails CPU |
 | `s3k_hcz1` / `TestS3kHczCompleteRunTraceReplay` | `1489` | leader `y` | `0x0776` | `0x0775` | advanced from f1402 inactive marker status | leader movement / camera follow |
@@ -224,7 +244,8 @@ At CNZ2 `f3691`, ROM keeps `Status_Push` for one stationary released-sidekick
 frame after engine has already cleared it. Both snapshots are grounded,
 non-rolling, off-object, routine 2, and have matching position, subpixels,
 angle, and zero speed; the mismatch clears at f3692 before the later movement
-frontier. That diagnostic no longer owns the frontier; CNZ2 now reports `f4418`.
+frontier. That diagnostic no longer owns the frontier; CNZ2 later advanced past
+the vertical Obj85 release/floor-reset mismatch and now reports `f4632`.
 At HTZ `f4229`, Tails has just landed on an object with matching sidekick
 kinematics. ROM has already latched the raw `tails_interact` slot but the CPU
 interact id refresh is one frame behind, so the diagnostic no longer owns a
