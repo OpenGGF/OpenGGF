@@ -105,11 +105,12 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
     private boolean contactTop;
     private boolean contactBottom;
 
-    // objoff_36 propagation-latency model (see update()): a grounded cross-object
-    // walk-on transfer propagates the trigger one frame later than an airborne
-    // landing. prevPlayerAirborne is the approach air-state captured each frame;
-    // the deferred* flags hold the one-frame grounded defer buffer.
-    private boolean prevPlayerAirborne = true;
+    // objoff_36 propagation-latency model (see update()): an object-to-object
+    // standing transfer propagates the trigger one frame later than a fresh
+    // landing/walk-on from terrain or air. prevPlayerOnObject is the approach
+    // standing-on-object state captured each frame; the deferred* flags hold the
+    // one-frame transfer defer buffer.
+    private boolean prevPlayerOnObject;
     private boolean deferredTrigTop;
     private boolean deferredTrigBottom;
 
@@ -300,33 +301,43 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
         //
         // A piece's Stair_Solid sets the PARENT's objoff_36 from its own
         // Status_OnObj (docs/s1disasm/_incObj/5B SLZ Staircase.asm:90-93), and the
-        // parent's Stair_Move reads objoff_36 (lines 104-119). When the player
-        // lands from the AIR onto a piece, that piece's Solid_Landed sets its
-        // Status_OnObj and propagates objoff_36 the SAME frame (aux ground truth:
-        // SLZ1 f902 airborne landing on slot 0x3D -> parent objoff_36=1 at f902).
-        // When the player walks GROUNDED across the A->B boundary from an adjacent
-        // solid object, the standing-transfer (Solid_ResetFloor reassigning
-        // standonobject between separate SST slots) makes the new piece's
-        // objoff_36 propagation land ONE frame later (aux: SLZ1 f2835 grounded
-        // transfer onto slot 0x61 -> parent objoff_36=1 only at f2836). The
-        // engine's update()-then-checkpoint order already gives the base +1; add
-        // the extra +1 only for the grounded-approach case via a one-frame defer.
-        // The approach air-state is the player's air at the START of the frame the
-        // contact was registered, captured as prevPlayerAir on the prior update.
+        // parent's Stair_Move reads objoff_36 (lines 104-119). The relevant timing
+        // is when the piece first establishes the player's standonobject:
+        //
+        //  - Fresh contact from AIR or from TERRAIN: the piece's Solid_Landed sets
+        //    standonobject and obStatus bit3 the SAME frame the player's foot
+        //    enters the landing window, so objoff_36 propagates that frame (aux
+        //    ground truth: SLZ1 f902 airborne land -> objoff_36=1 at f902; SLZ1
+        //    f3020 terrain walk-on onto slot 0x47 with status on-object=False the
+        //    prior frame -> objoff_36=1 at f3020). No extra latency.
+        //  - Object-to-object transfer (player already standing on a DIFFERENT
+        //    solid object, status on-object=True): walking off the source's edge
+        //    (SolidObject .leave clears the source bit) and the destination piece
+        //    re-catching via Solid_ResetFloor lands the new piece's objoff_36
+        //    propagation ONE frame later (aux: SLZ1 f2835 transfer from slot 0x69
+        //    (on a staircase, on-object=True) onto slot 0x61 -> parent objoff_36=1
+        //    only at f2836).
+        //
+        // The engine's update()-then-checkpoint order already gives the base +1
+        // (the checkpoint sets the contact flag, the next update reads it). Add the
+        // extra +1 only for the object-to-object transfer case via a one-frame
+        // defer, keyed to whether the player was standing on an object on the
+        // prior frame (prevPlayerOnObject). Approach from terrain/air uses the
+        // base +1 unchanged.
         boolean trigTop;
         boolean trigBottom;
-        if (prevPlayerAirborne) {
-            trigTop = touchTop;
-            trigBottom = touchBottom;
-            deferredTrigTop = false;
-            deferredTrigBottom = false;
-        } else {
+        if (prevPlayerOnObject) {
             trigTop = deferredTrigTop;
             trigBottom = deferredTrigBottom;
             deferredTrigTop = touchTop;
             deferredTrigBottom = touchBottom;
+        } else {
+            trigTop = touchTop;
+            trigBottom = touchBottom;
+            deferredTrigTop = false;
+            deferredTrigBottom = false;
         }
-        prevPlayerAirborne = playerEntity != null && playerEntity.getAir();
+        prevPlayerOnObject = playerEntity != null && playerEntity.isOnObject();
 
         // Run state machine (subtype & 0x07 dispatch)
         switch (state & 0x07) {
