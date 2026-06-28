@@ -6,6 +6,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -151,9 +152,15 @@ public class Sonic1BombFuseInstance extends AbstractObjectInstance implements Re
         if (timer < 0) {
             // loc_11B7C: Timer expired - spawn shrapnel and destroy
             // In ROM: clears bom_time, resets obRoutine to 0, restores origY,
-            // then creates 4 shrapnel at current position.
+            // then creates 4 shrapnel at current position. The fuse object (a0)
+            // BECOMES the first shrapnel in place (movea.l a0,a1), so its SST slot
+            // is reused for shrapnel #0; pieces 1-3 are FindNextFreeObj-allocated
+            // after the fuse slot (docs/s1disasm/_incObj/5F Badnik - Walking
+            // Bomb.asm:181-205). Detach the fuse slot here so removing the fuse
+            // does not free it; spawnShrapnel hands it to shrapnel #0.
             currentY = origY;
-            parent.spawnShrapnel(currentX, currentY);
+            int fuseSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+            parent.spawnShrapnel(currentX, currentY, fuseSlot);
 
             // Destroy the fuse
             destroyed = true;
@@ -182,8 +189,16 @@ public class Sonic1BombFuseInstance extends AbstractObjectInstance implements Re
 
     @Override
     public boolean isPersistent() {
-        // RememberState: persists while on screen
-        return !destroyed && isOnScreenX(160);
+        // Bom_Fuse ends in RememberState (docs/s1disasm/_incObj/5F Badnik -
+        // Walking Bomb.asm:158), whose off-screen test is the out_of_range macro
+        // (Macros.asm:273-289): chunk-align obX and (v_screenposx-128) and delete
+        // when the unsigned distance exceeds 640. The fuse moves only vertically,
+        // so getX() (= spawn obX) is the live obX the macro reads. Using the
+        // approximate symmetric isOnScreenX(160) kept fuses ~160px left of the
+        // viewport that the ROM had already deleted off the left edge — those
+        // lingering fuses then expired and spawned phantom shrapnel the ROM never
+        // created (SBZ2 f1596: extra shrapnel at x=0x09B9/0x09E9).
+        return !destroyed && isInRange();
     }
 
     @Override

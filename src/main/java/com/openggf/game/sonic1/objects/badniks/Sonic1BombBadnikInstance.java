@@ -11,6 +11,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -294,10 +295,17 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
     private void updateExplode(int frameCounter) {
         timer--;
         if (timer < 0) {
-            // Timer expired: change to explosion (object $3F = ExplosionBomb)
-            // In ROM this replaces the object in-place. In our engine, we spawn
-            // a bomb explosion and destroy self.
-            spawnBombExplosion();
+            // Timer expired: change the bomb into an explosion (object $3F).
+            // ROM Bom_Action_WaitAndExplode does this IN PLACE via
+            // _move.b #id_Explosion,obID(a0) (docs/s1disasm/_incObj/5F Badnik -
+            // Walking Bomb.asm:93-94), keeping the bomb's SST slot. Detach the
+            // slot so removing the bomb does not free it, then place the
+            // explosion at that same slot (mirrors the badnik-kill in-place
+            // obID change, DestructionEffects/AbstractBadnikInstance.destroyBadnik).
+            // Spawning the explosion at the lowest free slot instead shifted OST
+            // occupancy and cascaded later FindFreeObj allocations (SBZ2 f1596).
+            int mySlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+            spawnBombExplosion(mySlot);
             destroyed = true;
             setDestroyed(true);
             var objectManager = services().objectManager();
@@ -411,16 +419,20 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
      * From ExBom_Main: uses Map_ExplodeBomb, ArtTile_Explosion, plays sfx_Bomb (0xC4).
      * The explosion reuses the standard ExItem_Animate with 5 frames at 7 ticks each.
      */
-    private void spawnBombExplosion() {
+    private void spawnBombExplosion(int transferredSlot) {
         var objectManager = services().objectManager();
         if (objectManager == null) {
             return;
         }
 
-        // Spawn explosion with bomb sound effect
-        spawnFreeChild(() -> new ExplosionObjectInstance(
-                0x3F, currentX, currentY,
-                services().renderManager()));
+        // Place the explosion into the bomb's just-vacated slot (in-place obID
+        // change parity). Constructed directly (no spawnFreeChild) like the
+        // shared badnik-kill path in DestructionEffects, which also uses
+        // addReplacementAtTransferredSlot; ExplosionObjectInstance's constructor
+        // does not require the spawn ConstructionContext.
+        ExplosionObjectInstance explosion = new ExplosionObjectInstance(
+                0x3F, currentX, currentY, services().renderManager());
+        ObjectLifetimeOps.addReplacementAtTransferredSlot(objectManager, explosion, transferredSlot);
 
         // sfx_Bomb = $C4 = BOSS_EXPLOSION
         services().playSfx(Sonic1Sfx.BOSS_EXPLOSION.id);
@@ -449,8 +461,8 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
      *     bset    #7,obRender(a1)
      * </pre>
      */
-    void spawnShrapnel(int fuseX, int fuseY) {
-        var objectManager = services().objectManager();
+    void spawnShrapnel(int fuseX, int fuseY, int fuseSlot) {
+        final ObjectManager objectManager = services().objectManager();
         if (objectManager == null) {
             return;
         }
@@ -465,8 +477,24 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
             // following frame (docs/s1disasm/_incObj/5F Badnik - Walking
             // Bomb.asm:181-220, 30-33). Defer pieces 1-3's first move to match.
             final boolean deferFirstMove = i != 0;
-            spawnFreeChild(() -> new Sonic1BombShrapnelInstance(
-                    fuseX, fuseY, vx, vy, deferFirstMove));
+            final boolean firstPiece = i == 0;
+            // Slot allocation (Walking Bomb.asm:181-203): the loop keeps a0 = the
+            // fuse, so the first shrapnel reuses the fuse's slot (movea.l a0,a1)
+            // and pieces 1-3 each take FindNextFreeObj's first empty slot AFTER
+            // the fuse (already-allocated pieces are skipped, so the slots climb).
+            // Using lowest-free FindFreeObj instead put the shrapnel below the
+            // high-slot fuse, drifting OST occupancy and cascading later
+            // FindFreeObj allocations (SBZ2 f1596 -> the f2306 conveyor slot).
+            spawnFreeChild(() -> {
+                Sonic1BombShrapnelInstance shrapnel = new Sonic1BombShrapnelInstance(
+                        fuseX, fuseY, vx, vy, deferFirstMove);
+                if (firstPiece && fuseSlot >= 0) {
+                    shrapnel.setSlotIndex(fuseSlot);
+                } else if (fuseSlot >= 0) {
+                    ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, shrapnel, fuseSlot);
+                }
+                return shrapnel;
+            });
         }
     }
 
