@@ -131,6 +131,16 @@ public final class LevelFrameStep {
             prePhysicsEvents.updatePrePhysics();
         }
 
+        // 1c. Dynamic water level move — ROM S1/S2 advance the water level
+        //     (LZWaterFeatures / WaterEffects) BEFORE ExecuteObjects/RunObjects,
+        //     so the player's same-frame Sonic_Water underwater check reads the
+        //     just-moved level. S3K runs Handle_Onscreen_Water_Height AFTER the
+        //     object loop, so it keeps the move in step 6 (LevelManager.update).
+        //     Gated by PhysicsFeatureSet.advanceWaterLevelBeforePlayerPhysics().
+        if (levelManager.advanceWaterLevelBeforePlayerPhysics()) {
+            wrapper.wrap("water-move", levelManager::advanceDynamicWaterLevel);
+        }
+
         boolean inlineSolidResolution = levelManager.objectsExecuteAfterPlayerPhysics();
         if (inlineSolidResolution) {
             // 2. Inline-order modules need a frame-start snapshot of object touch
