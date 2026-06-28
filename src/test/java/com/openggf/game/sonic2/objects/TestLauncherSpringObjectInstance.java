@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.SonicGame;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestLauncherSpringObjectInstance {
@@ -79,6 +81,25 @@ class TestLauncherSpringObjectInstance {
                 "Trace diagnostics should resolve native P2 from ObjectPlayerQuery, not raw sidekicks()");
         assertTrue(details.contains("p2solid=false"),
                 "Captured native P2 should report the per-player non-solid state");
+    }
+
+    @Test
+    void verticalTailsRecaptureKeepsRomStandingRadiusSeatBeforeObj85RollRadiusWrite() {
+        LauncherSpringObjectInstance spring = new LauncherSpringObjectInstance(
+                new ObjectSpawn(0x1070, 0x06F0, Sonic2ObjectIds.LAUNCHER_SPRING, 0, 0, false, 0),
+                "LauncherSpring");
+        Tails tails = new Tails("tails", (short) 0x1070, (short) 0x0600);
+        tails.setRolling(true);
+        tails.setAir(true);
+        tails.capturePrePhysicsSnapshot();
+        tails.setAir(false);
+        tails.setCentreY((short) 0x06C1);
+        tails.setYSpeed((short) 0);
+
+        spring.onSolidContact(tails, new SolidContact(true, false, false, true, false), 0);
+
+        assertEquals(0x06C0, tails.getCentreY() & 0xFFFF,
+                "S2 Obj85 runs SolidObject_Landed before writing Tails y_radius=$0E");
     }
 
     private static final class QueryOnlyPlayerServices extends TestObjectServices {
