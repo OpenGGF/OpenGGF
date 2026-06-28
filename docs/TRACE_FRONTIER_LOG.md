@@ -85,7 +85,7 @@ branch-local measurements.
 | `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1299 errors |
 | `TestS2Htz2LevelSelectTraceReplay` | f3315 `tails_x_speed` expected `0x01E8`, actual `0x00E8`; 1059 errors |
 | `TestS2CpzLevelSelectTraceReplay` | f3365 `tails_x` expected `0x24AB`, actual `0x24AA`; 310 errors |
-| `TestS2CnzLevelSelectTraceReplay` | f3906 `tails_y` expected `0x06C0`, actual `0x06C1`; 38 errors |
+| `TestS2CnzLevelSelectTraceReplay` | f3967 `tails_cpu_ctrl2_held` expected `0x0014`, actual `0x0004`; 39 errors |
 | `TestS2Mcz2LevelSelectTraceReplay` | f4485 `tails_x` expected `0x0EAB`, actual `0x0EAC`; 543 errors |
 | `TestS2Cnz2LevelSelectTraceReplay` | f4632 `tails_y` expected `0x02B8`, actual `0x02B4`; 1001 errors |
 | `TestS2DezEndingLevelSelectTraceReplay` | f5952 `y_speed` expected `0x0098`, actual `-0098`; 46 errors |
@@ -95,6 +95,36 @@ branch-local measurements.
 - First worker batch queued by earliest frontier: ARZ2 f566, OOZ2 f1109,
   MTZ1 f1267, and MTZ2 f1277. Each worker owns its own trace worktree and must
   return a ROM-cited triage before any fix is accepted.
+
+## 2026-06-29 - S2 CNZ1 Obj85 airborne rolling Tails re-capture seat - ENGINE FIX (Obj85 + focused test, CNZ1 f3906 -> f3967)
+
+- Scope: branch `bugfix/ai-trace-s2-cnz1-r2` in worktree
+  `.worktrees/trace-s2-cnz1-r2`. The diff is limited to S2 Obj85 vertical
+  launcher capture and its focused unit test; it does not hydrate trace data
+  and does not add zone, route, or frame carve-outs.
+- Root/fix: at the f3906 frontier, ROM and engine already agree on Obj85 slot
+  ownership and the odd/even `Status_OnObj` cadence, but engine Tails remained
+  seated one pixel low (`0x06C1` vs ROM `0x06C0`) after the airborne rolling
+  re-capture. ROM `Obj85_Up` calls `SolidObject_Always_SingleCharacter` before
+  Obj85 writes `Status_Roll`, `y_radius=$0E`, and `x_radius=7`
+  (`docs/s2disasm/s2.asm:58004-58023`). The engine now applies the existing
+  Tails-only one-pixel vertical capture lift when Tails entered the physics
+  tick airborne and rolling before Obj85 re-established `Status_OnObj`, so the
+  re-capture is seated from the ROM-visible pre-capture state rather than the
+  post-capture rolling radius. The grounded rolling capture at f3904 remains
+  unchanged.
+- Frontier movement: `TestS2CnzLevelSelectTraceReplay#replayMatchesTrace`
+  advances from f3906 / 38 errors (`tails_y` expected `0x06C0`, actual
+  `0x06C1`) to f3967 / 39 errors (`tails_cpu_ctrl2_held` expected `0x0014`,
+  actual `0x0004`). The former `tails_y` mismatch is cleared; the new owner is
+  a later Tails CPU jump/input latch cluster after the Obj85 re-capture.
+- Verification:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestLauncherSpringObjectInstance" test`
+  passed; `mvn "-Dtest=TestS2CnzLevelSelectTraceReplay" "-Dsonic2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+  expected-red advanced to f3967 / 39 errors; `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Dsonic2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+  held its existing f4632 / 1001-error frontier; `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay" "-Dsonic2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+  exited successfully, and the four individual Surefire reports show
+  1 test / 0 failures each.
 
 ## 2026-06-28 - S2 MTZ1 Obj64 phase candidate reverted after full S2 regression sweep
 
@@ -517,7 +547,7 @@ branch-local measurements.
 | `s2_ooz2` / `TestS2Ooz2LevelSelectTraceReplay` | `1109` | Tails `tails_y_speed` | `0x0000` | `-0AB8` | advanced from f1086 by Obj33 standing-bit apex launch and native-Y preservation | post-launch Obj48 handoff / landing interaction |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2889` | Tails `tails_x` | `0x10E8` | `0x10F0` | held after Obj1E source/destination handoff hypotheses failed to advance | movement downstream of Tails CPU |
 | `s2_arz2` / `TestS2Arz2LevelSelectTraceReplay` | `593` | `obj_extra_s18_x` | absent | `0x0677` | advanced from f566 after Obj0A breathing-bubble sidecar timer/art/allocation cadence | downstream animal slot/position cadence |
-| `s2_cnz1` / `TestS2CnzLevelSelectTraceReplay` | `3906` | Tails `tails_y` | `0x06C0` | `0x06C1` | advanced from f1691 by the slot-machine packed-target order fix; later held-only Ctrl2 diagnostics no longer own the frontier | movement downstream of Tails CPU |
+| `s2_cnz1` / `TestS2CnzLevelSelectTraceReplay` | `3967` | Tails CPU `tails_cpu_ctrl2_held` | `0x0014` | `0x0004` | advanced from f3906 by applying the Obj85 Tails airborne rolling re-capture seat lift | Tails CPU jump/input latch after Obj85 re-capture |
 | `s2_cnz2` / `TestS2Cnz2LevelSelectTraceReplay` | `4632` | Tails `tails_y` | `0x02B8` | `0x02B4` | advanced from f4418 by allowing ordinary Tails_ResetOnFloor to clear rolling after vertical Obj85 release | downstream Obj86 flipper handoff / Tails movement |
 | `s2_htz1` / `TestS2HtzLevelSelectTraceReplay` | `6114` | leader `air` | `1` | `0` | advanced from f4229/f4494 landing interact and push-bit diagnostics | leader/object-riding movement |
 | `s2_mcz2` / `TestS2Mcz2LevelSelectTraceReplay` | `4485` | Tails `tails_x` | `0x0EAB` | `0x0EAC` | advanced from f4482 grounded push-bit diagnostic | movement downstream of Tails CPU |

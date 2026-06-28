@@ -269,7 +269,14 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         boolean wasRolling = player.getRolling();
         boolean wasRollingLastFrame =
                 (player.getStatusHistory(1) & AbstractPlayableSprite.STATUS_ROLLING) != 0;
-        if (!isDiagonal() && isTails(player) && !wasRolling && !wasRollingLastFrame) {
+        if (!isDiagonal() && isTails(player)
+                && ((!wasRolling && !wasRollingLastFrame) || (wasRolling && player.wasPrePhysicsAir()))) {
+            // Tails' default y_radius is $0F, one pixel taller than Obj85's
+            // capture radius write ($0E). ROM runs SolidObject_Landed before
+            // Obj85 writes y_radius=$0E (s2.asm:58004-58023). Preserve the
+            // established first-capture lift, and also apply it to the
+            // airborne rolling re-capture case where Tails entered the physics
+            // tick as InAir|Roll before Obj85 re-established Status_OnObj.
             player.setCentreYPreserveSubpixel((short) (player.getCentreY() - 1));
         }
         player.setRolling(true);
