@@ -2248,6 +2248,18 @@ public class ObjectManager {
         placement.clearCounterForSpawn(spawn);
     }
 
+    /**
+     * Mirrors an object-local S1 {@code bclr #7,2(a2,d0.w)} while preserving
+     * ObjPosLoad cursor cadence until the cursor naturally reprocesses the entry.
+     */
+    public void clearSpawnCounterActiveBitAndMarkDormant(ObjectSpawn spawn) {
+        if (!placement.isCounterBasedRespawn()) {
+            return;
+        }
+        placement.clearCounterForSpawn(spawn);
+        placement.markDormant(spawn);
+    }
+
     public void markRemembered(ObjectSpawn spawn) {
         // Look up the instance to check if it should stay active.
         // activeObjects is an IdentityHashMap so try identity first.
