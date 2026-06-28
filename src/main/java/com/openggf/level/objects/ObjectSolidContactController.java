@@ -2429,6 +2429,31 @@ final class ObjectSolidContactController {
         int currentRidingPieceIndex = getCurrentPlayerRidingPieceIndex();
         boolean pieceScopedStanding = multiPiece.usesPieceScopedStandingBits();
 
+        // ROM ExecuteObjects runs each object's SolidObject in SST slot order, and
+        // the rider's stand-on-object is re-seated by the slot it currently stands
+        // on (Solid_ResetFloor). When the player walks from a HIGHER-slot solid
+        // object onto a LOWER-slot one, the lower-slot object's SolidObject runs
+        // FIRST -- BEFORE the higher-slot ridden object re-seats the rider this
+        // frame -- so it tests its new top-landing against the rider's pre-re-seat
+        // (previous-frame settled) y. This engine resolves solids after the object
+        // updates, so a lower-slot object would otherwise observe the higher-slot
+        // ridden object's just-applied re-seat and steal the ride one frame early.
+        // Detect that case here so the new-landing detection below can use the
+        // pre-re-seat y (SLZ1 f3520: ROM keeps the rider on the higher-slot @0B10
+        // staircase at x=0x0B83 and only lands the lower-slot @0B90 staircase at
+        // x=0x0B84). docs/s1disasm/sonic.asm ExecuteObjects (slot order);
+        // docs/s1disasm/_incObj/sub SolidObject.asm:262-318 (Solid_Landed/ResetFloor).
+        ObjectInstance riddenObjectForSlotGate = getRidingObject(player);
+        boolean crossSlotLowerTakeover =
+                !player.getAir()
+                && riddenObjectForSlotGate != null
+                && riddenObjectForSlotGate != instance
+                && instance instanceof AbstractObjectInstance thisAoiGate
+                && riddenObjectForSlotGate instanceof AbstractObjectInstance riddenAoiGate
+                && thisAoiGate.getSlotIndex() >= 0
+                && riddenAoiGate.getSlotIndex() >= 0
+                && thisAoiGate.getSlotIndex() < riddenAoiGate.getSlotIndex();
+
         for (int i = 0; i < pieceCount; i++) {
             // ROM slot-order parity: when the earlier slots of this ridden object
             // were already side-pushed ahead of the ride-bounds re-check
@@ -2487,6 +2512,41 @@ final class ObjectSolidContactController {
                 contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(),
                         params.groundHalfHeight(), solidProfile.topSolidOnly(), useStickyBuffer,
                         instance, true, slopedAdapter);
+            } else if (crossSlotLowerTakeover) {
+                // Cross-object hand-off from a higher-slot ridden object onto this
+                // lower-slot one (see crossSlotLowerTakeover above). A NEW top
+                // landing must be tested against the rider's pre-re-seat
+                // (previous-frame) y, matching ROM slot order. Detect-only first
+                // (apply=false) to see whether this would be a fresh top landing;
+                // if so, re-test at the previous-frame y and DEFER the hand-off one
+                // frame when the rider had not yet descended into this object's
+                // landing band last frame. Side/corner contacts are unaffected.
+                SolidContact curProbe = resolveContact(player, anchorX, anchorY,
+                        params.halfWidth(), halfHeight, solidProfile, useStickyBuffer,
+                        instance, i, false);
+                if (curProbe != null && curProbe.standing() && !curProbe.touchSide()) {
+                    short curCentreY = player.getCentreY();
+                    // getCentreY(0) is the most recent recorded (post-collision)
+                    // position -- i.e. the rider's settled y at the END of the
+                    // previous frame, which is exactly the y a ROM lower-slot object
+                    // observes when it runs BEFORE this frame's higher-slot ride
+                    // re-seat. The live getCentreY() already reflects that re-seat.
+                    short prevCentreY = player.getCentreY(0);
+                    boolean prevLands = prevCentreY == curCentreY;
+                    if (!prevLands) {
+                        player.setCentreYPreserveSubpixel(prevCentreY);
+                        SolidContact prevProbe = resolveContact(player, anchorX, anchorY,
+                                params.halfWidth(), halfHeight, solidProfile, useStickyBuffer,
+                                instance, i, false);
+                        player.setCentreYPreserveSubpixel(curCentreY);
+                        prevLands = prevProbe != null && prevProbe.standing();
+                    }
+                    if (!prevLands) {
+                        continue;
+                    }
+                }
+                contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
+                        solidProfile, useStickyBuffer, instance, i, true);
             } else {
                 // Multi-piece solids don't use monitor solidity
                 // Pass piece index so sticky buffer only applies to the piece being ridden
