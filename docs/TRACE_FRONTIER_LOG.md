@@ -76,6 +76,40 @@ branch-local measurements.
   invocation.
 - Regression status: no same-game guard regression observed.
 
+## 2026-06-28 - S2 OOZ2 Obj48 launcher captures airborne CPU Tails by ROM routine - ENGINE FIX (Obj48 + focused tests, OOZ2 f1109 -> f1450)
+
+- Scope: independently verified branch `bugfix/ai-trace-s2-ooz2-f1109` in
+  worktree `.worktrees/trace-s2-ooz2-f1109`. The diff is limited to Obj48
+  launcher-ball capture and its focused unit tests; it does not hydrate trace
+  data and does not add zone, route, or frame carve-outs.
+- Fix: Obj48 now skips CPU Sidekick capture only when the mapped ROM
+  `Tails_CPU_routine` is `4`, matching `docs/s2disasm/s2.asm:51316-51319`.
+  Airborne CPU Tails in routine 6 can be captured, and capture latches the
+  live launcher object while mirroring the ROM `interact`, snap, velocity clear,
+  `obj_control=$81`, in-air, and on-object writes
+  (`docs/s2disasm/s2.asm:51349-51367`). The preceding Obj33 apex launch still
+  clears on-object and sets `y_vel=-$1000` before Obj48 can recapture
+  (`docs/s2disasm/s2.asm:49857-49883`).
+- Frontier movement: `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace`
+  advances from f1109 / 1101 errors (`tails_y_speed` expected `0x0000`,
+  actual `-0AB8`) to f1450 / 1302 errors (`tails_y_speed` expected `-0400`,
+  actual `-0648`). The new frontier is later sidekick movement after the Obj48
+  capture window, not the original airborne CPU-sidekick skip.
+- Verification:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Dtest=com.openggf.game.sonic2.objects.TestLauncherBallObjectInstance"" test"`
+  produced a clean focused Surefire report for `TestLauncherBallObjectInstance`
+  (3 tests, 0 failures). The local trace-replay profile also included the
+  expected-red OOZ2 report in MSE's aggregate output.
+  Targeted trace command:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace"" test"`
+  failed expected-red at f1450 with 1302 errors / 0 warnings, first field
+  `tails_y_speed`.
+  Guard command:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay"" test"`
+  exited 0; fresh Surefire reports show ARZ, EHZ1, MCZ, and SCZ all green. MSE
+  also printed the stale OOZ2 report from the previous targeted run, but OOZ2
+  was not part of the guard invocation.
+
 ## 2026-06-28 - S2 ARZ2 Obj28 vertical subpixel carry - ENGINE FIX (2 files, ARZ2 f553 -> f566)
 
 - Scope: continued the ARZ2 ChopChop destruction/animal/points lifetime window
