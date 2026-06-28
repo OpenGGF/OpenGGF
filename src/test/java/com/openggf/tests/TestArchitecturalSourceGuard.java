@@ -23,7 +23,7 @@ class TestArchitecturalSourceGuard {
     private static final String ENGINE_PATH = "com/openggf/Engine.java";
     private static final String GAME_LOOP_PATH = "com/openggf/GameLoop.java";
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2735;
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2747;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3065,

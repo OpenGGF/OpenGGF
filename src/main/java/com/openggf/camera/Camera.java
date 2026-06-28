@@ -582,10 +582,16 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				maxY += step;
 			}
 
-			// Clamp to target if we overshot
-			if ((diff > 0 && maxY > maxYTarget) || (diff < 0 && maxY < maxYTarget)) {
-				maxY = maxYTarget;
-			}
+			// ROM does NOT clamp the eased boundary to its target on either path
+			// (S1 DynamicLevelEvents.asm:5-49; S2 RunDynamicLevelEvents s2.asm:20329-
+			// 20364). On the move-up (decreasing) path, the snap deliberately sets
+			// Camera_Max_Y_pos = (Camera_Y_pos & $FFFE) - 2, which lands one step
+			// BELOW the target, and the ROM leaves it there; the boundary converges
+			// the next frame via the move-down (+2) path. From even start to even
+			// target the un-snapped 2px steps land on the target exactly, so no
+			// clamp is needed there either. An overshoot clamp here would override
+			// the deliberate below-target snap and produce a 2px-high bottom-boundary
+			// clamp on the following frame's ScrollVertical (S1 MZ3 f15324).
 
 			maxYChanging = true;
 		}
