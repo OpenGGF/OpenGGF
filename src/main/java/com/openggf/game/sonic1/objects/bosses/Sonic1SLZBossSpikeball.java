@@ -6,7 +6,6 @@ import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.Sonic1SeesawObjectInstance;
-import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -99,6 +98,12 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
     // Subtype value that triggers fragment spawning
     private static final int SUBTYPE_SPAWN_FRAGMENTS = 0x20;
 
+    // ROM Obj3F explosion timing (docs/s1disasm/_incObj/27, 3F Explosions.asm).
+    // S1 loads obTimeFrame = 8-1 = 7 (Sonic1GameModule.explosionInitialAnimDuration),
+    // advances obFrame every 8 frames, and DeleteObjects when obFrame reaches 5.
+    private static final int EXPLOSION_INITIAL_ANIM_DURATION = 7;
+    private static final int EXPLOSION_FINAL_FRAME = 5;
+
     // Fragment velocities (BossSpikeball_FragSpeed)
     private static final int[][] FRAGMENT_SPEEDS = {
             {-0x100, -0x340},  // left-up fast
@@ -146,6 +151,19 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
 
     // Fragment animation counter
     private int fragmentAnimCounter;
+
+    // ROM Obj3F explosion state. BossSpikeball_Explode does an IN-PLACE obID
+    // change (move.b #id_Explosion,obID(a0)) so the ball BECOMES the explosion in
+    // its own slot, keeping its objoff_3C (= linked seesaw address) for the whole
+    // ~41-frame explosion lifetime. The FixBugs=0 BSLZ_MakeBall .checkForBall scan
+    // (slots 1..63, raw objoff_3C compare) therefore still matches this lingering
+    // explosion and aborts a fresh drop on the same seesaw. The engine models the
+    // explosion in place (rather than destroying the ball + spawning a separate
+    // Explosion object) so the duplicate-scan sees the retained seesaw link, and
+    // so the boss's drop cadence stays ROM-faithful.
+    private boolean explosionStarted;
+    private int explosionAnimFrame;
+    private int explosionAnimDuration = -1;
 
     /**
      * Create a boss spikeball spawned by the SLZ boss above a target seesaw.
@@ -482,50 +500,66 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
         }
     }
 
-    // === EXPLODING — spawn explosion and optionally fragments ===
-    // ROM: BossSpikeball_Explode (routine 8)
+    // === EXPLODING — the ball becomes the bomb explosion IN PLACE ===
+    // ROM: BossSpikeball_Explode (routine 8) does `move.b #id_Explosion,obID(a0)`
+    // (an in-place obID change, NOT a fresh object) and then runs the standard
+    // Obj3F explosion (Expl_Main + ExItem_Animate). Because it is an in-place
+    // change, the object keeps its slot and its objoff_3C (= linked seesaw) for
+    // the whole explosion lifetime, which is exactly why BSLZ_MakeBall's broken
+    // FixBugs=0 .checkForBall scan still finds it and aborts a fresh drop on that
+    // seesaw. We therefore keep this object alive (rather than destroying it and
+    // spawning a separate Explosion) so the boss's duplicate-scan stays faithful.
+    // (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:833-864;
+    //  Obj3F lifetime docs/s1disasm/_incObj/27, 3F Explosions.asm:62-85)
     private void updateExploding() {
-        int bx = xPos >> 16;
-        int by = yPos >> 16;
+        if (!explosionStarted) {
+            explosionStarted = true;
+            int bx = xPos >> 16;
+            int by = yPos >> 16;
 
-        // ROM BossSpikeball_MakeFrag (loc_19086) runs `move.w objoff_34(a0),obY(a0)`
-        // BEFORE spawning the explosion-self and the four fragments, so on a
-        // self-destruct (obSubtype == $20) both the repositioned explosion (a0, whose
-        // obID was just changed to id_Explosion) and the fragments come out at the
-        // seesaw's origin Y, not the offset resting position the ball was flashing at.
-        // objoff_34 holds the linked seesaw's obY (BossSpikeball_Main:
-        // `move.w obY(a1),objoff_34(a0)`), which the engine models as seesawY.
-        // Without this reset the fragments spawned one BALL_Y_OFFSET (~8px) too high,
-        // so the fragment ROM places overlapping a standing player's hurt box
-        // (SLZ3 f7405: ROM frag @208A,02BB) instead sat just above it in the engine
-        // (@208A,02B3) and never hurt. Boss-hit / flying-landing explosions keep their
-        // current Y because those paths clear obSubtype to 0 before reaching Explode.
-        // (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:535,833-864)
-        if (subtypeCounter == SUBTYPE_SPAWN_FRAGMENTS && seesaw != null) {
-            by = seesawY;
-            yPos = seesawY << 16;
+            // ROM BossSpikeball_MakeFrag (loc_19086) runs `move.w objoff_34(a0),obY(a0)`
+            // BEFORE spawning the four fragments, so on a self-destruct
+            // (obSubtype == $20) both the (now-explosion) self and the fragments come
+            // out at the seesaw's origin Y, not the offset resting position the ball
+            // was flashing at. objoff_34 holds the linked seesaw's obY
+            // (BossSpikeball_Main: `move.w obY(a1),objoff_34(a0)`) = seesawY here.
+            // (SLZ3 f7405.)
+            if (subtypeCounter == SUBTYPE_SPAWN_FRAGMENTS && seesaw != null) {
+                by = seesawY;
+                yPos = seesawY << 16;
+            }
+
+            // ROM Obj3F Expl_Main: sfx_Bomb ($C4), obFrame = 0, obTimeFrame = 8-1.
+            try {
+                services().playSfx(Sonic1Sfx.BOSS_EXPLOSION.id);
+            } catch (Exception ignored) {
+                // audio failure must not break game logic
+            }
+
+            // ROM: cmpi.w #$20,obSubtype(a0) / beq.s BossSpikeball_MakeFrag.
+            // Fragments only on self-destruct (subtype == $20), not on boss hit (0).
+            // The fragments are SEPARATE FindFreeObj objects with NO seesaw link
+            // (objoff_3C = 0), so they never count toward the duplicate-scan.
+            if (subtypeCounter == SUBTYPE_SPAWN_FRAGMENTS) {
+                spawnFragments(bx, by);
+            }
+
+            explosionAnimFrame = 0;
+            explosionAnimDuration = EXPLOSION_INITIAL_ANIM_DURATION; // S1 = 7
         }
 
-        // ROM: move.b #id_ExplosionBomb,obID(a0) — replace self with bomb explosion (0x3F)
-        // Same explosion type as bomb badnik, uses Map_ExplodeBomb + ArtTile_Explosion
-        var objectManager = services().objectManager();
-        var renderManager = services().renderManager();
-        if (objectManager != null && renderManager != null) {
-            final int fbx = bx;
-            final int fby = by;
-            spawnFreeChild(() -> new ExplosionObjectInstance(
-                    0x3F, fbx, fby, renderManager));
-            // ROM: sfx_Bomb ($C4)
-            services().playSfx(Sonic1Sfx.BOSS_EXPLOSION.id);
+        // ROM ExItem_Animate: subq obTimeFrame; bpl display; else reload, advance
+        // frame; delete when frame reaches 5 (~41 frames total).
+        explosionAnimDuration--;
+        if (explosionAnimDuration >= 0) {
+            return;
         }
-
-        // ROM: cmpi.w #$20,obSubtype(a0) / beq.s BossSpikeball_MakeFrag
-        // Fragments only spawn on self-destruct (subtype == $20), not on boss hit (subtype == 0)
-        if (subtypeCounter == SUBTYPE_SPAWN_FRAGMENTS) {
-            spawnFragments(bx, by);
+        explosionAnimDuration = EXPLOSION_INITIAL_ANIM_DURATION;
+        explosionAnimFrame++;
+        if (explosionAnimFrame >= EXPLOSION_FINAL_FRAME) {
+            // ROM DeleteObject — slot freed, objoff_3C cleared, drops allowed again.
+            setDestroyed(true);
         }
-
-        setDestroyed(true);
     }
 
     // === FRAGMENT — fragment movement with gravity and rotation ===
@@ -831,6 +865,18 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
             return;
         }
 
+        if (currentState == State.EXPLODING) {
+            // ROM: the in-place obID change makes this object Obj3F (bomb explosion,
+            // Map_ExplodeBomb + ArtTile_Explosion), shared with the engine's
+            // ExplosionObjectInstance via the explosion renderer.
+            PatternSpriteRenderer explosionRenderer = renderManager.getExplosionRenderer();
+            if (explosionRenderer != null && explosionRenderer.isReady()
+                    && explosionAnimFrame < EXPLOSION_FINAL_FRAME) {
+                explosionRenderer.drawFrameIndex(explosionAnimFrame, xPos >> 16, yPos >> 16, false, false);
+            }
+            return;
+        }
+
         PatternSpriteRenderer renderer = renderManager.getRenderer(ObjectArtKeys.SLZ_SEESAW_BALL);
         if (renderer == null || !renderer.isReady()) {
             return;
@@ -852,6 +898,13 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
+        // ROM Obj3F (the in-place explosion) has no off-screen delete — it runs a
+        // fixed ~41-frame animation timer then DeleteObjects. Keep the exploding
+        // ball alive regardless of screen position so its slot (and seesaw link
+        // for the boss duplicate-scan) persists for the ROM-accurate window.
+        if (currentState == State.EXPLODING) {
+            return !isDestroyed();
+        }
         return !isDestroyed() && isOnScreen();
     }
 }

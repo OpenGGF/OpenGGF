@@ -46,7 +46,8 @@ public class Sonic1ObjectPlacement {
      *
      * @param zone Zone index (0-based)
      * @param act  Act index (0-based)
-     * @return Sorted, immutable list of object spawns
+     * @return chunk-ordered (ROM layout-table order preserved within each 0x80
+     *         column), immutable list of object spawns
      */
     public List<ObjectSpawn> load(int zone, int act) {
         int baseAddr = Sonic1Constants.OBJ_POS_INDEX_ADDR;
@@ -79,7 +80,16 @@ public class Sonic1ObjectPlacement {
             cursor += RECORD_SIZE;
         }
 
-        spawns.sort(Comparator.comparingInt(ObjectSpawn::x));
+        // ROM parity: ObjPosLoad walks the layout table in stored order within
+        // each chunk-aligned ($80) spawn column (docs/s1disasm/_inc/ObjPosLoad.asm
+        // OPL_MovedRight/OPL_MovedLeft scans, FindFreeObj hands out ascending
+        // slots in that order). Sort by chunk only (stable), so objects the level
+        // data stores slightly out of full-X order within one chunk keep their
+        // ROM table order -- a strict full-X sort would re-order co-column objects
+        // (e.g. SBZ2 0x72@0x1594 before 0x15@0x1590/Bomb@0x1590) and assign them
+        // the wrong FindFreeObj slots. AbstractPlacementManager re-applies the
+        // same chunk-granular stable order.
+        spawns.sort(Comparator.comparingInt(s -> s.x() & 0xFF80));
         return List.copyOf(spawns);
     }
 

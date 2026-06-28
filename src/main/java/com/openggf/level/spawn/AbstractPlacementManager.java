@@ -19,6 +19,32 @@ public abstract class AbstractPlacementManager<T extends SpawnPoint> {
 
     protected List<T> spawns;
     private int identityMissCount;
+
+    /**
+     * ROM-faithful spawn ordering: by chunk-aligned X ({@code x & 0xFF80}),
+     * <em>stable</em> so objects within the same 0x80 chunk keep their source
+     * (ROM layout-table) order.
+     * <p>
+     * ROM ObjPosLoad (S1) / ObjectsManager_Main (S2/S3K) window objects against
+     * chunk-aligned spawn-window edges ({@code v_opl_screen & $FF80} ± $80/$280;
+     * docs/s1disasm/_inc/ObjPosLoad.asm OPL_Main/OPL_Next, s2.asm:33045-33117),
+     * so every object inside a single 0x80 column always loads in the same
+     * ObjPosLoad pass, and the forward/backward scans walk the layout table in
+     * stored order ({@code a0 += 6} / {@code a0 -= 6}). FindFreeObj then hands out
+     * ascending free slots in that order. A strict full-X sort reorders objects
+     * that the level data stores slightly out of X order within one chunk (e.g.
+     * SBZ2's 0x72@0x1594 stored before 0x15@0x1590 / Bomb@0x1590), which assigns
+     * those co-column objects the wrong FindFreeObj slots. Sorting by chunk keeps
+     * the within-chunk order equal to the source list's order, matching ROM.
+     * <p>
+     * For lists already sorted ascending by full X within each chunk (S2/S3K
+     * layout tables are authored that way), this is identical to the old full-X
+     * sort. The window/lowerBound math uses chunk-aligned edges
+     * (see {@link #getWindowStart}/{@link #getWindowEnd}), so within-chunk X
+     * wiggle never affects a boundary decision.
+     */
+    private static final Comparator<SpawnPoint> CHUNK_GRANULAR_ORDER =
+            Comparator.comparingInt(p -> p.x() & 0xFF80);
     protected final Set<T> active = new LinkedHashSet<>();
     protected final Collection<T> activeUnmodifiable = Collections.unmodifiableCollection(active);
     protected final Map<T, Integer> spawnIndexMap = new IdentityHashMap<>();
@@ -46,7 +72,7 @@ public abstract class AbstractPlacementManager<T extends SpawnPoint> {
     private AbstractPlacementManager(List<T> spawns, int loadAheadFixed, int unloadBehind,
             java.util.function.IntSupplier widthSupplier, int extraAhead) {
         ArrayList<T> sorted = new ArrayList<>(spawns);
-        sorted.sort(Comparator.comparingInt(SpawnPoint::x));
+        sorted.sort(CHUNK_GRANULAR_ORDER);
         this.spawns = Collections.unmodifiableList(sorted);
         this.loadAheadFixed = loadAheadFixed;
         this.extraAhead = extraAhead;
@@ -66,7 +92,7 @@ public abstract class AbstractPlacementManager<T extends SpawnPoint> {
         active.clear();
         spawnIndexMap.clear();
         ArrayList<T> sorted = new ArrayList<>(newSpawns);
-        sorted.sort(Comparator.comparingInt(SpawnPoint::x));
+        sorted.sort(CHUNK_GRANULAR_ORDER);
         this.spawns = Collections.unmodifiableList(sorted);
         for (int i = 0; i < this.spawns.size(); i++) {
             spawnIndexMap.put(this.spawns.get(i), i);
