@@ -170,11 +170,6 @@ public class SlidingSpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean usesEnemyTouchCategoryOverride() {
-        return true;
-    }
-
-    @Override
     public int getOnScreenHalfWidth() {
         return WIDTH_PIXELS;
     }

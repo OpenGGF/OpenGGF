@@ -69,6 +69,38 @@ branch-local measurements.
   Obj64 fix must preserve the MTZ3 f1973 frontier in the same verification
   round.
 
+## 2026-06-29 - S2 OOZ2 Obj43 sliding spike hurt decode - ENGINE FIX (Obj43 + focused test, OOZ2 f1450 -> f1601)
+
+- Scope: independently verified branch `bugfix/ai-trace-s2-ooz2-r2` in
+  worktree `.worktrees/trace-s2-ooz2-r2`. The diff is limited to Obj43 sliding
+  spike touch-response decode, focused OOZ placed-object coverage, and the
+  required changelog/frontier documentation. It does not hydrate trace data and
+  does not add zone, route, or frame carve-outs.
+- Root/fix: ROM `Obj43_Init` writes `move.b #$A5,collision_flags(a1)`
+  (`docs/s2disasm/s2.asm:49986-49992`). `$A5` carries the normal `$80` HURT
+  category plus size index `$25`, so rolling CPU Tails must enter
+  `Hurt_Sidekick` on overlap. The engine forced Obj43 through ENEMY handling,
+  causing rolling Tails to be treated as attacking the spike and leaving him in
+  routine `$02` with the prior fall velocity. Removing the enemy-category
+  override lets the shared touch decoder route `$A5` to HURT and apply the ROM
+  sidekick hurt bounce (`x_vel=+$0200`, `y_vel=-$0400`) at the f1450 contact.
+- Frontier movement: `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace`
+  advances from f1450 / 1302 errors (`tails_y_speed` expected `-0400`,
+  actual `-0648`) to f1601 / 1303 errors (`tails_x` expected `0x04A1`,
+  actual `0x04A0`). The new frontier is a later Obj45 OOZ spring / sidekick
+  handoff state (`near tails s22 0x45 @04B5,03D0`), not the Obj43 hurt decode.
+- Verification:
+  `mvn "-Dtest=TestOOZPlacedObjectGaps" "-DfailIfNoTests=false" test`
+  passed the focused Obj43 decode assertion after first failing as expected
+  with `FORCE_ENEMY`.
+  Targeted trace command:
+  `mvn "-Dtest=TestS2Ooz2LevelSelectTraceReplay" "-Dsonic2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+  failed expected-red at f1601 with 1303 errors / 0 warnings, first field
+  `tails_x`.
+  Guard command:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay" "-Dsonic2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+  exited 0; fresh Surefire reports show ARZ, EHZ1, MCZ, and SCZ all green.
+
 ## 2026-06-28 - S2 OOZ2 Obj48 launcher captures airborne CPU Tails by ROM routine - ENGINE FIX (Obj48 + focused tests, OOZ2 f1109 -> f1450)
 
 - Scope: independently verified branch `bugfix/ai-trace-s2-ooz2-f1109` in
