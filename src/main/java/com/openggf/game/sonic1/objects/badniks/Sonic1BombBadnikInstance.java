@@ -223,11 +223,21 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
      */
     private void updateWalk(int frameCounter, AbstractPlayableSprite player) {
         checkSonic(player);
+
+        // ROM Bom_Action_Waiting decrements bom_time on the SAME frame, AFTER
+        // Bom_CheckStartFuse returns (subq.w #1,bom_time(a0); docs/s1disasm/
+        // _incObj/5F Badnik - Walking Bomb.asm:56-66). When the fuse just
+        // started, bom_time was set to 143 and is immediately decremented to
+        // 142; the bpl then returns (142 >= 0) without running the
+        // advance-to-walking branch. Performing this tick before the
+        // state-change early-return reproduces ROM's same-frame decrement so
+        // the fuse expires at T+143, not T+144 (SBZ2 f1595: four bombs exploded
+        // into id_Explosion one frame late, drifting OST free-slot cadence).
+        timer--;
         if (state != STATE_WALK) {
-            return; // chksonic may have transitioned to explode
+            return; // chksonic transitioned to explode; bpl returns this frame
         }
 
-        timer--;
         if (timer < 0) {
             // Timer expired: start walking
             state = STATE_WAIT;
@@ -265,11 +275,19 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
      */
     private void updateWait(int frameCounter, AbstractPlayableSprite player) {
         checkSonic(player);
+
+        // ROM Bom_Action_Walking likewise decrements bom_time on the SAME frame
+        // after Bom_CheckStartFuse (subq.w #1,bom_time(a0); docs/s1disasm/
+        // _incObj/5F Badnik - Walking Bomb.asm:69-79). When the fuse just
+        // started, bom_time (143 -> 142) does not go minus, so bmi is not taken
+        // and the routine falls through to SpeedToPos with obVelX already
+        // cleared (a no-op). Decrement before the state-change early-return to
+        // match ROM's fuse start tick (see updateWalk).
+        timer--;
         if (state != STATE_WAIT) {
-            return; // chksonic may have transitioned to explode
+            return; // chksonic transitioned to explode; bmi not taken this frame
         }
 
-        timer--;
         if (timer < 0) {
             // Timer expired: stop walking, return to stand state
             state = STATE_WALK;
@@ -404,12 +422,22 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
 
         // btst #1,obStatus(a0) / beq.s .normal / neg.w obVelY(a1)
         final int fuseYSpeed = ceilingBomb ? -FUSE_Y_SPEED : FUSE_Y_SPEED;
-        // ROM: FindNextFreeObj allocates slot after bomb
+        // ROM: FindNextFreeObj allocates the slot AFTER the bomb. When object RAM
+        // is full past the bomb, ROM's `bsr.w FindNextFreeObj / bne.s .return`
+        // (Walking Bomb.asm:111-112) leaves the body activated to explode but
+        // does NOT create the fuse. Allocate up front so a failure skips the
+        // fuse rather than letting spawnFreeChild fall back to a lowest-free
+        // FindFreeObj slot (which would fabricate a fuse the ROM never made and
+        // drift OST cadence).
         final int mySlot = getSlotIndex();
+        final int fuseSlot = mySlot >= 0 ? objectManager.allocateSlotAfter(mySlot) : -1;
+        if (fuseSlot < 0) {
+            return; // bne.s .return: object RAM full after bomb, no fuse spawned
+        }
         spawnFreeChild(() -> {
             Sonic1BombFuseInstance fuse = new Sonic1BombFuseInstance(
                     currentX, currentY, facingLeft, ceilingBomb, FUSE_TIME, fuseYSpeed, this);
-            ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, fuse, mySlot);
+            fuse.setSlotIndex(fuseSlot);
             return fuse;
         });
     }
@@ -485,13 +513,34 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
             // Using lowest-free FindFreeObj instead put the shrapnel below the
             // high-slot fuse, drifting OST occupancy and cascading later
             // FindFreeObj allocations (SBZ2 f1596 -> the f2306 conveyor slot).
+            //
+            // ROM .loopShrapnel runs `bsr.w FindNextFreeObj / bne.s .nextShrapnel`
+            // (docs/s1disasm/_incObj/sub FindFreeObj.asm:32-50, Walking Bomb.asm:
+            // 191-192): when no slot is free AFTER the fuse (object RAM full past
+            // the parent), the shrapnel is NOT created — the dbf just moves on.
+            // Allocate the slot up front so a FindNextFreeObj failure SKIPS the
+            // piece, instead of letting spawnFreeChild fall back to a lowest-free
+            // FindFreeObj slot. The fallback fabricated shrapnel the ROM never
+            // made (SBZ2 f1596: when four fuses expired the same frame but only
+            // six high slots were free, ROM made shrapnel for the first two
+            // fuses and skipped the rest; the engine packed the overflow into low
+            // free slots, drifting OST cadence into the f6839 bomb-slot error).
+            final int assignedSlot;
+            if (firstPiece) {
+                assignedSlot = fuseSlot;            // movea.l a0,a1: reuse fuse slot
+            } else if (fuseSlot >= 0) {
+                assignedSlot = objectManager.allocateSlotAfter(fuseSlot); // FindNextFreeObj
+                if (assignedSlot < 0) {
+                    continue;                        // bne.s .nextShrapnel: skip this piece
+                }
+            } else {
+                assignedSlot = -1;
+            }
             spawnFreeChild(() -> {
                 Sonic1BombShrapnelInstance shrapnel = new Sonic1BombShrapnelInstance(
                         fuseX, fuseY, vx, vy, deferFirstMove);
-                if (firstPiece && fuseSlot >= 0) {
-                    shrapnel.setSlotIndex(fuseSlot);
-                } else if (fuseSlot >= 0) {
-                    ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, shrapnel, fuseSlot);
+                if (assignedSlot >= 0) {
+                    shrapnel.setSlotIndex(assignedSlot);
                 }
                 return shrapnel;
             });

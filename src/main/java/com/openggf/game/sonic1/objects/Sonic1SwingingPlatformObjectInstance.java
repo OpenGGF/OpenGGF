@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -519,6 +521,51 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
         return !isDestroyed() && isBaseXOnScreen();
     }
 
+    @Override
+    public int getOutOfRangeReferenceX() {
+        // ROM Swing_ChkDel feeds swing_origX (objoff_3A = the pivot) to the
+        // out_of_range macro, NOT the swung platform/ball obX
+        // (docs/s1disasm/_incObj/15 Swinging Platforms.asm:247). The counter-
+        // based unload path deletes only when isPersistent() is false AND
+        // isObjectOutOfRange() is true; the latter uses this reference X. The
+        // default returns getX() (the oscillating obX), which swings up to ~0x70
+        // toward the camera and stayed "in range" for extra frames after the
+        // pivot left the window — so the parent lingered in its SST slot after
+        // ROM's Swing_DelAll had freed it (and after its own chain children,
+        // which DO key on the pivot, had unloaded). That stale parent slot
+        // permuted the next swing assembly's FindFreeObj chain allocation
+        // (SBZ2 f2103: old parent slot 0x5E held while ROM freed it, shifting
+        // the new chain into slots 53/54 that ROM left free -> the f6839 bomb
+        // slot error). Keying the parent on the pivot makes it unload on the
+        // same frame as its chain links, matching Swing_DelAll's en-masse delete.
+        return baseX;
+    }
+
+    @Override
+    public void onUnload() {
+        // ROM Swing_ChkDel -> Swing_DelAll loops the parent's stored chain-slot
+        // array and DeleteChild's every link the same frame the parent leaves
+        // range (docs/s1disasm/_incObj/15 Swinging Platforms.asm:256-269). The
+        // chain links are persistent (no self out_of_range), so the parent owns
+        // their teardown. Free each link's SST slot immediately, exactly when the
+        // parent unloads — this happens at the parent's ExecuteObjects slot, after
+        // any lower-slot sibling assembly's makechain has already allocated, so a
+        // freshly loaded chain never grabs a slot ROM still held for this expiring
+        // chain. Mirrors Sonic1SpikedBallChainObjectInstance.onUnload.
+        ObjectManager objectManager = tryServices() != null ? tryServices().objectManager() : null;
+        if (chainLinkChildren == null) {
+            return;
+        }
+        for (SwingChainLinkChild child : chainLinkChildren) {
+            if (child != null) {
+                ObjectLifetimeOps.expireDynamic(child);
+                if (objectManager != null) {
+                    objectManager.removeDynamicObject(child);
+                }
+            }
+        }
+    }
+
     private boolean isBaseXOnScreen() {
         return isInRangeAt(baseX);
     }
@@ -623,6 +670,27 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
         @Override
         public void update(int frameCounter, PlayableEntity player) {
             // Render-only (ROM Swing_Display): positioned by the anchor each frame.
+        }
+
+        @Override
+        public boolean isPersistent() {
+            // ROM chain links run routine $A Swing_Display (bra.w DisplaySprite)
+            // — they have NO out_of_range check and NEVER self-delete. The whole
+            // chain is deleted EN MASSE by the parent's Swing_ChkDel ->
+            // Swing_DelAll, which DeleteChild's every stored link slot AT THE
+            // PARENT'S OWN ExecuteObjects slot (docs/s1disasm/_incObj/15 Swinging
+            // Platforms.asm:247-269). A link must therefore stay alive until the
+            // parent unloads, even when the link's own (lower) SST slot is reached
+            // earlier in the slot-ordered ExecuteObjects pass. Letting a link
+            // self-delete at its own slot freed that slot BEFORE a higher-slot
+            // sibling assembly's makechain ran in the same frame, so a newly
+            // loaded swing chain grabbed slots ROM still held for the expiring
+            // chain (SBZ2 f2103: the new chain took freed slots 0x35/0x36 that ROM
+            // left occupied, gaining a 7th link and permuting every later
+            // FindFreeObj down to the f6839 bomb-slot error). Mirrors the
+            // SpikedBallChain (Obj 0x57) ChainChild, which is likewise parent-
+            // deleted. The parent's onUnload performs the en-masse DeleteChild.
+            return !isDestroyed();
         }
 
         @Override
