@@ -604,12 +604,28 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
      * Sets seesaw tilt angle, checks if player should be launched, clears velocity.
      */
     private void transitionToSeesawResting(int landingAngle) {
+        // ROM loc_18FA2 guards the player launch with TWO checks, evaluated AFTER
+        // writing the landing angle d1 into both objoff_3A slots:
+        //   cmp.b   obFrame(a1),d1   ; compare the seesaw's CURRENT visual frame to d1
+        //   beq.s   loc_19008        ; tilt did not change -> skip the launch
+        //   bclr    #3,obStatus(a1)  ; clear the "player standing" bit, test the old value
+        //   beq.s   loc_19008        ; player was not registered standing -> skip the launch
+        // (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:776-806).
+        // The first guard (tilt actually changed) was missing: the ball that lands on
+        // the side the seesaw is ALREADY tilted toward (landingAngle == obFrame) does
+        // NOT flip the seesaw, so it must not catapult the standing player — instead the
+        // resting spikeball's col_hurt collision simply spikes whoever is on the seesaw.
+        // Omitting it made the engine launch the player on the landing frame whenever
+        // they were standing, so a standing Sonic was flung upward (y_speed -07E0) one
+        // frame before the ROM, where the ball instead lands harmlessly that frame and
+        // hurts him the next (Sonic_Hurt: y_speed -0400). Compare against getMappingFrame()
+        // (obFrame) BEFORE setTargetFrame, which only updates the tilt TARGET (objoff_3A).
+        // (SLZ3 trace f7198/f7199.)
+        boolean tiltChanged = (landingAngle != seesaw.getMappingFrame());
         seesaw.setTargetFrame(landingAngle);
         storedFrame = landingAngle;
 
-        // ROM: cmp.b obFrame(a1),d1 — check if tilt actually changed
-        // ROM: bclr #3,obStatus(a1) / beq.s loc_19008 — check if player was standing
-        if (seesaw.isPlayerStanding()) {
+        if (tiltChanged && seesaw.isPlayerStanding()) {
             launchStandingPlayer();
         }
 
