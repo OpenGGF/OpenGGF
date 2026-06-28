@@ -247,6 +247,18 @@ public class TestS2ObjectOccupancyOracle {
                         + "until routine 2 on the next object pass; slots " + check.summary());
     }
 
+    @Test
+    public void arz2ChopChopAnimalKeepsObjectMoveAndFallSubpixelCarry() throws Exception {
+        AnimalPositionCheck check = animalPositionAtArz2Frame(553);
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj28 ObjectMoveAndFall should keep the animal at the Obj27 x-position while popping; slots "
+                        + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj28 ObjectMoveAndFall must apply old y_vel through the ROM subpixel accumulator "
+                        + "before gravity; slots " + check.summary());
+    }
+
     private AnimalPositionCheck animalPositionAtArz2Frame(int targetFrame) throws Exception {
         return driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {

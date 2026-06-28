@@ -27,6 +27,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private final PatternSpriteRenderer renderer;
     private int currentX;
     private int currentY;
+    private int ySubpixel;
     private int xVelocity;
     private int yVelocity;
     private int groundXVelocity;
@@ -135,13 +136,25 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     }
 
     private void objectMoveAndFall() {
-        yVelocity += GRAVITY;
-        objectMove();
+        currentX += (xVelocity >> 8);
+        SubpixelMotion.State motion = new SubpixelMotion.State(
+                currentX, currentY, 0, ySubpixel, 0, yVelocity);
+        SubpixelMotion.objectFall(motion, GRAVITY);
+        applyVerticalMotion(motion);
     }
 
     private void objectMove() {
         currentX += (xVelocity >> 8);
-        currentY += (yVelocity >> 8);
+        SubpixelMotion.State motion = new SubpixelMotion.State(
+                currentX, currentY, 0, ySubpixel, 0, yVelocity);
+        SubpixelMotion.speedToPosY(motion);
+        applyVerticalMotion(motion);
+    }
+
+    private void applyVerticalMotion(SubpixelMotion.State motion) {
+        currentY = motion.y;
+        ySubpixel = motion.ySub;
+        yVelocity = motion.yVel;
     }
 
     private boolean checkFloorCollision() {
