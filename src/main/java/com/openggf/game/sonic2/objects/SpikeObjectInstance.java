@@ -76,11 +76,11 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
             return Integer.MAX_VALUE;
         }
         // OOZ f1778 still falls through FollowLeft while Tails is moving right.
-        // At f1779 the previous SolidObject side response has flipped inertia to
-        // -$80, and Obj36's status byte is still visible to TailsCPU_Normal's
-        // status(a0) test, preserving delayed RIGHT into Tails_TurnRight
+        // By f1782 the post-Obj33 spike ride still has eight grace frames left,
+        // and Obj36's status byte is visible to TailsCPU_Normal's status(a0)
+        // test, preserving delayed RIGHT into Tails_TurnRight
         // (docs/s2disasm/s2.asm:39291-39294, 39958-39985).
-        return player.getGSpeed() < 0 ? 11 : 14;
+        return player.getGSpeed() < 0 ? 8 : 14;
     }
 
 }

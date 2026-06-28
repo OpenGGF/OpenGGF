@@ -35,6 +35,28 @@ branch-local measurements.
   verification because it regressed EHZ1 at f1417 by changing animal horizontal
   lifetime/slot cadence.
 
+## 2026-06-28 - S2 OOZ post-Obj33 Obj36 sidekick push-grace threshold - ENGINE FIX (Obj36 local + focused test, OOZ1 advances)
+
+- Scope: followed the OOZ1 post-Obj33 divergence to the live ROM/engine ride
+  slot. At f1782 both ROM and engine have Tails on Obj36 slot `0x1D`
+  (`@0CF0,0594`), not Obj33; the remaining Obj33 probe was therefore reverted.
+- Fix: Obj36 already opts into the S2 `TailsCPU_Normal` current `Status_Push`
+  bridge. Lower the negative-inertia CPU sidekick minimum from 11 to 8 frames
+  so the OOZ1 f1782 state (`normalPushingGraceFrames=8`, `g_speed=-000C`)
+  uses the ROM-visible Obj36 status byte instead of running a stale
+  follow-steering nudge. Positive-inertia riders keep the previous 14-frame
+  threshold; non-CPU riders remain disabled. Disassembly basis: Obj36 uses the
+  shared SolidObject status byte and `TailsCPU_Normal` reads current
+  `Status_Push` before the later solid pass (`docs/s2disasm/s2.asm:39291-39294`;
+  turn-right path `39958-39985`).
+- Frontier movement: `s2_ooz1` advances f1782 / 1303 errors (`tails_x`
+  expected `0x0CE4`, actual `0x0CE3`) to f1784 / 1256 errors
+  (`tails_x_speed` expected `0x000C`, actual `-000C`). `s2_ooz2` holds
+  f1109 / 1101 errors (`tails_y_speed` expected `0x0000`, actual `-0AB8`).
+- Verification: focused Obj36/Obj33 tests passed; the OOZ pair was expected-red
+  with the frontier above and no OOZ2 regression; selected S2 ARZ/EHZ/MCZ/SCZ
+  guard traces passed.
+
 ## 2026-06-28 - S2 OOZ Obj33 popping-platform launch parity cleanup - ENGINE FIX (1 file + focused tests, OOZ traces non-regressing)
 
 - Scope: compared `OOZPoppingPlatformObjectInstance` against Sonic 2 Obj33 and

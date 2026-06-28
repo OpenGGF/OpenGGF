@@ -300,6 +300,27 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void s2SpikesUsePostObj33SidekickPushGraceThreshold() {
+        SpikeObjectInstance spikes = new SpikeObjectInstance(
+                new ObjectSpawn(0x0CF0, 0x0594, Sonic2ObjectIds.SPIKES, 0x30, 2, false, 0x4650),
+                "Spikes");
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0CE3, (short) 0x0574);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0CE3, (short) 0x0574);
+        tails.setCpuControlled(true);
+
+        tails.setGSpeed((short) -0x000C);
+        assertFalse(spikes.preservesSidekickCpuPushGraceWhileRiding(sonic));
+        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(sonic));
+        assertTrue(spikes.preservesSidekickCpuPushGraceWhileRiding(tails));
+        assertEquals(8, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
+                "OOZ1 f1782 reaches Obj36 riding push grace with eight frames remaining");
+
+        tails.setGSpeed((short) 0x0080);
+        assertEquals(14, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
+                "The faster positive-inertia spike ride keeps the conservative existing bridge window");
+    }
+
+    @Test
     void spikeTouchChkHurt2RewindsCurrentYVelocityBeforeHurt() {
         ObjectManager objectManager = mock(ObjectManager.class);
         when(objectManager.getPreContactYSpeed()).thenReturn((short) 0xFE30);
