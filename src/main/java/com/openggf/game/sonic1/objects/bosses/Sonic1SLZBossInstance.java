@@ -275,6 +275,22 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
         // gravity steps (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike
         // Balls.asm:259-302).
         if (timer == BALL_SPAWN_DELAY) {
+            // ROM BSLZ_MakeBall .checkForBall: before allocating the ball, scan
+            // object RAM for an object whose objoff_3C already points at the target
+            // seesaw (i.e. a boss spikeball already in flight toward it) and abort
+            // the drop if found (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and
+            // Spike Balls.asm:280-285,307-309). The released REV00/REV01 ROM builds
+            // with FixBugs=0, so the scan covers only object slots 1..63 (the buggy
+            // half-pool range at lines 275-278) -- a duplicate ball that spilled into
+            // a slot >= 64 is NOT detected, which is exactly how the ROM ends up with
+            // two balls on one seesaw. On abort the routine returns to ShipMove
+            // (.abortDrop subtracts 2 from ob2ndRout and branches to BSLZ_ShipUpdate,
+            // which runs BossMove + sine), so model it as an immediate return to
+            // SCANNING with BossMove/sine enabled.
+            if (targetSeesawHasPendingBall()) {
+                state.routineSecondary = STATE_SCANNING;
+                return true;
+            }
             spawnBossSpikeball();
         }
         timer--;
@@ -445,6 +461,39 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
                 }
             }
         }
+    }
+
+    // ROM FixBugs=0 BSLZ_MakeBall .checkForBall scans object slots 1..63 only
+    // (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:275-285).
+    private static final int FIXBUGS_DUP_SCAN_LAST_SLOT = 63;
+
+    /**
+     * ROM BSLZ_MakeBall .checkForBall: is there already an object pointing at the
+     * target seesaw (objoff_3C == seesaw address) within the FixBugs=0 half-pool
+     * scan range (slots 1..63)? Balls in slots >= 64 are invisible to the buggy
+     * scan and therefore do NOT block a new drop.
+     */
+    private boolean targetSeesawHasPendingBall() {
+        if (targetSeesawIndex < 0 || targetSeesawIndex >= seesaws.size()) {
+            return false;
+        }
+        if (services().objectManager() == null) {
+            return false;
+        }
+        Sonic1SeesawObjectInstance target = seesaws.get(targetSeesawIndex);
+        for (ObjectInstance obj : services().objectManager().getActiveObjects()) {
+            if (!(obj instanceof Sonic1SLZBossSpikeball ball) || ball.isDestroyed()) {
+                continue;
+            }
+            if (ball.isFragment() || ball.getTargetSeesaw() != target) {
+                continue;
+            }
+            // FixBugs=0: only slots 1..63 are scanned.
+            if (ball.getSlotIndex() >= 0 && ball.getSlotIndex() <= FIXBUGS_DUP_SCAN_LAST_SLOT) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

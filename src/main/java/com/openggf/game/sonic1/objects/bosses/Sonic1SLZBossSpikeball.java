@@ -204,6 +204,16 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
         this.fragmentAnimCounter = 0;
     }
 
+    /** Target seesaw this ball was dropped on (ROM objoff_3C). Null for fragments. */
+    public Sonic1SeesawObjectInstance getTargetSeesaw() {
+        return seesaw;
+    }
+
+    /** True while this object is an explosion fragment (no seesaw linkage). */
+    public boolean isFragment() {
+        return currentState == State.FRAGMENT;
+    }
+
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         seedCapturedScalars(ctx);
@@ -400,6 +410,18 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
         // ROM: move.w #$20,obSubtype(a0) — set for potential fragment spawn on self-destruct
         subtypeCounter = SUBTYPE_SPAWN_FRAGMENTS;
         currentState = State.FLYING;
+
+        // ROM BossSpikeball_Bounce ends with `addq.b #2,obRoutine(a0) / bra.w
+        // BossSpikeball_HitBoss` (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and
+        // Spike Balls.asm:610-614): the launch frame falls straight through into the
+        // flying routine, so the ball already applies its first ObjectFall step (and
+        // the ascending double-gravity past the apex) on the frame it launches.
+        // Returning here instead left the ball stationary for one frame, so its whole
+        // flight — and the landing that springs the standing player — lagged ROM by
+        // one frame (SLZ3 f6507: ROM springs the player at f6507, the engine sprang
+        // at f6508). Mirrors the same fall-through fix on the seesaw's own spikeball
+        // (Sonic1SeesawBallObjectInstance.updateResting).
+        updateFlying();
     }
 
     // === FLYING — launched, check boss collision and landing ===
