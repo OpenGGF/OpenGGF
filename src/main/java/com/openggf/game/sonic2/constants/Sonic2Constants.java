@@ -866,6 +866,10 @@ public class Sonic2Constants {
     public static final int ART_NEM_BURNER_LID_ADDR = 0x80274;   // ArtNem_BurnerLid (verified via RomOffsetFinder)
     public static final int ART_NEM_OOZ_BURN_ADDR = 0x81514;     // ArtNem_OOZBurn (verified via RomOffsetFinder)
 
+    // SlidingSpike / OOZSpring (Objects 0x43/0x45)
+    public static final int ART_NEM_SPIKY_THING_ADDR = 0x8007C;   // ArtNem_SpikyThing (verified via RomOffsetFinder)
+    public static final int ART_NEM_PUSH_SPRING_ADDR = 0x80C64;   // ArtNem_PushSpring (verified via RomOffsetFinder)
+
     // OOZ Launcher (Object 0x3D) - striped blocks that launch rolling player
     public static final int ART_NEM_STRIPED_BLOCKS_VERT_ADDR = 0x8030A;  // ArtNem_StripedBlocksVert (CPZ)
     public static final int ART_NEM_STRIPED_BLOCKS_HORIZ_ADDR = 0x81048; // ArtNem_StripedBlocksHoriz (OOZ)
@@ -990,6 +994,8 @@ public class Sonic2Constants {
     public static final int MAP_UNC_OBJ33_B_ADDR = 0x23DF0;          // Obj33_MapUnc_23DF0 (Burn Flame)
     public static final int MAP_UNC_OBJ3F_HORIZ_ADDR = 0x2AA12;      // Obj3F_MapUnc_2AA12 (Fan Horiz)
     public static final int MAP_UNC_OBJ3F_VERT_ADDR = 0x2AAC4;       // Obj3F_MapUnc_2AAC4 (Fan Vert)
+    public static final int MAP_UNC_OBJ43_ADDR = 0x23FE0;            // Obj43_MapUnc_23FE0 (OOZ SlidingSpike)
+    public static final int MAP_UNC_OBJ45_ADDR = 0x2451A;            // Obj45_MapUnc_2451A (OOZ Pressure Spring)
     public static final int MAP_UNC_LAUNCH_BALL_ADDR = 0x254FE;      // Obj48_MapUnc_254FE
     public static final int MAP_UNC_OBJ3D_ADDR = 0x250BA;            // Obj3D_MapUnc_250BA (OOZ Launcher)
     public static final int MAP_UNC_OBJ1F_A_ADDR = 0x10F0C;          // Obj1F_MapUnc_10F0C (default/MZ/SLZ/SBZ Collapsing - obj1F_a.asm)
