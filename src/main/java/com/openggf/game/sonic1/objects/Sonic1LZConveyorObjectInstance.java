@@ -124,6 +124,14 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
     private int spawnerSlotIndex;    // v_obj63 slot index (objoff_2F & 0x7F)
     private boolean spawnerDone;     // set after spawning children
 
+    // Platform #0 only: the maker's v_obj63 dedup slot it must clear when it
+    // goes out of range, so the spawner re-creates the cluster on re-entry.
+    // ROM: the maker reuses its own slot for platform #0 (movea.l a0,a1) leaving
+    // objoff_2F holding the maker subtype ($80+); loc_12378 does
+    // bclr #0,(v_obj63,objoff_2F&$7F) on that platform's out_of_range delete
+    // (docs/s1disasm/_incObj/63 LZ Conveyor.asm:22-28). -1 = not platform #0.
+    private int makerDedupSlot = -1;
+
     // Wheel mode state
     private int wheelFrame;          // current animation frame (0-3)
 
@@ -251,6 +259,37 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
         } catch (IOException | RuntimeException e) {
             LOGGER.log(Level.WARNING, "Failed to load LZ conveyor path data from ROM", e);
             return false;
+        }
+    }
+
+    /**
+     * Clears the maker's {@code v_obj63} dedup latch when platform #0 leaves the
+     * camera window, so the spawner re-creates the conveyor cluster on re-entry.
+     * <p>
+     * ROM models this in {@code loc_12378}: when a conveyor object hits
+     * {@code out_of_range}, it reads {@code objoff_2F}; only platform #0 (the
+     * maker's reincarnated slot) has it negative, so only platform #0 runs
+     * {@code andi.w #$7F,d0 / bclr #0,(v_obj63,d0.w)}
+     * (docs/s1disasm/_incObj/63 LZ Conveyor.asm:22-28). Platforms #1..N have
+     * {@code objoff_2F=0} and just delete. Without this, the spawner's
+     * {@code bset #0,(v_obj63,slot)} latch (set on first spawn) is never cleared,
+     * so re-entering the spawner window deletes the maker without re-creating the
+     * platforms — the cluster permanently disappears after the first visit
+     * (S1 LZ1 group1 conveyor, trace frame 9716: player falls through the empty
+     * loop instead of landing on the re-spawned platform at @129D,0455).
+     * <p>
+     * Mirrors the SBZ spin-conveyor precedent
+     * ({@code Sonic1SpinConveyorObjectInstance.onUnload}). Gated to the
+     * out_of_range unload path ({@code !isDestroyed()}) so the maker's own
+     * self-delete after spawning never clears the latch.
+     */
+    @Override
+    public void onUnload() {
+        if (mode == Mode.PLATFORM && makerDedupSlot >= 0 && initialized && !isDestroyed()) {
+            Sonic1ConveyorState conveyorState = services().gameService(Sonic1ConveyorState.class);
+            if (conveyorState != null) {
+                conveyorState.clearSpawned(makerDedupSlot);
+            }
         }
     }
 
@@ -506,6 +545,7 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
         // executed frame early, leaving ridden platforms a constant 1px ahead of
         // ROM (S1 LZ1 conveyor ride, trace frame 5745: y 0x02ED vs 0x02EE).
         final int makerSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+        final int dedupSlot = spawnerSlotIndex;
         for (int i = 0; i < positionData.length; i++) {
             final int childX = positionData[i][0];
             final int childY = positionData[i][1];
@@ -519,6 +559,11 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
                     // Platform #0 takes the maker's own slot (movea.l a0,a1);
                     // FindFreeObj is only used for platforms #1..N.
                     child.setSlotIndex(makerSlot);
+                    // Platform #0 inherits the maker's negative objoff_2F, so it
+                    // is the platform that clears the v_obj63 dedup latch on its
+                    // out_of_range delete (ROM loc_12378). Platforms #1..N keep
+                    // objoff_2F=0 and just delete.
+                    child.makerDedupSlot = dedupSlot;
                 }
                 return child;
             });
