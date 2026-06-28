@@ -577,8 +577,16 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        // RememberState: persists while on screen
-        return !destroyed && isOnScreenX(160);
+        // Bom_Action ends in bra.w RememberState (docs/s1disasm/_incObj/5F Badnik -
+        // Walking Bomb.asm:49), whose off-screen test is the out_of_range macro
+        // (Macros.asm:273-289): chunk-align obX and (v_screenposx-128) and delete
+        // when the unsigned distance exceeds 640. Use isInRange() (the exact macro)
+        // for the body, matching the fuse (which also ends in RememberState). The
+        // approximate symmetric isOnScreenX(160) kept the walking body alive up to
+        // 160px past the right edge that the ROM had already deleted at the 640px
+        // window edge (BizHawk s1-complete-run: the SBZ2 x=0x12C0/0x12F0 bodies
+        // delete at trace f2931 when chunk-aligned obX - screen exceeds 640).
+        return !destroyed && isInRange();
     }
 
     @Override
