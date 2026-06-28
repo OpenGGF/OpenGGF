@@ -137,18 +137,19 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
             levelGamestate.pauseTimer();
         }
 
-        // Lock the camera at the current position so it stays on the prison
-        // while Sonic runs off the right side of the screen.
-        // ROM: clr.b (f_lockscreen).w — in the ROM this clears the scroll lock,
-        // but the camera stays put because v_limitleft2 = v_limitright2.
+        // ROM: Pri_Switch (3E Prison Capsule.asm:97) only does clr.b (f_lockscreen).w
+        // here — it does NOT touch v_limitleft2/v_limitright2. The camera keeps
+        // scrolling to v_limitright2, which each act-3 boss's escape routine already
+        // expanded to boss_*_end via addq.w #2,(v_limitright2). Locking the camera to
+        // its current X here froze it ~10px short of v_limitright2 in LZ3, where the
+        // player lands on the switch (un-roll) before the camera has finished
+        // scrolling to the boundary (boss_lz_end=$2031), diverging camera_x by 1px
+        // and growing. The Signpost screen-lock (v_limitleft2 = v_limitright2) is a
+        // separate end-of-act path that the act-3 boss zones never run, so the camera
+        // must remain free to reach v_limitright2.
         Camera camera = services().camera();
-        if (camera != null) {
-            if (camera.getFrozen()) {
-                camera.setFrozen(false);
-            }
-            // Lock camera horizontally at current position
-            camera.setMinX(camera.getX());
-            camera.setMaxX(camera.getX());
+        if (camera != null && camera.getFrozen()) {
+            camera.setFrozen(false);
         }
 
         // Clear boss fight state so doLevelBoundary allows Sonic to exceed
