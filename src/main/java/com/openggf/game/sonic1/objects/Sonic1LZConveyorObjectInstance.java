@@ -488,17 +488,45 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Spawn child platforms - first one replaces this object's identity,
-        // rest are new dynamic objects.
+        // Spawn child platforms.
+        //
+        // ROM parity (docs/s1disasm/_incObj/63 LZ Conveyor.asm:95-145): the maker
+        // reuses ITS OWN object slot for platform #0 (loc_12460:
+        // "movea.l a0,a1 / bra.s LCon_MakePtfms"), keeping obRoutine 0 so that
+        // platform #0 does not run its first PlatformObject/SpeedToPos pass until
+        // the FOLLOWING frame. Only platforms #1..N are allocated via FindFreeObj
+        // (LCon_Loop, line 130, non-FixBugs REV01 path).
+        //
+        // Reusing the maker's slot is load-bearing for spawn cadence: it places
+        // platform #0 in the maker's (high) slot and shifts the FindFreeObj
+        // children down by one, so a descending-leg platform lands in a slot
+        // BELOW the maker (already processed this frame -> first move next frame)
+        // instead of above it (executed same frame). Spawning platform #0 as a
+        // fresh FindFreeObj child instead made every belt platform start one
+        // executed frame early, leaving ridden platforms a constant 1px ahead of
+        // ROM (S1 LZ1 conveyor ride, trace frame 5745: y 0x02ED vs 0x02EE).
+        final int makerSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
         for (int i = 0; i < positionData.length; i++) {
             final int childX = positionData[i][0];
             final int childY = positionData[i][1];
             final int childSubtype = positionData[i][2];
+            final boolean reuseMakerSlot = (i == 0);
 
-            spawnFreeChild(() -> new Sonic1LZConveyorObjectInstance(childX, childY, childSubtype));
+            spawnFreeChild(() -> {
+                Sonic1LZConveyorObjectInstance child =
+                        new Sonic1LZConveyorObjectInstance(childX, childY, childSubtype);
+                if (reuseMakerSlot && makerSlot >= 0) {
+                    // Platform #0 takes the maker's own slot (movea.l a0,a1);
+                    // FindFreeObj is only used for platforms #1..N.
+                    child.setSlotIndex(makerSlot);
+                }
+                return child;
+            });
         }
 
-        // Spawner itself is consumed after spawning
+        // Spawner itself is consumed after spawning. Its slot was transferred to
+        // platform #0 above (slotIndex now -1), so the self-delete does not
+        // release that slot from the allocator.
         ObjectLifetimeOps.deleteNoRespawn(this);
     }
 
