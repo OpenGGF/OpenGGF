@@ -571,6 +571,23 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
         private int linkPriority;
         private int posX;
         private int posY;
+        // ROM parity: chain links use routine $A (Swing_Display) which is just
+        // `bra.w DisplaySprite` — NO out_of_range check. The whole assembly is
+        // deleted en masse by the parent's Swing_ChkDel:
+        //   out_of_range.w Swing_DelAll,swing_origX(a0)
+        // keyed on the PARENT's original X (swing_origX = objoff_3A), not the
+        // swinging position (docs/s1disasm/_incObj/15 Swinging Platforms.asm:
+        // 247-248, 278-279). So a link must despawn only when the parent's
+        // pivot leaves range — never on its own swung-out position. Keying the
+        // link's out_of_range reference on the pivot makes every piece unload
+        // on the same frame as the parent, matching Swing_DelAll. Without this
+        // a link that swings off-screen while the pivot is still on-screen
+        // despawns early, freeing its SST slot ahead of ROM and permuting all
+        // downstream FindFreeObj allocations (S1 MZ3 f6314: chain 12 -> 10,
+        // cascading to the Batbrain slot at f9917). Un-finaled so the generic
+        // field capturer reapplies the captured pivot after a rewind recreate
+        // (the recreate constructor seeds it from the dynamic/swung spawn X).
+        private int pivotBaseX;
 
         SwingChainLinkChild(int x, int y, String artKey, int frame, int priority) {
             super(new ObjectSpawn(x, y, Sonic1ObjectIds.SWINGING_PLATFORM, 0, 0, false, 0),
@@ -580,6 +597,7 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
             this.linkPriority = priority;
             this.posX = x;
             this.posY = y;
+            this.pivotBaseX = x;
         }
 
         SwingChainLinkChild(ObjectSpawn spawn) {
@@ -622,6 +640,18 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
         @Override
         public int getPriorityBucket() {
             return RenderPriority.clamp(linkPriority);
+        }
+
+        /**
+         * ROM parity: the chain link's unload is governed by the parent's
+         * {@code swing_origX} (Swing_ChkDel / Swing_DelAll), not the link's
+         * swinging position. Feeding the pivot X to the engine's out_of_range
+         * check makes the link unload on the same frame as the parent
+         * (docs/s1disasm/_incObj/15 Swinging Platforms.asm:247-248,278-279).
+         */
+        @Override
+        public int getOutOfRangeReferenceX() {
+            return pivotBaseX;
         }
     }
 }
