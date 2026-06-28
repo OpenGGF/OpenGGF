@@ -243,9 +243,18 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
-        lastFrameCounter = frameCounter;
+        // ROM Obj37 RLoss_Sparkle/RLoss_Delete advances per ExecuteObjects pass, NOT per
+        // VBlank. The object-loop passes the VBlank counter (ObjectManager.java:667), which
+        // also ticks on lag frames (ObjectManager.java:2217), so timing the collected-ring
+        // sparkle on it deletes the slot early by the number of lag frames during the sparkle.
+        // Use the executed-frame counter (objectManager.getFrameCounter()) for the sparkle/
+        // delete cadence, mirroring the placed-ring Obj25 path (Sonic1RingInstance.java:145
+        // -> RingManager.isCollectedAndSparkleDone). The physics floor-check cadence keeps
+        // using v_vbla_byte separately via resolveVblaCounter() (ROM RLoss_Bounce spread).
+        int executedFrame = resolveExecutedFrameCounter(frameCounter);
+        lastFrameCounter = executedFrame;
 
-        if (collected && collectedSparkleFinished(frameCounter)) {
+        if (collected && collectedSparkleFinished(executedFrame)) {
             setDestroyed(true);
             return;
         }
@@ -327,6 +336,17 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         ObjectServices services = servicesOrNull();
         ObjectManager objectManager = services != null ? services.objectManager() : null;
         return objectManager != null ? objectManager.getVblaCounter() : 0;
+    }
+
+    /**
+     * Executed-frame counter ({@code ObjectManager.getFrameCounter()}) used for the collected
+     * sparkle/delete cadence so it advances per ExecuteObjects pass (ROM RLoss_Sparkle), not per
+     * VBlank. Falls back to the supplied counter when no object manager is resolvable (unit tests).
+     */
+    protected int resolveExecutedFrameCounter(int fallback) {
+        ObjectServices services = servicesOrNull();
+        ObjectManager objectManager = services != null ? services.objectManager() : null;
+        return objectManager != null ? objectManager.getFrameCounter() : fallback;
     }
 
     private PhysicsFeatureSet resolveFeatureSet() {
