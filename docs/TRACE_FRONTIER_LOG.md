@@ -43,6 +43,39 @@ branch-local measurements.
   MTZ1 f1267, and MTZ2 f1277. Each worker owns its own trace worktree and must
   return a ROM-cited triage before any fix is accepted.
 
+## 2026-06-28 - S2 MTZ1 Obj64 stomper materialization phase - ENGINE FIX (Obj64 local + focused test, MTZ1 f1267 -> f1840)
+
+- Scope: verified branch `bugfix/ai-trace-s2-mtz1-f1267` in worktree
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\trace-s2-mtz1-f1267`.
+  The change is local to Obj64 MTZ Twin Stompers and its focused object test.
+- Root/fix: Obj64 init seeds `objoff_30`/`objoff_34` base position,
+  `objoff_3C` travel, and leaves `objoff_36` at zero
+  (`docs/s2disasm/s2.asm:52699-52723`). `Obj64_Main` runs movement before
+  `SolidObject` (`docs/s2disasm/s2.asm:52726-52743`), and the mode-1 movement
+  pre-decrements `objoff_36`, seeds `$5A` on underflow, and applies
+  `objoff_30 + objoff_3A` to `y_pos`
+  (`docs/s2disasm/s2.asm:52766-52805`). The engine constructor now primes one
+  ROM main tick instead of two before the object first enters the engine contact
+  window, so the first materialized tick seeds the wait timer while keeping
+  `y_pos` at the base position.
+- Frontier: `TestS2MtzLevelSelectTraceReplay#replayMatchesTrace` advances from
+  the prior MTZ1 f1267 `y` mismatch (`0x00AC` vs `0x00A4`, from the previous
+  ledger entry) to f1840 / 1277 errors, first error `g_speed` expected
+  `0x0311`, actual `0x0000`. The new context is around Obj65 long
+  platforms/cogs and Obj66 spring walls, not Obj64.
+- Verification:
+  `mvn -q -Dmse=relaxed "-Dtest=TestSonic2ObjectBugFixes#mtzTwinStompersPrimeOneRomMainTickBeforeFirstContactFrame" test`
+  passed the focused Obj64 method. The requested targeted trace command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2MtzLevelSelectTraceReplay#replayMatchesTrace"" test"`
+  failed expected-red at f1840 with the `g_speed` mismatch above. The requested
+  guard command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay"" test"`
+  exited 0; fresh Surefire XML shows ARZ, EHZ1, MCZ, and SCZ each ran with
+  `failures=0`, `errors=0`. MSE also printed the stale MTZ expected-red report
+  from the previous targeted run, but that class was not part of the guard
+  invocation.
+- Regression status: no same-game guard regression observed.
+
 ## 2026-06-28 - S2 ARZ2 Obj28 vertical subpixel carry - ENGINE FIX (2 files, ARZ2 f553 -> f566)
 
 - Scope: continued the ARZ2 ChopChop destruction/animal/points lifetime window
