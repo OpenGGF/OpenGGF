@@ -37,6 +37,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private int artVariant;
     private State state;
     private AnimalType definition;
+    private boolean firstDisplayFrame;
 
     public AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services) {
         this(spawn, services, services.rng().nextBits(1));
@@ -56,6 +57,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         this.animFrameTimer = ANIM_TIMER_INIT;
         this.animFrame = 2;
         this.state = State.MAIN;
+        this.firstDisplayFrame = true;
 
         int typeA = AnimalType.RABBIT.ordinal();
         int typeB = AnimalType.RABBIT.ordinal();
@@ -76,6 +78,10 @@ public class AnimalObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        if (firstDisplayFrame) {
+            firstDisplayFrame = false;
+            return;
+        }
         switch (state) {
             case MAIN -> updateMain();
             case WALK -> updateWalk();

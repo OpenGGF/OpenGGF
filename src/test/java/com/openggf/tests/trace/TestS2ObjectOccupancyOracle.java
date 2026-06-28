@@ -2,6 +2,7 @@ package com.openggf.tests.trace;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -12,6 +13,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
+import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
@@ -231,6 +233,56 @@ public class TestS2ObjectOccupancyOracle {
         Assertions.assertEquals(0x91, slotCheck.actualId(),
                 "ARZ2 Obj91 must take ROM slot 19; lower slots must not be held by "
                         + "stale Obj24 bubble children. Actual slots " + slotCheck.summary());
+    }
+
+    @Test
+    public void arz2ChopChopAnimalDoesNotMoveOnCreationFrame() throws Exception {
+        AnimalPositionCheck check = animalPositionAtArz2Frame(549);
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "ARZ2 Obj28 should be born at the Obj27 position on its first DisplaySprite frame; slots "
+                        + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj28_InitRandom branches to DisplaySprite and must not run ObjectMoveAndFall "
+                        + "until routine 2 on the next object pass; slots " + check.summary());
+    }
+
+    private AnimalPositionCheck animalPositionAtArz2Frame(int targetFrame) throws Exception {
+        return driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != targetFrame) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedAnimal = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 24)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x28)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedAnimal,
+                            "ARZ2 ROM fixture should report the first ChopChop animal in slot 24 at f"
+                                    + targetFrame);
+
+                    AnimalObjectInstance actualAnimal = om.activeObjectsOfType(AnimalObjectInstance.class).stream()
+                            .filter(animal -> animal.getSlotIndex() == 24)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(expectedAnimal.x() & 0xFFFF, expectedAnimal.y() & 0xFFFF,
+                            actualAnimal == null ? -1 : actualAnimal.getX(),
+                            actualAnimal == null ? -1 : actualAnimal.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 19, 25));
+                });
+    }
+
+    private record AnimalPositionCheck(int expectedX, int expectedY, int actualX, int actualY, String summary) {
+    }
+
+    private static int parseObjectType(String objectType) {
+        if (objectType == null || objectType.isBlank()) {
+            return -1;
+        }
+        return Integer.parseInt(objectType.replace("0x", "").replace("0X", "").trim(), 16) & 0xFF;
     }
 
     private static String describeSlots(Map<Integer, Integer> occupancy, int firstSlot, int lastSlot) {
