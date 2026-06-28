@@ -192,8 +192,15 @@ public class Sonic1BossFireInstance extends AbstractObjectInstance
         }
 
         // Non-zero subtype: delayed drop + sfx_Fireball (BossFire_Main -> loc_1870A).
+        // ROM loc_1870A has no rts/branch: it falls straight through into
+        // BossFire_Action, so the spawn frame ALSO runs one BossFire_Drop tick
+        // (plus SpeedToPos/AnimateSprite). Replicate that same-frame fall-through;
+        // otherwise the drop begins a frame late, leaving the falling fireball
+        // ~4px high at the contact frame and missing the player it should hurt.
         counter29 = 0x1E;
         services().playSfx(Sonic1Sfx.BURNING.id);
+        routine = ROUTINE_ACTION;
+        updateAction();
     }
 
     private void updateAction() {

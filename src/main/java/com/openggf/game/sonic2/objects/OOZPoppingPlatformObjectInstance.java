@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -168,6 +169,11 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
      */
     public int getHomeY() {
         return homeY;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        return true;
     }
 
     @Override
@@ -337,7 +343,9 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         // Apply gravity
         velocity += GRAVITY;
 
-        // Move locked players with platform
+        // The engine's shared moving-solid carry can lose the positive obj_control rider
+        // before Obj33 reaches its exact apex. Preserve the existing bridge here until
+        // the shared SolidObject carry path can model this ROM case directly.
         moveLockedPlayers(player);
 
         // ROM: cmp.w d0,d1 / bne.s + (exact equality check)
@@ -364,18 +372,13 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         sidekickLocked = false;
     }
 
-    /**
-     * Move locked players to ride with the platform.
-     */
     private void moveLockedPlayers(AbstractPlayableSprite mainChar) {
         if (mainCharLocked && mainChar != null) {
-            mainChar.setCentreX((short) x);
-            mainChar.setCentreY((short) (currentY - SOLID_HALF_HEIGHT_AIR));
+            NativePositionOps.writeYPosPreserveSubpixel(mainChar, currentY - SOLID_HALF_HEIGHT_AIR);
         }
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
         if (sidekickLocked && sidekick != null) {
-            sidekick.setCentreX((short) x);
-            sidekick.setCentreY((short) (currentY - SOLID_HALF_HEIGHT_AIR));
+            NativePositionOps.writeYPosPreserveSubpixel(sidekick, currentY - SOLID_HALF_HEIGHT_AIR);
         }
     }
 
@@ -392,8 +395,8 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
      *      bclr #3,status(a1) / clr.b obj_control(a1)
      */
     private void launchPlayer(AbstractPlayableSprite player, int frameCounter) {
-        // Center player on platform X
-        player.setCentreX((short) x);
+        // ROM move.w x_pos(a0),x_pos(a1): write the native pixel word and preserve x_sub.
+        NativePositionOps.writeXPosPreserveSubpixel(player, x);
         // Set rolling animation
         player.setAnimationId(Sonic2AnimationIds.ROLL);
         // Set inertia
@@ -402,6 +405,8 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         player.setAir(true);
         // Set strong upward velocity
         player.setYSpeed((short) LAUNCH_Y_VEL);
+        // ROM bclr #status.player.on_object,status(a1)
+        player.setOnObject(false);
         // Release from object control
         player.releaseFromObjectControl(frameCounter);
         // Play spring sound
@@ -415,6 +420,15 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT_AIR, SOLID_HALF_HEIGHT_GND);
+    }
+
+    @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // Obj33 writes obj_control(a1)=1 while the player rides the rising lid
+        // (s2.asm:49809/49837/49843), then still calls SolidObject from Obj33_Main.
+        // SolidObject_ChkBounds rejects only negative object_control values
+        // (s2.asm:35375-35377), so the positive capture state must keep support.
+        return true;
     }
 
     @Override

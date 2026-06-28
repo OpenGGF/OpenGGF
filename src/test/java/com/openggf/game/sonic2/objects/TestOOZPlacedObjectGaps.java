@@ -217,6 +217,18 @@ class TestOOZPlacedObjectGaps {
         assertEquals(0x0F, player.getLrbSolidBit() & 0xFF);
     }
 
+    @Test
+    void oozPoppingPlatformKeepsRomSolidLatchAndObjectControlledSupport() throws Exception {
+        ObjectInstance object = newObject("com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance",
+                new ObjectSpawn(0x1000, 0x0500, 0x33, 0x00, 0, false, 0));
+
+        SolidObjectProvider platform = assertInstanceOf(SolidObjectProvider.class, object);
+        assertTrue(platform.usesInstanceSolidStateLatchKey(),
+                "Obj33 rebuilds its dynamic spawn while ROM keeps standing/pushing bits in the SST status byte");
+        assertTrue(platform.allowsObjectControlledSolidContacts(),
+                "Obj33 keeps calling SolidObject while captured riders have positive obj_control=1");
+    }
+
     private static ObjectInstance newSlidingSpike(int x, int y, int subtype) throws Exception {
         ObjectInstance object = newObject("com.openggf.game.sonic2.objects.SlidingSpikeObjectInstance",
                 new ObjectSpawn(x, y, 0x43, subtype, 0, false, 0));
