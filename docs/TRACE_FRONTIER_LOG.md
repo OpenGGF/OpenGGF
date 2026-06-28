@@ -6,6 +6,40 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-28 - S1 SBZ2 f6839 co-located ObjPosLoad spawn-order - ENGINE FIX (2 files, 14 -> 11 errors, frontier f6839 -> f8941)
+
+- Frontier moved: `TestS1Sbz2CompleteRunTraceReplay` 14 -> 11 errors; first
+  error f6839 (`obj_s44_slot` exp 0x44 act 0x43) RESOLVED; new first error
+  f8941 (`camera_x` exp 0x1E40 act 0x1E42), a distinct SBZ stomper-door
+  (Obj0x6B) ride root (`eng-expected-onObj s6B missing`), NOT placement.
+- Root (BizHawk PC-execute probe `tools/bizhawk/s1_sbz2_slot_probe.lua`,
+  PCs 0xE10E/0xE12E/0xE14A/0xDCCE, bk2_offset 171193): at f6798 the camera
+  crosses into chunk 0x1580 and ROM ObjPosLoad spawns that column in stored
+  layout-table order -- `0x72@0x1594` (slot 59) FIRST, then `0x15@0x1590`
+  swing platform (slot 67), then the Bomb `0x5F@0x1590` (slot 68, the tracked
+  `obj_s44`), then `0x5F@0x15B0` (70)/`0x25@0x15DC` (71)/`0x15@0x15F0` (80).
+  FindFreeObj hands out ascending free slots in that walk order. The ROM
+  layout table stores `0x72@0x1594` BEFORE the two `@0x1590` objects even
+  though 0x1594 > 0x1590 -- a within-chunk X inversion. The engine sorted the
+  spawn list by strict full X, moving `0x72@0x1594` AFTER the `@0x1590` pair,
+  so the Bomb became the engine's 2nd column allocation (slot 0x43) instead of
+  ROM's 3rd (slot 0x44).
+- Fix (ROM: docs/s1disasm/_inc/ObjPosLoad.asm OPL_Main/OPL_MovedRight/
+  OPL_MovedLeft window at `v_opl_screen & $FF80` +/- $80/$280 and walk the
+  table in stored order; `sub FindFreeObj.asm`): sort the placement spawn list
+  by chunk-aligned X (`x & 0xFF80`) using a *stable* sort so within-chunk
+  objects keep ROM layout-table order. `AbstractPlacementManager` (shared
+  comparator `CHUNK_GRANULAR_ORDER`) + `Sonic1ObjectPlacement.load`. Identical
+  to full-X for lists already X-sorted within each chunk (S2/S3K tables), and
+  window/lowerBound math uses chunk-aligned edges so within-chunk wiggle never
+  affects a boundary decision.
+- Verification (worktree off develop 5925e12b2):
+  `mvn "-Dtest=TestS1*CompleteRunTraceReplay,TestS2Ehz1TraceReplay,TestRewindCoverageGuard,TestArchitecturalSourceGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test`
+  = 130 run, 3 failures (the unchanged S1 reds). All 16 S1 greens held; S2
+  EHZ1, S3K keep-green, both guards passed. Stash-baseline confirmed the other
+  reds are byte-identical pre/post fix: MZ2 1116@f2823, SLZ3 65@f11325; SBZ2
+  improved 14@f6839 -> 11@f8941.
+
 ## 2026-06-28 - S2 OOZ Obj33 popping-platform launch parity cleanup - ENGINE FIX (1 file + focused tests, OOZ traces non-regressing)
 
 - Scope: compared `OOZPoppingPlatformObjectInstance` against Sonic 2 Obj33 and
