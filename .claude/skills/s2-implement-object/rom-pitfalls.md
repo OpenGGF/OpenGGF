@@ -2259,7 +2259,7 @@ the player still received the final frame of logical input.
 `Ctrl_1_Logical` and seeds `objoff_2E=$38`; `ObjB2_Jump_to_plane` clears then
 rewrites `Ctrl_1_Logical` around the countdown edge.
 
-**Originating commit.** `<pending>` S2 WFZ Tornado scripted-input ordering:
+**Originating commit.** `d114fae44` S2 WFZ Tornado scripted-input ordering:
 `TestS2WfzLevelSelectTraceReplay` advances f13978 -> f14038.
 
 ---
