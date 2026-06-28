@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.physics.Direction;
 import com.openggf.tests.TestablePlayableSprite;
@@ -64,6 +65,9 @@ class TestOOZPlacedObjectGaps {
         assertEquals(0x1018, intField(subtype06, "maxX"));
         assertInstanceOf(TouchResponseProvider.class, subtype06);
         assertEquals(0xA5, ((TouchResponseProvider) subtype06).getCollisionFlags());
+        assertEquals(TouchCategoryDecodeMode.NORMAL,
+                ((TouchResponseProvider) subtype06).getTouchResponseProfile().categoryDecodeMode(),
+                "Obj43 ROM writes collision_flags=$A5 at s2.asm:49991; high bits $80 decode as HURT, not enemy");
 
         subtype06.update(0, playerAt(0x1000, 0x0500));
         assertEquals(0x0FE7, subtype06.getX(), "Obj43 moves one pixel toward its left bound when direction is clear");
