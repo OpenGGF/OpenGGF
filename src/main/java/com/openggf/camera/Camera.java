@@ -301,10 +301,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			}
 		}
 
-		// Clamp to boundaries (ROM: ScrollHoriz lines 18077-18092, ScrollVerti similar)
-		if (!deferHorizontalClampThisFrame) {
-			x = clampAxisWithWrap(x, minX, maxX);
-		}
+		// Horizontal boundary clamping already happened inside
+		// computeNextHorizontalCameraX (ROM MoveScreenHoriz applies the boundary
+		// directionally, inside the scroll branch). A symmetric re-clamp here would
+		// re-introduce the left-boundary pull on a rightward scroll, so only the
+		// vertical clamp remains below.
 		// ROM: After a vertical wrap, DeformLayers.asm branches directly to loc_6724
 		// (the store), skipping the normal boundary clamp. This is critical because
 		// after wrapping from e.g. -260 to 1788, clamping to maxY could force the
@@ -388,7 +389,24 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 		short cameraStepCap = fastScrollCap;
 
-		// Horizontal scroll logic (ROM: ScrollHoriz / MoveCameraX).
+		// Horizontal scroll logic (ROM: ScrollHoriz / MoveScreenHoriz).
+		//
+		// ROM applies the horizontal level boundaries DIRECTIONALLY, not as a
+		// symmetric [min,max] clamp:
+		//   - SH_MoveCameraLeft (camera scrolling left) clamps ONLY against
+		//     v_limitleft2 (engine minX).
+		//   - SH_MoveCameraRight (camera scrolling right) clamps ONLY against
+		//     v_limitright2 (engine maxX).
+		//   - The sweet-spot path (Sonic within the 144-160 deadzone) performs no
+		//     scroll and no boundary clamp at all.
+		// (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm MoveScreenHoriz;
+		//  s2.asm / sonic3k.asm share the same direction-split structure.)
+		//
+		// This matters at the end of an act: the signpost sets
+		// v_limitleft2 = v_limitright2 to lock the screen, but while Sonic keeps
+		// running right the camera only ever consults v_limitright2, so the raised
+		// left boundary never yanks the camera forward. A symmetric clamp here
+		// clamped the camera UP to the new minX a few frames early (S1 LZ1 f12463).
 		int deadzoneLeft = DeadzoneGeometry.leftEdge(width, deadzoneMode);
 		int deadzoneRight = DeadzoneGeometry.rightEdge(width);
 		if (focusedSpriteRealX < deadzoneLeft) {
@@ -399,6 +417,10 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			} else {
 				nextX += difference;
 			}
+			// ROM SH_MoveCameraLeft: clamp only against the left boundary.
+			if (applyBoundaryClamp) {
+				nextX = clampLeftBoundary(nextX);
+			}
 		} else if (focusedSpriteRealX > deadzoneRight) {
 			short difference = (short) (focusedSpriteRealX - deadzoneRight);
 			if (difference > cameraStepCap) {
@@ -406,9 +428,35 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			} else {
 				nextX += difference;
 			}
+			// ROM SH_MoveCameraRight: clamp only against the right boundary.
+			if (applyBoundaryClamp) {
+				nextX = clampRightBoundary(nextX);
+			}
 		}
+		// else: ROM sweet spot - no scroll, no boundary clamp.
 
-		return applyBoundaryClamp ? clampAxisWithWrap(nextX, minX, maxX) : nextX;
+		return nextX;
+	}
+
+	/**
+	 * ROM SH_MoveCameraLeft clamp: enforce only the left boundary (v_limitleft2).
+	 */
+	private short clampLeftBoundary(short value) {
+		return value < minX ? minX : value;
+	}
+
+	/**
+	 * ROM SH_MoveCameraRight clamp: enforce only the right boundary
+	 * (v_limitright2). When the right bound is transiently below the left bound
+	 * (e.g. S2 SCZ ObjB2 writes Camera_Max_X_pos = Camera_X_pos - $40), fall back
+	 * to the wrapped-domain handling that enforces only the left bound, matching
+	 * the prior {@code clampAxisWithWrap} behaviour for that case.
+	 */
+	private short clampRightBoundary(short value) {
+		if (maxX < minX) {
+			return value < minX ? minX : value;
+		}
+		return value > maxX ? maxX : value;
 	}
 
 	/**
