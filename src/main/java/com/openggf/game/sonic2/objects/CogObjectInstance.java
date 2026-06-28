@@ -465,11 +465,8 @@ public class CogObjectInstance extends AbstractObjectInstance
         // airborne side correction (s2.asm:35021-35040, 55039-55141). The
         // engine compresses the teeth into one multi-piece solid, so suppress
         // this Obj70-only fresh side correction to preserve the ROM stale-rider
-        // handoff instead of zeroing Tails' x velocity one frame early. A grounded
-        // CPU sidekick moving right into a tooth's left edge still follows the ROM
-        // SolidObject_cont side path, which zeroes x_vel/inertia and sets
-        // Status_Push (MTZ2 level-select trace f1277; s2.asm:35344-35450).
-        return player.isCpuControlled() && (player.getAir() || player.getXSpeed() <= 0);
+        // handoff instead of zeroing Tails' x velocity one frame early.
+        return player.isCpuControlled();
     }
 
     @Override

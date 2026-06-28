@@ -656,49 +656,6 @@ class TestSonic2ObjectBugFixes {
         assertEquals(0x014B, sonic.getGSpeed());
     }
 
-    @Test
-    void mtzCogGroundedCpuSidekickMovingRightCanPushAgainstToothLeftEdge() {
-        LevelManager levelManager = mock(LevelManager.class);
-        when(levelManager.getFrameCounter()).thenReturn(0x04E8);
-        CogObjectInstance cog = new CogObjectInstance(
-                new ObjectSpawn(0x0480, 0x0480, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
-                "Cog");
-        cog.setServices(new StubObjectServices() {
-            @Override
-            public LevelManager levelManager() {
-                return levelManager;
-            }
-        });
-        cog.update(0, new TestablePlayableSprite("sonic", (short) 0x0480, (short) 0x0400));
-        cog.snapshotPreUpdatePosition();
-        ObjectManager manager = buildSingleObjectManager(cog);
-
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
-        tails.setCpuControlled(true);
-        tails.setRenderFlagOnScreen(true);
-        tails.setWidth(18);
-        tails.setHeight(18);
-        tails.setAirForTest(false);
-        tails.setOnObject(false);
-        tails.setXSpeed((short) 0x01E7);
-        tails.setGSpeed((short) 0x01EB);
-        tails.setCentreX((short) 0x047F);
-        tails.setCentreY((short) 0x0431);
-
-        manager.updateSolidContacts(tails);
-
-        assertTrue(tails.getPushing(),
-                "Obj70 SolidObject_cont must let a grounded right-moving CPU sidekick set Status_Push"
-                        + " (x=" + String.format("0x%04X", tails.getCentreX() & 0xFFFF)
-                        + ", xs=" + String.format("0x%04X", tails.getXSpeed() & 0xFFFF)
-                        + ", gs=" + String.format("0x%04X", tails.getGSpeed() & 0xFFFF)
-                        + ")");
-        assertEquals(0, tails.getXSpeed(),
-                "SolidObject_AtEdge zeroes x_vel for a grounded side contact moving into the tooth");
-        assertEquals(0, tails.getGSpeed(),
-                "SolidObject_AtEdge zeroes inertia for the same side contact");
-    }
-
     private static int intField(Object target, String fieldName) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
