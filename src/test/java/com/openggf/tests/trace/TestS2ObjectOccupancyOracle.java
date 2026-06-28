@@ -259,6 +259,18 @@ public class TestS2ObjectOccupancyOracle {
                         + "before gravity; slots " + check.summary());
     }
 
+    @Test
+    public void arz2ChopChopAnimalDoesNotWalkOnLandingTransitionFrame() throws Exception {
+        AnimalPositionCheck check = animalPositionAtArz2Frame(593);
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj28_Main must branch to DisplaySprite after landing and must not run Obj28_Walk/Fly "
+                        + "until the next ExecuteObjects pass; slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj28_Main accepts only negative ObjCheckFloorDist (tst.w d1 / bpl.s DisplaySprite) "
+                        + "before snapping and changing routine; slots " + check.summary());
+    }
+
     private AnimalPositionCheck animalPositionAtArz2Frame(int targetFrame) throws Exception {
         return driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {
