@@ -486,9 +486,11 @@ public class CNZSlotMachineManager {
 
     private int targetShiftForSlot(int slot) {
         return switch (slot) {
-            case 0 -> 8; // slot1_targ is the high byte of slots_targ
+            // ROM SlotMachine_GetTargetForSlot shifts slots_targ by the current
+            // slot_index byte value: 0, 4, or 8 (s2.asm:59460-59467).
+            case 0 -> 0;
             case 1 -> 4; // slot2_targ is the high nibble of slot23_targ
-            case 2 -> 0; // slot3_targ is the low nibble of slot23_targ
+            case 2 -> 8; // slot1_targ is the high byte of slots_targ
             default -> -1;
         };
     }
