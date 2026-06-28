@@ -145,8 +145,31 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
         // the PREVIOUS frame's target -> the tilt flip lagged ROM by a frame
         // (SLZ3 f745: ROM flips obFrame 2->1 when the rocking player crosses
         // within 8px of centre; the engine flipped a frame late, re-seating the
-        // rider on the wrong slope). See_ChkSide only runs while standing.
-        if (player != null && playerStanding) {
+        // rider on the wrong slope).
+        //
+        // ROM See_ChkSide runs in routine 4 (See_Slope2), which the seesaw enters
+        // when SlopeObject lands a player on it (addq.b #2,obRoutine -- docs/
+        // s1disasm/_incObj/sub PlatformObject.asm:66) and leaves when ExitPlatform
+        // unseats them; the resulting see_frame then LATCHES while routine 2
+        // (See_Slope) keeps animating obFrame toward it (5E SLZ Seesaw.asm:55-68).
+        // The faithful engine proxy for "seesaw is in routine 4 (a player is
+        // standing on it)" is the SolidContacts riding state -- NOT the narrower
+        // playerStanding flag, which validateStandingPlayer clears the moment the
+        // rider's centre drifts 1px past the strict slope x-range (matching ROM
+        // SlopeObject's own bmi.s Plat_Exit, sub PlatformObject.asm:136). At SLZ3
+        // f9862 the rider sits at the seesaw's left edge (centre 1px off the range)
+        // while still riding: playerStanding was already cleared, so the engine
+        // never set see_frame=2 and the seesaw stayed at frame 0 (raised left end).
+        // Three frames later (f9866) that raised end caught the player who had
+        // correctly fallen off at f9863, re-landing him -- while ROM, whose seesaw
+        // had latched to frame 2 (dropped left end) by f9863, let him free-fall
+        // past it. Drive the tilt target from the riding state so it tracks the
+        // rider's side and latches after they leave, matching ROM obFrame 0->1->2.
+        boolean tiltTracking = player != null && !player.getAir()
+                && (playerStanding
+                        || (services().objectManager() != null
+                                && services().objectManager().isRidingObject(player, this)));
+        if (tiltTracking) {
             targetFrame = calculateTargetAngle(player);
         }
 
