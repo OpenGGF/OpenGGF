@@ -665,6 +665,13 @@ public class ObjectManager {
         registry.beginObject(instance, resolver);
         try {
             instance.update(vblaCounter, player);
+            // ROM parity: the object has now run its own routine (the engine
+            // equivalent of DisplaySprite setting obRender bit 7), so a child that
+            // was awaiting its first execution becomes touch-eligible from the
+            // next frame's ReactToItem onward.
+            if (instance instanceof AbstractObjectInstance aoi) {
+                aoi.clearAwaitingFirstTouchExecution();
+            }
             if (mode == SolidExecutionMode.AUTO_AFTER_UPDATE && !instance.isDestroyed()) {
                 registry.publishCheckpoint(
                         solidContacts.processCompatibilityCheckpoint(
@@ -1738,6 +1745,16 @@ public class ObjectManager {
                 object.snapshotPreUpdatePosition();
                 aoi2.setSkipTouchThisFrame(true);
                 execOrder[execIdx] = object;
+            } else {
+                // Child placed into a slot at or below the parent's current
+                // execution slot: ExecuteObjects has already passed it this frame,
+                // so it will not run (nor set obRender bit 7 via DisplaySprite)
+                // until the next frame's pass. ROM ReactToItem skips objects whose
+                // obRender bit 7 is clear, so this child must stay touch-ineligible
+                // for one extra frame relative to a same-frame (higher-slot) child
+                // -- i.e. until the frame after its first own execution.
+                // (docs/s1disasm/_incObj/sub ReactToItem.asm:50-51)
+                aoi2.markAwaitingFirstTouchExecution();
             }
         }
         bucketsDirty = true;

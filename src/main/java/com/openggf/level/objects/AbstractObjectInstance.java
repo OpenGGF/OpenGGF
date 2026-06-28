@@ -117,6 +117,24 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     private boolean skipTouchThisFrame;
 
     /**
+     * ROM parity: a child spawned mid-loop into a slot at or below the parent's
+     * current execution slot is not reached by this frame's ExecuteObjects pass,
+     * so it does not run (and therefore does not call DisplaySprite to set
+     * {@code obRender} bit 7) until the NEXT frame's pass. ReactToItem
+     * ({@code docs/s1disasm/_incObj/sub ReactToItem.asm:50-51}) gates on
+     * {@code tst.b obRender(a1) / bpl.s .next}, so such a child stays
+     * touch-ineligible for one extra frame relative to a same-frame (higher-slot)
+     * child: it cannot be touched until the frame AFTER its first own execution.
+     * <p>
+     * Set true when the child is registered (see
+     * {@link #markAwaitingFirstTouchExecution()}); cleared once the object has run
+     * its first {@code update()} (see {@link #clearAwaitingFirstTouchExecution()}).
+     * While true, {@link #isOnScreenForTouch()} (the engine's {@code obRender}
+     * bit-7 equivalent) returns false so the touch scan skips the object.
+     */
+    private boolean awaitingFirstTouchExecution;
+
+    /**
      * ROM parity: Objects skip SolidObject on their first frame because obRender bit 7
      * (set by DisplaySprite) hasn't been set yet. The object's init routine sets
      * obRender to 4 (no bit 7), then DisplaySprite sets bit 7 if on-screen. On the next
@@ -307,6 +325,26 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     public void setSkipTouchThisFrame(boolean skip) {
         this.skipTouchThisFrame = skip;
+    }
+
+    /**
+     * Marks a mid-loop child that was placed into a slot already passed by this
+     * frame's ExecuteObjects pass (so it will not execute, and thus not set
+     * {@code obRender} bit 7, until the next frame). Keeps the object
+     * touch-ineligible until its first own execution completes. See
+     * {@link #awaitingFirstTouchExecution}.
+     */
+    public void markAwaitingFirstTouchExecution() {
+        this.awaitingFirstTouchExecution = true;
+    }
+
+    /**
+     * Cleared by {@link ObjectManager} after the object runs its first
+     * {@code update()} (the engine equivalent of DisplaySprite setting
+     * {@code obRender} bit 7). No-op once already cleared.
+     */
+    public void clearAwaitingFirstTouchExecution() {
+        this.awaitingFirstTouchExecution = false;
     }
 
     /**
@@ -712,6 +750,12 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * would have been set.
      */
     public boolean isOnScreenForTouch() {
+        // ROM parity: obRender bit 7 stays clear until the object runs its own
+        // execution (DisplaySprite). A child dropped into an already-passed slot
+        // this frame does not execute until next frame, so it must stay
+        // touch-ineligible until that first execution completes. See
+        // awaitingFirstTouchExecution (docs/s1disasm/_incObj/sub ReactToItem.asm:50-51).
+        if (awaitingFirstTouchExecution) return false;
         if (!preUpdateValid) return false; // No snapshot → first frame, skip
         if (resolveTouchResponseUsesRenderFlagYGate()) {
             if (usesCustomRenderHeight()) {
