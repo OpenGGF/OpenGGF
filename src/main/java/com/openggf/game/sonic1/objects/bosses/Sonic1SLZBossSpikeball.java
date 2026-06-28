@@ -488,6 +488,24 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
         int bx = xPos >> 16;
         int by = yPos >> 16;
 
+        // ROM BossSpikeball_MakeFrag (loc_19086) runs `move.w objoff_34(a0),obY(a0)`
+        // BEFORE spawning the explosion-self and the four fragments, so on a
+        // self-destruct (obSubtype == $20) both the repositioned explosion (a0, whose
+        // obID was just changed to id_Explosion) and the fragments come out at the
+        // seesaw's origin Y, not the offset resting position the ball was flashing at.
+        // objoff_34 holds the linked seesaw's obY (BossSpikeball_Main:
+        // `move.w obY(a1),objoff_34(a0)`), which the engine models as seesawY.
+        // Without this reset the fragments spawned one BALL_Y_OFFSET (~8px) too high,
+        // so the fragment ROM places overlapping a standing player's hurt box
+        // (SLZ3 f7405: ROM frag @208A,02BB) instead sat just above it in the engine
+        // (@208A,02B3) and never hurt. Boss-hit / flying-landing explosions keep their
+        // current Y because those paths clear obSubtype to 0 before reaching Explode.
+        // (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:535,833-864)
+        if (subtypeCounter == SUBTYPE_SPAWN_FRAGMENTS && seesaw != null) {
+            by = seesawY;
+            yPos = seesawY << 16;
+        }
+
         // ROM: move.b #id_ExplosionBomb,obID(a0) — replace self with bomb explosion (0x3F)
         // Same explosion type as bomb badnik, uses Map_ExplodeBomb + ArtTile_Explosion
         var objectManager = services().objectManager();
