@@ -643,14 +643,18 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         }
         jumpTimer--;
 
-        alignPlaneAndSolid();
-        renderThisFrame = true;
-
+        solidActive = true;
         if (checkpoint(player).standingNow()) {
             routineSecondary = 0x0A;
             jumpTimer = 0x20;
             applyJumpToPlaneLayoutPatch();
         }
+
+        // The engine reaches this state with the Tornado already at the ROM
+        // frame's visible plane position. Resolve the manual landing checkpoint
+        // there, then advance ObjB2 for the next frame's Landed_on_plane state.
+        alignPlaneAndSolid();
+        renderThisFrame = true;
     }
 
     private void wfzLandedOnPlane(AbstractPlayableSprite player) {
@@ -662,8 +666,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             }
         }
 
-        alignPlaneAndSolid();
+        // ROM ObjB2_Landed_on_plane writes Sonic's x_pos/y_pos and clears his
+        // movement state before ObjB2_Align_plane moves the Tornado
+        // (docs/s2disasm/s2.asm:79047-79071).
         placePlayerOnWfzPlane(player);
+        alignPlaneAndSolid();
         renderThisFrame = true;
     }
 
@@ -698,10 +705,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             spawnTornadoChild(SUBTYPE_BLINKER, 0x3090, 0x0410);
         }
 
-        wfzDockOnDez();
-        if (scriptTimer <= WFZ_JUMP_TO_SHIP_START + 1) {
+        boolean keepPlayerOnPlane = scriptTimer < WFZ_JUMP_TO_SHIP_START + 1;
+        if (keepPlayerOnPlane) {
             placePlayerOnWfzPlane(player);
         }
+        wfzDockOnDez();
     }
 
     private void wfzDockOnDez() {

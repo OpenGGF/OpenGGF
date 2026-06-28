@@ -210,6 +210,49 @@ branch-local measurements.
 - Non-regression: `TestS2CnzLevelSelectTraceReplay#replayMatchesTrace` holds
   its accepted f3906 first error (`tails_y` `0x06C0` vs `0x06C1`).
 
+## 2026-06-29 - S2 WFZ ObjB2 Tornado plane-attachment ordering - ENGINE FIX (2 files + docs, WFZ advanced)
+
+- Scope: kept the fix inside ObjB2 WFZ Tornado handoff behavior. No trace
+  hydration, no zone/route/frame carve-out, and no shared physics change.
+- Root: after the prior scripted-input fix, Sonic reached the WFZ end Tornado
+  plane with matching speed/subpixel, but the engine resolved the first landing
+  and subsequent attachment frames from the already-advanced plane position.
+  The ROM frame boundary uses ObjB2's visible/pre-advance plane position for
+  these attachment writes, then moves the plane for the next frame.
+- ROM citation:
+  - `ObjB2_Jump_to_plane` transitions to `ObjB2_Landed_on_plane` after the
+    contact check at `docs/s2disasm/s2.asm:79023-79045`.
+  - `ObjB2_Landed_on_plane` writes Sonic's `x_pos`, clears velocities/inertia,
+    clears air/rolling, updates animation/radius, then calls
+    `ObjB2_Align_plane` at `docs/s2disasm/s2.asm:79047-79071`.
+  - Early `ObjB2_Approaching_ship` / `ObjB2_Dock_on_DEZ` continues the plane
+    motion script at `docs/s2disasm/s2.asm:79075-79122`; the engine-side attach
+    compensation now runs before that dock movement while the plane still
+    carries Sonic.
+- Fixes:
+  - `wfzJumpToPlane` resolves the manual landing checkpoint before advancing
+    ObjB2 for the next frame.
+  - `wfzLandedOnPlane` places Sonic on the plane before `alignPlaneAndSolid()`.
+  - Early `wfzJumpToShipCommon` keeps Sonic attached before `wfzDockOnDez()`
+    advances the plane.
+- Frontier: `TestS2WfzLevelSelectTraceReplay#replayMatchesTrace` advances from
+  f14038 / 17 errors (`y` expected `0x05E4`, actual `0x05E3`) to f15010 / 7
+  errors (`x` expected `0x311E`, actual `0x311F`). The new owner is the later
+  ObjB2 jump/grabber handoff: ROM is still grounded/on-object for f15010 while
+  the engine has already launched (`y_speed=-0680`, `air=1`, `rolling=1`).
+- Verification:
+  - `mvn "-Dtest=TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+    expected-red: 7 errors, first error f15010 `x` expected `0x311E`, actual
+    `0x311F`.
+  - `mvn "-Dtest=com.openggf.game.sonic2.objects.TestTornadoObjectInstance" "-DfailIfNoTests=false" test`
+    exited 0; Surefire `TestTornadoObjectInstance` reports 20 tests, 0
+    failures. MSE also echoed the stale expected-red WFZ report from the target
+    directory, but WFZ was not part of this invocation.
+  - `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay" "-Ds2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+    exited 0; Surefire reports ARZ, EHZ1, MCZ, and SCZ each as 1 test, 0
+    failures. MSE again echoed the stale expected-red WFZ report from the target
+    directory.
+
 ## 2026-06-28 - S2 WFZ ObjB2 Tornado scripted-input ordering - ENGINE FIX (2 files + focused tests, WFZ advanced)
 
 - Scope: compared S2 ObjB2 WFZ end script against `ObjB2_Prepare_to_jump` /
