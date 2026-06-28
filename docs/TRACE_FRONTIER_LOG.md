@@ -6,6 +6,41 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S1 SBZ2 f8941 title-card PLC-decompression wait - ENGINE FIX -> SBZ2 GREEN (1 file, 11 -> 0 errors)
+
+- Command: `mvn -q "-Dtest=TestS1Sbz2CompleteRunTraceReplay" test`
+  (worktree `bugfix/ai-sbz2-f8941` off develop a06d53c4f). Result: PASS (GREEN).
+- Frontier RESOLVED: `TestS1Sbz2CompleteRunTraceReplay` 11 -> 0 errors. Prior
+  first error f8941 (`camera_x` exp 0x1E40 act 0x1E42). SBZ2 is the 17th S1 green.
+- Root (BizHawk-free trace decode + engine instrumentation): the pin's "Obj0x6B
+  stomper-door ride gap" was a RED HERRING. The player is NOT riding a 6B as a
+  wall; the closest engine/static 6B is at origX 0x14C1 (instrumentation: zero
+  StomperDoor near 0x1FA8). The player at 0x1FA8 is clamped by `Sonic_LevelBound`
+  against the camera right boundary `maxX=0x1E40` (it ran into the level-bound
+  wall at f8388 and wedged, control-locked, while the SBZ2 end-of-act cutscene
+  plays). `onObj=6B` is just the floor it stands on. The real divergence: the
+  engine's `Sonic1ResultsScreenObjectInstance` skips ROM `Got_ChkPLC` (routine 0
+  of `GotThroughCard`, 3A Got Through Card.asm: `tst.l (v_plc_buffer); beq
+  Got_Main; rts`), which idles until the title-card PLC decompresses before the
+  slide-in. `Nem_TitleCard` (sonic.asm @ $39204; PLC_TitleCard) = 128 tiles
+  (artnem/Title Cards.nem header $8080 -> $80); gameplay VBlank decompresses 3
+  tiles/frame (`ProcessPLC_3Tiles` in `VBlank_UpdateScreen` / id_VBlank_Levels)
+  -> `ceil(128/3) = 43` frame wait. Skipping it ran the whole 483-frame results
+  sequence (slide-in 68 / pre-tally 180 / tally 21 / post-tally 180 / SBZ2
+  slide-out 34 -- all measured byte-faithful) 43 frames early, so `Got_SBZ2_Boundary`
+  (loc_C766) scrolled `v_limitright2` (+2/frame to $2100) and un-clamped the
+  player at f8941 instead of ROM's f8984. Card spawn matched ROM exactly (signpost
+  touch f8333 + 123-frame spin = card f8457).
+- Fix: model the `Got_ChkPLC` PLC-decompression idle in the S1 results object
+  (`PLC_DECOMPRESS_FRAMES = ceil(TITLE_CARD_TILE_COUNT 0x80 / PLC_TILES_PER_FRAME 3) = 43`),
+  rendering nothing during the wait. Game-wide S1 act-end behaviour (every
+  GotThroughCard routine 0), not an SBZ2/zone/frame carve-out.
+- Zero regression: full S1 `*TraceReplay` sweep (27/29 pass) + S2 EHZ1 +
+  `TestRewindCoverageGuard` + `TestArchitecturalSourceGuard` all green except the
+  pre-existing reds MZ2 (1116@f2823) and SLZ3 (22@f12712), both byte-identical
+  pre/post fix (matching this log's documented current red states).
+- Files: src/main/java/com/openggf/game/sonic1/objects/Sonic1ResultsScreenObjectInstance.java.
+
 ## 2026-06-28 - S1 SBZ2 f6839 co-located ObjPosLoad spawn-order - ENGINE FIX (2 files, 14 -> 11 errors, frontier f6839 -> f8941)
 
 - Frontier moved: `TestS1Sbz2CompleteRunTraceReplay` 14 -> 11 errors; first
