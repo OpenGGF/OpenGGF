@@ -248,7 +248,7 @@ public class TestObjectManagerCounterBasedDynamicUnload {
                 0x0C2F, 0x05EB, true, 4, "test", new int[] { 13, 18, 17, 16, 15, 14 }, 6, -0x88);
         objectManager.addDynamicObject(bubble);
 
-        for (int frame = 0; frame < 91; frame++) {
+        for (int frame = 0; frame < 92; frame++) {
             objectManager.update(0x0BA5, null, List.of(), frame);
         }
 
@@ -256,10 +256,27 @@ public class TestObjectManagerCounterBasedDynamicUnload {
                 "S1 Obj0A numbered bubbles use Ani_Drown appear/flash scripts before Drown_Delete; "
                         + "the SBZ3 trace keeps the f2762 number bubble in slot $5B through frame 2852");
 
-        objectManager.update(0x0BA5, null, List.of(), 91);
+        objectManager.update(0x0BA5, null, List.of(), 92);
 
         assertFalse(objectManager.getActiveObjects().contains(bubble),
                 "S1 Obj0A numbered bubbles delete after the ROM appear/flash display window completes");
+    }
+
+    @Test
+    public void breathingBubbleSkipsMovementOnAllocationFrame() {
+        BreathingBubbleInstance bubble = new BreathingBubbleInstance(
+                0x0676, 0x0515, false, -1, ObjectArtKeys.BUBBLES, new int[] { 11, 10, 9, 8, 7, 6 }, 3, -0x88);
+        objectManager.addDynamicObject(bubble);
+
+        bubble.update(0, null);
+
+        assertEquals(0x0515, bubble.getY() & 0xFFFF,
+                "Obj0A child allocated by the countdown sidecar should not run its own movement on the allocation frame");
+
+        bubble.update(1, null);
+
+        assertEquals(0x0514, bubble.getY() & 0xFFFF,
+                "The following update should begin the ROM y_vel=-$88 rise");
     }
 
     @Test

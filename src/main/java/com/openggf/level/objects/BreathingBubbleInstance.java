@@ -105,6 +105,13 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
     /** Frames since spawn, used only for diagnostics. */
     private int lifetime;
 
+    /**
+     * Obj0A children allocated by the countdown controller exist in the SST on
+     * the allocation frame, but their own Obj0A_Init/Animate pass does not run
+     * until ExecuteObjects reaches the child slot on a later pass.
+     */
+    private boolean spawnFrameSkipPending;
+
     /** ROM Drown_Display tail after Drown_ChkWater detects the water surface. */
     private int surfacePopUpdatesRemaining;
 
@@ -154,6 +161,7 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
         this.countdownFrame = 0;
         this.numberFormed = false;
         this.lifetime = 0;
+        this.spawnFrameSkipPending = true;
         this.artKey = artKey;
         this.countdownFrameMap = countdownFrameMap;
         this.maxBubbleFrame = maxBubbleFrame;
@@ -222,6 +230,11 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        if (spawnFrameSkipPending) {
+            spawnFrameSkipPending = false;
+            return;
+        }
+
         boolean observedRomRenderOnScreen = romRenderOnScreen;
         lifetime++;
 

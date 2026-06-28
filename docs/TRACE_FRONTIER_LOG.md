@@ -6,6 +6,43 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-28 - S2 ARZ2 Obj0A breathing-bubble sidecar cadence - ENGINE FIX (7 files, ARZ2 f566 -> f593)
+
+- Scope: independently verified `bugfix/ai-trace-s2-arz2-r1` in
+  `.worktrees/trace-s2-arz2-r1`. The patch touches shared Obj0A/Drowning
+  behavior plus S2 PLC art loading. No trace data is written into engine state,
+  and the S1/S2 vs S3K countdown cadence split is modelled through
+  `PhysicsFeatureSet.initialDrowningCountdownFrameTimer`, not a game-name,
+  zone, route, frame, or trace-specific carve-out.
+- Root/fix: S2 `Sonic_Water` / `Tails_Water` install the fixed Obj0A
+  countdown sidecar while leaving its timer storage at zero
+  (`docs/s2disasm/s2.asm:36367-36387,39535-39554`), so the first
+  `Obj0A_Countdown` pass underflows and processes the first air event before
+  resetting to a full-second delay (`docs/s2disasm/s2.asm:42199-42225`). The
+  generic S1/S2 countdown reset now starts from zero while S3K keeps the prior
+  full-second fallback. S2 StdWtr PLC art (`PLC_STD_WATER`) is loaded through
+  the ROM PLC pipeline so Obj0A bubble renderer presence is ROM-backed; no
+  runtime asset bytes are read from `docs/`.
+- Additional timing fix: Obj0A children spawned by the countdown controller are
+  enqueued through the next-frame dynamic object path and skip their allocation
+  frame movement, matching SST allocation before the child's own Obj0A routine
+  executes.
+- Verification:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed ""-Dtest=TestSonic2PlcParser,TestObjectManagerCounterBasedDynamicUnload,TestDrowningControllerMusicSelection"" test"`
+  produced fresh Surefire reports for the three focused classes with 30 tests,
+  0 failures, 0 errors. MSE also printed the stale ARZ2 report from the prior
+  targeted run; the individual XML reports for the requested focused classes
+  are clean.
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace"" test"`
+  now fails expected-red at f593 / 3171 errors: first error
+  `obj_extra_s18_x` expected absent, actual `0x0677`. Previous frontier was
+  f566 / 3140 errors (`obj_s1A_type` expected `0x0A`, actual missing).
+  Guard command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay"" test"`
+  exited 0; fresh XML reports show ARZ1, EHZ1, MCZ1, and SCZ all green with no
+  failures or errors. MSE again echoed the stale targeted ARZ2 failure in its
+  aggregate summary, but that class was not part of the guard invocation.
+
 ## 2026-06-28 - S2 ARZ2 Obj28 vertical subpixel carry - ENGINE FIX (2 files, ARZ2 f553 -> f566)
 
 - Scope: continued the ARZ2 ChopChop destruction/animal/points lifetime window
@@ -213,15 +250,16 @@ branch-local measurements.
    advanced from f4229 through f4494 to f6114 after clearing landing-frame CPU
    interact refresh lag and a moving grounded push-bit-only diagnostic. MCZ2 has
    advanced from f4482 to f4485, where movement now owns the first error.
-3. Continue the S2 target list with ARZ2 f566 (Obj0A breathing-bubble
-   allocation/timing after the ChopChop animal vertical-carry correction), WFZ
+3. Continue the S2 target list with ARZ2 f593 (animal slot/position mismatch
+   after clearing the Obj0A breathing-bubble allocation/timing frontier), WFZ
    f14038 (Tornado plane 1px landing/contact mismatch after scripted-input
    timing), then the movement downstream of Tails CPU cluster: OOZ f1784, MTZ3
    f1973, CPZ2 f2889, CNZ1 f3906, CNZ2 f4632, MCZ2 f4485, and HTZ f6114.
 4. The ARZ2 f523 stale Obj24/Obj91 slot allocation frontier is now integrated on
    `bugfix/ai-s2-trace-develop` as commit `4e8b201a1`; the remaining ARZ2 owner
-   was advanced by the Obj28 animal init-display and vertical-carry fixes; the
-   remaining ARZ2 owner appears downstream in Obj0A breathing-bubble cadence.
+   was advanced by the Obj28 animal init-display, vertical-carry, and Obj0A
+   breathing-bubble cadence fixes; the remaining ARZ2 owner appears downstream
+   in animal slot/position cadence.
 
 ### Current focused frontier details
 
@@ -233,7 +271,7 @@ branch-local measurements.
 | `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1784` | Tails `tails_x_speed` | `0x000C` | `-000C` | advanced from f1782 by lowering Obj36 negative-inertia CPU sidekick push-grace threshold | movement downstream of Tails CPU |
 | `s2_ooz2` / `TestS2Ooz2LevelSelectTraceReplay` | `1109` | Tails `tails_y_speed` | `0x0000` | `-0AB8` | advanced from f1086 by Obj33 standing-bit apex launch and native-Y preservation | post-launch Obj48 handoff / landing interaction |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2889` | Tails `tails_x` | `0x10E8` | `0x10F0` | held after Obj1E source/destination handoff hypotheses failed to advance | movement downstream of Tails CPU |
-| `s2_arz2` / `TestS2Arz2LevelSelectTraceReplay` | `566` | `obj_s1A_type` | `0x0A` | missing | advanced from f553 after Obj28 animal vertical `y_sub` carry | Obj0A breathing-bubble allocation/timing |
+| `s2_arz2` / `TestS2Arz2LevelSelectTraceReplay` | `593` | `obj_extra_s18_x` | absent | `0x0677` | advanced from f566 after Obj0A breathing-bubble sidecar timer/art/allocation cadence | downstream animal slot/position cadence |
 | `s2_cnz1` / `TestS2CnzLevelSelectTraceReplay` | `3906` | Tails `tails_y` | `0x06C0` | `0x06C1` | advanced from f1691 by the slot-machine packed-target order fix; later held-only Ctrl2 diagnostics no longer own the frontier | movement downstream of Tails CPU |
 | `s2_cnz2` / `TestS2Cnz2LevelSelectTraceReplay` | `4632` | Tails `tails_y` | `0x02B8` | `0x02B4` | advanced from f4418 by allowing ordinary Tails_ResetOnFloor to clear rolling after vertical Obj85 release | downstream Obj86 flipper handoff / Tails movement |
 | `s2_htz1` / `TestS2HtzLevelSelectTraceReplay` | `6114` | leader `air` | `1` | `0` | advanced from f4229/f4494 landing interact and push-bit diagnostics | leader/object-riding movement |
