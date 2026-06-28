@@ -596,6 +596,45 @@ class TestSonic2ObjectBugFixes {
                 "ROM-visible Level_frame_counter $07F0 advances Obj70 to the next tooth phase");
     }
 
+    @Test
+    void mtzCogLandingUsesFullRomWidthPixelsWindow() {
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getFrameCounter()).thenReturn(0x04DB);
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0480, 0x0480, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+        cog.setServices(new StubObjectServices() {
+            @Override
+            public LevelManager levelManager() {
+                return levelManager;
+            }
+        });
+        cog.update(0, new TestablePlayableSprite("sonic", (short) 0x0480, (short) 0x0400));
+        cog.snapshotPreUpdatePosition();
+        ObjectManager manager = buildSingleObjectManager(cog);
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setWidth(18);
+        sonic.setHeight(38);
+        sonic.setAir(false);
+        sonic.setAngle((byte) 0x34);
+        sonic.setGroundMode(com.openggf.game.GroundMode.LEFTWALL);
+        sonic.setXSpeed((short) 0x014B);
+        sonic.setYSpeed((short) 0x0444);
+        sonic.setGSpeed((short) 0x047A);
+        sonic.setCentreX((short) 0x04D0);
+        sonic.setCentreY((short) 0x0464);
+
+        manager.updateSolidContacts(sonic);
+
+        assertTrue(sonic.isOnObject(),
+                "Obj70 SolidObject_Landed re-checks width_pixels=$10, so x_pos +8 from tooth centre must land");
+        assertFalse(sonic.getAir());
+        assertEquals(0, sonic.getAngle() & 0xFF);
+        assertEquals(0, sonic.getYSpeed());
+        assertEquals(0x014B, sonic.getGSpeed());
+    }
+
     private static int intField(Object target, String fieldName) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);

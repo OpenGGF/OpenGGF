@@ -424,6 +424,16 @@ public class CogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // Obj70 passes byte_28706's d1=$10 into SolidObject, and Obj70_Init also
+        // writes width_pixels=$10 (docs/s2disasm/s2.asm:55111, 55189-55209).
+        // SolidObject_Landed re-checks width_pixels(a0) directly
+        // (s2.asm:35588-35620), so the landing window is the same $10 as the
+        // collision half-width, not the usual full-solid d1-$0B narrowing.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
