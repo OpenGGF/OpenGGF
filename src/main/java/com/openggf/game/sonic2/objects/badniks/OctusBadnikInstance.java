@@ -13,6 +13,8 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -45,6 +47,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     private static final int HOVER_DURATION = 60; // 60 frames hovering
     private static final int BULLET_X_VEL = 0x200; // Bullet speed
     private static final int BULLET_DELAY = 0x0F; // 15 frames stationary before moving
+    private static final int INIT_FLOOR_Y_RADIUS = 0x0B;
 
     private static final SpriteAnimationSet ANIMATIONS = createAnimations();
 
@@ -58,15 +61,29 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
 
     public OctusBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Octus", Sonic2BadnikConfig.DESTRUCTION);
-        this.startY = spawn.y();
         this.xFlip = (spawn.renderFlags() & 0x01) != 0;
         // Octus faces left by default; x_flip in spawn means face right
         this.facingLeft = !xFlip;
         this.state = State.WAIT_FOR_PLAYER;
         this.timer = 0;
-        this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+        int snappedY = snapToFloorLikeRom(spawn.x(), spawn.y());
+        this.currentY = snappedY;
+        this.startY = snappedY;
+        this.motionState = new SubpixelMotion.State(spawn.x(), snappedY, 0, 0, 0, 0);
         this.bulletFired = false;
         this.animationState = new ObjectAnimationState(ANIMATIONS, 0, 1);
+    }
+
+    private int snapToFloorLikeRom(int x, int y) {
+        try {
+            TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(x, y, INIT_FLOOR_Y_RADIUS);
+            if (floor.foundSurface() && floor.distance() < 0) {
+                return y + floor.distance();
+            }
+        } catch (RuntimeException ignored) {
+            // Tests without a level keep the placement coordinate.
+        }
+        return y;
     }
 
     @Override

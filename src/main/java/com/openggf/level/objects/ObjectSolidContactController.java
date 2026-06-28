@@ -2534,11 +2534,11 @@ final class ObjectSolidContactController {
                     short prevCentreY = player.getCentreY(0);
                     boolean prevLands = prevCentreY == curCentreY;
                     if (!prevLands) {
-                        player.setCentreYPreserveSubpixel(prevCentreY);
+                        NativePositionOps.writeYPosPreserveSubpixel(player, prevCentreY);
                         SolidContact prevProbe = resolveContact(player, anchorX, anchorY,
                                 params.halfWidth(), halfHeight, solidProfile, useStickyBuffer,
                                 instance, i, false);
-                        player.setCentreYPreserveSubpixel(curCentreY);
+                        NativePositionOps.writeYPosPreserveSubpixel(player, curCentreY);
                         prevLands = prevProbe != null && prevProbe.standing();
                     }
                     if (!prevLands) {

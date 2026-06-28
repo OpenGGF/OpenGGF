@@ -6,6 +6,7 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
+import com.openggf.game.solid.PlayerStandingState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -25,6 +26,7 @@ import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.sprites.NativePositionOps;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -112,6 +114,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
 
     // Invisible launcher states per player (ROM routine 6 states).
     private final Map<AbstractPlayableSprite, LauncherPlayerState> playerStates = new IdentityHashMap<>();
+    private static final Map<AbstractPlayableSprite, OOZLauncherObjectInstance> activeLaunchers = new IdentityHashMap<>();
 
     private final SolidObjectParams solidParams;
 
@@ -179,7 +182,16 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         int savedYVel = state.hasSavedState ? state.savedYVel : player.getYSpeed();
 
         if (savedAnim == Sonic2AnimationIds.ROLL.id()) {
-            launchPlayer(player, savedYVel, frameCounter);
+            for (AbstractPlayableSprite participant : playerParticipants(player)) {
+                PlayerStandingState previous = services().solidExecutionRegistry().previousStanding(this, participant);
+                if (participant == player || previous.standing()) {
+                    LauncherPlayerState participantState = stateFor(participant);
+                    int participantYVel = participantState.hasSavedState
+                            ? participantState.savedYVel
+                            : participant.getYSpeed();
+                    launchPlayer(participant, participantYVel, frameCounter);
+                }
+            }
             breakBlock(frameCounter);
         }
     }
@@ -240,8 +252,11 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Frame 1 of either sheet is the fragment grid (16 pieces, 1x1 tiles each)
-        SpriteMappingFrame fragmentFrame = sheet.getFrameCount() > 1 ? sheet.getFrame(1) : null;
+        // ROM Obj3D_Init starts horizontal subtype mappings at frame 2; the
+        // fragment routine increments to frame 3 before piece rendering.
+        int fragmentFrameIndex = isVertical ? 1 : 3;
+        SpriteMappingFrame fragmentFrame = sheet.getFrameCount() > fragmentFrameIndex
+                ? sheet.getFrame(fragmentFrameIndex) : null;
         if (fragmentFrame == null) {
             return;
         }
@@ -339,14 +354,14 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         if (isVertical) {
             // Subtype 0: Launch right (ROM: loc_24FF0)
             // ROM: move.w y_pos(a0),y_pos(a1)
-            player.setCentreY((short) spawn.y());
+            NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y());
             // ROM: move.w #$800,x_vel(a1); move.w #0,y_vel(a1)
             player.setXSpeed((short) LAUNCH_VELOCITY);
             player.setYSpeed((short) 0);
         } else {
             // Subtype != 0: Launch up (ROM: after tst.b subtype)
             // ROM: move.w x_pos(a0),x_pos(a1)
-            player.setCentreX((short) spawn.x());
+            NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x());
             // ROM: move.w #0,x_vel(a1); move.w #-$800,y_vel(a1)
             player.setXSpeed((short) 0);
             player.setYSpeed((short) -LAUNCH_VELOCITY);
@@ -356,6 +371,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         player.setPushing(false);
         player.setAir(true);
         player.setOnObject(true);
+        activeLaunchers.put(player, this);
 
         // Play roll sound (ROM: move.w #SndID_Roll,d0; jsr PlaySound)
         try {
@@ -384,15 +400,13 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             player.setControlLocked(false);
             player.setAir(true);
             player.setOnObject(false);
+            activeLaunchers.remove(player, this);
             return 0;
         }
 
         // Move player by velocity (ROM: Obj3D_MoveCharacter)
         // ROM uses 16.16 fixed point: ext.l d0; asl.l #8,d0; add.l d0,x_pos(a1)
-        int xVel = player.getXSpeed();
-        int yVel = player.getYSpeed();
-        player.setCentreX((short) (player.getCentreX() + (xVel >> 8)));
-        player.setCentreY((short) (player.getCentreY() + (yVel >> 8)));
+        player.move(player.getXSpeed(), player.getYSpeed());
 
         return 2; // Stay in tracking state
     }
@@ -416,13 +430,22 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isPlayerOnScreen(AbstractPlayableSprite player) {
-        Camera camera = services().camera();
-        int px = player.getCentreX();
-        int py = player.getCentreY();
-        int cx = camera.getX();
-        int cy = camera.getY();
-        // Generous bounds (player moves at 8 px/frame)
-        return px >= cx - 64 && px < cx + 384 && py >= cy - 64 && py < cy + 288;
+        Camera camera = player.currentCamera();
+        return camera == null || camera.isOnScreen(player);
+    }
+
+    public static void clearActiveLauncherFor(AbstractPlayableSprite player) {
+        OOZLauncherObjectInstance launcher = activeLaunchers.remove(player);
+        if (launcher != null) {
+            LauncherPlayerState state = launcher.playerStates.get(player);
+            if (state != null) {
+                state.launcherState = 0;
+            }
+        }
+    }
+
+    public static void clearActiveLaunchers() {
+        activeLaunchers.clear();
     }
 
     // ========================================================================
@@ -471,8 +494,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Frame 0 = intact block
-        renderer.drawFrameIndex(0, spawn.x(), spawn.y(), false, false);
+        renderer.drawFrameIndex(isVertical ? 0 : 2, spawn.x(), spawn.y(), false, false);
     }
 
     @Override

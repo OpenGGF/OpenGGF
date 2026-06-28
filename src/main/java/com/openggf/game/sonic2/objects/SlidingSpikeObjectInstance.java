@@ -148,7 +148,7 @@ public class SlidingSpikeObjectInstance extends AbstractObjectInstance
 
     private void playSlideSound() {
         ObjectServices services = tryServices();
-        if (services != null) {
+        if (services != null && isOnScreen()) {
             services.playSfx(Sonic2Sfx.SLIDING_SPIKE.id);
         }
     }
@@ -157,7 +157,7 @@ public class SlidingSpikeObjectInstance extends AbstractObjectInstance
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.OOZ_SLIDING_SPIKE);
         if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndex(0, currentX, currentY, false, false);
+            renderer.drawFrameIndexForcedPriority(0, currentX, currentY, false, false, -1, true);
         }
     }
 

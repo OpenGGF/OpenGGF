@@ -192,11 +192,12 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void updateShooting(AbstractPlayableSprite player) {
-        // Fire projectile if player is below and we haven't fired yet this phase
+        // ROM Obj50_ChkIfShoot sets the one-shot flag before the vertical
+        // eligibility check, so a too-high player still consumes this window.
         if (!shootingFlag && player != null && !player.isDebugMode()) {
+            shootingFlag = true;
             if (player.getCentreY() > currentY) {
                 fireProjectile();
-                shootingFlag = true;
             }
         }
 
@@ -268,12 +269,12 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
             return;
         }
 
-        final int bulletX = facingLeft ? currentX - BULLET_X_OFFSET : currentX + BULLET_X_OFFSET;
+        final int bulletX = facingLeft ? currentX + BULLET_X_OFFSET : currentX - BULLET_X_OFFSET;
         // Obj50_ChkIfShoot subtracts the $0A Y offset before setting velocity
         // (docs/s2disasm/s2.asm:60651,60659).
         final int bulletY = currentY - BULLET_Y_OFFSET;
-        final int bulletXVel = facingLeft ? -BULLET_X_VEL : BULLET_X_VEL;
-        final boolean bulletHFlip = !facingLeft;
+        final int bulletXVel = facingLeft ? BULLET_X_VEL : -BULLET_X_VEL;
+        final boolean bulletHFlip = facingLeft;
 
         spawnFreeChild(() -> new BadnikProjectileInstance(
                 spawn,

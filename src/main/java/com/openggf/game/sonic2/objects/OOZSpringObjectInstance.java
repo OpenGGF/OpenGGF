@@ -115,6 +115,7 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     private void updateVertical(PlayableEntity playerEntity) {
         List<PlayableEntity> participants = playerParticipants(playerEntity);
         List<AbstractPlayableSprite> standingPlayers = new ArrayList<>(2);
+        boolean launchedThisFrame = false;
         for (PlayableEntity participant : participants) {
             PlayerStandingState previous = services().solidExecutionRegistry().previousStanding(this, participant);
             if (previous.standing() && participant instanceof AbstractPlayableSprite player) {
@@ -127,6 +128,7 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
                 for (AbstractPlayableSprite player : standingPlayers) {
                     launchVertical(player);
                 }
+                launchedThisFrame = true;
             } else {
                 mappingFrame++;
             }
@@ -134,7 +136,9 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
             mappingFrame--;
         }
 
-        if (!solidExecutionIsInert()) {
+        // ROM Obj45_Vertical branches directly to the launch routine when
+        // frame 9 fires; SolidObject45 only runs on the non-launch path.
+        if (!launchedThisFrame && !solidExecutionIsInert()) {
             checkpointAll();
         }
     }
@@ -252,6 +256,7 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         player.setMoveLockTimer(0x0F);
         if (!player.getRolling()) {
             player.setAnimationId(Sonic2AnimationIds.WALK);
+            player.forceAnimationRestart();
         }
         if ((spawn.subtype() & 0x80) != 0) {
             player.setYSpeed((short) 0);
