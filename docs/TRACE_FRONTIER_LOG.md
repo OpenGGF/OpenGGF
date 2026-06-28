@@ -6,6 +6,43 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-28 - S2 full trace sweep baseline for `bugfix/ai-s2-trace-develop`
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop`, synced with local `develop` and
+  `origin/develop` before the sweep.
+- Command:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2*TraceReplay"" test"`.
+- Result: 19 Sonic 2 trace classes ran; 4 green, 15 expected-red. MSE also
+  printed unrelated project-wide cached/stale failures, so this routing table
+  is based on the S2 Surefire reports and `target/trace-reports/s2_*`.
+- Green guards available for this round: `TestS2ArzLevelSelectTraceReplay`,
+  `TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay`,
+  `TestS2SczLevelSelectTraceReplay`.
+- Current red frontiers:
+
+| Trace | First error |
+|---|---|
+| `TestS2Arz2LevelSelectTraceReplay` | f566 `obj_s1A_type` expected `0x0A`, actual missing; 3140 errors |
+| `TestS2Ooz2LevelSelectTraceReplay` | f1109 `tails_y_speed` expected `0x0000`, actual `-0AB8`; 1101 errors |
+| `TestS2MtzLevelSelectTraceReplay` | f1267 `y` expected `0x00AC`, actual `0x00A4`; 1092 errors |
+| `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
+| `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
+| `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
+| `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1299 errors |
+| `TestS2Htz2LevelSelectTraceReplay` | f3315 `tails_x_speed` expected `0x01E8`, actual `0x00E8`; 1059 errors |
+| `TestS2CpzLevelSelectTraceReplay` | f3365 `tails_x` expected `0x24AB`, actual `0x24AA`; 310 errors |
+| `TestS2CnzLevelSelectTraceReplay` | f3906 `tails_y` expected `0x06C0`, actual `0x06C1`; 38 errors |
+| `TestS2Mcz2LevelSelectTraceReplay` | f4485 `tails_x` expected `0x0EAB`, actual `0x0EAC`; 543 errors |
+| `TestS2Cnz2LevelSelectTraceReplay` | f4632 `tails_y` expected `0x02B8`, actual `0x02B4`; 1001 errors |
+| `TestS2DezEndingLevelSelectTraceReplay` | f5952 `y_speed` expected `0x0098`, actual `-0098`; 46 errors |
+| `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
+| `TestS2WfzLevelSelectTraceReplay` | f14038 `y` expected `0x05E4`, actual `0x05E3`; 17 errors |
+
+- First worker batch queued by earliest frontier: ARZ2 f566, OOZ2 f1109,
+  MTZ1 f1267, and MTZ2 f1277. Each worker owns its own trace worktree and must
+  return a ROM-cited triage before any fix is accepted.
+
 ## 2026-06-28 - S2 ARZ2 Obj28 vertical subpixel carry - ENGINE FIX (2 files, ARZ2 f553 -> f566)
 
 - Scope: continued the ARZ2 ChopChop destruction/animal/points lifetime window
