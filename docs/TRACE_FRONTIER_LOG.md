@@ -6,6 +6,45 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 ARZ2 Obj28 negative floor-distance landing gate - ENGINE FIX (2 files, ARZ2 f593 -> f595)
+
+- Scope: continued the ARZ2 ChopChop Obj28 animal window in
+  `.worktrees/trace-s2-arz2-r2` / `bugfix/ai-trace-s2-arz2-r2`. The accepted
+  patch is limited to shared S2/S3K-style `AnimalObjectInstance` landing logic
+  plus focused comparison-only trace occupancy coverage; no trace data is
+  hydrated into engine state and no zone, route, or frame carve-out was added.
+- Root: at f593 ROM slot `0x18` is the ChopChop-spawned Obj28 animal still at
+  `0x0679,0x0543` while the engine had already snapped to floor and walked to
+  `0x0677,0x0540`. Sonic 2 `Obj28_Main`, `Obj28_Walk`, and `Obj28_Fly` call
+  `ObjCheckFloorDist`, test `d1`, and branch away on `bpl`, so only a negative
+  floor distance lands/snaps the animal (docs/s2disasm/s2.asm:24644-24688).
+  The shared S3K animal routine has the same `ObjCheckFloorDist; tst.w d1;
+  bpl.s` gate (docs/skdisasm/sonic3k.asm:61100-61124). The engine used
+  `TerrainCheckResult.hasCollision()`, which accepts distance `0`, so Obj28
+  changed routine one frame early.
+- Fix: `AnimalObjectInstance.checkFloorCollision()` now accepts only
+  `result.distance() < 0` before snapping `currentY`. This keeps the landing
+  transition frame on the ROM display-only path and delays walking/flying until
+  the next object execution.
+- Result: `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from
+  f593 / 3171 errors (`obj_extra_s18_x` expected absent, actual `0x0677`) to
+  f595 / 3171 errors (`obj_extra_s18_x` expected absent, actual `0x0675`). The
+  new frontier is the already-identified Obj28 horizontal subpixel cadence in
+  `ObjectMoveAndFall`/`ObjectMove` (docs/s2disasm/s2.asm:30164-30199), but a
+  full-XY animal subpixel candidate was rejected in this round because it
+  regressed the green EHZ1 guard at f1417 by changing animal horizontal
+  lifetime/slot cadence. That follow-up needs separate object-slot/lifetime
+  triage before it is safe.
+- Verification:
+  `mvn "-Dtest=TestS2ObjectOccupancyOracle#arz2ChopChopAnimalDoesNotMoveOnCreationFrame+arz2ChopChopAnimalKeepsObjectMoveAndFallSubpixelCarry+arz2ChopChopAnimalDoesNotWalkOnLandingTransitionFrame" "-Ds2.rom.path=s2.gen" test`
+  exited 0 with 3 tests passed.
+  Targeted ARZ2 command
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay" "-Ds2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+  fails expected-red at f595 with 3171 errors / 0 warnings.
+  Guard command
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay" "-Ds2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+  exited 0 with 4 trace classes passed.
+
 ## 2026-06-28 - S2 MTZ2 Obj70 side-push candidate reverted after full S2 regression sweep
 
 - Candidate commit `ffc89b8a` / integration merge `83ce28a32` advanced

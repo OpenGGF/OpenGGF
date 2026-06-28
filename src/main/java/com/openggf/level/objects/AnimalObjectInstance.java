@@ -160,7 +160,9 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private boolean checkFloorCollision() {
         // Use centralized terrain API (mirrors ROM's ObjCheckFloorDist)
         TerrainCheckResult result = ObjectTerrainUtils.checkFloorDist(currentX, currentY, 12);
-        if (result.hasCollision()) {
+        // S2 Obj28_Main/Walk/Fly and S3K Obj_Animal all accept only d1 < 0:
+        // ObjCheckFloorDist; tst.w d1; bpl.s DisplaySprite/no-floor branch.
+        if (result.distance() < 0) {
             currentY = currentY + result.distance();
             return true;
         }
