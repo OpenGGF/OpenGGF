@@ -108,6 +108,40 @@ branch-local measurements.
   - `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test` -> 6 passed, 0 failed.
   - `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mtzLongPlatformOptsIntoZeroXSpeedLeftSideStopCharacter" test` -> passed.
 
+## 2026-06-29 - S1 MZ2 f4610 Caterkiller fragment-offscreen respawn-bit - ENGINE FIX -> MZ2 frontier f4610 -> f8661 (1 file, 824 -> 665 errors; full S1 sweep + S2 EHZ1 held GREEN)
+
+- Command: `mvn -q "-Dtest=TestS1*CompleteRunTraceReplay,TestS2Ehz1TraceReplay" test`
+  (worktree `bugfix/ai-mz2-f4610` off develop 2108116bb). Result: 19/20 PASS
+  (all S1 except MZ2 + S2 EHZ1 green); MZ2 FAIL but advanced f4610 -> f8661
+  (824 -> 665 errors). Guards: `TestRewindCoverageGuard`,
+  `TestArchitecturalSourceGuard` PASS (59 tests).
+- f4610 root (full-OST first-divergence hunt + placement instrumentation):
+  the engine missed a Basaran (Obj0x55) bounce because the Basaran took SST
+  slot 39 (ROM 40), shifting its vblank drop-gate `(v_vblank+d7)&7` (d7=127-slot)
+  by one residue -> wrong fly-phase X at f4610 (engine box ends 1px short of the
+  player touchbox -> no overlap -> no bounce). The slot swap cascaded from the
+  THIRD lost-ring scatter (f4019, player hurt): ROM put the 3 scattered rings in
+  slots [35,39,41] (FindFreeObj lowest-free), the engine in [35,54,58] because
+  ROM slots 39/41 were free in ROM but OCCUPIED in the engine. Root cause: the
+  Caterkiller (Obj0x78) at layout X=0x200 that ROM RESPAWNS at f3031 (occupying
+  slots 39/41/42/52) was MISSING in the engine. The player frag-hit a body
+  segment near the level start (~f490), the head entered fragment mode and bounced
+  off-screen; the engine's `Sonic1CaterkillerBadnikInstance.updateFragment`
+  off-screen branch called `setDestroyed(true)` (respawnable=false), which left
+  the REV01 `bset` placement counter bit (objState[2]) LATCHED, so the f3031
+  cursor crossing's `bset` test saw the bit already set and skipped the respawn.
+- Fix (1 line + cite): `updateFragment` off-screen now calls
+  `setDestroyedByOffscreen()` (respawnable, clears the placement counter bit),
+  mirroring ROM `Cat_Fragment` `.displayOrDelete` (`tst.b obRender / bpl.w
+  Cat_Despawn`, docs/s1disasm/_incObj/78 Badnik - Caterkiller.asm:206-208) ->
+  `Cat_Despawn` `bclr #7,2(a2,d0.w)` (Caterkiller.asm:139-148). Off-screen
+  fragments are a RememberState off-screen unload, NOT a permanent kill.
+  Object-local, S1-only, no zone/route/frame carve-out.
+- New frontier f8661: SEPARATE deep slot-cadence root (ROM `onObj=51`, player
+  rides a SwingingPlatform Obj0x15 at slot 51; engine's ridden object is at a
+  different slot -> `eng-expected-onObj s51 missing` -> player misses the airborne
+  transition). No Caterkiller involved; needs its own full-OST hunt.
+
 ## 2026-06-29 - S1 MZ2 f2823 lava-geyser eruption drift - ENGINE FIX -> MZ2 frontier f2823 -> f4610 (2 files, 1116 -> 824 errors; MZ1/MZ3 held GREEN)
 
 - Command: `mvn -q "-Dtest=TestS1Mz1CompleteRunTraceReplay,TestS1Mz2CompleteRunTraceReplay,TestS1Mz3CompleteRunTraceReplay" test`
