@@ -217,6 +217,9 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         boolean onScreen = sidekick.hasRenderFlagOnScreenState()
                 ? sidekick.isRenderFlagOnScreen()
                 : sidekick.currentCamera() != null && sidekick.currentCamera().isOnScreen(sidekick);
+        if (onScreen && consumesTopEdgeRenderFlagOneStepLate(sidekick)) {
+            onScreen = false;
+        }
         if (onScreen) {
             offscreenFlightFrames = 0;
             return false;
@@ -244,5 +247,25 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         controller.returnApproachToSpawningAfterFlyingTimeout();
         return true;
+    }
+
+    private boolean consumesTopEdgeRenderFlagOneStepLate(AbstractPlayableSprite sidekick) {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (fs != null && fs.sidekickRespawnEntersCatchUpFlight()) {
+            return false;
+        }
+        var camera = sidekick.currentCamera();
+        if (camera == null) {
+            return false;
+        }
+        int relY = sidekick.getRenderCentreY() - camera.getY();
+        // ROM TailsCPU_Flying tests render_flags.on_screen before the current
+        // fly-in movement can refresh that cached bit. At HTZ1 gfc $193F,
+        // BizHawk shows y=$04AD, camY=$04CC, render_flags=$04 and
+        // Tails_respawn_counter=$003F; the bit flips to $84 on the next frame.
+        // CNZ's later fly-in reaches the same top edge with flight_timer=$5B
+        // and has already refreshed render_flags, so keep this to the first
+        // $3E..$3F window where the stale flag is observed.
+        return offscreenFlightFrames >= 0x3E && offscreenFlightFrames <= 0x3F && relY <= -31;
     }
 }

@@ -6,6 +6,48 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 integration sweep after HTZ1 Tails fly-in render-flag merge (7 green, 12 expected-red)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop` after merging
+  `bugfix/ai-trace-s2-htz-r3` (`c1ba69888`) on top of the ARZ2 leaf lifetime
+  and OOZ2 Obj45 airborne side-compression integrations.
+- Accepted changes in this round: HTZ1 S2 `TailsCPU_Flying` top-edge cached
+  render-flag delay. The strategy preserves the shared respawn counter through
+  the observed two-frame `$3E..$3F` stale-render window, while later top-edge
+  fly-in passes still consume refreshed `render_flags.on_screen`.
+- Evidence: targeted BizHawk probe over HTZ1 captured `gfc=$193F` with Tails
+  at `1C97,04AD`, `Camera_Y=$04CC`, `render_flags=$04`, and
+  `Tails_respawn_counter=$003F`; the render flag flips to `$84` on the next
+  frame. Existing aux-state for CNZ shows the same top-edge shape much later in
+  `TailsCPU_Flying` (`flight_timer=$5B`), where ROM resets the counter;
+  `TestSidekickCpuDespawnParity` covers both shapes.
+- Worker focused command:
+  `mvn -q '-Dmse=relaxed' '-Dsurefire.forkCount=1' '-DreuseForks=true' '-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' '-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' '-Dtest=TestSidekickCpuDespawnParity#s2FlyingRespawnTopEdgeKeepsCounterUntilRomRenderFlagRefreshes+s2FlyingRespawnLaterTopEdgeUsesRefreshedRenderFlag,TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay' test`.
+  Result: targeted unit coverage and `TestS2CnzLevelSelectTraceReplay` passed.
+  `TestS2HtzLevelSelectTraceReplay` advanced to f6586 / 233 errors;
+  `TestS2Htz2LevelSelectTraceReplay` held f3317 / 1058 errors.
+- Worker S2 green guard:
+  `mvn -q '-Dmse=relaxed' '-Dsurefire.forkCount=1' '-DreuseForks=true' '-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' '-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' '-Dtest=TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay' test`.
+  Result: 8 trace classes ran. The six current green traces passed; only the
+  expected HTZ red traces failed.
+- Current red frontiers before the next full integration sweep:
+
+| Trace | First error |
+|---|---|
+| `TestS2Arz2LevelSelectTraceReplay` | f741 `obj_extra_s16_x` expected absent, actual `0x081C`; 2852 errors |
+| `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
+| `TestS2Ooz2LevelSelectTraceReplay` | f2623 `tails_x` expected `0x04A1`, actual `0x049D`; 946 errors |
+| `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
+| `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
+| `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1222 errors |
+| `TestS2Htz2LevelSelectTraceReplay` | f3317 `tails_x_speed` expected `0x00E8`, actual `-0018`; 1058 errors |
+| `TestS2CpzLevelSelectTraceReplay` | f4194 `y` expected `0x032C`, actual `0x032D`; 356 errors |
+| `TestS2Mcz2LevelSelectTraceReplay` | f6429 `tails_y` expected `0x0647`, actual `0x0648`; 425 errors |
+| `TestS2Cnz2LevelSelectTraceReplay` | f4730 `tails_y` expected `0x0368`, actual `0x0386`; 994 errors |
+| `TestS2HtzLevelSelectTraceReplay` | f6586 `y_speed` expected `-0178`, actual `-0078`; 233 errors |
+| `TestS2MtzLevelSelectTraceReplay` | f5647 `tails_y_sub` expected `0x6500`, actual `0x3D00`; 616 errors |
+
 ## 2026-06-29 - S2 integration sweep after OOZ2 Obj45 airborne side-compression merge (7 green, 12 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
