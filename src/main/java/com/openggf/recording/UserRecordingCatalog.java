@@ -1,5 +1,8 @@
 package com.openggf.recording;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.version.BuildIdentity;
@@ -21,6 +24,7 @@ import java.util.zip.ZipFile;
 public final class UserRecordingCatalog {
     private static final String MANIFEST_ENTRY = "OpenGGF/manifest.json";
     private static final String BK2_EXTENSION = ".bk2";
+    private static final ObjectMapper MANIFEST_MAPPER = new ObjectMapper();
 
     private final Path root;
     private final Bk2MovieLoader movieLoader;
@@ -104,9 +108,49 @@ public final class UserRecordingCatalog {
                 throw new IOException("BK2 missing required entry: " + MANIFEST_ENTRY);
             }
             try (InputStream in = zip.getInputStream(entry)) {
-                return UserRecordingJson.readManifest(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+                return readCatalogManifest(new String(in.readAllBytes(), StandardCharsets.UTF_8));
             }
         }
+    }
+
+    private static UserRecordingManifest readCatalogManifest(String json) throws IOException {
+        try {
+            return UserRecordingJson.readManifest(json);
+        } catch (IOException ex) {
+            if (!isMissingEngineIdentityError(ex)) {
+                throw ex;
+            }
+            return readManifestWithoutEngineIdentity(json, ex);
+        }
+    }
+
+    private static boolean isMissingEngineIdentityError(IOException ex) {
+        return "Missing required manifest field: engineIdentity".equals(ex.getMessage());
+    }
+
+    private static UserRecordingManifest readManifestWithoutEngineIdentity(String json, IOException original)
+            throws IOException {
+        JsonNode root = MANIFEST_MAPPER.readTree(json);
+        if (!(root instanceof ObjectNode objectNode) || objectNode.hasNonNull("engineIdentity")) {
+            throw original;
+        }
+
+        objectNode.set("engineIdentity", MANIFEST_MAPPER.createObjectNode()
+                .put("baseVersion", "unknown")
+                .put("commit", "")
+                .put("dirty", false));
+        UserRecordingManifest validated = UserRecordingJson.readManifest(MANIFEST_MAPPER.writeValueAsString(objectNode));
+        return new UserRecordingManifest(
+                validated.schemaVersion(),
+                validated.movieName(),
+                null,
+                validated.launchContext(),
+                validated.sidecar(),
+                validated.determinism(),
+                validated.jumpActionButton(),
+                validated.frameCount(),
+                validated.stopReason(),
+                validated.createdAt());
     }
 
     private static ZipEntry findEntryIgnoreCase(ZipFile zip, String expectedName) {

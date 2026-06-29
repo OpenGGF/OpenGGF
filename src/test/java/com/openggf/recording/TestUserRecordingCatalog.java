@@ -7,8 +7,12 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -110,6 +114,23 @@ class TestUserRecordingCatalog {
         assertTrue(entry.loadError().contains("malformed.bk2"));
     }
 
+    @Test
+    void missingEngineIdentityMetadataWarnsButCatalogEntryRemainsLoadable() throws Exception {
+        BuildIdentity identity = new BuildIdentity("0.6.1", "", false);
+        UserRecordingManifest manifest = manifest("missing-engine-identity", identity, 1);
+        Path bk2 = writeRecording("missing-engine-identity.bk2", manifest);
+        replaceManifestEntry(bk2, withoutEngineIdentity(UserRecordingJson.writeManifest(manifest)));
+
+        UserRecordingEntry entry = singleEntry(identity);
+
+        assertEquals(bk2, entry.path());
+        assertEquals("missing-engine-identity", entry.displayName());
+        assertEquals(1, entry.frameCount());
+        assertEquals(RecordingVersionWarning.MISSING_METADATA, entry.versionWarning());
+        assertTrue(entry.isLoadable());
+        assertTrue(entry.loadError() == null || entry.loadError().isBlank());
+    }
+
     private UserRecordingEntry singleEntry(BuildIdentity currentIdentity) throws Exception {
         List<UserRecordingEntry> entries = UserRecordingCatalog.scan(tempDir, "s3k", currentIdentity);
         assertEquals(1, entries.size());
@@ -168,5 +189,30 @@ class TestUserRecordingCatalog {
 
     private static DesyncLiteFrame sidecarFrame(int frame) {
         return new DesyncLiteFrame(frame, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+
+    private static String withoutEngineIdentity(String manifestJson) {
+        return manifestJson.replaceFirst("(?s)\\s+\"engineIdentity\"\\s*:\\s*\\{.*?\\},", "");
+    }
+
+    private static void replaceManifestEntry(Path bk2, String manifestJson) throws Exception {
+        Path tmp = Files.createTempFile(bk2.getParent(), "manifest-rewrite-", ".bk2");
+        try (ZipFile original = new ZipFile(bk2.toFile());
+                ZipOutputStream rewritten = new ZipOutputStream(Files.newOutputStream(tmp), StandardCharsets.UTF_8)) {
+            var entries = original.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                rewritten.putNextEntry(new ZipEntry(entry.getName()));
+                if ("OpenGGF/manifest.json".equals(entry.getName())) {
+                    rewritten.write(manifestJson.getBytes(StandardCharsets.UTF_8));
+                } else {
+                    try (var input = original.getInputStream(entry)) {
+                        input.transferTo(rewritten);
+                    }
+                }
+                rewritten.closeEntry();
+            }
+        }
+        Files.move(tmp, bk2, StandardCopyOption.REPLACE_EXISTING);
     }
 }
