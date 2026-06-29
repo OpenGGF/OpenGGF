@@ -3231,7 +3231,7 @@ final class ObjectSolidContactController {
             // movingInto mirrors Solid_Left/Solid_Right intent but is NOT
             // acted on here (SideAir skips StopCharacter entirely).
             boolean leftSide = relX < halfWidth;
-            boolean movingInto = leftSide ? player.getXSpeed() > 0 : player.getXSpeed() < 0;
+            boolean movingInto = isMovingIntoSideContact(player, instance, leftSide);
             if (apply
                     && isSignedObjectControlSideContactRejected(player, instance)) {
                 return null;
@@ -3315,7 +3315,7 @@ final class ObjectSolidContactController {
             // ROM loc_1E06E sets Status_Push for any grounded side contact
             // after applying the side separation. Only speed zeroing is
             // gated by moving into the object (sonic3k.asm:41473-41495).
-            boolean movingInto = leftSide ? player.getXSpeed() > 0 : player.getXSpeed() < 0;
+            boolean movingInto = isMovingIntoSideContact(player, instance, leftSide);
             boolean pushing = !player.getAir();
             // ROM: sub SolidObject.asm lines 173-196
             // When d0==0 (distX==0), ROM branches to Solid_Centre which does
@@ -3563,7 +3563,7 @@ final class ObjectSolidContactController {
             // If player is near the horizontal edge (absDistX < 16), push sideways instead.
             if (absDistX < 0x10) {
                 boolean leftSide = relX < halfWidth;
-                boolean movingInto = leftSide ? player.getXSpeed() > 0 : player.getXSpeed() < 0;
+                boolean movingInto = isMovingIntoSideContact(player, instance, leftSide);
                 boolean groundedSquashEdgePush = instance instanceof SolidObjectProvider provider
                         && provider.groundedSquashEdgeSideContactSetsPush();
                 boolean pushing = !player.getAir() && (movingInto || groundedSquashEdgePush);
@@ -3790,6 +3790,18 @@ final class ObjectSolidContactController {
             return false;
         }
         return provider.preservesEdgeSubpixelMotion();
+    }
+
+    private boolean isMovingIntoSideContact(PlayableEntity player, ObjectInstance instance, boolean leftSide) {
+        short xSpeed = player.getXSpeed();
+        if (!leftSide) {
+            return xSpeed < 0;
+        }
+        if (instance instanceof SolidObjectProvider provider
+                && provider.zeroXSpeedStopsOnLeftSideContact()) {
+            return xSpeed >= 0;
+        }
+        return xSpeed > 0;
     }
 
     /**

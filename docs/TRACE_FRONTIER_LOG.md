@@ -39,7 +39,41 @@ branch-local measurements.
 | `TestS2Cnz2LevelSelectTraceReplay` | f4632 `tails_y` expected `0x02B8`, actual `0x02B4`; 955 errors |
 | `TestS2DezEndingLevelSelectTraceReplay` | f5952 `y_speed` expected `0x0098`, actual `-0098`; 46 errors |
 | `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
-| `TestS2MtzLevelSelectTraceReplay` | f3081 `g_speed` expected `0x0000`, actual `-04F0`; 846 errors |
+| `TestS2MtzLevelSelectTraceReplay` | f4835 `tails_x` expected `0x16D6`, actual `0x16D7`; 845 errors |
+
+## 2026-06-29 - S2 MTZ1 Obj65 zero-X left-side stop - ENGINE FIX (MTZ1 f3081 -> f4835)
+
+- Scope: branch `bugfix/ai-trace-s2-mtz1-r4` in worktree
+  `.worktrees/trace-s2-mtz1-r4`, branched from `bugfix/ai-s2-trace-develop`.
+  The trace data remains comparison-only; no zone, route, frame, or known-failing
+  trace carve-out was added.
+- Root/fix: MTZ1 f3081 had already matched the ROM position and `x_vel/y_vel`
+  after a terrain right-wall hit, but retained stale `g_speed=-$04F0` while ROM
+  had cleared `inertia`. The next frame's leftward displacement came from nearby
+  Obj65 MTZ long platforms, not terrain. Obj65 calls the shared S2 `SolidObject`
+  helper after updating `x_pos` (`docs/s2disasm/s2.asm:52925-52940`). In
+  `SolidObject_InsideLeft`, `x_vel == 0` does not take the `bmi` escape to
+  `SolidObject_AtEdge`; it falls through to `SolidObject_StopCharacter`, which
+  clears both `inertia` and `x_vel` before the side separation
+  (`docs/s2disasm/s2.asm:35424-35439`). The engine's side-contact helper treated
+  zero X speed as "not moving into" the left side, so it corrected X but preserved
+  stale inertia. Obj65 now opts into this ROM boundary through a narrow
+  `SolidObjectProvider` hook; other solids keep the existing sign convention.
+- Frontier movement:
+  `TestS2MtzLevelSelectTraceReplay#replayMatchesTrace` advances from f3081 /
+  846 errors (`g_speed` expected `0x0000`, actual `-04F0`) to f4835 / 845 errors
+  (`tails_x` expected `0x16D6`, actual `0x16D7`).
+- Held frontiers:
+  `TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace` remains f1277 /
+  3385 errors (`tails_x` expected `0x047D`, actual `0x047F`);
+  `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace` remains f1973 /
+  3705 errors (`tails_g_speed` expected `0x0000`, actual `0x03C1`).
+- Verification:
+  - `mvn "-Dtest=TestS2MtzLevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test` -> expected red at f4835 / 845 errors.
+  - `mvn "-Dtest=TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test` -> expected red at f1277 / 3385 errors.
+  - `mvn "-Dtest=TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test` -> expected red at f1973 / 3705 errors.
+  - `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test` -> 6 passed, 0 failed.
+  - `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mtzLongPlatformOptsIntoZeroXSpeedLeftSideStopCharacter" test` -> passed.
 
 ## 2026-06-29 - S1 MZ2 f2823 lava-geyser eruption drift - ENGINE FIX -> MZ2 frontier f2823 -> f4610 (2 files, 1116 -> 824 errors; MZ1/MZ3 held GREEN)
 

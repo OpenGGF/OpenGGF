@@ -214,6 +214,16 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean zeroXSpeedStopsOnLeftSideContact() {
+        // Obj65 calls the shared S2 SolidObject helper after updating its x_pos
+        // (docs/s2disasm/s2.asm:52925-52940). In SolidObject_InsideLeft,
+        // x_vel == 0 does not take the bmi branch to SolidObject_AtEdge; it
+        // falls through to SolidObject_StopCharacter, clearing inertia and
+        // x_vel before side separation (docs/s2disasm/s2.asm:35424-35439).
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (contact.standing() || contact.touchTop()) {
