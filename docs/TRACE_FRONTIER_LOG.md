@@ -6,6 +6,38 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 MCZ2 Obj80 vine-release monitor landing (f7328 -> f8606)
+
+- Worktree/branch: `.worktrees/ai-trace-s2-mcz2-r11` /
+  `bugfix/ai-trace-s2-mcz2-r11`, forked from
+  `bugfix/ai-s2-trace-develop` at `be8376438`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Mcz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: MCZ2 f7328 / 447 errors (`g_speed` expected
+  `0x0000`, actual `0x02A0`); MCZ1 green.
+- Evidence/fix: ROM Obj80 moving-vine release clears `obj_control`, writes
+  upward velocity, and sets `Status_InAir`, but does not write a new animation
+  byte (`docs/s2disasm/s2.asm:56761-56775`). The grabbed pose remains
+  `AniIDSonAni_Hang2` until the Obj26 monitor landing reaches
+  `Sonic_ResetOnFloor`, which rewrites Walk and clears rolling
+  (`docs/s2disasm/s2.asm:38120-38160`). The engine's airborne animation
+  resolver was forcing inherited `Status_Roll` back to Roll, so
+  `SolidObject_Monitor_Sonic` rejected the landing even though ROM's
+  `anim(a1)` was not Roll (`docs/s2disasm/s2.asm:25611-25616`).
+  `ScriptedVelocityAnimationProfile` now preserves a non-roll current
+  animation byte for this airborne object-release state while still resolving
+  true jump/roll arcs to Roll.
+- Focused verification:
+  `mvn "-Dtest=com.openggf.tests.TestScriptedVelocityAnimationProfile" test`.
+  Result: selected animation profile coverage passed.
+- Target verification:
+  `mvn "-Dtest=TestS2Mcz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: MCZ2 advances to f8606 / 317 errors (`y_speed` expected `-03E0`,
+  actual `-0400`); MCZ1 remains green.
+- New frontier: f8606 enters the MCZ boss/debris contact window near Obj57,
+  with ROM still rolling (`status=06`, `g_speed=0x0044`) while the engine is in
+  hurt routine 4 with `x_speed=-0200`, `y_speed=-0400`, and rolling cleared.
+
 ## 2026-06-29 - S2 HTZ1 Obj84 flying-sidekick regression repair (256 -> 226 errors)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
@@ -209,7 +241,7 @@ branch-local measurements.
 | `TestS2CpzLevelSelectTraceReplay` | f4194 `y` expected `0x032C`, actual `0x032D`; 356 errors |
 | `TestS2HtzLevelSelectTraceReplay` | f6586 `y_speed` expected `-0178`, actual `-0078`; 233 errors |
 | `TestS2MtzLevelSelectTraceReplay` | f5647 `tails_y_sub` expected `0x6500`, actual `0x3D00`; 616 errors |
-| `TestS2Mcz2LevelSelectTraceReplay` | f7328 `g_speed` expected `0x0000`, actual `0x02A0`; 447 errors |
+| `TestS2Mcz2LevelSelectTraceReplay` | f8606 `y_speed` expected `-03E0`, actual `-0400`; 317 errors |
 | `TestS2Cnz2LevelSelectTraceReplay` | f4892 `tails_g_speed` expected `0x0800`, actual `0x0000`; 943 errors |
 
 ## 2026-06-29 - S2 ARZ2 Obj28 art RNG first-routine timing (f741 -> f796)

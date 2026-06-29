@@ -145,17 +145,19 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // field is never overwritten while airborne. Only the ground routine
             // (Sonic_MdNormal) calls Sonic_Move which selects walk/run/idle anim.
             //
-            // The ROM anim byte stays AniIDSonAni_Roll for the WHOLE airborne arc
-            // of any roll/jump: Sonic_Jump writes anim=Roll + sets status.rolling
+            // External object releases can place the player in the air without
+            // writing a fresh jump/roll anim byte. S2 Obj80 moving vines release
+            // with Status_Roll still set, but leave AniIDSonAni_Hang2 active until
+            // Sonic_ResetOnFloor lands and rewrites Walk (s2.asm:56761-56775,
+            // 38120-38160). Preserve those object-written bytes before applying
+            // the generic airborne roll rule.
+            // The ROM anim byte stays AniIDSonAni_Roll for the airborne arc of an
+            // actual roll/jump: Sonic_Jump writes anim=Roll + sets status.rolling
             // together (s2.asm:37387-37388), Sonic_RollJump only sets the
             // rolljumping bit and leaves the already-Roll anim alone
             // (s2.asm:37395-37397), and Sonic_MdAir never re-runs Sonic_Move
-            // (s2.asm:36791+). So the engine model is: while airborne, if the
-            // Status_Roll bit is set, the animation is Roll — independent of the
-            // engine's jumping/rollingJump bookkeeping, which can be cleared mid-air
-            // by platform/slot/object code that the ROM does not key the anim on.
-            // This is what lets a rolling jump break a Monitor on the way down
-            // (Touch_Monitor / SolidObject_Monitor_Sonic gate on
+            // (s2.asm:36791+). This lets a rolling jump break a Monitor on the way
+            // down (Touch_Monitor / SolidObject_Monitor_Sonic gate on
             // anim==AniIDSonAni_Roll, s2.asm:25611-25616,85245-85255); S1 and S3K
             // monitor roll gates match (s1disasm/_incObj/26 Monitor.asm,
             // sonic3k.asm Touch_Monitor), so this is a universal correction.
@@ -166,11 +168,11 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // sub_31E96). Fall through to the object-anim / walk-tumble path so the
             // fan's frames persist instead of snapping back to the ball.
             if (sprite.getRolling() && sprite.getFlipAngle() == 0) {
+                if (!sprite.isSliding() && !sprite.getRollingJump() && sprite.getAnimationId() != rollAnimId) {
+                    return null;
+                }
                 return rollAnimId;
             }
-            // When jumping=false and roll-jump=false (and not rolling/sliding), the
-            // player was placed into the air by an external force; keep its
-            // object-written animation rather than resolving back to walk/roll.
             if (!sprite.isJumping() && !sprite.getRollingJump() && !sprite.isSliding()) {
                 return null;
             }
