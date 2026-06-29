@@ -471,10 +471,10 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         // This suppresses normal physics while leaving global Control_Locked
         // untouched so Ctrl_1_Logical keeps refreshing during traversal.
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setRolling(true);
-        // ROM: move.b #AniIDSonAni_Roll,anim(a1) - force roll animation.
-        // Must be set explicitly because resolveAnimationId() returns null while
-        // objectControlled is true, so auto-resolution won't select the roll anim.
+        // ROM loc_22688 writes only anim(a1)=AniIDSonAni_Roll
+        // (docs/s2disasm/s2.asm:48612-48614); it does not set
+        // status.player.rolling or change y_radius. Preserve the incoming rolling
+        // status/radii and force the visual roll animation separately.
         player.setAnimationId(Sonic2AnimationIds.ROLL);
         player.setAir(true);
         player.setGSpeed((short) TUBE_SPEED);
@@ -738,21 +738,23 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
             LOGGER.fine("Normal exit: Completed all " + cs.completedSegmentCount + " segments, exit direction=" + cs.expectedExitDirection);
         }
 
-        // Clear Y position high bits (mask to 0x7FF) - using center coordinates
+        // ROM loc_227A6/loc_22858: andi.w #$7FF,y_pos(a1). This masks only
+        // the native y_pos pixel word and leaves the sibling y_sub word intact.
         int y = player.getCentreY() & 0x7FF;
-        player.setCentreY((short) y);
+        NativePositionOps.writeYPosPreserveSubpixel(player, y);
 
-        // Restore player-local object control with cooldown to prevent immediate re-capture.
-        // ROM: clr.b obj_control(a1)
-        player.releaseFromObjectControl(frameCounter);
+        // ROM loc_227A6 clears obj_control from Obj1E's later object slot after
+        // the player routine has already run for this frame
+        // (docs/s2disasm/s2.asm:48683-48688). Keep movement suppression active
+        // until endOfTick so the engine does not run one same-frame
+        // gravity/movement step after release.
+        player.deferObjectControlRelease();
+        player.setObjectControlSuppressesMovement(true);
 
-        // ROM (loc_227A6) does NOT set spindash_flag/pinball_mode on exit; it only
-        // clears obj_control and plays the spindash-release sound. The player leaves
-        // the tube as an airborne ball (the rolling bit set on entry persists while
-        // in_air) and uncurls naturally on landing. Forcing pinball_mode here made the
-        // S2 landing path (pinballLandingPreservesRoll / pinballLandingPreservesPinballMode)
-        // skip both the roll-clear and pinball-clear, locking the player rolling forever
-        // when they land without hitting the exit spring. Do not re-add it.
+        // ROM loc_227A6/loc_22858 do NOT set spindash_flag/pinball_mode or
+        // status.player.rolling on exit; they mask y_pos and play the
+        // spindash-release sound. Preserve whatever rolling status the player
+        // had on entry instead of forcing a pinball-style landing state.
 
         // Set springing frames to give the player ceiling collision immunity.
         // This prevents the movement manager from immediately zeroing ySpeed when the
