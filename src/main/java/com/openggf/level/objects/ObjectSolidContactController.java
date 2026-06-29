@@ -1587,6 +1587,12 @@ final class ObjectSolidContactController {
             if (deltaX != 0 && provider.carriesRiderOnHorizontalMove(player)) {
                 player.shiftX(deltaX);
             }
+            // Object-local escape hatch for ROM routines whose current body Y has
+            // advanced but whose continued top ride remains seated on the prior
+            // surface for this transition frame.
+            int rideY = provider.usesPreUpdateYForContinuedRide(player)
+                    ? instance.getPreUpdateY()
+                    : currentY;
             // NOTE: the S3K Obj_CollapsingPlatform transition-frame skip
             // (suppressSlopeSampleThisFrame) is handled at the top of this
             // method, before the player.getAir() unseat branch, so a player
@@ -1601,10 +1607,10 @@ final class ObjectSolidContactController {
             } else {
                 surfaceOffset = params.groundHalfHeight();
             }
-            int newCentreY = currentY + params.offsetY() - surfaceOffset - player.getYRadius();
+            int newCentreY = rideY + params.offsetY() - surfaceOffset - player.getYRadius();
             int newY = newCentreY - (player.getHeight() / 2);
             player.setY((short) newY);
-            putRidingState(player, instance, currentX, currentY, ridingPieceIndex);
+            putRidingState(player, instance, currentX, rideY, ridingPieceIndex);
             setObjectStandingBit(player, instance, ridingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
 

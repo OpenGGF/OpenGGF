@@ -215,6 +215,36 @@ public class TestS2ObjectOccupancyOracle {
     private record PushCheck(boolean pushing, int tailsX, int tailsY, String summary) {
     }
 
+    private record RideCheck(int expectedY, int actualY, boolean actualAir, boolean actualOnObject) {
+    }
+
+    @Test
+    public void mtz1TwinStomperRetractionKeepsRiderOnPreMoveSurfaceAtRomFrame1267() throws Exception {
+        RideCheck rideCheck = driveTrace("mtz", Sonic2ZoneConstants.ZONE_MTZ, 0,
+                (trace, om, frame) -> {
+                    if (frame != 1267) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    AbstractPlayableSprite sonic = Assertions.assertInstanceOf(
+                            AbstractPlayableSprite.class,
+                            GameServices.sprites().getSprite("sonic"),
+                            "Engine fixture must have Sonic at MTZ1 f1267");
+                    Assertions.assertEquals(0x1E, expected.standOnObj(),
+                            "ROM fixture should have Sonic riding Obj64 in slot 30 at MTZ1 f1267");
+                    return new RideCheck(expected.y() & 0xFFFF,
+                            sonic.getCentreY() & 0xFFFF,
+                            sonic.getAir(),
+                            sonic.isOnObject());
+                });
+        Assertions.assertNotNull(rideCheck);
+        Assertions.assertEquals(rideCheck.expectedY(), rideCheck.actualY(),
+                "S2 Obj64 retraction should keep a continued top rider seated on the "
+                        + "pre-update surface for the transition frame");
+        Assertions.assertFalse(rideCheck.actualAir());
+        Assertions.assertTrue(rideCheck.actualOnObject());
+    }
+
     @Test
     public void arz2ChopChopLoadsIntoRomSlot19AfterBubbleBurstClears() throws Exception {
         SlotCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,

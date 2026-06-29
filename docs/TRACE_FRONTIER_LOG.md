@@ -6,6 +6,45 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 MTZ1 Obj64 retraction carry - ENGINE FIX (MTZ1 f1267 -> f1840)
+
+- Scope: branch `bugfix/ai-trace-s2-mtz1-r2` in worktree
+  `.worktrees/trace-s2-mtz1-r2`, branched from
+  `bugfix/ai-s2-trace-develop` at `eae8f29c8`. The diff is limited to a
+  shared object-local continued-ride Y hook, S2 Obj64's retracting-state opt-in,
+  a comparison-only MTZ1 oracle guard, and docs. It does not hydrate trace data
+  and does not add zone, route, frame, or known-failing-trace carve-outs.
+- Root/fix: MTZ1 f1267 had Sonic still riding Obj64 slot 30. The engine updated
+  Obj64 from `y=$00CC` to `$00C4` before the continued-riding seat, carrying
+  Sonic 8 pixels too high. ROM `Obj64_Main` updates the object before
+  `JmpTo9_SolidObject` (`docs/s2disasm/s2.asm:52726-52750`), but the recorded
+  top-rider frame remains on the previous surface while `loc_269FA` starts the
+  retracting phase (`docs/s2disasm/s2.asm:52766-52805`). Obj64 now opts into a
+  narrow continued-ride Y anchor using the pre-update surface only while mode-1
+  movement is retracting upward. The object body, side-contact cleanup, and
+  MTZ3 no-contact push clear still observe the live post-update position.
+- Frontier movement: `TestS2MtzLevelSelectTraceReplay#replayMatchesTrace`
+  advances from f1267 / 1092 errors (`y` expected `0x00AC`, actual `0x00A4`)
+  to f1840 / 1277 errors (`g_speed` expected `0x0311`, actual `0x0000`).
+- Verification:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2ObjectOccupancyOracle#mtz1TwinStomperRetractionKeepsRiderOnPreMoveSurfaceAtRomFrame1267+mtz3TwinStomperNoContactClearsTailsPushAtRomFrame1743"" test"`
+  exited 0; both requested oracle methods passed.
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2MtzLevelSelectTraceReplay#replayMatchesTrace,TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace,TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace"" test"`
+  remains expected-red with MTZ1 at f1840, MTZ2 still at f1277, and MTZ3 still
+  at f1973.
+  Guard command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace"" test"`
+  exited 0; all six current S2 green guard traces passed. MSE echoed stale
+  expected-red MTZ XML summaries from the same target report directory, but the
+  requested tests passed and the command exited 0.
+- Current MTZ frontiers after this branch:
+
+| Trace | First error |
+|---|---|
+| `TestS2MtzLevelSelectTraceReplay` | f1840 `g_speed` expected `0x0311`, actual `0x0000`; 1277 errors |
+| `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
+| `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
+
 ## 2026-06-29 - S2 integration sweep after CNZ1 Obj86/control-latch merge (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
