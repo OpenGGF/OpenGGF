@@ -285,8 +285,6 @@ public record PerObjectRewindSnapshot(
             int minYBound,
             int maxYBound,
             int lastInteractObjectId,
-            boolean normalDespawnLastRenderFlagOffscreen,
-            boolean normalDespawnFreshRenderEntryDelayConsumed,
             int diagnosticS3kInteractWord,
             int normalFrameCount,
             int approachFrameCount,

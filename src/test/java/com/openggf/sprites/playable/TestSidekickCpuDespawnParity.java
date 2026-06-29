@@ -1081,44 +1081,6 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void s2NormalDespawnConsumesFreshRenderEntryOneCpuTickLate() {
-        TestableSprite sonic = new TestableSprite("sonic");
-        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
-        sonic.setCentreX((short) 0x08FB);
-        sonic.setCentreY((short) 0x01AC);
-        sonic.resetPositionAndStatTableHistory();
-
-        TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
-        tails.setCpuControlled(true);
-        tails.setCentreX((short) 0x0F38);
-        tails.setCentreY((short) 0x0296);
-        tails.setAir(true);
-        tails.setRolling(true);
-        GameServices.camera().setX((short) 0x0F49);
-        GameServices.camera().setY((short) 0x01D3);
-
-        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 0x0077, 0x16, false, 0x08FB, 0x01AC);
-        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 16);
-
-        tails.setRenderFlagOnScreen(false);
-        controller.update(3671);
-        assertEquals(0x0078, controller.getDiagnosticRespawnCounter());
-
-        tails.setRenderFlagOnScreen(true);
-        controller.update(3672);
-        assertEquals(0x0079, controller.getDiagnosticRespawnCounter(),
-                "S2 TailsCPU_CheckDespawn reads render_flags.on_screen before "
-                        + "the frame's later Tails_Display/BuildSprites pass refreshes it "
-                        + "(docs/s2disasm/s2.asm:38963-38970,39016-39024,39409-39440,5095-5111)");
-
-        tails.setRenderFlagOnScreen(true);
-        controller.update(3673);
-        assertEquals(0x0000, controller.getDiagnosticRespawnCounter());
-    }
-
-    @Test
     void blinkHiddenSidekickDoesNotRefreshRenderFlagFromCameraVisibility() {
         SpriteManager sprites = new SpriteManager();
         Camera camera = new Camera();
