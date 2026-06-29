@@ -6,6 +6,43 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 MCZ2 Obj75 anchor/display child advancement (f6429 -> f7328)
+
+- Worktree/branch: `.worktrees/trace-s2-mcz2-r4` /
+  `bugfix/ai-trace-s2-mcz2-r4`, forked from
+  `bugfix/ai-s2-trace-develop` at `ce786a7f78`.
+- Baseline: `TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace` failed at
+  f6429 / 425 errors (`tails_y` expected `0x0647`, actual `0x0648`). Context
+  near Tails showed ROM Obj75 spike-ball parent/display-child SST slots, while
+  the engine only had nearby Obj75 brick records.
+- Evidence: the MCZ2 layout record for Obj75 subtype `$17` at `1740,0690`
+  loaded, then became dormant before f6429 because the generic object-retire
+  path used the moving spike-ball head position. ROM Obj75 stores its anchor in
+  `objoff_30(a0)` and runs the despawn range check from that anchor, not from
+  the moving head (`docs/s2disasm/s2.asm:55590-55675`). Obj75 spike-ball init
+  also allocates a display-only multi-sprite child after the current slot.
+- Fix: `MCZBrickObjectInstance` now returns the Obj75 anchor from
+  `getOutOfRangeReferenceX()`, preserves the original layout index when
+  exposing the dynamic spike-ball collision spawn, and creates/synchronizes the
+  display-only child slot for spike-ball subtypes. The new tests cover
+  co-located Obj75 records, after-current display-child allocation, and MCZ2
+  f6429 parent/display-child survival.
+- Focused verification:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=com.openggf.tests.objects.TestS2ColocatedObjectPlacement,com.openggf.tests.trace.TestS2ObjectOccupancyOracle#mcz2Obj75SpikeBallParentAndDisplayChildSurviveUntilTailsHit" "-DfailIfNoTests=false" clean test`.
+  Result: 3 passed, 0 failed.
+- MCZ2 verification:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`.
+  Result: MCZ2 advances to f7328 / 447 errors (`g_speed` expected `0x0000`,
+  actual `0x02A0`).
+- Green guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" clean test`.
+  Result: 7 passed, 0 failed.
+- New frontier: f7328 `g_speed` expected `0x0000`, actual `0x02A0`. The ROM
+  context has Sonic standing on Obj26 monitor slot `0x1E` at `1F70,0471`
+  (`onObj=1E`, airborne clear), while the engine still has the monitor at the
+  same coordinates but one dynamic slot earlier and Sonic remains airborne /
+  rolling. Treat this as a separate Obj26 monitor contact / slot-order frontier.
+
 ## 2026-06-29 - S2 integration sweep after DEZ ending handoff merge (7 green, 12 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
@@ -38,7 +75,7 @@ branch-local measurements.
 | `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1222 errors |
 | `TestS2Htz2LevelSelectTraceReplay` | f3317 `tails_x_speed` expected `0x00E8`, actual `-0018`; 1058 errors |
 | `TestS2CpzLevelSelectTraceReplay` | f4194 `y` expected `0x032C`, actual `0x032D`; 356 errors |
-| `TestS2Mcz2LevelSelectTraceReplay` | f6429 `tails_y` expected `0x0647`, actual `0x0648`; 425 errors |
+| `TestS2Mcz2LevelSelectTraceReplay` | f7328 `g_speed` expected `0x0000`, actual `0x02A0`; 447 errors |
 | `TestS2Cnz2LevelSelectTraceReplay` | f4644 `tails_x` expected `0x1C8E`, actual `0x1C8D`; 925 errors |
 | `TestS2HtzLevelSelectTraceReplay` | f6467 `tails_cpu_respawn_counter` expected `0x003F`, actual `0x0000`; 234 errors |
 | `TestS2MtzLevelSelectTraceReplay` | f5647 `tails_y_sub` expected `0x6500`, actual `0x3D00`; 616 errors |
