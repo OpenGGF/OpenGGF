@@ -963,6 +963,7 @@ public final class RewindCodecs {
         private static final Field FRAME_INDEX = intField(ObjectAnimationState.class, "frameIndex");
         private static final Field FRAME_TICK = intField(ObjectAnimationState.class, "frameTick");
         private static final Field MAPPING_FRAME = intField(ObjectAnimationState.class, "mappingFrame");
+        private static final Field PENDING_SWITCH_ANIM_ID = intField(ObjectAnimationState.class, "pendingSwitchAnimId");
 
         @Override
         public void capture(Field field, Object target, RewindStateBuffer scalarData, List<Object> opaqueValues) {
@@ -976,6 +977,7 @@ public final class RewindCodecs {
             scalarData.writeInt(getInt(FRAME_INDEX, state));
             scalarData.writeInt(getInt(FRAME_TICK, state));
             scalarData.writeInt(getInt(MAPPING_FRAME, state));
+            scalarData.writeInt(getInt(PENDING_SWITCH_ANIM_ID, state));
         }
 
         @Override
@@ -990,6 +992,7 @@ public final class RewindCodecs {
             setInt(FRAME_INDEX, state, scalarData.readInt());
             setInt(FRAME_TICK, state, scalarData.readInt());
             setInt(MAPPING_FRAME, state, scalarData.readInt());
+            setInt(PENDING_SWITCH_ANIM_ID, state, scalarData.readInt());
         }
 
         @Override

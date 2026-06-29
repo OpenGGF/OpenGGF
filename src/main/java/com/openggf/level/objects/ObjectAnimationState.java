@@ -14,6 +14,7 @@ public class ObjectAnimationState {
     private int frameIndex;
     private int frameTick;
     private int mappingFrame;
+    private int pendingSwitchAnimId = -1;
 
     public ObjectAnimationState(SpriteAnimationSet animationSet, int animId, int initialMappingFrame) {
         this.animationSet = animationSet;
@@ -23,6 +24,7 @@ public class ObjectAnimationState {
 
     public void setAnimId(int animId) {
         this.animId = animId;
+        pendingSwitchAnimId = -1;
     }
 
     public int getAnimId() {
@@ -50,6 +52,7 @@ public class ObjectAnimationState {
         copy.lastAnimId = lastAnimId;
         copy.frameIndex = frameIndex;
         copy.frameTick = frameTick;
+        copy.pendingSwitchAnimId = pendingSwitchAnimId;
         return copy;
     }
 
@@ -60,10 +63,18 @@ public class ObjectAnimationState {
     public void resetFrameIndex() {
         frameIndex = 0;
         lastAnimId = -1; // Force re-initialization on next update()
+        pendingSwitchAnimId = -1;
     }
 
     public void update() {
         if (animationSet == null) {
+            return;
+        }
+
+        if (pendingSwitchAnimId >= 0) {
+            animId = pendingSwitchAnimId;
+            lastAnimId = -1;
+            pendingSwitchAnimId = -1;
             return;
         }
 
@@ -111,8 +122,8 @@ public class ObjectAnimationState {
                     frameIndex = 0;
                     return;
                 }
-                animId = nextAnimId;
-                lastAnimId = -1;
+                frameIndex = script.frames().size() - 1;
+                pendingSwitchAnimId = nextAnimId;
             }
             case LOOP -> frameIndex = 0;
             default -> frameIndex = 0;
@@ -138,11 +149,12 @@ public class ObjectAnimationState {
                 && lastAnimId == state.lastAnimId
                 && frameIndex == state.frameIndex
                 && frameTick == state.frameTick
-                && mappingFrame == state.mappingFrame;
+                && mappingFrame == state.mappingFrame
+                && pendingSwitchAnimId == state.pendingSwitchAnimId;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(animId, lastAnimId, frameIndex, frameTick, mappingFrame);
+        return Objects.hash(animId, lastAnimId, frameIndex, frameTick, mappingFrame, pendingSwitchAnimId);
     }
 }
