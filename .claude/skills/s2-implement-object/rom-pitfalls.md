@@ -2627,6 +2627,42 @@ launch on live pushing bits).
 
 ---
 
+## P64 - Negative SolidObject returns are not always ride captures
+
+**Pattern.** Some S2 object-local wrappers branch on `tst.w d4` after
+`SolidObject_Always_SingleCharacter`. A negative return means the player
+contacted the object vertically, but it may be either top or bottom contact.
+Only the top path has the prior `RideObject_SetRide` side effects; bottom
+captures preserve the player's airborne/no-on-object state.
+
+**Engine symptom.** A sidekick enters an object from below and the engine either
+fails to capture them, or captures them as if they were riding on top. In CNZ2,
+ObjD6 Point Pokey missed Tails' bottom capture at f4730, leaving Tails below
+the cage with the wrong `y_pos` and velocity.
+
+**What to check / fix.** When a routine tests `d4` after a single-character
+`SolidObject` call:
+1. Map the ROM return sign and contact kind separately. Negative top and bottom
+   may both enter the object's capture/effect path, but only top should inherit
+   ride/standing state.
+2. Preserve per-player object state words such as ObjD6 `objoff_30` for Sonic
+   and `objoff_34` for Sidekick. A release must target the captured player, not
+   whichever player the engine update happened to receive first.
+3. If the occupied routine releases on an off-screen/render-flag check, run the
+   ROM release tail for the captured player and preserve any post-release
+   cooldown before clearing the per-player state.
+
+**ROM citation.** ObjD6 calls Sonic then Sidekick with separate state words and
+captures on `tst.w d4 / bpl` after `SolidObject_Always_SingleCharacter`
+(`docs/s2disasm/s2.asm:59030-59046`). Its occupied routine releases through
+`loc_2BE2E` and clears the state in `loc_2BE9C`
+(`docs/s2disasm/s2.asm:59188-59256`).
+
+**Originating commit.** `<pending>` S2 CNZ2 ObjD6 bottom-capture/sidekick
+ownership fix: `TestS2Cnz2LevelSelectTraceReplay` advances f4730 -> f4892.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

@@ -6,6 +6,33 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 CNZ2 ObjD6 Point Pokey capture advancement (f4730 -> f4892)
+
+- Worktree/branch: `.worktrees/trace-s2-cnz2-r4` /
+  `bugfix/ai-trace-s2-cnz2-r4`, forked from
+  `bugfix/ai-s2-trace-develop` at `f91c814f6`.
+- Baseline: `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` failed at
+  f4730 / 994 errors (`tails_y` expected `0x0368`, actual `0x0386`).
+- Evidence/fix: ObjD6 runs Sonic and Sidekick through separate state words
+  (`objoff_30` and `objoff_34`) and captures when
+  `SolidObject_Always_SingleCharacter` returns any negative value, not only a
+  top ride (`docs/s2disasm/s2.asm:59030-59046`). The occupied path releases
+  the captured player when the cage is off-screen and then waits through
+  `loc_2BE9C` before clearing the state (`docs/s2disasm/s2.asm:59188-59256`).
+  `PointPokeyObjectInstance` now handles bottom captures without inventing a
+  ride latch, tracks the captured sidekick, and releases the captured sprite
+  rather than always acting on Sonic.
+- Focused verification:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestPointPokeyObjectInstance,TestS2Cnz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: focused ObjD6 unit coverage and CNZ1 passed; CNZ2 advanced to
+  f4892 / 943 errors (`tails_g_speed` expected `0x0800`, actual `0x0000`).
+- Green guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+  Result: passed, no current S2 green trace regressed.
+- New frontier: f4892 `tails_g_speed` expected `0x0800`, actual `0x0000`.
+  Treat this as the next ObjD6 release/bumper/sidekick-speed frontier, not as
+  a regression of the f4730 bottom-capture bug.
+
 ## 2026-06-29 - S2 integration sweep after MCZ2 Obj75 merge (7 green, 12 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
