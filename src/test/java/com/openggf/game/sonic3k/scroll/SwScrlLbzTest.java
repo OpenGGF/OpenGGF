@@ -217,7 +217,7 @@ class SwScrlLbzTest {
     }
 
     @Test
-    void act2DeathEggForegroundVscrollFollowsLaunchCameraBeforeDetach() {
+    void act2DeathEggWindowPlatformAppliesDetachScrollToScrollA() {
         TestEnvironment.activeGameplayMode();
         LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE);
         state.setLaunchActive(true);
@@ -237,7 +237,8 @@ class SwScrlLbzTest {
         handler.update(buffer, 0x4380, 0x0668, 9, 1);
 
         assertEquals((short) 0x066D, handler.getVscrollFactorFG(),
-                "Events_bg+$16 must layer on top of the camera-driven foreground scroll, not replace it");
+                "ROM LBZ2BGE_PlatformDetach adds Events_bg+$16 to Scroll A. The copied VDP window masks "
+                        + "the standing platform while the exposed Death Egg/top band detaches.");
     }
 
     @Test

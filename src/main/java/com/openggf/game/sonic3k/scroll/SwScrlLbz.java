@@ -129,8 +129,9 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             }
             composer.setVscrollFactorFG((short) (cameraY + screenShakeOffset));
         }
-        // ROM LBZ2BGE_PlatformDetach: Events_bg+$16 is added to the FG
-        // V-scroll only, dropping the standing pad before the layout clear.
+        // ROM LBZ2BGE_PlatformDetach: once the copied platform is exposed in
+        // the VDP window, Events_bg+$16 is still added to Scroll A so the
+        // uncovered Death Egg/top band detaches.
         int detachScroll = runtimeState != null ? runtimeState.getDetachScroll() : 0;
         if (detachScroll != 0) {
             short base = composer.getVscrollFactorFG() != 0
@@ -138,7 +139,6 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
                     : (short) cameraY;
             composer.setVscrollFactorFG((short) (base + detachScroll));
         }
-
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         currentBgPeriodWidth = computeBgPeriodWidth(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
@@ -269,9 +269,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         }
         composer.setVscrollFactorBG((short) bgY);
         // ROM LBZ2BGE_PlatformDetach writes Camera_Y_pos_copy into
-        // V_scroll_value before layering Events_bg+$16 on top. The launch
-        // camera starts moving before the detach counter begins, so the
-        // foreground pad must follow Camera_Y_pos immediately.
+        // V_scroll_value before layering Events_bg+$16 on top.
         composer.setVscrollFactorFG((short) cameraY);
 
         int cameraXFixed = fixedFromWord(cameraX);

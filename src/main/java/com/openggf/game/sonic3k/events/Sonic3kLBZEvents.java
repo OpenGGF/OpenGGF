@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.GameServices;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
@@ -23,6 +24,7 @@ import com.openggf.level.Level;
 import com.openggf.level.LevelConstants;
 import com.openggf.level.Map;
 import com.openggf.level.Pattern;
+import com.openggf.level.PatternDesc;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.resources.LoadOp;
@@ -108,6 +110,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private static final int LBZ2_WATER_DRAIN_LIMIT = 0x0F00;
     private static final int LBZ2_WATER_DRAIN_CLAMP = 0x0F80;
     private static final int LBZ2_PAD_DETACH_SCROLL_DONE = 0x28;
+    private static final int LBZ2_PAD_WINDOW_COPY_FRAMES = 0x1C;
     private static final int LBZ2_FINAL_FALL_CAMERA_DY = -2;
     private static final int LBZ2_PAD_CLEAR_X = 0x87;
     private static final int LBZ2_PAD_CLEAR_Y = 0x0B;
@@ -124,6 +127,11 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private int endingCollapsePhase;
     private boolean eventsFg5;
     private boolean restartInitChecked;
+    private int[] lbz2CopiedWindowDescriptors;
+    private int lbz2CopiedWindowScreenX;
+    private int lbz2CopiedWindowScreenY;
+    private boolean lbz2CopiedWindowActive;
+    private final PatternDesc lbz2CopiedWindowPatternDesc = new PatternDesc();
     private final int[] endingCollapseFixed = new int[ENDING_COLLAPSE_COLUMN_COUNT];
     private final int[] endingCollapseScroll = new int[ENDING_COLLAPSE_COLUMN_COUNT];
 
@@ -379,7 +387,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     }
 
     public void requestPadCollapseStart() {
-        currentLbzRuntimeState().ifPresent(LbzZoneRuntimeState::requestPadCollapseStart);
+        currentLbzRuntimeState().ifPresent(state -> {
+            state.requestPadCollapseStart();
+            lbz2CopiedWindowDescriptors = captureLaunchPadVisualTilemap();
+        });
     }
 
     public boolean consumePadCollapseStartRequested() {
@@ -768,15 +779,17 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             state.setLaunchFallingAccelActive(true);
             state.setWaterDisabled(false);
             state.setDetachScroll(0);
+            state.setDetachWindowCopyTimer(0);
+            lbz2CopiedWindowActive = false;
+            lbz2CopiedWindowScreenX = 0;
+            lbz2CopiedWindowScreenY = 0;
+            if (lbz2CopiedWindowDescriptors == null) {
+                lbz2CopiedWindowDescriptors = captureLaunchPadVisualTilemap();
+            }
         }
-        if (state.consumeFinalFallRequested()) {
-            state.setFinalFallActive(true);
-        }
+        consumeFinalFallIfDetachFinished(state);
         if (state.isFinalFallActive()) {
-            // ROM LBZ2BGE_Falling: Scroll_lock + camera.y -= 2; the launch
-            // motion/deform no longer runs once Events_fg_5 (3rd use) is set.
-            camera().setFrozen(true);
-            camera().setY((short) ((camera().getY() & 0xFFFF) + LBZ2_FINAL_FALL_CAMERA_DY));
+            applyFinalFallFrame();
             return;
         }
         if (!state.isLaunchActive()) {
@@ -789,15 +802,39 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             updateLaunchFallingAccel(state);
             if (!state.isWaterDisabled() && state.getBgLaunchSpeed() < 0) {
                 state.setWaterDisabled(true);
+                state.setDetachWindowCopyTimer(LBZ2_PAD_WINDOW_COPY_FRAMES);
+                captureLbz2CopiedWindowPlatform();
             }
         }
         updateLaunchMotion(state);
         if (state.isPadCollapseActive()) {
             updatePadCollapse(state, frameCounter);
         }
+        if (consumeFinalFallIfDetachFinished(state)) {
+            applyFinalFallFrame();
+        }
+    }
+
+    private boolean consumeFinalFallIfDetachFinished(LbzZoneRuntimeState state) {
+        if (state.isPadCollapseActive()
+                || !state.isWaterDisabled()
+                || state.getDetachWindowCopyTimer() > 0
+                || !state.consumeFinalFallRequested()) {
+            return false;
+        }
+        state.setFinalFallActive(true);
+        return true;
+    }
+
+    private void applyFinalFallFrame() {
+        // ROM LBZ2BGE_Falling: Scroll_lock + camera.y -= 2; the launch
+        // motion/deform no longer runs once Events_fg_5 (3rd use) is set.
+        camera().setFrozen(true);
+        camera().setY((short) ((camera().getY() & 0xFFFF) + LBZ2_FINAL_FALL_CAMERA_DY));
     }
 
     private void startLaunch(LbzZoneRuntimeState state) {
+        clearLbz2CopiedWindowPlatform();
         state.setLaunchActive(true);
         state.setDeathEggRumble(true);
         state.setPreLaunchDelay(LBZ2_LAUNCH_PRE_DELAY);
@@ -956,17 +993,25 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         if (!state.isWaterDisabled()) {
             return;
         }
+        if (state.getDetachWindowCopyTimer() > 0) {
+            state.setDetachWindowCopyTimer(state.getDetachWindowCopyTimer() - 1);
+            if (state.getDetachWindowCopyTimer() == 0) {
+                activateLbz2CopiedWindowPlatform();
+            }
+            return;
+        }
         if ((frameCounter & 3) != 0) {
             return;
         }
-        int detachScroll = state.getDetachScroll() + 1;
+        int detachScroll = state.getDetachScroll();
         if (detachScroll < LBZ2_PAD_DETACH_SCROLL_DONE) {
-            state.setDetachScroll(detachScroll);
+            state.setDetachScroll(detachScroll + 1);
             return;
         }
         state.setDetachScroll(0);
         state.setPadCollapseActive(false);
         clearLaunchPadTerrain();
+        lbz2CopiedWindowActive = false;
     }
 
     private void clearLaunchPadTerrain() {
@@ -974,10 +1019,13 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         if (level == null || level.getMap() == null) {
             return;
         }
+        if (lbz2CopiedWindowDescriptors == null) {
+            captureLbz2CopiedWindowPlatform();
+        }
         LayoutMutationContext context = new LayoutMutationContext(
                 LevelMutationSurface.forLevel(level),
                 levelManager()::applyMutationEffects);
-        zoneLayoutMutationPipeline().applyImmediately(
+        zoneLayoutMutationPipeline().applyImmediatelyWithoutRedraw(
                 mutationContext -> {
                     MutationEffects combined = MutationEffects.NONE;
                     LevelMutationSurface surface = mutationContext.surface();
@@ -993,6 +1041,123 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                     return combined;
                 },
                 context);
+    }
+
+    public void renderLbz2CopiedWindowPlatform(Camera camera) {
+        if (camera == null || !lbz2CopiedWindowActive || lbz2CopiedWindowDescriptors == null) {
+            return;
+        }
+        int tileColumns = LBZ2_PAD_CLEAR_WIDTH * LevelConstants.BLOCK_WIDTH / Pattern.PATTERN_WIDTH;
+        int tileRows = LBZ2_PAD_CLEAR_HEIGHT * LevelConstants.BLOCK_HEIGHT / Pattern.PATTERN_HEIGHT;
+        int index = 0;
+        for (int row = 0; row < tileRows; row++) {
+            int worldY = getLbz2CopiedWindowRenderWorldYForTest(camera, row);
+            for (int col = 0; col < tileColumns; col++) {
+                int descriptor = lbz2CopiedWindowDescriptors[index++];
+                if (descriptor == 0) {
+                    continue;
+                }
+                int worldX = getLbz2CopiedWindowRenderWorldXForTest(camera, col);
+                int patternIndex = descriptor & 0x7FF;
+                lbz2CopiedWindowPatternDesc.set(descriptor);
+                GameServices.graphics().renderPatternWithId(
+                        patternIndex, lbz2CopiedWindowPatternDesc, worldX, worldY);
+            }
+        }
+    }
+
+    public int getLbz2CopiedWindowDescriptorForTest(int worldX, int worldY) {
+        if (lbz2CopiedWindowDescriptors == null) {
+            return 0;
+        }
+        int originX = LBZ2_PAD_CLEAR_X * LevelConstants.BLOCK_WIDTH;
+        int originY = LBZ2_PAD_CLEAR_Y * LevelConstants.BLOCK_HEIGHT;
+        int localX = worldX - originX;
+        int localY = worldY - originY;
+        int width = LBZ2_PAD_CLEAR_WIDTH * LevelConstants.BLOCK_WIDTH;
+        int height = LBZ2_PAD_CLEAR_HEIGHT * LevelConstants.BLOCK_HEIGHT;
+        if (localX < 0 || localY < 0 || localX >= width || localY >= height) {
+            return 0;
+        }
+        int tileColumns = width / Pattern.PATTERN_WIDTH;
+        int col = localX / Pattern.PATTERN_WIDTH;
+        int row = localY / Pattern.PATTERN_HEIGHT;
+        return lbz2CopiedWindowDescriptors[row * tileColumns + col];
+    }
+
+    int getLbz2CopiedWindowRenderWorldXForTest(Camera camera, int tileColumn) {
+        return (camera.getX() & 0xFFFF) + lbz2CopiedWindowScreenX + tileColumn * Pattern.PATTERN_WIDTH;
+    }
+
+    int getLbz2CopiedWindowRenderWorldYForTest(Camera camera, int tileRow) {
+        // ROM LBZ2BGE_PlatformDetach adds Events_bg+$16 to Scroll A's V-scroll
+        // (SwScrlLbz applies the same +detachScroll to the FG plane). The copied
+        // Death Egg band must ride that scroll up off the top of the screen in
+        // lockstep with the rest of Scroll A, otherwise it stays pinned for the
+        // ~$28 detach window and then pops out when the overlay is dropped.
+        int detachScroll = currentLbzRuntimeState()
+                .map(LbzZoneRuntimeState::getDetachScroll)
+                .orElse(0);
+        return (camera.getY() & 0xFFFF) + lbz2CopiedWindowScreenY + tileRow * Pattern.PATTERN_HEIGHT
+                - detachScroll;
+    }
+
+    private void captureLbz2CopiedWindowPlatform() {
+        if (lbz2CopiedWindowDescriptors == null) {
+            lbz2CopiedWindowDescriptors = captureLaunchPadVisualTilemap();
+        }
+    }
+
+    private void activateLbz2CopiedWindowPlatform() {
+        captureLbz2CopiedWindowPlatform();
+        lbz2CopiedWindowScreenX = LBZ2_PAD_CLEAR_X * LevelConstants.BLOCK_WIDTH - (camera().getX() & 0xFFFF);
+        lbz2CopiedWindowScreenY = LBZ2_PAD_CLEAR_Y * LevelConstants.BLOCK_HEIGHT - (camera().getY() & 0xFFFF);
+        clearLbz2ScrollAPlatformTilemap();
+        lbz2CopiedWindowActive = true;
+    }
+
+    boolean isLbz2CopiedWindowActiveForTest() {
+        return lbz2CopiedWindowActive;
+    }
+
+    private void clearLbz2CopiedWindowPlatform() {
+        lbz2CopiedWindowDescriptors = null;
+        lbz2CopiedWindowScreenX = 0;
+        lbz2CopiedWindowScreenY = 0;
+        lbz2CopiedWindowActive = false;
+    }
+
+    private void clearLbz2ScrollAPlatformTilemap() {
+        int width = LBZ2_PAD_CLEAR_WIDTH * LevelConstants.BLOCK_WIDTH;
+        int height = LBZ2_PAD_CLEAR_HEIGHT * LevelConstants.BLOCK_HEIGHT;
+        int originX = LBZ2_PAD_CLEAR_X * LevelConstants.BLOCK_WIDTH;
+        int originY = LBZ2_PAD_CLEAR_Y * LevelConstants.BLOCK_HEIGHT;
+        boolean changed = false;
+        for (int y = 0; y < height; y += Pattern.PATTERN_HEIGHT) {
+            for (int x = 0; x < width; x += Pattern.PATTERN_WIDTH) {
+                changed |= levelManager().setForegroundTileDescriptorAtWorld(originX + x, originY + y, 0);
+            }
+        }
+        if (changed) {
+            levelManager().uploadForegroundTilemap();
+        }
+    }
+
+    private int[] captureLaunchPadVisualTilemap() {
+        int tileColumns = LBZ2_PAD_CLEAR_WIDTH * LevelConstants.BLOCK_WIDTH / Pattern.PATTERN_WIDTH;
+        int tileRows = LBZ2_PAD_CLEAR_HEIGHT * LevelConstants.BLOCK_HEIGHT / Pattern.PATTERN_HEIGHT;
+        int[] descriptors = new int[tileColumns * tileRows];
+        int originX = LBZ2_PAD_CLEAR_X * LevelConstants.BLOCK_WIDTH;
+        int originY = LBZ2_PAD_CLEAR_Y * LevelConstants.BLOCK_HEIGHT;
+        int index = 0;
+        for (int row = 0; row < tileRows; row++) {
+            int worldY = originY + row * Pattern.PATTERN_HEIGHT;
+            for (int col = 0; col < tileColumns; col++) {
+                int worldX = originX + col * Pattern.PATTERN_WIDTH;
+                descriptors[index++] = levelManager().getForegroundTileDescriptorAtWorld(worldX, worldY);
+            }
+        }
+        return descriptors;
     }
 
     /**

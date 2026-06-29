@@ -489,7 +489,16 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
     @Override
     public void renderAfterForeground(Camera camera) {
         var levelManager = GameServices.levelOrNull();
-        if (levelManager == null || levelManager.getCurrentZone() != Sonic3kZoneIds.ZONE_SLOT_MACHINE) {
+        if (levelManager == null) {
+            return;
+        }
+        if (levelManager.getCurrentZone() == Sonic3kZoneIds.ZONE_LBZ
+                && levelManager.getFeatureActId() == 1
+                && GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager manager
+                && manager.getLbzEvents() != null) {
+            manager.getLbzEvents().renderLbz2CopiedWindowPlatform(camera);
+        }
+        if (levelManager.getCurrentZone() != Sonic3kZoneIds.ZONE_SLOT_MACHINE) {
             return;
         }
         if (!(GameServices.module().getBonusStageProvider() instanceof Sonic3kBonusStageCoordinator coordinator)) {

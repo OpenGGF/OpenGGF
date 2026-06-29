@@ -70,6 +70,7 @@ class TestLbzLaunchRuntimeState {
         original.setLaunchYDelta(-3);
         original.setPreLaunchDelay(0x3C);
         original.setDetachScroll(0x27);
+        original.setDetachWindowCopyTimer(0x1B);
         original.setWaterTargetYForTest(0x0F80);
         original.setPadCollapseActive(true);
         original.setFinalFallActive(true);
@@ -96,6 +97,7 @@ class TestLbzLaunchRuntimeState {
         assertEquals(-3, restored.getLaunchYDelta());
         assertEquals(0x3C, restored.getPreLaunchDelay());
         assertEquals(0x27, restored.getDetachScroll());
+        assertEquals(0x1B, restored.getDetachWindowCopyTimer());
         assertEquals(0x0F80, restored.getWaterTargetY());
         assertTrue(restored.isPadCollapseActive());
         assertTrue(restored.isFinalFallActive());
@@ -187,6 +189,7 @@ class TestLbzLaunchRuntimeState {
         state.setLaunchYDelta(-3);
         state.setPreLaunchDelay(0x3C);
         state.setDetachScroll(0x27);
+        state.setDetachWindowCopyTimer(0x1B);
         state.setWaterTargetYForTest(0x0F80);
         state.setPadCollapseActive(true);
         state.setFinalFallActive(true);
@@ -212,6 +215,7 @@ class TestLbzLaunchRuntimeState {
         assertEquals(0, state.getLaunchYDelta());
         assertEquals(0, state.getPreLaunchDelay());
         assertEquals(0, state.getDetachScroll());
+        assertEquals(0, state.getDetachWindowCopyTimer());
         assertEquals(0, state.getWaterTargetY());
         assertFalse(state.isPadCollapseActive());
         assertFalse(state.isFinalFallActive());

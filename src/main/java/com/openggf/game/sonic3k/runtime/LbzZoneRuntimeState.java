@@ -13,12 +13,14 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int LAUNCH_EXTENSION_VERSION_2 = 2;
     private static final int LAUNCH_EXTENSION_VERSION_3 = 3;
     private static final int LAUNCH_EXTENSION_VERSION_4 = 4;
-    private static final int LAUNCH_EXTENSION_VERSION = 5;
+    private static final int LAUNCH_EXTENSION_VERSION_5 = 5;
+    private static final int LAUNCH_EXTENSION_VERSION = 6;
     private static final int LAUNCH_EXTENSION_BYTES_V1 = 34;
     private static final int LAUNCH_EXTENSION_BYTES_V2 = 41;
     private static final int LAUNCH_EXTENSION_BYTES_V3 = 49;
     private static final int LAUNCH_EXTENSION_BYTES_V4 = 53;
-    private static final int LAUNCH_EXTENSION_BYTES = 65;
+    private static final int LAUNCH_EXTENSION_BYTES_V5 = 65;
+    private static final int LAUNCH_EXTENSION_BYTES = 69;
     private static final int LAUNCH_FLAG_ACTIVE = 1;
     private static final int LAUNCH_FLAG_DEATH_EGG_RUMBLE = 1 << 1;
     private static final int LAUNCH_FLAG_START_REQUESTED = 1 << 2;
@@ -54,6 +56,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private int launchYDelta;
     private int preLaunchDelay;
     private int detachScroll;
+    private int detachWindowCopyTimer;
     private int waterTargetY;
     private boolean launchStartRequested;
     private boolean padCollapseStartRequested;
@@ -265,6 +268,14 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         this.detachScroll = detachScroll;
     }
 
+    public int getDetachWindowCopyTimer() {
+        return detachWindowCopyTimer;
+    }
+
+    public void setDetachWindowCopyTimer(int detachWindowCopyTimer) {
+        this.detachWindowCopyTimer = Math.max(0, detachWindowCopyTimer);
+    }
+
     public int getWaterTargetY() {
         return waterTargetY;
     }
@@ -458,6 +469,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putInt(launchYDelta);
         buffer.putInt(preLaunchDelay);
         buffer.putInt(detachScroll);
+        buffer.putInt(detachWindowCopyTimer);
         buffer.putInt(waterTargetY);
         buffer.putInt(launchRiderAnchorId);
         buffer.putInt(deathEggDeformWrapLatch);
@@ -512,29 +524,39 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         int version = buffer.get() & 0xFF;
         if (version == LAUNCH_EXTENSION_VERSION_1) {
             restoreLaunchFlags(buffer.get() & 0xFF);
-            restoreLaunchInts(buffer, false, false);
+            restoreLaunchInts(buffer, false, false, false);
             return;
         }
         if (version == LAUNCH_EXTENSION_VERSION_2) {
             restoreLaunchFlags(buffer.getInt());
-            restoreLaunchInts(buffer, true, false);
+            restoreLaunchInts(buffer, true, false, false);
             return;
         }
         if (version == LAUNCH_EXTENSION_VERSION_3
                 && bytes.length >= LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES_V3) {
             restoreLaunchFlags(buffer.getInt());
-            restoreLaunchInts(buffer, true, true);
+            restoreLaunchInts(buffer, true, true, false);
             launchRiderDelta = 0;
             return;
         }
         if (version == LAUNCH_EXTENSION_VERSION_4
                 && bytes.length >= LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES_V4) {
             restoreLaunchFlags(buffer.getInt());
-            restoreLaunchInts(buffer, true, true);
+            restoreLaunchInts(buffer, true, true, false);
             launchRiderDelta = buffer.getInt();
             lbz2WaterlinePhase = 0;
             lbz2ScrollArtPhaseSource = 0;
             publishedBgCameraX = 0;
+            return;
+        }
+        if (version == LAUNCH_EXTENSION_VERSION_5
+                && bytes.length >= LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES_V5) {
+            restoreLaunchFlags(buffer.getInt());
+            restoreLaunchInts(buffer, true, true, false);
+            launchRiderDelta = buffer.getInt();
+            lbz2WaterlinePhase = buffer.getInt();
+            lbz2ScrollArtPhaseSource = buffer.getInt();
+            publishedBgCameraX = buffer.getInt();
             return;
         }
         if (version != LAUNCH_EXTENSION_VERSION || bytes.length < LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES) {
@@ -543,7 +565,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         }
         int flags = buffer.getInt();
         restoreLaunchFlags(flags);
-        restoreLaunchInts(buffer, true, true);
+        restoreLaunchInts(buffer, true, true, true);
         launchRiderDelta = buffer.getInt();
         lbz2WaterlinePhase = buffer.getInt();
         lbz2ScrollArtPhaseSource = buffer.getInt();
@@ -569,7 +591,10 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         launchFallingAccelActive = (flags & LAUNCH_FLAG_FALLING_ACCEL_ACTIVE) != 0;
     }
 
-    private void restoreLaunchInts(ByteBuffer buffer, boolean hasWaterTarget, boolean hasDeathEggDeformState) {
+    private void restoreLaunchInts(ByteBuffer buffer,
+                                   boolean hasWaterTarget,
+                                   boolean hasDeathEggDeformState,
+                                   boolean hasDetachWindowCopyTimer) {
         fgLaunchSpeed = buffer.getInt();
         bgLaunchSpeed = buffer.getInt();
         fgAccum = buffer.getInt();
@@ -577,6 +602,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         launchYDelta = buffer.getInt();
         preLaunchDelay = buffer.getInt();
         detachScroll = buffer.getInt();
+        detachWindowCopyTimer = hasDetachWindowCopyTimer ? buffer.getInt() : 0;
         waterTargetY = hasWaterTarget ? buffer.getInt() : 0;
         launchRiderAnchorId = buffer.getInt();
         deathEggDeformWrapLatch = hasDeathEggDeformState ? buffer.getInt() : 0;
@@ -593,6 +619,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         launchYDelta = 0;
         preLaunchDelay = 0;
         detachScroll = 0;
+        detachWindowCopyTimer = 0;
         waterTargetY = 0;
         launchStartRequested = false;
         padCollapseStartRequested = false;

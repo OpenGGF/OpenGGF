@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K LBZ2 launch-pad detach window:** the post-results launch sequence now preserves the copied Death Egg platform window while Scroll A is cleared behind it, waits for the ROM detach copy/scroll to finish before starting final fall, and spawns the Death Egg miniature cluster relative to the explosion sequencer instead of fixed world coordinates.
 - **S3K LBZ2 final boss off-screen return:** Obj_LBZFinalBoss1 laser-head children now run the ROM `sub_733FC` arc step before reacting to a detached top turret segment, preserving the final `$38` bit-3 firing-notch strobe that lets Robotnik reposition instead of waiting off-screen after the 5-HP segment break.
 - **S3K LBZ2 pipe-plug water exhaust:** LBZ Pipe Plug (Obj0x1B subtype 0) now breaks into the ROM's individual large mapping pieces instead of full-plug chunks, registers and renders `Map_TunnelExhaust` from the ROM-backed LBZ2 misc art, emits the short waterfall when a tunnel plug breaks, and spawns the directional water splash when Sonic exits the automatic tunnel.
 - **S3K LBZ spin-launcher collision parity:** LBZ Spin Launcher (Obj0x1E) now treats the ROM `sub_1DD24` top/bottom result as a launch trigger instead of an ordinary underside collision, and its standing release path is covered against `sub_28F40` for unsigned X-window, mirrored release, no `y_pos` write, and `$20` cooldown behavior.

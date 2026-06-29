@@ -191,6 +191,9 @@ class TestSonic3kLbzLaunchSignals {
 
         events.requestFinalFall();
         int beforeY = Short.toUnsignedInt(camera.getY());
+        state.setPadCollapseActive(false);
+        state.setWaterDisabled(true);
+        state.setDetachWindowCopyTimer(0);
         events.update(1, 3);
 
         assertTrue(state.isFinalFallActive());
@@ -198,6 +201,59 @@ class TestSonic3kLbzLaunchSignals {
                 "event-owned final fall should not clear launchActive; ship release owns no runtime shutdown");
         assertEquals(beforeY - 2, Short.toUnsignedInt(camera.getY()),
                 "final fall scrolls the camera upward two pixels per frame");
+    }
+
+    @Test
+    void finalFallSignalWaitsForPlatformDetachToFinish() {
+        Sonic3kLBZEvents events = new Sonic3kLBZEvents();
+        LbzZoneRuntimeState state = installAct2State();
+        Camera camera = GameServices.camera();
+        camera.setFocusedSprite(new TestablePlayableSprite("sonic", (short) 0x4430, (short) 0x0700));
+        camera.setX((short) 0x4390);
+        camera.setY((short) 0x0668);
+        state.setLaunchActive(true);
+        state.setPadCollapseActive(true);
+        state.setLaunchFallingAccelActive(true);
+        state.setWaterDisabled(true);
+        state.setPreLaunchDelay(0);
+        state.setFgLaunchSpeed(0);
+        state.setBgLaunchSpeed(-0x100);
+        state.setWaterTargetY(0x0668);
+
+        events.requestFinalFall();
+        events.update(1, 3);
+
+        assertFalse(state.isFinalFallActive(),
+                "LBZ2BGE_PlatformDetach ignores the third Events_fg_5 use until the detach state has advanced");
+        assertTrue(state.consumeFinalFallRequested(),
+                "the final-fall signal must remain pending instead of being lost while the pad is detaching");
+        assertEquals(0x0668, Short.toUnsignedInt(camera.getY()),
+                "camera final fall must not start before the visual/collision platform detach has completed");
+    }
+
+    @Test
+    void finalFallSignalWaitsForDetachMilestoneNotJustInactivePad() {
+        Sonic3kLBZEvents events = new Sonic3kLBZEvents();
+        LbzZoneRuntimeState state = installAct2State();
+        Camera camera = GameServices.camera();
+        camera.setFocusedSprite(new TestablePlayableSprite("sonic", (short) 0x4430, (short) 0x0700));
+        camera.setX((short) 0x4390);
+        camera.setY((short) 0x0668);
+        state.setLaunchActive(true);
+        state.setPadCollapseActive(false);
+        state.setLaunchFallingAccelActive(true);
+        state.setWaterDisabled(false);
+        state.setDetachWindowCopyTimer(0);
+
+        events.requestFinalFall();
+        events.update(1, 3);
+
+        assertFalse(state.isFinalFallActive(),
+                "LBZ2BGE_Falling must not start merely because the local pad-collapse latch is inactive");
+        assertTrue(state.consumeFinalFallRequested(),
+                "the third Events_fg_5 signal remains pending until LBZ2BGE_PlatformDetach has been reached");
+        assertEquals(0x0668, Short.toUnsignedInt(camera.getY()),
+                "camera must not move Sonic down before the platform detach path has armed");
     }
 
     @Test
@@ -213,6 +269,15 @@ class TestSonic3kLbzLaunchSignals {
         camera.setX((short) 0x4390);
         camera.setY((short) 0x0668);
         seedLaunchPadBlocks(level, 0x51);
+        int[] visiblePadSample = findVisibleLaunchPadDescriptor();
+        int padWorldX = visiblePadSample[0];
+        int padWorldY = visiblePadSample[1];
+        int visiblePadDescriptor = visiblePadSample[2];
+        assertNotEquals(0, visiblePadDescriptor,
+                "test setup must seed a visible launch-pad tile before the ROM layout clear");
+        assertEquals(visiblePadDescriptor,
+                GameServices.level().getForegroundTileDescriptorFromTilemapAtWorld(padWorldX, padWorldY),
+                "test setup must start with the original platform visible in the live Scroll A tilemap");
 
         state.setLaunchActive(true);
         state.setPreLaunchDelay(0);
@@ -244,23 +309,85 @@ class TestSonic3kLbzLaunchSignals {
                 "the transition frame arms detach but does not consume the every-four-frame scroll tick");
         assertLaunchPadBlocks(level, 0x51,
                 "terrain remains intact on the frame detach is armed");
+        int tileColumn = (padWorldX - 0x87 * LevelConstants.BLOCK_WIDTH) / Pattern.PATTERN_WIDTH;
+        int tileRow = (padWorldY - 0x0B * LevelConstants.BLOCK_HEIGHT) / Pattern.PATTERN_HEIGHT;
+        assertFalse(events.isLbz2CopiedWindowActiveForTest(),
+                "SpecialVInt_LBZ2WindowCopy fills the window nametable before the window is enabled");
 
-        int detachTicks = 0;
+        for (int copyFrame = 0; copyFrame < 0x1C; copyFrame++) {
+            events.update(1, frame++);
+            assertEquals(0, state.getDetachScroll(),
+                    "SpecialVInt_LBZ2WindowCopy must finish before Events_bg+$16 starts detaching the pad");
+            assertTrue(state.isPadCollapseActive(),
+                    "pad collapse remains in LBZ2BGE_PlatformDetach while the window copy is pending");
+            assertLaunchPadBlocks(level, 0x51,
+                    "terrain must not clear while the ROM is copying the detachable platform window");
+        }
+        assertTrue(events.isLbz2CopiedWindowActiveForTest(),
+                "SpecialVInt_LBZ2ScrollAClear enables the copied window immediately before detach scroll begins");
+        assertEquals(0,
+                GameServices.level().getForegroundTileDescriptorFromTilemapAtWorld(padWorldX, padWorldY),
+                "SpecialVInt_LBZ2ScrollAClear clears Scroll A behind the copied window so the platform is not "
+                        + "drawn twice");
+        assertEquals(visiblePadDescriptor,
+                events.getLbz2CopiedWindowDescriptorForTest(padWorldX, padWorldY),
+                "the copied VDP window must retain platform pixels after Scroll A is cleared behind it");
+        assertLaunchPadBlocks(level, 0x51,
+                "Scroll A VRAM clear must not remove collision/layout before the ROM's later $28 detach clear");
+        int originalCameraX = Short.toUnsignedInt(camera.getX());
+        int originalCameraY = Short.toUnsignedInt(camera.getY());
+        int copiedScreenX = events.getLbz2CopiedWindowRenderWorldXForTest(camera, tileColumn)
+                - originalCameraX;
+        int copiedScreenY = events.getLbz2CopiedWindowRenderWorldYForTest(camera, tileRow)
+                - originalCameraY;
+        camera.setX((short) (originalCameraX + 0x20));
+        camera.setY((short) (originalCameraY + 0x20));
+        assertEquals(copiedScreenX,
+                events.getLbz2CopiedWindowRenderWorldXForTest(camera, tileColumn)
+                        - Short.toUnsignedInt(camera.getX()),
+                "SpecialVInt_LBZ2ScrollAClear exposes a VDP window, so copied platform pixels stay screen-fixed");
+        assertEquals(copiedScreenY,
+                events.getLbz2CopiedWindowRenderWorldYForTest(camera, tileRow)
+                        - Short.toUnsignedInt(camera.getY()),
+                "SpecialVInt_LBZ2ScrollAClear exposes a VDP window, so copied platform pixels stay screen-fixed");
+        camera.setX((short) originalCameraX);
+        camera.setY((short) originalCameraY);
+
+        // ROM LBZ2BGE_PlatformDetach adds Events_bg+$16 to Scroll A's V-scroll
+        // every four frames; the copied Death Egg band must ride that same
+        // scroll up off the top of the screen, not stay pinned until it is
+        // deleted at $28 (which reads on screen as the band freezing then
+        // popping out instead of leaving via the top with the clouds).
+        int bandScreenYAtDetach0 = events.getLbz2CopiedWindowRenderWorldYForTest(camera, tileRow)
+                - originalCameraY;
+        state.setDetachScroll(0x10);
+        int bandScreenYAtDetach10 = events.getLbz2CopiedWindowRenderWorldYForTest(camera, tileRow)
+                - originalCameraY;
+        assertEquals(bandScreenYAtDetach0 - 0x10, bandScreenYAtDetach10,
+                "the copied Death Egg band must ride Events_bg+$16 up off the top of the screen "
+                        + "in lockstep with Scroll A, not stay pinned while Scroll A scrolls away");
+        state.setDetachScroll(0);
+
+        int detachTickChecks = 0;
         while (state.isPadCollapseActive()) {
             events.update(1, frame++);
             if (((frame - 1) & 3) == 0) {
-                detachTicks++;
+                detachTickChecks++;
             }
-            assertTrue(detachTicks <= 0x28,
-                    "pad collapse should finish after exactly $28 every-four-frame detach ticks");
+            assertTrue(detachTickChecks <= 0x29,
+                    "pad collapse should finish after $28 visible detach ticks plus the ROM clear check");
         }
 
-        assertEquals(0x28, detachTicks);
+        assertEquals(0x29, detachTickChecks);
         assertEquals(0, state.getDetachScroll());
         assertTrue(state.isLaunchActive(),
                 "event-owned collapse completion should leave launchActive set for final-fall/transition consumers");
         assertLaunchPadBlocks(level, 0,
                 "terrain clear must happen only when the detach scroll reaches $28");
+        assertEquals(visiblePadDescriptor,
+                events.getLbz2CopiedWindowDescriptorForTest(padWorldX, padWorldY),
+                "SpecialVInt_LBZ2WindowCopy keeps copied platform pixels available for rendering even though "
+                        + "the collision/layout cells have been cleared");
     }
 
     @Test
@@ -362,6 +489,22 @@ class TestSonic3kLbzLaunchSignals {
                         message + " at pad cell (" + col + "," + row + ")");
             }
         }
+    }
+
+    private static int[] findVisibleLaunchPadDescriptor() {
+        int left = 0x87 * LevelConstants.BLOCK_WIDTH;
+        int top = 0x0B * LevelConstants.BLOCK_HEIGHT;
+        int width = 3 * LevelConstants.BLOCK_WIDTH;
+        int height = 2 * LevelConstants.BLOCK_HEIGHT;
+        for (int y = top; y < top + height; y += Pattern.PATTERN_HEIGHT) {
+            for (int x = left; x < left + width; x += Pattern.PATTERN_WIDTH) {
+                int descriptor = GameServices.level().getForegroundTileDescriptorAtWorld(x, y);
+                if (descriptor != 0) {
+                    return new int[]{x, y, descriptor};
+                }
+            }
+        }
+        return new int[]{left, top, 0};
     }
 
     private static boolean eventsFg5(Sonic3kLBZEvents events) throws Exception {

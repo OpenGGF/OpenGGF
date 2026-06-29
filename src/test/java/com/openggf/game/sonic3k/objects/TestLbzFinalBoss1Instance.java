@@ -514,6 +514,30 @@ class TestLbzFinalBoss1Instance {
                         + "Y-offscreen debris must delete instead of wrapping forever while X remains in range");
     }
 
+    @Test
+    void deathEggMiniatureClusterUsesExplosionSequencerCameraRelativeBase() throws Exception {
+        HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
+        services.camera.setX((short) 0x4310);
+        services.camera.setY((short) 0x0668);
+        LbzFinalBoss1Instance boss = newBoss(services);
+        boss.update(0, null);
+        AbstractObjectInstance sequencer = newExplosionSequencerForTest(boss);
+        writeIntField(sequencer, "milestoneWait", 0);
+
+        sequencer.update(0, null);
+
+        List<Object> miniatures = boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.DEATH_EGG_MINIATURE);
+        assertEquals(7, miniatures.size());
+        AbstractObjectInstance lead = assertInstanceOf(AbstractObjectInstance.class, miniatures.get(0));
+        AbstractObjectInstance lowerLeft = assertInstanceOf(AbstractObjectInstance.class, miniatures.get(1));
+        assertEquals(0x43E0, lead.getX(),
+                "ChildObjDat_7380C is relative to the loc_72DEA sequencer at camera.x+$D0");
+        assertEquals(0x0648, lead.getY(),
+                "ChildObjDat_7380C is relative to the loc_72DEA sequencer at camera.y-$20");
+        assertEquals(0x43D0, lowerLeft.getX());
+        assertEquals(0x0670, lowerLeft.getY());
+    }
+
     private static LbzFinalBoss1Instance newBoss(HarnessServices services) {
         LbzFinalBoss1Instance boss = new LbzFinalBoss1Instance(new ObjectSpawn(
                 0x44A0, 0x0780, OBJ_LBZ_FINAL_BOSS_1, 0, 0, false, 0));
@@ -532,6 +556,21 @@ class TestLbzFinalBoss1Instance {
         Constructor<?> ctor = cls.getDeclaredConstructor(LbzFinalBoss1Instance.class, int.class, int.class, int.class);
         ctor.setAccessible(true);
         return (AbstractObjectInstance) ctor.newInstance(boss, x, y, frame);
+    }
+
+    private static AbstractObjectInstance newExplosionSequencerForTest(LbzFinalBoss1Instance boss)
+            throws Exception {
+        Class<?> cls = Class.forName(
+                "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$ExplosionSequencerChild");
+        Constructor<?> ctor = cls.getDeclaredConstructor(LbzFinalBoss1Instance.class);
+        ctor.setAccessible(true);
+        return (AbstractObjectInstance) ctor.newInstance(boss);
+    }
+
+    private static void writeIntField(Object target, String fieldName, int value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(target, value);
     }
 
     private static LbzFinalBoss1Instance.BossChild firstBossChild(

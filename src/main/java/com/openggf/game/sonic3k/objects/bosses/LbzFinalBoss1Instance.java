@@ -828,12 +828,12 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         launchMilestoneB = true;
     }
 
-    private void spawnDeathEggMiniatures() {
+    private void spawnDeathEggMiniatures(int baseX, int baseY) {
         loadEndingPalette();
         for (int i = 0; i < 7; i++) {
             int index = i;
             recordChild(ChildKind.DEATH_EGG_MINIATURE,
-                    spawnFreeChild(() -> new DeathEggMiniatureChild(this, index)));
+                    spawnFreeChild(() -> new DeathEggMiniatureChild(this, baseX, baseY, index)));
         }
     }
 
@@ -1992,7 +1992,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             if (milestoneWait >= 0) {
                 if (milestoneWait-- <= 0) {
                     boss.signalLaunchMilestoneA();
-                    boss.spawnDeathEggMiniatures();
+                    boss.spawnDeathEggMiniatures(getX(), getY());
                     ObjectLifetimeOps.expireDynamic(this);
                 }
                 return;
@@ -2053,10 +2053,10 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         private static final int[] Y_VELS = {0x40, 0x38, 0x3C, 0x40, 0x44, 0x48, 0x4C};
         private final int index;
 
-        private DeathEggMiniatureChild(LbzFinalBoss1Instance boss, int index) {
+        private DeathEggMiniatureChild(LbzFinalBoss1Instance boss, int baseX, int baseY, int index) {
             super(boss, "LBZFinalBoss1DeathEggMiniature",
-                    0x4430 + OFFSETS[index][0],
-                    0x0678 + OFFSETS[index][1],
+                    baseX + OFFSETS[index][0],
+                    baseY + OFFSETS[index][1],
                     index);
             this.index = index;
             this.mappingFrame = FRAME_FLAGS[index][0];
