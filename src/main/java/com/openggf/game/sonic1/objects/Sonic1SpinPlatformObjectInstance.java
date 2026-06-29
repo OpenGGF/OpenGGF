@@ -439,8 +439,16 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        // RememberState: out_of_range.w checks X distance from camera
-        // Approximately 640px range (128 + 320 + 192)
-        return !isDestroyed() && isOnScreenX(160);
+        // Spin_Trapdoor/.display and Spin_Spinner both end in RememberState
+        // (docs/s1disasm/_incObj/69 SBZ Spinning Platforms and Trapdoors.asm:80,
+        // 92,121), whose off-screen test is the out_of_range macro
+        // (docs/s1disasm/Macros.asm:273-289): chunk-align obX and (v_screenposx
+        // -128), and delete when the unsigned distance exceeds 128+320+192 (=640).
+        // The platform/trapdoor is stationary so getX() (= spawn obX) is the live
+        // obX the macro reads. The previous symmetric isOnScreenX(160) approximated
+        // this and kept objects ~160px left of the viewport that the ROM has
+        // already deleted off the left edge (SBZ2: the x=0x05F0 trapdoor lingered
+        // in slot 83 after the camera reached 0x0688, drifting OST occupancy).
+        return !isDestroyed() && isInRange();
     }
 }

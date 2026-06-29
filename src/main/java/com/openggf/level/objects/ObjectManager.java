@@ -665,6 +665,13 @@ public class ObjectManager {
         registry.beginObject(instance, resolver);
         try {
             instance.update(vblaCounter, player);
+            // ROM parity: the object has now run its own routine (the engine
+            // equivalent of DisplaySprite setting obRender bit 7), so a child that
+            // was awaiting its first execution becomes touch-eligible from the
+            // next frame's ReactToItem onward.
+            if (instance instanceof AbstractObjectInstance aoi) {
+                aoi.clearAwaitingFirstTouchExecution();
+            }
             if (mode == SolidExecutionMode.AUTO_AFTER_UPDATE && !instance.isDestroyed()) {
                 registry.publishCheckpoint(
                         solidContacts.processCompatibilityCheckpoint(
@@ -1693,7 +1700,7 @@ public class ObjectManager {
             // including children spawned by other objects (lava balls, projectiles,
             // explosion effects, etc.). Without this, child objects don't consume
             // slots in the allocator, causing subsequent OPL allocations to get lower
-            // slot numbers than the ROM — shifting d7 values and breaking timing
+            // slot numbers than the ROM, shifting d7 values and breaking timing
             // gates like (v_vbla_byte + d7) & 7.
             if (aoi.getSlotIndex() < 0) {
                 int slot;
@@ -1738,6 +1745,16 @@ public class ObjectManager {
                 object.snapshotPreUpdatePosition();
                 aoi2.setSkipTouchThisFrame(true);
                 execOrder[execIdx] = object;
+            } else {
+                // Child placed into a slot at or below the parent's current
+                // execution slot: ExecuteObjects has already passed it this frame,
+                // so it will not run (nor set obRender bit 7 via DisplaySprite)
+                // until the next frame's pass. ROM ReactToItem skips objects whose
+                // obRender bit 7 is clear, so this child must stay touch-ineligible
+                // for one extra frame relative to a same-frame (higher-slot) child
+                // -- i.e. until the frame after its first own execution.
+                // (docs/s1disasm/_incObj/sub ReactToItem.asm:50-51)
+                aoi2.markAwaitingFirstTouchExecution();
             }
         }
         bucketsDirty = true;
@@ -1763,6 +1780,17 @@ public class ObjectManager {
      */
     private int allocateSlot() {
         return slotAllocator.allocate();
+    }
+
+    /**
+     * Non-mutating ROM FindFreeObj probe: true if a free dynamic SST slot is
+     * available (an {@code allocate()} would succeed). Used by object routines
+     * that branch on FindFreeObj success/failure without spawning, for example
+     * the S1 LZ drowning countdown retries its bubble RNG when the pool is full
+     * (docs/s1disasm/_incObj/0A LZ Drowning Countdown.asm:283-284).
+     */
+    public boolean hasFreeDynamicSlot() {
+        return slotAllocator.hasFreeSlot();
     }
 
     /**
@@ -2218,6 +2246,18 @@ public class ObjectManager {
 
     public void clearSpawnCounterActiveBit(ObjectSpawn spawn) {
         placement.clearCounterForSpawn(spawn);
+    }
+
+    /**
+     * Mirrors an object-local S1 {@code bclr #7,2(a2,d0.w)} while preserving
+     * ObjPosLoad cursor cadence until the cursor naturally reprocesses the entry.
+     */
+    public void clearSpawnCounterActiveBitAndMarkDormant(ObjectSpawn spawn) {
+        if (!placement.isCounterBasedRespawn()) {
+            return;
+        }
+        placement.clearCounterForSpawn(spawn);
+        placement.markDormant(spawn);
     }
 
     public void markRemembered(ObjectSpawn spawn) {

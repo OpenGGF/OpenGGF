@@ -532,6 +532,23 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance
         var rng = services().rng();
         delayCounter = rng.nextBits(0x1F);
 
+        // docs/s1disasm/_incObj/64 LZ Air Bubbles.asm:169-170:
+        //   bsr.w FindFreeObj / bne.s .fail
+        // The ROM consumes the spawn-delay RandomNumber above (objoff_38), then
+        // tests FindFreeObj. When the dynamic SST pool is full it branches to
+        // .fail WITHOUT consuming the xOffset (line 173) or the large-bubble
+        // 25%-override (line 184) RandomNumber and without spawning a child; the
+        // caller's objoff_34 decrement (+ optional long-delay RandomNumber) still
+        // runs. The engine's spawnFreeChild silently drops the bubble when the
+        // pool is full but still consumed those extra RandomNumber draws here,
+        // pushing the shared GameRng ahead of the ROM and mispositioning later
+        // maker bubbles (LZ air-bubble production-cadence drift, pitfall P24).
+        // Mirror the ROM bail: return before the xOffset/override RNG and the
+        // spawn, leaving the caller to run the unconditional .fail tail.
+        if (!hasFreeDynamicSlot()) {
+            return;
+        }
+
         // Determine bubble subtype from type table
         int tableIndex = typeTableOffset + typeCounter;
         int tableSubtype;
@@ -600,6 +617,17 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance
                 overrideReason,
                 xOffset);
         spawnFreeChild(() -> new Sonic1BubblesObjectInstance(childSpawn, childDebug));
+    }
+
+    /**
+     * ROM FindFreeObj probe (docs/s1disasm/_incObj/64 LZ Air Bubbles.asm:169):
+     * true when a free dynamic SST slot is available. Returns true when no
+     * object pool is present (e.g. headless physics tests) so the spawn path
+     * proceeds as before.
+     */
+    private boolean hasFreeDynamicSlot() {
+        var om = services().objectManager();
+        return om == null || om.hasFreeDynamicSlot();
     }
 
     /**

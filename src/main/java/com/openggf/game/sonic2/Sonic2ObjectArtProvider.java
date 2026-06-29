@@ -314,6 +314,9 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
                 registerIfAbsent(Sonic2ObjectArtKeys.MCZ_BOSS, artLoader::loadMCZBossSheet);
                 registerIfAbsent(Sonic2ObjectArtKeys.MCZ_FALLING_ROCKS, artLoader::loadMCZFallingRocksSheet);
                 break;
+            case 0x0A: // ROM_ZONE_OOZ
+                registerIfAbsent(Sonic2ObjectArtKeys.OOZ_BOSS, artLoader::loadOOZBossSheet);
+                break;
             case 0x04: // ROM_ZONE_MTZ
                 registerIfAbsent(Sonic2ObjectArtKeys.MTZ_BOSS, artLoader::loadMTZBossSheet);
                 break;

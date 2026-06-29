@@ -112,17 +112,41 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance impleme
         int probeX = currentX + (facingLeft ? -0x0C : 0x0C);
 
         if (!oldFloorProbeToggle) {
-            TerrainCheckResult aheadFloor = ObjectTerrainUtils.checkFloorDist(probeX, currentY, Y_RADIUS);
-            if (!aheadFloor.foundSurface() || aheadFloor.distance() >= 0x0C) {
+            // Burro_Move .checkLedgeAhead: ObjFloorDist2 then cmpi.w #$C,d1 / bge NextAction.
+            // docs/s1disasm/_incObj/2D Badnik - Burrobot.asm:75-85
+            if (objFloorDist(probeX) >= 0x0C) {
                 enterMoveEndBranch(frameCounter);
             }
             return;
         }
 
-        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, Y_RADIUS);
+        // Burro_Move .alignToFloor: ObjFloorDist then add.w d1,obY (unconditional).
+        // docs/s1disasm/_incObj/2D Badnik - Burrobot.asm:88-91
+        currentY += objFloorDist(currentX);
+    }
+
+    /**
+     * ROM {@code ObjFloorDist} ({@code FindFloor}): always returns a floor distance,
+     * never a "no surface" sentinel. When neither the sensor tile nor the tile below
+     * is solid (the Burrobot has walked off a ledge), {@code FindFloor2.isblank2}
+     * returns {@code $F - (sensorY & $F)} and {@code FindFloor.isblank} adds {@code $10},
+     * yielding {@code $1F - (sensorY & $F)} (a small positive fall distance). The
+     * Burrobot's {@code add.w d1,obY} then walks it off the edge / starts its fall,
+     * which is what subsequently drives the random Burro jump. The engine's
+     * {@link ObjectTerrainUtils#checkFloorDist} reports the both-blank case as
+     * no-collision, so substitute the ROM blank-tile return here.
+     *
+     * <p>docs/s1disasm/_incObj/sub ObjFloorDist.asm:17-39<br>
+     * docs/s1disasm/_incObj/sub FindNearestTile &amp; FindFloor &amp; FindWall.asm
+     * (FindFloor.isblank, FindFloor2.isblank2)
+     */
+    private int objFloorDist(int probeX) {
+        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(probeX, currentY, Y_RADIUS);
         if (floor.foundSurface()) {
-            currentY += floor.distance();
+            return floor.distance();
         }
+        int sensorY = currentY + Y_RADIUS;
+        return 0x1F - (sensorY & 0x0F);
     }
 
     private void enterMoveEndBranch(int frameCounter) {

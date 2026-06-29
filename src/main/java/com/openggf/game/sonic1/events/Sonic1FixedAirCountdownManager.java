@@ -192,7 +192,26 @@ final class Sonic1FixedAirCountdownManager {
         }
 
         private void makeItem(AbstractPlayableSprite owner) {
+            // ROM Drown_Countdown .makenum (docs/s1disasm/_incObj/0A LZ Drowning
+            // Countdown.asm:280-282): RandomNumber & $F -> objoff_3A. Consumed
+            // ALWAYS, BEFORE the FindFreeObj test below.
             obj3a = owner.currentRng().nextRaw() & 0x0F;
+
+            // ROM .makenum (0A LZ Drowning Countdown.asm:283-284):
+            //   jsr (FindFreeObj).l / bne.w .nocountdown
+            // When the dynamic SST is full, the ROM has already reset obj3A
+            // (consuming one RandomNumber) but then bails: it does NOT spawn a
+            // bubble, does NOT consume the large-bubble RandomNumber, does NOT
+            // decrement objoff_34, and does NOT clear objoff_36. The countdown
+            // therefore stays "in production" and retries on the next obj3A
+            // interval, consuming one RandomNumber each retry until a slot frees.
+            // Mirroring this is required for global RNG cadence parity (LZ2 f7800
+            // air-bubble drift): the old code always spawned and exhausted
+            // objoff_34, stopping ~5 retries early and leaving the engine RNG
+            // behind the ROM by the time the LZ air-bubble maker spawns.
+            if (!hasFreeDynamicSlot(owner)) {
+                return;
+            }
 
             int countdownNumber = -1;
             if ((obj36 & 0x80) != 0) {
@@ -218,6 +237,16 @@ final class Sonic1FixedAirCountdownManager {
             if ((byte) obj34 < 0) {
                 obj36 = 0;
             }
+        }
+
+        private boolean hasFreeDynamicSlot(AbstractPlayableSprite owner) {
+            var levelManager = owner.currentLevelManagerIfAvailable();
+            if (levelManager == null || levelManager.getObjectManager() == null) {
+                // No object pool available (e.g. headless physics test): treat as
+                // "slot free" so the spawn path proceeds as before.
+                return true;
+            }
+            return levelManager.getObjectManager().hasFreeDynamicSlot();
         }
 
         private int currentAir(AbstractPlayableSprite owner) {

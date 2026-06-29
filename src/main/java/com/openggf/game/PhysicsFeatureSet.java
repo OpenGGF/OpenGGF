@@ -1037,7 +1037,30 @@ public record PhysicsFeatureSet(
          * is {@code true} for S3K, so the +64 extension is never added and this
          * gate is never consulted.
          */
-        boolean levelBoundaryLockUsesScreenLockFlag
+        boolean levelBoundaryLockUsesScreenLockFlag,
+        /** Whether the frame loop advances the dynamic water level (move toward
+         *  target) BEFORE the player object's underwater check, instead of after.
+         *
+         *  <p>This controls {@code LevelManager.advanceWaterLevelBeforePlayerPhysics()},
+         *  which {@code LevelFrameStep} reads to decide whether the water-level
+         *  move runs in the pre-physics step (true) or stays in the post-physics
+         *  level update (false). The player's water-state check itself always
+         *  runs inside the player tick (matching {@code Sonic_Water} after
+         *  {@code Sonic_Modes}); this flag only relocates the water-level MOVE so
+         *  the player observes the same-frame value the ROM does.
+         *
+         *  <p>S1: {@code true}. {@code LZWaterFeatures} (which moves
+         *  {@code v_waterpos2} via {@code LZDynamicWater}) runs BEFORE
+         *  {@code ExecuteObjects} (sonic.asm:2986-2987), so {@code Sonic_Water}
+         *  sees this frame's moved water level.
+         *
+         *  <p>S2: {@code true}. {@code WaterEffects} (DynamicWater + MoveWater)
+         *  runs BEFORE {@code RunObjects} (s2.asm:5094-5095).
+         *
+         *  <p>S3K: {@code false}. {@code Process_Sprites} (the object/player loop)
+         *  runs BEFORE {@code Handle_Onscreen_Water_Height} (sonic3k.asm main
+         *  loop), so the player reads the PREVIOUS frame's water level. */
+        boolean advanceWaterLevelBeforePlayerPhysics
 ) {
     /** S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp directly modifies v_lookshift). */
     public static final short LOOK_SCROLL_DELAY_NONE = 0;
@@ -1254,7 +1277,8 @@ public record PhysicsFeatureSet(
                     source.mouthBubbleTimerBias(),
                     source.mouthBubbleRiseVelocity(),
                     source.solidObjectKeepsOnObjWhenJumpedOffSameFrame(),
-                    source.levelBoundaryLockUsesScreenLockFlag()
+                    source.levelBoundaryLockUsesScreenLockFlag(),
+                    source.advanceWaterLevelBeforePlayerPhysics()
             );
         }
     }
@@ -1318,7 +1342,8 @@ public record PhysicsFeatureSet(
             0 /* mouthBubbleTimerBias: S1 LZ Obj64 air bubbles use a distinct bubble-maker structure with no (RandomNumber&$F)+8 mouth-bubble delay */,
             -0x88 /* mouthBubbleRiseVelocity: S1 Obj0A small bubbles use y_vel=-$88 with SpeedToPos */,
             false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S1 unaffected (no CPU sidekick; existing same-frame unseat ordering preserved by gating) */,
-            true /* levelBoundaryLockUsesScreenLockFlag: S1 Sonic_LevelBound gates the +64 right-extension on f_lockscreen (s1disasm/_incObj/01 Sonic.asm:1047-1049), which persists past boss defeat (FZ has no Egg Prison) */);
+            true /* levelBoundaryLockUsesScreenLockFlag: S1 Sonic_LevelBound gates the +64 right-extension on f_lockscreen (s1disasm/_incObj/01 Sonic.asm:1047-1049), which persists past boss defeat (FZ has no Egg Prison) */,
+            true /* advanceWaterLevelBeforePlayerPhysics: S1 LZWaterFeatures runs before ExecuteObjects (sonic.asm:2986-2987) */);
 
     /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
      *  preserves high ground speed on input (s2.asm:36610-36616),
@@ -1385,7 +1410,8 @@ public record PhysicsFeatureSet(
             8 /* mouthBubbleTimerBias: S2 Obj0A_Animate next mouth-bubble delay = (RandomNumber&$F)+8 (s2.asm:42201-42204) */,
             -0x88 /* mouthBubbleRiseVelocity: S2 Obj0A small bubbles use y_vel=-$88 with SpeedToPos (s2.asm:41899,41941-41942) */,
             false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S2 unaffected; existing same-frame unseat ordering preserved by gating */,
-            false /* levelBoundaryLockUsesScreenLockFlag: S2 Sonic_LevelBound gates the +$40 right-extension on Current_Boss_ID (s2.asm:37247-37250), i.e. boss-alive; engine uses isBossFightActive() */);
+            false /* levelBoundaryLockUsesScreenLockFlag: S2 Sonic_LevelBound gates the +$40 right-extension on Current_Boss_ID (s2.asm:37247-37250), i.e. boss-alive; engine uses isBossFightActive() */,
+            true /* advanceWaterLevelBeforePlayerPhysics: S2 WaterEffects runs before RunObjects (s2.asm:5094-5095) */);
 
     /** Sonic 3&K: spindash with same speed table as S2, dual collision paths, delayed look scroll,
      *  preserves high ground speed on input, elemental shields,
@@ -1454,7 +1480,8 @@ public record PhysicsFeatureSet(
             8 /* mouthBubbleTimerBias: S3K shares the S2 Obj0A mouth-bubble cadence (RandomNumber&$F)+8 */,
             -0x100 /* mouthBubbleRiseVelocity: S3K AirCountdown uses y_vel=-$100 with MoveSprite2 (sonic3k.asm:33312,33347) */,
             true /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S3K SolidObjectFull runs once/object/frame. A land-and-jump-off frame keeps Status_OnObj|Status_InAir (RideObject_SetRide bset Status_OnObj sonic3k.asm:42033; Tails_Jump bset Status_InAir without clearing OnObj sonic3k.asm:28553-28554); the airborne-rider unseat (loc_1DC98 41016-41035 / loc_1DCF0 41066-41084) fires only on the NEXT frame. AIZ1 f2590 Tails-on-Spikes: ROM 0x0A, engine was 0x02. */,
-            false /* levelBoundaryLockUsesScreenLockFlag: S3K has levelBoundaryRightStrict=true so the +64 extension is never added and this gate is never consulted */);
+            false /* levelBoundaryLockUsesScreenLockFlag: S3K has levelBoundaryRightStrict=true so the +64 extension is never added and this gate is never consulted */,
+            false /* advanceWaterLevelBeforePlayerPhysics: S3K Process_Sprites runs before Handle_Onscreen_Water_Height, so the player reads the previous frame's water level */);
 
     /** Returns true when the game supports dual collision paths (primary/secondary). */
     public boolean hasDualCollisionPaths() {

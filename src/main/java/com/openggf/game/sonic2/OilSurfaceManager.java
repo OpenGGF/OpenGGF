@@ -44,6 +44,7 @@ public class OilSurfaceManager {
     // Internal frame counter for slide sound timing
     private int frameCounter = 0;
     private boolean frameAdvancedThisTick = false;
+    private int registeredOilPlayers = 0;
 
     // OilSlides_Chunks table (ROM: s2.asm:5647-5650)
     // 32 block IDs that trigger oil slide behavior
@@ -76,7 +77,15 @@ public class OilSurfaceManager {
     }
 
     private PlayerOilState stateFor(AbstractPlayableSprite player) {
-        return playerStates.computeIfAbsent(player, p -> new PlayerOilState(submersionMax));
+        PlayerOilState existing = playerStates.get(player);
+        if (existing != null) {
+            return existing;
+        }
+        int initialSubmersion = registeredOilPlayers == 0 ? submersionMax : 0;
+        registeredOilPlayers++;
+        PlayerOilState created = new PlayerOilState(initialSubmersion);
+        playerStates.put(player, created);
+        return created;
     }
 
     /**
@@ -137,6 +146,7 @@ public class OilSurfaceManager {
         playerStates.clear();
         frameCounter = 0;
         frameAdvancedThisTick = false;
+        registeredOilPlayers = 0;
     }
 
     // =========================================================================

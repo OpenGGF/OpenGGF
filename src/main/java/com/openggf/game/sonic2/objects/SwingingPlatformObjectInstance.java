@@ -20,6 +20,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.SpritePieceRenderer;
@@ -97,6 +98,16 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
     private static final int TRAP_ROTATION_STEP = 8;   // Angle change per frame
     private static final int TRAP_ROTATION_MAX = 0x200; // Maximum rotation accumulator
     private static final int DISPLAY_CHILD_ANCHOR_LENGTH = 0x40;
+    private static final int PLATFORM_FRAME_NORMAL = 0;
+    private static final int PLATFORM_FRAME_TRIGGERED_PARENT = 3;
+    private static final int BIT7_STATE_NORMAL = 0;
+    private static final int BIT7_STATE_ARMED = 1;
+    private static final int BIT7_STATE_TRIGGERED_PARENT = 2;
+    private static final int BIT7_STATE_FALLING_CHILD = 3;
+    private static final int BIT7_STATE_BOBBING_CHILD = 4;
+    private static final int STATE6_CHILD_X_SPEED = 0x200;
+    private static final int STATE6_CHILD_GRAVITY = 0x18;
+    private static final int STATE6_CHILD_LANDING_Y = 0x720;
 
     // Static mapping data (loaded per-zone)
     private static final LazyMappingHolder OOZ_MAPPINGS = new LazyMappingHolder();
@@ -131,6 +142,14 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
 
     // Player tracking
     private boolean playerStanding;
+    private int bit7State;
+    private int platformMappingFrame;
+    private int xVel;
+    private int yVel;
+    private int xSub;
+    private int ySub;
+    private int state6BobBaseY;
+
     public SwingingPlatformObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         this.baseX = spawn.x();
@@ -146,6 +165,9 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         // links cap at 6, but the math still uses the full chainCount.)
         this.chainCount = Math.max(1, subtype & 0x0F);
         this.displayOnly = (subtype & 0x80) != 0;
+        this.bit7State = displayOnly ? BIT7_STATE_ARMED : BIT7_STATE_NORMAL;
+        this.platformMappingFrame = PLATFORM_FRAME_NORMAL;
+        this.state6BobBaseY = spawn.y();
 
         // Determine behavior mode from bits 4-6
         int modeValue = (subtype & 0x70) >> 4;
@@ -184,6 +206,36 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         LOGGER.fine(() -> String.format(
                 "SwingingPlatform init: pos=(%d,%d), subtype=0x%02X, chains=%d, mode=%s, zone=%s",
                 baseX, baseY, subtype, chainCount, behaviorMode, zoneConfig));
+    }
+
+    private SwingingPlatformObjectInstance(SwingingPlatformObjectInstance parent, int childXVel) {
+        this(new ObjectSpawn(
+                        parent.x,
+                        parent.y,
+                        parent.spawn.objectId(),
+                        parent.spawn.subtype(),
+                        parent.spawn.renderFlags(),
+                        false,
+                        parent.spawn.rawYWord(),
+                        parent.spawn.layoutIndex()),
+                parent.name);
+        this.baseX = parent.baseX;
+        this.baseY = parent.baseY;
+        this.x = parent.x;
+        this.y = parent.y;
+        this.displayChildX = parent.displayChildX;
+        this.displayChildY = parent.displayChildY;
+        this.zoneConfig = parent.zoneConfig;
+        this.behaviorMode = parent.behaviorMode;
+        this.displayOnly = false;
+        this.bit7State = BIT7_STATE_FALLING_CHILD;
+        this.platformMappingFrame = PLATFORM_FRAME_NORMAL;
+        this.xVel = childXVel;
+        this.yVel = 0;
+        this.xSub = 0;
+        this.ySub = 0;
+        this.state6BobBaseY = parent.y;
+        updateDynamicSpawn(x, y);
     }
 
     @Override
@@ -226,6 +278,9 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
      */
     @Override
     public int getOutOfRangeReferenceX() {
+        if (isState6Child()) {
+            return x;
+        }
         return baseX;
     }
 
@@ -235,9 +290,21 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+
+        switch (bit7State) {
+            case BIT7_STATE_ARMED -> updateBit7State4(frameCounter, player);
+            case BIT7_STATE_TRIGGERED_PARENT -> updateTriggeredParent(frameCounter, player);
+            case BIT7_STATE_FALLING_CHILD -> updateState6FallingChild();
+            case BIT7_STATE_BOBBING_CHILD -> updateState6BobbingChild();
+            default -> updateByBehavior(frameCounter, player);
+        }
+
+        updateDynamicSpawn(x, y);
+    }
+
+    private void updateByBehavior(int frameCounter, AbstractPlayableSprite player) {
         ensureDisplayChild();
 
-        // Update based on behavior mode
         switch (behaviorMode) {
             case NORMAL -> updateNormalSwing(frameCounter);
             case BOUNCE_LEFT -> updateBounceSwing(player, true);
@@ -245,8 +312,68 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
             case TRAP -> updateTrapMode(player);
             case STATIC -> { /* No update needed */ }
         }
+    }
 
-        updateDynamicSpawn(x, y);
+    private void updateBit7State4(int frameCounter, AbstractPlayableSprite player) {
+        // ROM Obj15_State4 (s2.asm:22753-22831): run normal Obj15 swing math,
+        // then split when the previous SolidObject standing bits are set and
+        // Oscillating_Data+$18 reaches zero.
+        updateByBehavior(frameCounter, player);
+        boolean standing = playerStanding || safeIsPlayerRiding();
+        playerStanding = false;
+        if (standing && OscillationManager.getByte(0x18) == 0) {
+            spawnState6Child();
+        }
+    }
+
+    private void updateTriggeredParent(int frameCounter, AbstractPlayableSprite player) {
+        updateByBehavior(frameCounter, player);
+        playerStanding = false;
+    }
+
+    private boolean safeIsPlayerRiding() {
+        try {
+            return isPlayerRiding();
+        } catch (IllegalStateException e) {
+            return false;
+        }
+    }
+
+    private void spawnState6Child() {
+        int childXVel = ((spawn.renderFlags() & 0x01) != 0)
+                ? -STATE6_CHILD_X_SPEED
+                : STATE6_CHILD_X_SPEED;
+        spawnChild(() -> new SwingingPlatformObjectInstance(this, childXVel));
+        platformMappingFrame = PLATFORM_FRAME_TRIGGERED_PARENT;
+        bit7State = BIT7_STATE_TRIGGERED_PARENT;
+    }
+
+    private void updateState6FallingChild() {
+        SubpixelMotion.State motion = new SubpixelMotion.State(x, y, xSub, ySub, xVel, yVel);
+        SubpixelMotion.speedToPos(motion);
+        motion.yVel += STATE6_CHILD_GRAVITY;
+        x = motion.x;
+        y = motion.y;
+        xSub = motion.xSub;
+        ySub = motion.ySub;
+        xVel = motion.xVel;
+        yVel = motion.yVel;
+        if (y >= STATE6_CHILD_LANDING_Y) {
+            y = STATE6_CHILD_LANDING_Y;
+            ySub = 0;
+            xVel = 0;
+            yVel = 0;
+            state6BobBaseY = y;
+            bit7State = BIT7_STATE_BOBBING_CHILD;
+        }
+    }
+
+    private void updateState6BobbingChild() {
+        y = state6BobBaseY + (OscillationManager.getByte(0x14) >> 1);
+    }
+
+    private boolean isState6Child() {
+        return bit7State == BIT7_STATE_FALLING_CHILD || bit7State == BIT7_STATE_BOBBING_CHILD;
     }
 
     private void ensureDisplayChild() {
@@ -490,6 +617,11 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         boolean hFlip = (spawn.renderFlags() & 0x1) != 0;
         boolean vFlip = (spawn.renderFlags() & 0x2) != 0;
 
+        if (isState6Child()) {
+            renderPlatformFrame(mappings, graphicsManager, hFlip, vFlip);
+            return;
+        }
+
         // Render anchor/base at pivot point (frame 2)
         if (mappings.size() > 2) {
             SpriteMappingFrame anchorFrame = mappings.get(2);
@@ -509,9 +641,13 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
             }
         }
 
-        // Render platform at end of chain (frame 0)
-        if (mappings.size() > 0) {
-            SpriteMappingFrame platformFrame = mappings.get(0);
+        renderPlatformFrame(mappings, graphicsManager, hFlip, vFlip);
+    }
+
+    private void renderPlatformFrame(List<SpriteMappingFrame> mappings, GraphicsManager graphicsManager,
+                                     boolean hFlip, boolean vFlip) {
+        if (mappings.size() > platformMappingFrame) {
+            SpriteMappingFrame platformFrame = mappings.get(platformMappingFrame);
             if (platformFrame != null && !platformFrame.pieces().isEmpty()) {
                 renderPieces(graphicsManager, platformFrame.pieces(), x, y, hFlip, vFlip);
             }
@@ -581,7 +717,6 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (contact.standing()) {
             playerStanding = true;
         }
@@ -589,8 +724,7 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        return !isDestroyed();
+        return !isDestroyed() && bit7State != BIT7_STATE_TRIGGERED_PARENT;
     }
 
     @Override

@@ -469,6 +469,9 @@ public final class ObjectRewindDynamicCodecs {
                     (Constructor<? extends AbstractObjectInstance>) rawCtor;
             ctor.setAccessible(true);
             ObjectInstance parent = findLiveAssignableParentForProbe(params[3], ctx);
+            if (parent == null) {
+                return null;
+            }
             return invokeProbeCtor(
                     cls, ctor, ctx, spawn, 0, 0, parent);
         }

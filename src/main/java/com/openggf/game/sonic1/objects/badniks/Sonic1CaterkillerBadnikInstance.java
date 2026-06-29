@@ -554,9 +554,22 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
             }
         }
 
-        // loc_16CE0: tst.b obRender(a0) / bpl.w Cat_ChkGone.
+        // Cat_Fragment .displayOrDelete (docs/s1disasm/_incObj/78 Badnik -
+        // Caterkiller.asm:206-208): tst.b obRender(a0) / bpl.w Cat_Despawn.
+        // An off-screen fragment routes to Cat_Despawn, which clears bit 7 of
+        // the object's v_objstate respawn-table entry (bclr #7,2(a2,d0.w),
+        // Caterkiller.asm:139-148) before DeleteObject — exactly the
+        // RememberState off-screen unload, NOT a permanent kill. Using
+        // setDestroyedByOffscreen() (respawnable, clears the placement counter
+        // bit) instead of setDestroyed(true) lets the layout entry re-create
+        // the Caterkiller when the camera returns. setDestroyed(true) kept the
+        // REV01 bset counter bit latched, so a Caterkiller the player frag-hit
+        // then walked away from never respawned (MZ2 @0x200 caterkiller: the
+        // placement bit-2 collision blocked its f3031 respawn, cascading the
+        // scattered-ring + Basaran slot allocation and dropping the f4610
+        // Basaran bounce).
         if (!renderOnScreen) {
-            setDestroyed(true);
+            setDestroyedByOffscreen();
             return;
         }
         updateCaterkillerRenderFlag();

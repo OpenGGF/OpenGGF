@@ -51,6 +51,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
     private static final int COLLISION_SIZE_ASTERON_SPIKE = 0x18; // From ObjA4_SubObjData2: collision_flags=$98
     private static final int COLLISION_SIZE_NEBULA_BOMB = 0x0B; // From Obj99_SubObjData: collision_flags=$8B
     private static final int COLLISION_SIZE_CLUCKER_SHOT = 0x18; // From ObjAD_SubObjData3: collision_flags=$98
+    private static final int[] AQUIS_BULLET_FRAMES = {5, 6, 7, 6};
     private static final int GRAVITY_COCONUT = 0x20; // Obj98_CoconutFall
     private static final int GRAVITY_SPINY_SPIKE = 0x20; // From disassembly +$20 per frame
     private static final int GRAVITY_REXON_FIREBALL = 0x80; // From disassembly $80 per frame
@@ -66,6 +67,8 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
     private int gravity;
     private int collisionSizeIndex;
     private int animFrame;
+    private int aquisBulletAnimTimer;
+    private int aquisBulletAnimIndex;
     private boolean hFlip;
     private int initialDelay; // Frames to wait before moving (Octus bullet: 0x0F)
     private int fixedFrame = -1; // Fixed mapping frame override (Asteron spikes use different frames per projectile)
@@ -126,6 +129,8 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
             case AQUIS_BULLET -> {
                 this.gravity = 0;
                 this.collisionSizeIndex = COLLISION_SIZE_AQUIS_BULLET;
+                this.animFrame = 0;
+                this.aquisBulletAnimTimer = 3;
             }
             case ASTERON_SPIKE -> {
                 this.gravity = 0;
@@ -238,7 +243,15 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
         }
 
         // Animation cycling
-        if (type == ProjectileType.CLUCKER_SHOT) {
+        if (type == ProjectileType.AQUIS_BULLET) {
+            // Ani_obj50_Bullet: dc.b 3, 5, 6, 7, 6, $FF.
+            aquisBulletAnimTimer--;
+            if (aquisBulletAnimTimer < 0) {
+                aquisBulletAnimTimer = 3;
+                animFrame = (animFrame + 1) & 3;
+            }
+            aquisBulletAnimIndex = animFrame;
+        } else if (type == ProjectileType.CLUCKER_SHOT) {
             // Ani_CluckerShot: duration 3, frames $D-$14, end $FF (loop)
             // 8 frames total, each held for 4 game frames (duration 3 = 3+1 ticks)
             cluckerAnimTimer--;
@@ -312,6 +325,9 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
         if (type == ProjectileType.CLUCKER_SHOT) {
             return RenderPriority.clamp(5);
         }
+        if (type == ProjectileType.AQUIS_BULLET) {
+            return RenderPriority.clamp(3);
+        }
         return RenderPriority.clamp(4);
     }
 
@@ -358,8 +374,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
                 break;
             case AQUIS_BULLET:
                 renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.AQUIS);
-                // Aquis bullet uses frames 5-7 (animation 2: dc.b 3, 5, 6, 7, 6, $FF)
-                frame = 5 + (animFrame % 3);
+                frame = AQUIS_BULLET_FRAMES[animFrame % AQUIS_BULLET_FRAMES.length];
                 break;
             case ASTERON_SPIKE:
                 renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.ASTERON);
@@ -423,6 +438,8 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
                         paletteBlink,
                         cluckerAnimTimer,
                         cluckerAnimIndex,
+                        aquisBulletAnimTimer,
+                        aquisBulletAnimIndex,
                         loadSubObjectInitPending));
     }
 
@@ -445,6 +462,8 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
             paletteBlink = extra.paletteBlink();
             cluckerAnimTimer = extra.cluckerAnimTimer();
             cluckerAnimIndex = extra.cluckerAnimIndex();
+            aquisBulletAnimTimer = extra.aquisBulletAnimTimer();
+            aquisBulletAnimIndex = extra.aquisBulletAnimIndex();
             loadSubObjectInitPending = extra.loadSubObjectInitPending();
             motionState.x = currentX;
             motionState.y = currentY;

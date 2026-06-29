@@ -2,8 +2,13 @@ package com.openggf.game.sonic2.events;
 
 import com.openggf.game.sonic2.OilSurfaceManager;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic2.audio.Sonic2Music;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.objects.bosses.Sonic2OOZBossInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -14,7 +19,16 @@ import java.util.List;
  * Also handles oil surface (Obj07) and oil slides (OilSlides routine).
  */
 public class Sonic2OOZEvents extends Sonic2ZoneEvents {
+    private static final int APPROACH_TRIGGER_X = 0x2668;
+    private static final int ARENA_LOCK_X = 0x2880;
+    private static final int ARENA_MAX_X = 0x28C0;
+    private static final int ARENA_MAX_Y_TARGET = 0x01E0;
+    private static final int ARENA_MIN_Y = 0x01D8;
+    private static final int SPAWN_DELAY = 0x5A;
+    private static final int CURRENT_BOSS_ID_OOZ = 8;
+
     private OilSurfaceManager oilManager;
+    private Sonic2OOZBossInstance oozBoss;
 
     public Sonic2OOZEvents() {
     }
@@ -23,6 +37,7 @@ public class Sonic2OOZEvents extends Sonic2ZoneEvents {
     public void init(int act) {
         super.init(act);
         oilManager = new OilSurfaceManager();
+        oozBoss = null;
     }
 
     @Override
@@ -49,20 +64,81 @@ public class Sonic2OOZEvents extends Sonic2ZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
-        if (oilManager == null) {
+        if (oilManager != null) {
+            // ROM Obj07_Main (oil surface) runs during object processing, after the
+            // player object (s2.asm:49659-49749). Mirror that post-physics here.
+            ObjectPlayerQuery playerQuery = playerQueryFromRuntime();
+            for (PlayableEntity participant :
+                    playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (participant instanceof AbstractPlayableSprite playable) {
+                    oilManager.updateSurface(playable);
+                }
+            }
+            // Re-arm the per-frame slide cadence for the next frame's pre-physics pass.
+            oilManager.endFrame();
+        }
+        updateBossEvents(act);
+    }
+
+    private void updateBossEvents(int act) {
+        if (act == 0) {
             return;
         }
-        // ROM Obj07_Main (oil surface) runs during object processing, after the
-        // player object (s2.asm:49659-49749). Mirror that post-physics here.
-        ObjectPlayerQuery playerQuery = playerQueryFromRuntime();
-        for (PlayableEntity participant :
-                playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
-            if (participant instanceof AbstractPlayableSprite playable) {
-                oilManager.updateSurface(playable);
+
+        switch (eventRoutine) {
+            case 0 -> {
+                if (camera().getX() >= APPROACH_TRIGGER_X) {
+                    camera().setMinX(camera().getX());
+                    camera().setMaxYTarget((short) ARENA_MAX_Y_TARGET);
+                    setSidekickBounds((int) camera().getX(), null, ARENA_MAX_Y_TARGET);
+                    eventRoutine += 2;
+                }
+            }
+            case 2 -> {
+                if (camera().getX() >= ARENA_LOCK_X) {
+                    camera().setMinX((short) ARENA_LOCK_X);
+                    camera().setMaxX((short) ARENA_MAX_X);
+                    setSidekickBounds(ARENA_LOCK_X, ARENA_MAX_X, ARENA_MAX_Y_TARGET);
+                    eventRoutine += 2;
+                    bossSpawnDelay = 0;
+                    audio().fadeOutMusic();
+                    gameState().setCurrentBossId(CURRENT_BOSS_ID_OOZ);
+                    requestSonic2Plc(Sonic2Constants.PLC_OOZ_BOSS);
+                    loadOOZBossPalette();
+                }
+            }
+            case 4 -> {
+                if (camera().getY() >= ARENA_MIN_Y) {
+                    camera().setMinY((short) ARENA_MIN_Y);
+                    setSidekickBounds(ARENA_LOCK_X, ARENA_MAX_X, ARENA_MIN_Y, ARENA_MAX_Y_TARGET);
+                }
+                bossSpawnDelay++;
+                if (bossSpawnDelay >= SPAWN_DELAY) {
+                    spawnOOZBoss();
+                    eventRoutine += 2;
+                    audio().playMusic(Sonic2Music.BOSS.id);
+                }
+            }
+            case 6 -> {
+                if (oozBoss != null && oozBoss.isDefeated()) {
+                    camera().setMinX(camera().getX());
+                    syncSidekickBoundsToCamera();
+                }
+            }
+            default -> {
             }
         }
-        // Re-arm the per-frame slide cadence for the next frame's pre-physics pass.
-        oilManager.endFrame();
+    }
+
+    private void spawnOOZBoss() {
+        ObjectSpawn bossSpawn = new ObjectSpawn(
+                0x2940, 0x02D0, Sonic2ObjectIds.OOZ_BOSS, 0, 0, false, 0);
+        oozBoss = new Sonic2OOZBossInstance(bossSpawn);
+        spawnObject(oozBoss);
+    }
+
+    protected void loadOOZBossPalette() {
+        loadBossPalette(1, Sonic2Constants.PAL_OOZ_BOSS_ADDR);
     }
 
     private ObjectPlayerQuery playerQueryFromRuntime() {

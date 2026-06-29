@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.audio.GameSound;
+import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -11,6 +12,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -178,6 +180,13 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
             return;
         }
 
+        // ROM skips CPU Tails while in the flying routine. The engine does not
+        // expose Tails_CPU_routine directly here, so use the same conservative
+        // physical guard as Obj3D for CPU airborne non-rolling flight.
+        if (player.isCpuControlled() && player.getAir() && !player.getRolling()) {
+            return;
+        }
+
         // Check 32x32 detection box centered on launcher
         // ROM: sub.w x_pos(a0),d0; addi.w #$10,d0; cmpi.w #$20,d0
         int dx = player.getCentreX() - spawn.x() + DETECTION_HALF_SIZE;
@@ -187,6 +196,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         }
 
         // If player is currently held by another launcher, clear that launcher's state
+        OOZLauncherObjectInstance.clearActiveLauncherFor(player);
         LauncherBallObjectInstance previousLauncher = activeCaptures.get(player);
         if (previousLauncher != null && previousLauncher != this) {
             previousLauncher.playerStates.put(player, STATE_DETECTION);
@@ -206,8 +216,8 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         playerStates.put(player, STATE_ANIMATION);
 
         // Snap player to launcher position
-        player.setCentreX((short) spawn.x());
-        player.setCentreY((short) spawn.y());
+        NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x());
+        NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y());
 
         // Setup character state (ROM: move.b #$81,obj_control(a1))
         ObjectControlState.nativeBit7FullControl().applyTo(player);
@@ -369,10 +379,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         // ROM: ext.l d0; asl.l #8,d0; add.l d0,x_pos(a1)
         // LAUNCH_VELOCITY = 0x1000, shifted right 8 = 0x10 = 16 pixels/frame
         int[] vel = playerVelocities.getOrDefault(player, new int[]{0, 0});
-        int moveX = vel[0] >> 8;
-        int moveY = vel[1] >> 8;
-        player.setCentreX((short) (player.getCentreX() + moveX));
-        player.setCentreY((short) (player.getCentreY() + moveY));
+        player.move((short) vel[0], (short) vel[1]);
     }
 
     /**
@@ -410,11 +417,8 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
      * ROM: btst #render_flags.on_screen,render_flags(a1)
      */
     private boolean isPlayerOnScreen(AbstractPlayableSprite player) {
-        int px = player.getCentreX();
-        int py = player.getCentreY();
-        // Use generous margin since player is moving fast (16px/frame)
-        return isOnScreen(128)
-                || (Math.abs(px - spawn.x()) < 400 && Math.abs(py - spawn.y()) < 400);
+        Camera camera = player.currentCamera();
+        return camera == null || camera.isOnScreen(player);
     }
 
     /**
@@ -460,5 +464,6 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
      */
     public static void clearActiveCaptures() {
         activeCaptures.clear();
+        OOZLauncherObjectInstance.clearActiveLaunchers();
     }
 }

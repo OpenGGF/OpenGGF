@@ -49,14 +49,15 @@ class TestRemainingRewindTailInventory {
     void remainingRoundTripTailMatchesInventory() {
         TailInventory expected = loadInventory();
         TailInventory current = currentInventory();
+        String delta = describeDelta(expected, current);
 
-        assertEquals(expected.total(), current.total(), "total object class count changed");
-        assertEquals(expected.passed(), current.passed(), "passed object count changed");
-        assertEquals(expected.graphCovered(), current.graphCovered(), "graph-covered object count changed");
-        assertEquals(expected.noCodec(), current.noCodec(), "no-codec bucket must stay empty");
+        assertEquals(expected.total(), current.total(), "total object class count changed\n" + delta);
+        assertEquals(expected.passed(), current.passed(), "passed object count changed\n" + delta);
+        assertEquals(expected.graphCovered(), current.graphCovered(), "graph-covered object count changed\n" + delta);
+        assertEquals(expected.noCodec(), current.noCodec(), "no-codec bucket must stay empty\n" + delta);
         assertEquals(expected.classesByBucket(), current.classesByBucket(),
                 "Remaining rewind tail changed. If a class moved out, delete its row. "
-                        + "If a class moved in, classify it honestly before continuing.");
+                        + "If a class moved in, classify it honestly before continuing.\n" + delta);
     }
 
     private static TailInventory currentInventory() {
@@ -112,7 +113,7 @@ class TestRemainingRewindTailInventory {
         assertEquals(0, buckets.get(Bucket.COUNT_MISMATCH).size(), "count-mismatch inventory count");
         assertEquals(0, buckets.get(Bucket.SCALAR_MISMATCH).size(), "scalar-mismatch inventory count");
 
-        return new TailInventory(784, 646, 138, 0, buckets);
+        return new TailInventory(787, 649, 138, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
@@ -171,6 +172,31 @@ class TestRemainingRewindTailInventory {
             buckets.put(bucket, new TreeSet<>());
         }
         return buckets;
+    }
+
+    private static String describeDelta(TailInventory expected, TailInventory current) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("expected total=").append(expected.total())
+                .append(" passed=").append(expected.passed())
+                .append(" graphCovered=").append(expected.graphCovered())
+                .append(" noCodec=").append(expected.noCodec())
+                .append("; current total=").append(current.total())
+                .append(" passed=").append(current.passed())
+                .append(" graphCovered=").append(current.graphCovered())
+                .append(" noCodec=").append(current.noCodec());
+        for (Bucket bucket : Bucket.values()) {
+            TreeSet<String> expectedRows = expected.classesByBucket().get(bucket);
+            TreeSet<String> currentRows = current.classesByBucket().get(bucket);
+            TreeSet<String> added = new TreeSet<>(currentRows);
+            added.removeAll(expectedRows);
+            TreeSet<String> removed = new TreeSet<>(expectedRows);
+            removed.removeAll(currentRows);
+            if (!added.isEmpty() || !removed.isEmpty()) {
+                sb.append(System.lineSeparator()).append(bucket.id).append(" added=").append(added)
+                        .append(" removed=").append(removed);
+            }
+        }
+        return sb.toString();
     }
 
     private enum Bucket {

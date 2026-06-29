@@ -135,6 +135,9 @@ divergence plus diagnostic context, animated ROM-derived master-title game previ
 bundled title emblem resource, S2 trace-frontier closures (Sky Chase and Casino
 Night
 level-select replays), object-physics standardization onto shared contracts,
+Oil Ocean object parity work covering Obj55 boss/event spawning, launcher and
+launcher-ball capture behavior, Obj15 bit-7 split/falling-child state, OOZ
+badnik projectile/floor-snap fixes, pressure-spring and oil-surface polish,
 Casino Night slot-machine reward/display alignment,
 expanded rewind coverage, and architecture-guard hardening across runtime
 ownership, trace/rewind invariants, and object-service boundaries. A recent
@@ -144,7 +147,9 @@ oracles, and added a guard that fails the build on assertion-free `@Test`
 methods, plus order-dependence hardening (an S3K AIZ replay-probe crash fix, a
 fork-mate state-leak fix flagged by the singleton-lifecycle guard, and the MZ1
 lost-ring regression test rerouted through the production replay bootstrap so it
-is deterministic rather than fork-order dependent). See CHANGELOG.md for the
+is deterministic rather than fork-order dependent). Source-budget architecture
+guards now count effective source lines so comments and blank lines do not
+consume budget or incentivize deleting ROM-parity documentation. See CHANGELOG.md for the
 detailed, per-merge history.
 
 ### Where do I get ROMs?
@@ -242,6 +247,7 @@ Highlights:
 
 - S3K coverage has expanded across AIZ, HCZ, CNZ, MGZ, ICZ, MHZ, and LBZ, with route objects, badniks, bosses/minibosses, events, scroll/parallax, animated tiles, palette/PLC state, transitions, and rendering fixes advancing by route impact.
 - Trace replay is now the main parity workflow: complete-run and level-select traces cover broad S1/S2/S3K routes, diagnostics default to frontier-focused output, and frame-by-frame evidence lives in [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md) instead of this README.
+- Sonic 2 placed-object parity now reports 122/122 implemented after adding Oil Ocean's SlidingSpike and pressure spring objects with ROM-backed art/PLC registration and focused behavior coverage; the remaining OOZ item is the dynamic boss path.
 - Rewind now has broader gameplay coverage, object identity capture, construction-child restore adoption, generic recreate support, coverage analysis, and round-trip guards for captured objects.
 - Recent rewind cleanup extended graph/session restore coverage for object families, removed additional private dynamic codecs, and tightened live-rewind boundary handling around level/mode transitions.
 - Runtime-owned frameworks continue replacing zone-local behavior where they reduce duplication or active risk: typed zone state, palette ownership, animated tile channels, live layout mutation, scroll composition, staged render effects, and render-mode overrides.

@@ -51,7 +51,7 @@ import java.util.List;
  * <p>
  * <b>Touch collision:</b> obColType=$94 (HURT category $80 | size index $14).
  * <p>
- * Reference: docs/s1disasm/_incObj/4E Wall of Lava.asm
+ * Reference: docs/s1disasm/_incObj/4E MZ Wall of Lava.asm
  */
 public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider, RewindRecreatable {
@@ -197,6 +197,9 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
     /** Whether the trailing child has been spawned (prevents double-spawn). */
     private boolean childSpawned;
 
+    /** True when routine 8 was reached from Obj4E's out_of_range tail. */
+    private boolean respawnableDelete;
+
     // ========================================================================
     // Constructors
     // ========================================================================
@@ -274,7 +277,13 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
             case 4 -> updateProximityCheck(player);
             case 2 -> updateSolidMoving(player);
             case 6 -> updateTrail();
-            case 8 -> setDestroyed(true);
+            case 8 -> {
+                if (respawnableDelete) {
+                    setDestroyedByOffscreen();
+                } else {
+                    setDestroyed(true);
+                }
+            }
         }
     }
 
@@ -427,7 +436,7 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * Handle going out of range: clear respawn flag and mark for deletion.
+     * Handle going out of range: mark routine 8 as an off-screen delete.
      * <pre>
      * .chkgone:
      *   lea    (v_objstate).w,a2
@@ -436,8 +445,16 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
      *   bclr   #7,2(a2,d0.w)
      *   move.b #8,obRoutine(a0)
      * </pre>
+     * The respawn-table bit is cleared in this routine, before the routine-8
+     * {@code DeleteObject} tail runs. The placement layer keeps the spawn
+     * dormant until the cursor reprocesses it so the immediate {@code bclr}
+     * does not materialize a second object while this SST slot is still alive.
      */
     private void handleOutOfRange() {
+        if (services().objectManager() != null) {
+            services().objectManager().clearSpawnCounterActiveBitAndMarkDormant(spawn);
+        }
+        respawnableDelete = true;
         routine = 8;
     }
 

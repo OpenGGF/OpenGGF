@@ -1309,6 +1309,24 @@ final class ObjectSolidContactController {
                 clearGroundWallSuppressionForNormalSolidSupport(player, instance);
                 inlineSupportedPlayers.add(player);
             }
+            // Solid_ResetFloor takeover (pieceScoped multi-piece only): an adjacent
+            // piece whose narrow Solid_Landed window now contains the player has
+            // claimed standing and re-seated the player onto itself. Transfer the
+            // riding latch to that piece and DO NOT restore the previously-ridden
+            // piece's Y, mirroring ROM Solid_ResetFloor reassigning standonobject
+            // (docs/s1disasm/_incObj/sub SolidObject.asm:305-375). Without this the
+            // engine holds the rider on the prior piece's interpolated height
+            // (SLZ staircase: piece1 at 75% vs piece0/parent at 100%), leaving the
+            // rider 1px high as the descending steps deepen (SLZ1 f2872).
+            if (result.overridePieceIndex() >= 0) {
+                putRidingState(player, instance, result.overrideX(), result.overrideY(),
+                        result.overridePieceIndex());
+                setObjectStandingBit(player, instance, result.overridePieceIndex());
+                markStandingBitEstablishedThisFrame(player, instance, result.overridePieceIndex());
+                clearGroundWallSuppressionForNormalSolidSupport(player, instance);
+                inlineSupportedPlayers.add(player);
+                return result.aggregateContact();
+            }
             // Restore riding piece Y after sibling-piece contacts. Non-riding sibling
             // pieces may have applied Solid_Landed Y snaps for overlapping X ranges.
             // In ROM each piece is a separate slot; the ridden piece runs LAST in slot
@@ -2335,7 +2353,10 @@ final class ObjectSolidContactController {
             int ridingX,
             int ridingY,
             int pieceIndex,
-            SolidContact aggregateContact) {}
+            SolidContact aggregateContact,
+            int overridePieceIndex,
+            int overrideX,
+            int overrideY) {}
 
     /**
      * Resolve the side/push contact of the sibling pieces allocated before the
@@ -2391,9 +2412,47 @@ final class ObjectSolidContactController {
         int standingPieceIndex = -1;
         int standingPieceX = 0;
         int standingPieceY = 0;
+        // ROM Solid_ResetFloor takeover: while the player rides one piece (held by
+        // its full-width continued window), an ADJACENT piece whose narrow
+        // Solid_Landed window (obActWid*2 = piece spacing) now contains the
+        // player's foot claims standing and reassigns standonobject to itself
+        // (docs/s1disasm/_incObj/sub SolidObject.asm:305-324 Solid_Landed ->
+        // Solid_ResetFloor:344-375). The narrow per-piece windows are contiguous
+        // and non-overlapping, so exactly one piece claims. Only providers that
+        // opt into usesPieceScopedStandingBits() (separate ROM SST slots folded
+        // into one instance) take this path.
+        int overridePieceIndex = -1;
+        int overridePieceX = 0;
+        int overridePieceY = 0;
         SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
         boolean ridingCurrentObject = isRidingCurrentPlayerObject(instance);
         int currentRidingPieceIndex = getCurrentPlayerRidingPieceIndex();
+        boolean pieceScopedStanding = multiPiece.usesPieceScopedStandingBits();
+
+        // ROM ExecuteObjects runs each object's SolidObject in SST slot order, and
+        // the rider's stand-on-object is re-seated by the slot it currently stands
+        // on (Solid_ResetFloor). When the player walks from a HIGHER-slot solid
+        // object onto a LOWER-slot one, the lower-slot object's SolidObject runs
+        // FIRST -- BEFORE the higher-slot ridden object re-seats the rider this
+        // frame -- so it tests its new top-landing against the rider's pre-re-seat
+        // (previous-frame settled) y. This engine resolves solids after the object
+        // updates, so a lower-slot object would otherwise observe the higher-slot
+        // ridden object's just-applied re-seat and steal the ride one frame early.
+        // Detect that case here so the new-landing detection below can use the
+        // pre-re-seat y (SLZ1 f3520: ROM keeps the rider on the higher-slot @0B10
+        // staircase at x=0x0B83 and only lands the lower-slot @0B90 staircase at
+        // x=0x0B84). docs/s1disasm/sonic.asm ExecuteObjects (slot order);
+        // docs/s1disasm/_incObj/sub SolidObject.asm:262-318 (Solid_Landed/ResetFloor).
+        ObjectInstance riddenObjectForSlotGate = getRidingObject(player);
+        boolean crossSlotLowerTakeover =
+                !player.getAir()
+                && riddenObjectForSlotGate != null
+                && riddenObjectForSlotGate != instance
+                && instance instanceof AbstractObjectInstance thisAoiGate
+                && riddenObjectForSlotGate instanceof AbstractObjectInstance riddenAoiGate
+                && thisAoiGate.getSlotIndex() >= 0
+                && riddenAoiGate.getSlotIndex() >= 0
+                && thisAoiGate.getSlotIndex() < riddenAoiGate.getSlotIndex();
 
         for (int i = 0; i < pieceCount; i++) {
             // ROM slot-order parity: when the earlier slots of this ridden object
@@ -2453,6 +2512,41 @@ final class ObjectSolidContactController {
                 contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(),
                         params.groundHalfHeight(), solidProfile.topSolidOnly(), useStickyBuffer,
                         instance, true, slopedAdapter);
+            } else if (crossSlotLowerTakeover) {
+                // Cross-object hand-off from a higher-slot ridden object onto this
+                // lower-slot one (see crossSlotLowerTakeover above). A NEW top
+                // landing must be tested against the rider's pre-re-seat
+                // (previous-frame) y, matching ROM slot order. Detect-only first
+                // (apply=false) to see whether this would be a fresh top landing;
+                // if so, re-test at the previous-frame y and DEFER the hand-off one
+                // frame when the rider had not yet descended into this object's
+                // landing band last frame. Side/corner contacts are unaffected.
+                SolidContact curProbe = resolveContact(player, anchorX, anchorY,
+                        params.halfWidth(), halfHeight, solidProfile, useStickyBuffer,
+                        instance, i, false);
+                if (curProbe != null && curProbe.standing() && !curProbe.touchSide()) {
+                    short curCentreY = player.getCentreY();
+                    // getCentreY(0) is the most recent recorded (post-collision)
+                    // position -- i.e. the rider's settled y at the END of the
+                    // previous frame, which is exactly the y a ROM lower-slot object
+                    // observes when it runs BEFORE this frame's higher-slot ride
+                    // re-seat. The live getCentreY() already reflects that re-seat.
+                    short prevCentreY = player.getCentreY(0);
+                    boolean prevLands = prevCentreY == curCentreY;
+                    if (!prevLands) {
+                        NativePositionOps.writeYPosPreserveSubpixel(player, prevCentreY);
+                        SolidContact prevProbe = resolveContact(player, anchorX, anchorY,
+                                params.halfWidth(), halfHeight, solidProfile, useStickyBuffer,
+                                instance, i, false);
+                        NativePositionOps.writeYPosPreserveSubpixel(player, curCentreY);
+                        prevLands = prevProbe != null && prevProbe.standing();
+                    }
+                    if (!prevLands) {
+                        continue;
+                    }
+                }
+                contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
+                        solidProfile, useStickyBuffer, instance, i, true);
             } else {
                 // Multi-piece solids don't use monitor solidity
                 // Pass piece index so sticky buffer only applies to the piece being ridden
@@ -2474,6 +2568,27 @@ final class ObjectSolidContactController {
                     standingPieceIndex = i;
                     standingPieceX = pieceX;
                     standingPieceY = pieceY;
+                }
+                // Solid_ResetFloor takeover: a non-ridden sibling piece freshly
+                // standing while the player rides a different piece of this same
+                // instance. resolveContact already re-seated the player onto this
+                // piece (apply=true), so record it so the riding latch transfers.
+                // Gate on the NARROW Solid_Landed window (obActWid, not the wider
+                // collision half-width): adjacent pieces' full collision boxes
+                // overlap, so without this gate two neighbouring pieces both
+                // register standing and the takeover thrashes between them every
+                // frame. The narrow windows are contiguous/non-overlapping, so
+                // exactly one piece owns the player (ROM Solid_Landed obActWid
+                // gate, docs/s1disasm/_incObj/sub SolidObject.asm:307-315).
+                if (pieceScopedStanding && ridingCurrentObject && !player.getAir()
+                        && i != currentRidingPieceIndex && overridePieceIndex < 0) {
+                    int narrowHalf = multiPiece.getPieceLandingHalfWidth(i);
+                    int relNarrow = player.getCentreX() - pieceX + narrowHalf;
+                    if (relNarrow >= 0 && relNarrow < narrowHalf * 2) {
+                        overridePieceIndex = i;
+                        overridePieceX = pieceX;
+                        overridePieceY = pieceY;
+                    }
                 }
             }
             if (contact.touchTop()) {
@@ -2500,7 +2615,8 @@ final class ObjectSolidContactController {
 
         return new MultiPieceContactResult(
                 anyStanding, anyPushing, standingPieceX, standingPieceY,
-                standingPieceIndex, aggregateContact);
+                standingPieceIndex, aggregateContact,
+                overridePieceIndex, overridePieceX, overridePieceY);
     }
 
     /**

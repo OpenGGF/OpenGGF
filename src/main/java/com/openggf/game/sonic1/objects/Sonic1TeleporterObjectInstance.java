@@ -146,11 +146,6 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
     // These are in the ROM's velocity format: 1 unit = 1/256th of a pixel per frame.
     private int playerVelX;
     private int playerVelY;
-    // 16.8 fixed-point position accumulators for sub-pixel movement during travel.
-    // The ROM uses move.l obX to read/write 32-bit values where the top 16 bits are
-    // pixel position and the next 8 bits are subpixel. We emulate this as 24-bit (16.8).
-    private int posX_16_8;
-    private int posY_16_8;
     private AbstractPlayableSprite controlledPlayer;
 
     public Sonic1TeleporterObjectInstance(ObjectSpawn spawn) {
@@ -319,8 +314,13 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
         // move.w obY(a0),d2
         // sub.w d0,d2
         // move.w d2,obY(a1)
+        // ROM writes only the y_pos PIXEL word (move.w) -- the 16-bit y_sub is
+        // left untouched, so the player keeps the sub-pixel fraction he carried
+        // into the teleporter. Use the preserve-subpixel setter (setCentreY would
+        // zero y_sub, dropping the carried fraction and shifting the eventual
+        // travel landing by up to 1px -- SBZ2 trace f2920).
         int newY = getY() - yOffset;
-        player.setCentreY((short) newY);
+        NativePositionOps.writeYPosPreserveSubpixel(player, newY);
 
         // cmpi.b #$80,objoff_32(a0) / bne.s locret_16796
         if ((sineAngle & 0xFF) != SINE_COMPLETE_ANGLE) {
@@ -353,9 +353,13 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
             return;
         }
 
-        // Waypoint reached - snap player to target and advance
-        player.setCentreX((short) targetX);
-        player.setCentreY((short) targetY);
+        // Waypoint reached - snap player to target and advance.
+        // ROM loc_167C2: move.w objoff_36(a0),obX(a1) / move.w objoff_38(a0),obY(a1)
+        // snaps only the x_pos/y_pos PIXEL words, preserving the 16-bit sub-pixels
+        // (which Tele_Move then reads as pixel words, but loc_167DA keeps accumulating
+        // through the next segment). setCentreX/Y would zero the sub-pixel here.
+        NativePositionOps.writeXPosPreserveSubpixel(player, targetX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, targetY);
 
         // moveq #0,d1
         // move.b objoff_3A(a0),d1
@@ -402,18 +406,13 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
      * vel = $1000 means 16 pixels per frame ($10.00 in 8.8 format).
      */
     private void movePlayerByVelocity(AbstractPlayableSprite player) {
-        // Update 16.8 accumulators: pos_16_8 += velocity (velocity IS in 16.8 scale
-        // because the ROM does pos_32 += vel << 8, but our accumulators are already
-        // in 16.8 format, and vel << 8 in 32-bit maps to vel in 24-bit = vel in 16.8)
-        posX_16_8 += signExtend16(playerVelX);
-        posY_16_8 += signExtend16(playerVelY);
-
-        // Extract pixel position from 16.8 format (arithmetic shift right 8)
-        int pixelX = posX_16_8 >> 8;
-        int pixelY = posY_16_8 >> 8;
-
-        player.setCentreX((short) pixelX);
-        player.setCentreY((short) pixelY);
+        // ROM loc_167DA performs the standard 16.16 fixed-point position update on the
+        // player's FULL position words (pixel:16 | sub:16), reading obVelX/obVelY and
+        // adding vel<<8. AbstractSprite.move() implements exactly that 32-bit add, so it
+        // preserves and accumulates the player's 16-bit sub-pixel fraction. A separate
+        // 16.8 accumulator seeded from the pixel-only position silently dropped the
+        // carried sub-pixel and landed the player 1px off (SBZ2 trace f2920).
+        player.move((short) playerVelX, (short) playerVelY);
     }
 
     /**
@@ -429,8 +428,9 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
      */
     private void releasePlayer(AbstractPlayableSprite player) {
         // andi.w #$7FF,obY(a1)
+        // Masks only the y_pos PIXEL word, preserving the 16-bit y_sub.
         int maskedY = player.getCentreY() & Y_COORDINATE_MASK;
-        player.setCentreY((short) maskedY);
+        NativePositionOps.writeYPosPreserveSubpixel(player, maskedY);
 
         // clr.b obRoutine(a0) - reset to wait state
         routine = Routine.WAIT;
@@ -468,10 +468,6 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
     private void calculateTravelVelocity(AbstractPlayableSprite player) {
         int playerX = player.getCentreX();
         int playerY = player.getCentreY();
-
-        // Initialize 16.8 fixed-point accumulators from current pixel position
-        posX_16_8 = playerX << 8;
-        posY_16_8 = playerY << 8;
 
         // moveq #0,d0
         // move.w #$1000,d2

@@ -501,6 +501,35 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void oozPoppingPlatformLaunchPreservesNativeXSubpixelAndClearsOnObject() throws Exception {
+        TestablePlayableSprite player = player("sonic", 0x1020, 0x1000);
+        player.setSubpixelRaw(0xCA00, 0x5A00);
+        player.setOnObject(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(player, List.of());
+        OOZPoppingPlatformObjectInstance platform = new OOZPoppingPlatformObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x33, 1, 0, false, 0),
+                "OOZPoppingPlatform");
+        platform.setServices(services);
+
+        Method launchPlayer = OOZPoppingPlatformObjectInstance.class
+                .getDeclaredMethod("launchPlayer", com.openggf.sprites.playable.AbstractPlayableSprite.class, int.class);
+        launchPlayer.setAccessible(true);
+        launchPlayer.invoke(platform, player, 42);
+
+        assertEquals(0x1000, player.getCentreX() & 0xFFFF,
+                "ROM move.w x_pos(a0),x_pos(a1) centers the launched player on Obj33");
+        assertEquals(0xCA00, player.getXSubpixelRaw() & 0xFFFF,
+                "Obj33 must preserve x_sub when writing the native x_pos word");
+        assertFalse(player.isOnObject(), "ROM clears Status_OnObj when launching from Obj33");
+        assertFalse(player.isObjectControlled(), "ROM clears obj_control after launch");
+        assertTrue(player.getAir(), "ROM sets Status_InAir on launch");
+        assertEquals(0x800, player.getGSpeed() & 0xFFFF);
+        assertEquals(0xF000, player.getYSpeed() & 0xFFFF);
+        assertEquals(Sonic2AnimationIds.ROLL.id(), player.getAnimationId());
+    }
+
+    @Test
     void flipperAppliesCheckpointContactToQueryOnlySidekick() {
         TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x1010, 0x1000);

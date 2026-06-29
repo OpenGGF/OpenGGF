@@ -4,6 +4,7 @@ import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MCZBossInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2OOZBossInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.ObjectFactory;
 import com.openggf.level.objects.ObjectInstance;
@@ -249,6 +250,10 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new FanObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
         registerFactory(Sonic2ObjectIds.OOZ_POPPING_PLATFORM,
                 (spawn, registry) -> new OOZPoppingPlatformObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
+        registerFactory(Sonic2ObjectIds.SLIDING_SPIKE,
+                (spawn, registry) -> new SlidingSpikeObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
+        registerFactory(Sonic2ObjectIds.OOZ_SPRING,
+                (spawn, registry) -> new OOZSpringObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
         registerFactory(Sonic2ObjectIds.SPIRAL,
                 (spawn, registry) -> new SpiralObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
 
@@ -355,6 +360,9 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         // EHZ Boss (Object 0x56)
         registerFactory(Sonic2ObjectIds.EHZ_BOSS,
                 (spawn, registry) -> new Sonic2EHZBossInstance(spawn));
+        // OOZ Boss (Object 0x55)
+        registerFactory(Sonic2ObjectIds.OOZ_BOSS,
+                (spawn, registry) -> new Sonic2OOZBossInstance(spawn));
         // MCZ Boss (Object 0x57)
         registerFactory(Sonic2ObjectIds.MCZ_BOSS,
                 (spawn, registry) -> new Sonic2MCZBossInstance(spawn));

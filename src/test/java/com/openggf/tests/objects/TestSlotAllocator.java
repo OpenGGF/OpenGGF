@@ -49,6 +49,23 @@ class TestSlotAllocator {
     }
 
     @Test
+    void hasFreeSlotMatchesAllocateSuccess() {
+        // ROM FindFreeObj probe used by routines that branch on success/failure
+        // without spawning (e.g. S1 LZ drowning countdown retry when the pool is
+        // full). hasFreeSlot() must agree with whether allocate() would succeed.
+        SlotAllocator a = s2();
+        assertTrue(a.hasFreeSlot());
+        for (int i = 0; i < ObjectSlotLayout.SONIC_2.dynamicSlotCount(); i++) {
+            assertTrue(a.hasFreeSlot());   // true while a slot remains
+            assertTrue(a.allocate() >= 0);
+        }
+        assertFalse(a.hasFreeSlot());      // pool full → matches allocate()==-1
+        assertEquals(-1, a.allocate());
+        a.release(16);
+        assertTrue(a.hasFreeSlot());       // freeing one slot re-enables it
+    }
+
+    @Test
     void reserveSpecificSlotSucceedsWhenFreeAndFailsWhenTaken() {
         SlotAllocator a = s2();
         assertTrue(a.reserve(20));

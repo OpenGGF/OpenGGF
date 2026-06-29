@@ -50,6 +50,40 @@ class TestSonic1LavaWallGraphRewind {
     }
 
     @Test
+    void lavaWallOffscreenSelfDeleteClearsS1RespawnCounter() {
+        MutableCamera camera = new MutableCamera();
+        ObjectSpawn spawn = new ObjectSpawn(0x0180, 0x0180, Sonic1ObjectIds.LAVA_WALL, 0, 0, true, 0x8000);
+        ObjectManager[] holder = new ObjectManager[1];
+        ObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+        };
+        ObjectManager objectManager = new ObjectManager(
+                List.of(spawn), new Sonic1ObjectRegistry(), 0, null, null,
+                GraphicsManager.getInstance(), camera, services);
+        holder[0] = objectManager;
+        objectManager.enableCounterBasedRespawn();
+        objectManager.reset(0);
+
+        assertTrue(objectManager.isSpawnStateBitSet(spawn, 7),
+                "S1 ObjPosLoad should set the lava wall respawn-table active bit when spawning it");
+
+        objectManager.update(0, null, null, 1, false);
+        camera.setX(0x0800);
+        objectManager.update(0x0800, null, null, 2, false);
+        assertFalse(objectManager.isSpawnStateBitSet(spawn, 7),
+                "Obj4E .startDelete clears bit 7 immediately via bclr #7,2(a2,d0.w)");
+        assertTrue(objectManager.isDormant(spawn),
+                "ObjPosLoad must not rematerialize the spawn until the cursor reprocesses it");
+        assertEquals(1, liveWalls(objectManager).size(),
+                "The later trail slot should see parent routine 8 and delete in the same ExecuteObjects pass");
+        objectManager.update(0x0800, null, null, 3, false);
+
+        assertFalse(objectManager.isSpawnStateBitSet(spawn, 7),
+                "Obj4E's routine-8 offscreen delete must clear bit 7 so the wall can spawn again when revisited");
+    }
+
+    @Test
     void lavaWallMainAndTrailRestoreFreshWithoutDropsDoublesOrStaleReferences() {
         Harness harness = Harness.create();
         ObjectManager objectManager = harness.objectManager();
@@ -292,5 +326,19 @@ class TestSonic1LavaWallGraphRewind {
             @Override public short getHeight() { return 224; }
             @Override public boolean isVerticalWrapEnabled() { return false; }
         };
+    }
+
+    private static final class MutableCamera extends Camera {
+        private int x;
+
+        void setX(int x) {
+            this.x = x;
+        }
+
+        @Override public short getX() { return (short) x; }
+        @Override public short getY() { return 0; }
+        @Override public short getWidth() { return 320; }
+        @Override public short getHeight() { return 224; }
+        @Override public boolean isVerticalWrapEnabled() { return false; }
     }
 }

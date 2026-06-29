@@ -2174,6 +2174,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		if (inputAllowed && inputLeft) {
 			if (gSpeed > 0) {
+				// ROM Sonic_RollLeft.changeddirection: sub.w d4,d0 / bcc / move.w #-$80.
+				// The subtraction borrows (carry set) only when the result is strictly
+				// negative, so a result of exactly 0 stays 0 (s1:01 Sonic.asm:871-878;
+				// s2.asm:37119-37124; sonic3k.asm sub_11608 loc_1161E).
 				gSpeed -= rollDecel;
 				if (gSpeed < 0) gSpeed = (short) -128;
 			} else {
@@ -2182,8 +2186,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		if (inputAllowed && inputRight) {
 			if (gSpeed < 0) {
+				// ROM Sonic_RollRight.changedirection: add.w d4,d0 / bcc / move.w #$80.
+				// The addition carries (carry set) when the result is >= 0, so a result
+				// of exactly 0 clamps to +$80 -- unlike the leftward sub-borrow case
+				// above (s1:01 Sonic.asm:895-899; s2.asm:37141-37146;
+				// sonic3k.asm sub_1162C loc_11640).
 				gSpeed += rollDecel;
-				if (gSpeed > 0) gSpeed = (short) 128;
+				if (gSpeed >= 0) gSpeed = (short) 128;
 			} else {
 				sprite.setDirection(Direction.RIGHT);
 			}

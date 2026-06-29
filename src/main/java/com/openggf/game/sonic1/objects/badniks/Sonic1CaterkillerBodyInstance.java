@@ -497,8 +497,25 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
         if (fragmenting) {
             return renderOnScreen;
         }
-        // Body segments persist as long as head exists
-        return !head.isDestroyed() && !head.isDeleting();
+        // Body segments persist as long as the head's slot is still live.
+        // ROM Cat_BodySeg1 .chkBroken detects the head's Cat_Despawn routine $A
+        // and branches to .delete, which (FixBugs=0 in REV01) sets the segment's
+        // own routine $A and FALLS THROUGH to DisplaySprite — so each body
+        // segment displays for the SAME frame the head sets routine $A, then
+        // deletes via Cat_Delete on the next frame, the same frame the head's
+        // own Cat_Delete runs. Head + bodies therefore DeleteObject together one
+        // frame after Cat_Despawn (docs/s1disasm/_incObj/78 Badnik -
+        // Caterkiller.asm:139-152,368-391).
+        //
+        // The head's off-screen Cat_Despawn maps to head.isDeleting() being true
+        // for one frame before head.isDestroyed(). Gating persistence on
+        // !head.isDeleting() here culled the off-screen body segments via the
+        // generic out_of_range pass one frame early (the frame the head set
+        // deleting, before this segment's own update() could latch its deferred
+        // delete), freeing their SST slots a frame ahead of the head. Persist
+        // while the head's slot is live; update() then latches this segment's
+        // own deferred delete so it frees on the same frame as the head.
+        return !head.isDestroyed();
     }
 
     private void updateCaterkillerRenderFlag() {

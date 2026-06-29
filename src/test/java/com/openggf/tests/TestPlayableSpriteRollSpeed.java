@@ -87,6 +87,78 @@ class TestPlayableSpriteRollSpeed {
         assertEquals(19, sonic.getYRadius(), "S2 zero-inertia unroll restores standing y_radius");
     }
 
+    @Test
+    void rollingLeftPressingRightClampsToPositiveMinimumOnZeroCrossing() throws Exception {
+        // ROM Sonic_RollRight.changedirection (s1:01 Sonic.asm:895-899): the player is
+        // rolling left (inertia=-$20) and presses right. add.w d4($20),d0 yields exactly
+        // 0 with the carry SET, so bcc is not taken and inertia is clamped to +$80; the
+        // following roll friction (-$06) leaves +$7A and the player keeps rolling.
+        // Reproduces S1 LZ1 complete-run frame 12097.
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_1);
+        sonic.setGroundMode(GroundMode.GROUND);
+        sonic.setDirection(Direction.LEFT);
+        sonic.setAir(false);
+        sonic.setRolling(true);
+        sonic.setCentreX((short) 0x16EE);
+        sonic.setCentreY((short) 0x00F1);
+        sonic.setGSpeed((short) -0x20);
+        sonic.setXSpeed((short) -0x20);
+        sonic.setYSpeed((short) 0);
+
+        PlayableSpriteMovement movement = new PlayableSpriteMovement(
+                sonic, new NoWallCollisionSystem(), null);
+        setInputs(movement, false, true);
+        invokeDoRollSpeed(movement);
+
+        assertTrue(sonic.getRolling(),
+                "Right turnaround clamps inertia to +$80, so it never reaches zero and the player keeps rolling");
+        assertEquals(0x007A, sonic.getGSpeed() & 0xFFFF,
+                "add-carry clamp to +$80 then roll friction -$06 leaves +$7A");
+        assertEquals(0x00F1, sonic.getCentreY() & 0xFFFF,
+                "Still rolling: no unroll y-radius lift is applied");
+    }
+
+    @Test
+    void rollingRightPressingLeftStaysZeroOnExactZeroCrossing() throws Exception {
+        // ROM Sonic_RollLeft.changeddirection (s1:01 Sonic.asm:871-878) mirrors the right
+        // case but uses sub.w d4,d0 / bcc / move.w #-$80. Subtraction borrows (carry set)
+        // only when the result is strictly negative, so inertia $20 - $20 = 0 does NOT
+        // clamp to -$80; it stays 0 and the player unrolls. This asymmetry between the
+        // add-carry and sub-borrow boundaries must be preserved.
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_1);
+        sonic.setGroundMode(GroundMode.GROUND);
+        sonic.setDirection(Direction.RIGHT);
+        sonic.setAir(false);
+        sonic.setRolling(true);
+        sonic.setCentreX((short) 0x16EE);
+        sonic.setCentreY((short) 0x00F1);
+        sonic.setGSpeed((short) 0x20);
+        sonic.setXSpeed((short) 0x20);
+        sonic.setYSpeed((short) 0);
+
+        PlayableSpriteMovement movement = new PlayableSpriteMovement(
+                sonic, new NoWallCollisionSystem(), null);
+        setInputs(movement, true, false);
+        invokeDoRollSpeed(movement);
+
+        assertEquals(0x0000, sonic.getGSpeed() & 0xFFFF,
+                "Left turnaround sub-borrow boundary leaves an exact-zero crossing at 0, not -$80");
+        assertFalse(sonic.getRolling(),
+                "S1 unrolls once inertia reaches zero");
+    }
+
+    private static void setInputs(PlayableSpriteMovement movement,
+            boolean inputLeft, boolean inputRight) throws Exception {
+        Field left = PlayableSpriteMovement.class.getDeclaredField("inputLeft");
+        Field right = PlayableSpriteMovement.class.getDeclaredField("inputRight");
+        left.setAccessible(true);
+        right.setAccessible(true);
+        left.set(movement, inputLeft);
+        right.set(movement, inputRight);
+    }
+
     private static TestablePlayableSprite s2Sonic(short gSpeed) {
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);

@@ -3664,6 +3664,12 @@ public class GameLoop {
         // but steps 5-6 are conditional on scroll-freeze state during ending fadeout.
         spriteManager.publishHeldInputForLevelEvents(inputHandler);
         levelManager.updateZoneFeaturesPrePhysics();
+        // Mirror LevelFrameStep step 1c: S1/S2 move the water level before the
+        // player's underwater check; LevelManager.update() skips the move when
+        // this flag is set, so run it here too.
+        if (levelManager.advanceWaterLevelBeforePlayerPhysics()) {
+            levelManager.advanceDynamicWaterLevel();
+        }
         if (levelManager.objectsExecuteAfterPlayerPhysics()) {
             spriteManager.update(inputHandler);
             levelManager.updateObjectPositionsPostPhysicsWithoutTouches();

@@ -916,8 +916,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         MgzZoneRuntimeState runtimeState = currentMgzRuntimeState();
         if (runtimeState == null) {
             if (bgRiseRoutine == BG_RISE_SONIC) {
-                LOG.warning("MGZ BG-rise: state SONIC armed but scroll handler is null — "
-                        + "BG formula will NOT shift in-game");
+                LOG.fine("MGZ BG-rise: state SONIC armed with no runtime scroll bridge; "
+                        + "headless BG formula sync skipped");
             }
             return;
         }

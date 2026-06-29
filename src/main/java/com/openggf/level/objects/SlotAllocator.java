@@ -29,6 +29,15 @@ public final class SlotAllocator {
         return allocateFrom(0);
     }
 
+    /**
+     * Non-mutating ROM FindFreeObj probe: true if a free dynamic slot exists
+     * (i.e. {@link #allocate()} would succeed). Mirrors the ROM's
+     * {@code FindFreeObj ... bne} test without consuming a slot.
+     */
+    public boolean hasFreeSlot() {
+        return used.nextClearBit(0) < layout.dynamicSlotCount();
+    }
+
     /** ROM FindNextFreeObj: first empty slot strictly after {@code parentSlot}. -1 if none. */
     public int allocateAfter(int parentSlot) {
         int startExec = Math.max(0, layout.toExecIndex(parentSlot) + 1);

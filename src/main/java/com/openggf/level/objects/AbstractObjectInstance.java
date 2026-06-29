@@ -117,6 +117,24 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     private boolean skipTouchThisFrame;
 
     /**
+     * ROM parity: a child spawned mid-loop into a slot at or below the parent's
+     * current execution slot is not reached by this frame's ExecuteObjects pass,
+     * so it does not run (and therefore does not call DisplaySprite to set
+     * {@code obRender} bit 7) until the NEXT frame's pass. ReactToItem
+     * ({@code docs/s1disasm/_incObj/sub ReactToItem.asm:50-51}) gates on
+     * {@code tst.b obRender(a1) / bpl.s .next}, so such a child stays
+     * touch-ineligible for one extra frame relative to a same-frame (higher-slot)
+     * child: it cannot be touched until the frame AFTER its first own execution.
+     * <p>
+     * Set true when the child is registered (see
+     * {@link #markAwaitingFirstTouchExecution()}); cleared once the object has run
+     * its first {@code update()} (see {@link #clearAwaitingFirstTouchExecution()}).
+     * While true, {@link #isOnScreenForTouch()} (the engine's {@code obRender}
+     * bit-7 equivalent) returns false so the touch scan skips the object.
+     */
+    private boolean awaitingFirstTouchExecution;
+
+    /**
      * ROM parity: Objects skip SolidObject on their first frame because obRender bit 7
      * (set by DisplaySprite) hasn't been set yet. The object's init routine sets
      * obRender to 4 (no bit 7), then DisplaySprite sets bit 7 if on-screen. On the next
@@ -307,6 +325,26 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     public void setSkipTouchThisFrame(boolean skip) {
         this.skipTouchThisFrame = skip;
+    }
+
+    /**
+     * Marks a mid-loop child that was placed into a slot already passed by this
+     * frame's ExecuteObjects pass (so it will not execute, and thus not set
+     * {@code obRender} bit 7, until the next frame). Keeps the object
+     * touch-ineligible until its first own execution completes. See
+     * {@link #awaitingFirstTouchExecution}.
+     */
+    public void markAwaitingFirstTouchExecution() {
+        this.awaitingFirstTouchExecution = true;
+    }
+
+    /**
+     * Cleared by {@link ObjectManager} after the object runs its first
+     * {@code update()} (the engine equivalent of DisplaySprite setting
+     * {@code obRender} bit 7). No-op once already cleared.
+     */
+    public void clearAwaitingFirstTouchExecution() {
+        this.awaitingFirstTouchExecution = false;
     }
 
     /**
@@ -655,6 +693,23 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * ROM parity for the BuildSprites custom-height render path
+     * ({@code docs/s1disasm/_inc/BuildSprites.asm:61-73}): objects that set
+     * {@code obRender} bit 4 ({@code bset #4,obRender}) have their on-screen
+     * render flag computed from the object's own {@code obHeight} half-extent
+     * rather than the 32px {@code .assumeHeight} band. Defaults to
+     * {@code false} (the shared assumed-height path). Tall S1 objects that set
+     * the flag (e.g. the 256px MZ lava geyser column) override this to
+     * {@code true} and supply their half-extent via
+     * {@link #getOnScreenHalfHeight()} so the touch-response render-flag gate
+     * ({@link #isOnScreenForTouch()}) matches the ROM. Not a zone carve-out:
+     * the predicate models the ROM render flag, not a level id.
+     */
+    protected boolean usesCustomRenderHeight() {
+        return false;
+    }
+
+    /**
      * ROM parity for ReactToItem: returns true if the object was on-screen
      * as of the pre-update snapshot (equivalent to obRender bit 7 from
      * the previous frame's BuildSprites).
@@ -695,8 +750,25 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * would have been set.
      */
     public boolean isOnScreenForTouch() {
+        // ROM parity: obRender bit 7 stays clear until the object runs its own
+        // execution (DisplaySprite). A child dropped into an already-passed slot
+        // this frame does not execute until next frame, so it must stay
+        // touch-ineligible until that first execution completes. See
+        // awaitingFirstTouchExecution (docs/s1disasm/_incObj/sub ReactToItem.asm:50-51).
+        if (awaitingFirstTouchExecution) return false;
         if (!preUpdateValid) return false; // No snapshot → first frame, skip
         if (resolveTouchResponseUsesRenderFlagYGate()) {
+            if (usesCustomRenderHeight()) {
+                // S1 BuildSprites custom-height path (btst #4 set,
+                // docs/s1disasm/_inc/BuildSprites.asm:61-73): the Y on-screen
+                // test uses the object's own obHeight half-extent instead of the
+                // 32px .assumeHeight band, so a tall object whose anchor sits
+                // above the camera top (e.g. the 256px MZ lava geyser column,
+                // obHeight=$80) keeps render_flags bit 7 set and stays
+                // touchable. Mirror the ROM custom-height bounds test.
+                return cameraBounds.containsRenderSpriteBounds(preUpdateX, preUpdateY,
+                        getOnScreenHalfWidth(), getOnScreenHalfHeight());
+            }
             // S1: include the BuildSprites .assumeHeight Y band.
             return cameraBounds.contains(preUpdateX, preUpdateY,
                     getOnScreenHalfWidth(), TOUCH_RESPONSE_Y_MARGIN);

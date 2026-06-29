@@ -68,6 +68,8 @@ public final class Sonic2ObjectArtKeys {
     public static final String OOZ_LAUNCHER_HORIZ = "ooz_launcher_horiz";
     public static final String OOZ_BURNER_LID = "ooz_burner_lid";
     public static final String OOZ_BURN_FLAME = "ooz_burn_flame";
+    public static final String OOZ_SLIDING_SPIKE = "ooz_sliding_spike";
+    public static final String OOZ_PRESSURE_SPRING = "ooz_pressure_spring";
 
     // Collapsing Platform (OOZ/MCZ)
     public static final String OOZ_COLLAPSING_PLATFORM = "ooz_collapsing_platform";
@@ -76,6 +78,7 @@ public final class Sonic2ObjectArtKeys {
     // OOZ Badniks
     public static final String OCTUS = "octus";
     public static final String AQUIS = "aquis";
+    public static final String OOZ_BOSS = "ooz_boss";
 
     // EHZ Badniks
     public static final String MASHER = "masher";

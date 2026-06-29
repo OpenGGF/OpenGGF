@@ -126,6 +126,33 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
     }
 
     @Override
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        // ROM: the killing hit only sets obStatus bit 7 on the boss; the boss acts on
+        // it when its own routine reaches BSLZ_StatusUpdate (run from the end of
+        // BossStarLight_ShipMain), where BSLZ_Defeated does
+        //   move.b #6,ob2ndRout(a0)   ; select BSLZ_Explode
+        //   move.b #120,BossStarLight_GenericTimer(a0)
+        //   clr.w obVelX(a0)
+        //   rts
+        // (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:186-192,
+        // loc_18A46). BSLZ_Defeated returns WITHOUT falling through to BSLZ_Explode, so
+        // the newly selected secondary routine -- and its first defeat-timer decrement
+        // (BSLZ_Explode subq.b #1,GenericTimer at loc_18B48, lines 313-314) -- is not
+        // dispatched until the next frame, when BossStarLight_ShipMain re-reads
+        // ob2ndRout at the top via BossStarLight_ShipIndex (lines 102-104). The engine
+        // selects the defeat routine during the spikeball's update / touch-response pass
+        // that runs before this boss's own update(), so without this one-frame deferral
+        // updateDefeatWait() decrements the $78 timer on the same frame the routine
+        // changed. The deferral restores that settle frame, which propagates through the
+        // exit jump (BSLZ_Recover) to BSLZ_Escape so the `addq.w #2,(v_limitright2)`
+        // camera scroll (runCameraExpandEscape) starts on the correct frame (SLZ3 trace
+        // f12785, not f12784). Same ROM dispatch shape as the GHZ, SYZ, and MZ bosses
+        // (Sonic1GHZBossInstance / Sonic1SYZBossInstance / Sonic1MZBossInstance
+        // .defeatDeferralAppliesToThisBoss).
+        return true;
+    }
+
+    @Override
     protected void onHitTaken(int remainingHits) {
         // ROM: sfx_HitBoss played by BossHitHandler
         faceAnim = Sonic1BossAnimations.ANIM_FACE_HIT;
@@ -275,6 +302,22 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
         // gravity steps (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike
         // Balls.asm:259-302).
         if (timer == BALL_SPAWN_DELAY) {
+            // ROM BSLZ_MakeBall .checkForBall: before allocating the ball, scan
+            // object RAM for an object whose objoff_3C already points at the target
+            // seesaw (i.e. a boss spikeball already in flight toward it) and abort
+            // the drop if found (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and
+            // Spike Balls.asm:280-285,307-309). The released REV00/REV01 ROM builds
+            // with FixBugs=0, so the scan covers only object slots 1..63 (the buggy
+            // half-pool range at lines 275-278) -- a duplicate ball that spilled into
+            // a slot >= 64 is NOT detected, which is exactly how the ROM ends up with
+            // two balls on one seesaw. On abort the routine returns to ShipMove
+            // (.abortDrop subtracts 2 from ob2ndRout and branches to BSLZ_ShipUpdate,
+            // which runs BossMove + sine), so model it as an immediate return to
+            // SCANNING with BossMove/sine enabled.
+            if (targetSeesawHasPendingBall()) {
+                state.routineSecondary = STATE_SCANNING;
+                return true;
+            }
             spawnBossSpikeball();
         }
         timer--;
@@ -445,6 +488,39 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
                 }
             }
         }
+    }
+
+    // ROM FixBugs=0 BSLZ_MakeBall .checkForBall scans object slots 1..63 only
+    // (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:275-285).
+    private static final int FIXBUGS_DUP_SCAN_LAST_SLOT = 63;
+
+    /**
+     * ROM BSLZ_MakeBall .checkForBall: is there already an object pointing at the
+     * target seesaw (objoff_3C == seesaw address) within the FixBugs=0 half-pool
+     * scan range (slots 1..63)? Balls in slots >= 64 are invisible to the buggy
+     * scan and therefore do NOT block a new drop.
+     */
+    private boolean targetSeesawHasPendingBall() {
+        if (targetSeesawIndex < 0 || targetSeesawIndex >= seesaws.size()) {
+            return false;
+        }
+        if (services().objectManager() == null) {
+            return false;
+        }
+        Sonic1SeesawObjectInstance target = seesaws.get(targetSeesawIndex);
+        for (ObjectInstance obj : services().objectManager().getActiveObjects()) {
+            if (!(obj instanceof Sonic1SLZBossSpikeball ball) || ball.isDestroyed()) {
+                continue;
+            }
+            if (ball.isFragment() || ball.getTargetSeesaw() != target) {
+                continue;
+            }
+            // FixBugs=0: only slots 1..63 are scanned.
+            if (ball.getSlotIndex() >= 0 && ball.getSlotIndex() <= FIXBUGS_DUP_SCAN_LAST_SLOT) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

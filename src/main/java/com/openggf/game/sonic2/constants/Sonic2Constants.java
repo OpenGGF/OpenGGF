@@ -502,6 +502,7 @@ public class Sonic2Constants {
     // OOZ Badnik Art (Nemesis compressed)
     public static final int ART_NEM_OCTUS_ADDR = 0x8336A;    // Octus (octopus badnik from OOZ)
     public static final int ART_NEM_AQUIS_ADDR = 0x8368A;    // Aquis (seahorse badnik from OOZ)
+    public static final int ART_NEM_OOZ_BOSS_ADDR = 0x882D6; // ArtNem_OOZBoss (verified via RomOffsetFinder)
 
     // CNZ Badnik Art (Nemesis compressed)
     public static final int ART_NEM_CRAWL_ADDR = 0x901A4;    // Crawl (bouncer badnik from CNZ, 42 tiles)
@@ -519,6 +520,7 @@ public class Sonic2Constants {
     public static final int MAP_UNC_MCZ_BOSS_ADDR = 0x316EC;         // Obj57_MapUnc_316EC (21 frames)
     public static final int PAL_MCZ_BOSS_ADDR = 0x3082;              // Pal_MCZ_B (32 bytes, verified)
     public static final int PAL_CNZ_BOSS_ADDR = 0x30A2;              // Pal_CNZ_B (32 bytes, verified)
+    public static final int PAL_OOZ_BOSS_ADDR = 0x30C2;              // Pal_OOZ_B (32 bytes, after Pal_CNZ_B)
 
     // Boss art (Nemesis compressed, verified offsets)
     public static final int ART_NEM_EGGPOD_ADDR = 0x83BF6;     // ArtNem_Eggpod (flying vehicle)
@@ -549,6 +551,7 @@ public class Sonic2Constants {
     public static final int ART_TILE_CNZ_BOSS_FUDGE = 0x03A7; // ArtTile_ArtNem_CNZBoss_Fudge (= 0x0407 - 0x60)
     public static final int ART_TILE_HTZ_BOSS = 0x0421;  // ArtTile_ArtNem_HTZBoss (flamethrower/lava ball)
     public static final int ART_TILE_EGGPOD_2 = 0x03C1;  // ArtTile_ArtNem_Eggpod_2 (HTZ boss uses this)
+    public static final int ART_TILE_OOZ_BOSS = 0x03E8;  // ArtTile_ArtNem_OOZBoss
 
     // CNZ Boss mappings (uncompressed)
     public static final int MAP_UNC_CNZ_BOSS_ADDR = 0x320EA;  // Obj51_MapUnc_320EA (21 frames)
@@ -598,6 +601,7 @@ public class Sonic2Constants {
     // MTZ Boss art and mappings
     public static final int ART_NEM_MTZ_BOSS_ADDR = 0x88DA6;        // ArtNem_MTZBoss (verified via RomOffsetFinder)
     public static final int MAP_UNC_MTZ_BOSS_ADDR = 0x32DC6;        // Obj54_MapUnc_32DC6 (verified via ROM search)
+    public static final int MAP_UNC_OOZ_BOSS_ADDR = 0x33756;        // Obj55_MapUnc_33756
 
     // Animal art (Nemesis compressed, verified offsets)
     public static final int ART_NEM_FLICKY_ADDR = 0x7EF60;
@@ -866,6 +870,10 @@ public class Sonic2Constants {
     public static final int ART_NEM_BURNER_LID_ADDR = 0x80274;   // ArtNem_BurnerLid (verified via RomOffsetFinder)
     public static final int ART_NEM_OOZ_BURN_ADDR = 0x81514;     // ArtNem_OOZBurn (verified via RomOffsetFinder)
 
+    // SlidingSpike / OOZSpring (Objects 0x43/0x45)
+    public static final int ART_NEM_SPIKY_THING_ADDR = 0x8007C;   // ArtNem_SpikyThing (verified via RomOffsetFinder)
+    public static final int ART_NEM_PUSH_SPRING_ADDR = 0x80C64;   // ArtNem_PushSpring (verified via RomOffsetFinder)
+
     // OOZ Launcher (Object 0x3D) - striped blocks that launch rolling player
     public static final int ART_NEM_STRIPED_BLOCKS_VERT_ADDR = 0x8030A;  // ArtNem_StripedBlocksVert (CPZ)
     public static final int ART_NEM_STRIPED_BLOCKS_HORIZ_ADDR = 0x81048; // ArtNem_StripedBlocksHoriz (OOZ)
@@ -990,6 +998,8 @@ public class Sonic2Constants {
     public static final int MAP_UNC_OBJ33_B_ADDR = 0x23DF0;          // Obj33_MapUnc_23DF0 (Burn Flame)
     public static final int MAP_UNC_OBJ3F_HORIZ_ADDR = 0x2AA12;      // Obj3F_MapUnc_2AA12 (Fan Horiz)
     public static final int MAP_UNC_OBJ3F_VERT_ADDR = 0x2AAC4;       // Obj3F_MapUnc_2AAC4 (Fan Vert)
+    public static final int MAP_UNC_OBJ43_ADDR = 0x23FE0;            // Obj43_MapUnc_23FE0 (OOZ SlidingSpike)
+    public static final int MAP_UNC_OBJ45_ADDR = 0x2451A;            // Obj45_MapUnc_2451A (OOZ Pressure Spring)
     public static final int MAP_UNC_LAUNCH_BALL_ADDR = 0x254FE;      // Obj48_MapUnc_254FE
     public static final int MAP_UNC_OBJ3D_ADDR = 0x250BA;            // Obj3D_MapUnc_250BA (OOZ Launcher)
     public static final int MAP_UNC_OBJ1F_A_ADDR = 0x10F0C;          // Obj1F_MapUnc_10F0C (default/MZ/SLZ/SBZ Collapsing - obj1F_a.asm)
@@ -1244,6 +1254,7 @@ public class Sonic2Constants {
         offsets.put("ART_NEM_REXON_ADDR", ART_NEM_REXON_ADDR);
         offsets.put("ART_NEM_OCTUS_ADDR", ART_NEM_OCTUS_ADDR);
         offsets.put("ART_NEM_AQUIS_ADDR", ART_NEM_AQUIS_ADDR);
+        offsets.put("ART_NEM_OOZ_BOSS_ADDR", ART_NEM_OOZ_BOSS_ADDR);
         offsets.put("ART_NEM_CRAWL_ADDR", ART_NEM_CRAWL_ADDR);
         offsets.put("ART_NEM_ARROW_SHOOTER_ADDR", ART_NEM_ARROW_SHOOTER_ADDR);
         offsets.put("MAP_UNC_ARROW_SHOOTER_ADDR", MAP_UNC_ARROW_SHOOTER_ADDR);
@@ -1269,11 +1280,13 @@ public class Sonic2Constants {
         offsets.put("ART_TILE_EGGPOD_4", ART_TILE_EGGPOD_4);
         offsets.put("ART_TILE_CNZ_BOSS", ART_TILE_CNZ_BOSS);
         offsets.put("ART_TILE_CNZ_BOSS_FUDGE", ART_TILE_CNZ_BOSS_FUDGE);
+        offsets.put("ART_TILE_OOZ_BOSS", ART_TILE_OOZ_BOSS);
         offsets.put("ART_NEM_MCZ_BOSS_ADDR", ART_NEM_MCZ_BOSS_ADDR);
         offsets.put("ART_UNC_FALLING_ROCKS_ADDR", ART_UNC_FALLING_ROCKS_ADDR);
         offsets.put("MAP_UNC_MCZ_BOSS_ADDR", MAP_UNC_MCZ_BOSS_ADDR);
         offsets.put("PAL_MCZ_BOSS_ADDR", PAL_MCZ_BOSS_ADDR);
         offsets.put("PAL_CNZ_BOSS_ADDR", PAL_CNZ_BOSS_ADDR);
+        offsets.put("PAL_OOZ_BOSS_ADDR", PAL_OOZ_BOSS_ADDR);
         offsets.put("MAP_UNC_CNZ_BOSS_ADDR", MAP_UNC_CNZ_BOSS_ADDR);
         offsets.put("CYCLING_PAL_CNZ_BOSS1_ADDR", CYCLING_PAL_CNZ_BOSS1_ADDR);
         offsets.put("CYCLING_PAL_CNZ_BOSS1_LEN", CYCLING_PAL_CNZ_BOSS1_LEN);
@@ -1288,6 +1301,7 @@ public class Sonic2Constants {
         offsets.put("MAP_UNC_BOSS_EXPLOSION_ADDR", MAP_UNC_BOSS_EXPLOSION_ADDR);
         offsets.put("MAP_UNC_ARZ_BOSS_PARTS_ADDR", MAP_UNC_ARZ_BOSS_PARTS_ADDR);
         offsets.put("MAP_UNC_ARZ_BOSS_MAIN_ADDR", MAP_UNC_ARZ_BOSS_MAIN_ADDR);
+        offsets.put("MAP_UNC_OOZ_BOSS_ADDR", MAP_UNC_OOZ_BOSS_ADDR);
         offsets.put("ART_NEM_FLICKY_ADDR", ART_NEM_FLICKY_ADDR);
         offsets.put("ART_NEM_SQUIRREL_ADDR", ART_NEM_SQUIRREL_ADDR);
         offsets.put("ART_NEM_MOUSE_ADDR", ART_NEM_MOUSE_ADDR);

@@ -874,6 +874,45 @@ public class LevelManager {
     }
 
     /**
+     * Returns true when the active module advances the dynamic water level (move
+     * toward target) BEFORE the player's underwater check, matching S1/S2 ROM
+     * order ({@code LZWaterFeatures}/{@code WaterEffects} run before
+     * {@code ExecuteObjects}/{@code RunObjects}). S3K returns false because
+     * {@code Process_Sprites} runs before {@code Handle_Onscreen_Water_Height},
+     * so the player reads the previous frame's water level there. Driven by the
+     * {@link PhysicsFeatureSet#advanceWaterLevelBeforePlayerPhysics()} flag.
+     */
+    public boolean advanceWaterLevelBeforePlayerPhysics() {
+        GameModule activeModule = activeGameModule();
+        if (activeModule == null
+                || activeModule.getPhysicsProvider() == null
+                || activeModule.getPhysicsProvider().getFeatureSet() == null) {
+            return false;
+        }
+        return activeModule.getPhysicsProvider().getFeatureSet()
+                .advanceWaterLevelBeforePlayerPhysics();
+    }
+
+    /**
+     * Advances the dynamic water level (move toward target) for the current
+     * level. Extracted from {@link #update()} so the inline-order path can run it
+     * BEFORE the player physics step when
+     * {@link #advanceWaterLevelBeforePlayerPhysics()} is set, matching ROM order
+     * where {@code v_waterpos2}/{@code Water_Level} is moved before the player's
+     * {@code Sonic_Water} underwater check. This relocates only the level MOVE;
+     * the per-act target ({@code DynWaterHeight}) is still set by the zone
+     * feature provider in {@link #update()}.
+     */
+    public void advanceDynamicWaterLevel() {
+        int featureZone = getFeatureZoneId();
+        int featureAct = getFeatureActId();
+        if (level != null && waterSystem != null && waterSystem.hasWater(featureZone, featureAct)) {
+            waterSystem.updateDynamic(featureZone, featureAct, camera.getX(), camera.getY());
+            waterSystem.update();
+        }
+    }
+
+    /**
      * Run touch responses for a single player. Called from tickPlayablePhysics
      * after handleMovement but before post-movement solid contacts, matching
      * the ROM's ReactToItem timing within ExecuteObjects.
@@ -1068,7 +1107,16 @@ public class LevelManager {
         // resolves to SBZ3 water behavior while retaining LZ tile/object resources.
         int featureZone = getFeatureZoneId();
         int featureAct = getFeatureActId();
-        if (level != null && waterSystem.hasWater(featureZone, featureAct)) {
+        // Water movement — ROM order: MoveWater (move toward target) before
+        // DynWaterHeight (zone features set new target). For S1/S2 the ROM moves
+        // the water level BEFORE the player's underwater check
+        // (LZWaterFeatures/WaterEffects run before ExecuteObjects/RunObjects), so
+        // the inline-order path runs advanceDynamicWaterLevel() in the pre-physics
+        // step and we must NOT move it again here. S3K moves water after the
+        // player loop (Process_Sprites before Handle_Onscreen_Water_Height), so it
+        // still moves here.
+        if (!advanceWaterLevelBeforePlayerPhysics()
+                && level != null && waterSystem.hasWater(featureZone, featureAct)) {
             waterSystem.updateDynamic(featureZone, featureAct, camera.getX(), camera.getY());
             waterSystem.update();
         }
