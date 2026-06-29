@@ -76,6 +76,8 @@ class TestCPZSpinTubeObjectInstance {
         player.setSubpixelRaw(0x4000, 0xAA00);
         player.setObjectControlled(true);
         player.setObjectControlSuppressesMovement(true);
+        player.setAir(true);
+        player.setAnimationId(Sonic2AnimationIds.ROLL);
 
         CPZSpinTubeObjectInstance tube = new CPZSpinTubeObjectInstance(spawn, "CPZSpinTube");
         tube.setServices(new TestObjectServices());
@@ -97,6 +99,24 @@ class TestCPZSpinTubeObjectInstance {
                 "Obj1E loc_227A6 directly clears obj_control(a1).");
         assertFalse(player.isObjectControlSuppressesMovement(),
                 "The loc_227A6 full-release path must allow the next player movement step to consume exit velocity.");
+        assertTrue(player.getAir(),
+                "Obj1E loc_22688 sets status.player.in_air and loc_227A6 does not clear it.");
+        assertEquals(Sonic2AnimationIds.ROLL.id(), player.getAnimationId(),
+                "Obj1E leaves anim(a1)=AniIDSonAni_Roll active after loc_227A6; CPZ1 BizHawk probe "
+                        + "shows anim=02 while obj_control=00 at trace frames 3868-3874.");
+        assertTrue(player.getSpringing(),
+                "The engine keeps a CPZ release collision-immunity latch for tube geometry.");
+        assertFalse(player.getRolling(),
+                "Obj1E preserves the roll animation byte without setting status.player.rolling.");
+
+        player.setAnimationId(Sonic2AnimationIds.WAIT);
+        var preserveReleasedRollAnimation = CPZSpinTubeObjectInstance.class.getDeclaredMethod(
+                "preserveReleasedRollAnimation", AbstractPlayableSprite.class, characterState.getClass());
+        preserveReleasedRollAnimation.setAccessible(true);
+        preserveReleasedRollAnimation.invoke(tube, player, characterState);
+
+        assertEquals(Sonic2AnimationIds.ROLL.id(), player.getAnimationId(),
+                "The CPZ-local post-release hold restores the ROM anim byte before later object gates run.");
 
         player.endOfTick();
 

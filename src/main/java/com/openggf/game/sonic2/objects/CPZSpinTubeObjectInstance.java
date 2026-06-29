@@ -31,6 +31,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
 
     // Fixed rolling speed through tube (0x800 in ROM)
     private static final int TUBE_SPEED = 0x800;
+    private static final int RELEASE_ROLL_ANIMATION_HOLD_FRAMES = 15;
 
     // Collision distance table (word_225BC)
     private static final int[] COLLISION_DISTANCES = {0xA0, 0x100, 0x120};
@@ -196,6 +197,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         int expectedSegmentCount = 0;      // Expected number of segments to traverse
         int completedSegmentCount = 0;     // Number of segments actually completed
         String expectedExitDirection = ""; // Expected exit direction (UP, DOWN, LEFT, RIGHT)
+        int releaseRollAnimationHoldFrames = 0;
     }
 
     // One independent state slot per playable, mirroring ROM objoff_2C (main)
@@ -287,6 +289,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         if (cs.state != 0) {
             LOGGER.fine("updateCharacter: state=" + cs.state);
         }
+        preserveReleasedRollAnimation(player, cs);
         switch (cs.state) {
             case 0:
                 checkEntryCollision(player, cs);
@@ -314,6 +317,18 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         cs.path = null;
         cs.completedSegmentCount = 0;
         cs.expectedSegmentCount = 0;
+        cs.releaseRollAnimationHoldFrames = 0;
+    }
+
+    private void preserveReleasedRollAnimation(AbstractPlayableSprite player, CharacterState cs) {
+        if (cs.releaseRollAnimationHoldFrames <= 0) {
+            return;
+        }
+        cs.releaseRollAnimationHoldFrames--;
+        if (player.isObjectControlled()) {
+            return;
+        }
+        player.setAnimationId(Sonic2AnimationIds.ROLL);
     }
 
     /**
@@ -748,10 +763,16 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         // handled separately because it deliberately leaves obj_control set.
         player.releaseFromObjectControl(frameCounter);
 
-        // ROM loc_227A6/loc_22858 do NOT set spindash_flag/pinball_mode or
-        // status.player.rolling on exit; they mask y_pos and play the
-        // spindash-release sound. Preserve whatever rolling status the player
-        // had on entry instead of forcing a pinball-style landing state.
+        // ROM loc_22688 sets status.player.in_air and anim(a1)=AniIDSonAni_Roll
+        // on capture (docs/s2disasm/s2.asm:48612-48616). loc_227A6 only masks
+        // y_pos, clears obj_control, and plays the release sound; it does not set
+        // status.player.rolling (docs/s2disasm/s2.asm:48683-48688). The engine
+        // keeps a short release collision-immunity latch for tube geometry, so
+        // preserve the ROM Roll anim byte separately for later same-frame S2
+        // object gates such as Obj26 monitors. A CPZ1 BizHawk probe at trace
+        // frames 3868-3874 captured anim=02, status=03, obj_control=00 after
+        // this release.
+        cs.releaseRollAnimationHoldFrames = RELEASE_ROLL_ANIMATION_HOLD_FRAMES;
 
         // Set springing frames to give the player ceiling collision immunity.
         // This prevents the movement manager from immediately zeroing ySpeed when the
