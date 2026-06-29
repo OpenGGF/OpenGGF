@@ -1014,7 +1014,7 @@ final class ObjectSolidContactController {
         preContactAnimationId = player.getAnimationId();
 
         PreContactState preContact = new PreContactState(
-                preContactXSpeed, preContactYSpeed, preContactRolling, preContactAnimationId);
+                preContactXSpeed, preContactYSpeed, preContactRolling, player.getAir(), preContactAnimationId);
         SolidContact contact = processInlineObjectForPlayer(instance, player);
         PostContactState postContact = new PostContactState(
                 player.getXSpeed(), player.getYSpeed(), player.getAir(),
