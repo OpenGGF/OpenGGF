@@ -24,6 +24,7 @@ class TestCPZSpinTubeObjectInstance {
                 (short) spawn.y());
         player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
         player.setLogicalInputState(false, false, true, false, false);
+        player.setJumping(true);
         player.endOfTick();
         assertEquals(AbstractPlayableSprite.INPUT_LEFT, player.getInputHistory(0));
 
@@ -38,6 +39,8 @@ class TestCPZSpinTubeObjectInstance {
                 "S2 Obj1E writes obj_control(a1), not global Control_Locked; Ctrl_1_Logical must keep refreshing "
                         + "while the tube owns movement (s2.asm:48551-48568).");
         assertEquals(Sonic2AnimationIds.ROLL.id(), player.getAnimationId());
+        assertFalse(player.isJumping(),
+                "Obj1E loc_22688 clears jumping(a1) on capture, so later tube exit velocity is not jump-height capped.");
 
         player.setLogicalInputState(false, false, false, false, false);
         player.endOfTick();

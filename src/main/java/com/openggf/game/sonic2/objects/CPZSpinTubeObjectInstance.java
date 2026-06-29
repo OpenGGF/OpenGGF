@@ -497,6 +497,10 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         // status/radii and force the visual roll animation separately.
         player.setAnimationId(Sonic2AnimationIds.ROLL);
         player.setAir(true);
+        // ROM loc_22688: move.b #0,jumping(a1). Tube traversal is an external
+        // object launch; the following exit velocity must not be capped by
+        // Tails_JumpHeight/Sonic_JumpHeight as if it were a held jump.
+        player.setJumping(false);
         player.setGSpeed((short) TUBE_SPEED);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
