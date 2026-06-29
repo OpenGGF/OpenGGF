@@ -11,4 +11,7 @@ public record RecordingLaunchContext(
         boolean debugToolsEnabled,
         String launchRoute
 ) {
+    public RecordingLaunchContext {
+        sidekickCharacters = sidekickCharacters == null ? List.of() : List.copyOf(sidekickCharacters);
+    }
 }
