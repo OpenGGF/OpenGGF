@@ -38,6 +38,26 @@ branch-local measurements.
   with ROM still rolling (`status=06`, `g_speed=0x0044`) while the engine is in
   hurt routine 4 with `x_speed=-0200`, `y_speed=-0400`, and rolling cleared.
 
+## 2026-06-29 - Rejected S2 HTZ2 ride-wall candidate regressed CNZ2/OOZ1 counts
+
+- Candidate commit: `9c3b932fbdc6fa5eff85c3cb3e775de07b39bd67` from
+  `.worktrees/trace-s2-htz2-r11` / `bugfix/ai-trace-s2-htz2-r11`.
+- Integration action: merged as `98d148eb5`, then reverted as `4133b286b`
+  after the full S2 sweep below showed count regressions in other red traces.
+- Focused candidate result reproduced as claimed:
+  `TestS2Htz2LevelSelectTraceReplay` advanced f3317 / 1058 ->
+  f3322 / 1060 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
+  `TestS2HtzLevelSelectTraceReplay` held f6586 / 226.
+- Full sweep command:
+  `mvn "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+- Regression findings versus the MCZ2-integrated baseline: CNZ2 stayed at
+  f5213 but total errors regressed 749 -> 804; OOZ1 stayed at f1784 but total
+  errors regressed 1256 -> 1336. MTZ3 stayed at f2048 and improved total
+  errors 3742 -> 3717, but the cross-trace blast radius confirmed the shared
+  `CollisionSystem` flush-wall predicate was too broad to accept.
+- Current accepted integration state keeps HTZ2 at f3317 / 1058 until a revised
+  ROM-state predicate advances HTZ2 without worsening CNZ2 or OOZ1.
+
 ## 2026-06-29 - S2 full-sweep routing baseline after CNZ2/MTZ2 integration
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
