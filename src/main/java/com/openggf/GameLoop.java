@@ -166,6 +166,7 @@ public class GameLoop {
     private final UserRecordingSessionLauncher userRecordingSessionLauncher;
     private final UserRecordingRuntimeControls userRecordingControls;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
+    private int lastAppliedUserRecordingPlaybackFrame = -1;
     private long gameplayAudioFrame;
     private boolean audioUpdatedThisStep;
 
@@ -298,6 +299,7 @@ public class GameLoop {
         @Override
         public void endPlaybackDebugSession() {
             userRecordingSessionLauncher.endPlaybackSession();
+            resetLastAppliedUserRecordingPlaybackFrame();
         }
     }
 
@@ -327,7 +329,7 @@ public class GameLoop {
         this.liveRewindManager = new LiveRewindManager(configService);
         this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
         this.userRecordingControls = new UserRecordingRuntimeControls(new LiveUserRecordingRuntime());
-        this.userRecordingPlaybackStarter = userRecordingSessionLauncher::beginPlayback;
+        this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
                 () -> resolveFadeManager().isActive(),
@@ -465,9 +467,17 @@ public class GameLoop {
     }
 
     public void setUserRecordingPlaybackStarter(UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter) {
-        this.userRecordingPlaybackStarter = Objects.requireNonNull(
-                userRecordingPlaybackStarter, "userRecordingPlaybackStarter");
+        this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingPlaybackStarter);
         installUserRecordingPlaybackStarter(currentMasterTitleScreen());
+    }
+
+    private UserRecordingMenu.PlaybackStarter withPlaybackAppliedFrameReset(
+            UserRecordingMenu.PlaybackStarter starter) {
+        Objects.requireNonNull(starter, "starter");
+        return (entry, options) -> {
+            resetLastAppliedUserRecordingPlaybackFrame();
+            starter.start(entry, options);
+        };
     }
 
     public void setMasterTitleExitHandler(Consumer<String> masterTitleExitHandler) {
@@ -864,14 +874,25 @@ public class GameLoop {
     }
 
     private void finishUserRecordingPlaybackAtLevelBoundary(boolean advancePlaybackFrame) {
-        int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();
+        int appliedPlaybackFrame;
         if (advancePlaybackFrame) {
+            appliedPlaybackFrame = playbackDebugManager.getCursorFrame();
+            lastAppliedUserRecordingPlaybackFrame = appliedPlaybackFrame;
             playbackDebugManager.onLevelFrameAdvanced();
+        } else {
+            appliedPlaybackFrame = lastAppliedUserRecordingPlaybackFrame;
+            if (appliedPlaybackFrame < 0) {
+                return;
+            }
         }
         userRecordingControls.afterPlaybackFrame(
                 appliedPlaybackFrame,
                 true,
                 isAppliedPlaybackFrameMovieEnd(appliedPlaybackFrame));
+    }
+
+    private void resetLastAppliedUserRecordingPlaybackFrame() {
+        lastAppliedUserRecordingPlaybackFrame = -1;
     }
 
     private boolean isAppliedPlaybackFrameMovieEnd(int appliedPlaybackFrame) {
@@ -1220,6 +1241,7 @@ public class GameLoop {
             // cursor always matches the BK2 cursor. onLevelFrameAdvanced
             // is a no-op when no playback session is active.
             int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();
+            lastAppliedUserRecordingPlaybackFrame = appliedPlaybackFrame;
             playbackDebugManager.onLevelFrameAdvanced();
             userRecordingControls.afterPlaybackFrame(
                     appliedPlaybackFrame,
@@ -2799,6 +2821,7 @@ public class GameLoop {
         escapeToMasterTitleController.reset();
         userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
         userRecordingSessionLauncher.endPlaybackSession();
+        resetLastAppliedUserRecordingPlaybackFrame();
         masterTitleLaunchCoordinator.returnToMasterTitle();
     }
 

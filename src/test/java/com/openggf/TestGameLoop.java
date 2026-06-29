@@ -43,6 +43,8 @@ import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.dataselect.S3kDataSelectManager;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.recording.UserRecordingPlaybackOptions;
+import com.openggf.recording.UserRecordingPlaybackState;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.TestEnvironment;
@@ -261,13 +263,24 @@ public class TestGameLoop {
                 "GameLoop must centralize user-recording playback boundary handling");
         String helperBody = source.substring(helperStart, helperEnd);
 
-        int appliedFrame = helperBody.indexOf("int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();");
+        int appliedFrame = helperBody.indexOf("appliedPlaybackFrame = playbackDebugManager.getCursorFrame();");
+        int rememberAppliedFrame = helperBody.indexOf(
+                "lastAppliedUserRecordingPlaybackFrame = appliedPlaybackFrame;");
+        int reuseLastAppliedFrame = helperBody.indexOf(
+                "appliedPlaybackFrame = lastAppliedUserRecordingPlaybackFrame;");
+        int skipUnappliedFrame = helperBody.indexOf("if (appliedPlaybackFrame < 0)");
         int advance = helperBody.indexOf("playbackDebugManager.onLevelFrameAdvanced();");
         int classify = helperBody.indexOf("userRecordingControls.afterPlaybackFrame(\n" +
                 "                appliedPlaybackFrame,\n" +
                 "                true,");
         assertTrue(appliedFrame >= 0,
-                "Boundary playback handling must classify the already-applied BK2 row");
+                "Advancing boundary playback handling must capture the BK2 row applied by the boundary");
+        assertTrue(rememberAppliedFrame > appliedFrame,
+                "Advancing boundary playback handling must remember the applied BK2 row");
+        assertTrue(reuseLastAppliedFrame > advance,
+                "Non-advancing boundary playback handling must reuse the last actually-applied BK2 row");
+        assertTrue(skipUnappliedFrame > reuseLastAppliedFrame,
+                "Non-advancing boundary playback handling must skip classification before any BK2 row applied");
         assertTrue(advance > appliedFrame,
                 "Boundary playback handling must capture the applied BK2 frame before advancing the cursor");
         assertTrue(classify > advance,
@@ -284,6 +297,36 @@ public class TestGameLoop {
             assertTrue(levelBody.contains(required),
                     "Level-boundary returns must notify playback policy via " + required);
         }
+    }
+
+    @Test
+    public void userRecordingBoundaryDoesNotClassifyCursorZeroBeforeAnyMovieFrameApplied() throws Exception {
+        com.openggf.debug.playback.PlaybackDebugManager playback =
+                mock(com.openggf.debug.playback.PlaybackDebugManager.class);
+        when(playback.getCursorFrame()).thenReturn(0);
+        when(playback.getMovieFrameCount()).thenReturn(2);
+        when(playback.isSessionPlaying()).thenReturn(true);
+        GameLoop loop = new GameLoop(new EngineContext(
+                SonicConfigurationService.getInstance(),
+                mock(com.openggf.graphics.GraphicsManager.class),
+                mock(AudioManager.class),
+                mock(com.openggf.data.RomManager.class),
+                mock(com.openggf.debug.PerformanceProfiler.class),
+                mock(com.openggf.debug.DebugOverlayManager.class),
+                playback,
+                mock(com.openggf.game.RomDetectionService.class),
+                mock(com.openggf.game.CrossGameFeatureProvider.class)));
+        Object launcher = getPrivateField(loop, "userRecordingSessionLauncher");
+        setPrivateField(launcher, "activePlaybackOptions", new UserRecordingPlaybackOptions(0, true, false));
+        setPrivateField(launcher, "activePlaybackState", UserRecordingPlaybackState.PLAYING);
+
+        invokePrivateMethod(loop, "finishUserRecordingPlaybackAtLevelBoundary",
+                new Class<?>[] { boolean.class }, false);
+
+        assertEquals(UserRecordingPlaybackState.PLAYING,
+                getPrivateField(launcher, "activePlaybackState"),
+                "A title-card/boundary return before frame 0 is simulated must not complete playback");
+        verify(playback, never()).onLevelFrameAdvanced();
     }
 
     @Test

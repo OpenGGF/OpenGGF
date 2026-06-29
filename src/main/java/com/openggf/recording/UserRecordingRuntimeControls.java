@@ -121,7 +121,10 @@ public final class UserRecordingRuntimeControls {
             return activeHud;
         }
         UserRecordingPlaybackOptions options = runtime.activePlaybackOptions();
-        if (options != null && runtime.activePlaybackState() == UserRecordingPlaybackState.PLAYING) {
+        UserRecordingPlaybackState playbackState = runtime.activePlaybackState();
+        if (options != null
+                && (playbackState == UserRecordingPlaybackState.PLAYING
+                || playbackState == UserRecordingPlaybackState.PAUSED_ON_DESYNC)) {
             int frame = runtime.currentPlaybackFrame();
             UserRecordingVerificationResult verification = runtime.activePlaybackVerificationResult();
             return new UserRecordingHudState(

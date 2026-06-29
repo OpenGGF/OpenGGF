@@ -172,6 +172,26 @@ class TestUserRecordingControls {
     }
 
     @Test
+    void pausedOnDesyncPlaybackHudSurfacesFirstMismatchVerifierStatus() {
+        Fixture fixture = new Fixture();
+        fixture.playbackOptions = new UserRecordingPlaybackOptions(120, true, true);
+        fixture.playbackState = UserRecordingPlaybackState.PAUSED_ON_DESYNC;
+        fixture.currentPlaybackFrame = 44;
+        fixture.playbackFrameCount = 120;
+        fixture.verificationResult = UserRecordingVerificationResult.firstMismatch(
+                45, 44, "p1CentreX", "100", "321");
+
+        UserRecordingHudState hud = fixture.controls.hudState();
+
+        assertTrue(hud.visible());
+        assertEquals("PLAYBACK FF 44/120", hud.primaryText());
+        assertEquals("VERIFY first-mismatch(frame=44, field=p1CentreX, expected=100, actual=321)",
+                hud.secondaryText());
+        assertTrue(hud.amberWarning());
+        assertFalse(hud.redWarning());
+    }
+
+    @Test
     void masterTitleShiftRecordUsesConfiguredRecordKey() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(SonicConfiguration.RECORDING_RECORD_KEY, GLFW_KEY_F10);
