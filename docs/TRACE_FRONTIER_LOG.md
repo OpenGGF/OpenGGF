@@ -6,6 +6,31 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 full-sweep routing baseline after CNZ2/MTZ2 integration
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop` at `be8376438`.
+- Full sweep command:
+  `mvn "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+- Result: 19 S2 trace classes ran; 7 remain green (`ARZ1`, `CNZ1`,
+  `DEZ ending`, `EHZ1`, `MCZ1`, `SCZ`, `WFZ`) and 12 remain red.
+- Current red routing table:
+  `ARZ2` f870 / 2794 (`obj_s18_slot` expected `0x18`, actual `0x17`);
+  `CNZ2` f5213 / 749 (`y_speed` expected `0x0000`, actual `0x0400`);
+  `CPZ1` f4225 / 264 (`tails_x_speed` expected `0x0024`, actual `0x0018`);
+  `CPZ2` f2889 / 1238 (`tails_x` expected `0x10E8`, actual `0x10F0`);
+  `HTZ1` f6586 / 226 (`y_speed` expected `-0178`, actual `-0078`);
+  `HTZ2` f3317 / 1058 (`tails_x_speed` expected `0x00E8`, actual `-0018`);
+  `MCZ2` f7328 / 447 (`g_speed` expected `0x0000`, actual `0x02A0`);
+  `MTZ1` f5647 / 616 (`tails_y_sub` expected `0x6500`, actual `0x3D00`);
+  `MTZ2` f1857 / 3209 (`g_speed` expected `0x0381`, actual `0x02CB`);
+  `MTZ3` f2048 / 3742 (`tails_x` expected `0x07CA`, actual `0x07BE`);
+  `OOZ1` f1784 / 1256 (`tails_x_speed` expected `0x000C`, actual `-000C`);
+  `OOZ2` f2623 / 946 (`tails_x` expected `0x04A1`, actual `0x049D`).
+- Routing decisions from this sweep: CPZ, HTZ2, and MCZ2 were delegated to
+  isolated workers; OOZ1 remains with the retry worker because the previous
+  OOZ1 advancement regressed OOZ2 total errors.
+
 ## 2026-06-29 - S2 HTZ1 Obj84 flying-sidekick regression repair (256 -> 226 errors)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
