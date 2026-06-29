@@ -154,6 +154,25 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void nutOffscreenSidekickSolidObjectGateReturnsNoContact() {
+        NutObjectInstance nut = new NutObjectInstance(
+                new ObjectSpawn(0x16C0, 0x04E6, Sonic2ObjectIds.NUT, 0, 0, false, 0),
+                "Nut");
+        TestablePlayableSprite tails = player("tails", 0x16C0, 0x04D2);
+        tails.setCpuControlled(true);
+        tails.setRenderFlagOnScreen(false);
+
+        assertTrue(nut.airborneStaleStandingBitReturnsNoContact(tails),
+                "Obj69's native P2 SolidObject tail returns before SolidObject_cont when "
+                        + "the CPU sidekick render_flags.on_screen bit is clear (s2.asm:54006-54013, 35022-35025)");
+
+        tails.setRenderFlagOnScreen(true);
+        assertFalse(nut.airborneStaleStandingBitReturnsNoContact(tails),
+                "On-screen Obj69 contacts still run the regular SolidObject path");
+        assertFalse(nut.airborneStaleStandingBitReturnsNoContact(null));
+    }
+
+    @Test
     void wfzPaletteSwitcherUsesQueryOnlySidekickCrossing() {
         TestablePlayableSprite main = player("sonic", 0x0800, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x0FF0, 0x1000);

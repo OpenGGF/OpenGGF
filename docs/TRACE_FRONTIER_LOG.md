@@ -35,6 +35,10 @@ branch-local measurements.
   - A later MTZ1 offscreen sidekick-latch candidate advanced MTZ1 but regressed
     MTZ2 total errors from 951 to 971 at f3055; it was rejected and reverted in
     `a01e0fedc`.
+  - MTZ1 Obj69 offscreen native-P2 SolidObject gating plus stale Obj26 monitor
+    break cleanup advanced `TestS2MtzLevelSelectTraceReplay` from f5647 / 616 to
+    f5713 / 560 while holding MTZ2, MTZ3, CPZ1, CPZ2, and the rest of the full
+    S2 sweep at their accepted baselines.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
@@ -43,7 +47,7 @@ branch-local measurements.
   `HTZ1` f7108 / 221 (`tails_x` expected `0x231F`, actual `0x2320`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
   `MCZ2` f8965 / 156 (`y` expected `0x063E`, actual `0x0643`);
-  `MTZ1` f5647 / 616 (`tails_y_sub` expected `0x6500`, actual `0x3D00`);
+  `MTZ1` f5713 / 560 (`tails_y_speed` expected `0x0ED0`, actual `0x0000`);
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
   `MTZ3` f2588 / 939 (`tails_cpu_ctrl2_held` expected `0x0012`, actual `0x0002`);
   `OOZ1` f1790 / 1125 (`tails_x_speed` expected `0x0080`, actual `-008C`);

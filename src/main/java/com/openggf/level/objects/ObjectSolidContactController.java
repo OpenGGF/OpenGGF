@@ -1863,6 +1863,27 @@ final class ObjectSolidContactController {
                 || hasPreMovementGroundAttachmentSupport(player);
     }
 
+    boolean hasGroundingObjectSupport(PlayableEntity player) {
+        if (player == null || player.getDead() || player.isDebugMode()) {
+            return false;
+        }
+        ObjectInstance ridingObject = getRidingObject(player);
+        if (ridingObject != null) {
+            // S2 SolidObject gates Player_2 on render_flags.on_screen before
+            // testing the object's standing bit or reaching SolidObject_cont
+            // (docs/s2disasm/s2.asm:35022-35031). The stale offscreen latch
+            // survives for Obj69's action pass, but it is not active grounding.
+            if (player.getAir()
+                    && shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)
+                    && ridingObject instanceof SolidObjectProvider provider
+                    && provider.airborneStaleStandingBitReturnsNoContact(player)) {
+                return false;
+            }
+            return true;
+        }
+        return latestStandingSnapshot(player);
+    }
+
     private boolean hasPreMovementGroundAttachmentSupport(PlayableEntity player) {
         int playerCenterX = player.getCentreX();
         int playerCenterY = player.getCentreY();
@@ -2098,6 +2119,7 @@ final class ObjectSolidContactController {
         int ridingY = state != null ? state.y : 0;
         int ridingPieceIndex = state != null ? state.pieceIndex : -1;
         ObjectInstance dropOnFloorExclude = null;
+        ObjectInstance offscreenSkippedAirborneRidingObject = null;
         boolean preserveAirborneRideForEarlierPieces =
                 shouldResolveEarlierMultiPieceSiblingsBeforeRidingPiece(
                         player, ridingObject, ridingPieceIndex);
@@ -2260,6 +2282,14 @@ final class ObjectSolidContactController {
                     ridingPieceIndex = -1;
                 }
                 }
+            } else if (player.getAir()
+                    && provider.airborneStaleStandingBitReturnsNoContact(player)) {
+                // S2 SolidObject returns before the offscreen Player_2 pass
+                // (docs/s2disasm/s2.asm:35022-35025). The ride/standing bit
+                // survives for object-local code such as Obj69, but no
+                // SolidObject_cont/RideObject_SetRide support contact is
+                // produced this frame.
+                offscreenSkippedAirborneRidingObject = ridingObject;
             }
         }
 
@@ -2271,7 +2301,8 @@ final class ObjectSolidContactController {
         // offsets) causing the riding state to be spuriously removed and re-added
         // on alternating frames. This is most visible on monitors where
         // groundHalfHeight > airHalfHeight — the player jitters vertically.
-        ObjectInstance ridingMaintained = ridingObject;
+        ObjectInstance ridingMaintained =
+                offscreenSkippedAirborneRidingObject != null ? null : ridingObject;
         ObjectInstance nextRidingObject = null;
         int nextRidingX = 0;
         int nextRidingY = 0;
@@ -2280,6 +2311,9 @@ final class ObjectSolidContactController {
             // DropOnFloor detached the player from this object — don't re-land on it
             // this frame. Terrain collision will handle the player next frame.
             if (instance == dropOnFloorExclude) {
+                continue;
+            }
+            if (instance == offscreenSkippedAirborneRidingObject) {
                 continue;
             }
             // ROM: riding section already handled this via ExitPlatform.
@@ -2430,6 +2464,10 @@ final class ObjectSolidContactController {
             putRidingState(player, nextRidingObject, nextRidingX, nextRidingY, nextRidingPieceIndex);
             setObjectStandingBit(player, nextRidingObject, nextRidingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, nextRidingObject);
+        } else if (offscreenSkippedAirborneRidingObject != null) {
+            putRidingState(player, offscreenSkippedAirborneRidingObject,
+                    ridingX, ridingY, ridingPieceIndex);
+            setObjectStandingBit(player, offscreenSkippedAirborneRidingObject, ridingPieceIndex);
         } else {
             ridingStates.remove(player);
         }
@@ -2437,7 +2475,7 @@ final class ObjectSolidContactController {
         // ROM: bclr #status.player.on_object when not standing on any object
         // Also clear when player becomes airborne (jumping/falling off) - s2.asm has many instances
         // of this paired with bset #status.player.in_air
-        if (nextRidingObject == null) {
+        if (nextRidingObject == null && offscreenSkippedAirborneRidingObject == null) {
             player.setOnObject(false);
         }
 

@@ -2431,6 +2431,10 @@ public class ObjectManager {
         return solidContacts.latestStandingSnapshot(player);
     }
 
+    public boolean hasGroundingObjectSupport(PlayableEntity player) {
+        return solidContacts.hasGroundingObjectSupport(player);
+    }
+
     public int latestHeadroomSnapshot(PlayableEntity player, int hexAngle) {
         return solidContacts.latestHeadroomSnapshot(player, hexAngle);
     }

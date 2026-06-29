@@ -232,7 +232,10 @@ public class CollisionSystem {
     }
 
     public boolean hasGroundingObjectSupport(AbstractPlayableSprite player) {
-        return isRidingObject(player) || hasStandingContact(player);
+        if (player == null || objectManager == null) {
+            return false;
+        }
+        return objectManager.hasGroundingObjectSupport(player);
     }
 
     private boolean hasActiveLatchedObjectSupport(AbstractPlayableSprite player) {

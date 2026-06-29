@@ -286,6 +286,51 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void offscreenS2AirborneSidekickRideLatchIsNotGroundingSupport() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestSolidObject object = new StaleStandingBitFullSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
+        sidekick.useFeatureSet(PhysicsFeatureSet.SONIC_2);
+        sidekick.setCpuControlled(true);
+        sidekick.setRenderFlagOnScreen(true);
+        sidekick.setWidth(20);
+        sidekick.setHeight(20);
+        sidekick.setCentreX((short) 100);
+        int centreY = 100 - params.groundHalfHeight() - sidekick.getYRadius();
+        sidekick.setCentreY((short) centreY);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setAir(true);
+
+        manager.updateSolidContacts(sidekick);
+        assertTrue(manager.isRidingObject(sidekick));
+        assertTrue(manager.hasGroundingObjectSupport(sidekick));
+
+        sidekick.setRenderFlagOnScreen(false);
+        sidekick.setOnObject(true);
+        sidekick.setAir(true);
+        sidekick.setYSpeed((short) 0x0038);
+
+        assertTrue(manager.isRidingObject(sidekick),
+                "S2 SolidObject preserves the stale P2 ride latch when render_flags.on_screen is clear");
+        assertFalse(manager.hasGroundingObjectSupport(sidekick),
+                "The preserved offscreen P2 latch is not active grounding support because "
+                        + "SolidObject returns before SolidObject_cont (s2.asm:35022-35031)");
+
+        manager.updateSolidContacts(sidekick);
+
+        assertTrue(sidekick.isOnObject(),
+                "Skipping offscreen P2 SolidObject preserves Status_OnObj");
+        assertTrue(sidekick.getAir(),
+                "Skipping offscreen P2 SolidObject preserves Status_InAir");
+        assertTrue(manager.isRidingObject(sidekick));
+        assertFalse(manager.hasGroundingObjectSupport(sidekick));
+        assertEquals(0x0038, sidekick.getYSpeed() & 0xFFFF,
+                "No SolidObject_cont support pass should zero the airborne sidekick's y_vel");
+    }
+
+    @Test
     public void s3kNormalSolidSupportClearsStaleObjectControlBitSixWallSuppression() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         TestSolidObject object = new TestSolidObject(100, 100, params);
