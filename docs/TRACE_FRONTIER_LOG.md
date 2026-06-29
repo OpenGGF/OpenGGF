@@ -6,7 +6,7 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-## 2026-06-29 - S2 accepted routing baseline after MTZ2 comparator and CPZ2 integration
+## 2026-06-29 - S2 accepted routing baseline after ARZ2 and CPZ2 integration
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
   `bugfix/ai-s2-trace-develop`.
@@ -21,16 +21,20 @@ branch-local measurements.
     holding first error f2889.
   - CPZ2 Obj1E lower-slot tube handoff advanced
     `TestS2Cpz2LevelSelectTraceReplay` from f2889 / 1236 to f2976 / 1232.
+  - ARZ2 Obj18 platform standing-latch nudge advanced
+    `TestS2Arz2LevelSelectTraceReplay` from f888 / 2720 to f1028 / 2688 and
+    reduced `TestS2Htz2LevelSelectTraceReplay` total errors from 1060 to 1057
+    while holding its first frontier.
   - A later MTZ1 offscreen sidekick-latch candidate advanced MTZ1 but regressed
     MTZ2 total errors from 951 to 971 at f3055; it was rejected and reverted in
     `a01e0fedc`.
 - Current red routing table:
-  `ARZ2` f888 / 2720 (`obj_extra_s1F_x` expected absent, actual `0x0AE0`);
+  `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
   `CPZ1` f4281 / 246 (`tails_x_speed` expected `-0018`, actual `0x0000`);
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
   `HTZ1` f6586 / 226 (`y_speed` expected `-0178`, actual `-0078`);
-  `HTZ2` f3322 / 1060 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
+  `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
   `MCZ2` f8965 / 156 (`y` expected `0x063E`, actual `0x0643`);
   `MTZ1` f5647 / 616 (`tails_y_sub` expected `0x6500`, actual `0x3D00`);
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
