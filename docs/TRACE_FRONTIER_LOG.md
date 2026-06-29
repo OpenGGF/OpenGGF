@@ -42,6 +42,10 @@ branch-local measurements.
     break cleanup advanced `TestS2MtzLevelSelectTraceReplay` from f5647 / 616 to
     f5713 / 560 while holding MTZ2, MTZ3, CPZ1, CPZ2, and the rest of the full
     S2 sweep at their accepted baselines.
+  - OOZ OilSlides logical-input slot timing advanced
+    `TestS2Ooz2LevelSelectTraceReplay` from f3226 / 945 to f3672 / 692 and
+    improved `TestS2OozLevelSelectTraceReplay` from 1125 to 614 errors while
+    holding its first frontier at f1790.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
@@ -53,10 +57,49 @@ branch-local measurements.
   `MTZ1` f5713 / 560 (`tails_y_speed` expected `0x0ED0`, actual `0x0000`);
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
   `MTZ3` f2588 / 939 (`tails_cpu_ctrl2_held` expected `0x0012`, actual `0x0002`);
-  `OOZ1` f1790 / 1125 (`tails_x_speed` expected `0x0080`, actual `-008C`);
-  `OOZ2` f3226 / 945 (`g_speed` expected `0x0528`, actual `0x0520`).
+  `OOZ1` f1790 / 614 (`tails_x_speed` expected `0x0080`, actual `-008C`);
+  `OOZ2` f3672 / 692 (`tails_cpu_respawn_counter` expected `0x0079`, actual `0x0000`).
 - Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `MCZ1`,
   `SCZ`, and `WFZ`.
+
+## 2026-06-29 - S2 OOZ OilSlides logical input slot timing (f3226 -> f3672)
+
+- Worktree/branch: `.worktrees/trace-s2-ooz2-obj45-speed` /
+  `bugfix/ai-trace-s2-ooz2-obj45-speed`, forked from
+  `bugfix/ai-s2-trace-develop` at integration head `0f00c10e8`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result before the fix: OOZ2 f3226 / 945 errors (`g_speed` expected `0x0528`,
+  actual `0x0520`).
+- Evidence/fix: the f3226 engine player was still grounded at the same
+  position as ROM through f3225, but `g_speed` had already dropped from
+  `0x0524` to `0x0520` before `Sonic_Move` ground friction ran. The pre-physics
+  OOZ `OilSlides` handler is the earlier writer: the ROM copies
+  `Ctrl_1_Held_Logical` / `Ctrl_2_Held_Logical` into `d2` before processing oil
+  slide friction (`docs/s2disasm/s2.asm:5537-5540,5599-5638`), and before the
+  player slot refreshes current raw input (`docs/s2disasm/s2.asm:36470-36484`).
+  `OilSurfaceManager` now reads `AbstractPlayableSprite.getLogicalInputState()`
+  for this friction path, so the same-frame logical Right bit produces the ROM
+  net `+4` acceleration instead of the neutral `-4` deceleration. This models
+  ROM-visible input state; it does not use trace data, frame gates, route gates,
+  or zone-specific exceptions.
+- Focused behavior test:
+  `mvn "-Dtest=com.openggf.tests.TestOilSurfaceManager#frictionSlideUsesLogicalHeldInputFromRomPreObjectSlot" "-DfailIfNoTests=false" test`.
+  The test was verified red before the production change (`0x0528` expected,
+  `0x0520` actual) and green after the fix.
+- Focused OOZ traces:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result after the fix: OOZ1 remains f1790 and improves 1125 -> 614 errors;
+  OOZ2 advances to f3672 / 692 errors (`tails_cpu_respawn_counter` expected
+  `0x0079`, actual `0x0000`).
+- S2 green guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result: 7 passed, 0 failed.
+- Full S2 sweep:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result after the fix: 19 trace classes ran; 7 green / 12 expected-red. A
+  comparison against a detached `0f00c10e8` baseline showed only OOZ1 and OOZ2
+  changed; every non-OOZ first frontier and total error count held.
 
 ## 2026-06-29 - S2 MCZ2 Obj57 boss-specific drill collision (f8965 -> f9662)
 
