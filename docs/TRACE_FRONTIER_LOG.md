@@ -6,6 +6,43 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 MCZ2 MCZ boss Tails max-X mirror (f10119 -> green)
+
+- Worktree/branch: `.worktrees/trace-s2-mcz2-r14` /
+  `bugfix/ai-trace-s2-mcz2-r14`, based on integration head
+  `a2e17deef` including the CNZ2 merge and OOZ2 commit.
+- Baseline reproduction before the fix:
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" test`.
+  Result: MCZ2 f10119 / 26 (`tails_x_sub` expected `0x5200`,
+  actual `0x0000`).
+- Triage/evidence: full trace diagnostics showed Tails CPU control and
+  ground acceleration matched ROM through `x_speed/g_speed=0x0597`, but
+  `doLevelBoundary` immediately clamped Tails to `x=$2218`, zeroing
+  subpixel and velocity. That clamp is `Tails_Max_X_pos=$20F0` plus the
+  boss-strict `$128` right boundary. ROM `LevEvents_MCZ2_Routine4` does
+  not stop on boss defeat; it keeps copying `Camera_Max_X_pos` into
+  `Tails_Max_X_pos` every frame while Obj57 SubC expands
+  `Camera_Max_X_pos` toward `$2240`. The engine exited the event routine
+  when `mczBoss.isDefeated()`, leaving the sidekick bound stale at `$20F0`.
+  The fix keeps routine 6 active so the existing `syncSidekickBoundsToCamera`
+  continues through escape/capsule timing. No trace hydration, tolerance,
+  route, frame, or zone carve-out is used.
+- Disassembly cited: MCZ2 routine 4 Tails-bound copy at
+  `docs/s2disasm/s2.asm:21495-21506`; Tails boundary consuming
+  `Tails_Max_X_pos` and `Current_Boss_ID` at
+  `docs/s2disasm/s2.asm:40259-40278`; Obj57 SubC camera expansion at
+  `docs/s2disasm/s2.asm:66316-66324`.
+- Focused trace:
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" test`.
+  Result: passed 1/1; MCZ2 is green.
+- Preservation run:
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay" test`.
+  Result: expected nonzero, 18 run / 9 passed / 9 expected-red. Green:
+  ARZ1, CNZ1, DEZ ending, EHZ1, HTZ1, MCZ1, MCZ2, SCZ, WFZ. Preserved
+  reds: CNZ2 f5298 / 920; OOZ2 f3830 / 691; OOZ1 f1790 / 614; HTZ2
+  f3322 / 1057; MTZ1 f5713 / 560; MTZ2 f4375 / 950; MTZ3 f2588 / 939;
+  CPZ1 f4351 / 181; CPZ2 f2976 / 1232.
+
 ## 2026-06-29 - S2 CNZ2 linked Point Pokey shared-prize counter release (f5242 -> f5298)
 
 - Worktree/branch: `.worktrees/trace-s2-cnz2-r14` /
