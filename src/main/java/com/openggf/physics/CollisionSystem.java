@@ -314,10 +314,6 @@ public class CollisionSystem {
         // the per-frame follow nudge (loc_13E34 addq.w #1,x_pos,
         // sonic3k.asm:26734-26741), so no zero-distance seam override is required.
         int distance = result.distance();
-        if (distance == 0 && shouldTreatObjectRideFlushWallAsPenetration(sprite, mode, gSpeed)) {
-            sprite.deferGroundWallVelocityResponse(mode, -1);
-            return;
-        }
         if (distance >= 0) {
             return;
         }
@@ -336,25 +332,6 @@ public class CollisionSystem {
                 && sprite.isOnObject()
                 && sprite.getPushing()
                 && ((mode == 0x40 && predictedDx < 0) || (mode == 0xC0 && predictedDx > 0));
-    }
-
-    private static boolean shouldTreatObjectRideFlushWallAsPenetration(
-            AbstractPlayableSprite sprite, int mode, short gSpeed) {
-        var featureSet = sprite.getPhysicsFeatureSet();
-        if (featureSet == null
-                || !featureSet.repeatedObjectRideGroundWallResponseDeferred()
-                || !sprite.isOnObject()
-                || !sprite.getPushing()) {
-            return false;
-        }
-        // S2's sustained object-riding push cadence can keep Status_Push set
-        // while CalcRoomInFront is exactly flush on the engine's tile probe.
-        // Once the player has accelerated beyond the first +/-$0C step, ROM's
-        // stored speed reflects the repeated push correction after this frame's
-        // position update. Keep the rule on the S2 deferred-response feature so
-        // S3K continues using its separate sidekick object-order bridge.
-        return (mode == 0x40 && gSpeed <= -0x18)
-                || (mode == 0xC0 && gSpeed >= 0x18);
     }
 
     public void applyDeferredGroundWallVelocityResponse(AbstractPlayableSprite sprite) {
