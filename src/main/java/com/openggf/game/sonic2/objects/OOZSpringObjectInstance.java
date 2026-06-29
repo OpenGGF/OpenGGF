@@ -304,11 +304,23 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
 
         for (PlayableEntity participant : participants) {
             if (participant instanceof AbstractPlayableSprite player
-                    && (!horizontalLaunchRequiresCurrentPush || isHorizontalPushingThisFrame(player))
-                    && consumePendingHorizontalLaunch(player)) {
+                    && shouldLaunchHorizontalDuringRelease(player)) {
+                clearPendingHorizontalLaunch(player);
                 launchHorizontal(player);
             }
         }
+    }
+
+    private boolean shouldLaunchHorizontalDuringRelease(AbstractPlayableSprite player) {
+        boolean pushingThisFrame = isHorizontalPushingThisFrame(player);
+        if (horizontalLaunchRequiresCurrentPush && !pushingThisFrame) {
+            return false;
+        }
+        // ROM Obj45_LaunchCharacterHorizontal keys the release launch off
+        // status(a0)'s p1/p2 pushing bits after the spring has stepped back
+        // toward obj45_original_x_pos, not off a one-shot pending flag
+        // (docs/s2disasm/s2.asm:50435-50459,50529-50540).
+        return hasPendingHorizontalLaunch(player) || pushingThisFrame;
     }
 
     private void updateVerticalForStandingPlayer(AbstractPlayableSprite player) {
@@ -484,15 +496,16 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         return isNativeSidekick(player) ? sidekickHorizontalPushingThisFrame : mainHorizontalPushingThisFrame;
     }
 
-    private boolean consumePendingHorizontalLaunch(AbstractPlayableSprite player) {
+    private boolean hasPendingHorizontalLaunch(AbstractPlayableSprite player) {
+        return isNativeSidekick(player) ? pendingSidekickHorizontalLaunch : pendingMainHorizontalLaunch;
+    }
+
+    private void clearPendingHorizontalLaunch(AbstractPlayableSprite player) {
         if (isNativeSidekick(player)) {
-            boolean pending = pendingSidekickHorizontalLaunch;
             pendingSidekickHorizontalLaunch = false;
-            return pending;
+        } else {
+            pendingMainHorizontalLaunch = false;
         }
-        boolean pending = pendingMainHorizontalLaunch;
-        pendingMainHorizontalLaunch = false;
-        return pending;
     }
 
     private boolean isNativeSidekick(AbstractPlayableSprite player) {

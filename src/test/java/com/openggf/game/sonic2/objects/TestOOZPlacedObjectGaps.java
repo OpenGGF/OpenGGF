@@ -373,6 +373,42 @@ class TestOOZPlacedObjectGaps {
     }
 
     @Test
+    void horizontalOozPressureSpringStatusPushCanRelaunchDuringRelease() throws Exception {
+        ObjectInstance spring = newOOZSpring(0x04B4, 0x03D0, 0x10, 1);
+        TestablePlayableSprite sonic = playerAt(0x049B, 0x03CC);
+        sonic.setDirection(Direction.LEFT);
+        sonic.setGSpeed((short) 0xF800);
+        sonic.setXSpeed((short) 0xF800);
+        setIntField(spring, "currentX", 0x04BA);
+        setIntField(spring, "mappingFrame", 0x10);
+
+        PlayerSolidContactResult exactEdgePushMovingAway = new PlayerSolidContactResult(
+                ContactKind.SIDE,
+                false,
+                false,
+                true,
+                true,
+                PreContactState.ZERO,
+                PostContactState.ZERO,
+                0);
+        ((AbstractObjectInstance) spring).setServices(new TestObjectServices()
+                .withSolidExecutionRegistry(new ScriptedSolidRegistry(
+                        spring,
+                        Map.of(sonic, exactEdgePushMovingAway),
+                        Map.of(sonic, new PlayerStandingState(ContactKind.SIDE, false, true)))));
+
+        spring.update(0, sonic);
+
+        assertEquals(0x04B6, spring.getX(),
+                "Obj45 releases four pixels before launching from status(a0)'s push bit");
+        assertEquals(0xFA00, sonic.getXSpeed() & 0xFFFF,
+                "Obj45_LaunchCharacterHorizontal uses the post-release two-pixel compression");
+        assertEquals(0xFA00, sonic.getGSpeed() & 0xFFFF);
+        assertEquals(0x0497, sonic.getCentreX() & 0xFFFF,
+                "flipped Obj45 subtracts 4 from x_pos(a1) during horizontal launch");
+    }
+
+    @Test
     void oozPoppingPlatformKeepsRomSolidLatchAndObjectControlledSupport() throws Exception {
         ObjectInstance object = newObject("com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance",
                 new ObjectSpawn(0x1000, 0x0500, 0x33, 0x00, 0, false, 0));

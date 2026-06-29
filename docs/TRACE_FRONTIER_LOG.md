@@ -6,6 +6,47 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 OOZ2 Obj45 release relaunch from current push bit (OOZ worker r8)
+
+- Worktree/branch: `.worktrees/trace-s2-ooz-r8` /
+  `bugfix/ai-trace-s2-ooz-r8`, branched from
+  `.worktrees/ai-s2-trace-develop` / `bugfix/ai-s2-trace-develop` at
+  `c2cc1fb47`.
+- Scope: S2 Obj45 (`OOZSpringObjectInstance`) horizontal release launch gate
+  plus a focused Obj45 regression in `TestOOZPlacedObjectGaps`. No
+  trace-to-engine hydration and no zone/route/frame carve-out.
+- Root cause: after a horizontal OOZ pressure spring has already launched once,
+  ROM can still relaunch on later release frames from the current
+  `status(a0)` p1/p2 pushing bit. The engine consumed a one-shot pending launch
+  latch and then ignored the current push-status equivalent, so Sonic kept the
+  earlier `-$0800` launch at OOZ2 f2176 instead of being rewritten to the
+  post-release `-$0600`. ROM references: Obj45 releases then branches to
+  `Obj45_LaunchCharacterHorizontal` at `docs/s2disasm/s2.asm:50435-50459`,
+  and that launch routine tests/clears `status(a0)` pushing bits at
+  `docs/s2disasm/s2.asm:50529-50540`.
+- Before on clean branch:
+  `mvn "-Dtest=TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  -> expected-red pair: OOZ1 f1784 / 1256 errors
+  (`tails_x_speed` expected `0x000C`, actual `-000C`); OOZ2 f2176 / 1077
+  errors (`g_speed` expected `-0600`, actual `-0800`).
+- Red/green object coverage:
+  `mvn "-Dtest=TestOOZPlacedObjectGaps#horizontalOozPressureSpringStatusPushCanRelaunchDuringRelease" "-DfailIfNoTests=false" test`
+  failed before the fix with `x_speed` still `0xF800`; passed after the fix.
+  `mvn "-Dtest=TestOOZPlacedObjectGaps" "-DfailIfNoTests=false" test`
+  passed all selected Obj45/OOZ object tests.
+- Focused OOZ verification after fix:
+  `mvn "-Dtest=TestOOZPlacedObjectGaps,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  -> expected-red only for the known OOZ trace frontiers. OOZ1 holds f1784 /
+  1256 errors; OOZ2 advances to f2484 / 1176 errors (`g_speed` expected
+  `0x0040`, actual `0x0000`).
+- S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  -> Maven OK, 6 passed, 0 failed.
+- New branch-local OOZ routing: OOZ1 remains separate Obj36 sidekick
+  push/ride path at f1784; OOZ2 is now f2484, likely a later post-Obj45
+  low-speed ground/inertia handoff rather than the previous release strength
+  mismatch.
+
 ## 2026-06-29 - S2 integration sweep after CNZ2 Obj86 seating merge (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
