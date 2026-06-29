@@ -304,6 +304,45 @@ class TestOOZPlacedObjectGaps {
     }
 
     @Test
+    void horizontalOozPressureSpringCompressesWhenSideAirClearsOldPushBit() throws Exception {
+        ObjectInstance spring = newOOZSpring(0x04B4, 0x03D0, 0x10, 1);
+        TestablePlayableSprite tails = playerAt(0x04A1, 0x03CA);
+        tails.setAir(true);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0040);
+        setIntField(spring, "currentX", 0x04BB);
+        setIntField(spring, "mappingFrame", 0x11);
+        setBooleanField(spring, "pendingSidekickHorizontalLaunch", true);
+
+        PlayerSolidContactResult sideAirClearedPush = new PlayerSolidContactResult(
+                ContactKind.SIDE,
+                false,
+                false,
+                false,
+                true,
+                PreContactState.ZERO,
+                PostContactState.ZERO,
+                5);
+        ((AbstractObjectInstance) spring).setServices(new TestObjectServices()
+                .withSidekicks(List.of(tails))
+                .withSolidExecutionRegistry(new ScriptedSolidRegistry(
+                        spring,
+                        Map.of(tails, sideAirClearedPush),
+                        Map.of(tails, new PlayerStandingState(ContactKind.SIDE, false, true)))));
+
+        spring.update(0, playerAt(0x0400, 0x0300));
+
+        assertEquals(0x04BC, spring.getX(),
+                "SolidObject_SideAir clears the push bit but still returns d4=1, so Obj45_Horizontal "
+                        + "must run loc_2433C instead of releasing (s2.asm:50393-50420, 50465-50525)");
+        assertEquals(0x04A2, tails.getCentreX() & 0xFFFF,
+                "loc_243A6 applies the one-pixel spring compression delta to x_pos(a1)");
+        assertEquals(0x0040, tails.getGSpeed() & 0xFFFF);
+        assertTrue(booleanField(spring, "pendingSidekickHorizontalLaunch"),
+                "SideAir does not set a fresh status push bit, so the stale launch latch must not be consumed");
+    }
+
+    @Test
     void horizontalOozPressureSpringDoesNotDuplicateCarryAfterSidekickIsAlreadyPushing() throws Exception {
         ObjectInstance spring = newOOZSpring(0x04B4, 0x03D0, 0x10, 1);
         TestablePlayableSprite sonic = playerAt(0x04A1, 0x03B4);

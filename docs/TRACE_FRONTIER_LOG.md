@@ -6,6 +6,32 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 OOZ2 Obj45 SideAir push-clear compression (f2623 -> f3226)
+
+- Worktree/branch: `.worktrees/trace-s2-ooz2-r12` /
+  `bugfix/ai-trace-s2-ooz2-r12`, forked from
+  `bugfix/ai-s2-trace-develop` at integration note `a722e7699`.
+- Baseline reproduction:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Ooz2LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: OOZ2 f2623 / 946 errors (`tails_x` expected
+  `0x04A1`, actual `0x049D`); OOZ1 f1790 / 1125 errors
+  (`tails_x_speed` expected `0x0080`, actual `-008C`).
+- Evidence/fix: OOZ2 f2623 had Obj45 one compression step behind ROM after
+  a side contact that cleared the old push bit. ROM `Obj45_Horizontal` still
+  calls `loc_2433C` when `SolidObject_Always_SingleCharacter` returns
+  `d4=1`; `SolidObject_SideAir` clears the push bits but still returns that
+  side-contact value (`docs/s2disasm/s2.asm:50393-50420,50465-50525`,
+  `35393-35459`). `OOZSpringObjectInstance` now treats `ContactKind.SIDE`
+  as the compression trigger even when `pushingLastFrame=true` and
+  `pushingNow=false`; release launch remains gated by the current push bit.
+- Focused verification:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Ooz2LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: OOZ2 advances to f3226 / 945 errors (`g_speed` expected
+  `0x0528`, actual `0x0520`); OOZ1 remains unchanged at f1790 / 1125.
+- S2 green guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+  Result: command exited 0; selected guard traces passed.
+
 ## 2026-06-29 - S2 MCZ2 Obj57 debris and boss-hit ordering integration (f8606 -> f8965)
 
 - Integrated worker commit: `a01a2f31eba8610577971a68a0a95355fec4aa3e` from
