@@ -271,8 +271,11 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
      * 4. Play roll sound
      */
     private void enablePinballMode(AbstractPlayableSprite player) {
-        // Enable pinball mode flag - this prevents rolling from being cleared
+        // S2 aliases Obj84 pinball_mode to spindash_flag. Keep the engine's
+        // separate fields in sync so later Tails_UpdateSpindash paths can
+        // consume the same ROM byte after forced rolling ends.
         player.setPinballMode(true);
+        player.setSpindash(true);
 
         // If already rolling, no need to do anything else
         if (player.getRolling()) {
@@ -307,6 +310,7 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
      */
     private void disablePinballMode(AbstractPlayableSprite player) {
         player.setPinballMode(false);
+        player.setSpindash(false);
     }
 
     /**

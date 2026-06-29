@@ -6,6 +6,46 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 CNZ2 Obj84/Obj86 sidekick pinball-spindash advancement (f4892 -> f4894)
+
+- Worktree/branch: `.worktrees/trace-s2-cnz2-r9` /
+  `bugfix/ai-trace-s2-cnz2-r9`, forked from
+  `bugfix/ai-s2-trace-develop`.
+- Baseline: `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` failed at
+  f4892 / 943 errors (`tails_g_speed` expected `0x0800`, actual `0x0000`).
+- Evidence/fix: BizHawk RAM probes around CNZ2 f4610-f4894 showed Obj84 set
+  `pinball_mode=1` for Tails and that byte stayed live through the off-screen
+  `TailsCPU_Despawn` marker until `Tails_UpdateSpindash` consumed it on the
+  landing frame. In S2, Obj84's `pinball_mode(a1)` byte is also the
+  spindash flag tested by Tails' spindash update, Obj86 release clears
+  `obj_control` without clearing that byte, and `TailsCPU_Despawn` writes the
+  marker position/routine/control/status but not `pinball_mode` or
+  `spindash_counter` (`docs/s2disasm/s2.asm:39391-39400,40470-40530,
+  46853-46881,58323-58350`). The engine now mirrors Obj84 pinball writes into
+  the separate spindash field, restores Obj86's pre-lock pinball state, and
+  preserves sidekick spindash state across the despawn marker. Spindash release
+  also keeps the temporary release velocity from moving the player horizontally
+  on the release frame; ROM's release path runs LevelBound/AnglePos but the
+  first rolling displacement happens on the next `MdRoll` frame.
+- Focused verification:
+  `mvn "-Dtest=TestForcedSpinObjectInstance,TestSolidOrderingSentinelsHeadless,TestSidekickCpuDespawnParity" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: focused unit reports passed (`TestForcedSpinObjectInstance` 3/3,
+  `TestSolidOrderingSentinelsHeadless` 5/5,
+  `TestSidekickCpuDespawnParity` 45/45; MSE total 53 passed, 0 failed).
+- CNZ2 frontier check:
+  `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: advanced to f4894 / 766 errors (`tails_y` expected `0x0670`,
+  actual `0x0671`).
+- CNZ1 guard:
+  `mvn "-Dtest=TestS2CnzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: passed.
+- Green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: passed, no current S2 green trace regressed.
+- New frontier: f4894 `tails_y` expected `0x0670`, actual `0x0671`. Continue
+  from the post-release/landing vertical position and AnglePos/floor attach
+  behavior, not from ObjD6 Point Pokey.
+
 ## 2026-06-29 - S2 integration sweep after MTZ2 Obj70 merge (7 green, 12 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /

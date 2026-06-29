@@ -887,6 +887,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		short preReleaseXSpeed = sprite.getXSpeed();
 		short preReleaseYSpeed = sprite.getYSpeed();
+		short preReleaseCentreX = sprite.getCentreX();
 
 		// Keep a temporary derived release velocity for the AnglePos threshold
 		// check that still runs on the release frame.
@@ -899,6 +900,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		audioManager.playSfx(GameSound.SPINDASH_RELEASE);
 		doLevelBoundaryAndAnglePos();
 		if (!sprite.getAir()) {
+			// ROM's release path runs LevelBound + AnglePos but not SpeedToPos;
+			// the first rolling displacement happens on the next MdRoll frame.
+			// Keep the temporary velocity from moving the player horizontally
+			// through the engine's attachment pass.
+			sprite.setCentreXPreserveSubpixel(preReleaseCentreX);
+			sprite.setGSpeed(spindashGSpeed);
 			sprite.setXSpeed(preReleaseXSpeed);
 			sprite.setYSpeed(preReleaseYSpeed);
 		}

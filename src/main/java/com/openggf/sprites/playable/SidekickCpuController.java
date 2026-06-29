@@ -4554,8 +4554,6 @@ public class SidekickCpuController {
         }
         sidekick.setDead(false);
         sidekick.setDeathCountdown(0);
-        sidekick.setSpindash(false);
-        sidekick.setSpindashCounter((short) 0);
         clearRespawnAnimationState();
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
@@ -4572,8 +4570,9 @@ public class SidekickCpuController {
         // before this marker warp on Frame N+1.
         // S2 TailsCPU_Despawn (docs/s2disasm/s2.asm:39391-39400) and S3K
         // sub_13ECA (docs/skdisasm/sonic3k.asm:26800-26809) do not write the
-        // ROM-visible interact latch. Preserve it until the next active-play
-        // update samples another stood-on object or RAM is explicitly reset.
+        // pinball/spindash flag, spindash_counter, or ROM-visible interact
+        // latch. Preserve them until the next active-play update samples
+        // another stood-on object or RAM is explicitly reset.
     }
 
     /**

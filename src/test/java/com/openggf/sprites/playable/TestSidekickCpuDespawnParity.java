@@ -151,6 +151,8 @@ class TestSidekickCpuDespawnParity {
         tails.setXSpeed((short) 0x041C);
         tails.setYSpeed((short) 0x0000);
         tails.setGSpeed((short) 0x041C);
+        tails.setSpindash(true);
+        tails.setSpindashCounter((short) 0x0400);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.setInitialState(SidekickCpuController.State.NORMAL);
@@ -165,6 +167,10 @@ class TestSidekickCpuDespawnParity {
         assertEquals((short) 0x041C, tails.getXSpeed());
         assertEquals((short) 0x0000, tails.getYSpeed());
         assertEquals((short) 0x041C, tails.getGSpeed());
+        assertTrue(tails.getSpindash(),
+                "S2 TailsCPU_Despawn does not clear pinball_mode/spindash_flag");
+        assertEquals((short) 0x0400, tails.getSpindashCounter(),
+                "S2 TailsCPU_Despawn does not touch spindash_counter");
         assertTrue(tails.getAir());
         assertFalse(tails.getRolling());
         assertFalse(tails.getRollingJump());
