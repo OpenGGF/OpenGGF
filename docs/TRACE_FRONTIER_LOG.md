@@ -6,6 +6,33 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 DEZ ending Death Egg Robot control handoff retry (DEZ GREEN)
+
+- Worktree/branch: `.worktrees/trace-s2-dez-ending-r6` /
+  `bugfix/ai-trace-s2-dez-ending-r6`, based on integration commit
+  `20a6dab95` (`docs: record S2 post-CPZ trace sweep`).
+- Baseline command:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2DezEndingLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay" test`.
+- Baseline result: expected failure only in
+  `TestS2DezEndingLevelSelectTraceReplay`, f7503 / 11 errors,
+  `y_speed` expected `-0450`, actual `-03C8`; WFZ and the current S2 green
+  guard traces passed.
+- Fix: `Sonic2DeathEggRobotInstance` now models ObjC7's two-dispatch ending
+  handoff. The first frame mirrors `loc_3D922` by setting `Control_Locked`
+  while preserving the prior logical input word, so `Sonic_JumpHeight` still
+  sees the held jump/left bits. The next frame mirrors `loc_3D93C` by writing
+  forced RIGHT (`docs/s2disasm/s2.asm:82966-82980,36233-36235,37416-37429`).
+  No broad `SpriteManager` or `PlayableSpriteMovement` control-lock change was
+  committed.
+- Verification command:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2DezEndingLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay" test`.
+- Verification result: 7 selected trace classes passed. DEZ advanced from
+  f7503 / 11 errors to green; WFZ did not regress.
+- BizHawk/ROM evidence: no new PC probe was needed. The existing trace context
+  at f7503 showed the jump-cap signature (`y_speed` expected `-0450`, actual
+  `-03C8`) while the ROM disassembly shows `Control_Locked` is set one ObjC7
+  dispatch before the forced-right logical write.
+
 ## 2026-06-29 - S2 integration sweep after CPZ Obj1E release animation merge (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /

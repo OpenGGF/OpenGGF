@@ -413,6 +413,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     // Setup-ending state (ObjC7_SetupEnding, s2.asm:83050-83124)
     private int robotFollowOffset;  // Robot trails player by this amount, decremented every 32 frames
     private int defeatFrameCounter; // Frame counter for setup-ending rumble timing
+    private int defeatWalkFrameCounter; // Frames since loc_3D922 locked control before loc_3D93C force-right
     private int fadeTimer;          // Countdown for fade-to-white before credits
 
     // Child references (10 permanent)
@@ -451,6 +452,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         defeatPhase = 0;
         robotFollowOffset = 0;
         defeatFrameCounter = 0;
+        defeatWalkFrameCounter = 0;
         fadeTimer = 0;
         targetedPlayerX = 0;
         frontPunchTriggered = false;
@@ -1005,6 +1007,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             }
         } else {
             defeatPhase = 4;
+            defeatWalkFrameCounter = 0;
             Camera camera = services().camera();
             if (camera != null) {
                 camera.setMaxX((short) DEFEAT_CAMERA_MAX_X);
@@ -1017,16 +1020,25 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     /** Defeat phase 4: Force player right, advance to setup-ending when camera reaches $840.
      *  ROM: ObjC7_Phase3 (s2.asm) - lock controls, walk right until Camera_X >= $840. */
     private void updateDefeatWalkPlayer(int frameCounter, AbstractPlayableSprite player) {
-        // ROM: move.b #1,(Ctrl_1_Locked).w — lock player controls
-        // ROM: move.w #(btnRight<<8)|btnRight,(Ctrl_1_Logical).w — force walk right
         if (player != null) {
+            // ROM splits the ending handoff across two body dispatches:
+            // loc_3D922 locks Control_Locked (s2.asm:82966-82975), so Obj01_Control
+            // skips the Ctrl_1 -> Ctrl_1_Logical copy (s2.asm:36233-36235) and the
+            // previous logical jump/left word survives for Sonic_JumpHeight.
+            // loc_3D93C writes forced RIGHT on the next dispatch (s2.asm:82978-82980).
+            int latchedLogicalInput = player.getLogicalInputState();
             player.setControlLocked(true);
-            player.setForceInputRight(true);
+            if (defeatWalkFrameCounter == 0) {
+                player.setForcedInputMask(latchedLogicalInput);
+            } else {
+                player.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+            }
             // Prevent pit death: clamp player Y to ground level during ending walk.
             // The level collision may not extend far enough to the credits trigger X,
             // so force the player to stay at ground height.
             clampPlayerToGround(player);
         }
+        defeatWalkFrameCounter++;
 
         Camera camera = services().camera();
         if (camera != null && camera.getX() >= DEFEAT_CAMERA_WALK_TARGET) {
