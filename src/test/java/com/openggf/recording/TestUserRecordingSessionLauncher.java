@@ -8,13 +8,20 @@ import com.openggf.version.BuildIdentity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -101,21 +108,55 @@ class TestUserRecordingSessionLauncher {
         assertSame(options, fixture.launcher().activePlaybackOptions());
     }
 
+    @Test
+    void beginPlaybackDoesNotRestartWhenMovieLoadFails() throws Exception {
+        Fixture fixture = new Fixture();
+        RecordingLaunchContext manifestContext = new RecordingLaunchContext(
+                "s3k", 5, 2, "knuckles", List.of("tails"),
+                true, "current-act-fresh-start");
+        Path bk2 = writeRecordingZip("missing-input-log.bk2", manifestContext, 2, false, true);
+        UserRecordingEntry entry = new UserRecordingEntry(
+                bk2, "missing-input-log", null, 2, fixture.now,
+                RecordingVersionWarning.NONE, "");
+
+        IOException thrown = assertThrows(IOException.class,
+                () -> fixture.launcher().beginPlayback(entry, new UserRecordingPlaybackOptions(1, true, false)));
+
+        assertTrue(thrown.getMessage().contains("Input Log"));
+        assertEquals(0, fixture.restarts.size());
+        assertEquals(-1, fixture.startedOffset);
+        assertNull(fixture.startedMovie);
+        assertNull(fixture.observer);
+    }
+
+    @Test
+    void beginPlaybackAllowsMissingDesyncLiteSidecar() throws Exception {
+        Fixture fixture = new Fixture();
+        RecordingLaunchContext manifestContext = new RecordingLaunchContext(
+                "s2", 3, 1, "tails", List.of("sonic"),
+                false, "current-act-fresh-start");
+        Path bk2 = writeRecordingZip("missing-sidecar.bk2", manifestContext, 2, true, false);
+        UserRecordingEntry entry = new UserRecordingEntry(
+                bk2, "missing-sidecar", null, 2, fixture.now,
+                RecordingVersionWarning.NONE, "");
+
+        UserRecordingPlaybackState state = fixture.launcher()
+                .beginPlayback(entry, new UserRecordingPlaybackOptions(1, true, false));
+
+        assertEquals(UserRecordingPlaybackState.PLAYING, state);
+        assertEquals(List.of(manifestContext), fixture.restarts);
+        assertNotNull(fixture.startedMovie);
+        assertEquals(2, fixture.startedMovie.getFrameCount());
+        assertNotNull(fixture.observer);
+        assertNotNull(fixture.launcher().activeVerifier());
+        assertEquals(0, fixture.launcher().activeVerifier().result().comparedFrames());
+    }
+
     private Path writeRecording(String fileName, RecordingLaunchContext context, int frameCount) throws Exception {
         Path path = tempDir.resolve("fixtures").resolve(fileName);
         UserRecordingWriter.write(
                 path,
-                new UserRecordingManifest(
-                        UserRecordingManifest.CURRENT_SCHEMA_VERSION,
-                        fileName,
-                        new BuildIdentity("0.6.prerelease", "task9", false),
-                        context,
-                        UserRecordingSidecarMetadata.everyFrame(),
-                        new RecordingDeterminismMetadata(0, null),
-                        "A",
-                        frameCount,
-                        UserRecordingStopReason.USER_STOPPED,
-                        Instant.parse("2026-06-29T14:30:22Z")),
+                manifest(fileName, context, frameCount),
                 java.util.stream.IntStream.range(0, frameCount)
                         .mapToObj(frame -> new RecordedFrameInput(
                                 frame,
@@ -132,6 +173,61 @@ class TestUserRecordingSessionLauncher {
                                 0, 0, 0, 0, 0, 0, 0))
                         .toList());
         return path;
+    }
+
+    private Path writeRecordingZip(String fileName, RecordingLaunchContext context,
+            int frameCount, boolean includeInputLog, boolean includeSidecar) throws Exception {
+        Path path = tempDir.resolve("fixtures").resolve(fileName);
+        Files.createDirectories(path.getParent());
+        try (OutputStream out = Files.newOutputStream(path);
+                ZipOutputStream zip = new ZipOutputStream(out, StandardCharsets.UTF_8)) {
+            writeEntry(zip, "Header.txt", "Author: OpenGGF\nGameName: " + context.gameId() + "\n");
+            if (includeInputLog) {
+                writeEntry(zip, "Input Log.txt", inputLog(frameCount));
+            }
+            writeEntry(zip, "OpenGGF/manifest.json",
+                    UserRecordingJson.writeManifest(manifest(fileName, context, frameCount)));
+            if (includeSidecar) {
+                writeEntry(zip, "OpenGGF/desync-lite.jsonl", "{}\n");
+            }
+        }
+        return path;
+    }
+
+    private static UserRecordingManifest manifest(String fileName, RecordingLaunchContext context, int frameCount) {
+        return new UserRecordingManifest(
+                UserRecordingManifest.CURRENT_SCHEMA_VERSION,
+                fileName,
+                new BuildIdentity("0.6.prerelease", "task9", false),
+                context,
+                UserRecordingSidecarMetadata.everyFrame(),
+                new RecordingDeterminismMetadata(0, null),
+                "A",
+                frameCount,
+                UserRecordingStopReason.USER_STOPPED,
+                Instant.parse("2026-06-29T14:30:22Z"));
+    }
+
+    private static String inputLog(int frameCount) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("[Input]\n");
+        builder.append("LogKey:").append(UserRecordingWriter.LOG_KEY).append('\n');
+        for (int frame = 0; frame < frameCount; frame++) {
+            builder.append('|')
+                    .append(frame == 0 ? "...RA..." : "........")
+                    .append('|')
+                    .append("........")
+                    .append('|')
+                    .append('\n');
+        }
+        builder.append("[/Input]\n");
+        return builder.toString();
+    }
+
+    private static void writeEntry(ZipOutputStream zip, String name, String content) throws Exception {
+        zip.putNextEntry(new ZipEntry(name));
+        zip.write(content.getBytes(StandardCharsets.UTF_8));
+        zip.closeEntry();
     }
 
     private final class Fixture implements UserRecordingSessionLauncher.GameLoopAdapter,

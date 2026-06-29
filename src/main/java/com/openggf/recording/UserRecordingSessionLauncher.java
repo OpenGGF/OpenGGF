@@ -114,12 +114,11 @@ public final class UserRecordingSessionLauncher {
 
         UserRecordingManifest manifest = readManifest(entry.path());
         RecordingLaunchContext context = manifest.launchContext();
-        gameLoop.restartFromRecordingLaunchContext(context);
-
         Bk2Movie movie = movieLoader.load(entry.path());
         List<DesyncLiteFrame> sidecarFrames = readDesyncLite(entry.path());
         UserRecordingVerifier verifier = new UserRecordingVerifier(sidecarFrames);
 
+        gameLoop.restartFromRecordingLaunchContext(context);
         playback.startSession(movie, 0);
         playback.setFrameObserver(verifier.observer());
 
@@ -170,7 +169,7 @@ public final class UserRecordingSessionLauncher {
         try (ZipFile zip = new ZipFile(bk2Path.toFile())) {
             ZipEntry entry = findEntryIgnoreCase(zip, DESYNC_LITE_ENTRY);
             if (entry == null) {
-                throw new IOException("BK2 missing required entry: " + DESYNC_LITE_ENTRY);
+                return List.of();
             }
             List<DesyncLiteFrame> frames = new ArrayList<>();
             try (BufferedReader reader = new BufferedReader(
