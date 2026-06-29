@@ -2264,6 +2264,40 @@ rewrites `Ctrl_1_Logical` around the countdown edge.
 
 ---
 
+## P55 — Ordered Sonic/Sidekick SolidObject calls can carry later riders from the pre-mutation baseline
+
+**Symptom.** Sidekick is exactly 1px behind ROM while already standing on a
+solid object that Sonic pushes or compresses first in the same object routine.
+The object position and standing slot agree, but the later sidekick participant
+misses the first push delta.
+
+**Root cause.** Some S2 objects call `SolidObject_Always_SingleCharacter` for
+Sonic, mutate the object in response to that result, restore the routine-entry
+registers, then call the same solid routine for Sidekick. The later call can
+therefore compare the current object position against the pre-mutation `d4`
+baseline and carry an already-standing sidekick by Sonic's delta. A naive engine
+loop that only carries the player who caused the mutation drops that ordered
+carry.
+
+**What to check / fix.** When a ROM routine invokes the per-character
+`SolidObject` path more than once with saved/restored `d1-d4`, inspect whether
+the first player's contact mutates `x_pos`/`y_pos` before the later player's
+solid call. If it does, process players in ROM order and carry later existing
+riders from the previous solid-state baseline. Do not key the behavior on a
+zone, route, or trace frame; key it on the object's actual per-player routine
+ordering and standing state.
+
+**ROM citation.** Obj45 OOZ horizontal spring:
+`docs/s2disasm/s2.asm:50393-50420` (`Obj45_Horizontal` Sonic pass, restore,
+Sidekick pass), `s2.asm:50465-50510` (horizontal compression moves object and
+player), and `s2.asm:35193-35234` (`SolidObject45` continued-rider carry from
+`d4`).
+
+**Originating commit.** `fix: advance S2 OOZ2 Obj45 ordered carry`
+(`TestS2Ooz2LevelSelectTraceReplay` advances f1601 -> f1603).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
