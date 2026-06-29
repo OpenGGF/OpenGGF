@@ -233,6 +233,9 @@ class TestMonitorObjectInstance {
         assertFalse(profile.monitorSolidity());
         assertEquals(0, profile.monitorVerticalOffset());
         assertFalse(profile.stickyContactBuffer());
+        assertTrue(profile.inclusiveRightEdge());
+        assertTrue(profile.bypassesOffscreenSolidGate());
+        assertTrue(monitor.projectsPreMovementGroundXForSolidContact(null));
     }
 
     private static boolean isBroken(MonitorObjectInstance monitor) {
