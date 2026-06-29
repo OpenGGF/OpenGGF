@@ -93,6 +93,7 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
     private int[] chainY;
     private int spikeBallX;
     private int spikeBallY;
+    private MCZBrickDisplayChild displayChild;
 
     public MCZBrickObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -177,18 +178,15 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOutOfRangeReferenceX() {
+        return initialX;
+    }
+
+    @Override
     public ObjectSpawn getSpawn() {
         // For spike ball mode, return spawn with dynamic position for touch response collision
         if (mode == Mode.SPIKE_BALL) {
-            return new ObjectSpawn(
-                    spikeBallX,
-                    spikeBallY,
-                    spawn.objectId(),
-                    spawn.subtype(),
-                    spawn.renderFlags(),
-                    spawn.respawnTracked(),
-                    spawn.rawYWord()
-            );
+            return buildSpawnAt(spikeBallX, spikeBallY);
         }
         return spawn;
     }
@@ -201,11 +199,59 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
         }
 
         if (mode == Mode.SPIKE_BALL) {
+            ensureDisplayChild();
             // Update rotation angle (16-bit accumulation)
             angleWord = (angleWord + speed) & 0xFFFF;
             updateRotation();
         }
         // Brick mode has no update logic - it's static
+    }
+
+    @Override
+    public void onUnload() {
+        if (displayChild != null) {
+            displayChild.setDestroyed(true);
+        }
+    }
+
+    private void ensureDisplayChild() {
+        if (displayChild != null) {
+            return;
+        }
+        displayChild = spawnChild(() -> new MCZBrickDisplayChild(this));
+    }
+
+    private void attachDisplayChildForRewind(MCZBrickDisplayChild child) {
+        displayChild = child;
+    }
+
+    private static MCZBrickObjectInstance nearestParentForRewind(RewindRecreateContext ctx) {
+        var objectManager = ctx.objectManager() != null
+                ? ctx.objectManager()
+                : ctx.objectServices().objectManager();
+        ObjectSpawn spawn = ctx.spawn();
+        return objectManager.getActiveObjects().stream()
+                .filter(MCZBrickObjectInstance.class::isInstance)
+                .map(MCZBrickObjectInstance.class::cast)
+                .filter(parent -> parent.mode == Mode.SPIKE_BALL)
+                .filter(parent -> !parent.isDestroyed())
+                .min((a, b) -> Integer.compare(
+                        distanceFromChildSpawn(a, spawn),
+                        distanceFromChildSpawn(b, spawn)))
+                .orElse(null);
+    }
+
+    private static int distanceFromChildSpawn(MCZBrickObjectInstance parent, ObjectSpawn spawn) {
+        return Math.abs(parent.displayChildX() - spawn.x())
+                + Math.abs(parent.displayChildY() - spawn.y());
+    }
+
+    private int displayChildX() {
+        return chainCount > 0 ? chainX[chainCount - 1] : spikeBallX;
+    }
+
+    private int displayChildY() {
+        return chainCount > 0 ? chainY[chainCount - 1] : spikeBallY;
     }
 
     /**
@@ -407,6 +453,73 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
             // Draw spike ball head position (red cross)
             ctx.drawLine(spikeBallX - 4, spikeBallY, spikeBallX + 4, spikeBallY, 1.0f, 0.0f, 0.0f);
             ctx.drawLine(spikeBallX, spikeBallY - 4, spikeBallX, spikeBallY + 4, 1.0f, 0.0f, 0.0f);
+        }
+    }
+
+    private static final class MCZBrickDisplayChild extends AbstractObjectInstance implements RewindRecreatable {
+        private final MCZBrickObjectInstance parent;
+        private int x;
+        private int y;
+
+        private MCZBrickDisplayChild(MCZBrickObjectInstance parent) {
+            super(new ObjectSpawn(
+                    parent.displayChildX(),
+                    parent.displayChildY(),
+                    parent.spawn.objectId(),
+                    parent.spawn.subtype(),
+                    parent.spawn.renderFlags(),
+                    false,
+                    parent.spawn.rawYWord(),
+                    parent.spawn.layoutIndex()),
+                    "MCZBrickDisplayChild");
+            this.parent = parent;
+            syncFromParent();
+        }
+
+        @Override
+        public MCZBrickDisplayChild recreateForRewind(RewindRecreateContext ctx) {
+            MCZBrickObjectInstance parent = nearestParentForRewind(ctx);
+            if (parent == null) {
+                throw new IllegalStateException("Cannot recreate MCZ Obj75 display child without a live parent");
+            }
+            MCZBrickDisplayChild child = new MCZBrickDisplayChild(parent);
+            parent.attachDisplayChildForRewind(child);
+            return child;
+        }
+
+        private void syncFromParent() {
+            this.x = parent.displayChildX();
+            this.y = parent.displayChildY();
+            updateDynamicSpawn(x, y);
+        }
+
+        @Override
+        public int getX() {
+            return x;
+        }
+
+        @Override
+        public int getY() {
+            return y;
+        }
+
+        @Override
+        public int getOutOfRangeReferenceX() {
+            return parent.initialX;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (parent.isDestroyed()) {
+                setDestroyed(true);
+                return;
+            }
+            syncFromParent();
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // Parent renders the full Obj75 multi-sprite assembly; this instance occupies the ROM SST child slot.
         }
     }
 

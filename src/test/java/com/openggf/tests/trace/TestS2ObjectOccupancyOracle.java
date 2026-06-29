@@ -4,6 +4,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.objects.ArrowProjectileInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.objects.AnimalObjectInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -210,10 +211,34 @@ public class TestS2ObjectOccupancyOracle {
                         + ") nearby slots " + pushCheck.summary());
     }
 
+    @Test
+    public void mcz2Obj75SpikeBallParentAndDisplayChildSurviveUntilTailsHit() throws Exception {
+        SlotCheck slotCheck = driveTrace("mcz2", Sonic2ZoneConstants.ZONE_MCZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 6429) {
+                        return null;
+                    }
+                    ObjectSpawnState state = obj75Mcz2SpikeBallState(om);
+                    boolean matches = state != null
+                            && state.active()
+                            && !state.dormant()
+                            && state.liveCount() >= 2;
+                    return matches ? null : new SlotCheck(-1,
+                            describeSlots(om.occupiedDynamicSlotIds(), 24, 36) + " | "
+                                    + describeObj75Mcz2SpawnState(om));
+                });
+        Assertions.assertNull(slotCheck,
+                () -> "MCZ2 Obj75 spike-ball parent/display child was not live at f6429; actual slots "
+                        + slotCheck.summary());
+    }
+
     private record SlotCheck(Integer actualId, String summary) {
     }
 
     private record PushCheck(boolean pushing, int tailsX, int tailsY, String summary) {
+    }
+
+    private record ObjectSpawnState(boolean active, boolean dormant, int liveCount) {
     }
 
     private record RideCheck(int expectedY, int actualY, boolean actualAir, boolean actualOnObject) {
@@ -508,6 +533,61 @@ public class TestS2ObjectOccupancyOracle {
             sb.append(slot).append(':').append(String.format("%02X", id & 0xFF));
         }
         return sb.toString();
+    }
+
+    private static String describeObj75Mcz2SpawnState(ObjectManager objectManager) {
+        StringBuilder sb = new StringBuilder("obj75-spawns");
+        for (var spawn : objectManager.getAllSpawns()) {
+            if (spawn.objectId() == 0x75
+                    && spawn.x() >= 0x1700
+                    && spawn.x() <= 0x1800) {
+                if (sb.length() > "obj75-spawns".length()) {
+                    sb.append(' ');
+                } else {
+                    sb.append(' ');
+                }
+                int liveSlot = objectManager.getActiveObjects().stream()
+                        .filter(AbstractObjectInstance.class::isInstance)
+                        .map(AbstractObjectInstance.class::cast)
+                        .filter(instance -> instance.getSpawn() != null)
+                        .filter(instance -> instance.getSpawn().layoutIndex() == spawn.layoutIndex())
+                        .mapToInt(AbstractObjectInstance::getSlotIndex)
+                        .findFirst()
+                        .orElse(-1);
+                sb.append(String.format("i%d %02X@%04X,%04X sub=%02X active=%s dorm=%s rem=%s live=s%d",
+                        spawn.layoutIndex(),
+                        spawn.objectId(),
+                        spawn.x(),
+                        spawn.y(),
+                        spawn.subtype(),
+                        objectManager.getActiveSpawns().contains(spawn),
+                        objectManager.isDormant(spawn),
+                        objectManager.isRemembered(spawn),
+                        liveSlot));
+            }
+        }
+        return sb.toString();
+    }
+
+    private static ObjectSpawnState obj75Mcz2SpikeBallState(ObjectManager objectManager) {
+        for (var spawn : objectManager.getAllSpawns()) {
+            if (spawn.objectId() == 0x75
+                    && spawn.x() == 0x1740
+                    && spawn.y() == 0x0690
+                    && spawn.subtype() == 0x17) {
+                int liveCount = (int) objectManager.getActiveObjects().stream()
+                        .filter(AbstractObjectInstance.class::isInstance)
+                        .map(AbstractObjectInstance.class::cast)
+                        .filter(instance -> instance.getSpawn() != null)
+                        .filter(instance -> instance.getSpawn().layoutIndex() == spawn.layoutIndex())
+                        .count();
+                return new ObjectSpawnState(
+                        objectManager.getActiveSpawns().contains(spawn),
+                        objectManager.isDormant(spawn),
+                        liveCount);
+            }
+        }
+        return null;
     }
 
     @Test
