@@ -188,6 +188,17 @@ public class CNZSlotMachineManager {
     }
 
     /**
+     * Clears the cage ownership latch without stopping the reels.
+     * <p>
+     * ROM ObjD6 clears {@code SlotMachineInUse} when a linked PointPokey exits,
+     * but {@code SlotMachine_Routine} continues to run from {@code LevEvents_CNZ}
+     * until the reels naturally complete.
+     */
+    public void releaseUse() {
+        inUse = false;
+    }
+
+    /**
      * Update the slot machine state.
      * Called each frame while slot machine is active.
      */

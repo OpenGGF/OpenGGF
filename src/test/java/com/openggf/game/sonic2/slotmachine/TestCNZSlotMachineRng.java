@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestCNZSlotMachineRng {
     @Test
@@ -91,6 +92,35 @@ class TestCNZSlotMachineRng {
     }
 
     @Test
+    void linkedCageReleaseKeepsReelsRunningToRomCompletion() throws Exception {
+        CNZSlotMachineManager manager = new CNZSlotMachineManager();
+        setIntField(manager, "routine", 0x18);
+        setIntArray(manager, "slotIndices", new int[]{0x64, 0x8C, 0x91});
+        setIntArray(manager, "slotOffsets", new int[]{0x00, 0x00, 0x00});
+        manager.update(0x41E6);
+        manager.activate();
+
+        for (int frame = 0x41E7; frame <= 0x4207; frame++) {
+            manager.update(frame);
+        }
+        manager.releaseUse();
+
+        assertFalse((boolean) booleanField(manager, "inUse"),
+                "releaseUse mirrors ObjD6 clearing SlotMachineInUse");
+        assertEquals(0x10, intField(manager, "routine"),
+                "clearing SlotMachineInUse must not stop SlotMachine_Routine");
+
+        for (int frame = 0x4208; frame <= 0x42BF; frame++) {
+            manager.update(frame);
+        }
+
+        assertEquals(0x18, intField(manager, "routine"));
+        assertTrue(manager.isComplete());
+        assertArrayEquals(new int[]{0x00, 0x00, 0x00}, maskedSlots(manager, "slotOffsets"));
+        assertArrayEquals(new int[]{0x00, 0x00, 0x00}, maskedSlots(manager, "slotSpeeds"));
+    }
+
+    @Test
     void managerDoesNotUseJvmRandomSources() throws IOException {
         String source = Files.readString(Path.of(
                 "src/main/java/com/openggf/game/sonic2/slotmachine/CNZSlotMachineManager.java"));
@@ -112,6 +142,12 @@ class TestCNZSlotMachineRng {
         field.setInt(target, value);
     }
 
+    private static boolean booleanField(Object target, String fieldName) throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getBoolean(target);
+    }
+
     private static void setIntArray(Object target, String fieldName, int[] values) throws ReflectiveOperationException {
         int[] array = intArray(target, fieldName);
         System.arraycopy(values, 0, array, 0, values.length);
@@ -121,6 +157,11 @@ class TestCNZSlotMachineRng {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return (int[]) field.get(target);
+    }
+
+    private static int[] maskedSlots(Object target, String fieldName) throws ReflectiveOperationException {
+        int[] source = intArray(target, fieldName);
+        return new int[]{source[0] & 0xFF, source[1] & 0xFF, source[2] & 0xFF};
     }
 
     private static int invokeGetTargetForSlot(CNZSlotMachineManager manager, int slot)
