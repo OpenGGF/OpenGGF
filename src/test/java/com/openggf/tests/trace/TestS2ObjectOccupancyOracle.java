@@ -445,6 +445,84 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void arz2SecondArrowProjectileAllocatesInRomLowSlotOnRomFrame796() throws Exception {
+        SlotProjectileCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 796) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    TraceEvent.ObjectNear expectedArrow = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 18)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x22)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedArrow,
+                            "ARZ2 ROM fixture should allocate the second Obj22 arrow in low slot 0x12 at f796");
+                    ArrowProjectileInstance actualArrow = om.activeObjectsOfType(ArrowProjectileInstance.class)
+                            .stream()
+                            .filter(arrow -> arrow.getSlotIndex() == 18)
+                            .findFirst()
+                            .orElse(null);
+                    return new SlotProjectileCheck(actual.get(18),
+                            actualArrow == null ? -1 : actualArrow.getX(),
+                            expectedArrow.x() & 0xFFFF,
+                            "expected " + describeSlots(expected, 18, 42)
+                                    + " actual " + describeSlots(actual, 18, 42));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x22, slotCheck.actualId(),
+                "S2 Obj22_ShootArrow must use AllocateObject/lowest-free semantics; at f796 the "
+                        + "free ROM slot is below the shooter, so the projectile belongs in slot 0x12. "
+                        + "Actual slots " + slotCheck.summary());
+        Assertions.assertEquals(slotCheck.expectedX(), slotCheck.actualX(),
+                "A lower-slot Obj22 child has already been passed by ExecuteObjects on its allocation "
+                        + "frame, so it must remain at the shooter x_pos until the next frame "
+                        + "(docs/s2disasm/s2.asm:51570-51607); actual slots " + slotCheck.summary());
+    }
+
+    @Test
+    public void arz2ArrowProjectileUsesRomWallProbeAtRomFrame844() throws Exception {
+        SlotProjectileCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 844) {
+                        return null;
+                    }
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    TraceEvent.ObjectNear expectedArrow = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 65)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x22)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedArrow,
+                            "ARZ2 ROM fixture should still report the first Obj22 arrow in slot 0x41 at f844");
+                    ArrowProjectileInstance actualArrow = om.activeObjectsOfType(ArrowProjectileInstance.class)
+                            .stream()
+                            .filter(arrow -> arrow.getSlotIndex() == 65)
+                            .findFirst()
+                            .orElse(null);
+                    return new SlotProjectileCheck(actual.get(65),
+                            actualArrow == null ? -1 : actualArrow.getX(),
+                            expectedArrow.x() & 0xFFFF,
+                            describeSlots(actual, 60, 65));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x22, slotCheck.actualId(),
+                "S2 Obj22 arrow must survive through the ROM opposite-side wall probe at f844; "
+                        + "actual slots " + slotCheck.summary());
+        Assertions.assertEquals(slotCheck.expectedX(), slotCheck.actualX(),
+                "S2 Obj22_Arrow checks ObjCheckLeftWallDist at x_pos-8 for a right-moving arrow, "
+                        + "not the right wall at x_pos+8 (docs/s2disasm/s2.asm:51607-51623); "
+                        + "actual slots " + slotCheck.summary());
+    }
+
+    @Test
     public void arz2LeafParticlesDoNotDisplaceMouthBubbleSlotOnRomFrame723() throws Exception {
         SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {

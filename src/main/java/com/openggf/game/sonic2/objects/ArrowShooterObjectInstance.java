@@ -205,11 +205,11 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance implement
         // Play pre-arrow sound (SndID_PreArrowFiring, played by Obj22_ShootArrow).
         services().playSfx(Sonic2Sfx.PRE_ARROW_FIRING.id);
 
-        // ROM Obj22_ShootArrow allocates the child, returns the parent routine to Obj22_Main,
-        // then calls AnimateSprite again (docs/s2disasm/s2.asm:51570-51587). A higher-slot
-        // child is reached later in the same ExecuteObjects pass, so Obj22_Arrow_Init falls
-        // through into Obj22_Arrow/ObjectMove on its allocation frame.
-        spawnChild(() -> new ArrowProjectileInstance(spawn, currentX, currentY, hFlip));
+        // ROM Obj22_ShootArrow calls AllocateObject, not AllocateObjectAfterCurrent
+        // (docs/s2disasm/s2.asm:51570-51587). A higher-slot child is reached later in
+        // the same ExecuteObjects pass and moves immediately; a lower-slot child waits
+        // until the next pass.
+        spawnFreeChild(() -> new ArrowProjectileInstance(spawn, currentX, currentY, hFlip));
         updateAnimation();
     }
 

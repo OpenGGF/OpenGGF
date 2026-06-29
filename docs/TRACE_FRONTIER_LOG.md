@@ -23064,3 +23064,47 @@ Verification:
 - `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
   exited 0; the requested S2 green-guard traces stayed green while the expected
   CPZ reds remained at the frontiers above.
+
+### 2026-06-29 -- S2 ARZ2 Obj22 arrow allocation/wall probes: f796 -> f870
+
+Worktree `bugfix/ai-trace-s2-arz2-r10` from integration parent
+`abd56516f44613445a7b73487b9ea86088cee78a`.
+
+Root fixed: Obj22 arrow spawning used after-current child allocation, but the ROM
+`Obj22_ShootArrow` calls `AllocateObject` / lowest-free allocation
+(`docs/s2disasm/s2.asm:51570-51587`). That only happened to match when the first
+free slot was after the shooter. At trace f796, ROM reused slot `0x12`, below the
+slot-`0x24` shooter, so the new arrow stayed at `x_pos=$0820` with routine 6 until
+the next `ExecuteObjects` pass. The engine forced the child after the parent into
+slot `0x2A`, where it executed immediately and appeared at `$0824`.
+
+Follow-up root fixed in the same Obj22 path: right-moving arrows do not probe the
+right wall at `x_pos+8`. ROM `Obj22_Arrow` calls `ObjectMove`, then for an
+unflipped/right-moving arrow calls `ObjCheckLeftWallDist` with `d3=-8`; the
+flipped/left-moving path calls `ObjCheckRightWallDist` with `d3=8`
+(`docs/s2disasm/s2.asm:51607-51623`). Mirroring that opposite-side probe keeps the
+slot-`0x41` arrow alive and at ROM x `$0948` through f844.
+
+Fix:
+- `ArrowShooterObjectInstance` now uses `spawnFreeChild(...)` for Obj22 arrows,
+  preserving ROM lowest-free slot selection while still allowing same-frame
+  execution when the chosen slot is after the shooter.
+- `ArrowProjectileInstance` now uses the ROM helper side/offset pairing for wall
+  deletion.
+- `TestS2ObjectOccupancyOracle` now asserts the higher-slot f696 arrow movement,
+  the low-slot f796 arrow allocation/no-move case, and the f844 wall-probe
+  survival/position case.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f796 / 2846 errors
+  (`obj_extra_s2A_x` expected absent, actual `0x0824`) -> f870 / 2794 errors
+  (`obj_s18_slot` expected `0x18`, actual `0x17`).
+
+Verification:
+- `mvn "-Dtest=TestS2ObjectOccupancyOracle#arz2ArrowProjectileAllocatesInRomSlot65OnRomFrame696+arz2SecondArrowProjectileAllocatesInRomLowSlotOnRomFrame796+arz2ArrowProjectileUsesRomWallProbeAtRomFrame844" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  passed 3 focused Obj22 occupancy assertions.
+- `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  produced the f870 / 2794 frontier above.
+- `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0; fresh surefire XML for all seven requested S2 green-guard traces
+  reports `failures="0"` / `errors="0"`.
