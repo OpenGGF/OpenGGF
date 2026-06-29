@@ -6,7 +6,7 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-## 2026-06-29 - S2 accepted routing baseline after ARZ2 and CPZ2 integration
+## 2026-06-29 - S2 accepted routing baseline after ARZ2, CPZ2, and HTZ1 integration
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
   `bugfix/ai-s2-trace-develop`.
@@ -25,6 +25,9 @@ branch-local measurements.
     `TestS2Arz2LevelSelectTraceReplay` from f888 / 2720 to f1028 / 2688 and
     reduced `TestS2Htz2LevelSelectTraceReplay` total errors from 1060 to 1057
     while holding its first frontier.
+  - HTZ1 Obj92 closest-native-player throw gate advanced
+    `TestS2HtzLevelSelectTraceReplay` from f6586 / 226 to f7108 / 221 while
+    holding `TestS2Htz2LevelSelectTraceReplay` at f3322 / 1057.
   - A later MTZ1 offscreen sidekick-latch candidate advanced MTZ1 but regressed
     MTZ2 total errors from 951 to 971 at f3055; it was rejected and reverted in
     `a01e0fedc`.
@@ -33,7 +36,7 @@ branch-local measurements.
   `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
   `CPZ1` f4281 / 246 (`tails_x_speed` expected `-0018`, actual `0x0000`);
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
-  `HTZ1` f6586 / 226 (`y_speed` expected `-0178`, actual `-0078`);
+  `HTZ1` f7108 / 221 (`tails_x` expected `0x231F`, actual `0x2320`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
   `MCZ2` f8965 / 156 (`y` expected `0x063E`, actual `0x0643`);
   `MTZ1` f5647 / 616 (`tails_y_sub` expected `0x6500`, actual `0x3D00`);
@@ -126,6 +129,39 @@ branch-local measurements.
   MTZ2 f3055 / 951; MTZ3 f2048 / 3742; OOZ1 f1790 / 1125; OOZ2 f3226 / 945.
   Compared to the accepted r13 baseline, only CPZ2 moved and no first frontier
   or total error count regressed.
+
+## 2026-06-29 - S2 HTZ1 Obj92 closest-native-player throw gate (f6586 -> f7108)
+
+- Worktree/branch: `.worktrees/trace-s2-htz-r13` /
+  `bugfix/ai-trace-s2-htz-r13`, forked from
+  `bugfix/ai-s2-trace-develop` at `a01e0fedc537573c92bc3f01d8caa6121dfd9c8d`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: HTZ1 f6586 / 226 errors (`y_speed` expected
+  `-0178`, actual `-0078`); HTZ2 f3322 / 1060 errors (`tails_x_sub`
+  expected `0x7500`, actual `0x8D00`).
+- Evidence/fix: HTZ1 f6586 showed the engine destroying Obj92 Spiker one
+  frame early at `x=$1CEF` while ROM still had slot 32 Obj92 alive at
+  `x=$1CF0`. Obj92's throw-arm helper calls `Obj_GetOrientationToPlayer`,
+  which selects the closer native player (MainCharacter vs Sidekick) by
+  absolute 16-bit X distance before applying Obj92's `+/-$20` horizontal and
+  `+/-$80` vertical windows (`docs/s2disasm/s2.asm:72812-72831,73954-73977`).
+  `SpikerBadnikInstance` was checking only the main player, shifting the
+  throw/pause cadence and final turnaround by one pixel; it now uses
+  `ObjectPlayerQuery.nearestByRomX(NATIVE_P1_P2, ...)`.
+- Focused verification:
+  `mvn "-Dtest=TestSonic2SpikerBadnikInstance,TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: focused Obj92 unit passed; HTZ1 advances to f7108 / 221 errors
+  (`tails_x` expected `0x231F`, actual `0x2320`); HTZ2 remains f3322 / 1057.
+- S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: command exited 0; selected guard traces passed.
+- Full S2 sweep after clearing `target/surefire-reports`:
+  `mvn "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: 19 trace classes ran; 7 green / 12 expected-red. Red summary:
+  ARZ2 f1028 / 2688; CNZ2 f5242 / 875; CPZ1 f4281 / 246; CPZ2 f2976 / 1232;
+  HTZ1 f7108 / 221; HTZ2 f3322 / 1057; MCZ2 f8965 / 156; MTZ1 f5647 / 616;
+  MTZ2 f4375 / 950; MTZ3 f2048 / 3742; OOZ1 f1790 / 1125; OOZ2 f3226 / 945.
 
 ## 2026-06-29 - S2 OOZ2 Obj45 SideAir push-clear compression (f2623 -> f3226)
 
