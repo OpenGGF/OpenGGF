@@ -154,6 +154,17 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void nutAirborneStaleStandingBitReturnsNoContact() {
+        NutObjectInstance nut = new NutObjectInstance(
+                new ObjectSpawn(0x16C0, 0x04E6, Sonic2ObjectIds.NUT, 0, 0, false, 0),
+                "Nut");
+
+        assertTrue(nut.airborneStaleStandingBitReturnsNoContact(null),
+                "Obj69's SolidObject tail clears stale standing bits and returns d4=0 when "
+                        + "the player is already airborne (s2.asm:54006-54013, 35028-35046)");
+    }
+
+    @Test
     void wfzPaletteSwitcherUsesQueryOnlySidekickCrossing() {
         TestablePlayableSprite main = player("sonic", 0x0800, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x0FF0, 0x1000);

@@ -188,6 +188,16 @@ public class NutObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // Obj69 tail-calls S2 SolidObject after its action passes
+        // (docs/s2disasm/s2.asm:54006-54013). SolidObject first consumes this
+        // object's stale standing bit; if the player is already airborne it
+        // clears Status_OnObj/d6 and returns d4=0 without reaching
+        // SolidObject_cont or RideObject_SetRide (s2.asm:35028-35046).
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         if (!(contact.standing() || contact.touchTop())) {
             return;

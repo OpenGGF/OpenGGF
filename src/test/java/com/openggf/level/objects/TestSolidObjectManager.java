@@ -286,6 +286,92 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void offscreenS2AirborneSidekickKeepsRideLatchWithoutStandingContact() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        CountingSolidObject object = new CountingSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
+        sidekick.useFeatureSet(PhysicsFeatureSet.SONIC_2);
+        sidekick.setCpuControlled(true);
+        sidekick.setRenderFlagOnScreen(true);
+        sidekick.setWidth(20);
+        sidekick.setHeight(20);
+        sidekick.setCentreX((short) 100);
+        int centreY = 100 - params.groundHalfHeight() - sidekick.getYRadius();
+        sidekick.setCentreY((short) centreY);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setAir(true);
+
+        manager.updateSolidContacts(sidekick);
+        assertTrue(manager.isRidingObject(sidekick));
+
+        object.contactCount = 0;
+        sidekick.setRenderFlagOnScreen(false);
+        sidekick.setOnObject(true);
+        sidekick.setAir(true);
+        sidekick.setYSpeed((short) 0x0038);
+
+        assertFalse(manager.hasGroundingObjectSupport(sidekick),
+                "The stale offscreen Player_2 ride latch is preserved, but it is not active grounding support");
+
+        manager.updateSolidContacts(sidekick);
+
+        assertTrue(sidekick.isOnObject(),
+                "S2 SolidObject's offscreen Player_2 gate preserves the stale Status_OnObj latch");
+        assertTrue(sidekick.getAir(),
+                "Skipping the offscreen Player_2 pass preserves the current Status_InAir bit");
+        assertTrue(manager.isRidingObject(sidekick),
+                "The ride record remains latched for the next frame when ROM skips Player_2");
+        assertEquals(0x0038, sidekick.getYSpeed() & 0xFFFF,
+                "No SolidObject_cont support pass should zero the airborne sidekick's y_vel");
+        assertEquals(0, object.contactCount,
+                "S2 SolidObject returns before the P2 SolidObject_cont/RideObject_SetRide contact "
+                        + "when render_flags.on_screen is clear (s2.asm:35022-35025)");
+    }
+
+    @Test
+    public void inlineOffscreenS2AirborneSidekickKeepsRideLatchWithoutStandingContact() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        CountingStaleStandingBitFullSolidObject object =
+                new CountingStaleStandingBitFullSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+        TestPlayableSprite main = new TestPlayableSprite((short) 0, (short) 0);
+        main.setCentreX((short) 0);
+        main.setCentreY((short) 0);
+
+        TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
+        sidekick.useFeatureSet(PhysicsFeatureSet.SONIC_2);
+        sidekick.setCpuControlled(true);
+        sidekick.setRenderFlagOnScreen(true);
+        sidekick.setWidth(20);
+        sidekick.setHeight(20);
+        sidekick.setCentreX((short) 100);
+        int centreY = 100 - params.groundHalfHeight() - sidekick.getYRadius();
+        sidekick.setCentreY((short) centreY);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setAir(true);
+
+        manager.update(0, main, List.of(sidekick), 0, false, true, false);
+        assertTrue(manager.isRidingObject(sidekick));
+
+        object.contactCount = 0;
+        sidekick.setRenderFlagOnScreen(false);
+        sidekick.setOnObject(true);
+        sidekick.setAir(true);
+        sidekick.setYSpeed((short) 0x0060);
+
+        manager.update(1, main, List.of(sidekick), 0, false, true, false);
+
+        assertTrue(sidekick.isOnObject(),
+                "Inline S2 SolidObject must preserve stale Status_OnObj when offscreen Player_2 is skipped");
+        assertTrue(sidekick.getAir());
+        assertTrue(manager.isRidingObject(sidekick));
+        assertEquals(0, object.contactCount,
+                "The offscreen Player_2 gate returns before publishing a standing contact");
+    }
+
+    @Test
     public void s3kNormalSolidSupportClearsStaleObjectControlBitSixWallSuppression() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         TestSolidObject object = new TestSolidObject(100, 100, params);
@@ -1197,6 +1283,66 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void batchedAirborneStaleStandingBitDoesNotRelandSameObject() {
+        SolidObjectParams params = new SolidObjectParams(0x2B, 8, 9);
+        TestSolidObject object = new StaleStandingBitFullSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useFeatureSet(PhysicsFeatureSet.SONIC_2);
+        player.setWidth(20);
+        player.setHeight(20);
+        int maxTop = params.airHalfHeight() + player.getYRadius();
+        player.setCentreX((short) 100);
+        player.setCentreY((short) (100 - 4 - maxTop + 8));
+
+        manager.forceRidingObjectForBootstrap(player, object);
+        manager.clearRidingObject(player);
+        player.setAir(true);
+        player.setOnObject(false);
+        player.setYSpeed((short) 0x0038);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.getAir(),
+                "S2 SolidObject clears a stale standing bit and returns d4=0 without "
+                        + "falling through to SolidObject_cont when the player is already "
+                        + "airborne (s2.asm:35028-35046)");
+        assertFalse(player.isOnObject());
+        assertFalse(manager.isRidingObject(player));
+        assertEquals(0x0038, player.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
+    public void inlineAirUnseatSuppressesBatchedRelandSameFrame() {
+        SolidObjectParams params = new SolidObjectParams(0x2B, 8, 9);
+        TestSolidObject object = new StaleStandingBitFullSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useFeatureSet(PhysicsFeatureSet.SONIC_2);
+        player.setWidth(20);
+        player.setHeight(20);
+        int maxTop = params.airHalfHeight() + player.getYRadius();
+        player.setCentreX((short) 100);
+        player.setCentreY((short) (100 - 4 - maxTop + 8));
+
+        manager.forceRidingObjectForBootstrap(player, object);
+        player.setAir(true);
+        player.setYSpeed((short) 0x0038);
+
+        manager.processImmediateInlineSolidCheckpoint(object, player, List.of());
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.getAir(),
+                "An inline SolidObject stale-rider d4=0 return must suppress the later "
+                        + "batched SolidObject_cont check for the same object and frame");
+        assertFalse(player.isOnObject());
+        assertFalse(manager.isRidingObject(player));
+        assertEquals(0x0038, player.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
     public void unifiedRideExitClearsOnObjectWithoutForcingAirSameFrame() {
         GameModule previous = GameModuleRegistry.getCurrent();
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
@@ -1662,6 +1808,42 @@ public class TestSolidObjectManager {
         @Override
         public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
             return true;
+        }
+    }
+
+    private static final class CountingSolidObject extends TestSolidObject implements SolidObjectListener {
+        private int contactCount;
+
+        private CountingSolidObject(int x, int y, SolidObjectParams params) {
+            super(x, y, params);
+        }
+
+        @Override
+        public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
+            if (contact != null && contact.standing()) {
+                contactCount++;
+            }
+        }
+    }
+
+    private static final class CountingStaleStandingBitFullSolidObject
+            extends TestSolidObject implements SolidObjectListener {
+        private int contactCount;
+
+        private CountingStaleStandingBitFullSolidObject(int x, int y, SolidObjectParams params) {
+            super(x, y, params);
+        }
+
+        @Override
+        public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+            return true;
+        }
+
+        @Override
+        public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
+            if (contact != null && contact.standing()) {
+                contactCount++;
+            }
         }
     }
 

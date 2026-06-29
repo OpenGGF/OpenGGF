@@ -357,6 +357,47 @@ branch-local measurements.
   frame and total error count. `mvn "-Dtest=TestCpzStaircaseWallCollision" test
   "-DfailIfNoTests=false"` exited 0 with 2 tests, 0 failures, 0 errors.
 
+## 2026-06-29 - S2 MTZ1 Obj69 offscreen sidekick latch frontier move (f5647 -> f5713)
+
+- Worktree/branch: `.worktrees/trace-s2-mtz1-r12` /
+  `bugfix/ai-trace-s2-mtz1-r12`, branched from
+  `bugfix/ai-s2-trace-develop` at `a007ab673`.
+- Baseline reproduction:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2MtzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: f5647 / 616 errors (`tails_y_sub` expected
+  `0x6500`, actual `0x3D00`).
+- Evidence/fix: Obj69 runs its per-player action passes and tail-calls the
+  shared S2 `SolidObject` helper (`docs/s2disasm/s2.asm:54006-54013`). When
+  the sidekick is offscreen, `SolidObject` skips the Player_2 pass before
+  `SolidObject_cont` (`docs/s2disasm/s2.asm:35022-35025`), so the stale
+  `Status_OnObj` latch can survive without producing active grounding support.
+  When the same object's stale standing bit is processed while the player is
+  already airborne, the helper clears the bit and returns `d4=0` without
+  reaching `SolidObject_cont` / `RideObject_SetRide`
+  (`docs/s2disasm/s2.asm:35028-35046`). The solid controller now models both
+  pieces explicitly instead of letting the stale latch zero Tails' vertical
+  speed, and Obj69 opts into the stale-standing-bit no-contact return.
+- Secondary fix: S2 Obj26 monitor break release checks this monitor's own
+  standing/pushing bits before clearing another character's object state
+  (`docs/s2disasm/s2.asm:25675-25688`). The engine now clears stale monitor
+  touching bits locally when the monitor no longer owns the live ride/push
+  contact, preventing a stale monitor bit from clearing the MTZ Obj69 latch.
+- Focused object coverage:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.level.objects.TestSolidObjectManager#inlineOffscreenS2AirborneSidekickKeepsRideLatchWithoutStandingContact+offscreenS2AirborneSidekickKeepsRideLatchWithoutStandingContact+batchedAirborneStaleStandingBitDoesNotRelandSameObject+inlineAirUnseatSuppressesBatchedRelandSameFrame,com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#nutAirborneStaleStandingBitReturnsNoContact" "-DfailIfNoTests=false" test`.
+  Result: command exited 0.
+- Focused target trace after the fix:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2MtzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: advanced to f5713 / 560 errors (`tails_y_speed` expected `0x0ED0`,
+  actual `0x0000`).
+- Green guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+  Result: command exited 0; 7 trace classes passed with no failures.
+- Rewind coverage: not run; this change adds transient solid-controller
+  bookkeeping and no object presence, lifetime, or rewind-captured object field
+  changes.
+- New MTZ1 frontier: f5713 `tails_y_speed` expected `0x0ED0`, actual
+  `0x0000`.
+
 ## 2026-06-29 - S2 HTZ1 Obj84 flying-sidekick regression repair (256 -> 226 errors)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
