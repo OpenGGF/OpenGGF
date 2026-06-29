@@ -58,7 +58,8 @@ class TestLbzFinalBoss1Instance {
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ROBOTNIK_HEAD).size());
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.TOP_ATTACHMENT).size());
         assertEquals(3, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.TURRET_SEGMENT).size());
-        assertEquals(2, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.LASER_HEAD).size());
+        assertEquals(4, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.LASER_HEAD).size(),
+                "ChildObjDat_737BA is reached by both loc_7308E and loc_730F8, so top and middle segments each get a laser-head pair");
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ORBITING_POD).size());
         assertEquals(2, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.GUN_POD).size());
         assertEquals(-1, firstBossChild(boss, LbzFinalBoss1Instance.ChildKind.TURRET_SEGMENT).paletteOverrideForTest(),

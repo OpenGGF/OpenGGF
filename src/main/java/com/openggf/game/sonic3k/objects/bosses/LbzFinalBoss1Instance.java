@@ -1277,7 +1277,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             this.tag = tag;
             this.mappingFrame = tag == 2 ? 1 : 0;
             this.collisionFlags = 0xAD;
-            if (tag == 0) {
+            if (tag <= 1) {
                 boss.recordChild(ChildKind.LASER_HEAD, boss.spawnChild(() -> new LaserHeadChild(boss, this, 0)));
                 boss.recordChild(ChildKind.LASER_HEAD, boss.spawnChild(() -> new LaserHeadChild(boss, this, 2)));
             } else if (tag == 2) {
