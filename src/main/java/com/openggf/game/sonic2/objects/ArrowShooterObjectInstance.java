@@ -23,7 +23,7 @@ import java.util.logging.Logger;
  * <p>
  * A stationary hazard that detects the player horizontally and fires arrow projectiles.
  * <p>
- * Behavior from disassembly (s2.asm lines 51010-51147):
+ * Behavior from disassembly (s2.asm lines 51509-51638):
  * <ul>
  *   <li>Detects player within 64 ($40) pixels horizontally</li>
  *   <li>When detected, plays "detecting" animation (frames 1-2)</li>
@@ -35,7 +35,7 @@ import java.util.logging.Logger;
  * <ul>
  *   <li>Anim 0 (Idle): delay $1F, frame 1, loop</li>
  *   <li>Anim 1 (Detecting): delay $03, frames 1-2, loop</li>
- *   <li>Anim 2 (Firing): delay $07, frames 3,4,$FC,4,3,1,$FD,0 (fires arrow on $FD)</li>
+ *   <li>Anim 2 (Firing): delay $07, frames 3,4,$FC,4,3,1,$FD,0 ($FC advances to ShootArrow)</li>
  * </ul>
  */
 public class ArrowShooterObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
@@ -56,14 +56,11 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance implement
     private static final int DELAY_DETECTING = 0x03;
     private static final int DELAY_FIRING = 0x07;
 
-    // Firing animation sequence (Ani_obj22 anim 2, byte_257FB): frames 3, 4 shown pre-$FC,
-    // then 4, 3, 1 shown post-ShootArrow (driven by AnimateSprite in Obj22_ShootArrow).
-    // The arrow is spawned after entry 2 is processed (after entry 1 shows frame=4) via
-    // addDynamicObjectNextFrame, matching the ROM's 1-frame gap between $FC and Obj22_ShootArrow.
-    private static final int[] FIRING_SEQUENCE = {3, 4, 4, 3, 1};
-    // Arrow is spawned via addDynamicObjectNextFrame when firingIndex reaches 3 (after processing
-    // FIRING_SEQUENCE[2]), i.e. one entry after the pre-$FC frames (indices 0 and 1).
-    private static final int FIRING_CALLBACK_INDEX = 3;
+    private static final int FIRING_ROUTINE_ADVANCE = -1;
+    // Ani_obj22 anim 2, byte_257FB: frames 3,4,$FC,4,3,1,$FD,0.
+    // AnimateSprite's $FC handler advances routine, clears anim_frame_duration, advances
+    // anim_frame, and returns; Obj22_ShootArrow allocates the arrow on the next dispatch.
+    private static final int[] FIRING_SEQUENCE = {3, 4, FIRING_ROUTINE_ADVANCE, 4, 3, 1};
 
     private int currentX;
     private int currentY;
@@ -71,7 +68,7 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance implement
     private int animFrame;
     private int animTimer;
     private int firingIndex;
-    private boolean arrowFired;
+    private boolean shootArrowRoutinePending;
     private boolean hFlip;
 
     public ArrowShooterObjectInstance(ObjectSpawn spawn, String name) {
@@ -82,7 +79,7 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance implement
         this.animFrame = 1; // Start at mapping frame 1 (shooter idle)
         this.animTimer = DELAY_IDLE;
         this.firingIndex = 0;
-        this.arrowFired = false;
+        this.shootArrowRoutinePending = false;
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
     }
 
@@ -93,6 +90,10 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance implement
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        if (shootArrowRoutinePending) {
+            runShootArrowRoutine();
+            return;
+        }
         if (currentAnim != ANIM_FIRING) {
             updateDetection(playerEntity);
         }
@@ -126,7 +127,7 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance implement
                 currentAnim = ANIM_FIRING;
                 animTimer = 0;
                 firingIndex = 0;
-                arrowFired = false;
+                shootArrowRoutinePending = false;
             } else if (currentAnim == ANIM_IDLE) {
                 // Stay idle
             }
@@ -175,14 +176,18 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance implement
 
                 case ANIM_FIRING:
                     if (firingIndex < FIRING_SEQUENCE.length) {
-                        animFrame = FIRING_SEQUENCE[firingIndex];
+                        int entry = FIRING_SEQUENCE[firingIndex];
                         firingIndex++;
-                        animTimer = DELAY_FIRING;
-
-                        // Fire arrow after showing frame 1 at the end
-                        if (firingIndex == FIRING_CALLBACK_INDEX && !arrowFired) {
-                            fireArrow();
-                            arrowFired = true;
+                        if (entry == FIRING_ROUTINE_ADVANCE) {
+                            // ROM AnimateSprite $FC branch:
+                            // addq.b #2,routine(a0); move.b #0,anim_frame_duration(a0);
+                            // addq.b #1,anim_frame(a0); rts (docs/s2disasm/s2.asm:30481-30487).
+                            // Obj22_ShootArrow runs on the following object dispatch.
+                            shootArrowRoutinePending = true;
+                            animTimer = 0;
+                        } else {
+                            animFrame = entry;
+                            animTimer = DELAY_FIRING;
                         }
                     } else {
                         // Firing animation complete, return to idle
@@ -195,17 +200,17 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance implement
         }
     }
 
-    private void fireArrow() {
+    private void runShootArrowRoutine() {
+        shootArrowRoutinePending = false;
         // Play pre-arrow sound (SndID_PreArrowFiring, played by Obj22_ShootArrow).
         services().playSfx(Sonic2Sfx.PRE_ARROW_FIRING.id);
 
-        // Spawn arrow projectile.
-        // ROM Obj22_ShootArrow: arrow allocated one frame AFTER $FC fires (routine is incremented
-        // by $FC on frame N, then Obj22_ShootArrow runs on frame N+1 and allocates the object).
-        // Using addDynamicObjectNextFrame replicates this 1-frame gap: the arrow object is added
-        // to the active list for the next frame, so its first update (Obj22_Arrow_Init + ObjectMove)
-        // runs on the same frame as it would in the ROM.
+        // ROM Obj22_ShootArrow allocates the child, returns the parent routine to Obj22_Main,
+        // then calls AnimateSprite again (docs/s2disasm/s2.asm:51570-51587). A higher-slot
+        // child is reached later in the same ExecuteObjects pass, so Obj22_Arrow_Init falls
+        // through into Obj22_Arrow/ObjectMove on its allocation frame.
         spawnChild(() -> new ArrowProjectileInstance(spawn, currentX, currentY, hFlip));
+        updateAnimation();
     }
 
     @Override

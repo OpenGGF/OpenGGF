@@ -1,6 +1,7 @@
 package com.openggf.tests.trace;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.objects.ArrowProjectileInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -369,10 +370,62 @@ public class TestS2ObjectOccupancyOracle {
                         + check.summary());
     }
 
+    @Test
+    public void arz2ArrowProjectileAllocatesInRomSlot65OnRomFrame696() throws Exception {
+        SlotProjectileCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 694 && frame != 695 && frame != 696) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    if (frame == 694 || frame == 695) {
+                        Assertions.assertNull(expected.get(65),
+                                "ROM fixture should not allocate the Obj22 arrow into slot 0x41 until f696");
+                        Assertions.assertNull(actual.get(65),
+                                "S2 Obj22 should not reserve the arrow projectile SST slot before "
+                                        + "Obj22_ShootArrow runs (docs/s2disasm/s2.asm:51570-51587); "
+                                        + "actual slots " + describeSlots(actual, 60, 65));
+                        return null;
+                    }
+
+                    TraceEvent.ObjectNear expectedArrow = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 65)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x22)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedArrow,
+                            "ARZ2 ROM fixture should report the first Obj22 arrow in slot 0x41 at f696");
+                    ArrowProjectileInstance actualArrow = om.activeObjectsOfType(ArrowProjectileInstance.class)
+                            .stream()
+                            .filter(arrow -> arrow.getSlotIndex() == 65)
+                            .findFirst()
+                            .orElse(null);
+                    return new SlotProjectileCheck(actual.get(65),
+                            actualArrow == null ? -1 : actualArrow.getX(),
+                            expectedArrow.x() & 0xFFFF,
+                            describeSlots(actual, 60, 65));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x22, slotCheck.actualId(),
+                "ARZ2 slot 0x41 should first contain Obj22 when ROM Obj22_ShootArrow allocates "
+                        + "the arrow at f696; actual slots " + slotCheck.summary());
+        Assertions.assertEquals(slotCheck.expectedX(), slotCheck.actualX(),
+                "S2 Obj22_Arrow_Init falls through into Obj22_Arrow/ObjectMove on the allocation "
+                        + "frame, so the first visible arrow X is already advanced by $400 "
+                        + "(docs/s2disasm/s2.asm:51590-51607); actual slots " + slotCheck.summary());
+    }
+
     private record SlotWindowCheck(Map<Integer, Integer> slots, String summary) {
         int idAt(int slot) {
             return slots.getOrDefault(slot, -1);
         }
+    }
+
+    private record SlotProjectileCheck(Integer actualId, int actualX, int expectedX, String summary) {
     }
 
     private AnimalPositionCheck animalPositionAtArz2Frame(int targetFrame) throws Exception {
