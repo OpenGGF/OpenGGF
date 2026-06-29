@@ -23074,6 +23074,49 @@ which throws silently on the Windows JVM).
      `(Vint_runcount+3)` seed fix.
    - Detail: memory `cnz1-f1691-slotmachine-timing.md`.
 
+### 2026-06-29 -- S2 OOZ1 Obj36 sidekick push-grace window: f1784 -> f1790
+
+Worktree `bugfix/ai-trace-s2-ooz-r10` from integration branch
+`bugfix/ai-s2-trace-develop`.
+
+Root fixed: S2 Obj36 stores standing and pushing bits in the live object SST
+status byte. The engine already had an object-local CPU sidekick bridge for
+Obj36, but its timing missed the late OOZ1 stationary/low-speed handoff where
+`TailsCPU_Normal` reads Tails' current `Status_Push` before the later
+`SolidObject` pass can clear the Obj36 push bit. The bridge is now bounded by
+Obj36-visible ROM state instead of a route/frame carve-out: left-facing
+zero-inertia handoff plus the inner-left-edge positive-speed ladder below `$30`,
+and the late `$30` sample only while the remaining grace window is low. Wider
+left-edge Obj36 rides fall back to the ordinary SolidObject grace threshold.
+This preserves the delayed RIGHT sample through the ROM `Tails_MoveRight`
+acceleration ladder without re-enabling the earlier high-grace `$30`
+fall-through sample or the OOZ2 wide-left-edge error-count regression.
+
+Disassembly anchors:
+- `TailsCPU_Normal` current-push gate:
+  `docs/s2disasm/s2.asm:39291-39294`.
+- `Tails_MoveRight` zero/positive-inertia acceleration path:
+  `docs/s2disasm/s2.asm:39964-39981`.
+- `SolidObject_AtEdge` / `SolidObject_TestClearPush` player/object push-bit
+  ownership: `docs/s2disasm/s2.asm:35438-35449,35462-35487`.
+
+Result:
+- `TestS2OozLevelSelectTraceReplay#replayMatchesTrace`: f1784 / 1256 errors
+  (`tails_x_speed` expected `0x000C`, actual `-000C`) -> f1790 / 1125 errors
+  (`tails_x_speed` expected `0x0080`, actual `-008C`).
+- `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace`: held f2623 / 946
+  errors (`tails_x` expected `0x04A1`, actual `0x049D`), avoiding the rejected
+  1002-error regression from the unbounded low-speed Obj36 ladder.
+
+Verification:
+- `mvn "-Dtest=TestSidekickCpuControllerLevelStart" test` passed 15 tests.
+- `mvn "-Dtest=TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.context.diagnosticChars=full" test`
+  produced the f1790 / 1125 frontier above.
+- `mvn "-Dtest=TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.context.diagnosticChars=full" test`
+  held the f2623 / 946 frontier above.
+- `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  exited 0; the current S2 green guard remained green.
+
 ### 2026-06-29 -- S2 CPZ1 Obj1E spin-tube capture/release: f3544 -> f3723
 
 Worktree `bugfix/ai-trace-s2-cpz1-r4` is based on exact parent
