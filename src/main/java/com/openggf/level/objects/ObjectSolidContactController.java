@@ -3489,7 +3489,7 @@ final class ObjectSolidContactController {
             // pre-movement behavior for wall alignment consistency.
             boolean skipSideEffects = deferSideToPostMovement && player.getAir();
             if (instance instanceof SolidObjectProvider solidProvider
-                    && solidProvider.sideContactReturnsNoContact(player)) {
+                    && sideContactProviderReturnsNoContact(player, instance, pieceIndex, solidProvider)) {
                 return null;
             }
             if (apply
@@ -3773,6 +3773,49 @@ final class ObjectSolidContactController {
             player.setYSpeed((short) 0);
         }
         return SolidContact.CEILING;
+    }
+
+    private boolean sideContactProviderReturnsNoContact(PlayableEntity player, ObjectInstance instance,
+            int pieceIndex, SolidObjectProvider provider) {
+        if (!provider.sideContactReturnsNoContact(player)) {
+            return false;
+        }
+        if (instance instanceof MultiPieceSolidProvider multiPiece
+                && multiPiece.usesPieceScopedStandingBits()) {
+            return hasObjectStandingBit(player, instance, pieceIndex)
+                    || wasObjectStandingBitSetThisFrame(player, instance, pieceIndex)
+                    || hasAnyPieceStandingBit(player, instance, multiPiece)
+                    || wasAnyPieceStandingBitSetThisFrame(player, instance, multiPiece)
+                    // Folded ROM-slot solids such as S2 Obj70 can classify
+                    // a stale leftward rider as a fresh side hit after the
+                    // player movement phase even though the ROM slot branch
+                    // returned d4=0 before SolidObject_cont. Keep the
+                    // no-contact opt-in for that leftward stale geometry, but
+                    // allow rightward grounded side hits to reach
+                    // SolidObject_StopCharacter.
+                    || player.getXSpeed() < 0;
+        }
+        return true;
+    }
+
+    private boolean hasAnyPieceStandingBit(PlayableEntity player, ObjectInstance instance,
+            MultiPieceSolidProvider multiPiece) {
+        for (int i = 0; i < multiPiece.getPieceCount(); i++) {
+            if (hasObjectStandingBit(player, instance, i)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean wasAnyPieceStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance,
+            MultiPieceSolidProvider multiPiece) {
+        for (int i = 0; i < multiPiece.getPieceCount(); i++) {
+            if (wasObjectStandingBitSetThisFrame(player, instance, i)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isWithinTopLandingWidth(ObjectInstance instance, PlayableEntity player, int relX,

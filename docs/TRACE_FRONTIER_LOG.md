@@ -24,6 +24,37 @@ branch-local measurements.
   `TestCamera`, `TestRewindCoverageGuard`, and `TestArchitecturalSourceGuard`
   green; S3K AIZ/HCZ complete-run frontier counts unchanged.
 
+## 2026-06-29 - S2 post-develop integration sweep after shared camera merge (7 green, 12 expected-red)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop` at merge commit `39e42e043`, after merging
+  `origin/develop` commit `84f1f269d` on top of the ARZ2, OOZ2, and HTZ1 S2
+  integrations.
+- Purpose: verify that the shared directional camera boundary clamp from
+  `origin/develop` did not regress current S2 green traces before the next S2
+  frontier worker starts.
+- Full S2 sweep command:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+  Result: expected-red; 67 tests ran, 55 passed, 12 failed. The current seven
+  green complete-run S2 traces (`ARZ1`, `CNZ1`, `DEZ`, `EHZ1`, `MCZ1`, `SCZ`,
+  `WFZ`) stayed green.
+- Current red frontiers:
+
+| Trace | First error |
+|---|---|
+| `TestS2Arz2LevelSelectTraceReplay` | f741 `obj_extra_s16_x` expected absent, actual `0x081C`; 2852 errors |
+| `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
+| `TestS2Ooz2LevelSelectTraceReplay` | f2623 `tails_x` expected `0x04A1`, actual `0x049D`; 946 errors |
+| `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
+| `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
+| `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1222 errors |
+| `TestS2Htz2LevelSelectTraceReplay` | f3317 `tails_x_speed` expected `0x00E8`, actual `-0018`; 1058 errors |
+| `TestS2CpzLevelSelectTraceReplay` | f4194 `y` expected `0x032C`, actual `0x032D`; 356 errors |
+| `TestS2Mcz2LevelSelectTraceReplay` | f6429 `tails_y` expected `0x0647`, actual `0x0648`; 425 errors |
+| `TestS2Cnz2LevelSelectTraceReplay` | f4730 `tails_y` expected `0x0368`, actual `0x0386`; 994 errors |
+| `TestS2HtzLevelSelectTraceReplay` | f6586 `y_speed` expected `-0178`, actual `-0078`; 233 errors |
+| `TestS2MtzLevelSelectTraceReplay` | f5647 `tails_y_sub` expected `0x6500`, actual `0x3D00`; 616 errors |
+
 ## 2026-06-29 - S2 integration sweep after HTZ1 Tails fly-in render-flag merge (7 green, 12 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
@@ -236,6 +267,41 @@ branch-local measurements.
 | `TestS2Cnz2LevelSelectTraceReplay` | f4730 `tails_y` expected `0x0368`, actual `0x0386`; 994 errors |
 | `TestS2HtzLevelSelectTraceReplay` | f6467 `tails_cpu_respawn_counter` expected `0x003F`, actual `0x0000`; 234 errors |
 | `TestS2MtzLevelSelectTraceReplay` | f5647 `tails_y_sub` expected `0x6500`, actual `0x3D00`; 616 errors |
+
+## 2026-06-29 - S2 MTZ Obj70 folded cog side-contact frontier move
+
+- Worktree/branch: `.worktrees/trace-s2-mtz-r7` /
+  `bugfix/ai-trace-s2-mtz-r7`, based on integration commit `ce786a7f78`
+  (`docs: record S2 post-DEZ trace sweep`).
+- Fix summary: S2 Obj70 still opts into the ROM stale-rider no-contact path for
+  CPU sidekicks, but the shared solid controller now narrows that opt-in for
+  piece-scoped multi-piece solids. A folded cog side contact returns no-contact
+  only while a ROM standing-bit equivalent is latched, a same-frame standing-bit
+  snapshot exists, or the CPU sidekick is moving left through stale folded
+  geometry. Without those stale-slot signals, grounded side contacts reach
+  `SolidObject_StopCharacter`, matching Obj70's standard `SolidObject` tail
+  (`docs/s2disasm/s2.asm:35021-35040,35413-35429,55039-55141`).
+- Focused verification:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtest=TestSonic2ObjectBugFixes#mtzCogGroundedCpuSideContactWithoutStandingBitReachesRomStopCharacterPath" test`.
+  Result: passed.
+- MTZ2 command:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mtz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected-red frontier advanced from f1277 / 3385 errors
+  (`tails_x` expected `0x047D`, actual `0x047F`) to f1282 / 3417 errors
+  (`tails_x` expected `0x047C`, actual `0x047D`).
+- MTZ3 command:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected-red frontier advanced from f1973 / 3705 errors
+  (`tails_g_speed` expected `0x0000`, actual `0x03C1`) to f2048 / 3742
+  errors (`tails_x` expected `0x07CA`, actual `0x07BE`).
+- Green guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+  Result: passed; 7/7 current S2 green guard traces stayed green.
+- Current affected red frontiers:
+  - `TestS2Mtz2LevelSelectTraceReplay`: f1282 `tails_x` expected `0x047C`,
+    actual `0x047D`; 3417 errors.
+  - `TestS2Mtz3LevelSelectTraceReplay`: f2048 `tails_x` expected `0x07CA`,
+    actual `0x07BE`; 3742 errors.
 
 ## 2026-06-29 - S2 integration sweep after DEZ ending handoff merge (7 green, 12 expected-red)
 
