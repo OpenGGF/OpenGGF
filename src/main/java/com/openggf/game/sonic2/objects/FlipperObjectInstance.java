@@ -170,12 +170,10 @@ public class FlipperObjectInstance extends BoxObjectInstance
             // once after every player is processed (see processVerticalLaunch()),
             // matching ROM's objoff_38 trigger at s2.asm:58296-58303.
             if (result.standingNow()) {
-                // ROM: move.b #1,obj_control(a1) - locks ALL player input including jumping
-                // This is set every frame while standing on the flipper
-                player.setControlLocked(true);
                 // Obj01_Control skips the player movement dispatch while
-                // obj_control bit 0 is set, then still runs display/record/
-                // animation/TouchResponse (s2.asm:35937-35962).
+                // obj_control bit 0 is set, but Ctrl_1 -> Ctrl_1_Logical was
+                // already copied before that per-player bit is tested
+                // (s2.asm:36227-36237). Do not toggle global Control_Locked.
                 suppressMovementForLockedPlayer(player);
 
                 if (playerFlipperState.getOrDefault(player, 0) == 0) {
@@ -214,9 +212,12 @@ public class FlipperObjectInstance extends BoxObjectInstance
                         applyFlipperSlide(player);
                     }
                 }
-            } else if (result.kind() == ContactKind.NONE) {
-                // Player left flipper without jumping (loc_2B23C branch to clear)
-                // ROM: move.b #0,obj_control(a1)
+            } else {
+                // Player left the vertical flipper's standing contact without
+                // jumping (loc_2B23C). ROM gates release on Obj86's per-player
+                // standing bit, not on all contact being absent; a side overlap
+                // after sliding off must still clear obj_control before the next
+                // Obj01_Control publishes Ctrl_1_Logical.
                 if (playerFlipperState.getOrDefault(player, 0) != 0) {
                     releaseLockedPlayer(player);
                     playerFlipperState.remove(player);
@@ -527,7 +528,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
     }
 
     /**
-     * Release the control lock on the given player.
+     * Release the movement suppression on the given player.
      * ROM: move.b #0,obj_control(a1) at loc_2B23C when player leaves flipper.
      * Per-player so releasing Sonic does not disturb a still-locked Tails
      * (objoff_36 / objoff_37 are independent in s2.asm:58286-58295).
@@ -535,7 +536,6 @@ public class FlipperObjectInstance extends BoxObjectInstance
     private void releaseLockedPlayer(AbstractPlayableSprite player) {
         Boolean prevSuppressed = lockedPlayerPrevSuppressed.remove(player);
         if (prevSuppressed != null) {
-            player.setControlLocked(false);
             ObjectControlState.setMovementSuppressionPreservingOwnership(
                     player, prevSuppressed);
             player.setPinballMode(false);

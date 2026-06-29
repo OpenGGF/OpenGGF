@@ -779,6 +779,23 @@ public class SidekickCpuController {
                 skipFollowSteering, appliedFollowNudge);
     }
 
+    private void finishNormalStepDiagnosticsPreservingCtrl2(NormalStepDiagnostics base,
+                                                            String branch,
+                                                            int followDelayFrames,
+                                                            int followHistorySlot,
+                                                            int recordedInput,
+                                                            int recordedStatus,
+                                                            int pushBypassStatus,
+                                                            int dx,
+                                                            int dy,
+                                                            boolean skipFollowSteering,
+                                                            int appliedFollowNudge) {
+        finishNormalStepDiagnosticsWithCtrl2(base, branch,
+                followDelayFrames, followHistorySlot, recordedInput, recordedStatus, pushBypassStatus,
+                dx, dy, diagnosticCtrl2HeldLatch, diagnosticCtrl2PressedLatch,
+                skipFollowSteering, appliedFollowNudge);
+    }
+
     private void finishNormalStepDiagnosticsWithCtrl2(NormalStepDiagnostics base,
                                                       String branch,
                                                       int followDelayFrames,
@@ -1833,7 +1850,10 @@ public class SidekickCpuController {
             normalPushingGraceFrames = 0;
             suppressNextAirbornePushFollowSteering = false;
             clearStaleDeadOnObjectAfterVisibleWindow();
-            finishNormalStepDiagnostics(diagnostics, "sidekick_dead", -1, -1,
+            // Obj02_Dead bypasses TailsCPU_Control; the global Ctrl_2_Logical
+            // word keeps the last CPU-written value until a later routine
+            // explicitly writes it.
+            finishNormalStepDiagnosticsPreservingCtrl2(diagnostics, "sidekick_dead", -1, -1,
                     0, 0, 0, 0, 0, false, 0);
             return;
         }

@@ -6,6 +6,70 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 CNZ1 Obj86/control-latch parity - ENGINE FIX (CNZ1 f4024 -> GREEN; sweep 6 green, 13 expected-red)
+
+- Scope: branch `bugfix/ai-trace-s2-cnz1-r4` in worktree
+  `.worktrees/trace-s2-cnz1-r4`, branched from
+  `bugfix/ai-s2-trace-develop` at `b995725c6`. The diff is limited to S2
+  Obj86 flipper player-control semantics, sidekick CPU/input latch timing,
+  rolling push preservation, focused sidekick parity coverage, and docs. It
+  does not hydrate trace data and does not add zone, route, frame, or
+  known-failing-trace carve-outs.
+- Root/fix: the f4024 cluster was not a follower-history slot-selection
+  problem. ROM and engine both read the same delayed slot, but the engine had
+  recorded the wrong logical input because Obj86 set global `Control_Locked`.
+  Sonic 2 Obj86 writes only per-player `obj_control(a1)=1`; `Obj01_Control`
+  copies `Ctrl_1` to `Ctrl_1_Logical` before testing that per-player bit
+  (`docs/s2disasm/s2.asm:36227-36237,58286-58303`). The flipper now suppresses
+  player movement through `ObjectControlState` only, and clears that suppression
+  as soon as Obj86's standing bit clears.
+- Follow-on roots/fixes: after f4024 cleared, f4025 exposed a stale
+  `forcedJumpPress` edge leaking into the next stat-record slot, so forced press
+  edges now clear after the `Sonic_RecordPos`-equivalent history write. f4027
+  then exposed `Status_Push` being cleared by generic direction-change logic
+  while Tails was rolling/pinballing; S2 `Obj02_MdRoll` does not run
+  `Tails_MoveLeft/Right`, so rolling frames now skip that push clear. The final
+  f5544 mismatch came from S2 Obj02_Dead bypassing Tails CPU control while
+  ROM-visible `Ctrl_2_Logical` keeps the previous word; the engine now preserves
+  the sidekick CPU latch only on that dead-sidekick no-write branch.
+- Frontier movement: `TestS2CnzLevelSelectTraceReplay#replayMatchesTrace`
+  advances from f4024 / 30 errors (`tails_cpu_ctrl2_held` expected `0x0010`,
+  actual `0x0000`) to green.
+- Verification:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dtest=TestSidekickCpuDespawnParity,TestSidekickCpuFollowParity test"`
+  exited 0 with 126 sidekick parity tests passed.
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2CnzLevelSelectTraceReplay#replayMatchesTrace"" test"`
+  exited 0.
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace"" test"`
+  remains expected-red at f4632 (`tails_y` expected `0x02B8`, actual
+  `0x02B4`), so CNZ2 did not regress.
+  Guard command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace"" test"`
+  exited 0; all five green guard traces passed.
+  Full S2 sweep command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2*TraceReplay"" test"`
+  ran 19 concrete S2 trace classes: 6 green, 13 expected-red. New green set:
+  `TestS2ArzLevelSelectTraceReplay`, `TestS2CnzLevelSelectTraceReplay`,
+  `TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay`,
+  `TestS2SczLevelSelectTraceReplay`, `TestS2WfzLevelSelectTraceReplay`.
+- Current red frontiers after this branch:
+
+| Trace | First error |
+|---|---|
+| `TestS2Arz2LevelSelectTraceReplay` | f595 `obj_extra_s18_x` expected absent, actual `0x0675`; 3171 errors |
+| `TestS2MtzLevelSelectTraceReplay` | f1267 `y` expected `0x00AC`, actual `0x00A4`; 1092 errors |
+| `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
+| `TestS2Ooz2LevelSelectTraceReplay` | f1603 `x_speed` expected `0x004C`, actual `0x0000`; 1250 errors |
+| `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
+| `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
+| `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1299 errors |
+| `TestS2Htz2LevelSelectTraceReplay` | f3315 `tails_x_speed` expected `0x01E8`, actual `0x00E8`; 1059 errors |
+| `TestS2CpzLevelSelectTraceReplay` | f3365 `tails_x` expected `0x24AB`, actual `0x24AA`; 310 errors |
+| `TestS2Mcz2LevelSelectTraceReplay` | f4485 `tails_x` expected `0x0EAB`, actual `0x0EAC`; 543 errors |
+| `TestS2Cnz2LevelSelectTraceReplay` | f4632 `tails_y` expected `0x02B8`, actual `0x02B4`; 955 errors |
+| `TestS2DezEndingLevelSelectTraceReplay` | f5952 `y_speed` expected `0x0098`, actual `-0098`; 46 errors |
+| `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
+
 ## 2026-06-29 - S2 integration sweep after OOZ2 Obj43 merge (5 green, 14 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
