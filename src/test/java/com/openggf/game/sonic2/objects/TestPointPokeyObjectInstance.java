@@ -1,18 +1,47 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.GameServices;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.solid.DefaultSolidExecutionRegistry;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.PostContactState;
+import com.openggf.game.solid.PreContactState;
+import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.StubObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
-
+import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestPointPokeyObjectInstance {
+
+    @BeforeEach
+    void setUp() {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
+        TestEnvironment.activeGameplayMode();
+        GameServices.camera().resetState();
+    }
+
+    @AfterEach
+    void tearDown() {
+        SessionManager.clear();
+        GameModuleRegistry.reset();
+    }
 
     @Test
     void captureUsesObjectControlWithoutGlobalControlLockedLatch() throws Exception {
@@ -41,9 +70,133 @@ class TestPointPokeyObjectInstance {
                         + "Sonic_RecordPos stores follower history (s2.asm:36227-36246,36346).");
     }
 
+    @Test
+    void bottomSolidReturnCapturesWithoutRideLatch() throws Exception {
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x1DBF, (short) 0x0382);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setAir(true);
+        tails.setRolling(true);
+        tails.setXSpeed((short) 0x03A4);
+        tails.setYSpeed((short) 0xFC1E);
+
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x1DC0, 0x0368, 0xD6, 0x00, 0, false, 0);
+        PointPokeyObjectInstance pokey = new PointPokeyObjectInstance(spawn, "PointPokey");
+
+        invokeCapture(pokey, tails, new PlayerSolidContactResult(
+                ContactKind.BOTTOM,
+                false,
+                false,
+                false,
+                false,
+                new PreContactState(tails.getXSpeed(), tails.getYSpeed(), tails.getRolling(), tails.getAir(),
+                        tails.getAnimationId()),
+                new PostContactState(tails.getXSpeed(), tails.getYSpeed(), tails.getAir(), tails.isOnObject(),
+                        tails.getPushing()),
+                0));
+
+        assertTrue(tails.isObjectControlled(),
+                "ObjD6 captures on any negative SolidObject return (tst.w d4 / bpl at s2.asm:59045-59046).");
+        assertEquals(0x1DC0, tails.getCentreX() & 0xFFFF);
+        assertEquals(0x0368, tails.getCentreY() & 0xFFFF);
+        assertTrue(tails.getAir(),
+                "A bottom-return capture must preserve SolidObject's airborne state; ObjD6 itself only writes "
+                        + "position, velocity, radii, rolling/animation, and obj_control.");
+        assertFalse(tails.isOnObject(),
+                "Only the top-return path has RideObject_SetRide side effects before ObjD6 captures.");
+    }
+
+    @Test
+    void offscreenReleaseTargetsCapturedSidekick() throws Exception {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x1E60, (short) 0x01C6);
+        main.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        main.setYSpeed((short) 0x1234);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x1DBF, (short) 0x0382);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setAir(true);
+        tails.setRolling(true);
+
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x1DC0, 0x0368, 0xD6, 0x00, 0, false, 0);
+        OffscreenPointPokeyObjectInstance pokey = new OffscreenPointPokeyObjectInstance(spawn);
+        PointPokeySolidServices services = new PointPokeySolidServices();
+        services.sidekicks = List.of(tails);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, GameServices.camera(), services);
+        services.objectManager = objectManager;
+        objectManager.addDynamicObject(pokey);
+
+        invokeCapture(pokey, tails, new PlayerSolidContactResult(
+                ContactKind.BOTTOM,
+                false,
+                false,
+                false,
+                false,
+                new PreContactState(tails.getXSpeed(), tails.getYSpeed(), tails.getRolling(), tails.getAir(),
+                        tails.getAnimationId()),
+                new PostContactState(tails.getXSpeed(), tails.getYSpeed(), tails.getAir(), tails.isOnObject(),
+                        tails.getPushing()),
+                0));
+
+        pokey.update(1, main);
+
+        assertEquals(0x1234, main.getYSpeed() & 0xFFFF,
+                "ObjD6 has separate ROM state for main and sidekick (objoff_30 / objoff_34); "
+                        + "sidekick release must not eject main.");
+        assertEquals(0x0400, tails.getYSpeed() & 0xFFFF,
+                "Off-screen occupied ObjD6 branches to loc_2BE2E and applies the release velocity "
+                        + "to the captured sidekick.");
+        assertFalse(tails.isObjectControlled());
+        assertTrue(tails.getAir());
+    }
+
     private static void invokeCapture(PointPokeyObjectInstance pokey, TestablePlayableSprite player) throws Exception {
         Method capture = PointPokeyObjectInstance.class.getDeclaredMethod("capturePlayer", AbstractPlayableSprite.class);
         capture.setAccessible(true);
         capture.invoke(pokey, player);
+    }
+
+    private static void invokeCapture(
+            PointPokeyObjectInstance pokey,
+            TestablePlayableSprite player,
+            PlayerSolidContactResult result) throws Exception {
+        Method capture = PointPokeyObjectInstance.class.getDeclaredMethod(
+                "capturePlayer", AbstractPlayableSprite.class, PlayerSolidContactResult.class);
+        capture.setAccessible(true);
+        capture.invoke(pokey, player, result);
+    }
+
+    private static final class OffscreenPointPokeyObjectInstance extends PointPokeyObjectInstance {
+        private OffscreenPointPokeyObjectInstance(ObjectSpawn spawn) {
+            super(spawn, "PointPokey");
+        }
+
+        @Override
+        public boolean isWithinSolidContactBounds() {
+            return false;
+        }
+    }
+
+    private static final class PointPokeySolidServices extends StubObjectServices {
+        private final SolidExecutionRegistry solidExecutionRegistry = new DefaultSolidExecutionRegistry();
+        private ObjectManager objectManager;
+        private List<PlayableEntity> sidekicks = List.of();
+
+        @Override
+        public ObjectManager objectManager() {
+            return objectManager;
+        }
+
+        @Override
+        public SolidExecutionRegistry solidExecutionRegistry() {
+            return solidExecutionRegistry;
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return sidekicks;
+        }
     }
 }
