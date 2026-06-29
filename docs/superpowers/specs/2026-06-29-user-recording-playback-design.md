@@ -7,9 +7,9 @@
 ## 1. Purpose And Scope
 
 Add an engine-owned recording and playback workflow for interactive OpenGGF
-gameplay. A user can start a recording from the current live gameplay setup,
-have the engine restart that setup from a clean slate, record input to a BK2
-movie, and later replay the movie in-engine without needing trace data.
+gameplay. A user can request a recording from live gameplay; the engine then
+restarts the current game/zone/act/team setup from act start, records input to
+a BK2 movie, and later replays the movie in-engine without needing trace data.
 
 This is not a ROM trace replay replacement. Trace Test Mode remains the
 authoritative ROM-parity workflow. User recordings are engine-authored movies
@@ -19,7 +19,7 @@ That sidecar is comparison-only and must never hydrate or correct engine state.
 ### MVP Scope
 
 - Start recording from live `LEVEL` mode by holding `Shift+Record` for one
-  second.
+  second, then restart the current act from a clean slate before frame 0.
 - Snapshot the current live launch setup, rebuild it fresh, and arm recording
   before the first gameplay frame.
 - Record controller input to a BK2-compatible zip file under
@@ -75,9 +75,28 @@ Trace Test Mode should not depend on this feature. Shared extraction from
 Trace Test Mode is acceptable only for genuinely generic BK2 or launch-context
 utilities.
 
-## 3. Recording Flow
+## 3. Determinism Gate
 
-Recording starts from live gameplay:
+The MVP depends on deterministic fresh-start replay. Before building menu,
+HUD, fast-forward, or desync-warning polish, implementation must prove that a
+plain current-act restart can record and replay cleanly:
+
+1. Build a minimal fresh `RecordingLaunchContext` for one cheap route.
+2. Record a short BK2 plus every-frame `desync-lite` rows from a clean restart.
+3. Rebuild from the recorded launch context.
+4. Replay the BK2 through the same gameplay tick path.
+5. Require `UserRecordingVerifier` to report clean through the recorded window.
+
+This is a hard go/no-go gate for the recording MVP. If the smoke test fails
+because fresh launch reads non-reproducible state, timer-seeded logic, or
+wall-clock/driver-coupled gameplay state, fix that determinism problem before
+implementing the user-facing layers. An MVP whose own fresh recordings show
+version-clean desync warnings is not acceptable.
+
+## 4. Recording Flow
+
+Recording starts from live gameplay, but the movie itself starts from the
+current act's fresh start state:
 
 1. While in `GameMode.LEVEL`, the user holds `Shift+Record`.
 2. A top-left red prompt appears:
@@ -103,6 +122,11 @@ inputs. It should not preserve the live player's position, object slots, rings,
 timer, RNG progress, editor mutations, or other runtime state unless a later
 design explicitly extends `RecordingLaunchContext`.
 
+Per-frame input/diagnostic writes are outside the gameplay decision path. They
+may slow wall-clock time, but they must not reorder, skip, or gate gameplay
+ticks. Buffer or stream the data so I/O failures finalize or abort recording
+without changing the frame that was just simulated.
+
 Default output path:
 
 ```text
@@ -115,7 +139,7 @@ Example:
 recordings/s3k/s3k-aiz1-2026-06-29-143022.bk2
 ```
 
-## 4. Playback Flow
+## 5. Playback Flow
 
 Playback starts from master title:
 
@@ -132,6 +156,13 @@ Playback starts from master title:
 6. Starting playback rebuilds the recorded launch context from
    `OpenGGF/manifest.json`, starts BK2 input driving, and enters `LEVEL`.
 
+The master-title recordings menu is available from the normal master-title
+game-selection state. When `debug.testMode.enabled` is active and the trace
+picker owns the master-title screen, the trace picker keeps its existing input
+contract and `Shift+Record` does not open the recordings menu. Active Trace
+Test Mode sessions also keep their existing `Esc`/rewind behavior; user
+recording and playback are not available inside a trace session.
+
 Default playback renders normally. If the BK2 contains
 `OpenGGF/desync-lite.jsonl`, verification status is shown in the HUD. A missing
 sidecar is informational and does not block playback.
@@ -143,7 +174,7 @@ continues BK2 playback or hands control back to live player input.
 `Esc` exits playback, tears down the active session, and returns to the
 recordings menu or master-title flow.
 
-## 5. Fast-Forward
+## 6. Fast-Forward
 
 Fast-forward is a playback execution/display mode, not a different simulation
 path. Gameplay still advances normally, consumes BK2 input normally, runs level
@@ -180,7 +211,7 @@ budget. The invariant is that skipped rendering must not skip gameplay updates,
 input consumption, level transitions, audio/session counters needed by gameplay,
 or verifier rows.
 
-## 6. BK2 Format
+## 7. BK2 Format
 
 The movie remains a normal zip-compatible BK2-style file. OpenGGF owns private
 entries under `OpenGGF/`.
@@ -196,14 +227,49 @@ OpenGGF/desync-lite.jsonl
 
 ### `Header.txt`
 
-Contains basic BK2 metadata plus OpenGGF creator/version fields. It should stay
-simple enough that external BK2 tooling can ignore OpenGGF-specific data.
+Contains basic BK2 metadata plus OpenGGF creator/version fields. The current
+`Bk2MovieLoader` header parser reads simple colon-delimited `key: value` lines
+and skips section markers. OpenGGF-authored recordings should use that
+self-consistent convention. Supporting arbitrary BizHawk-authored header
+fields is not required for this feature because the recording writer and reader
+are both OpenGGF-owned.
 
 ### `Input Log.txt`
 
 Stores per-frame controller input using the same button vocabulary that
 `Bk2MovieLoader` already parses. The writer should include P1 and P2 lanes so
 sidekick input and future two-player/debug uses are not lost.
+
+#### Writer LogKey Contract
+
+The writer must emit a LogKey/Input Log shape that round-trips through
+`Bk2MovieLoader` without fallback ambiguity. Use explicit P1 and P2 scoped
+Genesis-pad groups, for example:
+
+```text
+LogKey:#P1 Up|P1 Down|P1 Left|P1 Right|P1 Start|P1 A|P1 B|P1 C|#P2 Up|P2 Down|P2 Left|P2 Right|P2 Start|P2 A|P2 B|P2 C|
+[Input]
+|........|........|
+[/Input]
+```
+
+Each frame line carries one grouped token per lane, in the same button order as
+the LogKey. Use `.` for released buttons and the conventional button letter
+for pressed buttons (`U`, `D`, `L`, `R`, `S`, `A`, `B`, `C`).
+
+This explicit contract matters because playback derives `INPUT_JUMP` from
+`A || B || C`, and jump-press edges come from action-mask transitions. The
+writer must therefore emit an A/B/C action column, not only the collapsed
+engine `INPUT_JUMP` bit, or playback loses jump edges. Live gameplay currently
+has one jump binding for P1 and one jump binding for P2, while future engine
+versions may expose multiple jump buttons. The MVP should map the current
+collapsed jump binding to `A` for both P1 and P2. The manifest records
+`jumpActionButton: "A"` so future multi-button recording can expand without
+ambiguity.
+
+P2 fields must be explicitly `P2`-scoped in the LogKey. Unscoped fields are
+treated as P1 by the loader, and the P2 lane would otherwise round-trip as
+empty.
 
 ### `OpenGGF/manifest.json`
 
@@ -223,6 +289,7 @@ Carries recording metadata:
 - frame count;
 - stop reason;
 - deterministic start seed/counter inputs where available;
+- `jumpActionButton`, initially `"A"` for the single live jump binding;
 - `sidecar.sampleMode: "every-frame"`;
 - reserved optional `sidecar.sampleInterval` for future sparse modes.
 
@@ -263,6 +330,9 @@ the dirty suffix.
 Every line is one frame's lightweight diagnostic snapshot. MVP writes every
 frame because the zip container should compress the repeated structure well.
 Sparse modes can be added later through the manifest contract.
+The expected volume is bounded by act/movie length: long recordings may produce
+large uncompressed JSONL, but repetitive field names and similar values should
+compress well inside the BK2 zip.
 
 Initial fields should be stable and cheap:
 
@@ -281,7 +351,7 @@ Initial fields should be stable and cheap:
 The sidecar is diagnostic-only. It must not be used to hydrate start state,
 repair playback, suppress gameplay, or add tolerance carve-outs.
 
-## 7. Verification Model
+## 8. Verification Model
 
 `UserRecordingVerifier` compares current engine state after each playback frame
 with that frame's `desync-lite` row.
@@ -302,7 +372,18 @@ normal rendering, pauses the engine, and displays the mismatch summary.
 Verification must compare only the recording's fields. It should not grow
 zone/route/frame exceptions and should not reuse trace replay hydration logic.
 
-## 8. UI Details
+The verifier and recorder must use the same state accessors. For position
+fields, use ROM-position center coordinates (`getCentreX()` / `getCentreY()`),
+not top-left render bounds (`getX()` / `getY()`). This avoids the known
+coordinate-semantic trap where a clean replay appears desynced by sprite-bound
+offsets.
+
+The per-frame verifier hook should reuse the existing playback observation
+path where possible: `PlaybackDebugManager.PlaybackFrameObserver` already
+offers `afterFrameAdvanced(...)` after a BK2 frame is consumed. Do not invent a
+parallel playback cursor unless the implementation plan finds a specific gap.
+
+## 9. UI Details
 
 ### Live Recording HUD
 
@@ -344,6 +425,12 @@ when either side is dirty or when the recording lacks build metadata.
 
 It should be a sibling to the trace picker, not a trace picker mode.
 
+The configurable `Record` key should be separate from existing
+`debug.playback.*`, pause, frame-step, and trace-rewind bindings. The
+recording chord is `Shift+Record` for start/menu entry; plain `Record` stops an
+active recording. In modes where another debug surface owns input, the
+recording shortcut is ignored rather than stealing that surface's controls.
+
 ### Playback Options
 
 Minimal prompt fields:
@@ -352,12 +439,18 @@ Minimal prompt fields:
 - pause on desync: toggle;
 - fast-forward: toggle.
 
-## 9. Testing
+## 10. Testing
 
 Unit tests:
 
+- Step-0 determinism smoke test: record a short fresh-start window, replay it
+  from the recorded launch context, and require verifier clean.
 - `UserRecordingWriter` creates a valid zip with all expected entries.
 - Written BK2 can be loaded by `Bk2MovieLoader`.
+- Writer emits explicit P1/P2-scoped LogKey groups.
+- Writer maps the single live jump binding to the configured action button and
+  `Bk2MovieLoader` reconstructs both held jump and jump-press edges.
+- Writer preserves P2 held/jump/start input through `Bk2MovieLoader`.
 - Manifest reader accepts current schema and rejects unsupported required
   schema versions.
 - Manifest sidecar fields accept `sampleMode: "every-frame"` and tolerate
@@ -367,6 +460,8 @@ Unit tests:
 - Verifier reports missing sidecar.
 - Verifier reports truncated sidecar.
 - Verifier reports unsupported sidecar schema.
+- Recorder/verifier both compare center-coordinate x/y and reject a synthetic
+  top-left-vs-center mismatch.
 - Playback timeline/options pause at target frame.
 - Pause-on-desync stops at the mismatching frame.
 - Fast-forward exits at target frame.
@@ -391,7 +486,7 @@ Integration tests:
 - Focused runtime test, where practical, records a tiny fresh-start session and
   replays it cleanly without requiring trace data.
 
-## 10. Open Implementation Decisions
+## 11. Open Implementation Decisions
 
 - Exact default `Record` key and config location. The feature should use a
   configurable key and render key names through `GlfwKeyNameResolver`.
