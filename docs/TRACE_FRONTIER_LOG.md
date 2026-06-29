@@ -6,6 +6,29 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 ARZ2 Obj91 ChopChop patrol bubble integration (f870 -> f888)
+
+- Integrated worker commit: `fc335afd79618a2df5932b68607c2c96b6e9eb33` from
+  `.worktrees/trace-s2-arz2-r12` / `bugfix/ai-trace-s2-arz2-r12`, merged into
+  `bugfix/ai-s2-trace-develop` as `677858465`.
+- Focused integration verification:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ObjectOccupancyOracle,TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: `TestS2ObjectOccupancyOracle` passed all 23 tests; ARZ2 advanced to
+  f888 / 2720 errors (`obj_extra_s1F_x` expected absent, actual `0x0AE0`).
+- S2 green guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+  Result: command exited 0; selected guard reports show failures/errors 0.
+- Full S2 sweep after clearing `target/surefire-reports`:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: 19 trace classes ran; 7 green / 12 expected-red. Red summary:
+  ARZ2 f888 / 2720; CNZ2 f5213 / 749; CPZ1 f4225 / 264; CPZ2 f2889 / 1238;
+  HTZ1 f6586 / 226; HTZ2 f3322 / 1060; MCZ2 f8606 / 317; MTZ1 f5647 / 616;
+  MTZ2 f1857 / 3209; MTZ3 f2048 / 3742; OOZ1 f1790 / 1125; OOZ2 f2623 / 946.
+- Rewind guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtest=TestRewindCoverageGuard" test`.
+  Result: `com.openggf.game.rewind.coverage.TestRewindCoverageGuard` passed
+  1 test with failures/errors 0.
+
 ## 2026-06-29 - S2 HTZ2 DropOnFloor ride-wall deferred speed frontier move (f3317 -> f3322)
 
 - Worktree/branch: `.worktrees/trace-s2-htz2-r12` /
