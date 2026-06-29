@@ -6,6 +6,48 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S1 MZ2 f8661 MovingBlock (Obj0x52) walk-off uses pre-move x for ridden bounds - ENGINE FIX -> MZ2 frontier f8661 -> f13473 (1 file, 665 -> 1 error; full S1 sweep + S2 EHZ1 + guards held GREEN)
+
+- Command: `mvn -Dmse=off "-Dtest=TestS1*CompleteRunTraceReplay" test` +
+  `TestS2Ehz1TraceReplay,TestRewindCoverageGuard,TestArchitecturalSourceGuard`
+  (worktree `bugfix/ai-mz2-osc-phase` off develop 725d2ba24). Result: all 18
+  other S1 complete-run traces GREEN, S2 EHZ1 GREEN, both guards GREEN
+  (TestArchitecturalSourceGuard 58, TestRewindCoverageGuard 1). MZ2 FAIL but
+  advanced f8661 -> f13473 (665 -> 1 error).
+- The pinned osc-phase theory was STALE/DISPROVEN: instrumented a per-frame
+  engine `OscillationManager.snapshotRomFormatBytes()` vs trace `v_oscillate`
+  aux diff from MZ2 frame 0. The osc array is byte-perfect at f8661 (OSCOK).
+  The earlier non-uniform osc compare was from a pre-725d2ba24 engine; the
+  f4610->f8661 tip fix moved the frontier onto a different root. (The only osc
+  blips found, e.g. f2579, are transient single-lag-frame leads that self-heal
+  within one frame and never reach f8661.)
+- f8661 real root (air mismatch exp=1 act=0): the player rides MovingBlock
+  Obj0x52 (slot 0x51, MZ 96x16 triple block, obActWid 0x30) that oscillates
+  horizontally (type 01, v_oscillate+$E). ROM clears Status_OnObj at f8660 (relX
+  reaches the right edge) and goes airborne for ONE frame at f8661, then re-lands
+  at f8662. The engine walked off ONE FRAME LATE (f8661 instead of f8660), so
+  f8662 re-landed instead of ever going airborne. Cause: ROM Obj52 routine 4
+  `MBlock_StandOn` runs `ExitPlatform` (the walk-off bounds check) BEFORE
+  `MBlock_Move`, so it observes the block's PRE-move x_pos
+  (docs/s1disasm/_incObj/52 Moving Blocks.asm:64-83; sub ExitPlatform.asm:24-29).
+  The engine moves the block in update() before the solid checkpoint, so the
+  ridden-bounds check used the POST-move x (relX 0x5F < 0x60 -> stayed; pre-move
+  relX 0x60 -> exits, matching ROM ExitPlatform d0=0x61>=0x60).
+- Fix (1 file): `Sonic1MovingBlockObjectInstance.usesPreUpdatePositionForSolidContact`
+  returns true ONLY while the queried player is already riding this block
+  (`objectManager.isRidingObject(player, this)`). Routine 4 (rider) uses the
+  pre-move x for ExitPlatform bounds; routine 2 (fresh landing) keeps the
+  post-move x because `MBlock_Platform` runs MBlock_Move BEFORE PlatformObject
+  (Moving Blocks.asm:55-61). Same ExitPlatform-before-move pattern already used
+  by Obj18/Obj15/Obj5A platform-family overrides; carry delta unchanged.
+  Object-local, S1-only, no zone/route/frame carve-out.
+- New frontier f13473: SEPARATE camera-vertical-scroll root (1 error total).
+  Player jumping upward on a ChainedStomper (onObj=2A); ROM cam_y eases up by a
+  non-uniform -2/-3/-1 per frame and is at 0x0201 on f13473 while the engine
+  reached 0x0200 one frame early (1px). Single-frame vertical-camera-follow
+  rounding in shared camera code; NOT the MovingBlock/osc root. Bounced (high
+  regression risk on camera_y across all greens for a 1-frame 1px blip).
+
 ## 2026-06-29 - S1 MZ2 f4610 Caterkiller fragment-offscreen respawn-bit - ENGINE FIX -> MZ2 frontier f4610 -> f8661 (1 file, 824 -> 665 errors; full S1 sweep + S2 EHZ1 held GREEN)
 
 - Command: `mvn -q "-Dtest=TestS1*CompleteRunTraceReplay,TestS2Ehz1TraceReplay" test`
