@@ -6,35 +6,62 @@ import java.util.Properties;
 
 public final class AppVersion {
     private static final String RESOURCE_PATH = "/version.properties";
-    private static final String PROPERTY_NAME = "app.version";
+    private static final String VERSION_PROPERTY = "app.version";
+    private static final String BASE_VERSION_PROPERTY = "app.baseVersion";
+    private static final String COMMIT_PROPERTY = "app.commit";
+    private static final String DIRTY_PROPERTY = "app.dirty";
     private static final String DEFAULT_VERSION = "dev";
-    private static final String VERSION = loadVersion();
+    private static final BuildIdentity IDENTITY = loadIdentity();
 
     private AppVersion() {
     }
 
     public static String get() {
-        return VERSION;
+        return identity().displayVersion();
     }
 
-    private static String loadVersion() {
-        return loadVersion(AppVersion.class.getResourceAsStream(RESOURCE_PATH));
+    public static BuildIdentity identity() {
+        return IDENTITY;
     }
 
-    private static String loadVersion(InputStream input) {
+    private static BuildIdentity loadIdentity() {
+        return loadIdentity(AppVersion.class.getResourceAsStream(RESOURCE_PATH));
+    }
+
+    static BuildIdentity loadIdentity(InputStream input) {
         try (InputStream stream = input) {
             if (stream == null) {
-                return DEFAULT_VERSION;
+                return defaultIdentity();
             }
             Properties properties = new Properties();
             properties.load(stream);
-            String version = properties.getProperty(PROPERTY_NAME);
-            if (version == null || version.trim().isEmpty()) {
-                return DEFAULT_VERSION;
-            }
-            return version.trim();
+            String baseVersion = firstNonBlank(
+                    properties.getProperty(BASE_VERSION_PROPERTY),
+                    properties.getProperty(VERSION_PROPERTY),
+                    DEFAULT_VERSION);
+            String commit = trim(properties.getProperty(COMMIT_PROPERTY));
+            boolean dirty = Boolean.parseBoolean(trim(properties.getProperty(DIRTY_PROPERTY)));
+            return new BuildIdentity(baseVersion, commit, dirty);
         } catch (IOException | IllegalArgumentException e) {
-            return DEFAULT_VERSION;
+            return defaultIdentity();
         }
+    }
+
+    private static BuildIdentity defaultIdentity() {
+        return new BuildIdentity(DEFAULT_VERSION, "", false);
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            String trimmed = trim(value);
+            if (!trimmed.isEmpty()) {
+                return trimmed;
+            }
+        }
+        return DEFAULT_VERSION;
+    }
+
+    private static String trim(String value) {
+        return value == null ? "" : value.trim();
     }
 }
