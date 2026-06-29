@@ -6,6 +6,32 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 OOZ2 Obj45 current-push launch gate (OOZ worker r7)
+
+- Worktree/branch: `.worktrees/trace-s2-ooz-r7` /
+  `bugfix/ai-trace-s2-ooz-r7`.
+- Root cause: Obj45 horizontal pressure-spring launch was consuming an
+  engine-local pending launch after `SolidObject_TestClearPush` or no-contact
+  frames. ROM `Obj45_Horizontal` still releases the spring body on those
+  frames, but `Obj45_LaunchCharacterHorizontal` launches a player only when
+  the current object `status(a0)` pushing bit for that player is set and then
+  `bclr`'d (`docs/s2disasm/s2.asm:50393-50538`); the clear-push path removes
+  the object and player pushing bits before returning no collision
+  (`docs/s2disasm/s2.asm:35443-35462`).
+- Verification:
+  `mvn -q "-Dmse=relaxed" "-Dtrace.context.diagnosticChars=full" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Ooz2LevelSelectTraceReplay" test`
+  now fails at the new expected-red OOZ2 frontier below.
+- OOZ2 advances from f1873 / 1093 errors (`x` expected `0x04A6`, actual
+  `0x04A2`) to f2176 / 1077 errors (`g_speed` expected `-0600`, actual
+  `-0800`). The remaining first error is a later Obj45/post-launch pushing
+  status mismatch, not the f1873 early launch.
+- OOZ1 holds f1784 / 1256 errors (`tails_x_speed` expected `0x000C`, actual
+  `-000C`), rooted in the separate Obj36 spike sidekick push/ride path.
+- Current S2 green guard traces remain green:
+  `TestS2ArzLevelSelectTraceReplay`, `TestS2CnzLevelSelectTraceReplay`,
+  `TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay`,
+  `TestS2SczLevelSelectTraceReplay`, `TestS2WfzLevelSelectTraceReplay`.
+
 ## 2026-06-29 - S2 integration sweep after HTZ2 object-riding wall push merge (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /

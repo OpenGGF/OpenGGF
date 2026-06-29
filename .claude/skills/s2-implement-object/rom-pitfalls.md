@@ -2411,6 +2411,42 @@ SolidObject" but shows a one-pixel side-stop delay:
 
 ---
 
+## P59 — Launch/effect gates may depend on the current object pushing bits, not stale pending state
+
+**Pattern.** Some S2 solid interactives split their response into two phases:
+the first `SolidObject` pass compresses or arms the object, and a later release
+tail checks the object's live `status(a0)` pushing bits before launching or
+applying the effect. A naive engine port stores a persistent per-player
+`pendingLaunch` flag and consumes it as soon as the object releases, even after
+the ROM `SolidObject_TestClearPush` path has cleared the object/player pushing
+bits or no current side-push occurred.
+
+**Engine symptom.** The object position and visual release can match ROM, but
+the player launches one frame early or at the wrong release strength. In OOZ2,
+Obj45 released from the correct compressed X on f1873, but the engine consumed
+a stale Sonic pending launch while ROM had just cleared the pushing bit and
+kept Sonic at `x=$04A6` for another frame.
+
+**What to check / fix.** When a ROM routine calls a launch/effect tail that
+starts by testing `status(a0) & pushing_mask` or `bclr #pN_pushing_bit,status(a0)`:
+1. Preserve any visual release motion that occurs before the launch tail.
+2. Do not consume a stale engine pending flag after `SolidObject_TestClearPush`
+   or a no-contact result. Require the current per-player object pushing bit
+   to be set, mirroring the ROM `bclr` gate.
+3. Keep the state object-local and per-player. Do not patch by zone, route,
+   frame, or trace name.
+
+**ROM citation.** Obj45 OOZ horizontal spring release/launch:
+`docs/s2disasm/s2.asm:50435-50538`; current pushing bits are cleared by
+`SolidObject_TestClearPush` / `Solid_NotPushing`
+(`docs/s2disasm/s2.asm:35443-35462`) and set by side collision
+(`docs/s2disasm/s2.asm:35276-35299`).
+
+**Originating commit.** `<pending>` S2 OOZ2 Obj45 current-push launch gate:
+`TestS2Ooz2LevelSelectTraceReplay` advances f1873 -> f2176.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
