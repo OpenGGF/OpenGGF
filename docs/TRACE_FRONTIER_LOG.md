@@ -6,6 +6,48 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 integration sweep after ARZ2 Obj28 + MTZ1 Obj64 merges (6 green, 13 expected-red)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop` after merging
+  `bugfix/ai-trace-s2-mtz1-r2` (`7eb8e0f82`) and
+  `bugfix/ai-trace-s2-arz2-r4` (`427787d41`). Local `develop` and
+  `origin/develop` were merged afterward; both were already up to date.
+- Commands:
+  - `git fetch origin develop`, then `git merge --no-ff origin/develop` and
+    `git merge --no-ff develop`; both merge commands reported already up to
+    date.
+  - Initial broad sweep command
+    `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2*TraceReplay"" test"`
+    was unusable because Surefire matched
+    `AbstractS2LevelSelectTraceReplayTest` and aborted the fork.
+  - Concrete S2 sweep:
+    `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay"" test"`.
+- Result: all 19 concrete S2 trace classes ran: 6 green, 13 expected-red.
+  ARZ2 advanced from f595 to f643. MTZ1 advanced from f1267 to f1840. No
+  current S2 green trace regressed.
+- Green traces: `TestS2ArzLevelSelectTraceReplay`,
+  `TestS2CnzLevelSelectTraceReplay`, `TestS2Ehz1TraceReplay`,
+  `TestS2MczLevelSelectTraceReplay`, `TestS2SczLevelSelectTraceReplay`,
+  `TestS2WfzLevelSelectTraceReplay`.
+- Current red frontiers:
+
+| Trace | First error |
+|---|---|
+| `TestS2Arz2LevelSelectTraceReplay` | f643 `obj_s11_type` expected `0x2C`, actual missing; 3172 errors |
+| `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
+| `TestS2Ooz2LevelSelectTraceReplay` | f1873 `x` expected `0x04A6`, actual `0x04A2`; 1072 errors |
+| `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
+| `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
+| `TestS2MtzLevelSelectTraceReplay` | f1840 `g_speed` expected `0x0311`, actual `0x0000`; 1277 errors |
+| `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1299 errors |
+| `TestS2Htz2LevelSelectTraceReplay` | f3315 `tails_x_speed` expected `0x01E8`, actual `0x00E8`; 1059 errors |
+| `TestS2CpzLevelSelectTraceReplay` | f3544 `y` expected `0x0510`, actual `0x050B`; 350 errors |
+| `TestS2Mcz2LevelSelectTraceReplay` | f4485 `tails_x` expected `0x0EAB`, actual `0x0EAC`; 543 errors |
+| `TestS2Cnz2LevelSelectTraceReplay` | f4632 `tails_y` expected `0x02B8`, actual `0x02B4`; 955 errors |
+| `TestS2DezEndingLevelSelectTraceReplay` | f5952 `y_speed` expected `0x0098`, actual `-0098`; 46 errors |
+| `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
+
 ## 2026-06-29 - S2 MTZ1 Obj64 retraction carry - ENGINE FIX (MTZ1 f1267 -> f1840)
 
 - Scope: branch `bugfix/ai-trace-s2-mtz1-r2` in worktree
