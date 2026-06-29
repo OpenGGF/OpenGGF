@@ -182,6 +182,48 @@ branch-local measurements.
     `TestS2SczLevelSelectTraceReplay`, and
     `TestS2WfzLevelSelectTraceReplay` passed with S2 ROM properties.
 
+## 2026-06-29 - S2 HTZ2 object-riding ground-wall stored velocity - ENGINE FIX (HTZ2 f3315 -> f3317)
+
+- Scope: branch `bugfix/ai-trace-s2-htz2-r1` in worktree
+  `.worktrees/trace-s2-htz2-r1`, branched from
+  `bugfix/ai-s2-trace-develop`. The diff is limited to S2-gated player/terrain
+  collision behavior plus changelog/frontier docs. It does not hydrate trace
+  data and does not add zone, route, frame, or known-failing-trace carve-outs.
+- Root/fix: HTZ2 f3315 matched the ROM position/subpixel delta but stored
+  `tails_x_speed=$00E8` instead of ROM `$01E8` while Tails was already pushing
+  left on Obj30. S2 `Obj02_MdNormal` runs `Tails_Move` before `ObjectMove` and
+  `AnglePos` (`docs/s2disasm/s2.asm:39603-39608`); `Tails_Move` performs the
+  `CalcRoomInFront` wall response before that move
+  (`docs/s2disasm/s2.asm:39833-39885`), and `SolidObject_Always` keeps
+  `Status_OnObj`/standing state alive later in `RunObjects` when the rider is
+  still in bounds (`docs/s2disasm/s2.asm:35070-35095`). The trace rows showed
+  the f3315 position moved with the immediate `$00E8` velocity, then ROM kept a
+  second stored velocity correction for the sustained pushing/object-riding
+  state. `PhysicsFeatureSet` now gates that repeated post-`ObjectMove` stored
+  response to S2, and `CollisionSystem` only stages it when a grounded
+  object-rider is already pushing and the predicted pixel step crosses into the
+  wall.
+- Frontier movement:
+  `TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace` advances from f3315 /
+  1059 errors (`tails_x_speed` expected `0x01E8`, actual `0x00E8`) to f3317 /
+  1058 errors (`tails_x_speed` expected `0x00E8`, actual `-0018`). The new
+  frontier is a downstream sustained-push velocity sign/overcorrection case, not
+  the original f3315 missing stored correction.
+- Held frontier:
+  `TestS2HtzLevelSelectTraceReplay#replayMatchesTrace` remains f6114 / 451
+  errors (`air` expected `1`, actual `0`), so HTZ1 did not regress from the
+  integration expected-red baseline.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.physics.CollisionSystemTest" "-DfailIfNoTests=false" test`
+    exited 0; the selected collision tests passed.
+  - `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-DfailIfNoTests=false" test`
+    remains expected-red at f3317 / 1058 errors above.
+  - `mvn "-Dtest=TestS2HtzLevelSelectTraceReplay#replayMatchesTrace" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-DfailIfNoTests=false" test`
+    remains expected-red at f6114 / 451 errors above.
+  - `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-DfailIfNoTests=false" test`
+    exited 0; individual Surefire reports for all six selected current-green S2
+    guard traces showed 1 run, 0 failures, 0 errors, and 0 skipped.
+
 ## 2026-06-29 - S2 ARZ2 Obj2C leaf d7 slot parity - ENGINE FIX (ARZ2 f662 -> f669)
 
 - Scope: branch `bugfix/ai-trace-s2-arz2-r6` in worktree

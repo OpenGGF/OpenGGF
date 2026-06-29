@@ -318,7 +318,20 @@ public class CollisionSystem {
             return;
         }
 
+        boolean deferRepeatedObjectRideResponse = shouldDeferRepeatedObjectRideResponse(sprite, mode, predictedDx);
         applyGroundWallVelocityResponse(sprite, mode, distance);
+        if (deferRepeatedObjectRideResponse) {
+            sprite.deferGroundWallVelocityResponse(mode, distance);
+        }
+    }
+
+    private static boolean shouldDeferRepeatedObjectRideResponse(AbstractPlayableSprite sprite, int mode, short predictedDx) {
+        var featureSet = sprite.getPhysicsFeatureSet();
+        return featureSet != null
+                && featureSet.repeatedObjectRideGroundWallResponseDeferred()
+                && sprite.isOnObject()
+                && sprite.getPushing()
+                && ((mode == 0x40 && predictedDx < 0) || (mode == 0xC0 && predictedDx > 0));
     }
 
     public void applyDeferredGroundWallVelocityResponse(AbstractPlayableSprite sprite) {
