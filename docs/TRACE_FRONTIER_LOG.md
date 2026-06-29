@@ -38,6 +38,9 @@ branch-local measurements.
   - MCZ2 Obj57 `boss_hurt_sonic` latch lifetime advanced
     `TestS2Mcz2LevelSelectTraceReplay` from f9662 / 83 to f10111 / 22 while
     holding every other S2 accepted red/green frontier in the full sweep.
+  - MCZ2 Obj57 ROM-owned escape deletion advanced
+    `TestS2Mcz2LevelSelectTraceReplay` from f10111 / 22 to f10119 / 26 while
+    holding the S2 green guard.
   - A later MTZ1 offscreen sidekick-latch candidate advanced MTZ1 but regressed
     MTZ2 total errors from 951 to 971 at f3055; it was rejected and reverted in
     `a01e0fedc`.
@@ -52,7 +55,7 @@ branch-local measurements.
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
   `HTZ1` f7108 / 221 (`tails_x` expected `0x231F`, actual `0x2320`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
-  `MCZ2` f10111 / 22 (`camera_x` expected `0x21A1`, actual `0x219C`);
+  `MCZ2` f10119 / 26 (`tails_x_sub` expected `0x5200`, actual `0x0000`);
   `MTZ1` f5713 / 560 (`tails_y_speed` expected `0x0ED0`, actual `0x0000`);
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
   `MTZ3` f2588 / 939 (`tails_cpu_ctrl2_held` expected `0x0012`, actual `0x0002`);
@@ -60,6 +63,41 @@ branch-local measurements.
   `OOZ2` f3226 / 945 (`g_speed` expected `0x0528`, actual `0x0520`).
 - Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `MCZ1`,
   `SCZ`, and `WFZ`.
+
+## 2026-06-29 - S2 MCZ2 Obj57 ROM-owned escape deletion (f10111 -> f10119)
+
+- Worktree/branch: `.worktrees/trace-s2-mcz2-camera` /
+  `bugfix/ai-trace-s2-mcz2-camera`, forked from
+  `bugfix/ai-s2-trace-develop` at integration head `13367aa5213b7d5ef4017a33111f52fe45d2c6e7`.
+- Baseline reproduction:
+  `mvn -q '-Dmse=off' '-Dtest=TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace' '-DfailIfNoTests=false' '-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' test`.
+  Result before the fix: MCZ2 f10111 / 22 errors (`camera_x` expected
+  `0x21A1`, actual `0x219C`).
+- Evidence/fix: The first error showed Sonic and Tails still matching while the
+  engine camera was clamped at `Camera_Max_X_pos=0x219C`; the ROM camera should
+  continue to `0x21A1` because Obj57's SubC escape routine keeps adding 2 to
+  `Camera_Max_X_pos` until it reaches `$2240`. ROM `Obj57_Main_SubC` performs
+  the off-screen delete/capsule spawn only after that compare succeeds
+  (`docs/s2disasm/s2.asm:66316-66335`), and the active Obj57 routines tail into
+  drawing rather than the shared `MarkObjGone`/out-of-range unload path.
+  `Sonic2MCZBossInstance` now marks Obj57 persistent so the manager does not
+  unload the event-spawned boss before its ROM escape routine opens the camera.
+  This is Obj57-local ROM-state modelling, not trace hydration or a
+  zone/route/frame carve-out.
+- Focused Obj57 verification:
+  `mvn -q '-Dmse=off' '-Dtest=com.openggf.game.sonic2.objects.TestTodo4_MCZBossCollision#testObj57UsesRomOwnedEscapeDeleteInsteadOfManagerOutOfRange' test`.
+  Result: command exited 0.
+- Required fresh build:
+  `mvn -q '-Dmse=off' compile test-compile`.
+  Result: command exited 0.
+- Focused MCZ2 trace:
+  `mvn -q '-Dmse=off' '-Dtest=TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace' '-DfailIfNoTests=false' '-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' test`.
+  Result after the fix: MCZ2 advances to f10119 / 26 errors (`tails_x_sub`
+  expected `0x5200`, actual `0x0000`).
+- S2 green guard:
+  `mvn -q '-Dmse=off' '-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay' '-DfailIfNoTests=false' '-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' test`.
+  Result: command exited 0; ARZ1, CNZ1, DEZ ending, EHZ1, MCZ1, SCZ, and WFZ
+  held green.
 
 ## 2026-06-29 - S2 MCZ2 Obj57 boss_hurt_sonic latch lifetime (f9662 -> f10111)
 

@@ -941,6 +941,15 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
     }
 
     @Override
+    public boolean isPersistent() {
+        // Obj57 is event-spawned and its active routines end in Draw_Sprite, not
+        // the shared MarkObjGone/off-screen unload tail. Its escape routine only
+        // deletes after Camera_Max_X_pos reaches $2240 and the boss is off-screen
+        // (Obj57_Main_SubC, docs/s2disasm/s2.asm:66316-66335).
+        return true;
+    }
+
+    @Override
     public String traceDebugDetails() {
         return String.format("sub=%02X cd=%04X flip=%s hurt=%s inv=%s:%02X hp=%02X",
                 state.routineSecondary & 0xFF,

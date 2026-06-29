@@ -321,6 +321,14 @@ public class TestTodo4_MCZBossCollision {
                 "Reascend resets Boss_Countdown to the cycle delay");
     }
 
+    @Test
+    public void testObj57UsesRomOwnedEscapeDeleteInsteadOfManagerOutOfRange() throws Exception {
+        Sonic2MCZBossInstance boss = newMczBossAt(0x2200, 0x0660);
+
+        assertTrue(boss.isPersistent(),
+                "Obj57 must not be unloaded by the shared out-of-range path before SubC opens Camera_Max_X_pos");
+    }
+
     private static Sonic2MCZBossInstance newMczBossAt(int x, int y) throws Exception {
         Sonic2MCZBossInstance boss = new Sonic2MCZBossInstance(
                 new ObjectSpawn(x, y, 0x57, 0, 0, false, y));
