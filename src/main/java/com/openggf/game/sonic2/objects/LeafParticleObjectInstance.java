@@ -107,15 +107,15 @@ public class LeafParticleObjectInstance extends AbstractObjectInstance
         // ROM: move.b objoff_38(a0),d0 / add.b d0,angle(a0)
         angle = (angle + oscillationSpeed) & 0xFF;
 
-        // Random direction reversal check
-        // ROM: add.b (Vint_runcount+3).w,d0 / andi.w #$1F,d0 / bne.s + / ...
-        // This checks if (oscillationSpeed + frame_counter) & 0x1F == 0
-        // Then 50% chance to negate oscillation speed
+        // Direction reversal check.
+        // ROM: Obj2C_Leaf adds (Vint_runcount+3) to objoff_38 and gates on
+        // $1F, then uses ExecuteObjects' d7 loop register, not RNG, to decide
+        // whether to negate objoff_38 (docs/s2disasm/s2.asm:52202-52208).
         int check = (oscillationSpeed + frameCounter) & 0x1F;
         if (check == 0) {
-            // 50% chance to reverse direction
-            // ROM uses d7 which contains random bits
-            if ((frameCounter & 1) != 0) {
+            int slot = getSlotIndex();
+            int romD7 = slot >= 0 && slot <= 127 ? 127 - slot : frameCounter;
+            if ((romD7 & 1) != 0) {
                 oscillationSpeed = -oscillationSpeed;
             }
         }

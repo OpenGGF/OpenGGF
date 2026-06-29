@@ -6,6 +6,39 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 ARZ2 Obj2C leaf d7 slot parity - ENGINE FIX (ARZ2 f662 -> f669)
+
+- Scope: branch `bugfix/ai-trace-s2-arz2-r6` in worktree
+  `.worktrees/trace-s2-arz2-r6`, branched from
+  `bugfix/ai-s2-trace-develop`. The diff is limited to S2 Obj2C leaf particle
+  behavior, focused Obj2C coverage, and changelog/frontier docs. It does not
+  hydrate trace data and does not add zone, route, frame, or known-failing-trace
+  carve-outs.
+- Root/fix: ARZ2 f662 had the Obj2C leaf slots present, but even SST slots were
+  one pixel low after the second leaves burst, so semantic object matching
+  reported `obj_extra_s1E_x` and sibling extra/missing Obj2C slot errors. ROM
+  `Obj2C_Leaf` gates wobble-speed reversal with
+  `add.b (Vint_runcount+3),d0; andi.w #$1F,d0`, then decides whether to negate
+  `objoff_38` from the `ExecuteObjects` `d7` loop register, not RNG or frame
+  parity (`docs/s2disasm/s2.asm:52202-52208`). Since `d7 = 127 - slot`, even
+  SST slots reverse at that gate and odd SST slots do not. The Java leaf routine
+  now uses `127 - getSlotIndex()` for that branch, with a frame-counter fallback
+  only for test/unmanaged construction outside `ObjectManager`.
+- Frontier movement: `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`
+  advances from f662 / 3408 errors (`obj_extra_s1E_x` expected absent, actual
+  `0x0749`) to f669 / 3098 errors (`obj_extra_s13_x` expected absent, actual
+  `0x06F2`). The new frontier is no longer Obj2C leaf position churn: ROM
+  reuses slot 19 for Obj28 at `0x078E,0x0538`, while the engine still has an
+  Obj0A breathing bubble in slot 19 at `0x06F2,0x0510`, so the next blocker is a
+  separate slot-lifetime/allocation issue.
+- Verification:
+  `mvn "-Dtest=TestLeafParticleObjectInstance" test` passed the focused Obj2C
+  leaf parity unit coverage.
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  remains expected-red at the new f669 frontier above (3098 errors, 0 warnings).
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  exited 0; all six current S2 green guard traces passed.
+
 ## 2026-06-29 - S2 integration sweep after ARZ2 Obj2C + CPZ Obj1E + MTZ1 Obj47 merges (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
