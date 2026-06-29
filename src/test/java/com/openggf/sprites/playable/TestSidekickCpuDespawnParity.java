@@ -1081,6 +1081,108 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s2NormalDespawnConsumesFreshRenderEntryForAirRollingDelayedLeaderSample() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        seedDelayedLeaderStatus(sonic,
+                (byte) (AbstractPlayableSprite.STATUS_IN_AIR | AbstractPlayableSprite.STATUS_ROLLING),
+                false);
+
+        TestableSprite tails = createS2Ooz2FreshRenderEntrySidekick();
+        SidekickCpuController controller = createS2Ooz2FreshRenderEntryController(tails, sonic);
+
+        tails.setRenderFlagOnScreen(false);
+        controller.update(3671);
+        assertEquals(0x0078, controller.getDiagnosticRespawnCounter());
+
+        tails.setRenderFlagOnScreen(true);
+        controller.update(3672);
+        assertEquals(0x0079, controller.getDiagnosticRespawnCounter(),
+                "OOZ2 f3672 reads the delayed Stat_table status as air+rolling (0x06); "
+                        + "S2 TailsCPU_CheckDespawn must consume this fresh render-entry one CPU tick late");
+
+        tails.setRenderFlagOnScreen(true);
+        controller.update(3673);
+        assertEquals(0x0000, controller.getDiagnosticRespawnCounter());
+    }
+
+    @Test
+    void s2NormalDespawnResetsFreshRenderEntryForNonAirRollingDelayedLeaderSamples() {
+        byte[] protectedStatuses = {
+                0,
+                AbstractPlayableSprite.STATUS_ROLLING,
+                AbstractPlayableSprite.STATUS_ON_OBJECT,
+                AbstractPlayableSprite.STATUS_FACING_LEFT
+                        | AbstractPlayableSprite.STATUS_IN_AIR
+                        | AbstractPlayableSprite.STATUS_ROLLING
+        };
+        for (byte delayedStatus : protectedStatuses) {
+            TestableSprite sonic = new TestableSprite("sonic");
+            seedDelayedLeaderStatus(sonic, delayedStatus,
+                    (delayedStatus & AbstractPlayableSprite.STATUS_FACING_LEFT) != 0);
+
+            TestableSprite tails = createS2Ooz2FreshRenderEntrySidekick();
+            SidekickCpuController controller = createS2Ooz2FreshRenderEntryController(tails, sonic);
+
+            tails.setRenderFlagOnScreen(false);
+            controller.update(3671);
+            assertEquals(0x0078, controller.getDiagnosticRespawnCounter(),
+                    "precondition failed for delayed Stat_table status " + delayedStatus);
+
+            tails.setRenderFlagOnScreen(true);
+            controller.update(3672);
+            assertEquals(0x0000, controller.getDiagnosticRespawnCounter(),
+                    "HTZ2/HTZ1/MTZ1-shaped delayed Stat_table statuses must reset immediately, status="
+                            + delayedStatus);
+        }
+    }
+
+    private static TestableSprite createS2Ooz2FreshRenderEntrySidekick() {
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0F38);
+        tails.setCentreY((short) 0x0296);
+        tails.setAir(true);
+        tails.setRolling(true);
+        GameServices.camera().setX((short) 0x0F49);
+        GameServices.camera().setY((short) 0x01D3);
+        return tails;
+    }
+
+    private static SidekickCpuController createS2Ooz2FreshRenderEntryController(
+            TestableSprite tails,
+            TestableSprite sonic) {
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0x0077, 0x16, false, 0x08FB, 0x01AC);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 16);
+        return controller;
+    }
+
+    private static void seedDelayedLeaderStatus(TestableSprite sonic, byte delayedStatus, boolean delayedLeftInput) {
+        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        sonic.setCentreX((short) 0x08FB);
+        sonic.setCentreY((short) 0x01AC);
+        sonic.resetPositionAndStatTableHistory();
+        applyStatusBits(sonic, delayedStatus);
+        sonic.setLogicalInputState(false, false, delayedLeftInput, false, false, false);
+        sonic.recordFollowerHistoryForTick();
+        sonic.endOfTick();
+        applyStatusBits(sonic, (byte) 0);
+        for (int i = 0; i < 16; i++) {
+            sonic.endOfTick();
+        }
+    }
+
+    private static void applyStatusBits(TestableSprite sprite, byte status) {
+        sprite.setDirection((status & AbstractPlayableSprite.STATUS_FACING_LEFT) != 0
+                ? Direction.LEFT
+                : Direction.RIGHT);
+        sprite.setAir((status & AbstractPlayableSprite.STATUS_IN_AIR) != 0);
+        sprite.setRolling((status & AbstractPlayableSprite.STATUS_ROLLING) != 0);
+        sprite.setOnObject((status & AbstractPlayableSprite.STATUS_ON_OBJECT) != 0);
+    }
+
+    @Test
     void blinkHiddenSidekickDoesNotRefreshRenderFlagFromCameraVisibility() {
         SpriteManager sprites = new SpriteManager();
         Camera camera = new Camera();

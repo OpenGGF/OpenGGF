@@ -337,6 +337,20 @@ public record PhysicsFeatureSet(
          */
         boolean sidekickDespawnUsesObjectIdMismatch,
         /**
+         * Whether {@code TailsCPU_CheckDespawn} can consume a fresh off-screen
+         * to on-screen render-bit transition one CPU tick late.
+         * <p>S2: {@code true} — {@code Obj02_Control} calls
+         * {@code TailsCPU_Control} before {@code Tails_Display}, and
+         * {@code BuildSprites} runs later in {@code Level_MainLoop}
+         * (s2.asm:38963-38970,39016-39024,39409-39440,5095-5111). Narrowed at
+         * the call site to the ROM-visible CPU status shape that shows this
+         * delay in OOZ2: the sidekick and delayed leader Stat_table sample are
+         * both air+rolling.
+         * <p>S3K: {@code false} for the current sidekick catch-up-flight model.
+         * <p>S1: unreachable (no Tails CPU).
+         */
+        boolean sidekickNormalDespawnDelaysFreshRenderEntry,
+        /**
          * Mask applied to the recorded leader status byte during the sidekick
          * CPU's "fly-back to leader" exit gate (engine APPROACHING state -&gt;
          * NORMAL). When any masked bit is set in the recorded leader status,
@@ -1272,6 +1286,7 @@ public record PhysicsFeatureSet(
                     source.useScreenYWrapValueForVisibility(),
                     source.playerControlAppliesVerticalWrapMask(),
                     source.sidekickDespawnUsesObjectIdMismatch(),
+                    source.sidekickNormalDespawnDelaysFreshRenderEntry(),
                     source.sidekickFlyLandStatusBlockerMask(),
                     source.sidekickFlyLandRequiresLeaderAlive(),
                     source.sidekickCatchUpYOffset(),
@@ -1345,6 +1360,7 @@ public record PhysicsFeatureSet(
             true /* sidekickSpawningRequiresGroundedLeader: S1 has no Tails CPU */, false /* useScreenYWrapValueForVisibility: S1 keeps 32-margin */,
             false /* playerControlAppliesVerticalWrapMask: S1 LZ3/SBZ2 masks y_pos only on camera wrap crossing */,
             true /* sidekickDespawnUsesObjectIdMismatch: S1 has no Tails CPU; symmetric with S2 */,
+            false /* sidekickNormalDespawnDelaysFreshRenderEntry: S1 has no Tails CPU */,
             SIDEKICK_FLY_LAND_BLOCKERS_NONE, false /* sidekickFlyLandRequiresLeaderAlive: S1 has no CPU sidekick */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
             SIDEKICK_FLIGHT_MAX_X_STEP_S3K, SIDEKICK_FLIGHT_Y_STEP_S3K,
@@ -1417,6 +1433,7 @@ public record PhysicsFeatureSet(
             true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
             true /* playerControlAppliesVerticalWrapMask: S2 Obj01_Control applies the active $7FF y_pos mask in vertical-wrap loops */,
             true /* sidekickDespawnUsesObjectIdMismatch: S2 cmp.b id(a3),d0 in TailsCPU_CheckDespawn (s2.asm:39067) */,
+            true /* sidekickNormalDespawnDelaysFreshRenderEntry: S2 TailsCPU_CheckDespawn reads render_flags before Tails_Display/BuildSprites refreshes it, gated by CPU status context at the call site (s2.asm:38963-38970,39016-39024,39409-39440,5095-5111) */,
             SIDEKICK_FLY_LAND_BLOCKERS_S2, false /* sidekickFlyLandRequiresLeaderAlive: S2 TailsCPU_Flying_Part2 has no Sonic-routine check */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
             SIDEKICK_FLIGHT_MAX_X_STEP_S3K, SIDEKICK_FLIGHT_Y_STEP_S3K,
@@ -1491,6 +1508,7 @@ public record PhysicsFeatureSet(
             false, true /* useScreenYWrapValueForVisibility: S3K Render_Sprites height_pixels=0x18 */,
             true /* playerControlAppliesVerticalWrapMask: S3K player control applies Screen_Y_wrap_value */,
             false /* sidekickDespawnUsesObjectIdMismatch: S3K cmp.w (a3),d0 in sub_13EFC (sonic3k.asm:26823) compares routine-pointer high word; all gameplay objects share the same high word so the check almost never fires */,
+            false /* sidekickNormalDespawnDelaysFreshRenderEntry: S3K catch-up-flight traces keep the existing render-bit timing */,
             SIDEKICK_FLY_LAND_BLOCKERS_S3K, true /* sidekickFlyLandRequiresLeaderAlive: sonic3k.asm:26629 cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42 */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
             SIDEKICK_FLIGHT_MAX_X_STEP_S3K, SIDEKICK_FLIGHT_Y_STEP_S3K,

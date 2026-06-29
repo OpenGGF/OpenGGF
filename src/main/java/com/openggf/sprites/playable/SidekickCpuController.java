@@ -189,6 +189,8 @@ public class SidekickCpuController {
      * slot-id-mismatch despawn compare until a real id is observed.
      */
     private int lastInteractObjectId = -1;
+    private boolean normalDespawnLastRenderFlagOffscreen;
+    private boolean normalDespawnFreshRenderEntryDelayConsumed;
     /**
      * S3K mirror of ROM {@code Tails_CPU_interact}: word 0 of the stood-on
      * object SST, sampled by {@code sub_13EFC} during Tails CPU control
@@ -3930,6 +3932,21 @@ public class SidekickCpuController {
         boolean onScreen = sidekick.hasRenderFlagOnScreenState()
                 ? sidekick.isRenderFlagOnScreen()
                 : isCurrentlyVisible();
+        boolean delayingFreshRenderEntry = false;
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (onScreen
+                && fs != null
+                && fs.sidekickNormalDespawnDelaysFreshRenderEntry()
+                && normalDespawnLastRenderFlagOffscreen
+                && !normalDespawnFreshRenderEntryDelayConsumed
+                && sidekick.getAir()
+                && sidekick.getRolling()
+                && delayedLeaderSampleIsUncontrolledAirRoll()
+                && isNearHorizontalRenderEntryEdge()) {
+            onScreen = false;
+            delayingFreshRenderEntry = true;
+            normalDespawnFreshRenderEntryDelayConsumed = true;
+        }
 
         // RAW id of the LIVE object currently occupying the persistent
         // interact(a0) slot. -1 == slot empty in the engine (covers BOTH
@@ -3950,15 +3967,20 @@ public class SidekickCpuController {
         if (onScreen) {
             // ROM TailsCPU_ResetRespawnTimer -> TailsCPU_UpdateObjInteract.
             despawnCounter = 0;
+            normalDespawnLastRenderFlagOffscreen = false;
+            normalDespawnFreshRenderEntryDelayConsumed = false;
             refreshInteractIdSnapshot(snapshotSeedId);
             return false;
         }
 
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         boolean useRidingInstanceLossDespawn = fs != null
                 && fs.sidekickDespawnUsesRidingInstanceLoss();
         boolean useSlotIdMismatchDespawn = fs == null
                 || fs.sidekickDespawnUsesObjectIdMismatch();
+        normalDespawnLastRenderFlagOffscreen = true;
+        if (!delayingFreshRenderEntry) {
+            normalDespawnFreshRenderEntryDelayConsumed = false;
+        }
 
         if (sidekick.isOnObject()) {
             // S3K: sub_13EFC's only practical trigger is a slot freed by
@@ -4004,6 +4026,29 @@ public class SidekickCpuController {
         // ROM falls through to TailsCPU_UpdateObjInteract.
         refreshInteractIdSnapshot(snapshotSeedId);
         return false;
+    }
+
+    private boolean delayedLeaderSampleIsUncontrolledAirRoll() {
+        AbstractPlayableSprite effectiveLeader = resolveActiveFollowLeader();
+        if (effectiveLeader == null) {
+            return false;
+        }
+        int delayFrames = resolveFollowStatDelayFrames();
+        int status = effectiveLeader.getStatusHistory(delayFrames) & 0xFF;
+        int required = AbstractPlayableSprite.STATUS_IN_AIR | AbstractPlayableSprite.STATUS_ROLLING;
+        int input = effectiveLeader.getInputHistory(delayFrames) & 0xFFFF;
+        return status == required && input == 0;
+    }
+
+    private boolean isNearHorizontalRenderEntryEdge() {
+        var camera = sidekick.currentCamera();
+        if (camera == null) {
+            return false;
+        }
+        int widthPixels = sidekick.getRenderFlagWidthPixels();
+        int relX = sidekick.getRenderCentreX() - camera.getX();
+        return (relX > -widthPixels && relX < 0)
+                || (relX >= camera.getWidth() && relX < camera.getWidth() + widthPixels);
     }
 
     /**
@@ -5034,6 +5079,8 @@ public class SidekickCpuController {
                 minYBound,
                 maxYBound,
                 lastInteractObjectId,
+                normalDespawnLastRenderFlagOffscreen,
+                normalDespawnFreshRenderEntryDelayConsumed,
                 diagnosticS3kInteractWord,
                 normalFrameCount,
                 approachFrameCount,
@@ -5092,6 +5139,8 @@ public class SidekickCpuController {
         minYBound = snapshot.minYBound();
         maxYBound = snapshot.maxYBound();
         lastInteractObjectId = snapshot.lastInteractObjectId();
+        normalDespawnLastRenderFlagOffscreen = snapshot.normalDespawnLastRenderFlagOffscreen();
+        normalDespawnFreshRenderEntryDelayConsumed = snapshot.normalDespawnFreshRenderEntryDelayConsumed();
         diagnosticS3kInteractWord = snapshot.diagnosticS3kInteractWord();
         normalFrameCount = snapshot.normalFrameCount();
         approachFrameCount = snapshot.approachFrameCount();
@@ -5208,6 +5257,8 @@ public class SidekickCpuController {
         // construction time, not per-level state. Clearing it would break the sidekick
         // permanently since findLeader() scanning was removed in favor of explicit assignment.
         lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
+        normalDespawnLastRenderFlagOffscreen = false;
+        normalDespawnFreshRenderEntryDelayConsumed = false;
         diagnosticS3kInteractWord = 0;
         minXBound = Integer.MIN_VALUE;
         maxXBound = Integer.MIN_VALUE;

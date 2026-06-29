@@ -66,6 +66,10 @@ branch-local measurements.
     `TestS2Ooz2LevelSelectTraceReplay` from f3226 / 945 to f3672 / 692 and
     improved `TestS2OozLevelSelectTraceReplay` from 1125 to 614 errors while
     holding its first frontier at f1790.
+  - OOZ2 S2 sidekick normal-despawn fresh render-entry timing advanced
+    `TestS2Ooz2LevelSelectTraceReplay` from f3672 / 692 to f3830 / 691 while
+    holding OOZ1 f1790 / 614, HTZ1 green, HTZ2 f3322 / 1057, MTZ1 f5713 / 560,
+    and the S2 green guard including HTZ1.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
@@ -77,9 +81,46 @@ branch-local measurements.
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
   `MTZ3` f2588 / 939 (`tails_cpu_ctrl2_held` expected `0x0012`, actual `0x0002`);
   `OOZ1` f1790 / 614 (`tails_x_speed` expected `0x0080`, actual `-008C`);
-  `OOZ2` f3672 / 692 (`tails_cpu_respawn_counter` expected `0x0079`, actual `0x0000`).
+  `OOZ2` f3830 / 691 (`y` expected `0x024C`, actual `0x0247`).
 - Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `HTZ1`,
   `MCZ1`, `SCZ`, and `WFZ`.
+
+## 2026-06-29 - S2 OOZ2 sidekick render-entry despawn timing (f3672 -> f3830)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop`. Clean verification was run in detached
+  `.worktrees/ai-s2-trace-verify` from the same branch head with only this
+  four-file patch applied because the requested worktree contained unrelated
+  concurrent dirty edits in object/movement files.
+- Baseline reproduction on the requested worktree before the fix:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: OOZ2 f3672 / 692 (`tails_cpu_respawn_counter` expected `0x0079`,
+  actual `0x0000`).
+- Triage/evidence: OOZ2 f3672 has native Tails in normal CPU routine 6,
+  off-screen in the prior despawn check and then freshly re-entering the
+  horizontal render window. The delayed leader Stat_table sample is exactly
+  air+rolling with no logical input (`status=0x06`, delayed input `0x0000`),
+  and ROM keeps `Tails_respawn_counter=0x0079` for one more CPU tick before
+  resetting on f3673. The rejected broad predicate also matched HTZ2 and MTZ1
+  forms; the preserved regression frames differ in ROM-visible CPU
+  status/control bits: HTZ1 uses rolling-only delayed status, HTZ2 f798 uses a
+  grounded delayed sample, MTZ1 uses an on-object delayed sample, and HTZ2 f1171
+  uses facing-left air+rolling with delayed input `0x0400`. The fix therefore
+  keys on the exact S2 delayed status/input shape plus the sidekick's current
+  air+rolling state, prior off-screen render flag, single-use delay latch, and
+  horizontal render-entry edge; no trace data hydration, tolerance, route,
+  frame, or zone carve-out is used.
+- Focused behavior guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuDespawnParity#s2NormalDespawnConsumesFreshRenderEntryForAirRollingDelayedLeaderSample+s2NormalDespawnResetsFreshRenderEntryForNonAirRollingDelayedLeaderSamples" clean test`.
+  Result: passed 2/2 in the clean verification worktree.
+- Focused trace checks:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx4g" test`.
+  Result: OOZ2 advances to f3830 / 691 (`y` expected `0x024C`, actual
+  `0x0247`); OOZ1 holds f1790 / 614; HTZ1 passed; HTZ2 holds f3322 / 1057;
+  MTZ1 holds f5713 / 560.
+- S2 green guard including HTZ1:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx4g" test`.
+  Result: passed 8/8; no S2 green guard regressions.
 
 ## 2026-06-29 - S2 CPZ Obj78 CPU push grace narrowed (CPZ2 1244 -> 1232)
 
