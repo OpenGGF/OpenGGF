@@ -1,6 +1,7 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.tests.TestEnvironment;
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
@@ -8,6 +9,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -615,6 +617,40 @@ class TestSidekickCpuFollowParity {
         assertSame(Direction.LEFT, tails.getDirection(),
                 "ROM TailsCPU_Panic does not reface toward Sonic until inertia reaches zero");
         assertSame(SidekickCpuController.State.PANIC, controller.getState());
+    }
+
+    @Test
+    void s2PanicRevPulseEmitsJumpOnThirtyTwoFramePhase() {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic2GameModule());
+            TestableSprite sonic = new TestableSprite("sonic");
+            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            sonic.setCentreX((short) 0x0AF6);
+
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setCentreX((short) 0x0ACB);
+            tails.setGSpeed((short) 0);
+            tails.setMoveLockTimer(0);
+            tails.setAnimationId(tails.resolveAnimationId(CanonicalAnimation.DUCK));
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.PANIC, 0);
+
+            controller.update(0x0A20);
+
+            assertTrue(controller.getInputDown(),
+                    "S2 TailsCPU_Panic holds DOWN before the release phase (s2.asm:39478-39490)");
+            assertTrue(controller.getInputJump(),
+                    "S2 TailsCPU_Panic ORs A/B/C on phase $20 while ducking (s2.asm:39478-39490)");
+            assertTrue((controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP) != 0,
+                    "Trace diagnostics must expose the panic rev jump bit");
+        } finally {
+            GameModuleRegistry.setCurrent(previous);
+            SessionManager.clear();
+        }
     }
 
     @Test

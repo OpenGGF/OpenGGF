@@ -194,6 +194,14 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean suppressesObjectEdgeBalance() {
+        // ROM Obj65_Init sets status.npc.no_balancing when mapping_frame == 1
+        // (s2.asm:52865-52870). Tails_Move tests that bit before object-edge
+        // balance and falls through to look/duck input handling when it is set.
+        return mappingFrame == 1;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();

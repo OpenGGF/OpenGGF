@@ -3682,9 +3682,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		// ROM: Check if object allows balancing (status.npc.no_balancing bit)
-		// Some objects (like spinning platforms) disable balancing
-		// We skip this check for now as most objects allow balancing
+		if (ridingObject instanceof com.openggf.level.objects.AbstractObjectInstance objectInstance
+				&& objectInstance.suppressesObjectEdgeBalance()) {
+			return;
+		}
 
 		// For multi-piece solid objects (e.g., CPZ Staircase), use the piece-specific
 		// position and params rather than the overall object's base position.

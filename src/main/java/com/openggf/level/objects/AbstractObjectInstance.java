@@ -684,6 +684,15 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * ROM {@code status.npc.no_balancing}: when set, player look/duck logic skips
+     * the object-edge balance branch for riders and falls through to up/down input
+     * handling instead.
+     */
+    public boolean suppressesObjectEdgeBalance() {
+        return false;
+    }
+
+    /**
      * Per-object rendered half-height used by the on-screen / solid-contact
      * gate. ROM equivalent: {@code height_pixels(a0)} as read by Render_Sprites
      * while setting render_flags bit 7.
