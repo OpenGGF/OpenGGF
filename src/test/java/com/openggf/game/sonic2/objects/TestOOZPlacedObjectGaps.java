@@ -337,6 +337,42 @@ class TestOOZPlacedObjectGaps {
     }
 
     @Test
+    void horizontalOozPressureSpringPushClearFrameDoesNotLaunch() throws Exception {
+        ObjectInstance spring = newOOZSpring(0x04B4, 0x03D0, 0x10, 1);
+        TestablePlayableSprite sonic = playerAt(0x04A6, 0x03CC);
+        sonic.setDirection(Direction.RIGHT);
+        sonic.setGSpeed((short) -0x0080);
+        sonic.setXSpeed((short) -0x0080);
+        setIntField(spring, "currentX", 0x04C6);
+        setIntField(spring, "mappingFrame", 0x1C);
+        setBooleanField(spring, "pendingMainHorizontalLaunch", true);
+
+        PlayerSolidContactResult pushCleared = new PlayerSolidContactResult(
+                ContactKind.NONE,
+                false,
+                false,
+                false,
+                true,
+                PreContactState.ZERO,
+                PostContactState.ZERO,
+                0);
+        ((AbstractObjectInstance) spring).setServices(new TestObjectServices()
+                .withSolidExecutionRegistry(new ScriptedSolidRegistry(
+                        spring,
+                        Map.of(sonic, pushCleared),
+                        Map.of(sonic, new PlayerStandingState(ContactKind.SIDE, false, true)))));
+
+        spring.update(0, sonic);
+
+        assertEquals(0x04C2, spring.getX(),
+                "Obj45 releases on the frame where SolidObject clears the old pushing bit");
+        assertEquals(0xFF80, sonic.getXSpeed() & 0xFFFF,
+                "Obj45 must not launch while the previous push bit is only being cleared");
+        assertTrue(booleanField(spring, "pendingMainHorizontalLaunch"),
+                "the pending Obj45 launch remains for the later release frame");
+    }
+
+    @Test
     void oozPoppingPlatformKeepsRomSolidLatchAndObjectControlledSupport() throws Exception {
         ObjectInstance object = newObject("com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance",
                 new ObjectSpawn(0x1000, 0x0500, 0x33, 0x00, 0, false, 0));
@@ -396,6 +432,12 @@ class TestOOZPlacedObjectGaps {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setInt(target, value);
+    }
+
+    private static void setBooleanField(Object target, String fieldName, boolean value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setBoolean(target, value);
     }
 
     private static final class BothPlayersStandingRegistry implements SolidExecutionRegistry {

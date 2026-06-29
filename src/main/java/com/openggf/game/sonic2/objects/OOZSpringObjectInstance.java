@@ -52,6 +52,9 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     private boolean pendingMainHorizontalLaunch;
     private boolean pendingSidekickHorizontalLaunch;
     private boolean compressedThisFrame;
+    private boolean mainHorizontalPushingThisFrame;
+    private boolean sidekickHorizontalPushingThisFrame;
+    private boolean horizontalLaunchRequiresCurrentPush;
     private boolean mainFreshOrderedCarry;
     private boolean sidekickFreshOrderedCarry;
 
@@ -97,14 +100,23 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
 
     private void updateHorizontal(PlayableEntity playerEntity) {
         compressedThisFrame = false;
+        mainHorizontalPushingThisFrame = false;
+        sidekickHorizontalPushingThisFrame = false;
+        horizontalLaunchRequiresCurrentPush = !solidExecutionIsInert();
         List<PlayableEntity> participants = playerParticipants(playerEntity);
-        if (!solidExecutionIsInert()) {
+        if (horizontalLaunchRequiresCurrentPush) {
             SolidCheckpointBatch batch = checkpointAll();
             for (int i = 0; i < participants.size(); i++) {
                 PlayableEntity participant = participants.get(i);
                 PlayerSolidContactResult result = batch.perPlayer().get(participant);
+                if (result != null && result.pushingLastFrame() && !result.pushingNow()) {
+                    // SolidObject_TestClearPush has cleared the old pushing bits; ROM
+                    // Obj45 still releases this frame but cannot consume the launch.
+                    continue;
+                }
                 if (result != null && result.kind() != ContactKind.NONE && result.pushingNow()
                         && participant instanceof AbstractPlayableSprite player) {
+                    markHorizontalPushingThisFrame(player);
                     int beforeX = currentX;
                     handleHorizontalPush(player, result.sideDistX());
                     carryLaterStandingRiders(participants, i + 1, player, currentX - beforeX);
@@ -291,7 +303,9 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         }
 
         for (PlayableEntity participant : participants) {
-            if (participant instanceof AbstractPlayableSprite player && consumePendingHorizontalLaunch(player)) {
+            if (participant instanceof AbstractPlayableSprite player
+                    && (!horizontalLaunchRequiresCurrentPush || isHorizontalPushingThisFrame(player))
+                    && consumePendingHorizontalLaunch(player)) {
                 launchHorizontal(player);
             }
         }
@@ -456,6 +470,18 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         } else {
             pendingMainHorizontalLaunch = true;
         }
+    }
+
+    private void markHorizontalPushingThisFrame(AbstractPlayableSprite player) {
+        if (isNativeSidekick(player)) {
+            sidekickHorizontalPushingThisFrame = true;
+        } else {
+            mainHorizontalPushingThisFrame = true;
+        }
+    }
+
+    private boolean isHorizontalPushingThisFrame(AbstractPlayableSprite player) {
+        return isNativeSidekick(player) ? sidekickHorizontalPushingThisFrame : mainHorizontalPushingThisFrame;
     }
 
     private boolean consumePendingHorizontalLaunch(AbstractPlayableSprite player) {
