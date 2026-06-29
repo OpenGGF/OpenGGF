@@ -91,10 +91,6 @@ public class Sonic2MCZEvents extends Sonic2ZoneEvents {
                 // ROM: Update minX to camera X (prevent backtracking)
                 camera().setMinX(camera().getX());
                 syncSidekickBoundsToCamera();
-
-                if (mczBoss != null && mczBoss.isDefeated()) {
-                    eventRoutine += 2;
-                }
             }
             default -> {
                 // No more routines
