@@ -718,6 +718,71 @@ class TestSonic2ObjectBugFixes {
                 "Grounded Obj70 side contact without a standing bit must set Status_Push");
     }
 
+    @Test
+    void mtzCogLeftwardGroundedCpuSideContactWithoutStandingBitStillPushes() {
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getFrameCounter()).thenReturn(0x04E7);
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0480, 0x0480, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+        cog.setServices(new StubObjectServices() {
+            @Override
+            public LevelManager levelManager() {
+                return levelManager;
+            }
+        });
+        cog.update(0, new TestablePlayableSprite("sonic", (short) 0x0480, (short) 0x0400));
+        cog.snapshotPreUpdatePosition();
+        ObjectManager manager = buildSingleObjectManager(cog);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x04B2, (short) 0x042E);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setXSpeed((short) -0x0080);
+        tails.setGSpeed((short) -0x0080);
+
+        manager.updateSolidContacts(tails);
+
+        assertTrue(tails.getPushing(),
+                "Obj70 reaches SolidObject_cont with no standing bit; moving left must not be mistaken "
+                        + "for the stale-standing d4=0 branch (s2.asm:35021-35044, 55080-55141)");
+    }
+
+    @Test
+    void mtzCogHighSpeedLeftwardReleaseStillSkipsFoldedSiblingSideStop() {
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getFrameCounter()).thenReturn(0x04E7);
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0480, 0x0480, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+        cog.setServices(new StubObjectServices() {
+            @Override
+            public LevelManager levelManager() {
+                return levelManager;
+            }
+        });
+        cog.update(0, new TestablePlayableSprite("sonic", (short) 0x0480, (short) 0x0400));
+        cog.snapshotPreUpdatePosition();
+        ObjectManager manager = buildSingleObjectManager(cog);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x04B2, (short) 0x042E);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setXSpeed((short) -0x0700);
+        tails.setGSpeed((short) -0x0700);
+
+        manager.updateSolidContacts(tails);
+
+        assertFalse(tails.getPushing(),
+                "A high-speed leftward Obj70 release is stale folded-slot geometry, not a fresh grounded push");
+        assertEquals(-0x0700, tails.getXSpeed(),
+                "The folded sibling side path must not run SolidObject_StopCharacter for the stale release");
+    }
+
     private static int intField(Object target, String fieldName) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
