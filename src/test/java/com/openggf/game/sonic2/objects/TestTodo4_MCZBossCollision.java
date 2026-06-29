@@ -4,13 +4,25 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.tests.TestEnvironment;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.events.Sonic2MCZEvents;
+import com.openggf.game.sonic2.objects.bosses.Sonic2MCZBossInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.boss.AbstractBossInstance;
+import com.openggf.level.objects.boss.BossStateContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for MCZ Boss arena events and collision specifications.
@@ -192,6 +204,117 @@ public class TestTodo4_MCZBossCollision {
         assertEquals(6, events.getEventRoutine());
     }
 
+    /**
+     * Boss_CollisionRoutine = 1 uses a single side drill hurt check:
+     * x_pos +/- $30, y_pos + 4, height=4, width=4.
+     *
+     * <p>ROM reference: BossCollision_MCZ (s2.asm:85736-85757)
+     */
+    @Test
+    public void testObj57HorizontalDrillReportsSideHurtRegion() throws Exception {
+        Sonic2MCZBossInstance boss = newMczBossAt(0x2200, 0x0660);
+        setState(boss, "routineSecondary", 0x06);
+        setField(boss, "countdown", 0x10);
+
+        TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
+
+        assertNotNull(regions, "horizontal MCZ drill collision should use explicit boss-specific hurt region");
+        assertEquals(2, regions.length);
+        assertEquals(0x21D0, regions[0].x(), "unflipped horizontal drill is x_pos - $30");
+        assertEquals(0x0664, regions[0].y(), "horizontal drill is y_pos + 4");
+        assertEquals(0x80, regions[0].collisionFlags(), "HURT category with 4x4 size index");
+        assertEquals(0x2200, regions[1].x(), "generic boss body region keeps x_pos");
+        assertEquals(0x0660, regions[1].y(), "generic boss body region keeps y_pos");
+        assertEquals(0xCF, regions[1].collisionFlags(), "generic boss body remains attackable after drill checks");
+    }
+
+    /**
+     * Boss_CollisionRoutine = 0 checks both upward drills:
+     * x_pos + $14 and x_pos - $14, y_pos - $20, height=$10, width=4.
+     *
+     * <p>ROM reference: BossCollision_MCZ2 (s2.asm:85768-85783)
+     */
+    @Test
+    public void testObj57VerticalDrillsReportBothHurtRegions() throws Exception {
+        Sonic2MCZBossInstance boss = newMczBossAt(0x2200, 0x0660);
+        setState(boss, "routineSecondary", 0x02);
+
+        TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
+
+        assertNotNull(regions, "vertical MCZ drill collision should expose both boss-specific hurt regions");
+        assertEquals(3, regions.length);
+        assertEquals(0x2214, regions[0].x(), "first vertical drill is x_pos + $14");
+        assertEquals(0x0640, regions[0].y(), "vertical drills are y_pos - $20");
+        assertEquals(0x84, regions[0].collisionFlags(), "HURT category with size index 4");
+        assertEquals(0x21EC, regions[1].x(), "second vertical drill is x_pos - $14");
+        assertEquals(0x0640, regions[1].y(), "vertical drills are y_pos - $20");
+        assertEquals(0x84, regions[1].collisionFlags(), "HURT category with size index 4");
+        assertEquals(0x2200, regions[2].x(), "generic boss body region keeps x_pos");
+        assertEquals(0x0660, regions[2].y(), "generic boss body region keeps y_pos");
+        assertEquals(0xCF, regions[2].collisionFlags(), "generic boss body remains attackable after drill checks");
+    }
+
+    /**
+     * boss_hurt_sonic is latched by the main-character BossCollision_MCZ hurt path.
+     * CPU Tails can be hurt by Obj57 without forcing the boss into the grin/reascend
+     * branch.
+     *
+     * <p>ROM reference: BossCollision_MCZ tests the main character's
+     * invulnerable_time(a0) == $78 before setting boss_hurt_sonic.
+     */
+    @Test
+    public void testObj57DrillHurtLatchIgnoresCpuSidekick() throws Exception {
+        Sonic2MCZBossInstance boss = newMczBossAt(0x2200, 0x0660);
+        TouchResponseResult hurtResult = new TouchResponseResult(0, 4, 4, TouchCategory.HURT);
+
+        PlayableEntity sidekick = mock(PlayableEntity.class);
+        when(sidekick.isCpuControlled()).thenReturn(true);
+        when(sidekick.getInvulnerable()).thenReturn(false);
+        boss.onTouchResponse(sidekick, hurtResult, 0);
+        assertFalse(getBooleanField(boss, "bossHurtSonic"),
+                "CPU sidekick drill hurt should not latch boss_hurt_sonic");
+
+        PlayableEntity sonic = mock(PlayableEntity.class);
+        when(sonic.isCpuControlled()).thenReturn(false);
+        when(sonic.getInvulnerable()).thenReturn(false);
+        boss.onTouchResponse(sonic, hurtResult, 1);
+        assertTrue(getBooleanField(boss, "bossHurtSonic"),
+                "main-character drill hurt should latch boss_hurt_sonic");
+    }
+
+    private static Sonic2MCZBossInstance newMczBossAt(int x, int y) throws Exception {
+        Sonic2MCZBossInstance boss = new Sonic2MCZBossInstance(
+                new ObjectSpawn(x, y, 0x57, 0, 0, false, y));
+        BossStateContext state = bossState(boss);
+        state.x = x;
+        state.y = y;
+        state.xFixed = x << 16;
+        state.yFixed = y << 16;
+        return boss;
+    }
+
+    private static BossStateContext bossState(Sonic2MCZBossInstance boss) throws Exception {
+        Field stateField = AbstractBossInstance.class.getDeclaredField("state");
+        stateField.setAccessible(true);
+        return (BossStateContext) stateField.get(boss);
+    }
+
+    private static void setState(Sonic2MCZBossInstance boss, String name, int value) throws Exception {
+        Field field = BossStateContext.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.setInt(bossState(boss), value);
+    }
+
+    private static void setField(Sonic2MCZBossInstance boss, String name, int value) throws Exception {
+        Field field = Sonic2MCZBossInstance.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.setInt(boss, value);
+    }
+
+    private static boolean getBooleanField(Sonic2MCZBossInstance boss, String name) throws Exception {
+        Field field = Sonic2MCZBossInstance.class.getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getBoolean(boss);
+    }
+
 }
-
-

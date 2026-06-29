@@ -11,6 +11,10 @@ import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -40,7 +44,8 @@ import java.util.List;
  * - SUBA (0x0A): Hover down after defeat
  * - SUBC (0x0C): Escape right
  */
-public class Sonic2MCZBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public class Sonic2MCZBossInstance extends AbstractBossInstance
+        implements SpawnRewindRecreatable, TouchResponseListener {
 
     // State machine constants (ROM: boss_routine values)
     private static final int SUB0_RISING = 0x00;
@@ -104,6 +109,18 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance implements Spawn
     private static final int COLLISION_ENABLE_THRESHOLD = 0x28;
     /** Defeat explosion duration (ROM: move.w #$B3,(Boss_Countdown).w) */
     private static final int DEFEAT_COUNTDOWN = 0xB3;
+    /** ROM BossCollision_MCZ side-digger HURT size: width=4, height=4 (Touch_Sizes index 0). */
+    private static final int SIDE_DRILL_HURT_FLAGS = 0x80;
+    /** ROM BossCollision_MCZ2 upward-digger HURT size: width=4, height=$10 (Touch_Sizes index 4). */
+    private static final int UPWARD_DRILL_HURT_FLAGS = 0x84;
+    /** ROM BossCollision_MCZ side-digger X offset (x_pos +/- $30). */
+    private static final int SIDE_DRILL_X_OFFSET = 0x30;
+    /** ROM BossCollision_MCZ side-digger Y offset (y_pos + 4). */
+    private static final int SIDE_DRILL_Y_OFFSET = 4;
+    /** ROM BossCollision_MCZ2 upward-digger X offsets (x_pos +/- $14). */
+    private static final int UPWARD_DRILL_X_OFFSET = 0x14;
+    /** ROM BossCollision_MCZ2 upward-digger Y offset (y_pos - $20). */
+    private static final int UPWARD_DRILL_Y_OFFSET = -0x20;
 
     // Animation frame indices (from ROM Ani_obj57 / Obj57_MapUnc_316EC)
     // Main vehicle body
@@ -834,6 +851,57 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance implements Spawn
     }
 
     @Override
+    public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
+        int bodyFlags = getCollisionFlags();
+        if (bodyFlags == 0) {
+            return null;
+        }
+
+        TouchResponseProvider.TouchRegion body =
+                new TouchResponseProvider.TouchRegion(state.x, state.y, bodyFlags);
+        if (sideDrillCollisionRoutineActive()) {
+            int drillX = flipped ? state.x + SIDE_DRILL_X_OFFSET : state.x - SIDE_DRILL_X_OFFSET;
+            return new TouchResponseProvider.TouchRegion[] {
+                new TouchResponseProvider.TouchRegion(
+                        drillX,
+                        state.y + SIDE_DRILL_Y_OFFSET,
+                        SIDE_DRILL_HURT_FLAGS),
+                body
+            };
+        }
+
+        return new TouchResponseProvider.TouchRegion[] {
+            new TouchResponseProvider.TouchRegion(
+                    state.x + UPWARD_DRILL_X_OFFSET,
+                    state.y + UPWARD_DRILL_Y_OFFSET,
+                    UPWARD_DRILL_HURT_FLAGS),
+            new TouchResponseProvider.TouchRegion(
+                    state.x - UPWARD_DRILL_X_OFFSET,
+                    state.y + UPWARD_DRILL_Y_OFFSET,
+                    UPWARD_DRILL_HURT_FLAGS),
+            body
+        };
+    }
+
+    @Override
+    public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
+        if (result.category() == TouchCategory.HURT
+                && player != null
+                && !player.isCpuControlled()
+                && !player.getInvulnerable()) {
+            // ROM BossCollision_MCZ sets boss_hurt_sonic when Boss_DoCollision
+            // just raised the main character's invulnerable_time(a0) to $78.
+            bossHurtSonic = true;
+        }
+    }
+
+    private boolean sideDrillCollisionRoutineActive() {
+        // ROM Obj57_Main_Sub6 writes Boss_CollisionRoutine=1 once countdown
+        // reaches $28; Sub0 later clears it when its cycle countdown reaches $28.
+        return state.routineSecondary == SUB6_HORIZONTAL && countdown <= COLLISION_ENABLE_THRESHOLD;
+    }
+
+    @Override
     protected boolean usesDefeatSequencer() {
         return false; // MCZ boss has custom defeat logic
     }
@@ -861,6 +929,18 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance implements Spawn
     @Override
     public int getPriorityBucket() {
         return 3; // ROM: move.b #3,priority(a0)
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("sub=%02X cd=%04X flip=%s hurt=%s inv=%s:%02X hp=%02X",
+                state.routineSecondary & 0xFF,
+                countdown & 0xFFFF,
+                flipped,
+                bossHurtSonic,
+                state.invulnerable,
+                state.invulnerabilityTimer & 0xFF,
+                state.hitCount & 0xFF);
     }
 
     @Override

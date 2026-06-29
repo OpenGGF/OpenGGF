@@ -32,6 +32,9 @@ branch-local measurements.
     `TestS2Mtz3LevelSelectTraceReplay` from f2048 / 3742 to f2588 / 939 while
     holding `TestS2MtzLevelSelectTraceReplay` and
     `TestS2Mtz2LevelSelectTraceReplay` at their current frontiers.
+  - MCZ2 Obj57 boss-specific drill hurt regions advanced
+    `TestS2Mcz2LevelSelectTraceReplay` from f8965 / 156 to f9662 / 83 while
+    holding every other S2 accepted red/green frontier in the full sweep.
   - A later MTZ1 offscreen sidekick-latch candidate advanced MTZ1 but regressed
     MTZ2 total errors from 951 to 971 at f3055; it was rejected and reverted in
     `a01e0fedc`.
@@ -46,7 +49,7 @@ branch-local measurements.
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
   `HTZ1` f7108 / 221 (`tails_x` expected `0x231F`, actual `0x2320`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
-  `MCZ2` f8965 / 156 (`y` expected `0x063E`, actual `0x0643`);
+  `MCZ2` f9662 / 83 (`y` expected `0x0631`, actual `0x062C`);
   `MTZ1` f5713 / 560 (`tails_y_speed` expected `0x0ED0`, actual `0x0000`);
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
   `MTZ3` f2588 / 939 (`tails_cpu_ctrl2_held` expected `0x0012`, actual `0x0002`);
@@ -54,6 +57,46 @@ branch-local measurements.
   `OOZ2` f3226 / 945 (`g_speed` expected `0x0528`, actual `0x0520`).
 - Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `MCZ1`,
   `SCZ`, and `WFZ`.
+
+## 2026-06-29 - S2 MCZ2 Obj57 boss-specific drill collision (f8965 -> f9662)
+
+- Worktree/branch: `.worktrees/trace-s2-mcz2-obj57-current` /
+  `bugfix/ai-trace-s2-mcz2-obj57-current`, forked from
+  `bugfix/ai-s2-trace-develop` at integration head `9b32649b`.
+- Baseline reproduction:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" test"`.
+  Result before the fix: MCZ2 f8965 / 156 errors (`y` expected `0x063E`,
+  actual `0x0643`), with ROM Sonic entering hurt/ring-scatter state while the
+  engine left Obj57 collisionless.
+- Evidence/fix: MCZ Obj57 does not rely only on the generic boss body. S2
+  `BossCollision_MCZ` first tests the horizontal side drill at
+  `x_pos +/- $30`, `y_pos + 4`, 4x4 while `Boss_CollisionRoutine=1`; the
+  `BossCollision_MCZ2` path tests the upward drill pair at `x_pos +/- $14`,
+  `y_pos - $20`, 4x16 while the collision routine is zero
+  (`docs/s2disasm/s2.asm:85736-85783`). `Sonic2MCZBossInstance` now exposes
+  those ROM drill hurt regions ahead of the generic boss body region, and latches
+  `boss_hurt_sonic` only when the main character takes the drill hurt path.
+  This is Obj57-local ROM-state modelling, not trace hydration or a zone/frame
+  carve-out.
+- Focused Obj57 verification:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dtest=com.openggf.game.sonic2.objects.TestTodo4_MCZBossCollision test"`.
+  Result: command exited 0; focused MCZ event/collision tests passed (MSE also
+  echoed a stale previously generated MCZ2 trace report before the later report
+  refresh).
+- Focused MCZ2 trace:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.context.diagnosticChars=full" "-Dtest=TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" test"`.
+  Result after the fix: MCZ2 advances to f9662 / 83 errors (`y` expected
+  `0x0631`, actual `0x062C`). The new frontier shows a separate Obj57
+  phase/countdown mismatch: the engine has already taken the
+  `boss_hurt_sonic` reascend path while ROM Obj57 remains in routine `$06`.
+- S2 green guard / full S2 sweep:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test"`.
+  Result: 19 trace classes ran; 7 green / 12 expected-red. Red summary:
+  ARZ2 f1028 / 2688; CNZ2 f5242 / 875; CPZ1 f4281 / 246; CPZ2 f2976 / 1232;
+  HTZ1 f7108 / 221; HTZ2 f3322 / 1057; MCZ2 f9662 / 83; MTZ1 f5647 / 616;
+  MTZ2 f4375 / 950; MTZ3 f2588 / 939; OOZ1 f1790 / 1125; OOZ2 f3226 / 945.
+  Compared to the accepted baseline, only MCZ2 moved and no accepted green or
+  red frontier regressed.
 
 ## 2026-06-29 - S2 MTZ2 landing-frame Tails CPU interact refresh lag (f3055 -> f4375)
 
