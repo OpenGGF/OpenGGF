@@ -45,12 +45,15 @@ branch-local measurements.
     break cleanup advanced `TestS2MtzLevelSelectTraceReplay` from f5647 / 616 to
     f5713 / 560 while holding MTZ2, MTZ3, CPZ1, CPZ2, and the rest of the full
     S2 sweep at their accepted baselines.
+  - HTZ1 Obj14 seesaw ball touch-region centering advanced
+    `TestS2HtzLevelSelectTraceReplay` from f7108 / 221 to f7805 / 138 while
+    holding ARZ1, CNZ1, DEZ ending, EHZ1, MCZ1, SCZ, and WFZ green.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
   `CPZ1` f4281 / 246 (`tails_x_speed` expected `-0018`, actual `0x0000`);
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
-  `HTZ1` f7108 / 221 (`tails_x` expected `0x231F`, actual `0x2320`);
+  `HTZ1` f7805 / 138 (`y_speed` expected `0x0038`, actual `0x0000`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
   `MCZ2` f10111 / 22 (`camera_x` expected `0x21A1`, actual `0x219C`);
   `MTZ1` f5713 / 560 (`tails_y_speed` expected `0x0ED0`, actual `0x0000`);
@@ -60,6 +63,45 @@ branch-local measurements.
   `OOZ2` f3226 / 945 (`g_speed` expected `0x0528`, actual `0x0520`).
 - Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `MCZ1`,
   `SCZ`, and `WFZ`.
+
+## 2026-06-29 - S2 HTZ1 Obj14 seesaw ball touch center (f7108 -> f7805)
+
+- Worktree/branch: `.worktrees/trace-s2-htz1-obj14-touch-state` /
+  `bugfix/ai-trace-s2-htz1-obj14-touch-state`, forked from
+  `bugfix/ai-s2-trace-develop` at integration head `13367aa52`.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2HtzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result before the fix: HTZ1 f7108 / 221 errors (`tails_x` expected
+  `0x231F`, actual `0x2320`).
+- Evidence/fix: frame 7108 showed ROM slot 19 Obj14 ball at `x_pos=$2360`,
+  `y_pos=$0743`, routine `$0A`, while the engine touch diagnostic was testing
+  Obj14 at the sprite top-left (`$2355,$0742`) with the ball center shown in
+  trace details as `$2361.$8800,$074A.$B800`. A candidate that only opted into
+  current touch state was rejected because it did not move the trace. The real
+  mismatch was coordinate semantics: S2 `TouchResponse` subtracts the touch
+  size from `x_pos(a1)` and `y_pos(a1)` directly when checking object overlap
+  (`docs/s2disasm/s2.asm:85075,85092`), and Obj14 writes the ball's harmful
+  `collision_flags=$8B` in init (`docs/s2disasm/s2.asm:47596`). The engine now
+  exposes the Obj14 ball touch as a single region at `getCentreX()/getCentreY()`
+  while keeping `getX()/getY()` as sprite top-left render bounds. This is
+  Obj14-local ROM-state modelling, not trace hydration or a zone/frame carve-out.
+- Focused Obj14 verification:
+  `mvn -q "-Dmse=off" "-Dtest=TestSeesawBallTouchState" test`.
+  Result: command exited 0; the test pins that the sprite bounds remain offset
+  while the touch region reports the ROM center position and `$8B` collision
+  byte.
+- Focused HTZ1 trace:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2HtzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result after the fix: HTZ1 advances to f7805 / 138 errors (`y_speed`
+  expected `0x0038`, actual `0x0000`). Trace triage identifies the new frontier
+  as player physics around a smashable-ground fragment/contact state, separate
+  from Obj14 touch.
+- S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: ARZ1, CNZ1, DEZ ending, EHZ1, MCZ1, SCZ, and WFZ all held green.
+  A combined run that also included `TestObjectPhysicsStandardizationGuard`
+  failed only on pre-existing source-guard budget/legacy violations unrelated
+  to Obj14; the S2 guard trace XML reports all had zero failures.
 
 ## 2026-06-29 - S2 MCZ2 Obj57 boss_hurt_sonic latch lifetime (f9662 -> f10111)
 
