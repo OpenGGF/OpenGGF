@@ -128,7 +128,7 @@ class TestUserRecordingWriter {
         List<RecordedFrameInput> inputs = List.of(
                 new RecordedFrameInput(0, 0, 0, false, 0, 0, false),
                 new RecordedFrameInput(1, 0, 0, false, 0, 0, false));
-        List<DesyncLiteFrame> sidecarFrames = List.of(new DesyncLiteFrame(0));
+        List<DesyncLiteFrame> sidecarFrames = List.of(sidecarFrame(0));
 
         assertThrows(IllegalArgumentException.class,
                 () -> UserRecordingWriter.write(bk2Path, sampleManifest(2), inputs, sidecarFrames));
@@ -141,7 +141,7 @@ class TestUserRecordingWriter {
         List<RecordedFrameInput> inputs = List.of(
                 new RecordedFrameInput(0, 0, 0, false, 0, 0, false),
                 new RecordedFrameInput(1, 0, 0, false, 0, 0, false));
-        List<DesyncLiteFrame> sidecarFrames = List.of(new DesyncLiteFrame(0), new DesyncLiteFrame(3));
+        List<DesyncLiteFrame> sidecarFrames = List.of(sidecarFrame(0), sidecarFrame(3));
 
         assertThrows(IllegalArgumentException.class,
                 () -> UserRecordingWriter.write(bk2Path, sampleManifest(2), inputs, sidecarFrames));
@@ -164,8 +164,12 @@ class TestUserRecordingWriter {
 
     private static List<DesyncLiteFrame> sidecarFrames(int count) {
         return java.util.stream.IntStream.range(0, count)
-                .mapToObj(DesyncLiteFrame::new)
+                .mapToObj(TestUserRecordingWriter::sidecarFrame)
                 .toList();
+    }
+
+    private static DesyncLiteFrame sidecarFrame(int frame) {
+        return new DesyncLiteFrame(frame, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     private static UserRecordingManifest sampleManifest(int frameCount) {
