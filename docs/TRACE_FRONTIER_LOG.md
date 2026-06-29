@@ -6,6 +6,38 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 HTZ2 Rising Lava ride-wall deferred speed frontier move (f3317 -> f3322)
+
+- Worktree/branch: `.worktrees/trace-s2-htz2-r11` /
+  `bugfix/ai-trace-s2-htz2-r11`, branched from
+  `bugfix/ai-s2-trace-develop`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: HTZ2 f3317 / 1058 errors (`tails_x_speed`
+  expected `0x00E8`, actual `-0018`); HTZ1 sentinel held f6586 / 226
+  errors (`y_speed` expected `-0178`, actual `-0078`).
+- Evidence/fix: HTZ2 f3317 has Tails standing on Obj30 Rising Lava while
+  `Status_Push` is already set and the predicted wall probe is exactly flush.
+  S2's sustained object-riding push cadence stores the repeated
+  ground-wall velocity correction after the current position update, matching
+  the `Tails_Move` / `ObjectMove` ordering instead of applying the correction
+  before movement (`docs/s2disasm/s2.asm:39603-39608,36842-36860`). The
+  engine now stages a deferred `CalcRoomInFront` response for this ROM-state
+  case under the existing S2 repeated object-ride response feature flag, with
+  no trace, route, frame, or zone carve-out.
+- Focused target/sentinel verification:
+  `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: HTZ2 advances to f3322 / 1060 errors (`tails_x_sub` expected
+  `0x7500`, actual `0x8D00`); HTZ1 remains unchanged at f6586 / 226 errors.
+- S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: command exited 0; the selected S2 guard report XMLs all show
+  `failures="0"`.
+- New HTZ2 frontier: f3322 sidekick ride/CPU steering state, with
+  `tails_cpu_ctrl2_held` expected `0x0004`, actual `0x0008`,
+  `tails_status_byte` expected `0x0029`, actual `0x0008`, and matching
+  integer `tails_x` at `0x170A`.
+
 ## 2026-06-29 - S2 HTZ1 Obj84 flying-sidekick regression repair (256 -> 226 errors)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
