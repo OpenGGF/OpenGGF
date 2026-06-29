@@ -177,6 +177,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
                 suppressMovementForLockedPlayer(player);
 
                 if (playerFlipperState.getOrDefault(player, 0) == 0) {
+                    applySkippedRideObjectRollClear(player, result);
                     // First frame standing: enter rolling state (loc_2B20A)
                     // We use pinball_mode to prevent rolling from being cleared
                     player.setPinballMode(true);
@@ -224,6 +225,22 @@ public class FlipperObjectInstance extends BoxObjectInstance
                 }
             }
         }
+    }
+
+    private void applySkippedRideObjectRollClear(AbstractPlayableSprite player, PlayerSolidContactResult result) {
+        if (player == null || result == null
+                || !result.preContact().air()
+                || !result.preContact().rolling()
+                || !player.getRolling()) {
+            return;
+        }
+        // ROM RideObject_SetRide calls Tails/Sonic_ResetOnFloor_Part2 directly
+        // for airborne object landings (s2.asm:35986-36030), bypassing the
+        // terrain landing pinball_mode guard. If the shared landing path
+        // preserved pinball rolling, restore the direct Part2 side effect here
+        // before Obj86's first-stand bset/addq #5 branch runs (s2.asm:58371-58386).
+        player.setRolling(false);
+        player.setY((short) (player.getY() - player.getRollHeightAdjustment()));
     }
 
     /**

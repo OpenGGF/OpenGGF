@@ -97,7 +97,7 @@ branch-local measurements.
 | `TestS2Htz2LevelSelectTraceReplay` | f3317 `tails_x_speed` expected `0x00E8`, actual `-0018`; 1058 errors |
 | `TestS2CpzLevelSelectTraceReplay` | f3871 `y_speed` expected `0x0638`, actual `0x0000`; 154 errors |
 | `TestS2Mcz2LevelSelectTraceReplay` | f4485 `tails_x` expected `0x0EAB`, actual `0x0EAC`; 543 errors |
-| `TestS2Cnz2LevelSelectTraceReplay` | f4632 `tails_y` expected `0x02B8`, actual `0x02B4`; 955 errors |
+| `TestS2Cnz2LevelSelectTraceReplay` | f4641 `tails_x_speed` expected `0x0000`, actual `0x0100`; 954 errors |
 | `TestS2DezEndingLevelSelectTraceReplay` | f5952 `y_speed` expected `0x0098`, actual `-0098`; 46 errors |
 | `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
 | `TestS2MtzLevelSelectTraceReplay` | f5602 `tails_x` expected `0x16C0`, actual `0x16C1`; 608 errors |
@@ -127,6 +127,41 @@ branch-local measurements.
   `TestS2ArzLevelSelectTraceReplay`, `TestS2CnzLevelSelectTraceReplay`,
   `TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay`,
   `TestS2SczLevelSelectTraceReplay`, `TestS2WfzLevelSelectTraceReplay`.
+
+## 2026-06-29 - S2 CNZ2 Obj86 airborne RideObject roll-clear - ENGINE FIX (CNZ2 f4632 -> f4641)
+
+- Scope: branch `bugfix/ai-trace-s2-cnz2-r6` in worktree
+  `.worktrees/trace-s2-cnz2-r6`, branched from
+  `bugfix/ai-s2-trace-develop`. Comparison-only; no zone, route, frame, or
+  known-failing-trace carve-outs.
+- Root/fix: f4632 is Tails' first stand on vertical Obj86 slot 21 at
+  `0x1C9C,0x02CC`. The generic `SlopedSolid_cont` snap itself is `0x02B4`
+  from Obj86's slope table, but ROM reaches that object landing with
+  `Status_InAir` still set and then `RideObject_SetRide` calls
+  `Tails_ResetOnFloor_Part2` directly (`docs/s2disasm/s2.asm:35986-36030`).
+  That direct Part2 bypasses the terrain `pinball_mode` guard, clears rolling,
+  restores Tails' standing radius, and lifts `y_pos` by 1 before Obj86's
+  first-stand branch writes rolling radii and applies `addq.w #5,y_pos`
+  (`docs/s2disasm/s2.asm:58371-58386`). Net effect: the first-stand seat is
+  4px below the raw slope snap, matching the ROM `tails_y=0x02B8`.
+- Engine fix: `PreContactState` now records the pre-solid air bit, and
+  `FlipperObjectInstance` applies the skipped direct `ResetOnFloor_Part2`
+  rolling clear only for first-stand contacts that were airborne+rolling before
+  Obj86 and still have rolling set after the shared object landing path. This
+  keeps the existing f1775 non-rolling first-stand behavior intact and avoids a
+  broad Obj86 offset.
+- Result: `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` advances from
+  f4632 / 955 errors (`tails_y` expected `0x02B8`, actual `0x02B4`) to
+  f4641 / 954 errors (`tails_x_speed` expected `0x0000`, actual `0x0100`).
+  The new frontier is a separate Obj86 slide-cadence mismatch: after seating,
+  the engine begins the `mapping_frame-1` slide one frame before ROM.
+- Verification:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Dsonic.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" test`
+  -> expected-red at f4641 / 954 errors.
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Dsonic.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" test`
+  -> Maven OK; CNZ1 passed, with Surefire also picking up CNZ2 as the expected-red f4641 failure.
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Dsonic.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" test`
+  -> Maven OK; six requested green traces passed, with Surefire also picking up CNZ2 as the expected-red f4641 failure.
 
 ## 2026-06-29 - S2 integration sweep after HTZ2 object-riding wall push merge (6 green, 13 expected-red)
 
