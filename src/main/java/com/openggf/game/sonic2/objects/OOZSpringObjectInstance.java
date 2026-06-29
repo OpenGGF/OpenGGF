@@ -106,7 +106,7 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
                 if (result != null && result.kind() != ContactKind.NONE && result.pushingNow()
                         && participant instanceof AbstractPlayableSprite player) {
                     int beforeX = currentX;
-                    compressHorizontalSpring(player);
+                    handleHorizontalPush(player, result.sideDistX());
                     carryLaterStandingRiders(participants, i + 1, player, currentX - beforeX);
                 }
             }
@@ -155,13 +155,37 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         }
         if (horizontal) {
             if (contact.pushing()) {
-                compressHorizontalSpring(player);
+                handleHorizontalPush(player, contact.sideDistX());
             }
             return;
         }
         if (contact.standing()) {
             updateVerticalForStandingPlayer(player);
         }
+    }
+
+    private void handleHorizontalPush(AbstractPlayableSprite player, int sideDistX) {
+        if (sideDistX == 0) {
+            holdHorizontalSpringAtExactEdge(player);
+            return;
+        }
+        compressHorizontalSpring(player);
+    }
+
+    private void holdHorizontalSpringAtExactEdge(AbstractPlayableSprite player) {
+        boolean flipped = isXFlipped();
+        if (flipped) {
+            if (player.getDirection() != Direction.RIGHT || player.getGSpeed() <= 0) {
+                return;
+            }
+        } else if (player.getDirection() != Direction.LEFT || player.getGSpeed() >= 0) {
+            return;
+        }
+
+        // ROM Obj45_Horizontal loc_2433C reaches loc_243C8 when d0 == 0 and
+        // inertia points into the spring: it sets objoff_36, but does not move
+        // the spring, add to x_pos(a1), or clear x_vel(a1) (s2.asm:50475-50525).
+        compressedThisFrame = true;
     }
 
     private void compressHorizontalSpring(AbstractPlayableSprite player) {

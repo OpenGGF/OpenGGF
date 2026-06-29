@@ -41,6 +41,47 @@ branch-local measurements.
 | `TestS2DezEndingLevelSelectTraceReplay` | f5952 `y_speed` expected `0x0098`, actual `-0098`; 46 errors |
 | `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
 
+## 2026-06-29 - S2 OOZ2 Obj45 exact-edge compression hold - ENGINE FIX (Obj45 + focused test, OOZ2 f1603 -> f1751)
+
+- Scope: branch `bugfix/ai-trace-s2-ooz2-r4` in worktree
+  `.worktrees/trace-s2-ooz2-r4`. The diff is limited to S2 Obj45 horizontal
+  pressure-spring contact handling, focused Obj45 unit coverage, and docs; it
+  does not hydrate trace data and does not add zone, route, or frame carve-outs.
+- Root/fix: at f1603 the engine still treated Obj45's persisted side push as a
+  compressing contact, so it moved the spring, added to Sonic's `x_pos`, and
+  cleared Sonic's `x_vel` after player movement. ROM `Obj45_Horizontal` only
+  calls the compression body when the SolidObject side distance is nonzero. When
+  `d0 == 0`, `loc_2433C` may branch to `loc_243C8` to set `objoff_36`, but it
+  does not move Obj45, add to `x_pos(a1)`, or clear `x_vel(a1)`
+  (`docs/s2disasm/s2.asm:50475-50525`). Obj45 now handles that exact-edge path
+  by holding the spring compressed without clamping the player's velocity.
+- Frontier movement: `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace`
+  advances from f1603 / 1250 errors (`x_speed` expected `0x004C`, actual
+  `0x0000`) to f1751 / 1338 errors (`y_speed` expected `0x0420`, actual
+  `-0400`). The new frontier is downstream near the upper Obj45/Obj43 area:
+  the engine is in a hurt/lost-ring state after an Obj43 overlap while ROM is
+  still in normal airborne motion.
+- Rejected hypotheses: this was not a duplicate of the prior ordered sidekick
+  carry fix; the decisive ROM branch is Obj45's `d0 == 0` exact-edge handling,
+  not the Sonic-vs-Sidekick SolidObject ordering. It also is not a broad
+  SolidObject resolver change because other objects still need the normal
+  side-contact `d4 == 1` result; Obj45 alone reads the side distance again in
+  its compression routine.
+- Verification:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed ""-Dtest=com.openggf.game.sonic2.objects.TestOOZPlacedObjectGaps"" test"`
+  exited 0; Surefire reports 13 Obj45/OOZ object tests passed.
+  Focused target/guard command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestOOZPlacedObjectGaps,TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,TestS2OozLevelSelectTraceReplay#replayMatchesTrace,TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace"" test"`
+  remained expected-red only for OOZ2 f1751 and the pre-existing OOZ1 f1784;
+  Obj45 coverage and ARZ1/EHZ1/MCZ1/SCZ/WFZ green guards passed.
+  Full S2 sweep command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2*TraceReplay"" test"`
+  ran 19 S2 trace classes; 5 green and 14 expected-red. All non-OOZ2 first
+  errors match the integration baseline (`ARZ2 f595`, `CNZ1 f4024`,
+  `CNZ2 f4632`, `CPZ1 f3365`, `CPZ2 f2889`, `DEZ ending f5952`, `HTZ1 f6114`,
+  `HTZ2 f3315`, `MCZ2 f4485`, `MTZ1 f1267`, `MTZ2 f1277`, `MTZ3 f1973`,
+  `OOZ1 f1784`); OOZ2 advances to f1751.
+
 ## 2026-06-29 - S2 WFZ ObjB2 jump-to-ship latch and plane seating - ENGINE FIX (ObjB2 + focused tests, WFZ f15010 -> GREEN)
 
 - Scope: branch `bugfix/ai-trace-s2-wfz-r3` in worktree
