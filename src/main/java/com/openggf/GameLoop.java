@@ -61,16 +61,19 @@ import com.openggf.level.WaterSystem;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.data.RomManager;
+import com.openggf.data.Rom;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
 import com.openggf.integration.presence.PresenceFormatter;
 import com.openggf.integration.presence.PresenceManager;
 import com.openggf.integration.presence.RuntimePresenceSnapshotProvider;
 import com.openggf.integration.presence.discord.DiscordIpcPresenceClient;
 import com.openggf.integration.presence.discord.DiscordIpcTransports;
+import com.openggf.recording.RecordingLaunchContext;
 import com.openggf.testmode.TraceCameraFocusController;
 
 import java.io.IOException;
@@ -2654,6 +2657,53 @@ public class GameLoop {
         }
         GameplayModeContext currentGameplayMode = SessionManager.getCurrentGameplayMode();
         return currentGameplayMode != null && currentGameplayMode.isGameplayRuntimeReady();
+    }
+
+    public void restartFromRecordingLaunchContext(RecordingLaunchContext context) {
+        Objects.requireNonNull(context, "context");
+
+        configService.clearSessionOverrides();
+        configService.setSessionOverride(SonicConfiguration.DEFAULT_ROM, context.gameId());
+        configService.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, context.debugToolsEnabled());
+        configService.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, context.mainCharacter());
+        configService.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
+                String.join(",", context.sidekickCharacters()));
+        configService.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+        configService.resolveDisplayAspect();
+
+        try {
+            romManager.close();
+            Rom rom = romManager.getRom();
+            GameModule module = engineServices.romDetection()
+                    .detectAndCreateModule(rom)
+                    .orElseThrow(() -> new IOException(
+                            "ROM not recognized for recording launch context: " + context.gameId()));
+
+            audioManager.setAudioProfile(module.getAudioProfile());
+            audioManager.setRom(rom);
+            resetModuleScopedProviders();
+
+            GameplayModeContext freshGameplayMode = SessionManager.openGameplaySession(module);
+            GameplaySessionFactory.attachManagers(freshGameplayMode, engineServices);
+            setGameplayMode(freshGameplayMode);
+
+            var team = ActiveGameplayTeamResolver.resolvePlayerCharacter(configService);
+            var bootstrappedTeam = com.openggf.game.session.GameplayTeamBootstrap.registerActiveTeam(
+                    module, spriteManager, configService);
+            camera.setFocusedSprite(bootstrappedTeam.mainSprite());
+            camera.updatePosition(true);
+            levelManager.loadZoneAndAct(context.zone(), context.act());
+
+            GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
+            if (gameModeChangeListener != null) {
+                gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
+            }
+            LOGGER.info("Restarted recording launch context: " + context.gameId()
+                    + " zone " + context.zone() + " act " + context.act()
+                    + " team " + team);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to restart from recording launch context", e);
+        }
     }
 
     private FadeManager resolveFadeManager() {
