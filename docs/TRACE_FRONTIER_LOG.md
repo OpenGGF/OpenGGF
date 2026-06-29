@@ -11,6 +11,8 @@ branch-local measurements.
 - Worktree/branch: `.worktrees/trace-s2-ooz2-r12` /
   `bugfix/ai-trace-s2-ooz2-r12`, forked from
   `bugfix/ai-s2-trace-develop` at integration note `a722e7699`.
+- Integrated worker commit: `1aae9b01b7b50923b8fabb2e5ddb4bee446babcf`,
+  merged into `bugfix/ai-s2-trace-develop` as `8b08d9689`.
 - Baseline reproduction:
   `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Ooz2LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
   Result before the fix: OOZ2 f2623 / 946 errors (`tails_x` expected
@@ -31,6 +33,16 @@ branch-local measurements.
 - S2 green guard:
   `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
   Result: command exited 0; selected guard traces passed.
+- Integration full S2 sweep after clearing `target/surefire-reports`:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: 19 trace classes ran; 7 green / 12 expected-red. Red summary:
+  ARZ2 f888 / 2720; CNZ2 f5242 / 875; CPZ1 f4225 / 264; CPZ2 f2889 / 1238;
+  HTZ1 f6586 / 226; HTZ2 f3322 / 1060; MCZ2 f8965 / 156; MTZ1 f5647 / 616;
+  MTZ2 f1857 / 3209; MTZ3 f2048 / 3742; OOZ1 f1790 / 1125; OOZ2 f3226 / 945.
+- Integration rewind guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtest=TestRewindCoverageGuard" test`.
+  Result: `com.openggf.game.rewind.coverage.TestRewindCoverageGuard` passed
+  1 test with failures/errors 0.
 
 ## 2026-06-29 - S2 MCZ2 Obj57 debris and boss-hit ordering integration (f8606 -> f8965)
 
