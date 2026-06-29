@@ -6,6 +6,49 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 MTZ1 Obj26 monitor side-entry solid timing - ENGINE FIX (MTZ1 f4835 -> f5602)
+
+- Scope: branch `bugfix/ai-trace-s2-mtz1-r5` in worktree
+  `.worktrees/trace-s2-mtz1-r5`, branched from
+  `bugfix/ai-s2-trace-develop`. The diff is limited to S2 monitor solid timing,
+  a narrow `SolidObjectProvider` opt-in hook used by Obj26, focused monitor
+  coverage, and docs. Trace data remains comparison-only; no zone, route, frame,
+  or known-failing-trace carve-out was added.
+- Root/fix: MTZ1 f4835 was a one-frame-late Tails side stop against an Obj26
+  monitor after the preceding Obj65 interaction. ROM Tails had already advanced
+  to `x=$16D6`, `x_vel/inertia=0`, and `Status_Push` set, while the engine was
+  still at `x=$16D7` with live ground speed. Obj26 runs its main routine after
+  the player/sidekick slots and calls `SolidObject_Monitor` for Sonic then
+  Tails (`docs/s2disasm/s2.asm:25579-25605`). The Obj26 wrappers branch
+  directly to `SolidObject_cont`, not `SolidObject_OnScreenTest`
+  (`docs/s2disasm/s2.asm:25617-25636`), and the shared left-side path stops the
+  character once the pending ground movement has crossed into the monitor
+  (`docs/s2disasm/s2.asm:35424-35439`). The engine's normal object pass is
+  before grounded player movement, so Obj26 now bypasses the generic off-screen
+  solid gate and opts into a projected flat-ground X side-entry check that is
+  only used for new grounded side contact.
+- Frontier movement:
+  `TestS2MtzLevelSelectTraceReplay#replayMatchesTrace` advances from f4835 /
+  845 errors (`tails_x` expected `0x16D6`, actual `0x16D7`) to f5602 /
+  608 errors (`tails_x` expected `0x16C0`, actual `0x16C1`).
+- Held frontiers:
+  `TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace` remains f1277 /
+  3385 errors (`tails_x` expected `0x047D`, actual `0x047F`);
+  `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace` remains f1973 /
+  3705 errors (`tails_g_speed` expected `0x0000`, actual `0x03C1`).
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic2.objects.TestMonitorObjectInstance" "-DfailIfNoTests=false" test` -> 8 passed, 0 failed.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-DfailIfNoTests=false" test` -> expected red at f5602 / 608 errors.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-DfailIfNoTests=false" test` -> expected red at f1277 / 3385 errors.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-DfailIfNoTests=false" test` -> expected red at f1973 / 3705 errors.
+  - Required green guards
+    `TestS2ArzLevelSelectTraceReplay`,
+    `TestS2CnzLevelSelectTraceReplay`,
+    `TestS2Ehz1TraceReplay`,
+    `TestS2MczLevelSelectTraceReplay`,
+    `TestS2SczLevelSelectTraceReplay`, and
+    `TestS2WfzLevelSelectTraceReplay` passed with S2 ROM properties.
+
 ## 2026-06-29 - S2 ARZ2 Obj2C leaf d7 slot parity - ENGINE FIX (ARZ2 f662 -> f669)
 
 - Scope: branch `bugfix/ai-trace-s2-arz2-r6` in worktree

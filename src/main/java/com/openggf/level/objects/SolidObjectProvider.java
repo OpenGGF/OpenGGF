@@ -454,6 +454,18 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object should project a grounded player's pending flat-ground
+     * X movement before running new side-contact geometry.
+     * <p>
+     * Most objects keep the engine's normal pre-movement solid pass. Concrete
+     * S2 objects whose ROM routine runs after the player slot may opt in when
+     * trace evidence shows the object must see the post-player-move X position.
+     */
+    default boolean projectsPreMovementGroundXForSolidContact(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether continued-riding flat-top re-seat should use the object's
      * pre-update Y for this frame.
      * <p>

@@ -436,6 +436,8 @@ final class ObjectSolidContactController {
     private final Map<PlayableEntity, Map<Integer, Integer>> latestHeadroomSnapshots =
             new IdentityHashMap<>(2);
 
+    private record ProjectedPreMovementX(int centerX, int subpixel) {}
+
     ObjectSolidContactController(ObjectManager objectManager) {
         this.objectManager = objectManager;
     }
@@ -2705,6 +2707,12 @@ final class ObjectSolidContactController {
         // can drop contact for one frame at edges.
         int stickyX = ridingThisPiece ? 16 : 0;
         int rightLimit = width2 + stickyX;
+        ProjectedPreMovementX projectedPreMovementX = projectedPreMovementXForSolidContact(
+                player, instance, anchorX, halfWidth, relXRaw, rightLimit, inclusiveRightEdge, apply);
+        if (projectedPreMovementX != null) {
+            playerCenterX = projectedPreMovementX.centerX();
+            relXRaw = playerCenterX - anchorX + halfWidth;
+        }
         if (relXRaw < -stickyX || (inclusiveRightEdge ? relXRaw > rightLimit : relXRaw >= rightLimit)) {
             return null;
         }
@@ -2724,13 +2732,148 @@ final class ObjectSolidContactController {
             return null;
         }
 
+        SolidContact contact;
         if (monitorSolidity) {
-            return resolveMonitorContact(player, relX, relY, halfWidth, maxTop, playerCenterX, playerCenterY,
+            contact = resolveMonitorContact(player, relX, relY, halfWidth, maxTop, playerCenterX, playerCenterY,
                     anchorX, riding, apply);
+        } else {
+            contact = resolveContactInternal(player, relX, relY, halfWidth, maxTop, totalHeight,
+                    playerCenterX, playerCenterY,
+                    topSolidOnly, riding, apply, instance, true, pieceIndex);
         }
-        return resolveContactInternal(player, relX, relY, halfWidth, maxTop, totalHeight,
-                playerCenterX, playerCenterY,
-                topSolidOnly, riding, apply, instance, true, pieceIndex);
+        preserveProjectedXSubpixelAfterSideContact(player, contact, projectedPreMovementX);
+        return contact;
+    }
+
+    private ProjectedPreMovementX projectedPreMovementXForSolidContact(PlayableEntity player,
+            ObjectInstance instance, int anchorX, int halfWidth, int relXRaw, int rightLimit,
+            boolean inclusiveRightEdge, boolean apply) {
+        if (!apply
+                || postMovement
+                || !(instance instanceof SolidObjectProvider provider)
+                || !provider.projectsPreMovementGroundXForSolidContact(player)
+                || !(player instanceof AbstractPlayableSprite sprite)
+                || player.getAir()
+                || sprite.getGroundMode() != GroundMode.GROUND
+                || (sprite.getAngle() & 0xFF) != 0
+                || sprite.getRolling()
+                || sprite.getSpindash()) {
+            return null;
+        }
+
+        boolean leftOfBox = relXRaw < 0;
+        boolean rightOfBox = inclusiveRightEdge ? relXRaw > rightLimit : relXRaw >= rightLimit;
+        if (!leftOfBox && !rightOfBox) {
+            return null;
+        }
+
+        short projectedXSpeed = projectedFlatGroundXSpeed(sprite);
+        if ((leftOfBox && projectedXSpeed <= 0) || (rightOfBox && projectedXSpeed >= 0)) {
+            return null;
+        }
+
+        int projectedFullX = ((int) sprite.getCentreX() << 16)
+                | (sprite.getXSubpixelRaw() & 0xFFFF);
+        projectedFullX += (int) projectedXSpeed << 8;
+        int projectedCenterX = projectedFullX >> 16;
+        int projectedRelX = projectedCenterX - anchorX + halfWidth;
+        boolean projectedInside = projectedRelX >= 0
+                && (inclusiveRightEdge ? projectedRelX <= rightLimit : projectedRelX < rightLimit);
+        if (!projectedInside) {
+            return null;
+        }
+        return new ProjectedPreMovementX(projectedCenterX, projectedFullX & 0xFFFF);
+    }
+
+    private short projectedFlatGroundXSpeed(AbstractPlayableSprite sprite) {
+        short gSpeed = sprite.getGSpeed();
+        short runAccel = sprite.getRunAccel();
+        short runDecel = sprite.getRunDecel();
+        short friction = sprite.getFriction();
+        short max = sprite.getMax();
+        boolean left = sprite.isLeftPressed();
+        boolean right = sprite.isRightPressed();
+        boolean moveLockActive = sprite.getMoveLockTimer() > 0;
+
+        if (!moveLockActive) {
+            if (left) {
+                if (gSpeed > 0) {
+                    gSpeed -= runDecel;
+                    if (gSpeed < 0) {
+                        gSpeed = (short) -128;
+                    }
+                } else {
+                    gSpeed = accelerateLeftForProjection(sprite, gSpeed, runAccel, max);
+                }
+            }
+            if (right) {
+                if (gSpeed < 0) {
+                    gSpeed += runDecel;
+                    if (gSpeed >= 0) {
+                        gSpeed = (short) 128;
+                    }
+                } else {
+                    gSpeed = accelerateRightForProjection(sprite, gSpeed, runAccel, max);
+                }
+            }
+        }
+
+        if (!left && !right) {
+            gSpeed = applyFrictionForProjection(gSpeed, friction);
+        }
+        return gSpeed;
+    }
+
+    private short accelerateLeftForProjection(AbstractPlayableSprite sprite, short gSpeed,
+            short runAccel, short max) {
+        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+        boolean alwaysCap = featureSet != null && featureSet.inputAlwaysCapsGroundSpeed();
+        if (alwaysCap || gSpeed > -max) {
+            gSpeed -= runAccel;
+            if (gSpeed < -max) {
+                gSpeed = (short) -max;
+            }
+        }
+        return gSpeed;
+    }
+
+    private short accelerateRightForProjection(AbstractPlayableSprite sprite, short gSpeed,
+            short runAccel, short max) {
+        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+        boolean alwaysCap = featureSet != null && featureSet.inputAlwaysCapsGroundSpeed();
+        if (alwaysCap || gSpeed < max) {
+            gSpeed += runAccel;
+            if (gSpeed > max) {
+                gSpeed = max;
+            }
+        }
+        return gSpeed;
+    }
+
+    private short applyFrictionForProjection(short speed, short friction) {
+        if (speed > 0) {
+            speed -= friction;
+            if (speed < 0) {
+                speed = 0;
+            }
+        } else if (speed < 0) {
+            speed += friction;
+            if (speed > 0) {
+                speed = 0;
+            }
+        }
+        return speed;
+    }
+
+    private void preserveProjectedXSubpixelAfterSideContact(PlayableEntity player, SolidContact contact,
+            ProjectedPreMovementX projectedPreMovementX) {
+        if (projectedPreMovementX == null
+                || contact == null
+                || !contact.touchSide()
+                || !(player instanceof AbstractPlayableSprite sprite)) {
+            return;
+        }
+        sprite.setSubpixelRaw(projectedPreMovementX.subpixel(), sprite.getYSubpixelRaw());
     }
 
     private int getSolidTopYRadius(PlayableEntity player) {

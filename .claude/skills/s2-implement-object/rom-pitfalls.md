@@ -2332,6 +2332,55 @@ parent/child X offsets; OOZ2 advances from f1751 to f1873.
 
 ---
 
+## P57 - Some object-local SolidObject wrappers bypass the generic off-screen gate and may see post-player X
+
+**Pattern.** Do not assume an object that uses the shared `SolidObject` geometry
+enters through the generic `SolidObject_OnScreenTest` wrapper, and do not assume
+the engine's usual pre-player object contact pass is equivalent for every
+wrapper. Some S2 object routines call a per-object wrapper after the player
+slots have already moved for the frame, and that wrapper may branch directly to
+`SolidObject_cont`.
+
+**Engine symptom.** A sidekick or player reaches a solid object's side one
+frame late by exactly one pixel. The trace shows the ROM already set
+`Status_Push` and cleared `x_vel`/`inertia`, while the engine still has live
+ground speed and is one pixel beyond the object's side. In the originating MTZ1
+case, Tails at f4835 should have stopped on Obj26 at `x=$16D6`, but the engine
+remained at `$16D7` until the next frame.
+
+**Root cause.** S2 Obj26 monitor `Obj26_Main` calls `SolidObject_Monitor` for
+Sonic and then Sidekick from the object pass (`docs/s2disasm/s2.asm:25579-25605`).
+`SolidObject_Monitor_Sonic` and `SolidObject_Monitor_Tails` branch directly to
+`SolidObject_cont` (`docs/s2disasm/s2.asm:25617-25636`), so a generic off-screen
+solid gate in the engine can skip a ROM-live side contact. Because the ROM
+object routine sees the already-updated player X, an engine pass that evaluates
+object contacts before flat-ground player movement may also miss the first
+side-entry frame.
+
+**What to check / fix.** For any object that appears to be "just a normal
+SolidObject" but shows a one-pixel side-stop delay:
+1. Inspect the object-specific wrapper and confirm whether it branches to
+   `SolidObject_cont` directly or through `SolidObject_OnScreenTest`.
+2. If the wrapper bypasses the on-screen test, expose that as object-local
+   solid profile state (for Obj26, `bypassesOffscreenSolidGate()`), not as a
+   zone or trace exception.
+3. If ROM execution order means the object sees post-player flat-ground X, use
+   a narrow object-local projection hook for fresh grounded side entry only.
+   Do not project airborne, rolling, sloped, continued-riding, or route-specific
+   cases unless the object routine proves the same ROM-state rule.
+4. Preserve the player's subpixel when the projected side contact stops them;
+   ROM `SolidObject_cont` writes the pixel word and leaves `x_sub` intact.
+
+**ROM citation.** Obj26 main/wrapper:
+`docs/s2disasm/s2.asm:25579-25605` and
+`docs/s2disasm/s2.asm:25617-25636`. Shared side stop/push:
+`docs/s2disasm/s2.asm:35424-35456`.
+
+**Originating commit.** `fix: advance S2 MTZ1 monitor side-entry solid timing`
+(`TestS2MtzLevelSelectTraceReplay` advances f4835 -> f5602).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
