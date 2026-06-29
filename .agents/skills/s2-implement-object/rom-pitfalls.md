@@ -2767,6 +2767,43 @@ ball's `collision_flags=$8B` during init (`docs/s2disasm/s2.asm:47596`).
 
 ---
 
+## P68 - Break paths must clear both player on-object status and engine riding support
+
+**Pattern.** S2 object break/collapse/release routines that force the player
+airborne often clear both the player status bit and the object's standing mask.
+When Java only calls `setAir(true)`, the engine can retain a stale
+`onObject`/riding-provider latch even though the ROM object no longer supports
+the player.
+
+**Engine symptom.** The player becomes grounded again on the next movement
+frame, clears rolling/airborne state, and loses the ROM gravity increment or
+launch velocity. In HTZ1, Obj2F smashable ground set Sonic airborne/rolling in
+ROM and the fragment routine only moved/displayed pieces, but the engine
+recovered stale riding support on the deleted/non-solid support and zeroed
+`y_speed` at f7805.
+
+**What to check / fix.** When porting an object path that writes
+`status.player.in_air`, clears `status.player.on_object`, or clears the
+object's `standing_mask`:
+1. Pair the airborne write with `player.setOnObject(false)`.
+2. Clear the engine solid-contact rider latch with
+   `ObjectManager.clearRidingObject(player)` when the live object was a
+   potential support.
+3. Verify the post-break fragment/display routine. Do not leave fragments solid
+   unless the ROM fragment routine calls `SolidObject`.
+4. Gate the behavior by the object's live ROM state. Do not add zone, route,
+   frame, or trace-specific branches.
+
+**ROM citation.** Obj2F's break path sets rolling/airborne state and clears
+`status.player.on_object` (`docs/s2disasm/s2.asm:49239-49249`), then clears the
+object standing mask before `BreakObjectToPieces`; Obj2F fragments only move,
+apply gravity, delete offscreen, and display (`docs/s2disasm/s2.asm:49272-49294`).
+
+**Originating commit.** `31dd2631` S2 HTZ1 Obj2F smashable-ground support
+release: `TestS2HtzLevelSelectTraceReplay` advances f7805 -> green.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

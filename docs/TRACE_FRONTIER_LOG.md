@@ -54,6 +54,9 @@ branch-local measurements.
   - HTZ1 Obj14 seesaw ball touch-region centering advanced
     `TestS2HtzLevelSelectTraceReplay` from f7108 / 221 to f7805 / 138 while
     holding ARZ1, CNZ1, DEZ ending, EHZ1, MCZ1, SCZ, and WFZ green.
+  - HTZ1 Obj2F smashable-ground break release cleared stale on-object/riding
+    support and greened `TestS2HtzLevelSelectTraceReplay` from f7805 / 138
+    while holding ARZ1, CNZ1, DEZ ending, EHZ1, MCZ1, SCZ, and WFZ green.
   - OOZ OilSlides logical-input slot timing advanced
     `TestS2Ooz2LevelSelectTraceReplay` from f3226 / 945 to f3672 / 692 and
     improved `TestS2OozLevelSelectTraceReplay` from 1125 to 614 errors while
@@ -63,7 +66,6 @@ branch-local measurements.
   `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
   `CPZ1` f4351 / 259 (`tails_x` expected `0x20D4`, actual `0x20D3`);
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
-  `HTZ1` f7805 / 138 (`y_speed` expected `0x0038`, actual `0x0000`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
   `MCZ2` f10119 / 26 (`tails_x_sub` expected `0x5200`, actual `0x0000`);
   `MTZ1` f5713 / 560 (`tails_y_speed` expected `0x0ED0`, actual `0x0000`);
@@ -71,8 +73,44 @@ branch-local measurements.
   `MTZ3` f2588 / 939 (`tails_cpu_ctrl2_held` expected `0x0012`, actual `0x0002`);
   `OOZ1` f1790 / 614 (`tails_x_speed` expected `0x0080`, actual `-008C`);
   `OOZ2` f3672 / 692 (`tails_cpu_respawn_counter` expected `0x0079`, actual `0x0000`).
-- Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `MCZ1`,
-  `SCZ`, and `WFZ`.
+- Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `HTZ1`,
+  `MCZ1`, `SCZ`, and `WFZ`.
+
+## 2026-06-29 - S2 HTZ1 Obj2F smashable-ground support release (f7805 -> green)
+
+- Worktree/branch: `.worktrees/trace-s2-htz1-f7805-physics` /
+  `bugfix/ai-trace-s2-htz1-f7805-physics`, forked from
+  `bugfix/ai-s2-trace-develop` at integration head `4f3193788`.
+- Baseline reproduction:
+  `mvn "-Dmse=off" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context=true" "-Dtrace.context.rows=all" "-Dtrace.context.fields=all" "-Dtrace.context.diagnostics=all" test`.
+  Result before the fix: HTZ1 f7805 / 138 errors (`y_speed` expected
+  `0x0038`, actual `0x0000`).
+- Triage/evidence: `TraceTriageTool s2 htz1` identified player physics at
+  f7805. Frontier diagnostics showed ROM airborne/rolling (`status=06`,
+  `onObj=18`, `y_speed=0x0038`) with Obj2F fragments already in routine 4,
+  while the engine had recovered grounded riding support (`status=08`,
+  `onSlot=24`, `ride=1`) despite no active slot-24 support object in
+  `eng-near`. The S2 Obj2F break path sets the player rolling/airborne and
+  clears `status.player.on_object` (`docs/s2disasm/s2.asm:49239-49249`), then
+  clears the object's standing mask before breaking into fragments whose main
+  routine only moves, applies gravity, deletes offscreen, and displays
+  (`docs/s2disasm/s2.asm:49272-49294`).
+- Fix: `SmashableGroundObjectInstance.breakOneLayer` now clears the player's
+  on-object bit and `ObjectManager` riding latch when the ROM break path forces
+  the player airborne. This models live ROM object state only; it does not edit
+  trace resources, hydrate engine state from trace data, add tolerances, or add
+  zone/route/frame carve-outs.
+- Required fresh classes:
+  `mvn -q '-Dmse=off' compile test-compile`.
+  Result: exited 0.
+- Focused HTZ1 trace:
+  `mvn "-Dmse=off" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context=true" "-Dtrace.context.rows=all" "-Dtrace.context.fields=all" "-Dtrace.context.diagnostics=all" "-Dtrace.context.diagnosticChars=full" test`.
+  Result after the fix: passed 1/1; HTZ1 is green.
+- S2 green guard:
+  `mvn "-Dmse=off" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: passed 7/7; no S2 green guard regressions. The run emitted a
+  non-fatal `config.yaml` save warning from the symlinked worktree, but the
+  Maven test result was successful.
 
 ## 2026-06-29 - S2 CPZ1 Obj78 sidekick CPU push grace (f4281 -> f4351)
 

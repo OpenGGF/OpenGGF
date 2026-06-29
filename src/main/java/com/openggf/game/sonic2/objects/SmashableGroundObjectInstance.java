@@ -223,6 +223,11 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         // bset #status.player.in_air
         // bclr #status.player.on_object
         player.setAir(true);
+        player.setOnObject(false);
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager != null) {
+            objectManager.clearRidingObject(player);
+        }
 
         // Spawn fragments for ALL pieces of the current frame
         // In the ROM, BreakObjectToPieces creates fragments for every piece
@@ -235,7 +240,6 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         awardChainBonus();
 
         // Mark as broken in persistence table
-        ObjectManager objectManager = services().objectManager();
         ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
         // The original object is destroyed and becomes fragments
