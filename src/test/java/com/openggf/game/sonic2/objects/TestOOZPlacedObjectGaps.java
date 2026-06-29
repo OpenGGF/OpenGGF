@@ -266,6 +266,44 @@ class TestOOZPlacedObjectGaps {
     }
 
     @Test
+    void horizontalOozPressureSpringCompressesFromAirborneSideContactWithoutArmingLaunch() throws Exception {
+        ObjectInstance spring = newOOZSpring(0x04B4, 0x0230, 0x10, 1);
+        TestablePlayableSprite sonic = playerAt(0x0495, 0x0243);
+        sonic.setAir(true);
+        sonic.setDirection(Direction.RIGHT);
+        sonic.setGSpeed((short) 0);
+        sonic.setXSpeed((short) 0x0060);
+
+        PlayerSolidContactResult airborneSide = new PlayerSolidContactResult(
+                ContactKind.SIDE,
+                false,
+                false,
+                false,
+                false,
+                PreContactState.ZERO,
+                PostContactState.ZERO,
+                1);
+        ((AbstractObjectInstance) spring).setServices(new TestObjectServices()
+                .withSolidExecutionRegistry(new ScriptedSolidRegistry(
+                        spring,
+                        Map.of(sonic, airborneSide),
+                        Map.of())));
+
+        spring.update(0, sonic);
+
+        assertEquals(0x04B5, spring.getX(),
+                "Obj45_Horizontal calls loc_2433C on SolidObject d4==1 even for airborne side contact");
+        assertEquals(0x0496, sonic.getCentreX() & 0xFFFF,
+                "loc_243A6 adds the spring compression delta to x_pos(a1)");
+        assertEquals(0x0000, sonic.getXSpeed() & 0xFFFF,
+                "loc_243A6 clears x_vel(a1) while compressing");
+        assertEquals(0x0040, sonic.getGSpeed() & 0xFFFF,
+                "loc_243A6 writes the spring's compression inertia");
+        assertFalse(booleanField(spring, "pendingMainHorizontalLaunch"),
+                "airborne SolidObject_SideAir does not set status(a0)'s push bit for the later release launch");
+    }
+
+    @Test
     void horizontalOozPressureSpringDoesNotDuplicateCarryAfterSidekickIsAlreadyPushing() throws Exception {
         ObjectInstance spring = newOOZSpring(0x04B4, 0x03D0, 0x10, 1);
         TestablePlayableSprite sonic = playerAt(0x04A1, 0x03B4);

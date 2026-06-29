@@ -2561,6 +2561,42 @@ the first visible X was already `$0724` rather than the shooter X `$0720`.
 
 ---
 
+## P62 - SolidObject side return can trigger object response even when the push bit is not set
+
+**Pattern.** Some S2 solid interactives distinguish the `SolidObject` return
+code from the object's live pushing bits. A side-contact return (`d4==1`) may
+run a compression/effect routine even when the current contact did not set the
+player's push bit. Later launch/effect tails can still require the live
+`status(a0)` pushing bit.
+
+**Engine symptom.** An airborne player reaches a horizontal pressure spring
+from the side and the engine reports a side contact, but the object does not
+compress because the port only reacts to `pushingNow`. In OOZ2 this left Sonic's
+`g_speed` at `0x0000` on f2484 while ROM had compressed Obj45 by one pixel,
+shifted Sonic's `x_pos`, cleared `x_vel`, and wrote inertia `0x0040`.
+
+**What to check / fix.** When a routine tests the `SolidObject` return value
+(`cmpi.b #1,d4`, `beq`, or equivalent) and separately tests or clears
+`status(a0)` push bits later:
+1. Let the return-code path run from the contact kind (`SIDE`) even if the
+   engine's push bit is false.
+2. Only arm or consume launch/effect state from the current push bit when the
+   ROM tail uses `status(a0)` / `bclr #pN_pushing_bit,status(a0)`.
+3. Keep the distinction object-local and per-player. Do not replace it with a
+   zone, route, frame, or trace-name exception.
+
+**ROM citation.** Obj45 horizontal spring:
+`docs/s2disasm/s2.asm:50393-50432` (`Obj45_Horizontal` checks the
+`SolidObject_Always_SingleCharacter` side return), `s2.asm:50465-50524`
+(`loc_2433C` compresses, moves `x_pos(a0/a1)`, clears `x_vel`, writes inertia),
+and `s2.asm:50529-50540` (`Obj45_LaunchCharacterHorizontal` gates release
+launch on live pushing bits).
+
+**Originating commit.** `fix: advance S2 OOZ2 Obj45 airborne side compression`
+(`TestS2Ooz2LevelSelectTraceReplay` advances f2484 -> f2623).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

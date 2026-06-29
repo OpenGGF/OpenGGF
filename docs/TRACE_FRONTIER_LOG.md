@@ -6,6 +6,37 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 OOZ2 Obj45 airborne side-compression frontier
+
+- Worktree/branch: `.worktrees/trace-s2-ooz-r3` /
+  `bugfix/ai-trace-s2-ooz-r3`, based on integration commit
+  `ce786a7f78`.
+- Fix summary: `OOZSpringObjectInstance` now treats an Obj45 horizontal
+  `SolidObject` side result as the compression trigger even when
+  `pushingNow` is false. The push bit still only arms the later release
+  launch, so airborne side contact can move the spring/player and write
+  compression inertia without creating a stale pending launch.
+- ROM evidence: `Obj45_Horizontal` runs the main and sidekick
+  `SolidObject_Always_SingleCharacter` passes and calls `loc_2433C` when
+  the return code is `d4==1` (`docs/s2disasm/s2.asm:50393-50432`).
+  `loc_2433C` / `loc_243A6` compresses the horizontal spring, shifts
+  `x_pos(a1)`, clears `x_vel(a1)`, and writes inertia
+  (`docs/s2disasm/s2.asm:50465-50524`). The later
+  `Obj45_LaunchCharacterHorizontal` path still tests/clears the object's
+  live pushing bits (`docs/s2disasm/s2.asm:50529-50540`).
+- Focused unit verification:
+  `mvn -q "-Dmse=relaxed" "-Dtest=TestOOZPlacedObjectGaps" "-DfailIfNoTests=false" test`.
+  Result: passed, 16 tests.
+- Focused OOZ trace command:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected-red. OOZ2 advanced from f2484 / 1176 errors
+  (`g_speed` expected `0x0040`, actual `0x0000`) to f2623 / 946 errors
+  (`tails_x` expected `0x04A1`, actual `0x049D`). OOZ1 held f1784 /
+  1256 errors (`tails_x_speed` expected `0x000C`, actual `-000C`).
+- Green guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+  Result: passed, 7 trace classes.
+
 ## 2026-06-29 - S2 integration sweep after DEZ ending handoff merge (7 green, 12 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
@@ -32,7 +63,7 @@ branch-local measurements.
 |---|---|
 | `TestS2Arz2LevelSelectTraceReplay` | f723 `obj_s11_slot` expected `0x11`, actual `0x16`; 2924 errors |
 | `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
-| `TestS2Ooz2LevelSelectTraceReplay` | f2484 `g_speed` expected `0x0040`, actual `0x0000`; 1176 errors |
+| `TestS2Ooz2LevelSelectTraceReplay` | f2623 `tails_x` expected `0x04A1`, actual `0x049D`; 946 errors |
 | `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
 | `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
 | `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1222 errors |

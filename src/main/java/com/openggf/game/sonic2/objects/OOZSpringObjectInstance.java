@@ -114,11 +114,13 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
                     // Obj45 still releases this frame but cannot consume the launch.
                     continue;
                 }
-                if (result != null && result.kind() != ContactKind.NONE && result.pushingNow()
+                if (result != null && result.kind() == ContactKind.SIDE
                         && participant instanceof AbstractPlayableSprite player) {
-                    markHorizontalPushingThisFrame(player);
+                    if (result.pushingNow()) {
+                        markHorizontalPushingThisFrame(player);
+                    }
                     int beforeX = currentX;
-                    handleHorizontalPush(player, result.sideDistX());
+                    handleHorizontalPush(player, result.sideDistX(), result.pushingNow());
                     carryLaterStandingRiders(participants, i + 1, player, currentX - beforeX);
                 }
             }
@@ -167,7 +169,7 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         }
         if (horizontal) {
             if (contact.pushing()) {
-                handleHorizontalPush(player, contact.sideDistX());
+                handleHorizontalPush(player, contact.sideDistX(), true);
             }
             return;
         }
@@ -176,12 +178,12 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void handleHorizontalPush(AbstractPlayableSprite player, int sideDistX) {
+    private void handleHorizontalPush(AbstractPlayableSprite player, int sideDistX, boolean armLaunch) {
         if (sideDistX == 0) {
             holdHorizontalSpringAtExactEdge(player);
             return;
         }
-        compressHorizontalSpring(player);
+        compressHorizontalSpring(player, armLaunch);
     }
 
     private void holdHorizontalSpringAtExactEdge(AbstractPlayableSprite player) {
@@ -200,7 +202,7 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         compressedThisFrame = true;
     }
 
-    private void compressHorizontalSpring(AbstractPlayableSprite player) {
+    private void compressHorizontalSpring(AbstractPlayableSprite player, boolean armLaunch) {
         boolean flipped = isXFlipped();
         if (flipped) {
             if (player.getDirection() != Direction.RIGHT) {
@@ -224,7 +226,9 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
             }
         }
         mappingFrame = Math.abs(originalX - currentX) + HORIZONTAL_IDLE_FRAME;
-        setPendingHorizontalLaunch(player);
+        if (armLaunch) {
+            setPendingHorizontalLaunch(player);
+        }
         compressedThisFrame = true;
         updateDynamicSpawn(currentX, currentY);
     }
