@@ -6,6 +6,50 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 integration sweep after MTZ2 Obj70 merge (7 green, 12 expected-red)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop` after merging
+  `bugfix/ai-trace-s2-mtz-r8` (`c4d243148`) on top of the post-CNZ
+  integration point.
+- Accepted change in this round: MTZ2 Obj70 folded cog side contacts now keep
+  the stale no-contact path for airborne, rolling, or jumping folded geometry,
+  but let ordinary grounded leftward CPU sidekick hits reach the ROM side-push
+  path (`docs/s2disasm/s2.asm:35021-35044,55080-55141`).
+- Focused verification:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestSonic2ObjectBugFixes,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: focused Obj70 coverage passed; MTZ2 advanced to f1297 / 3324
+  errors (`tails_x_speed` expected `0x000B`, actual `0x0000`); MTZ1 and MTZ3
+  held their current first-error frames.
+- Green guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+  Result: passed, no current S2 green trace regressed.
+- Full sweep command:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+- Result: all 19 concrete S2 trace classes ran: 7 green, 12 expected-red. No
+  current S2 green trace regressed. MTZ2 advanced; other first-error frontiers
+  held.
+- Green traces: `TestS2ArzLevelSelectTraceReplay`,
+  `TestS2CnzLevelSelectTraceReplay`, `TestS2DezEndingLevelSelectTraceReplay`,
+  `TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay`,
+  `TestS2SczLevelSelectTraceReplay`, `TestS2WfzLevelSelectTraceReplay`.
+- Current red frontiers:
+
+| Trace | First error |
+|---|---|
+| `TestS2Arz2LevelSelectTraceReplay` | f741 `obj_extra_s16_x` expected absent, actual `0x081C`; 2852 errors |
+| `TestS2Mtz2LevelSelectTraceReplay` | f1297 `tails_x_speed` expected `0x000B`, actual `0x0000`; 3324 errors |
+| `TestS2Ooz2LevelSelectTraceReplay` | f2623 `tails_x` expected `0x04A1`, actual `0x049D`; 946 errors |
+| `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
+| `TestS2Mtz3LevelSelectTraceReplay` | f2048 `tails_x` expected `0x07CA`, actual `0x07BE`; 3742 errors |
+| `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1222 errors |
+| `TestS2Htz2LevelSelectTraceReplay` | f3317 `tails_x_speed` expected `0x00E8`, actual `-0018`; 1058 errors |
+| `TestS2CpzLevelSelectTraceReplay` | f4194 `y` expected `0x032C`, actual `0x032D`; 356 errors |
+| `TestS2HtzLevelSelectTraceReplay` | f6586 `y_speed` expected `-0178`, actual `-0078`; 233 errors |
+| `TestS2MtzLevelSelectTraceReplay` | f5647 `tails_y_sub` expected `0x6500`, actual `0x3D00`; 616 errors |
+| `TestS2Mcz2LevelSelectTraceReplay` | f7328 `g_speed` expected `0x0000`, actual `0x02A0`; 447 errors |
+| `TestS2Cnz2LevelSelectTraceReplay` | f4892 `tails_g_speed` expected `0x0800`, actual `0x0000`; 943 errors |
+
 ## 2026-06-29 - S2 MTZ2 Obj70 grounded leftward side-push advancement (f1282 -> f1297)
 
 - Worktree/branch: `.worktrees/trace-s2-mtz-r8` /
