@@ -6,6 +6,37 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 accepted routing baseline after MTZ2 and CPZ Obj78 integration
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop` at accepted head `a01e0fedc`.
+- Accepted since the prior OOZ2 baseline:
+  - MTZ2 Obj70 first-main low-byte-zero rotation advanced
+    `TestS2Mtz2LevelSelectTraceReplay` from f1857 / 3209 to f3055 / 951.
+  - CPZ Obj78 dynamic-spawn/live-SST latch handling advanced
+    `TestS2CpzLevelSelectTraceReplay` from f4225 / 264 to f4281 / 246 and
+    improved `TestS2Cpz2LevelSelectTraceReplay` from 1238 to 1236 errors while
+    holding first error f2889.
+  - A later MTZ1 offscreen sidekick-latch candidate advanced MTZ1 but regressed
+    MTZ2 total errors from 951 to 971 at f3055; it was rejected and reverted in
+    `a01e0fedc`.
+- Current red routing table:
+  `ARZ2` f888 / 2720 (`obj_extra_s1F_x` expected absent, actual `0x0AE0`);
+  `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
+  `CPZ1` f4281 / 246 (`tails_x_speed` expected `-0018`, actual `0x0000`);
+  `CPZ2` f2889 / 1236 (`tails_x` expected `0x10E8`, actual `0x10F0`);
+  `HTZ1` f6586 / 226 (`y_speed` expected `-0178`, actual `-0078`);
+  `HTZ2` f3322 / 1060 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
+  `MCZ2` f8965 / 156 (`y` expected `0x063E`, actual `0x0643`);
+  `MTZ1` f5647 / 616 (`tails_y_sub` expected `0x6500`, actual `0x3D00`);
+  `MTZ2` f3055 / 951 (`tails_cpu_interact` expected `0x0066`, actual
+  `0x0000`);
+  `MTZ3` f2048 / 3742 (`tails_x` expected `0x07CA`, actual `0x07BE`);
+  `OOZ1` f1790 / 1125 (`tails_x_speed` expected `0x0080`, actual `-008C`);
+  `OOZ2` f3226 / 945 (`g_speed` expected `0x0528`, actual `0x0520`).
+- Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `MCZ1`,
+  `SCZ`, and `WFZ`.
+
 ## 2026-06-29 - S2 OOZ2 Obj45 SideAir push-clear compression (f2623 -> f3226)
 
 - Worktree/branch: `.worktrees/trace-s2-ooz2-r12` /
