@@ -1096,10 +1096,14 @@ final class ObjectSolidContactController {
         int ridingPieceIndex = state != null ? state.pieceIndex : -1;
 
         ObjectInstance unseatedRidingObject = null;
+        boolean preserveAirborneRideForEarlierPieces =
+                shouldResolveEarlierMultiPieceSiblingsBeforeRidingPiece(
+                        player, ridingObject, ridingPieceIndex);
         // S3K SolidObjectFull tests Player_2 render_flags before entering
         // the helper that clears Status_OnObj/d6 for airborne riders
         // (docs/skdisasm/sonic3k.asm:41006-41010 before 41021-41034).
         if (ridingObject != null && player.getAir()
+                && !preserveAirborneRideForEarlierPieces
                 && !carriesAirborneRiderAfterExitPlatform(ridingObject)
                 && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)
                 // ROM evaluates each object's SolidObjectFull once per frame:
@@ -1248,8 +1252,8 @@ final class ObjectSolidContactController {
             // side-push per slot is not applied twice.
             if (ridingPieceIndex > 0
                     && provider instanceof MultiPieceSolidProvider earlyMulti
-                    && earlyMulti.resolvesEarlierPiecesBeforeRidingPiece()
-                    && !player.getAir()
+                    && shouldResolveEarlierMultiPieceSiblingsBeforeRidingPiece(
+                            player, instance, ridingPieceIndex)
                     && provider.isSolidFor(player)
                     && !blocksSolidContacts(player, instance)
                     && !instance.isSkipSolidContactThisFrame()) {
@@ -1719,6 +1723,22 @@ final class ObjectSolidContactController {
                 && provider.getSolidRoutineProfile().carriesAirborneRiderAfterExitPlatform();
     }
 
+    private boolean shouldResolveEarlierMultiPieceSiblingsBeforeRidingPiece(
+            PlayableEntity player, ObjectInstance instance, int ridingPieceIndex) {
+        if (player == null
+                || ridingPieceIndex <= 0
+                || !(instance instanceof MultiPieceSolidProvider multiPiece)
+                || !multiPiece.resolvesEarlierPiecesBeforeRidingPiece()) {
+            return false;
+        }
+        if (!player.getAir()) {
+            return true;
+        }
+        return multiPiece.usesPieceScopedStandingBits()
+                && multiPiece.airborneStaleStandingBitReturnsNoContact(player)
+                && hasObjectStandingBit(player, instance, ridingPieceIndex);
+    }
+
     private void preserveRidingPushStatusIfNeeded(PlayableEntity player, ObjectInstance instance,
             SolidObjectProvider provider) {
         if (!provider.preservesRidingPushStatus(player)) {
@@ -2078,6 +2098,9 @@ final class ObjectSolidContactController {
         int ridingY = state != null ? state.y : 0;
         int ridingPieceIndex = state != null ? state.pieceIndex : -1;
         ObjectInstance dropOnFloorExclude = null;
+        boolean preserveAirborneRideForEarlierPieces =
+                shouldResolveEarlierMultiPieceSiblingsBeforeRidingPiece(
+                        player, ridingObject, ridingPieceIndex);
 
         // ROM: Sonic_Jump does "bclr #sta_onObj,obStatus(a0)" before any
         // platform's SolidObject routine runs.  If the player is airborne,
@@ -2086,6 +2109,7 @@ final class ObjectSolidContactController {
         // so that gate also precedes the Status_InAir riding unseat branch
         // (docs/skdisasm/sonic3k.asm:41006-41010 before 41021-41034).
         if (ridingObject != null && player.getAir()
+                && !preserveAirborneRideForEarlierPieces
                 && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)) {
             ridingStates.remove(player);
             ridingObject = null;
@@ -2115,8 +2139,8 @@ final class ObjectSolidContactController {
 
                 if (ridingPieceIndex > 0
                         && ridingObject instanceof MultiPieceSolidProvider earlyMulti
-                        && earlyMulti.resolvesEarlierPiecesBeforeRidingPiece()
-                        && !player.getAir()
+                        && shouldResolveEarlierMultiPieceSiblingsBeforeRidingPiece(
+                                player, ridingObject, ridingPieceIndex)
                         && provider.isSolidFor(player)
                         && !blocksSolidContacts(player, ridingObject)
                         && !ridingObject.isSkipSolidContactThisFrame()) {
@@ -2127,7 +2151,23 @@ final class ObjectSolidContactController {
                     multiPieceEarlierPiecesResolvedUpTo = ridingPieceIndex;
                 }
 
-                int halfWidth = params.halfWidth();
+                if (preserveAirborneRideForEarlierPieces && player.getAir()) {
+                    // Folded ROM-slot solids such as S2 Obj70 run lower-index
+                    // sibling slots before the ridden slot's stale standing-bit
+                    // branch clears Status_OnObj and returns d4=0. The pre-pass
+                    // above mirrors those earlier slots; from here onward, treat
+                    // the ridden piece as airborne-unseated so processMultiPieceCollision
+                    // can clear only that piece's standing bit and skip its
+                    // SolidObject_cont path.
+                    ridingStates.remove(player);
+                    ridingObject = null;
+                    ridingPieceIndex = -1;
+                    player.setOnObject(false);
+                    player.setAir(true);
+                }
+
+                if (ridingObject != null) {
+                    int halfWidth = params.halfWidth();
                 // ROM: continued riding uses ExitPlatform / ExitPlatform2 semantics,
                 // which check the full collision width. Narrow top widths only apply
                 // to new Solid_Landed-style landings.
@@ -2218,6 +2258,7 @@ final class ObjectSolidContactController {
                     ridingStates.remove(player);
                     ridingObject = null;
                     ridingPieceIndex = -1;
+                }
                 }
             }
         }
@@ -3828,15 +3869,12 @@ final class ObjectSolidContactController {
                 && multiPiece.usesPieceScopedStandingBits()) {
             return hasObjectStandingBit(player, instance, pieceIndex)
                     || wasObjectStandingBitSetThisFrame(player, instance, pieceIndex)
-                    || hasAnyPieceStandingBit(player, instance, multiPiece)
-                    || wasAnyPieceStandingBitSetThisFrame(player, instance, multiPiece)
                     // Folded ROM-slot solids such as S2 Obj70 can classify a
-                    // stale airborne leftward rider as a fresh side hit after
-                    // the player movement phase even though the ROM slot branch
-                    // returned d4=0 before SolidObject_cont. Keep that
-                    // no-contact opt-in for jump-off stale geometry, but allow
-                    // ordinary grounded leftward side hits with no standing bit
-                    // to reach SolidObject_AtEdge and set Status_Push.
+                    // stale airborne leftward rider as a fresh side hit on the
+                    // SAME tooth whose d6 bit returned d4=0 before
+                    // SolidObject_cont. Suppress only that piece-specific branch:
+                    // Obj70 sibling slots with clear d6 still run SolidObject_cont
+                    // in ROM slot order (s2.asm:35028-35047, 55137-55191).
                     || (isJumpOffStaleSideGeometry(player) && player.getXSpeed() < 0)
                     || (preContactXSpeed <= -0x100 && player.getXSpeed() < 0);
         }
@@ -3851,26 +3889,6 @@ final class ObjectSolidContactController {
             return true;
         }
         return player instanceof AbstractPlayableSprite sprite && sprite.isJumping();
-    }
-
-    private boolean hasAnyPieceStandingBit(PlayableEntity player, ObjectInstance instance,
-            MultiPieceSolidProvider multiPiece) {
-        for (int i = 0; i < multiPiece.getPieceCount(); i++) {
-            if (hasObjectStandingBit(player, instance, i)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean wasAnyPieceStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance,
-            MultiPieceSolidProvider multiPiece) {
-        for (int i = 0; i < multiPiece.getPieceCount(); i++) {
-            if (wasObjectStandingBitSetThisFrame(player, instance, i)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean isWithinTopLandingWidth(ObjectInstance instance, PlayableEntity player, int relX,

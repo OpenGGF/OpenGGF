@@ -163,6 +163,42 @@ branch-local measurements.
   HTZ1 f7108 / 221; HTZ2 f3322 / 1057; MCZ2 f8965 / 156; MTZ1 f5647 / 616;
   MTZ2 f4375 / 950; MTZ3 f2048 / 3742; OOZ1 f1790 / 1125; OOZ2 f3226 / 945.
 
+## 2026-06-29 - S2 MTZ3 Obj70 airborne stale-rider sibling side push (f2048 -> f2588)
+
+- Worktree/branch: `.worktrees/trace-s2-mtz3-r13` /
+  `bugfix/ai-trace-s2-mtz3-r13`, forked from
+  `bugfix/ai-s2-trace-develop` at integration head `a01e0fedc`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: MTZ3 f2048 / 3742 errors (`tails_x` expected
+  `0x07CA`, actual `0x07BE`).
+- Evidence/fix: ROM Obj70 allocates each cog tooth as a separate SST slot.
+  At MTZ3 f2048 Tails is airborne with the ridden tooth's standing bit still
+  latched, so earlier sibling tooth slots with clear standing bits still run
+  `SolidObject_cont` before the ridden tooth clears its own bit and returns
+  `d4=0` (`docs/s2disasm/s2.asm:35028-35047,55096-55191`). The folded
+  multi-piece solid controller now preserves that stale airborne ride only long
+  enough to run the opted-in earlier sibling slots, then lets the ridden piece's
+  piece-scoped stale-bit path clear support. The no-contact side gate now checks
+  only the current piece's standing bit, not any sibling bit.
+- Focused verification:
+  `mvn "-Dtest=TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: MTZ3 advances to f2588 / 939 errors (`tails_cpu_ctrl2_held`
+  expected `0x0012`, actual `0x0002`); MTZ1 remains f5647 / 616 and MTZ2
+  remains f3055 / 951.
+- Focused unit coverage:
+  `mvn "-Dtest=com.openggf.level.objects.TestSolidObjectManager" test`.
+  Result: command exited 0; 44 tests passed.
+- S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+  Result: command exited 0; 7 selected guard traces passed.
+- Full S2 sweep after clearing `target/surefire-reports`:
+  `mvn "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: 19 trace classes ran; 7 green / 12 expected-red. Red summary:
+  ARZ2 f888 / 2720; CNZ2 f5242 / 875; CPZ1 f4281 / 246; CPZ2 f2889 / 1236;
+  HTZ1 f6586 / 226; HTZ2 f3322 / 1060; MCZ2 f8965 / 156; MTZ1 f5647 / 616;
+  MTZ2 f3055 / 951; MTZ3 f2588 / 939; OOZ1 f1790 / 1125; OOZ2 f3226 / 945.
+
 ## 2026-06-29 - S2 OOZ2 Obj45 SideAir push-clear compression (f2623 -> f3226)
 
 - Worktree/branch: `.worktrees/trace-s2-ooz2-r12` /

@@ -518,6 +518,45 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void airborneStaleMultiPieceRiderKeepsEarlierSiblingSidePush() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        SlotOrderedMultiPieceSolidObject object =
+                new SlotOrderedMultiPieceSolidObject(80, 120, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
+        sidekick.setCpuControlled(true);
+        sidekick.setWidth(20);
+        sidekick.setHeight(20);
+        sidekick.setAir(true);
+        sidekick.setYSpeed((short) 0x100);
+        sidekick.setCentreX((short) 120);
+        sidekick.setCentreY((short) 83);
+
+        manager.updateSolidContacts(sidekick);
+        assertTrue(manager.isRidingObject(sidekick));
+        assertEquals(1, object.lastStandingPieceIndex);
+
+        object.setPieceX(0, 135);
+        object.setPieceY(0, 96);
+        sidekick.setAir(true);
+        sidekick.setOnObject(false);
+        sidekick.setXSpeed((short) 0x100);
+        sidekick.setGSpeed((short) 0x100);
+
+        manager.updateSolidContacts(sidekick);
+
+        assertTrue(object.piece0Contacted,
+                "ROM Obj70 sibling slots still run SolidObject_cont before the stale ridden tooth returns");
+        assertTrue(object.piece0Side,
+                "Earlier sibling contact should stay on the side-contact path while the ridden tooth clears d6");
+        assertFalse(object.piece0Pushed,
+                "Airborne SolidObject side correction moves the player but does not set Status_Push");
+        assertFalse(sidekick.getCentreX() == 120,
+                "The earlier sibling side correction must not be suppressed by a different piece's stale standing bit");
+    }
+
+    @Test
     public void multiPieceRiderCarryDoesNotReapplyNewLandingSnapOnSamePiece() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         MutableMultiPieceSolidObject object = new MutableMultiPieceSolidObject(100, 100, params);
@@ -1554,6 +1593,16 @@ public class TestSolidObjectManager {
         @Override
         public boolean usesPieceScopedStandingBits() {
             return true;
+        }
+
+        @Override
+        public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+            return true;
+        }
+
+        @Override
+        public boolean sideContactReturnsNoContact(PlayableEntity player) {
+            return player.isCpuControlled();
         }
 
         @Override
