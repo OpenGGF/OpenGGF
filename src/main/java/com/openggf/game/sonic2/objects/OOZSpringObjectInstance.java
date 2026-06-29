@@ -109,11 +109,6 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
             for (int i = 0; i < participants.size(); i++) {
                 PlayableEntity participant = participants.get(i);
                 PlayerSolidContactResult result = batch.perPlayer().get(participant);
-                if (result != null && result.pushingLastFrame() && !result.pushingNow()) {
-                    // SolidObject_TestClearPush has cleared the old pushing bits; ROM
-                    // Obj45 still releases this frame but cannot consume the launch.
-                    continue;
-                }
                 if (result != null && result.kind() == ContactKind.SIDE
                         && participant instanceof AbstractPlayableSprite player) {
                     if (result.pushingNow()) {
