@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **User recording sessions now own active capture lifecycle and HUD state:** Added the active recording session model that buffers BK2 input frames and desync-lite snapshots, records configured P1/P2 controller lanes with jump mapped to action button A, finalizes recordings through `UserRecordingWriter`, handles abort/IO stop cases, and exposes side-effect-free HUD state/plumbing for later GameLoop wiring.
 - **User recording catalog now classifies playback version warnings:** Added a catalog scanner for `recordings/<game-id>/*.bk2` that reads OpenGGF manifests, counts BK2 frames through the playback loader, sorts newest recordings first, and reports non-blocking warnings for missing metadata, dirty builds, official version mismatches, and prerelease build mismatches.
 - **User recording desync-lite verifier:** Added the expanded desync-lite snapshot schema, live snapshot capture, configured-main-player resolution, and a playback observer verifier that reports the first comparison mismatch without mutating gameplay state.
 - **User recording BK2 writer now emits OpenGGF sidecar entries:** Added `UserRecordingWriter` and `RecordedFrameInput` so engine-authored recordings produce BK2 zip files with `Header.txt`, exact P1/P2 grouped `Input Log.txt`, `OpenGGF/manifest.json`, and `OpenGGF/desync-lite.jsonl` entries that round-trip through `Bk2MovieLoader`.
