@@ -22,6 +22,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -152,6 +153,27 @@ class TestPointPokeyObjectInstance {
         assertTrue(tails.getAir());
     }
 
+    @Test
+    void childPrizeCounterEmptyReleasesCapturedPlayerInSameFrame() throws Exception {
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x1DC0, (short) 0x0368);
+        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        PointPokeyObjectInstance pokey = new PointPokeyObjectInstance(
+                new ObjectSpawn(0x1DC0, 0x0368, 0xD6, 0x01, 0, false, 0),
+                "PointPokey");
+
+        invokeCapture(pokey, player);
+        setIntField(pokey, "playerState", 3);
+        setIntField(pokey, "prizesToSpawn", 0);
+
+        pokey.onPrizeCounterChanged(player);
+
+        assertEquals(0x0400, player.getYSpeed() & 0xFFFF,
+                "ObjDC/ObjD3 decrement ObjD6's shared prize counter; when it reaches zero, ObjD6 must take "
+                        + "the loc_2BE2E release path in that same frame.");
+        assertFalse(player.isObjectControlled());
+        assertTrue(player.getAir());
+    }
+
     private static void invokeCapture(PointPokeyObjectInstance pokey, TestablePlayableSprite player) throws Exception {
         Method capture = PointPokeyObjectInstance.class.getDeclaredMethod("capturePlayer", AbstractPlayableSprite.class);
         capture.setAccessible(true);
@@ -166,6 +188,12 @@ class TestPointPokeyObjectInstance {
                 "capturePlayer", AbstractPlayableSprite.class, PlayerSolidContactResult.class);
         capture.setAccessible(true);
         capture.invoke(pokey, player, result);
+    }
+
+    private static void setIntField(PointPokeyObjectInstance pokey, String name, int value) throws Exception {
+        Field field = PointPokeyObjectInstance.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.setInt(pokey, value);
     }
 
     private static final class OffscreenPointPokeyObjectInstance extends PointPokeyObjectInstance {

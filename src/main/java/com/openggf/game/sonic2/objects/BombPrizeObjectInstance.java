@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.audio.GameSound;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -51,6 +52,8 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
     // shared array reference cannot be captured/relinked, so spawn-based recreate
     // uses a fresh placeholder; only the parent slot-machine bookkeeping decrement drifts.
     private int[] prizeCounter;
+    @RewindTransient(reason = "Structural ObjD6 parent link; live prize children are spawned and owned by PointPokey.")
+    private PointPokeyObjectInstance parent;
 
     // Reference to LevelManager for rendering
 
@@ -66,6 +69,11 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
      */
     public BombPrizeObjectInstance(int x, int y, int machineX, int machineY,
                                    int displayDelay, int[] prizeCounter) {
+        this(x, y, machineX, machineY, displayDelay, prizeCounter, null);
+    }
+
+    BombPrizeObjectInstance(int x, int y, int machineX, int machineY,
+                            int displayDelay, int[] prizeCounter, PointPokeyObjectInstance parent) {
         super(new ObjectSpawn(x, y, 0xD3, 0, 0, false, 0), "BombPrize");
         this.currentX = x << 16;  // Convert to 16.16 fixed point
         this.currentY = y << 16;
@@ -73,6 +81,7 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
         this.machineY = machineY;
         this.displayDelay = displayDelay;
         this.prizeCounter = prizeCounter;
+        this.parent = parent;
     }
 
     BombPrizeObjectInstance(ObjectSpawn spawn) {
@@ -120,6 +129,9 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
                 // Decrement prize counter
                 if (prizeCounter != null && prizeCounter.length > 0) {
                     prizeCounter[0]--;
+                }
+                if (parent != null) {
+                    parent.onPrizeCounterChanged(player);
                 }
                 setDestroyed(true);
             }

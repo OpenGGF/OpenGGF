@@ -16,6 +16,35 @@ implementation, ROM citation, originating fix commit.
 
 ---
 
+## P0A — Child-to-parent shared counters must be visible in the same object pass
+
+**Symptom.** A parent object waits one extra frame to release the player or
+advance state even though trace diagnostics show the shared child counter has
+already reached zero. The first mismatch is often a player velocity or control
+state written by the parent's release routine.
+
+**Root cause.** The engine keeps the parent counter as a Java field/array and
+only checks it from the parent's scheduled `update`. ROM child routines can
+decrement a parent SST byte through an object pointer, and the parent-visible
+RAM change is immediate even when the child slot runs before the parent slot in
+the same `ExecuteObjects` pass.
+
+**What to check.** For prize displays, multi-part bosses, counters, latches,
+and parent-owned child effects, identify child writes through parent pointers
+(`objoff_2A(a0)`, explicit parent SST addresses, or similar). If a parent
+branches on that byte later in the same frame, notify the parent or otherwise
+make the shared state visible immediately instead of waiting for the parent's
+next frame.
+
+**ROM citation.** CNZ ObjDC decrements ObjD6's active-prize counter through
+`objoff_2A(a0)` before `CollectRing`; ObjD6 checks `objoff_2C` and releases via
+`loc_2BE2E` with `y_vel=$400`
+(`docs/s2disasm/s2.asm:25470-25494,59151-59188,59215-59224`).
+
+**Originating commit.** `fix(s2): advance CNZ2 point pokey prize release`.
+
+---
+
 ## P0 — LoadChildObject child accidentally uses lowest-free slot/order
 
 **Symptom.** A boss or compound object is position-correct for most of a trace,

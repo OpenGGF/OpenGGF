@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.audio.GameSound;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -54,6 +55,8 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
 
     // Reference to parent counter (for decrementing)
     private final int[] prizeCounter;
+    @RewindTransient(reason = "Structural ObjD6 parent link; live prize children are spawned and owned by PointPokey.")
+    private PointPokeyObjectInstance parent;
 
     // Animation state
     private int animTimer = 0;
@@ -83,6 +86,11 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
      */
     public RingPrizeObjectInstance(int x, int y, int machineX, int machineY,
                                    int displayDelay, int[] prizeCounter) {
+        this(x, y, machineX, machineY, displayDelay, prizeCounter, null);
+    }
+
+    RingPrizeObjectInstance(int x, int y, int machineX, int machineY,
+                            int displayDelay, int[] prizeCounter, PointPokeyObjectInstance parent) {
         super(new ObjectSpawn(x, y, 0xDC, 0, 0, false, 0), "RingPrize");
         this.currentX = x << 16;  // Convert to 16.16 fixed point
         this.currentY = y << 16;
@@ -90,6 +98,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
         this.machineY = machineY;
         this.displayDelay = displayDelay;
         this.prizeCounter = prizeCounter;
+        this.parent = parent;
     }
 
     RingPrizeObjectInstance(int x, int y, int ignoredSubtype, boolean ignoredFlag) {
@@ -215,6 +224,9 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
         // Add ring to player
         if (player != null) {
             player.addRings(1);
+        }
+        if (parent != null) {
+            parent.onPrizeCounterChanged(player);
         }
 
         // Play ring sound
