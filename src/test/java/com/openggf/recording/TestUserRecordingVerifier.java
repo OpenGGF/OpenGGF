@@ -21,6 +21,7 @@ class TestUserRecordingVerifier {
         verifier.observer().afterFrameAdvanced(movieFrame(0), false);
 
         UserRecordingVerificationResult result = verifier.result();
+        assertEquals("clean", result.status());
         assertTrue(result.clean());
         assertEquals(1, result.comparedFrames());
         assertFalse(verifier.hasMismatch());
@@ -35,6 +36,8 @@ class TestUserRecordingVerifier {
         verifier.observer().afterFrameAdvanced(movieFrame(4), false);
 
         UserRecordingVerificationResult result = verifier.result();
+        assertEquals("first-mismatch(frame=4, field=p1CentreX, expected=100, actual=321)",
+                result.status());
         assertFalse(result.clean());
         assertEquals(1, result.comparedFrames());
         assertEquals(4, result.firstMismatchFrame());
@@ -46,13 +49,61 @@ class TestUserRecordingVerifier {
 
     @Test
     void missingSparseFrameIsIgnored() {
-        UserRecordingVerifier verifier = UserRecordingVerifier.forTesting(List.of(frame(2)), frame(0));
+        UserRecordingVerifier verifier = UserRecordingVerifier.forTesting(
+                List.of(frame(2)),
+                new UserRecordingSidecarMetadata(
+                        UserRecordingSidecarMetadata.CURRENT_DESYNC_LITE_SCHEMA_VERSION,
+                        "sparse",
+                        30),
+                frame(0));
 
         verifier.observer().afterFrameAdvanced(movieFrame(0), false);
 
         UserRecordingVerificationResult result = verifier.result();
+        assertEquals("clean", result.status());
         assertTrue(result.clean());
         assertEquals(0, result.comparedFrames());
+    }
+
+    @Test
+    void missingEveryFrameRowReportsTruncatedSidecar() {
+        UserRecordingVerifier verifier = UserRecordingVerifier.forTesting(
+                List.of(frame(2)),
+                UserRecordingSidecarMetadata.everyFrame(),
+                frame(0));
+
+        verifier.observer().afterFrameAdvanced(movieFrame(0), false);
+
+        UserRecordingVerificationResult result = verifier.result();
+        assertEquals("truncated-sidecar", result.status());
+        assertFalse(result.clean());
+        assertEquals(0, result.comparedFrames());
+    }
+
+    @Test
+    void missingSidecarIsVisibleNonBlockingStatus() {
+        UserRecordingVerifier verifier = UserRecordingVerifier.missingSidecar();
+
+        verifier.observer().afterFrameAdvanced(movieFrame(0), false);
+
+        UserRecordingVerificationResult result = verifier.result();
+        assertEquals("missing-sidecar", result.status());
+        assertFalse(result.clean());
+        assertEquals(0, result.comparedFrames());
+        assertFalse(verifier.hasMismatch());
+    }
+
+    @Test
+    void unsupportedSchemaIsVisibleNonBlockingStatus() {
+        UserRecordingVerifier verifier = UserRecordingVerifier.unsupportedSchema(99);
+
+        verifier.observer().afterFrameAdvanced(movieFrame(0), false);
+
+        UserRecordingVerificationResult result = verifier.result();
+        assertEquals("schema-unsupported", result.status());
+        assertFalse(result.clean());
+        assertEquals(0, result.comparedFrames());
+        assertFalse(verifier.hasMismatch());
     }
 
     @Test

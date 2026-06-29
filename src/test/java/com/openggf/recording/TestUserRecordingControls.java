@@ -120,6 +120,23 @@ class TestUserRecordingControls {
     }
 
     @Test
+    void targetPauseWaitsUntilAppliedMovieFrameReachesTarget() {
+        Fixture fixture = new Fixture();
+        fixture.playbackOptions = new UserRecordingPlaybackOptions(10, true, false);
+        fixture.playbackState = UserRecordingPlaybackState.PLAYING;
+
+        fixture.controls.afterPlaybackFrame(9, false, false);
+
+        assertEquals(UserRecordingPlaybackState.PLAYING, fixture.playbackState);
+        assertFalse(fixture.enginePausedForPlayback);
+
+        fixture.controls.afterPlaybackFrame(10, false, false);
+
+        assertEquals(UserRecordingPlaybackState.PAUSED_AT_TARGET, fixture.playbackState);
+        assertTrue(fixture.enginePausedForPlayback);
+    }
+
+    @Test
     void masterTitleShiftRecordUsesConfiguredRecordKey() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(SonicConfiguration.RECORDING_RECORD_KEY, GLFW_KEY_F10);

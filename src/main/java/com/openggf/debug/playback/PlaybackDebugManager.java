@@ -33,7 +33,9 @@ public final class PlaybackDebugManager {
     private int lastAppliedMask;
     private boolean lastAppliedStart;
     private int previousActionMask;
+    private boolean previousStartPressed;
     private boolean currentForcedJumpPress;
+    private boolean currentForcedStartPress;
     private GameMode lastObservedMode = GameMode.LEVEL;
     private int firstActiveFrame = -1;
     private int periodicLogCounter;
@@ -143,12 +145,14 @@ public final class PlaybackDebugManager {
             lastAppliedMask = 0;
             lastAppliedStart = false;
             currentForcedJumpPress = false;
+            currentForcedStartPress = false;
             return 0;
         }
         if (!timeline.isPlaying()) {
             lastAppliedMask = 0;
             lastAppliedStart = false;
             currentForcedJumpPress = false;
+            currentForcedStartPress = false;
             return 0;
         }
         Bk2FrameInput frame = movie.getFrame(timeline.getCursorFrame());
@@ -159,12 +163,18 @@ public final class PlaybackDebugManager {
         int pressed = (actionMask ^ previousActionMask) & actionMask;
         currentForcedJumpPress = pressed != 0;
         previousActionMask = actionMask;
+        currentForcedStartPress = frame.p1StartPressed() && !previousStartPressed;
+        previousStartPressed = frame.p1StartPressed();
 
         return lastAppliedMask;
     }
 
     public synchronized boolean isCurrentForcedJumpPress() {
         return currentForcedJumpPress;
+    }
+
+    public synchronized boolean isCurrentForcedStartPress() {
+        return currentForcedStartPress;
     }
 
     public synchronized void onLevelFrameAdvanced() {
@@ -269,9 +279,11 @@ public final class PlaybackDebugManager {
         timeline.seekAndPlay(frame, playing);
         int cursor = timeline.getCursorFrame();
         previousActionMask = cursor > 0 ? movie.getFrame(cursor - 1).p1ActionMask() : 0;
+        previousStartPressed = cursor > 0 && movie.getFrame(cursor - 1).p1StartPressed();
         lastAppliedMask = 0;
         lastAppliedStart = false;
         currentForcedJumpPress = false;
+        currentForcedStartPress = false;
         currentTickSuppressed = false;
     }
 
@@ -279,7 +291,9 @@ public final class PlaybackDebugManager {
         lastAppliedMask = 0;
         lastAppliedStart = false;
         currentForcedJumpPress = false;
+        currentForcedStartPress = false;
         previousActionMask = 0;
+        previousStartPressed = false;
     }
 
 

@@ -115,8 +115,7 @@ public final class UserRecordingSessionLauncher {
         UserRecordingManifest manifest = readManifest(entry.path());
         RecordingLaunchContext context = manifest.launchContext();
         Bk2Movie movie = movieLoader.load(entry.path());
-        List<DesyncLiteFrame> sidecarFrames = readDesyncLite(entry.path());
-        UserRecordingVerifier verifier = new UserRecordingVerifier(sidecarFrames);
+        UserRecordingVerifier verifier = createVerifier(entry.path(), manifest);
 
         gameLoop.restartFromRecordingLaunchContext(context);
         playback.startSession(movie, 0);
@@ -217,11 +216,27 @@ public final class UserRecordingSessionLauncher {
         }
     }
 
-    private static List<DesyncLiteFrame> readDesyncLite(Path bk2Path) throws IOException {
+    private static UserRecordingVerifier createVerifier(Path bk2Path, UserRecordingManifest manifest)
+            throws IOException {
+        UserRecordingSidecarMetadata sidecar = manifest.sidecar();
+        if (sidecar != null
+                && sidecar.desyncLiteSchemaVersion()
+                > UserRecordingSidecarMetadata.CURRENT_DESYNC_LITE_SCHEMA_VERSION) {
+            return UserRecordingVerifier.unsupportedSchema(sidecar.desyncLiteSchemaVersion());
+        }
+        SidecarReadResult sidecarRead = readDesyncLiteWithPresence(bk2Path);
+        if (!sidecarRead.present()) {
+            return UserRecordingVerifier.missingSidecar();
+        }
+        return new UserRecordingVerifier(sidecarRead.frames(),
+                sidecar == null ? UserRecordingSidecarMetadata.everyFrame() : sidecar);
+    }
+
+    private static SidecarReadResult readDesyncLiteWithPresence(Path bk2Path) throws IOException {
         try (ZipFile zip = new ZipFile(bk2Path.toFile())) {
             ZipEntry entry = findEntryIgnoreCase(zip, DESYNC_LITE_ENTRY);
             if (entry == null) {
-                return List.of();
+                return new SidecarReadResult(false, List.of());
             }
             List<DesyncLiteFrame> frames = new ArrayList<>();
             try (BufferedReader reader = new BufferedReader(
@@ -234,8 +249,11 @@ public final class UserRecordingSessionLauncher {
                     }
                 }
             }
-            return frames;
+            return new SidecarReadResult(true, frames);
         }
+    }
+
+    private record SidecarReadResult(boolean present, List<DesyncLiteFrame> frames) {
     }
 
     private static ZipEntry findEntryIgnoreCase(ZipFile zip, String expectedName) {

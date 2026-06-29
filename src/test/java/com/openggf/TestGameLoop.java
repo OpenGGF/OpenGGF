@@ -242,6 +242,49 @@ public class TestGameLoop {
     }
 
     @Test
+    public void userRecordingPlaybackPolicyObservesAppliedMovieFrameBeforeCursorAdvance() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+
+        assertTrue(source.contains("int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();"),
+                "GameLoop must capture the BK2 frame before advancing the playback cursor");
+        assertTrue(source.contains("userRecordingControls.afterPlaybackFrame(\n" +
+                        "                    appliedPlaybackFrame,"),
+                "Target/completion policy must classify the frame that was just applied");
+    }
+
+    @Test
+    public void returnToMasterTitleTearsDownUserRecordingSessionsBeforeLeavingLevel() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int methodStart = source.indexOf("void returnToMasterTitle()");
+        int methodEnd = source.indexOf("private void startEscapeToMasterTitleTransition()", methodStart);
+        assertTrue(methodStart >= 0 && methodEnd > methodStart, "returnToMasterTitle method must exist");
+        String methodBody = source.substring(methodStart, methodEnd);
+
+        assertTrue(methodBody.contains("userRecordingSessionLauncher.stopActiveRecording"),
+                "Escape/return-to-title must finalize active user recordings");
+        assertTrue(methodBody.contains("userRecordingSessionLauncher.endPlaybackSession"),
+                "Escape/return-to-title must end user recording playback and forced BK2 input");
+        assertTrue(methodBody.indexOf("userRecordingSessionLauncher.stopActiveRecording")
+                        < methodBody.indexOf("masterTitleLaunchCoordinator.returnToMasterTitle()"),
+                "Recording teardown must run before gameplay is handed back to master title");
+        assertTrue(methodBody.indexOf("userRecordingSessionLauncher.endPlaybackSession")
+                        < methodBody.indexOf("masterTitleLaunchCoordinator.returnToMasterTitle()"),
+                "Playback teardown must run before gameplay is handed back to master title");
+    }
+
+    @Test
+    public void playbackStartInputFeedsGameplayPauseEdge() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int updateLevel = source.indexOf("private boolean updateLevelMode(");
+        int levelEnd = source.indexOf("private void updateBonusStageMode(", updateLevel);
+        assertTrue(updateLevel >= 0 && levelEnd > updateLevel, "updateLevelMode method must exist");
+        String levelBody = source.substring(updateLevel, levelEnd);
+
+        assertTrue(levelBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
+                "Recorded P1 Start must route to the same gameplay pause edge as live Start");
+    }
+
+    @Test
     public void stepInternalDelegatesBootScreensToExtractedController() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
 

@@ -1165,7 +1165,8 @@ public class GameLoop {
                 // per-game pause divergences are debug-only cheats inert in normal
                 // play).
                 boolean startEdge = inputHandler.isKeyPressed(
-                        configService.getInt(SonicConfiguration.START));
+                        configService.getInt(SonicConfiguration.START))
+                        || playbackDebugManager.isCurrentForcedStartPress();
                 userRecordingControls.beforeLevelFrame(inputHandler);
                 LevelFrameStep.executeWithPause(LevelFrameContext.from(gameplayMode),
                         levelManager, camera, () -> spriteManager.update(inputHandler),
@@ -1189,13 +1190,14 @@ public class GameLoop {
             // gameplay ticks and lag-gated skips — so the observer's
             // cursor always matches the BK2 cursor. onLevelFrameAdvanced
             // is a no-op when no playback session is active.
+            int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();
             playbackDebugManager.onLevelFrameAdvanced();
             userRecordingControls.afterPlaybackFrame(
-                    playbackDebugManager.getCursorFrame(),
+                    appliedPlaybackFrame,
                     false,
                     playbackDebugManager.getMovieFrameCount() > 0
                             && !playbackDebugManager.isSessionPlaying()
-                            && playbackDebugManager.getCursorFrame() >= playbackDebugManager.getMovieFrameCount() - 1);
+                            && appliedPlaybackFrame >= playbackDebugManager.getMovieFrameCount() - 1);
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
             if (traceSession != null) {
                 traceSession.recordExternalRewindFrame();
@@ -2768,6 +2770,8 @@ public class GameLoop {
      */
     void returnToMasterTitle() {
         escapeToMasterTitleController.reset();
+        userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+        userRecordingSessionLauncher.endPlaybackSession();
         masterTitleLaunchCoordinator.returnToMasterTitle();
     }
 

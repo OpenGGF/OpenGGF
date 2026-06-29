@@ -149,7 +149,33 @@ class TestUserRecordingSessionLauncher {
         assertEquals(2, fixture.startedMovie.getFrameCount());
         assertNotNull(fixture.observer);
         assertNotNull(fixture.launcher().activeVerifier());
+        assertEquals("missing-sidecar", fixture.launcher().activeVerifier().result().status());
         assertEquals(0, fixture.launcher().activeVerifier().result().comparedFrames());
+    }
+
+    @Test
+    void beginPlaybackReportsUnsupportedSidecarSchemaWithoutBlockingPlayback() throws Exception {
+        Fixture fixture = new Fixture();
+        RecordingLaunchContext manifestContext = new RecordingLaunchContext(
+                "s2", 3, 1, "tails", List.of("sonic"),
+                false, "current-act-fresh-start");
+        Path bk2 = writeRecordingZip("unsupported-sidecar.bk2", manifestContext, 2, true, true,
+                new UserRecordingSidecarMetadata(
+                        UserRecordingSidecarMetadata.CURRENT_DESYNC_LITE_SCHEMA_VERSION + 1,
+                        "every-frame",
+                        null));
+        UserRecordingEntry entry = new UserRecordingEntry(
+                bk2, "unsupported-sidecar", null, 2, fixture.now,
+                RecordingVersionWarning.NONE, "");
+
+        UserRecordingPlaybackState state = fixture.launcher()
+                .beginPlayback(entry, new UserRecordingPlaybackOptions(1, true, false));
+
+        assertEquals(UserRecordingPlaybackState.PLAYING, state);
+        assertEquals(List.of(manifestContext), fixture.restarts);
+        assertNotNull(fixture.startedMovie);
+        assertNotNull(fixture.observer);
+        assertEquals("schema-unsupported", fixture.launcher().activeVerifier().result().status());
     }
 
     private Path writeRecording(String fileName, RecordingLaunchContext context, int frameCount) throws Exception {
@@ -177,6 +203,13 @@ class TestUserRecordingSessionLauncher {
 
     private Path writeRecordingZip(String fileName, RecordingLaunchContext context,
             int frameCount, boolean includeInputLog, boolean includeSidecar) throws Exception {
+        return writeRecordingZip(fileName, context, frameCount, includeInputLog, includeSidecar,
+                UserRecordingSidecarMetadata.everyFrame());
+    }
+
+    private Path writeRecordingZip(String fileName, RecordingLaunchContext context,
+            int frameCount, boolean includeInputLog, boolean includeSidecar,
+            UserRecordingSidecarMetadata sidecarMetadata) throws Exception {
         Path path = tempDir.resolve("fixtures").resolve(fileName);
         Files.createDirectories(path.getParent());
         try (OutputStream out = Files.newOutputStream(path);
@@ -186,7 +219,7 @@ class TestUserRecordingSessionLauncher {
                 writeEntry(zip, "Input Log.txt", inputLog(frameCount));
             }
             writeEntry(zip, "OpenGGF/manifest.json",
-                    UserRecordingJson.writeManifest(manifest(fileName, context, frameCount)));
+                    UserRecordingJson.writeManifest(manifest(fileName, context, frameCount, sidecarMetadata)));
             if (includeSidecar) {
                 writeEntry(zip, "OpenGGF/desync-lite.jsonl", "{}\n");
             }
@@ -195,12 +228,17 @@ class TestUserRecordingSessionLauncher {
     }
 
     private static UserRecordingManifest manifest(String fileName, RecordingLaunchContext context, int frameCount) {
+        return manifest(fileName, context, frameCount, UserRecordingSidecarMetadata.everyFrame());
+    }
+
+    private static UserRecordingManifest manifest(String fileName, RecordingLaunchContext context, int frameCount,
+            UserRecordingSidecarMetadata sidecarMetadata) {
         return new UserRecordingManifest(
                 UserRecordingManifest.CURRENT_SCHEMA_VERSION,
                 fileName,
                 new BuildIdentity("0.6.prerelease", "task9", false),
                 context,
-                UserRecordingSidecarMetadata.everyFrame(),
+                sidecarMetadata,
                 new RecordingDeterminismMetadata(0, null),
                 "A",
                 frameCount,

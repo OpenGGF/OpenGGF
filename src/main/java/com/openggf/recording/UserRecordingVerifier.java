@@ -13,18 +13,32 @@ public final class UserRecordingVerifier {
     private final Map<Integer, DesyncLiteFrame> expectedFramesById;
     private final IntFunction<DesyncLiteFrame> snapshotter;
     private final PlaybackDebugManager.PlaybackFrameObserver observer = new Observer();
+    private final VerificationAvailability availability;
+    private final UserRecordingSidecarMetadata sidecarMetadata;
 
     private int comparedFrames;
     private UserRecordingVerificationResult firstMismatch;
+    private boolean truncatedSidecar;
 
     public UserRecordingVerifier(List<DesyncLiteFrame> expectedFrames) {
-        this(expectedFrames, DesyncLiteSnapshotter::capture);
+        this(expectedFrames, UserRecordingSidecarMetadata.everyFrame(), DesyncLiteSnapshotter::capture,
+                VerificationAvailability.AVAILABLE);
+    }
+
+    public UserRecordingVerifier(List<DesyncLiteFrame> expectedFrames,
+            UserRecordingSidecarMetadata sidecarMetadata) {
+        this(expectedFrames, sidecarMetadata, DesyncLiteSnapshotter::capture,
+                VerificationAvailability.AVAILABLE);
     }
 
     private UserRecordingVerifier(List<DesyncLiteFrame> expectedFrames,
-                                  IntFunction<DesyncLiteFrame> snapshotter) {
+                                  UserRecordingSidecarMetadata sidecarMetadata,
+                                  IntFunction<DesyncLiteFrame> snapshotter,
+                                  VerificationAvailability availability) {
         Objects.requireNonNull(expectedFrames, "expectedFrames");
         this.snapshotter = Objects.requireNonNull(snapshotter, "snapshotter");
+        this.sidecarMetadata = sidecarMetadata == null ? UserRecordingSidecarMetadata.everyFrame() : sidecarMetadata;
+        this.availability = Objects.requireNonNull(availability, "availability");
         this.expectedFramesById = new HashMap<>();
         for (DesyncLiteFrame frame : expectedFrames) {
             DesyncLiteFrame expected = Objects.requireNonNull(frame, "expectedFrames element");
@@ -34,8 +48,14 @@ public final class UserRecordingVerifier {
 
     static UserRecordingVerifier forTesting(List<DesyncLiteFrame> expectedFrames,
                                             DesyncLiteFrame... actualFrames) {
+        return forTesting(expectedFrames, UserRecordingSidecarMetadata.everyFrame(), actualFrames);
+    }
+
+    static UserRecordingVerifier forTesting(List<DesyncLiteFrame> expectedFrames,
+                                            UserRecordingSidecarMetadata sidecarMetadata,
+                                            DesyncLiteFrame... actualFrames) {
         Objects.requireNonNull(actualFrames, "actualFrames");
-        return new UserRecordingVerifier(expectedFrames, new IntFunction<>() {
+        return new UserRecordingVerifier(expectedFrames, sidecarMetadata, new IntFunction<>() {
             private int index;
 
             @Override
@@ -45,7 +65,19 @@ public final class UserRecordingVerifier {
                 }
                 return actualFrames[index++];
             }
-        });
+        }, VerificationAvailability.AVAILABLE);
+    }
+
+    public static UserRecordingVerifier missingSidecar() {
+        return new UserRecordingVerifier(List.of(), UserRecordingSidecarMetadata.everyFrame(),
+                DesyncLiteSnapshotter::capture, VerificationAvailability.MISSING_SIDECAR);
+    }
+
+    public static UserRecordingVerifier unsupportedSchema(int schemaVersion) {
+        return new UserRecordingVerifier(List.of(),
+                new UserRecordingSidecarMetadata(schemaVersion, "every-frame", null),
+                DesyncLiteSnapshotter::capture,
+                VerificationAvailability.SCHEMA_UNSUPPORTED);
     }
 
     public PlaybackDebugManager.PlaybackFrameObserver observer() {
@@ -54,13 +86,21 @@ public final class UserRecordingVerifier {
 
     public UserRecordingVerificationResult result() {
         if (firstMismatch != null) {
-            return new UserRecordingVerificationResult(
-                    false,
+            return UserRecordingVerificationResult.firstMismatch(
                     comparedFrames,
                     firstMismatch.firstMismatchFrame(),
                     firstMismatch.firstMismatchField(),
                     firstMismatch.expectedValue(),
                     firstMismatch.actualValue());
+        }
+        if (availability == VerificationAvailability.MISSING_SIDECAR) {
+            return UserRecordingVerificationResult.missingSidecar(comparedFrames);
+        }
+        if (availability == VerificationAvailability.SCHEMA_UNSUPPORTED) {
+            return UserRecordingVerificationResult.schemaUnsupported(comparedFrames);
+        }
+        if (truncatedSidecar) {
+            return UserRecordingVerificationResult.truncatedSidecar(comparedFrames);
         }
         return UserRecordingVerificationResult.clean(comparedFrames);
     }
@@ -70,8 +110,14 @@ public final class UserRecordingVerifier {
     }
 
     private void compareFrame(Bk2FrameInput frame) {
+        if (availability != VerificationAvailability.AVAILABLE) {
+            return;
+        }
         DesyncLiteFrame expected = expectedFramesById.get(frame.frameIndex());
         if (expected == null) {
+            if (isEveryFrameSidecar()) {
+                truncatedSidecar = true;
+            }
             return;
         }
 
@@ -122,13 +168,22 @@ public final class UserRecordingVerifier {
         if (expected == actual) {
             return null;
         }
-        return new UserRecordingVerificationResult(
-                false,
+        return UserRecordingVerificationResult.firstMismatch(
                 comparedFrames,
                 frame,
                 fieldName,
                 Integer.toString(expected),
                 Integer.toString(actual));
+    }
+
+    private boolean isEveryFrameSidecar() {
+        return "every-frame".equalsIgnoreCase(sidecarMetadata.sampleMode());
+    }
+
+    private enum VerificationAvailability {
+        AVAILABLE,
+        MISSING_SIDECAR,
+        SCHEMA_UNSUPPORTED
     }
 
     private final class Observer implements PlaybackDebugManager.PlaybackFrameObserver {

@@ -124,9 +124,8 @@ public final class UserRecordingJson {
         }
 
         private static void validateSidecar(UserRecordingSidecarMetadata sidecar) throws IOException {
-            if (sidecar.desyncLiteSchemaVersion() != UserRecordingSidecarMetadata.CURRENT_DESYNC_LITE_SCHEMA_VERSION) {
-                throw new IOException("Unsupported desync-lite sidecar schema version: "
-                        + sidecar.desyncLiteSchemaVersion());
+            if (sidecar.desyncLiteSchemaVersion() <= 0) {
+                throw new IOException("Missing required manifest field: sidecar.desyncLiteSchemaVersion");
             }
             requireNonBlank(sidecar.sampleMode(), "sidecar.sampleMode");
         }
