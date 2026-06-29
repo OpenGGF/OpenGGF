@@ -6,7 +6,7 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-## 2026-06-29 - S2 accepted routing baseline after ARZ2, CPZ2, HTZ1, and MTZ3 integration
+## 2026-06-29 - S2 accepted routing baseline after OOZ2 and HTZ1 integrations
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
   `bugfix/ai-s2-trace-develop`.
