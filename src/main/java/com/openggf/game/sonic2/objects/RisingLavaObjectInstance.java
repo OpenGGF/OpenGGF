@@ -361,6 +361,16 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesSidekickCpuCurrentPushObjectOrderInputDelay(PlayableEntity player) {
+        // Obj30 subtype 6 runs SolidObject_Always, DropOnFloor, then the
+        // supported-player hurt path after TailsCPU_Normal has already sampled
+        // Ctrl_2 (docs/s2disasm/s2.asm:49636-49643,39291-39294). The HTZ2
+        // lower-route platform keeps that object-order push visible to the CPU
+        // slot while the adjacent history input word has already flipped.
+        return subtype == 6 && player != null && player.isCpuControlled();
+    }
+
+    @Override
     public int getOnScreenHalfWidth() {
         return widthPixels;
     }
