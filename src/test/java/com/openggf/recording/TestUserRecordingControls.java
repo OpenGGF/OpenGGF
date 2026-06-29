@@ -1,21 +1,45 @@
 package com.openggf.recording;
 
+import com.openggf.GameLoop;
+import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.data.RomManager;
+import com.openggf.debug.DebugOverlayManager;
+import com.openggf.debug.PerformanceProfiler;
+import com.openggf.debug.playback.PlaybackDebugManager;
+import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameMode;
 import com.openggf.game.MasterTitleScreen;
+import com.openggf.game.RomDetectionService;
+import com.openggf.game.session.EngineContext;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.recording.menu.UserRecordingMenu;
+import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F10;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_F9;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
@@ -119,11 +143,93 @@ class TestUserRecordingControls {
         assertTrue(screen.isUserRecordingMenuOpenForTest());
     }
 
+    @Test
+    void defaultRecordKeyUsesF9InsteadOfPlaneSwitcherF10() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+
+        int recordKey = config.getInt(SonicConfiguration.RECORDING_RECORD_KEY);
+
+        assertEquals(GLFW_KEY_F9, recordKey);
+        assertNotEquals(GLFW_KEY_F10, recordKey);
+    }
+
+    @Test
+    void playbackTakeoverEndsSessionBeforePlaybackInputBridgeCanForceInput() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.PAUSE_KEY, GLFW_KEY_ENTER);
+        PlaybackDebugManager playback = mock(PlaybackDebugManager.class);
+        AtomicBoolean sessionEnded = new AtomicBoolean(false);
+        when(playback.isDriving(any())).thenAnswer(invocation -> !sessionEnded.get());
+        when(playback.getCurrentForcedInputMask()).thenReturn(AbstractPlayableSprite.INPUT_RIGHT);
+        when(playback.isCurrentForcedJumpPress()).thenReturn(true);
+        doAnswer(invocation -> {
+            sessionEnded.set(true);
+            return null;
+        }).when(playback).endSession();
+
+        GameLoop loop = new GameLoop(new EngineContext(
+                config,
+                mock(GraphicsManager.class),
+                mock(AudioManager.class),
+                mock(RomManager.class),
+                mock(PerformanceProfiler.class),
+                mock(DebugOverlayManager.class),
+                playback,
+                mock(RomDetectionService.class),
+                mock(CrossGameFeatureProvider.class)));
+        loop.toggleUserPause();
+
+        Object launcher = getPrivateField(loop, "userRecordingSessionLauncher");
+        setPrivateField(launcher, "activePlaybackOptions", new UserRecordingPlaybackOptions(10, true, false));
+        setPrivateField(launcher, "activePlaybackState", UserRecordingPlaybackState.PAUSED_ON_DESYNC);
+
+        SpriteManager sprites = mock(SpriteManager.class);
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(sprites.getSprite("sonic")).thenReturn(player);
+        setPrivateField(loop, "spriteManager", sprites);
+
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_PRESS);
+
+        assertTrue(invokeBoolean(loop, "handlePlaybackTakeoverBeforePlaybackInputBridge", input));
+        invokeVoid(loop, "syncPlaybackInputBridge");
+
+        assertTrue(sessionEnded.get());
+        assertFalse(loop.isUserPaused());
+        verify(sprites, never()).setPlaybackInputSuppressed(true);
+        verify(player, never()).setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+        verify(player, never()).setForcedJumpPress(true);
+    }
+
     private InputHandler recordingChord() {
         InputHandler input = new InputHandler();
         input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
         input.handleKeyEvent(GLFW_KEY_F10, GLFW_PRESS);
         return input;
+    }
+
+    private static boolean invokeBoolean(Object target, String methodName, InputHandler input) throws Exception {
+        Method method = target.getClass().getDeclaredMethod(methodName, InputHandler.class);
+        method.setAccessible(true);
+        return (boolean) method.invoke(target, input);
+    }
+
+    private static void invokeVoid(Object target, String methodName) throws Exception {
+        Method method = target.getClass().getDeclaredMethod(methodName);
+        method.setAccessible(true);
+        method.invoke(target);
+    }
+
+    private static Object getPrivateField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static void setPrivateField(Object target, String fieldName, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 
     private final class Fixture implements UserRecordingRuntimeControls.Runtime {

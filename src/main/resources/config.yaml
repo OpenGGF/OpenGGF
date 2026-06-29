@@ -158,7 +158,7 @@ debug:
     resetToStartKey: ""   # Reset the cursor to the start offset
     startOffsetFrame: 0   # Starting frame offset for BK2 playback
   recording:
-    recordKey: F10   # Shift+key starts/opens recordings; key alone stops active recording
+    recordKey: F9   # Shift+key starts/opens recordings; key alone stops active recording
   traceRewind:
     key: R   # Key held in Trace Test Mode to rewind deterministic engine state
   traceRender:

@@ -688,6 +688,8 @@ public class GameLoop {
             return;
         }
 
+        boolean playbackTakeoverConsumedPausePress =
+                handlePlaybackTakeoverBeforePlaybackInputBridge(inputHandler);
         syncPlaybackInputBridge();
 
         if (currentGameMode == GameMode.LEGAL_DISCLAIMER) {
@@ -755,7 +757,9 @@ public class GameLoop {
             userPaused = false;
             updateAudioPauseState();
         }
-        if (userPauseInputAllowedForCurrentMode() && inputHandler.isKeyPressed(pauseKey)) {
+        if (!playbackTakeoverConsumedPausePress
+                && userPauseInputAllowedForCurrentMode()
+                && inputHandler.isKeyPressed(pauseKey)) {
             if (userPaused && userRecordingControls.handlePlaybackTakeoverRequest()) {
                 userPaused = false;
                 updateAudioPauseState();
@@ -1353,6 +1357,19 @@ public class GameLoop {
         }
         audioUpdatedThisStep = true;
         profiler.endSection("audio");
+    }
+
+    boolean handlePlaybackTakeoverBeforePlaybackInputBridge(InputHandler input) {
+        if (input == null || !userPaused || !userPauseInputAllowedForCurrentMode()) {
+            return false;
+        }
+        int pauseKey = configService.getInt(SonicConfiguration.PAUSE_KEY);
+        if (!input.isKeyPressed(pauseKey) || !userRecordingControls.handlePlaybackTakeoverRequest()) {
+            return false;
+        }
+        userPaused = false;
+        updateAudioPauseState();
+        return true;
     }
 
     private void syncPlaybackInputBridge() {
