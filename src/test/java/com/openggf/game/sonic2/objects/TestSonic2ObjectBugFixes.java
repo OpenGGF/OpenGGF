@@ -270,6 +270,27 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void htzRisingLavaSubtypeSixUsesCpuSidekickObjectOrderInputDelay() {
+        RisingLavaObjectInstance lowerRoutePlatform = new RisingLavaObjectInstance(
+                new ObjectSpawn(0x1760, 0x07D4, Sonic2ObjectIds.RISING_LAVA, 0x06, 0, false, 0),
+                "RisingLava");
+        RisingLavaObjectInstance slopedPlatform = new RisingLavaObjectInstance(
+                new ObjectSpawn(0x1760, 0x07D4, Sonic2ObjectIds.RISING_LAVA, 0x08, 0, false, 0),
+                "RisingLavaSlope");
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x170A, (short) 0x074D);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x170A, (short) 0x074D);
+        tails.setCpuControlled(true);
+
+        assertTrue(lowerRoutePlatform.usesSidekickCpuCurrentPushObjectOrderInputDelay(tails),
+                "HTZ2 f3322 reaches Obj30 subtype 6's SolidObject_Always/DropOnFloor ordering with "
+                        + "Tails' current Status_Push still visible but the adjacent delayed input already flipped");
+        assertFalse(lowerRoutePlatform.usesSidekickCpuCurrentPushObjectOrderInputDelay(sonic),
+                "The bridge is only for CPU sidekick Ctrl_2 sampling");
+        assertFalse(slopedPlatform.usesSidekickCpuCurrentPushObjectOrderInputDelay(tails),
+                "Subtype 8 uses SlopedSolid and is not part of the HTZ2 lower-route Obj30 ordering window");
+    }
+
+    @Test
     void cpzStaircasePreservesRidingPushOnlyAtLowerStepSideOverlap() {
         CPZStaircaseObjectInstance staircase = new CPZStaircaseObjectInstance(
                 new ObjectSpawn(0x2090, 0x0350, Sonic2ObjectIds.CPZ_STAIRCASE, 0x01, 1, false, 0),

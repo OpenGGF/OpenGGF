@@ -2248,10 +2248,16 @@ public class SidekickCpuController {
                 && objectOrderFollowSteeringContext
                 && delayedObjectOrPushContext
                 && !sidekick.getAir();
+        boolean ridingObjectCurrentPushObjectOrderInputSample = currentPushBypass
+                && sidekick.isOnObject()
+                && !sidekick.getAir()
+                && usesSidekickCpuCurrentPushObjectOrderInputDelay(ridingObject);
         int bridgedInputDelayFrames = currentPushObjectOrderInputSample
                 ? ROM_FOLLOW_DELAY_FRAMES
+                : ridingObjectCurrentPushObjectOrderInputSample
+                ? OBJECT_ORDER_INPUT_DELAY_FRAMES
                 : OBJECT_ORDER_INPUT_DELAY_FRAMES;
-        if (objectOrderGrace || currentPushObjectOrderInputSample) {
+        if (objectOrderGrace || currentPushObjectOrderInputSample || ridingObjectCurrentPushObjectOrderInputSample) {
             recordedInput = effectiveLeader.getInputHistory(bridgedInputDelayFrames);
             recordedJumpPress = delayedJumpPress(effectiveLeader, bridgedInputDelayFrames, recordedInput);
             inputLeft = (recordedInput & AbstractPlayableSprite.INPUT_LEFT) != 0;
@@ -2785,6 +2791,16 @@ public class SidekickCpuController {
             return provider.sidekickCpuPushGraceMaximumFramesWhileRiding(sidekick);
         }
         return Integer.MAX_VALUE;
+    }
+
+    private boolean usesSidekickCpuCurrentPushObjectOrderInputDelay(ObjectInstance ridingObject) {
+        if (!hasLiveRidingObject(ridingObject)) {
+            return false;
+        }
+        if (ridingObject instanceof SolidObjectProvider provider) {
+            return provider.usesSidekickCpuCurrentPushObjectOrderInputDelay(sidekick);
+        }
+        return false;
     }
 
     private boolean usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge() {

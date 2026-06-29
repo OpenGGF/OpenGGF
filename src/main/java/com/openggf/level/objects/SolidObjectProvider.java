@@ -354,6 +354,21 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a current {@code Status_Push} bypass while the CPU sidekick is
+     * still riding this object should consume the object-order input history
+     * slot rather than the ordinary already-loaded follow slot.
+     * <p>
+     * Most objects must return false: ROM {@code TailsCPU_Normal} loads the
+     * delayed input and delayed status from the same history entry before
+     * testing {@code Status_Push}. Objects whose own solid/drop-floor routine
+     * runs after the sidekick CPU slot can opt in when trace evidence shows the
+     * ROM-visible push bit belongs to that later object-order window.
+     */
+    default boolean usesSidekickCpuCurrentPushObjectOrderInputDelay(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether this object's continued-riding path should keep the player's
      * {@code Status_Push} bit set even when the current frame does not produce
      * a fresh side-contact classification.

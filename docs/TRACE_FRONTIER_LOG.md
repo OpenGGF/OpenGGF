@@ -6,6 +6,45 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 HTZ2 Obj30 sidekick input slot bridge (f3322 -> f3618)
+
+- Worktree/branch: `.worktrees/ai-s2-htz2-frontier` /
+  `bugfix/ai-s2-htz2-frontier`, based on integration head `dd8710e47`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: HTZ2 f3322 / 1057 (`tails_x_sub` expected
+  `0x7500`, actual `0x8D00`; first control mismatch `tails_cpu_ctrl2_held`
+  expected `0x0004`, actual `0x0008`).
+- Triage/evidence: frames 3310-3321 were bit-exact, then f3322 entered
+  `TailsCPU_Normal` with current `Status_Push` visible while Tails was still
+  riding Obj30 subtype 6. The ordinary 16-frame delayed input sample still
+  carried RIGHT, but the ROM-visible Obj30 solid/drop-floor ordering had
+  already exposed the adjacent LEFT input word for `Ctrl_2`. Keeping the
+  normal follow-ring diagnostic slot at the ROM delayed index avoids the
+  earlier f3312 follow-ring regression while letting only Obj30 subtype 6
+  source the object-order input word.
+- Disassembly cited: Tails CPU current-push bypass at
+  `docs/s2disasm/s2.asm:39291-39294`; Obj30 subtype 6
+  `SolidObject_Always` / `DropOnFloor` / supported-player hurt sequence at
+  `docs/s2disasm/s2.asm:49636-49643`.
+- Fix: `SolidObjectProvider` now has an object-local hook for CPU sidekick
+  current-push object-order input delay. `RisingLavaObjectInstance` opts in
+  only for subtype 6 and CPU-controlled sidekicks; the shared Tails CPU path
+  uses that adjacent input slot only for generated input, not for the reported
+  ROM follow-ring slot. No trace hydration, tolerance, route, frame, or zone
+  carve-out is used.
+- Focused checks:
+  `mvn "-Dtest=TestSonic2ObjectBugFixes#htzRisingLavaSubtypeSixUsesCpuSidekickObjectOrderInputDelay,TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; the new object test passed, and HTZ2 advanced to
+  f3618 / 993 (`g_speed` expected `0x03F8`, actual `0x02A8`).
+- Full listed S2 preservation sweep:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; 19 trace classes run, 9 passed / 10
+  expected-red. Preserved reds: ARZ2 f1028 / 2688; CNZ2
+  f6144 / 994; CPZ1 f4547 / 177; CPZ2 f2976 / 1232; OOZ2 f3835 / 797;
+  OOZ1 f1790 / 614; MTZ1 f5713 / 560; MTZ2 f4375 / 950; MTZ3 f2588 / 939.
+  HTZ2 is the only changed trace, now f3618 / 993.
+
 ## 2026-06-29 - S2 CPZ Obj78 side-overlap push latch (f4351 -> f4547)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz1-frontier` /
@@ -203,12 +242,15 @@ branch-local measurements.
     `TestS2CpzLevelSelectTraceReplay` from f4351 / 181 to f4547 / 177 while
     preserving CPZ2 f2976 / 1232 and the current S2 accepted red/green
     frontier set.
+  - HTZ2 Obj30 subtype-6 sidekick current-push input slot bridge advanced
+    `TestS2Htz2LevelSelectTraceReplay` from f3322 / 1057 to f3618 / 993 while
+    preserving the current S2 accepted red/green frontier set.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f6144 / 994 (`tails_y_speed` expected `0x0038`, actual `0x0000`);
   `CPZ1` f4547 / 177 (`x_speed` expected `0x01E0`, actual `-0200`);
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
-  `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
+  `HTZ2` f3618 / 993 (`g_speed` expected `0x03F8`, actual `0x02A8`);
   `MTZ1` f5713 / 560 (`tails_y_speed` expected `0x0ED0`, actual `0x0000`);
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
   `MTZ3` f2588 / 939 (`tails_cpu_ctrl2_held` expected `0x0012`, actual `0x0002`);
