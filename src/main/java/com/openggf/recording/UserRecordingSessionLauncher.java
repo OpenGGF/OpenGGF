@@ -140,6 +140,35 @@ public final class UserRecordingSessionLauncher {
         return activeRecordingSession;
     }
 
+    public boolean hasActiveRecordingSession() {
+        return activeRecordingSession != null && activeRecordingSession.isActive();
+    }
+
+    public void beforeActiveRecordingLevelFrame(com.openggf.control.InputHandler input) {
+        if (hasActiveRecordingSession()) {
+            activeRecordingSession.beforeLevelFrame(input);
+        }
+    }
+
+    public void afterActiveRecordingLevelFrame() {
+        if (hasActiveRecordingSession()) {
+            activeRecordingSession.afterLevelFrame();
+        }
+    }
+
+    public void stopActiveRecording(UserRecordingStopReason reason) {
+        if (hasActiveRecordingSession()) {
+            activeRecordingSession.requestStop(reason);
+        }
+    }
+
+    public UserRecordingHudState activeRecordingHudState() {
+        if (activeRecordingSession == null) {
+            return null;
+        }
+        return activeRecordingSession.hudState();
+    }
+
     UserRecordingVerifier activeVerifier() {
         return activeVerifier;
     }
@@ -150,6 +179,29 @@ public final class UserRecordingSessionLauncher {
 
     UserRecordingPlaybackState activePlaybackState() {
         return activePlaybackState;
+    }
+
+    public UserRecordingPlaybackOptions currentPlaybackOptions() {
+        return activePlaybackOptions;
+    }
+
+    public UserRecordingPlaybackState currentPlaybackState() {
+        return activePlaybackState == null ? UserRecordingPlaybackState.STOPPED : activePlaybackState;
+    }
+
+    public boolean activePlaybackHasDesynced() {
+        return activeVerifier != null && activeVerifier.hasMismatch();
+    }
+
+    public void updateActivePlaybackState(UserRecordingPlaybackState state) {
+        activePlaybackState = state == null ? UserRecordingPlaybackState.STOPPED : state;
+    }
+
+    public void endPlaybackSession() {
+        playback.endSession();
+        activeVerifier = null;
+        activePlaybackOptions = null;
+        activePlaybackState = UserRecordingPlaybackState.STOPPED;
     }
 
     private static UserRecordingManifest readManifest(Path bk2Path) throws IOException {
@@ -212,6 +264,8 @@ public final class UserRecordingSessionLauncher {
         void startSession(Bk2Movie movie, int startOffsetIndex);
 
         void setFrameObserver(PlaybackDebugManager.PlaybackFrameObserver observer);
+
+        void endSession();
     }
 
     private record LiveGameLoopAdapter(GameLoop loop) implements GameLoopAdapter {
@@ -269,6 +323,11 @@ public final class UserRecordingSessionLauncher {
         @Override
         public void setFrameObserver(PlaybackDebugManager.PlaybackFrameObserver observer) {
             playbackDebugManager.setFrameObserver(observer);
+        }
+
+        @Override
+        public void endSession() {
+            playbackDebugManager.endSession();
         }
     }
 }

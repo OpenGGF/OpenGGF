@@ -331,6 +331,7 @@ before BK2 playback can be controlled from the keyboard.
 | `PLAYBACK_FAST_RATE_KEY` | `debug.playback.fastRateKey` | key | `""` / unbound | Cycle playback rate (1x/2x/4x/8x). |
 | `PLAYBACK_RESET_TO_START_KEY` | `debug.playback.resetToStartKey` | key | `""` / unbound | Reset the BK2 cursor to `PLAYBACK_START_OFFSET_FRAME`. |
 | `PLAYBACK_START_OFFSET_FRAME` | `debug.playback.startOffsetFrame` | int | `0` | Starting frame offset for BK2 playback. |
+| `RECORDING_RECORD_KEY` | `debug.recording.recordKey` | key | `F10` | `Shift+Record` starts recording from live `LEVEL` mode or opens the master-title recordings menu; plain Record stops an active recording. |
 | `TEST_MODE_ENABLED` | `debug.testMode.enabled` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `debug.testMode.catalogDir` and plays the chosen trace back in the live engine. Dev-only. **When `true`, `DISPLAY_ASPECT` is always forced to `NATIVE_4_3` (320×224) regardless of its configured value** — trace replay and test-mode runs are parity-critical and must always run at 320×224. |
 | `TRACE_CATALOG_DIR` | `debug.testMode.catalogDir` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
 | `TRACE_SHOW_DESYNC_GHOSTS` | `debug.traceRender.showDesyncGhosts` | bool | `true` | In Trace Test Mode and trace capture, render the desync ghost(s). |
@@ -392,6 +393,7 @@ The tables below list each key's name, default code, and the human-readable key 
 | `START` | `input.player1.start` | `259` | Backspace | Player 1 Start: ROM-accurate in-game pause (`Game_paused` / `Pause_Loop`). A press during level gameplay freezes the level update for the frame while the frame counter still advances; press again to resume. Distinct from `PAUSE_KEY`, which is the loop/timing-level pause that also halts audio. |
 | `PAUSE_KEY` | `input.pause` | `257` | Enter | Pause / unpause the game. |
 | `FRAME_STEP_KEY` | `debug.keys.frameStep` | `81` | Q | Advance one frame while paused. |
+| `RECORDING_RECORD_KEY` | `debug.recording.recordKey` | `299` | F10 | `Shift+Record` starts/opens user recording flows; plain Record stops active recording. |
 | `TRACE_REWIND_KEY` | `debug.traceRewind.key` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time, including reverse audio presentation and restored fade snapshots. |
 | `LIVE_REWIND_KEY` | `rewind.liveKey` | `82` | R | Hold during live level play to rewind deterministic gameplay state when `LIVE_REWIND_ENABLED` is true, including reverse audio presentation and restored fade snapshots. |
 
@@ -596,6 +598,8 @@ debug:
     fastRateKey: ""   # Cycle playback rate (1x/2x/4x/8x)
     resetToStartKey: ""   # Reset the cursor to the start offset
     startOffsetFrame: 0   # Starting frame offset for BK2 playback
+  recording:
+    recordKey: F10   # Shift+key starts/opens recordings; key alone stops active recording
   traceRewind:
     key: R   # Key held in Trace Test Mode to rewind deterministic engine state
   rewind:

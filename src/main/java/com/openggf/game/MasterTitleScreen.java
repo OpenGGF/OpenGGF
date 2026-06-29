@@ -366,7 +366,8 @@ public class MasterTitleScreen {
         int rightKey = configService.getInt(SonicConfiguration.RIGHT);
         int jumpKey = configService.getInt(SonicConfiguration.JUMP);
 
-        boolean recordingMenuRequested = inputHandler.isKeyPressed(GLFW_KEY_TAB) && inputHandler.isShiftDown();
+        int recordKey = configService.getInt(SonicConfiguration.RECORDING_RECORD_KEY);
+        boolean recordingMenuRequested = inputHandler.isKeyPressed(recordKey) && inputHandler.isShiftDown();
         if (handleUserRecordingMenuRequest(recordingMenuRequested) || recordingMenuRequested) {
             return;
         }

@@ -4,6 +4,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.debug.DebugOverlayManager;
+import com.openggf.debug.DebugColor;
 import com.openggf.editor.EditorInputHandler;
 import com.openggf.game.*;
 
@@ -74,7 +75,11 @@ import com.openggf.integration.presence.RuntimePresenceSnapshotProvider;
 import com.openggf.integration.presence.discord.DiscordIpcPresenceClient;
 import com.openggf.integration.presence.discord.DiscordIpcTransports;
 import com.openggf.recording.RecordingLaunchContext;
+import com.openggf.recording.UserRecordingHudState;
+import com.openggf.recording.UserRecordingRuntimeControls;
 import com.openggf.recording.UserRecordingSessionLauncher;
+import com.openggf.recording.UserRecordingStopReason;
+import com.openggf.recording.UserRecordingPlaybackState;
 import com.openggf.recording.menu.UserRecordingMenu;
 import com.openggf.testmode.TraceCameraFocusController;
 
@@ -113,6 +118,7 @@ public class GameLoop {
             (1 << STATUS_FIRE_SHIELD_BIT)
                     | (1 << STATUS_LIGHTNING_SHIELD_BIT)
                     | (1 << STATUS_BUBBLE_SHIELD_BIT);
+    private static final int USER_RECORDING_FAST_FORWARD_EXTRA_STEPS_PER_FRAME = 8;
 
     private static final Logger LOGGER = Logger.getLogger(GameLoop.class.getName());
     private final EngineContext engineServices;
@@ -157,6 +163,7 @@ public class GameLoop {
     private Runnable legalDisclaimerExitHandler;
     private Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler;
     private final UserRecordingSessionLauncher userRecordingSessionLauncher;
+    private final UserRecordingRuntimeControls userRecordingControls;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
     private long gameplayAudioFrame;
     private boolean audioUpdatedThisStep;
@@ -197,6 +204,97 @@ public class GameLoop {
     private TraceCameraFocusController traceCameraFocusController;
     private GameplayModeContext liveRewindBoundaryReporterContext;
 
+    private final class LiveUserRecordingRuntime implements UserRecordingRuntimeControls.Runtime {
+        @Override
+        public int recordKey() {
+            return configService.getInt(SonicConfiguration.RECORDING_RECORD_KEY);
+        }
+
+        @Override
+        public GameMode currentGameMode() {
+            return GameLoop.this.currentGameMode;
+        }
+
+        @Override
+        public boolean traceOrDebugSurfaceOwnsRecordingInput() {
+            return TraceSessionLauncher.active() != null
+                    || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+                    || (debugShortcutsEnabled()
+                    && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER));
+        }
+
+        @Override
+        public boolean hasActiveRecording() {
+            return userRecordingSessionLauncher.hasActiveRecordingSession();
+        }
+
+        @Override
+        public void beginRecordingFromCurrentLevel() {
+            userRecordingSessionLauncher.beginRecordingFromCurrentLevel();
+        }
+
+        @Override
+        public void stopActiveRecording(UserRecordingStopReason reason) {
+            userRecordingSessionLauncher.stopActiveRecording(reason);
+        }
+
+        @Override
+        public void beforeActiveRecordingLevelFrame(InputHandler input) {
+            userRecordingSessionLauncher.beforeActiveRecordingLevelFrame(input);
+        }
+
+        @Override
+        public void afterActiveRecordingLevelFrame() {
+            userRecordingSessionLauncher.afterActiveRecordingLevelFrame();
+        }
+
+        @Override
+        public UserRecordingHudState activeRecordingHudState() {
+            return userRecordingSessionLauncher.activeRecordingHudState();
+        }
+
+        @Override
+        public com.openggf.recording.UserRecordingPlaybackOptions activePlaybackOptions() {
+            return userRecordingSessionLauncher.currentPlaybackOptions();
+        }
+
+        @Override
+        public UserRecordingPlaybackState activePlaybackState() {
+            return userRecordingSessionLauncher.currentPlaybackState();
+        }
+
+        @Override
+        public boolean playbackHasDesynced() {
+            return userRecordingSessionLauncher.activePlaybackHasDesynced();
+        }
+
+        @Override
+        public int currentPlaybackFrame() {
+            return playbackDebugManager.getCursorFrame();
+        }
+
+        @Override
+        public int playbackFrameCount() {
+            return playbackDebugManager.getMovieFrameCount();
+        }
+
+        @Override
+        public void updatePlaybackState(UserRecordingPlaybackState state) {
+            userRecordingSessionLauncher.updateActivePlaybackState(state);
+        }
+
+        @Override
+        public void pauseEngineForPlayback() {
+            userPaused = true;
+            updateAudioPauseState();
+        }
+
+        @Override
+        public void endPlaybackDebugSession() {
+            userRecordingSessionLauncher.endPlaybackSession();
+        }
+    }
+
     /** @deprecated use {@link com.openggf.GameModeChangeListener}. */
     @Deprecated
     public interface GameModeChangeListener extends com.openggf.GameModeChangeListener {
@@ -222,6 +320,7 @@ public class GameLoop {
         this.playbackDebugManager = this.engineServices.playbackDebug();
         this.liveRewindManager = new LiveRewindManager(configService);
         this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
+        this.userRecordingControls = new UserRecordingRuntimeControls(new LiveUserRecordingRuntime());
         this.userRecordingPlaybackStarter = userRecordingSessionLauncher::beginPlayback;
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
@@ -306,6 +405,29 @@ public class GameLoop {
 
     public void renderLiveRewindHud(PixelFontTextRenderer textRenderer) {
         liveRewindManager.renderHud(currentGameMode, textRenderer);
+    }
+
+    public void renderUserRecordingHud(PixelFontTextRenderer textRenderer) {
+        if (textRenderer == null) {
+            return;
+        }
+        UserRecordingHudState state = userRecordingControls.hudState();
+        if (state == null || !state.visible()) {
+            return;
+        }
+        DebugColor color = state.redWarning()
+                ? DebugColor.RED
+                : state.amberWarning() ? DebugColor.ORANGE : DebugColor.WHITE;
+        textRenderer.beginBatch();
+        textRenderer.drawShadowedText(state.primaryText(), 8, 8, color, 0.7f);
+        if (state.secondaryText() != null && !state.secondaryText().isBlank()) {
+            textRenderer.drawShadowedText(state.secondaryText(), 8, 18, color, 0.6f);
+        }
+        textRenderer.endBatch();
+    }
+
+    public boolean shouldSuppressUserRecordingSceneRendering() {
+        return !isPaused() && userRecordingControls.shouldSuppressSceneRendering();
     }
 
     public EscapeToMasterTitleController getEscapeToMasterTitleController() {
@@ -523,6 +645,13 @@ public class GameLoop {
     public void step() {
         try {
             stepInternal();
+            int pumpedFrames = 0;
+            while (!isPaused()
+                    && userRecordingControls.shouldPumpFastForward()
+                    && pumpedFrames < USER_RECORDING_FAST_FORWARD_EXTRA_STEPS_PER_FRAME) {
+                stepInternal();
+                pumpedFrames++;
+            }
         } finally {
             runAfterStepMasterTitleLaunchCallbackIfPresent();
             presenceManager.tick();
@@ -617,6 +746,9 @@ public class GameLoop {
         }
 
         escapeToMasterTitleController.update(currentGameMode, inputHandler);
+        if (currentGameMode == GameMode.LEVEL) {
+            userRecordingControls.updateLevelControlInput(inputHandler);
+        }
 
         int pauseKey = configService.getInt(SonicConfiguration.PAUSE_KEY);
         if (!userPauseInputAllowedForCurrentMode() && userPaused) {
@@ -624,7 +756,12 @@ public class GameLoop {
             updateAudioPauseState();
         }
         if (userPauseInputAllowedForCurrentMode() && inputHandler.isKeyPressed(pauseKey)) {
-            toggleUserPause();
+            if (userPaused && userRecordingControls.handlePlaybackTakeoverRequest()) {
+                userPaused = false;
+                updateAudioPauseState();
+            } else {
+                toggleUserPause();
+            }
         }
 
         int frameStepKey = configService.getInt(SonicConfiguration.FRAME_STEP_KEY);
@@ -929,6 +1066,7 @@ public class GameLoop {
         // Handle in-place seamless transitions before fade-based routes.
         SeamlessLevelTransitionRequest seamlessRequest = levelManager.consumeSeamlessTransitionRequest();
         if (seamlessRequest != null) {
+            userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
             levelManager.applySeamlessTransition(seamlessRequest);
             if (levelManager.consumeInLevelTitleCardRequest()) {
                 enterInLevelTitleCard(levelManager.getInLevelTitleCardZone(), levelManager.getInLevelTitleCardAct());
@@ -972,21 +1110,25 @@ public class GameLoop {
                 return false;
             }
             if (levelManager.consumeNextActRequest()) {
+                userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 startNextActFade();
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
             if (levelManager.consumeNextZoneRequest()) {
+                userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 startNextZoneFade();
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
             if (levelManager.consumeZoneActRequest()) {
+                userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 startZoneActFade(levelManager.getRequestedZone(), levelManager.getRequestedAct());
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
             if (levelManager.consumeCreditsRequest()) {
+                userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 startEndingFade();
                 updateNonGameplayAudio(doFrameStep);
                 return false;
@@ -1020,6 +1162,7 @@ public class GameLoop {
                 // play).
                 boolean startEdge = inputHandler.isKeyPressed(
                         configService.getInt(SonicConfiguration.START));
+                userRecordingControls.beforeLevelFrame(inputHandler);
                 LevelFrameStep.executeWithPause(LevelFrameContext.from(gameplayMode),
                         levelManager, camera, () -> spriteManager.update(inputHandler),
                         startEdge,
@@ -1028,6 +1171,7 @@ public class GameLoop {
                             step.run();
                             profiler.endSection(name);
                         });
+                userRecordingControls.afterLevelFrame();
             } else if (levelManager.getObjectManager() != null) {
                 // ROM v_vbla_byte increments in VBlank even on rows where
                 // LevelLoop did not run. Headless trace replay mirrors
@@ -1042,6 +1186,12 @@ public class GameLoop {
             // cursor always matches the BK2 cursor. onLevelFrameAdvanced
             // is a no-op when no playback session is active.
             playbackDebugManager.onLevelFrameAdvanced();
+            userRecordingControls.afterPlaybackFrame(
+                    playbackDebugManager.getCursorFrame(),
+                    false,
+                    playbackDebugManager.getMovieFrameCount() > 0
+                            && !playbackDebugManager.isSessionPlaying()
+                            && playbackDebugManager.getCursorFrame() >= playbackDebugManager.getMovieFrameCount() - 1);
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
             if (traceSession != null) {
                 traceSession.recordExternalRewindFrame();

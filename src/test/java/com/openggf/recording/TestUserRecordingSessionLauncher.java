@@ -290,5 +290,12 @@ class TestUserRecordingSessionLauncher {
         public void setFrameObserver(PlaybackDebugManager.PlaybackFrameObserver observer) {
             this.observer = observer;
         }
+
+        @Override
+        public void endSession() {
+            startedMovie = null;
+            startedOffset = -1;
+            observer = null;
+        }
     }
 }

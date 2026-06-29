@@ -36,8 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_F10;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
@@ -119,7 +119,7 @@ class TestUserRecordingMenu {
     }
 
     @Test
-    void shiftTabUpdatePathRequestsRecordingMenuInNormalMode() {
+    void shiftRecordUpdatePathRequestsRecordingMenuInNormalMode() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         List<String> openedGameIds = new ArrayList<>();
         MasterTitleScreen screen = new MasterTitleScreen(config);
@@ -131,7 +131,7 @@ class TestUserRecordingMenu {
         });
         InputHandler input = new InputHandler();
 
-        pressShiftTab(screen, input);
+        pressShiftRecord(screen, input);
 
         assertEquals(List.of("s3k"), openedGameIds);
         assertTrue(screen.isUserRecordingMenuOpenForTest());
@@ -160,7 +160,7 @@ class TestUserRecordingMenu {
             loop.setMasterTitleScreenSupplier(() -> screen);
             loop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 
-            pressShiftTab(loop, input);
+            pressShiftRecord(loop, input);
             pressLoopKey(loop, input, GLFW_KEY_ENTER);
             pressLoopKey(loop, input, GLFW_KEY_ENTER);
             pressLoopKey(loop, input, GLFW_KEY_ENTER);
@@ -312,20 +312,20 @@ class TestUserRecordingMenu {
                 .toList();
     }
 
-    private static void pressShiftTab(MasterTitleScreen screen, InputHandler input) {
+    private static void pressShiftRecord(MasterTitleScreen screen, InputHandler input) {
         input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_F10, GLFW_PRESS);
         screen.update(input);
-        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_F10, GLFW_RELEASE);
         input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_RELEASE);
         input.update();
     }
 
-    private static void pressShiftTab(GameLoop loop, InputHandler input) {
+    private static void pressShiftRecord(GameLoop loop, InputHandler input) {
         input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_F10, GLFW_PRESS);
         loop.step();
-        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_F10, GLFW_RELEASE);
         input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_RELEASE);
         input.update();
     }

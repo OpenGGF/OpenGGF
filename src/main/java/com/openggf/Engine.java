@@ -1564,51 +1564,73 @@ public class Engine {
 		}
 		profiler.endSection("update");
 
+		boolean userRecordingSceneSuppressed = gameLoop != null
+				&& gameLoop.shouldSuppressUserRecordingSceneRendering();
+
 		profiler.beginSection("render");
 		graphicsManager.runPendingRenderThreadTasks();
-		draw();
+		if (!userRecordingSceneSuppressed) {
+			draw();
+		}
 		graphicsManager.flush();
-		applyDisplayShaderPhase(ShaderPhase.SCENE);
+		if (!userRecordingSceneSuppressed) {
+			applyDisplayShaderPhase(ShaderPhase.SCENE);
+		}
 		profiler.endSection("render");
 
 		// Render screen fade overlay via unified UI render pipeline
-		if (uiPipeline != null) {
+		if (uiPipeline != null && !userRecordingSceneSuppressed) {
 			uiPipeline.renderFadePass();
 		}
-		applyDisplayShaderPhase(ShaderPhase.PRESENTATION);
+		if (!userRecordingSceneSuppressed) {
+			applyDisplayShaderPhase(ShaderPhase.PRESENTATION);
+		}
 		RenderOrderRecorder postFadeRecorder = uiPipeline != null ? uiPipeline.getRenderOrderRecorder() : null;
 
 		// Post-fade diagnostic overlays: intentionally outside UiRenderPipeline so
 		// trace/debug status remains visible during fade-to-black teardown. Keep
 		// this block diagnostic-only unless an explicit render-order exception is
 		// documented and guarded.
-		if (postFadeRecorder != null) {
+		if (!userRecordingSceneSuppressed && postFadeRecorder != null) {
 			postFadeRecorder.recordPostFadeDiagnostic("DisplayColorProfileNotification");
 		}
-		renderDisplayColorProfileNotification();
-		if (postFadeRecorder != null) {
+		if (!userRecordingSceneSuppressed) {
+			renderDisplayColorProfileNotification();
+		}
+		if (!userRecordingSceneSuppressed && postFadeRecorder != null) {
 			postFadeRecorder.recordPostFadeDiagnostic("DisplayShaderNotification");
 		}
-		renderDisplayShaderNotification();
+		if (!userRecordingSceneSuppressed) {
+			renderDisplayShaderNotification();
+		}
 
 		// Trace Test Mode HUD and live rewind HUD: drawn after the fade pass so
 		// counters and TRACE COMPLETE remain readable during fade-to-black teardown.
 		TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-		if (traceSession != null) {
+		if (!userRecordingSceneSuppressed && traceSession != null) {
 			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 			if (postFadeRecorder != null) {
 				postFadeRecorder.recordPostFadeDiagnostic("TraceHud");
 			}
 			traceSession.render(traceHudTextRenderer);
-		} else if (gameLoop != null) {
+		} else if (!userRecordingSceneSuppressed && gameLoop != null) {
 			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 			if (postFadeRecorder != null) {
 				postFadeRecorder.recordPostFadeDiagnostic("LiveRewindHud");
 			}
 			gameLoop.renderLiveRewindHud(traceHudTextRenderer);
 		}
-		renderEscapeToMasterTitlePrompt(postFadeRecorder);
-		if (getCurrentGameMode() == GameMode.CREDITS_DEMO) {
+		if (gameLoop != null) {
+			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+			if (postFadeRecorder != null) {
+				postFadeRecorder.recordPostFadeDiagnostic("UserRecordingHud");
+			}
+			gameLoop.renderUserRecordingHud(traceHudTextRenderer);
+		}
+		if (!userRecordingSceneSuppressed) {
+			renderEscapeToMasterTitlePrompt(postFadeRecorder);
+		}
+		if (!userRecordingSceneSuppressed && getCurrentGameMode() == GameMode.CREDITS_DEMO) {
 			EndingProvider provider = gameLoop.getEndingProvider();
 			if (provider != null && provider.shouldRenderDemoSpritesOverFade()) {
 				// Credits demo exception: the original ending presentation keeps
@@ -1638,20 +1660,20 @@ public class Engine {
 				userPaused,
 				pauseIndicatorNowNanos,
 				userPauseIndicatorHiddenUntilNanos);
-		boolean needsOverlay = (getCurrentGameMode() == GameMode.SPECIAL_STAGE) ||
+		boolean needsOverlay = !userRecordingSceneSuppressed && ((getCurrentGameMode() == GameMode.SPECIAL_STAGE) ||
 				((debugViewEnabled || playbackHud || userPauseIndicatorVisible)
-						&& getCurrentGameMode() != GameMode.SPECIAL_STAGE);
+						&& getCurrentGameMode() != GameMode.SPECIAL_STAGE));
 
 		if (needsOverlay) {
 			prepareOverlayState();
 		}
 
-		if (userPauseIndicatorVisible) {
+		if (!userRecordingSceneSuppressed && userPauseIndicatorVisible) {
 			renderUserPauseIndicator();
 		}
 
 		profiler.beginSection("debug");
-		if (getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
+		if (!userRecordingSceneSuppressed && getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
 			SpecialStageProvider ssProvider = gameLoop.getActiveSpecialStageProvider();
 			if (ssProvider.isAlignmentTestMode()) {
 				if (postFadeRecorder != null) {
@@ -1664,7 +1686,7 @@ public class Engine {
 				}
 				ssProvider.renderLagCompensationOverlay(windowWidth, windowHeight);
 			}
-		} else if (debugViewEnabled || playbackHud) {
+		} else if (!userRecordingSceneSuppressed && (debugViewEnabled || playbackHud)) {
 			getDebugRenderer().updateViewport(viewportWidth, viewportHeight);
 			if (postFadeRecorder != null) {
 				postFadeRecorder.recordPostFadeDiagnostic("DebugOverlay");

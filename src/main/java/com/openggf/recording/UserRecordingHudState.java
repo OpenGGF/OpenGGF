@@ -8,4 +8,7 @@ public record UserRecordingHudState(
         boolean amberWarning,
         boolean redWarning
 ) {
+    public static UserRecordingHudState hidden() {
+        return new UserRecordingHudState(false, "", "", 0, false, false);
+    }
 }

@@ -330,6 +330,18 @@ public final class PlaybackDebugManager {
         return movie != null;
     }
 
+    public synchronized boolean isSessionPlaying() {
+        return enabled && movie != null && timeline != null && timeline.isPlaying();
+    }
+
+    public synchronized int getCursorFrame() {
+        return timeline == null ? 0 : timeline.getCursorFrame();
+    }
+
+    public synchronized int getMovieFrameCount() {
+        return movie == null ? 0 : movie.getFrameCount();
+    }
+
     public synchronized boolean isHudVisible() {
         return enabled || movie != null;
     }
