@@ -462,25 +462,9 @@ public class CNZBumperManager {
 
         int incomingAngle = TrigLookupTable.calcAngle((short) xVel, (short) yVel);
 
-        // Step 2: Calculate delta from surface angle
-        // ROM: sub.w d3,d0  (d0 = incomingAngle - surfaceAngle)
-        int delta = (incomingAngle - surfaceAngle) & 0xFF;
-
-        // Handle signed comparison (convert to signed -128..127 range)
-        int signedDelta = (delta > 127) ? delta - 256 : delta;
-        int absDelta = StrictMath.abs(signedDelta);
-
-        // Step 3: Determine output angle
-        // ROM: cmpi.b #$38,d1 / blo.s loc_17618 / move.w d3,d0
-        int outAngle;
-        if (absDelta < 0x38) {
-            // Reflect: outAngle = -delta + surfaceAngle
-            // ROM: neg.w d0 / add.w d3,d0
-            outAngle = (-signedDelta + surfaceAngle) & 0xFF;
-        } else {
-            // Too steep - force redirect to surface angle
-            outAngle = surfaceAngle & 0xFF;
-        }
+        // Step 2/3: Resolve the outgoing angle with the ROM's word-sized
+        // subtract/absolute-value semantics.
+        int outAngle = resolveAngleBounceOutAngle(incomingAngle, surfaceAngle);
 
         // Step 4: Apply velocity using CalcSine
         // ROM: jsr CalcSine returns sin in d0, cos in d1
@@ -492,6 +476,24 @@ public class CNZBumperManager {
 
         player.setXSpeed((short) newXVel);
         player.setYSpeed((short) newYVel);
+    }
+
+    static int resolveAngleBounceOutAngle(int incomingAngle, int surfaceAngle) {
+        int deltaWord = toSignedWord((incomingAngle & 0xFF) - (surfaceAngle & 0xFF));
+        int absDeltaWord = StrictMath.abs(deltaWord);
+
+        // ROM: cmpi.b #$38,d1 / blo.s loc_17618. The compare uses the low byte
+        // of the word absolute value as an unsigned byte, not a signed 8-bit delta.
+        if ((absDeltaWord & 0xFF) < 0x38) {
+            return toSignedWord(-deltaWord + (surfaceAngle & 0xFF)) & 0xFF;
+        }
+
+        return surfaceAngle & 0xFF;
+    }
+
+    private static int toSignedWord(int value) {
+        value &= 0xFFFF;
+        return value >= 0x8000 ? value - 0x10000 : value;
     }
 
     private static final class Placement extends AbstractPlacementManager<CNZBumperSpawn> {

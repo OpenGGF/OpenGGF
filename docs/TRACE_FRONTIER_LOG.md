@@ -24432,3 +24432,55 @@ Verification:
   improvement noted above.
 - `mvn "-Dtest=TestRewindCoverageGuard" "-DfailIfNoTests=false" test`
   exited 0; `TestRewindCoverageGuard` passed 1/1.
+
+### 2026-06-29 -- S2 CNZ2 Point Pokey bumper angle and pinball-mode handoff: f5298 -> f6144
+
+Worktree `bugfix/ai-s2-cnz2-point-pokey` from integration parent
+`0d82525118c5134f4f791bff3fc02d4da442552d`.
+
+Root fixed: after ObjD6 released Sonic from the Point Pokey cage, the engine's
+CNZ narrow-left bumper bounce treated `incomingAngle - surfaceAngle` as a signed
+8-bit delta. The ROM code at `loc_175EA` subtracts as a word, takes a word
+absolute value, then performs `cmpi.b #$38,d1` as an unsigned byte compare
+(`docs/s2disasm/s2.asm:32651-32675`). At the f5298 blocker this made
+`incoming=$FD`, `surface=$08` reflect to output angle `$13`; ROM sees the word
+absolute delta `$00F5` as not below `$38` and forces output angle `$08`.
+
+Follow-up same-route root: after the corrected bumper launch, Sonic's first
+landing out of the cage unrolled in the engine at f5461. ObjD6 writes rolling
+state/radii while captured and sets `in_air`/`y_vel=$400` on release, but it
+does not clear `pinball_mode` (`docs/s2disasm/s2.asm:59070-59085,59215-59224`).
+S2 `Sonic_ResetOnFloor` skips the rolling clear while `pinball_mode` is set
+(`docs/s2disasm/s2.asm:38123-38144`). The engine's cage hold temporarily uses
+its pinball-mode mirror to keep the held player curled, so release now restores
+the pre-capture mirror instead of forcing it false.
+
+Fix:
+- `CNZBumperManager` resolves ObjD7 angle bounces with the ROM word-delta /
+  unsigned-byte threshold semantics and covers the f5298 `$FD-$08` case with a
+  focused Jupiter test.
+- `PointPokeyObjectInstance` records the player's pinball-mode mirror before
+  capture and restores it on release, preserving Obj84-owned pinball state while
+  avoiding a route/frame/zone carve-out.
+
+Result:
+- `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace`: f5298 / 920 errors
+  (`x_speed` expected `-09CE`, actual `-08E8`) -> f6144 / 994 errors
+  (`tails_y_speed` expected `0x0038`, actual `0x0000`).
+- New owner is CPU Tails airborne physics near the CNZ2 ForcedSpin / bumper
+  stack; Sonic's Point Pokey release, bumper launch, and first landing window
+  now match through that section.
+- Full requested S2 preservation sweep remains 9 green / 10 expected red. ARZ1,
+  CNZ1, DEZ ending, EHZ1, HTZ1, MCZ1, MCZ2, SCZ, and WFZ are green; ARZ2,
+  OOZ2, OOZ1, HTZ2, MTZ1, MTZ2, MTZ3, CPZ1, and CPZ2 hold their accepted
+  first-frontiers and counts.
+
+Verification:
+- `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  exited 1 with the improved f6144 / 994 CNZ2 frontier.
+- `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+  exited 1 with the same f6144 / 994 frontier and confirmed the new owner as
+  `tails_y_speed` near Obj84/ObjD7/Obj44.
+- `mvn "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  exited 1 with 19 trace tests run: 9 passed, 10 expected-red. The only changed
+  accepted frontier was CNZ2 at f6144 / 994.
