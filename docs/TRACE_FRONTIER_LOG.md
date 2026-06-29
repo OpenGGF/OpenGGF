@@ -6,6 +6,67 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 MCZ2 Obj6A/ObjA3 parity advances to Obj75 spike-ball slot frontier
+
+- Worktree/branch: `.worktrees/trace-s2-mcz2-r2` /
+  `bugfix/ai-trace-s2-mcz2-r2`, forked from
+  `.worktrees/ai-s2-trace-develop` at `c2cc1fb4789d92d6eabfca451b78cce3aef58995`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  failed at f4485 / 543 errors (`tails_x` expected `0x0EAB`, actual `0x0EAC`).
+- Root cause 1: MCZ Obj6A reaches `JmpTo13_SolidObject` after moving
+  (`docs/s2disasm/s2.asm:54276,54301`), and S2 `SolidObject_cont` rejects the
+  right edge only with `bhi` (`docs/s2disasm/s2.asm:35344-35354`). Obj6A also
+  mutates dynamic spawn coordinates while the ROM standing/pushing bits live in
+  the SST slot status byte. The engine was using an exclusive right edge and a
+  coordinate-keyed latch, then let CPU Tails lose the live pushing bit before
+  `TailsCPU_Normal` read `status.player.pushing`
+  (`docs/s2disasm/s2.asm:39297-39300`).
+- Fix 1: `MCZRotPformsObjectInstance` now opts into inclusive right-edge
+  `SolidObject` behavior, instance-keyed solid latches, and CPU sidekick riding
+  push grace keyed on object state instead of route/frame data.
+- Intermediate result:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+  advanced MCZ2 to f5294 / 540 errors, where the trace showed ROM Tails hurt by
+  ObjA3 while the engine reported the same Flasher with `gate=offscreenTouch`.
+- Root cause 2: S2 `Touch_Loop` reads `collision_flags(a1)` and branches to
+  `Touch_CheckCollision` without a render-flag gate
+  (`docs/s2disasm/s2.asm:85048-85054`). ObjA3's subobject data gives it
+  collision size 6 (`docs/s2disasm/s2.asm:76227-76228`), and the electrified
+  routine sets bit 7 in `collision_flags`
+  (`docs/s2disasm/s2.asm:76144-76148`), so off-screen CPU Tails can still be
+  hurt.
+- Fix 2: `FlasherBadnikInstance` no longer requires render flags for touch
+  response.
+- Result:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+  now fails at f6429 / 425 errors (`tails_y` expected `0x0647`, actual
+  `0x0648`), advancing MCZ2 from f4485.
+- New frontier evidence: MCZ2 aux object-near events at f6429 show ROM Obj75
+  entries near Tails: slot 29 routine 2 at `0x177E,0x0633` and slot 33 routine
+  6 at `0x1763,0x065B`, in addition to brick routine-4 entries. The Obj75
+  disassembly allocates a separate multi-sprite display child after the
+  collision parent (`docs/s2disasm/s2.asm:55590-55615`) and then updates both
+  parent and child positions in `Obj75_Main`
+  (`docs/s2disasm/s2.asm:55617-55659`). The engine neighborhood at the new
+  frontier only reports nearby `MCZBrick` entries, so the next blocker is the
+  Obj75 spike-ball parent/child slot model rather than the Obj6A or ObjA3 fixes.
+  No PC execute probe was used; the gzipped aux stream provided the slot
+  evidence above.
+- Verification:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mczRotPformsUseSolidObjectContStatusTiming,com.openggf.game.sonic2.objects.badniks.TestFlasherBadnikInstance#flasherTouchResponseDoesNotRequireRenderFlag" "-DfailIfNoTests=false" test`
+  exited 0; the two selected focused tests passed. MSE's relaxed summary echoed
+  a stale MCZ2 XML failure from the previous trace run.
+- Verification:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+  ran two trace tests: MCZ1 passed, MCZ2 failed only at the accepted new f6429 /
+  425 frontier.
+- Green guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 0. The six selected surefire XML reports each show `failures=0`:
+  ARZ, CNZ, EHZ1, MCZ1, SCZ, and WFZ remain green. MSE's relaxed aggregate
+  again included stale MCZ2 XML from the prior expected-red command.
+
 ## 2026-06-29 - S2 integration sweep after CNZ2 Obj86 seating merge (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
