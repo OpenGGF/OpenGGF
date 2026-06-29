@@ -6,6 +6,21 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 OOZ1 Obj36 sidekick push-grace window (f1784 -> f1790)
+
+- Worktree/branch: `.worktrees/trace-s2-ooz-r10` /
+  `bugfix/ai-trace-s2-ooz-r10`; merged into integration as `54301a0fe`.
+- Focused verification:
+  `mvn "-Dtest=TestSidekickCpuControllerLevelStart,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: unit coverage passed 15 tests; OOZ1 advanced to f1790 / 1125
+  (`tails_x_speed` expected `0x0080`, actual `-008C`); OOZ2 held f2623 / 946
+  (`tails_x` expected `0x04A1`, actual `0x049D`).
+- Full S2 sweep after integration:
+  `mvn "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: 19 S2 trace classes ran; 7 green, 12 expected-red. No trace regressed
+  in first frontier or total error count versus the MCZ2-integrated baseline;
+  only OOZ1 changed.
+
 ## 2026-06-29 - S2 MCZ2 Obj80 vine-release monitor landing (f7328 -> f8606)
 
 - Worktree/branch: `.worktrees/ai-trace-s2-mcz2-r11` /
@@ -78,12 +93,11 @@ branch-local measurements.
   `MTZ1` f5647 / 616 (`tails_y_sub` expected `0x6500`, actual `0x3D00`);
   `MTZ2` f1857 / 3209 (`g_speed` expected `0x0381`, actual `0x02CB`);
   `MTZ3` f2048 / 3742 (`tails_x` expected `0x07CA`, actual `0x07BE`);
-  `OOZ1` f1784 / 1256 (`tails_x_speed` expected `0x000C`, actual `-000C`);
+  `OOZ1` f1790 / 1125 (`tails_x_speed` expected `0x0080`, actual `-008C`);
   `OOZ2` f2623 / 946 (`tails_x` expected `0x04A1`, actual `0x049D`).
 - Routing decisions from this sweep: CPZ and HTZ2 were delegated to isolated
-  workers; OOZ1 remains with the retry worker because the previous OOZ1
-  advancement regressed OOZ2 total errors; MCZ2 advanced through the Obj80 fix
-  above.
+  workers; OOZ1 advanced through the Obj36 fix above after the revised worker
+  avoided the earlier OOZ2 regression; MCZ2 advanced through the Obj80 fix above.
 
 ## 2026-06-29 - S2 HTZ1 Obj84 flying-sidekick regression repair (256 -> 226 errors)
 
