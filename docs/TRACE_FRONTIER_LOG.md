@@ -11,6 +11,8 @@ branch-local measurements.
 - Worktree/branch: `.worktrees/trace-s2-cnz2-r12` /
   `bugfix/ai-trace-s2-cnz2-r12`, forked from
   `bugfix/ai-s2-trace-develop` at `057ba3d37`.
+- Integrated worker commit: `fa9095586ea269553b2fcae7ac6daf5656d257d2`,
+  merged into `bugfix/ai-s2-trace-develop` as `89deb4d35`.
 - Baseline reproduction:
   `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cnz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
   Result before the fix: CNZ2 f5213 / 749 errors (`y_speed` expected
@@ -34,6 +36,16 @@ branch-local measurements.
 - Green guard:
   `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
   Result: command exited 0; all selected S2 guard XMLs show `failures="0"`.
+- Integration full S2 sweep after clearing `target/surefire-reports`:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: 19 trace classes ran; 7 green / 12 expected-red. Red summary:
+  ARZ2 f888 / 2720; CNZ2 f5242 / 875; CPZ1 f4225 / 264; CPZ2 f2889 / 1238;
+  HTZ1 f6586 / 226; HTZ2 f3322 / 1060; MCZ2 f8606 / 317; MTZ1 f5647 / 616;
+  MTZ2 f1857 / 3209; MTZ3 f2048 / 3742; OOZ1 f1790 / 1125; OOZ2 f2623 / 946.
+- Integration rewind guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtest=TestRewindCoverageGuard" test`.
+  Result: `com.openggf.game.rewind.coverage.TestRewindCoverageGuard` passed
+  1 test with failures/errors 0.
 - New frontier: f5242 is a one-frame linked-prize release ordering mismatch.
   ROM has already ejected from ObjD6 after the active prize count drains, while
   the engine still has PointPokey state 3 with `active=0` and releases on the
