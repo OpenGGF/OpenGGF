@@ -39,7 +39,7 @@ public final class UserRecordingJson {
             Integer schemaVersion,
             String movieName,
             BuildIdentity engineIdentity,
-            RecordingLaunchContext launchContext,
+            LaunchContextDto launchContext,
             UserRecordingSidecarMetadata sidecar,
             RecordingDeterminismMetadata determinism,
             String jumpActionButton,
@@ -52,7 +52,7 @@ public final class UserRecordingJson {
                     manifest.schemaVersion(),
                     manifest.movieName(),
                     manifest.engineIdentity(),
-                    manifest.launchContext(),
+                    LaunchContextDto.from(manifest.launchContext()),
                     manifest.sidecar(),
                     manifest.determinism(),
                     manifest.jumpActionButton(),
@@ -67,7 +67,7 @@ public final class UserRecordingJson {
                     schemaVersion,
                     movieName,
                     engineIdentity,
-                    launchContext,
+                    launchContext.toLaunchContext(),
                     sidecar,
                     determinism,
                     jumpActionButton,
@@ -93,6 +93,7 @@ public final class UserRecordingJson {
             validateEngineIdentity(engineIdentity);
             validateLaunchContext(launchContext);
             validateSidecar(sidecar);
+            validateJumpActionButton(jumpActionButton);
         }
 
         private static void requirePresent(Object value, String fieldName) throws IOException {
@@ -112,9 +113,12 @@ public final class UserRecordingJson {
             requireNonBlank(engineIdentity.baseVersion(), "engineIdentity.baseVersion");
         }
 
-        private static void validateLaunchContext(RecordingLaunchContext launchContext) throws IOException {
+        private static void validateLaunchContext(LaunchContextDto launchContext) throws IOException {
             requireNonBlank(launchContext.gameId(), "launchContext.gameId");
+            requirePresent(launchContext.zone(), "launchContext.zone");
+            requirePresent(launchContext.act(), "launchContext.act");
             requireNonBlank(launchContext.mainCharacter(), "launchContext.mainCharacter");
+            requirePresent(launchContext.debugToolsEnabled(), "launchContext.debugToolsEnabled");
             requireNonBlank(launchContext.launchRoute(), "launchContext.launchRoute");
         }
 
@@ -124,6 +128,12 @@ public final class UserRecordingJson {
                         + sidecar.desyncLiteSchemaVersion());
             }
             requireNonBlank(sidecar.sampleMode(), "sidecar.sampleMode");
+        }
+
+        private static void validateJumpActionButton(String jumpActionButton) throws IOException {
+            if (!"A".equals(jumpActionButton)) {
+                throw new IOException("Unsupported manifest jumpActionButton: " + jumpActionButton);
+            }
         }
 
         private static UserRecordingStopReason parseStopReason(String value) {
@@ -140,6 +150,38 @@ public final class UserRecordingJson {
             } catch (DateTimeParseException ex) {
                 throw new IOException("Invalid manifest createdAt timestamp: " + value, ex);
             }
+        }
+    }
+
+    private record LaunchContextDto(
+            String gameId,
+            Integer zone,
+            Integer act,
+            String mainCharacter,
+            java.util.List<String> sidekickCharacters,
+            Boolean debugToolsEnabled,
+            String launchRoute
+    ) {
+        static LaunchContextDto from(RecordingLaunchContext launchContext) {
+            return new LaunchContextDto(
+                    launchContext.gameId(),
+                    launchContext.zone(),
+                    launchContext.act(),
+                    launchContext.mainCharacter(),
+                    launchContext.sidekickCharacters(),
+                    launchContext.debugToolsEnabled(),
+                    launchContext.launchRoute());
+        }
+
+        RecordingLaunchContext toLaunchContext() {
+            return new RecordingLaunchContext(
+                    gameId,
+                    zone,
+                    act,
+                    mainCharacter,
+                    sidekickCharacters,
+                    debugToolsEnabled,
+                    launchRoute);
         }
     }
 }

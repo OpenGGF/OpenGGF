@@ -127,6 +127,33 @@ class TestUserRecordingManifestJson {
     }
 
     @Test
+    void readManifestRejectsMissingLaunchContextZone() throws Exception {
+        String json = removeJsonLine(
+                UserRecordingJson.writeManifest(sampleManifest()),
+                "    \"zone\" : 0,");
+
+        assertThrows(IOException.class, () -> UserRecordingJson.readManifest(json));
+    }
+
+    @Test
+    void readManifestRejectsMissingLaunchContextAct() throws Exception {
+        String json = removeJsonLine(
+                UserRecordingJson.writeManifest(sampleManifest()),
+                "    \"act\" : 1,");
+
+        assertThrows(IOException.class, () -> UserRecordingJson.readManifest(json));
+    }
+
+    @Test
+    void readManifestRejectsMissingLaunchContextDebugToolsEnabled() throws Exception {
+        String json = removeJsonLine(
+                UserRecordingJson.writeManifest(sampleManifest()),
+                "    \"debugToolsEnabled\" : true,");
+
+        assertThrows(IOException.class, () -> UserRecordingJson.readManifest(json));
+    }
+
+    @Test
     void readManifestRejectsMissingEngineIdentityBaseVersion() throws Exception {
         String json = removeJsonLine(
                 UserRecordingJson.writeManifest(sampleManifest()),
@@ -158,6 +185,15 @@ class TestUserRecordingManifestJson {
         String json = UserRecordingJson.writeManifest(sampleManifest())
                 .replace("\"desyncLiteSchemaVersion\" : 1",
                         "\"desyncLiteSchemaVersion\" : 0");
+
+        assertThrows(IOException.class, () -> UserRecordingJson.readManifest(json));
+    }
+
+    @Test
+    void readManifestRejectsUnsupportedJumpActionButton() throws Exception {
+        String json = UserRecordingJson.writeManifest(sampleManifest())
+                .replace("\"jumpActionButton\" : \"A\"",
+                        "\"jumpActionButton\" : \"B\"");
 
         assertThrows(IOException.class, () -> UserRecordingJson.readManifest(json));
     }
