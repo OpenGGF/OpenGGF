@@ -33,9 +33,10 @@ That sidecar is comparison-only and must never hydrate or correct engine state.
 - Optionally fast-forward playback by skipping normal scene rendering and
   showing only progress/status until a target, desync, movie end, or level
   boundary is reached.
-- Store exact engine build identity in each recording and show a non-blocking
-  amber warning in the recordings menu when the highlighted movie was made by a
-  different build, a dirty build, or an unknown legacy build.
+- Store engine version identity in each recording and show a non-blocking amber
+  warning in the recordings menu when the highlighted movie was made by an
+  incompatible version, a dirty prerelease/nightly build, or an unknown legacy
+  build.
 
 ### Out Of Scope For MVP
 
@@ -212,8 +213,8 @@ Carries recording metadata:
 - desync-lite schema version;
 - engine display version;
 - engine base version;
-- engine commit hash;
-- engine dirty flag;
+- prerelease/nightly commit hash, absent for official releases;
+- prerelease/nightly dirty flag, absent or false for official releases;
 - game id;
 - zone and act;
 - team/profile/session overrides;
@@ -226,8 +227,22 @@ Carries recording metadata:
 - reserved optional `sidecar.sampleInterval` for future sparse modes.
 
 The engine version fields are build metadata, not hand-edited source metadata.
-`pom.xml` remains the human release/prerelease version, while the built
-`version.properties` should carry generated metadata such as:
+`pom.xml` remains the human release/prerelease version. Official releases do
+not append a commit hash because the release version is the complete identity:
+`0.6.0`, `0.6.1`, and so on. Prerelease/nightly builds append the short commit
+hash at build time so recordings made between official releases can be
+distinguished.
+
+Official-release example:
+
+```properties
+app.version=0.6.1
+app.baseVersion=0.6.1
+app.commit=
+app.dirty=false
+```
+
+Prerelease/nightly example:
 
 ```properties
 app.version=0.6.prerelease-84f1f269d
@@ -236,10 +251,12 @@ app.commit=84f1f269d
 app.dirty=false
 ```
 
-The short commit hash must be injected at build time, not committed into source
-as a generated file. Dirty working-tree builds should be visibly marked, for
-example `0.6.prerelease-84f1f269d-dirty`, so recordings made from uncommitted
-code are distinguishable.
+The short commit hash for prerelease/nightly builds must be injected at build
+time, not committed into source as a generated file. Dirty working-tree
+prerelease/nightly builds should be visibly marked, for example
+`0.6.prerelease-84f1f269d-dirty`, so recordings made from uncommitted code are
+distinguishable. Official release builds should be clean and should not carry
+the dirty suffix.
 
 ### `OpenGGF/desync-lite.jsonl`
 
@@ -318,11 +335,12 @@ The recordings menu can follow `TestModeTracePicker`'s text-list pattern:
 - `Enter` for options/playback;
 - `Esc` to return.
 
-When the highlighted movie's recorded engine identity differs from the current
-engine identity, the menu shows amber warning text. This warning is visual only:
-it must not block playback, fast-forward, target-frame playback, or verifier
-use. Warn when the commit hash differs, either side is dirty, or the recording
-lacks build metadata.
+When the highlighted movie's recorded engine identity is incompatible with the
+current engine identity, the menu shows amber warning text. This warning is
+visual only: it must not block playback, fast-forward, target-frame playback, or
+verifier use. For official-release recordings, compare the release version. For
+prerelease/nightly recordings, compare the base version plus commit hash. Warn
+when either side is dirty or when the recording lacks build metadata.
 
 It should be a sibling to the trace picker, not a trace picker mode.
 
@@ -357,9 +375,12 @@ Unit tests:
 - Menu scrolling/selection/options behavior, modeled after
   `TestModeTracePickerTest`.
 - Recordings-menu version status:
-  - no warning when the highlighted movie's engine commit matches the current
-    engine commit and neither side is marked dirty;
-  - amber warning when the commit differs;
+  - no warning when both recordings are official releases with the same release
+    version;
+  - no warning when both recordings are prerelease/nightly builds with the same
+    base version and commit hash and neither side is marked dirty;
+  - amber warning when official release versions differ;
+  - amber warning when prerelease/nightly base version or commit differs;
   - amber warning when either side is dirty;
   - amber legacy/unknown warning when the movie lacks build metadata.
 
