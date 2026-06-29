@@ -68,17 +68,15 @@ public final class UserRecordingWriter {
             validateActionMask("p1ActionMask", i, input.p1ActionMask());
             validateActionMask("p2ActionMask", i, input.p2ActionMask());
         }
-        if (!sidecarFrames.isEmpty()) {
-            if (sidecarFrames.size() != inputs.size()) {
-                throw new IllegalArgumentException("Sidecar frame count " + sidecarFrames.size()
-                        + " does not match input count " + inputs.size());
-            }
-            for (int i = 0; i < sidecarFrames.size(); i++) {
-                DesyncLiteFrame sidecarFrame = Objects.requireNonNull(sidecarFrames.get(i), "sidecarFrames[" + i + "]");
-                if (sidecarFrame.frame() != i) {
-                    throw new IllegalArgumentException(
-                            "Sidecar frame " + sidecarFrame.frame() + " at index " + i + " does not match timeline");
-                }
+        if (sidecarFrames.size() != inputs.size()) {
+            throw new IllegalArgumentException("Sidecar frame count " + sidecarFrames.size()
+                    + " does not match input count " + inputs.size());
+        }
+        for (int i = 0; i < sidecarFrames.size(); i++) {
+            DesyncLiteFrame sidecarFrame = Objects.requireNonNull(sidecarFrames.get(i), "sidecarFrames[" + i + "]");
+            if (sidecarFrame.frame() != i) {
+                throw new IllegalArgumentException(
+                        "Sidecar frame " + sidecarFrame.frame() + " at index " + i + " does not match timeline");
             }
         }
     }

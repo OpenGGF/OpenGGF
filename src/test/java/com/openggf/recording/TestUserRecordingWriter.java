@@ -46,7 +46,7 @@ class TestUserRecordingWriter {
                         0x01,
                         true));
 
-        UserRecordingWriter.write(bk2Path, manifest, inputs, List.of());
+        UserRecordingWriter.write(bk2Path, manifest, inputs, sidecarFrames(2));
 
         try (ZipFile zip = new ZipFile(bk2Path.toFile())) {
             assertNotNull(zip.getEntry("Header.txt"));
@@ -76,7 +76,7 @@ class TestUserRecordingWriter {
         List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(0, 0, 0x02, false, 0, 0, false));
 
         assertThrows(IllegalArgumentException.class,
-                () -> UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, List.of()));
+                () -> UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, sidecarFrames(1)));
         assertFalse(Files.exists(bk2Path));
     }
 
@@ -86,7 +86,7 @@ class TestUserRecordingWriter {
         List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(0, 0, 0, false, 0, 0x04, false));
 
         assertThrows(IllegalArgumentException.class,
-                () -> UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, List.of()));
+                () -> UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, sidecarFrames(1)));
         assertFalse(Files.exists(bk2Path));
     }
 
@@ -96,7 +96,7 @@ class TestUserRecordingWriter {
         List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(0, 0, 0, false, 0, 0, false));
 
         assertThrows(IllegalArgumentException.class,
-                () -> UserRecordingWriter.write(bk2Path, sampleManifest(2), inputs, List.of()));
+                () -> UserRecordingWriter.write(bk2Path, sampleManifest(2), inputs, sidecarFrames(1)));
         assertFalse(Files.exists(bk2Path));
     }
 
@@ -108,7 +108,30 @@ class TestUserRecordingWriter {
                 new RecordedFrameInput(2, 0, 0, false, 0, 0, false));
 
         assertThrows(IllegalArgumentException.class,
-                () -> UserRecordingWriter.write(bk2Path, sampleManifest(2), inputs, List.of()));
+                () -> UserRecordingWriter.write(bk2Path, sampleManifest(2), inputs, sidecarFrames(2)));
+        assertFalse(Files.exists(bk2Path));
+    }
+
+    @Test
+    void rejectsEmptySidecarFramesForNonzeroInputsBeforeWriting() {
+        Path bk2Path = tempDir.resolve("empty-sidecar-nonzero-input.bk2");
+        List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(0, 0, 0, false, 0, 0, false));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, List.of()));
+        assertFalse(Files.exists(bk2Path));
+    }
+
+    @Test
+    void rejectsSidecarFrameCountThatDoesNotMatchInputCountBeforeWriting() {
+        Path bk2Path = tempDir.resolve("bad-sidecar-count.bk2");
+        List<RecordedFrameInput> inputs = List.of(
+                new RecordedFrameInput(0, 0, 0, false, 0, 0, false),
+                new RecordedFrameInput(1, 0, 0, false, 0, 0, false));
+        List<DesyncLiteFrame> sidecarFrames = List.of(new DesyncLiteFrame(0));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> UserRecordingWriter.write(bk2Path, sampleManifest(2), inputs, sidecarFrames));
         assertFalse(Files.exists(bk2Path));
     }
 
@@ -132,11 +155,17 @@ class TestUserRecordingWriter {
         Files.writeString(deterministicTmp, "sentinel", StandardCharsets.UTF_8);
         List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(0, 0, 0, false, 0, 0, false));
 
-        UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, List.of());
+        UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, sidecarFrames(1));
 
         assertTrue(Files.exists(bk2Path));
         assertTrue(Files.exists(deterministicTmp));
         assertEquals("sentinel", Files.readString(deterministicTmp, StandardCharsets.UTF_8));
+    }
+
+    private static List<DesyncLiteFrame> sidecarFrames(int count) {
+        return java.util.stream.IntStream.range(0, count)
+                .mapToObj(DesyncLiteFrame::new)
+                .toList();
     }
 
     private static UserRecordingManifest sampleManifest(int frameCount) {
