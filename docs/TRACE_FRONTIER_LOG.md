@@ -25,7 +25,7 @@ branch-local measurements.
 
 | Trace | First error |
 |---|---|
-| `TestS2Arz2LevelSelectTraceReplay` | f723 `obj_s11_slot` expected `0x11`, actual `0x16`; 2924 errors |
+| `TestS2Arz2LevelSelectTraceReplay` | f741 `obj_extra_s16_x` expected absent, actual `0x081C`; 2852 errors |
 | `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
 | `TestS2Ooz2LevelSelectTraceReplay` | f2484 `g_speed` expected `0x0040`, actual `0x0000`; 1176 errors |
 | `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
@@ -38,6 +38,39 @@ branch-local measurements.
 | `TestS2DezEndingLevelSelectTraceReplay` | f7503 `y_speed` expected `-0450`, actual `-03C8`; 11 errors |
 | `TestS2HtzLevelSelectTraceReplay` | f6467 `tails_cpu_respawn_counter` expected `0x003F`, actual `0x0000`; 234 errors |
 | `TestS2MtzLevelSelectTraceReplay` | f5647 `tails_y_sub` expected `0x6500`, actual `0x3D00`; 616 errors |
+
+## 2026-06-29 - S2 ARZ2 Obj2C leaf render-flag lifetime - ENGINE FIX (ARZ2 f723 -> f741)
+
+- Worktree/branch: `.worktrees/trace-s2-arz2-r10` /
+  `bugfix/ai-trace-s2-arz2-r10`.
+- Root/fix: ARZ2 f723 expected the next Obj0A mouth bubble in ROM slot `0x11`,
+  but the engine still held older Obj2C leaf children in low dynamic slots long
+  enough to push that bubble to slot `0x16`. ROM `Obj2C_CreateLeaves` initializes
+  leaf children with `width_pixels(a1)=8`, and `Obj2C_Leaf` deletes when
+  `render_flags.on_screen` is clear before `DisplaySprite`
+  (`docs/s2disasm/s2.asm:52166,52232-52237`). The engine was using a broad
+  `isOnScreen(64)` margin, so leaf particles survived longer than the ROM
+  render-flag lifetime. `LeafParticleObjectInstance` now uses Render_Sprites
+  bounds with half-width 8 for this delete gate.
+- Focused guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ObjectOccupancyOracle#arz2DynamicSlotOccupancyMatchesThroughArrowShooterStream+arz2ArrowProjectileAllocatesInRomSlot65OnRomFrame696+arz2LeafParticlesDoNotDisplaceMouthBubbleSlotOnRomFrame723" test`
+  passed the three selected oracle methods. MSE also echoed the stale
+  expected-red ARZ2 replay report from the previous Surefire output.
+- Targeted ARZ2 replay:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.context.diagnosticChars=full" test`
+  remains expected-red but advances from f723 / 2924 errors to f741 / 2852
+  errors.
+- User-pasted ARZ2 + green bundle:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`
+  ran all 7 classes: 6 passed, with the only failure being expected-red ARZ2
+  at f741 / 2852 errors.
+- Current-green no-regression guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`
+  exited 0. MSE echoed the cached ARZ2 expected-red report from the prior run,
+  but Surefire selected only the six current-green classes.
+- New frontier: f741 `obj_extra_s16_x` expected absent, actual `0x081C`;
+  context shows slot `0x11` now contains the ROM Obj0A at `07EB,052F`, while a
+  separate extra Obj0A in slot `0x16` remains (`081C,0541`).
 
 ## 2026-06-29 - S2 integration sweep after MCZ2 Obj6A/ObjA3 merge (6 green, 13 expected-red)
 

@@ -157,7 +157,7 @@ public class LeafParticleObjectInstance extends AbstractObjectInstance
 
         // Check if off-screen - delete if so
         // ROM: btst #render_flags.on_screen,render_flags(a0) / beq DeleteObject
-        if (!isOnScreen(64)) {  // Use margin for particles
+        if (!isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight())) {
             setDestroyed(true);
         }
     }
@@ -170,6 +170,13 @@ public class LeafParticleObjectInstance extends AbstractObjectInstance
     @Override
     public int getY() {
         return displayY;
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        // ROM: Obj2C_CreateLeaves sets width_pixels(a1) to 8 before Obj2C_Leaf
+        // observes render_flags.on_screen (docs/s2disasm/s2.asm:52166,52235).
+        return 8;
     }
 
     @Override
