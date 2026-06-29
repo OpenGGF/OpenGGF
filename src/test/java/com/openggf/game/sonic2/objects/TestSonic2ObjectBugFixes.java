@@ -25,6 +25,7 @@ import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.Direction;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -266,6 +267,36 @@ class TestSonic2ObjectBugFixes {
                 "TailsCPU_Normal reads Status_Push before the next Obj6A SolidObject pass clears it");
         assertEquals(8, platform.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
                 "MCZ2 f4485 keeps the post-Obj6A push bit visible to the Tails CPU slot with eight grace frames");
+    }
+
+    @Test
+    void cpzStaircasePreservesRidingPushOnlyAtLowerStepSideOverlap() {
+        CPZStaircaseObjectInstance staircase = new CPZStaircaseObjectInstance(
+                new ObjectSpawn(0x2090, 0x0350, Sonic2ObjectIds.CPZ_STAIRCASE, 0x01, 1, false, 0),
+                "CPZStaircase");
+        for (int frame = 0; frame < 0x20; frame++) {
+            staircase.update(frame, null);
+        }
+
+        TestablePlayableSprite tails = new TestablePlayableSprite(
+                "tails", (short) staircase.getPieceX(2), (short) staircase.getPieceY(2));
+        tails.setCpuControlled(true);
+        tails.setDirection(Direction.RIGHT);
+
+        assertFalse(staircase.preservesRidingPushStatus(tails),
+                "CPZ1 f4351 has Tails near the centre of Obj78 slot 0x1F; ROM has no Status_Push, "
+                        + "so TailsCPU_Normal must still consume the +1 FollowRight nudge");
+
+        tails.setDirection(Direction.LEFT);
+        assertFalse(staircase.preservesSidekickCpuPushGraceWhileRiding(tails),
+                "Obj78 CPU-only grace models child-slot side-push visibility; it must not apply when "
+                        + "Tails is centered on a stair piece with no adjacent side overlap");
+
+        tails.setDirection(Direction.RIGHT);
+        tails.setCentreX((short) (staircase.getPieceX(3) - staircase.getPieceParams(3).halfWidth()));
+        assertTrue(staircase.preservesRidingPushStatus(tails),
+                "Obj78's folded multi-piece latch is still needed when the rider is actually pressed "
+                        + "into the lower neighbouring child slot's side");
     }
 
     @Test
