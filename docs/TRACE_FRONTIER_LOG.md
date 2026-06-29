@@ -37,7 +37,7 @@ branch-local measurements.
 
 | Trace | First error |
 |---|---|
-| `TestS2Arz2LevelSelectTraceReplay` | f741 `obj_extra_s16_x` expected absent, actual `0x081C`; 2852 errors |
+| `TestS2Arz2LevelSelectTraceReplay` | f796 `obj_extra_s2A_x` expected absent, actual `0x0824`; 2846 errors |
 | `TestS2Mtz2LevelSelectTraceReplay` | f1297 `tails_x_speed` expected `0x000B`, actual `0x0000`; 3324 errors |
 | `TestS2Ooz2LevelSelectTraceReplay` | f2623 `tails_x` expected `0x04A1`, actual `0x049D`; 946 errors |
 | `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
@@ -49,6 +49,37 @@ branch-local measurements.
 | `TestS2MtzLevelSelectTraceReplay` | f5647 `tails_y_sub` expected `0x6500`, actual `0x3D00`; 616 errors |
 | `TestS2Mcz2LevelSelectTraceReplay` | f7328 `g_speed` expected `0x0000`, actual `0x02A0`; 447 errors |
 | `TestS2Cnz2LevelSelectTraceReplay` | f4892 `tails_g_speed` expected `0x0800`, actual `0x0000`; 943 errors |
+
+## 2026-06-29 - S2 ARZ2 Obj28 art RNG first-routine timing (f741 -> f796)
+
+- Worktree/branch: `.worktrees/trace-s2-arz2-r9` /
+  `bugfix/ai-trace-s2-arz2-r9`, forked from
+  `bugfix/ai-s2-trace-develop`.
+- Baseline: `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` failed at
+  f741 / 2852 errors (`obj_extra_s16_x` expected absent, actual `0x081C`).
+- Evidence/fix: a BizHawk RAM/RNG probe over ARZ2 f659-f723 showed the ROM
+  consumes the Obj28 animal art random draw inside `Obj28_InitRandom`, after the
+  nearby Obj24 bubble-generator pass, while the engine consumed it in the
+  `AnimalObjectInstance` constructor during Obj27/explosion allocation. S2
+  badnik animal spawns now use a deferred Obj28 art-variant path, so the draw
+  happens on the animal's first routine pass (`docs/s2disasm/s2.asm:24570-24636,
+  46707-46715`). The generic animal constructor remains unchanged for existing
+  non-S2 callers.
+- Focused verification:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2AnimalObjectTiming" test`.
+  Result: passed, confirming the deferred S2 Obj28 path does not consume RNG at
+  construction and consumes it on first update.
+- ARZ2 trace verification:
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: advanced to f796 / 2846 errors (`obj_extra_s2A_x` expected absent,
+  actual `0x0824`).
+- Green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: fresh surefire XML reports for all seven requested guard traces show
+  zero failures/errors; no current S2 green trace regressed.
+- New frontier: f796 `obj_extra_s2A_x` expected absent, actual `0x0824`.
+  Continue from the post-breathing-bubble object occupancy state; do not assume
+  the remaining blocker is an Obj24 generator child without fresh evidence.
 
 ## 2026-06-29 - S2 MTZ2 Obj70 grounded leftward side-push advancement (f1282 -> f1297)
 
