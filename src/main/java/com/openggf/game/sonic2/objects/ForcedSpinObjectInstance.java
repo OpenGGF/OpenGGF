@@ -15,6 +15,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.util.List;
 
@@ -114,7 +115,7 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
         checkPlayerCrossing(player, true);
 
         AbstractPlayableSprite nativeP2 = nativeP2OrNull(player);
-        if (nativeP2 != null) {
+        if (nativeP2 != null && !isHorizontalSidekickFlightAutoRecovery(nativeP2)) {
             checkPlayerCrossing(nativeP2, false);
         }
     }
@@ -159,6 +160,14 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
             }
         }
         return null;
+    }
+
+    private boolean isHorizontalSidekickFlightAutoRecovery(AbstractPlayableSprite player) {
+        SidekickCpuController controller = player.getCpuController();
+        return !verticalMode
+                && player.isCpuControlled()
+                && controller != null
+                && controller.getDiagnosticRomCpuRoutine() == 0x04;
     }
 
     /**

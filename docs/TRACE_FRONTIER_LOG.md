@@ -6,6 +6,33 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 HTZ1 Obj84 flying-sidekick regression repair (256 -> 226 errors)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop`.
+- Regression source: integrating the CNZ2 Obj84 pinball/spindash alias kept
+  `TestS2Cnz2LevelSelectTraceReplay` at its advanced f4894 frontier, but a
+  full S2 sweep showed `TestS2HtzLevelSelectTraceReplay` still first failed at
+  f6586 while total errors increased from 233 to 256. Temporary bisection
+  showed the new downstream errors were caused specifically by the
+  `ForcedSpinObjectInstance` Obj84 alias, not Obj86, Tails despawn, or the ARZ2
+  merge.
+- Evidence/fix: S2 Obj84's horizontal path processes Sonic, then returns before
+  processing native P2 when `Tails_CPU_routine == 4` (`docs/s2disasm/s2.asm:
+  46828-46835`). The engine now mirrors that ROM-state gate by skipping native
+  P2 crossing for horizontal Obj84 while the sidekick controller reports ROM
+  routine `$04`, without advancing the per-player crossing latch; once Tails
+  returns to routine `$06`, the still-pending crossing can be consumed normally.
+- Focused verification:
+  `mvn "-Dtest=TestForcedSpinObjectInstance,TestS2HtzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: `TestForcedSpinObjectInstance` passed 4/4; HTZ1 held first frontier
+  f6586 (`y_speed` expected `-0178`, actual `-0078`) and improved total errors
+  256 -> 226; CNZ2 held f4894 / 766 errors (`tails_y` expected `0x0670`,
+  actual `0x0671`).
+- New routing: HTZ1 remains a f6586 player vertical-speed frontier, but the
+  Obj84 flying-sidekick error-count regression is repaired. CNZ2 remains a
+  f4894 post-release/landing vertical-position frontier.
+
 ## 2026-06-29 - S2 CNZ2 Obj84/Obj86 sidekick pinball-spindash advancement (f4892 -> f4894)
 
 - Worktree/branch: `.worktrees/trace-s2-cnz2-r9` /
