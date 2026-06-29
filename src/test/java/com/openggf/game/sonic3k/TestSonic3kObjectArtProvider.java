@@ -119,6 +119,27 @@ public class TestSonic3kObjectArtProvider {
     }
 
     @Test
+    public void mgz2RegistersEndBossDrillSheetWithRuntimeFrames() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MGZ, 1)
+                .build();
+
+        Sonic3kObjectArtProvider currentProvider =
+                (Sonic3kObjectArtProvider) GameModuleRegistry.getCurrent().getObjectArtProvider();
+
+        ObjectSpriteSheet sheet = currentProvider.getSheet(Sonic3kObjectArtKeys.MGZ_ENDBOSS);
+        assertNotNull(sheet, "MGZ2 endboss drill craft should register Map_MGZEndBoss without range warnings");
+        assertTrue(sheet.getFrameCount() > 0x30,
+                "Obj_MGZEndBoss draws drill poses through $25 and defeat debris frames $2E-$30");
+        assertFalse(sheet.getFrame(0x25).pieces().isEmpty(),
+                "Drill flame pose $25 must remain drawable from the base MGZ endboss bank");
+        assertFalse(sheet.getFrame(0x2E).pieces().isEmpty(),
+                "Defeat debris frame $2E must remain drawable from Map_MGZEndBoss");
+        assertFalse(sheet.getFrame(0x30).pieces().isEmpty(),
+                "Defeat debris frame $30 must remain drawable from Map_MGZEndBoss");
+    }
+
+    @Test
     public void cnzTraversalSheetsParticipateInLevelArtRefreshTracking() throws Exception {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)

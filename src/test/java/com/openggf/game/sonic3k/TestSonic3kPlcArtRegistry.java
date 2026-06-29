@@ -1492,7 +1492,7 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     private static boolean isKnownSplitStandaloneSheet(Sonic3kPlcArtRegistry.StandaloneArtEntry entry) {
-        return Sonic3kObjectArtKeys.MGZ_ENDBOSS.equals(entry.key());
+        return false;
     }
 
     private static void collectSAndKRuntimeAddressViolation(List<String> violations, String context,
