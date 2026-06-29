@@ -649,6 +649,28 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void mtzCogFirstMainExecutionRotatesOnCurrentRomLowByteZero() {
+        LevelManager levelManager = mock(LevelManager.class);
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0380, 0x0400, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+        cog.setServices(new StubObjectServices() {
+            @Override
+            public LevelManager levelManager() {
+                return levelManager;
+            }
+        });
+
+        when(levelManager.getFrameCounter()).thenReturn(0x0520);
+        cog.update(0x3751, new TestablePlayableSprite("sonic", (short) 0x0380, (short) 0x03A0));
+
+        assertEquals(0x038D, cog.getPieceX(0),
+                "A just-streamed Obj70 whose first Main pass lands on Level_frame_counter low byte zero "
+                        + "must take the same rotation tick as the copied ROM tooth slots");
+        assertEquals(0x03B8, cog.getPieceY(0));
+    }
+
+    @Test
     void mtzCogLandingUsesFullRomWidthPixelsWindow() {
         LevelManager levelManager = mock(LevelManager.class);
         when(levelManager.getFrameCounter()).thenReturn(0x04DB);

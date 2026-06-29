@@ -197,14 +197,20 @@ public class CogObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        boolean firstMainExecution = !childrenSpawned;
         ensureSlotChildrenSpawned();
 
         // ROM Obj70_Main (s2.asm:54662-54665): move.b (Level_frame_counter+1).w,d0;
         // andi.w #$F,d0; bne loc_286CA. On 68k, +1 reads the low byte of the word
         // label. LevelManager stores the previous completed frame until its late-frame
-        // update(), so object code must use the next visible level counter here.
+        // update(), so established object code must use the next visible level counter.
+        // A just-streamed Obj70 whose first Main pass lands on a low-byte-zero frame has
+        // already reached the ROM-visible tick; rotate once there so the copied tooth
+        // slots do not remain one 16-frame phase behind.
         int levelFrameCounter = services().levelManager().getFrameCounter();
-        if (((levelFrameCounter + 1) & 0x0F) == 0) {
+        boolean rotateThisFrame = ((levelFrameCounter + 1) & 0x0F) == 0
+                || (firstMainExecution && (levelFrameCounter & 0x0F) == 0);
+        if (rotateThisFrame) {
             advanceRotation();
         }
 

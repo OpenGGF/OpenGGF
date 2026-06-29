@@ -182,6 +182,36 @@ branch-local measurements.
   `tails_cpu_ctrl2_held` expected `0x0004`, actual `0x0008`,
   `tails_status_byte` expected `0x0029`, actual `0x0008`, and matching
   integer `tails_x` at `0x170A`.
+## 2026-06-29 - S2 MTZ2 Obj70 first-main low-byte-zero tick (f1857 -> f3055)
+
+- Worktree/branch: `.worktrees/trace-s2-mtz2-r12` /
+  `bugfix/ai-trace-s2-mtz2-r12`, forked from
+  `bugfix/ai-s2-trace-develop` at `77ba48d34`.
+- Baseline reproduction:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mtz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: MTZ2 f1857 / 3209 errors (`g_speed` expected
+  `0x0381`, actual `0x02CB`).
+- Evidence/fix: the failing Obj70 cog group first executes with
+  `Level_frame_counter=$0520`. ROM `Obj70_Main` reads the visible low byte and
+  advances on that zero-nibble tick (`docs/s2disasm/s2.asm:55080-55141`); the
+  engine's established `LevelManager+1` gate skipped that first tick, leaving
+  the folded tooth phase one 16-frame step behind while later ticks remained
+  aligned. `CogObjectInstance` now applies the current low-byte-zero gate only
+  on the first main execution, preserving the existing `+1` cadence for
+  already-running cogs.
+- Focused verification:
+  `mvn -q "-Dmse=relaxed" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mtzCogRotationUsesRomVisibleLevelFrameCounter+mtzCogFirstMainExecutionRotatesOnCurrentRomLowByteZero" test`.
+  Result: Obj70 focused coverage passed 2/2.
+- Target verification:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mtz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: MTZ2 advances to f3055 / 951 errors (`tails_cpu_interact` expected
+  `0x0066`, actual `0x0000`).
+- Regression checks: S2 green guard passed 7/7
+  (`ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `MCZ1`, `SCZ`, `WFZ`). MTZ siblings
+  held their expected-red counts: MTZ1 f5647 / 616 and MTZ3 f2048 / 3742.
+- New routing: f3055 is a sidekick CPU interact-id latch frontier. ROM and
+  engine both have Tails riding the MTZ twin stomper at that frame, but ROM's
+  `Tails_interact_ID` remains latched to Obj66 while the engine reports zero.
 
 ## 2026-06-29 - S2 OOZ1 Obj36 sidekick push-grace window (f1784 -> f1790)
 
