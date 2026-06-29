@@ -2298,6 +2298,38 @@ player), and `s2.asm:35193-35234` (`SolidObject45` continued-rider carry from
 
 ---
 
+## P56 — Table bytes are unsigned when ROM loads them with `moveq #0` then `move.b`
+
+**Pattern.** Some S2 object property tables use byte entries written as negative
+assembly literals (for example `-$18` / `-$58`), but the routine loads them with
+`moveq #0,dN` followed by `move.b (aX)+,dN`. That sequence zero-extends the
+byte; it does not sign-extend it. The value `-$18` is therefore `$E8` (232), not
+`-24`, unless the code later executes `ext.w`.
+
+**Engine symptom.** A moving object reverses at the wrong endpoint because the
+engine used `abs(-0x18)` / `Math.abs(tableByte)` or otherwise treated the table
+literal as signed. In OOZ2, Obj43 subtype `$06` used a 24px travel span instead
+of the ROM's `$E8` span; the upper sliding spike ran past its intended long
+cycle and hurt Sonic at f1751 while the ROM was still in normal airborne motion.
+
+**What to check.** For every byte-sized property table entry:
+1. Read the load instruction, not just the literal in the table.
+2. `moveq #0,dN` + `move.b ... ,dN` means unsigned 0..255.
+3. `move.b ... ,dN` followed by `ext.w dN` means signed -128..127.
+4. Keep signed position offsets (`move.w` table entries like parent/child
+   offsets) separate from unsigned span/count bytes in engine records.
+
+**ROM citation.** Obj43 loads `originXOffset` with `moveq #0,d1` /
+`move.b (a2)+,d1`, then computes `objoff_32/objoff_34` from that unsigned span
+(`docs/s2disasm/s2.asm:49972-50003`). The table rows use `-$18` and `-$58`
+(`docs/s2disasm/s2.asm:49958-49961`), which become `$E8` and `$A8`.
+
+**Originating commit.** `<pending>` S2 OOZ2 Obj43 unsigned travel span:
+`SlidingSpikeObjectInstance` separates unsigned `originSpan` from signed
+parent/child X offsets; OOZ2 advances from f1751 to f1873.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

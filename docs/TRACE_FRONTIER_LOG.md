@@ -6,6 +6,39 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 OOZ2 Obj43 unsigned travel-span fix - ENGINE FIX (Obj43 + focused test, OOZ2 f1751 -> f1873)
+
+- Worktree/branch: `.worktrees/trace-s2-ooz2-r5` /
+  `bugfix/ai-trace-s2-ooz2-r5`, branched from
+  `bugfix/ai-s2-trace-develop`.
+- Root/fix: Obj43's property table first byte is loaded as an unsigned byte in
+  the ROM (`moveq #0,d1; move.b (a2)+,d1`) before computing
+  `objoff_32/objoff_34` (`docs/s2disasm/s2.asm:49972-50003`). The engine used
+  `abs(-$18)` / `abs(-$58)`, so subtype `$06` reversed at a 24px span instead
+  of `$E8`, letting the upper OOZ2 spike overrun its ROM endpoint and hurt Sonic
+  at f1751. `SlidingSpikeObjectInstance` now keeps unsigned `originSpan` values
+  separate from signed parent/child word offsets.
+- Result: `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` advances from
+  f1751 / 1338 errors (`y_speed` expected `0x0420`, actual `-0400`) to f1873 /
+  1072 errors (`x` expected `0x04A6`, actual `0x04A2`).
+- Verification:
+  - Focused Obj43 red/green: `mvn "-Dtest=com.openggf.game.sonic2.objects.TestOOZPlacedObjectGaps#slidingSpikeSubtypesUseRomOffsetsAndOnePixelMotion" ... test`
+    failed before the fix on subtype `$06` minX (`expected 0x0F18`, actual
+    `0x0FE8`), then passed after the fix.
+  - Focused OOZ2: `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" ... test`
+    reports f1873 / 1072 errors.
+  - OOZ1 + green guards:
+    `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" ... test`
+    keeps OOZ1 at f1784 while ARZ1/EHZ1/MCZ1/SCZ/WFZ pass.
+  - Full S2 sweep:
+    `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" ... test`
+    ran 19 S2 trace classes; 5 green and 14 expected-red. All non-OOZ2 red
+    frontiers match the integration table below; OOZ2 is the only changed
+    frontier.
+- Current red frontiers are unchanged from the integration table below except
+  `TestS2Ooz2LevelSelectTraceReplay`, now f1873 `x` expected `0x04A6`, actual
+  `0x04A2`; 1072 errors.
+
 ## 2026-06-29 - S2 integration sweep after OOZ2 Obj45 exact-edge merge (5 green, 14 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /

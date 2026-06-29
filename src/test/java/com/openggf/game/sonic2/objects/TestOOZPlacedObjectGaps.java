@@ -66,8 +66,9 @@ class TestOOZPlacedObjectGaps {
 
         ObjectInstance subtype06 = newSlidingSpike(0x1000, 0x0500, 0x06);
         assertEquals(0x0FE8, subtype06.getX(), "Obj43 subtype 06 parent starts at -$18 from origin");
-        assertEquals(0x0FE8, intField(subtype06, "minX"));
-        assertEquals(0x1018, intField(subtype06, "maxX"));
+        assertEquals(0x0F18, intField(subtype06, "minX"),
+                "Obj43_Init loads originXOffset with move.b after moveq #0, so -$18 is the unsigned span $E8");
+        assertEquals(0x10E8, intField(subtype06, "maxX"));
         assertInstanceOf(TouchResponseProvider.class, subtype06);
         assertEquals(0xA5, ((TouchResponseProvider) subtype06).getCollisionFlags());
         assertEquals(TouchCategoryDecodeMode.NORMAL,
@@ -76,11 +77,17 @@ class TestOOZPlacedObjectGaps {
 
         subtype06.update(0, playerAt(0x1000, 0x0500));
         assertEquals(0x0FE7, subtype06.getX(), "Obj43 moves one pixel toward its left bound when direction is clear");
+        for (int i = 0; i < 0xD0; i++) {
+            subtype06.update(i + 1, playerAt(0x1000, 0x0500));
+        }
+        assertEquals(0x0F19, subtype06.getX(),
+                "Obj43 subtype 06 reverses only after reaching origin-$E8, not origin-$18");
 
         ObjectInstance subtype0C = newSlidingSpike(0x1000, 0x0500, 0x0C);
         assertEquals(0x0FA8, subtype0C.getX(), "Obj43 subtype 0C parent starts at -$58 from origin");
-        assertEquals(0x0FA8, intField(subtype0C, "minX"));
-        assertEquals(0x1058, intField(subtype0C, "maxX"));
+        assertEquals(0x0F58, intField(subtype0C, "minX"),
+                "Obj43_Init treats -$58 as unsigned $A8 for the travel span");
+        assertEquals(0x10A8, intField(subtype0C, "maxX"));
     }
 
     @Test
