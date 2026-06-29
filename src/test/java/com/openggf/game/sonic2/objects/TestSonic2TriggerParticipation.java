@@ -767,6 +767,25 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void cpzBreakableBlockRemainsSolidForLaterParticipantsInDestroyPass() {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        main.setRolling(false);
+        main.setAnimationId(Sonic2AnimationIds.ROLL.id());
+        TestablePlayableSprite sidekick = player("tails", 0x1000, 0x1000);
+        BreakableBlockObjectInstance block = new BreakableBlockObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_BLOCK, 0, 0, false, 0),
+                "BreakableBlock");
+        block.setServices(new QueryOnlyPlayerServices(main, List.of(sidekick)).withGameState(new GameStateManager()));
+
+        block.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
+
+        assertTrue(block.isDestroyed(),
+                "Obj32 should destroy as soon as the rolling standing player breaks it");
+        assertTrue(block.isSolidFor(sidekick),
+                "ROM Obj32 computes both players' standing state before the destroy branch");
+    }
+
+    @Test
     void htzSmashableGroundBreaksFromRollAnimationNotRollingStatus() {
         TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
         main.setRolling(false);

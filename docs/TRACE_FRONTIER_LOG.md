@@ -6,17 +6,18 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-## 2026-06-29 - S2 integration sweep after OOZ2 Obj45 exact-edge merge (5 green, 14 expected-red)
+## 2026-06-29 - S2 integration sweep after CPZ1 Obj32 candidate (5 green, 14 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
   `bugfix/ai-s2-trace-develop` at merge commit `7ba205591`, after first
   merging `origin/develop` at `b263d3a4d`, then merging
-  `bugfix/ai-trace-s2-ooz2-r4`.
+  `bugfix/ai-trace-s2-ooz2-r4`. The CPZ1 candidate was verified in
+  `.worktrees/trace-s2-cpz1-r2` / `bugfix/ai-trace-s2-cpz1-r2`.
 - Command:
   `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2*TraceReplay"" test"`.
 - Result: all 19 concrete S2 trace classes ran: 5 green, 14 expected-red. No
-  green guard regressed; WFZ remains green and OOZ2 advances from f1603 to the
-  new f1751 frontier.
+  green guard regressed; WFZ remains green. OOZ2 holds f1751, and CPZ1 advances
+  from f3365 to the new f3544 frontier.
 - Green traces: `TestS2ArzLevelSelectTraceReplay`, `TestS2Ehz1TraceReplay`,
   `TestS2MczLevelSelectTraceReplay`, `TestS2SczLevelSelectTraceReplay`,
   `TestS2WfzLevelSelectTraceReplay`.
@@ -32,12 +33,51 @@ branch-local measurements.
 | `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
 | `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1299 errors |
 | `TestS2Htz2LevelSelectTraceReplay` | f3315 `tails_x_speed` expected `0x01E8`, actual `0x00E8`; 1059 errors |
-| `TestS2CpzLevelSelectTraceReplay` | f3365 `tails_x` expected `0x24AB`, actual `0x24AA`; 310 errors |
+| `TestS2CpzLevelSelectTraceReplay` | f3544 `y` expected `0x0510`, actual `0x050B`; 350 errors |
 | `TestS2CnzLevelSelectTraceReplay` | f4024 `tails_cpu_ctrl2_held` expected `0x0010`, actual `0x0000`; 30 errors |
 | `TestS2Mcz2LevelSelectTraceReplay` | f4485 `tails_x` expected `0x0EAB`, actual `0x0EAC`; 543 errors |
 | `TestS2Cnz2LevelSelectTraceReplay` | f4632 `tails_y` expected `0x02B8`, actual `0x02B4`; 1001 errors |
 | `TestS2DezEndingLevelSelectTraceReplay` | f5952 `y_speed` expected `0x0098`, actual `-0098`; 46 errors |
 | `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
+
+## 2026-06-29 - S2 CPZ1 Obj32 same-pass participant support - ENGINE FIX (Obj32 + focused test, CPZ1 f3365 -> f3544)
+
+- Scope: branch `bugfix/ai-trace-s2-cpz1-r2` in worktree
+  `.worktrees/trace-s2-cpz1-r2`. The patch is limited to S2 Obj32 breakable
+  block destroy-pass support timing, focused participation coverage, and docs;
+  it does not hydrate trace data and does not add zone, route, or frame
+  carve-outs.
+- Root/fix: at f3365 ROM still had Tails' sidekick CPU/physics consuming the
+  pre-destroy Obj32 standing state (`status=$21`, on-object set) while the
+  engine had already made Obj32 non-solid when Sonic's earlier callback broke
+  the block, causing Tails to run free follow steering one frame early
+  (`tails_x` `0x24AA` vs ROM `0x24AB`, `tails_x_speed=-$12C` vs `0`).
+  ROM `Obj32_Main` calls `SolidObject` once for both players, snapshots the
+  block standing bits, then branches through `Obj32_Destroy`
+  (`docs/s2disasm/s2.asm:49349-49421`). The engine receives per-player
+  callbacks, so Obj32 now remains solid for later participants in the same
+  destroy callback batch after the first player breaks it.
+- Frontier movement: `TestS2CpzLevelSelectTraceReplay#replayMatchesTrace`
+  advances from f3365 / 310 errors (`tails_x` expected `0x24AB`, actual
+  `0x24AA`) to f3544 / 350 errors (`y` expected `0x0510`, actual `0x050B`).
+  The new frontier is a separate CPZ spin-tube exit/landing state: Sonic is
+  still rolling and 5 pixels high after Obj1E while ROM has cleared rolling.
+- Verification:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed ""-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#cpzBreakableBlockBreaksFromRollAnimationNotRollingStatus+cpzBreakableBlockRemainsSolidForLaterParticipantsInDestroyPass"" test"`
+  exited 0 for the requested Obj32 participation tests. MSE echoed a stale CPZ
+  trace report from the target directory, but the requested Surefire tests were
+  clean.
+  Focused CPZ/guard command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2CpzLevelSelectTraceReplay#replayMatchesTrace,TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace,TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace"" test"`
+  remained expected-red only for CPZ1 f3544 and CPZ2 f2889; ARZ1, EHZ1, MCZ1,
+  SCZ, and WFZ passed.
+  Full S2 sweep command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2*TraceReplay"" test"`
+  ran 19 S2 trace classes; 5 green and 14 expected-red. All non-CPZ1 first
+  errors match the integration baseline (`ARZ2 f595`, `CNZ1 f4024`,
+  `CNZ2 f4632`, `CPZ2 f2889`, `DEZ ending f5952`, `HTZ1 f6114`,
+  `HTZ2 f3315`, `MCZ2 f4485`, `MTZ1 f1267`, `MTZ2 f1277`, `MTZ3 f1973`,
+  `OOZ1 f1784`, `OOZ2 f1751`).
 
 ## 2026-06-29 - S2 OOZ2 Obj45 exact-edge compression hold - ENGINE FIX (Obj45 + focused test, OOZ2 f1603 -> f1751)
 
