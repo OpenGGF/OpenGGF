@@ -4089,6 +4089,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return preserveRollingOnNextRollStop;
         }
 
+        public void clearObjectPreservedRollingHandoff() {
+                preserveRollingOnNextRollStop = false;
+                objectPreservedRollBoostFollowup = false;
+                objectPreservedRollWallProbe = false;
+                objectPreservedRollVelocityCarry = false;
+        }
+
         public void markObjectPreservedRollBoostFollowup() {
                 this.objectPreservedRollBoostFollowup = true;
         }
