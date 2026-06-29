@@ -194,6 +194,19 @@ public class Sonic3kConstants {
     // Map_LBZCupElevator (5 frames). LockOn data include; verified by ROM byte
     // search for offset-table prefix 00 0A 00 18 00 20 00 2E 00 42.
     public static final int MAP_LBZ_CUP_ELEVATOR_ADDR = 0x22619A;
+    // Map_LBZGateLaser (3 frames). LockOn S3 data; Obj_LBZGateLaser in sonic3k.asm
+    // references this S3-half table and no S&K-side duplicate exists.
+    public static final int MAP_LBZ_GATE_LASER_ADDR = 0x228394;
+    // Map_LBZSpinLauncher (1 frame). LockOn S3 data; Obj_LBZSpinLauncher in
+    // sonic3k.asm references this S3-half table and no S&K-side duplicate exists.
+    public static final int MAP_LBZ_SPIN_LAUNCHER_ADDR = 0x227BC2;
+    // Map_LBZLoweringGrapple (15 frames). LockOn S3 data; Obj_LBZLoweringGrapple
+    // in sonic3k.asm references this S3-half table and no S&K-side duplicate exists.
+    public static final int MAP_LBZ_LOWERING_GRAPPLE_ADDR = 0x227DBC;
+    // Map_LBZPipePlug (8 frames). LockOn S3 data; Obj_LBZPipePlug in
+    // sonic3k.asm references this S3-half table and no S&K-side duplicate exists.
+    public static final int MAP_LBZ_PIPE_PLUG_ADDR = 0x226854;
+    public static final int MAP_TUNNEL_EXHAUST_ADDR = 0x029C8A; // Map_TunnelExhaust (2 frames, S&K-side)
     public static final int MAP_FBZ_CORK_FLOOR_ADDR = 0x2A920;    // Map_FBZCorkFloor (2 frames, 2/4 pieces, in sonic3k.asm)
 
     // ===== Breakable Wall mappings (Obj_BreakableWall, ID 0x0D) =====
@@ -1892,6 +1905,52 @@ public class Sonic3kConstants {
     public static final int ART_TILE_LBZ_MINIBOSS_BOX = 0x0456;
     // ArtTile_BossExplosion2 - VRAM tile for boss explosion (PLC_6B)
     public static final int ART_TILE_BOSS_EXPLOSION_2 = 0x04D2;
+    // ArtTile_BossExplosion - shared boss explosion tile base for LBZ2 PLCs.
+    public static final int ART_TILE_BOSS_EXPLOSION = 0x0500;
+
+    // ===== LBZ2 End Sequence (Objects 0xC6, 0xC8, 0xCA, 0xCB) =====
+    // LBZ end-sequence asset addresses legitimately point into the locked-on S3 half.
+    // ArtKosM_LBZEndBoss - spike-ball launcher boss art (51 tiles).
+    public static final int ART_KOSM_LBZ_END_BOSS_ADDR = 0x376542;
+    public static final int ART_KOSM_LBZ_END_BOSS_SIZE = 1632;
+    public static final int MAP_LBZ_END_BOSS_ADDR = 0x360896; // Map_LBZEndBoss (15 frames)
+    public static final int PAL_LBZ_END_BOSS_ADDR = 0x0741FE;
+    public static final int ART_TILE_LBZ_END_BOSS = 0x0425;
+    // ArtNem_LBZFinalBoss1 - Robotnik ship + laser-turret column (174 tiles).
+    public static final int ART_NEM_LBZ_FINAL_BOSS_1_ADDR = 0x37599C;
+    public static final int ART_NEM_LBZ_FINAL_BOSS_1_SIZE = 5568;
+    public static final int MAP_LBZ_FINAL_BOSS_1_ADDR = 0x3645A8; // Map_LBZFinalBoss1 (46 frames)
+    public static final int PAL_LBZ_FINAL_BOSS_1_ADDR = 0x073886;
+    public static final int ART_TILE_LBZ_FINAL_BOSS_1 = 0x03AA;
+    // ArtKosM_LBZ2DeathEggSmall - ending/launch miniature Death Egg art (82 tiles).
+    public static final int ART_KOSM_LBZ2_DEATH_EGG_SMALL_ADDR = 0x37921C;
+    public static final int ART_KOSM_LBZ2_DEATH_EGG_SMALL_SIZE = 2624;
+    public static final int MAP_LBZ_DEATH_EGG_SMALL_ADDR = 0x36480C; // Map_LBZDeathEggSmall (12 frames)
+    public static final int PAL_LBZ_ENDING_ADDR = 0x0738A6;
+    public static final int ART_TILE_LBZ2_DEATH_EGG_SMALL = 0x04AE;
+    // Obj_LBZKnuxPillar uses the Death Egg 2 art loaded by the terrain swap.
+    public static final int MAP_LBZ_KNUX_PILLAR_ADDR = 0x062AFC; // Map_LBZKnuxPillar (2 frames)
+    public static final int ART_TILE_LBZ_KNUX_PILLAR = 0x05A0;
+    // FBZ Robotnik running frames reused by the LBZ end boss intro.
+    public static final int ART_NEM_FBZ_ROBOTNIK_RUN_ADDR = 0x0D8302;
+    public static final int ART_NEM_FBZ_ROBOTNIK_RUN_SIZE = 2784;
+    public static final int MAP_FBZ_ROBOTNIK_RUN_ADDR = 0x06837E;
+    public static final int ART_TILE_FBZ_ROBOTNIK_RUN = 0x04A9;
+    public static final int PLC_LBZ2_FINAL_BOSS_1 = 0x71;
+    public static final int PLC_LBZ2_EGGMAN = 0x77;
+    // LBZ2 Death Egg terrain swap data queued by Dynamic_resize_routine.
+    public static final int LBZ2_16X16_DEATH_EGG_KOS_ADDR = 0x3E69B0;
+    public static final int LBZ2_16X16_DEATH_EGG_OUTPUT_SIZE = 0x1610;
+    public static final int LBZ2_16X16_DEATH_EGG_DEST_BLOCK = 0x0000;
+    public static final int LBZ2_128X128_DEATH_EGG_KOS_ADDR = 0x3ED3D4;
+    public static final int LBZ2_128X128_DEATH_EGG_OUTPUT_SIZE = 0x7C00;
+    public static final int LBZ2_128X128_DEATH_EGG_DEST_CHUNK = 0x0000;
+    public static final int LBZ2_8X8_DEATH_EGG_KOSM_ADDR = 0x3E8F72;
+    public static final int LBZ2_8X8_DEATH_EGG_OUTPUT_SIZE = 0x64A0;
+    public static final int LBZ2_8X8_DEATH_EGG_DEST_TILE = 0x0000;
+    public static final int ART_KOSM_LBZ2_DEATH_EGG_2_8X8_ADDR = 0x37F6EE;
+    public static final int ART_KOSM_LBZ2_DEATH_EGG_2_8X8_OUTPUT_SIZE = 0x0200;
+    public static final int ART_TILE_LBZ2_DEATH_EGG_2 = 0x05A0;
 
     // ===== AIZ2 Battleship / Bombing Sequence =====
     // AIZ2_16x16_BomberShip_Kos - Kosinski-compressed 16x16 ship blocks (S3 half 0x1B1372 + 0x200000)

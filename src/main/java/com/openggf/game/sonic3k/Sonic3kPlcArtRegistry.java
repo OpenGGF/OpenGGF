@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.resources.CompressionType;
 
 import java.util.ArrayList;
@@ -92,6 +93,7 @@ public final class Sonic3kPlcArtRegistry {
      * @param builderName  name of hardcoded builder method on {@link Sonic3kObjectArt},
      *                     or null if mappings are ROM-parsed
      * @param frameFilter  if non-null, only include these frame indices from the mapping table
+     * @param mappingFrameCount explicit mapping frame count, or -1 to auto-detect
      */
     public record LevelArtEntry(
             String key,
@@ -100,18 +102,31 @@ public final class Sonic3kPlcArtRegistry {
             int palette,
             String builderName,
             int[] frameFilter,
-            S3kSpriteDataLoader.MappingFormat mappingFormat
+            S3kSpriteDataLoader.MappingFormat mappingFormat,
+            int mappingFrameCount
     ) {
         public LevelArtEntry(String key, int mappingAddr, int artTileBase, int palette,
                 String builderName) {
             this(key, mappingAddr, artTileBase, palette, builderName, null,
-                    S3kSpriteDataLoader.MappingFormat.STANDARD);
+                    S3kSpriteDataLoader.MappingFormat.STANDARD, -1);
         }
 
         public LevelArtEntry(String key, int mappingAddr, int artTileBase, int palette,
                 String builderName, int[] frameFilter) {
             this(key, mappingAddr, artTileBase, palette, builderName, frameFilter,
-                    S3kSpriteDataLoader.MappingFormat.STANDARD);
+                    S3kSpriteDataLoader.MappingFormat.STANDARD, -1);
+        }
+
+        public LevelArtEntry(String key, int mappingAddr, int artTileBase, int palette,
+                String builderName, int[] frameFilter, S3kSpriteDataLoader.MappingFormat mappingFormat) {
+            this(key, mappingAddr, artTileBase, palette, builderName, frameFilter,
+                    mappingFormat, -1);
+        }
+
+        public LevelArtEntry(String key, int mappingAddr, int artTileBase, int palette,
+                String builderName, int mappingFrameCount) {
+            this(key, mappingAddr, artTileBase, palette, builderName, null,
+                    S3kSpriteDataLoader.MappingFormat.STANDARD, mappingFrameCount);
         }
     }
 
@@ -1487,6 +1502,123 @@ public final class Sonic3kPlcArtRegistry {
                     -1
             ));
         }
+        if (actIndex == 1) {
+            // Obj_LBZEndBoss queues ArtKosM_LBZEndBoss to ArtTile_LBZEndBoss and uses palette line 1.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_END_BOSS,
+                    Sonic3kConstants.ART_KOSM_LBZ_END_BOSS_ADDR,
+                    CompressionType.KOSINSKI_MODULED,
+                    Sonic3kConstants.ART_KOSM_LBZ_END_BOSS_SIZE,
+                    Sonic3kConstants.MAP_LBZ_END_BOSS_ADDR,
+                    1,
+                    -1,
+                    15
+            ));
+            // PLC_71 / Obj_LBZFinalBoss1: ArtNem_LBZFinalBoss1, Map_LBZFinalBoss1, palette line 1.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_FINAL_BOSS_1,
+                    Sonic3kConstants.ART_NEM_LBZ_FINAL_BOSS_1_ADDR,
+                    CompressionType.NEMESIS,
+                    Sonic3kConstants.ART_NEM_LBZ_FINAL_BOSS_1_SIZE,
+                    Sonic3kConstants.MAP_LBZ_FINAL_BOSS_1_ADDR,
+                    1,
+                    -1,
+                    46
+            ));
+            // Death Egg launch miniature art uses Pal_LBZEnding on palette line 1.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.LBZ2_DEATH_EGG_SMALL,
+                    Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_SMALL_ADDR,
+                    CompressionType.KOSINSKI_MODULED,
+                    Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_SMALL_SIZE,
+                    Sonic3kConstants.MAP_LBZ_DEATH_EGG_SMALL_ADDR,
+                    1,
+                    -1,
+                    12
+            ));
+            // PLC_77 / Robotnik runner child: ArtNem_FBZRobotnikRun, Map_FBZRobotnikRun, palette line 0.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_ROBOTNIK_RUN,
+                    Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_RUN_ADDR,
+                    CompressionType.NEMESIS,
+                    Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_RUN_SIZE,
+                    Sonic3kConstants.MAP_FBZ_ROBOTNIK_RUN_ADDR,
+                    0,
+                    -1
+            ));
+            // PLC_77 / Obj_LBZ2RobotnikShip reuses the shared Robotnik ship sheet.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                    Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR,
+                    CompressionType.NEMESIS,
+                    0,
+                    Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR,
+                    0,
+                    -1
+            ));
+            // CutsceneKnux_LBZ2 subtype 0x18 reuses the shared DPLC-driven cutscene Knuckles sheet.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES,
+                    Sonic3kConstants.ART_UNC_CUTSCENE_KNUX_ADDR,
+                    CompressionType.UNCOMPRESSED,
+                    Sonic3kConstants.ART_UNC_CUTSCENE_KNUX_SIZE,
+                    Sonic3kConstants.MAP_CUTSCENE_KNUX_ADDR,
+                    1,
+                    Sonic3kConstants.DPLC_CUTSCENE_KNUX_ADDR
+            ));
+            // PLC_77 and PLC_71 both include the shared boss explosion art at ArtTile_BossExplosion.
+            standalone.add(new StandaloneArtEntry(
+                    ObjectArtKeys.BOSS_EXPLOSION,
+                    Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_ADDR,
+                    CompressionType.NEMESIS,
+                    0,
+                    Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR,
+                    0,
+                    -1
+            ));
+            // Obj_LBZKnuxPillar renders from the Death Egg 2 tiles installed by the terrain swap.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_KNUX_PILLAR,
+                    Sonic3kConstants.MAP_LBZ_KNUX_PILLAR_ADDR,
+                    Sonic3kConstants.ART_TILE_LBZ_KNUX_PILLAR,
+                    2,
+                    null
+            ));
+            // Spin Launcher (Object 0x1E): make_art_tile(ArtTile_LBZ2Misc, 2, 0)
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_SPIN_LAUNCHER,
+                    Sonic3kConstants.MAP_LBZ_SPIN_LAUNCHER_ADDR,
+                    Sonic3kConstants.ARTTILE_LBZ2_MISC,
+                    2,
+                    null
+            ));
+            // Lowering Grapple (Object 0x1F): make_art_tile(ArtTile_LBZ2Misc, 2, 0)
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_LOWERING_GRAPPLE,
+                    Sonic3kConstants.MAP_LBZ_LOWERING_GRAPPLE_ADDR,
+                    Sonic3kConstants.ARTTILE_LBZ2_MISC,
+                    2,
+                    null
+            ));
+            // Pipe Plug (Object 0x1B): make_art_tile(ArtTile_LBZ2Misc-$4, 2, 0)
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_PIPE_PLUG,
+                    Sonic3kConstants.MAP_LBZ_PIPE_PLUG_ADDR,
+                    Sonic3kConstants.ARTTILE_LBZ2_MISC - 4,
+                    2,
+                    null,
+                    8
+            ));
+            // Tunnel exhaust / LBZ2 water: make_art_tile(ArtTile_LBZ2Misc, 2, 0)
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_TUNNEL_EXHAUST,
+                    Sonic3kConstants.MAP_TUNNEL_EXHAUST_ADDR,
+                    Sonic3kConstants.ARTTILE_LBZ2_MISC,
+                    2,
+                    null,
+                    2
+            ));
+        }
 
         // StillSprite groups: subtype 20 (pole), subtypes 21-23 (girders)
         // base 0x40D: subtype 20
@@ -1522,6 +1654,13 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_CUP_ELEVATOR,
                 Sonic3kConstants.MAP_LBZ_CUP_ELEVATOR_ADDR,
                 Sonic3kConstants.ARTTILE_LBZ_MISC + 0x4A,
+                2,
+                null));
+
+        // Gate Laser (Object 0x21): make_art_tile(ArtTile_LBZ2Misc, 2, 0)
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_GATE_LASER,
+                Sonic3kConstants.MAP_LBZ_GATE_LASER_ADDR,
+                Sonic3kConstants.ARTTILE_LBZ2_MISC,
                 2,
                 null));
 

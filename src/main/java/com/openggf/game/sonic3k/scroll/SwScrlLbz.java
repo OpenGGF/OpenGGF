@@ -7,7 +7,6 @@ import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
-import com.openggf.level.scroll.compose.WaterlineBlendComposer;
 
 import static com.openggf.level.scroll.M68KMath.negWord;
 
@@ -15,8 +14,8 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * Launch Base Zone scroll handler for Sonic 3K.
  *
  * <p>Ports the normal LBZ1/LBZ2 background deformation paths from the S3K
- * disassembly. The late LBZ2 Death Egg collapse has additional event-owned
- * background state and remains a future event integration pass.
+ * disassembly. The late LBZ2 Death Egg launch path switches to the event-owned
+ * Death Egg deformation table while the LBZ launch runtime state is active.
  */
 public class SwScrlLbz extends AbstractZoneScrollHandler {
     private static final int DEFAULT_BG_PERIOD_WIDTH = 512;
@@ -32,6 +31,12 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             0x40, 0x20, 0x10, 0x20, 0x70, 0x30, 0x80E0, 0x20, 0x7FFF
     };
 
+    private static final int[] LBZ2_DEATH_EGG_BG_DEFORM = {
+            0x38, 0x18, 0x28, 0x10, 0x10, 0x10, 0x18, 0x40,
+            0x38, 0x18, 0x28, 0x10, 0x10, 0x10, 0x18, 0x40,
+            0x20, 0x10, 0x20, 0x70, 0x60, 0x10, 0x805F, 0x7FFF
+    };
+
     private static final int[] LBZ2_CLOUD_DEFORM_OFFSETS = {
             0x16, 0x0E, 0x0A, 0x14, 0x0C, 0x06, 0x18, 0x10, 0x12, 0x02, 0x08, 0x04, 0x00
     };
@@ -39,6 +44,10 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     private static final int[] LBZ2_BG_UNDERWATER_DEFORM_RANGE = {
             7, 1, 3, 1, 7
     };
+    private static final int LBZ2_WATERLINE_UPPER_START_INDEX = 0x01E / 2;
+    private static final int LBZ2_WATERLINE_ANCHOR_INDEX = 0x09E / 2;
+    private static final int LBZ2_WATERLINE_LOWER_END_INDEX = 0x11E / 2;
+    private static final int LBZ2_WATERLINE_LOOKUP_STRIDE = 0x40;
 
     private static final short[] LBZ_WATER_WAVE_ARRAY = {
             1, 1, 1, 0, 0, 0, -1, -1, -1, -1, -1, -1, 0, 0, 0, 1,
@@ -48,12 +57,6 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     };
 
     private static final DeformationPlan.ScrollValueTransform NEGATE_WORD = value -> negWord(value);
-    private static final WaterlineBlendComposer WATERLINE_BLEND = new WaterlineBlendComposer(
-            79,
-            143,
-            207,
-            0x40
-    );
 
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
     private final ScrollValueTable lbz1HScroll = ScrollValueTable.ofLength(9);
@@ -62,6 +65,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
 
     private int cloudAccumulator;
     private int lastBgCameraX = Integer.MIN_VALUE;
+    private int lastLbz2ScrollArtPhaseSource;
     private int screenShakeOffset;
     private int currentBgPeriodWidth = DEFAULT_BG_PERIOD_WIDTH;
     private short vscrollFactorFG;
@@ -93,6 +97,10 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         return vscrollFactorFG;
     }
 
+    short getLbz2HScrollWordForTest(int index) {
+        return lbz2HScroll.get(index);
+    }
+
     @Override
     public void update(int[] horizScrollBuf,
                        int cameraX,
@@ -109,15 +117,28 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         short fgScroll = negWord(cameraX);
         if (actId == 0) {
             updateAct1(cameraX, cameraY, fgScroll);
+        } else if (runtimeState != null && runtimeState.isLaunchActive()) {
+            updateAct2DeathEgg(cameraX, cameraY, frameCounter, fgScroll, runtimeState);
         } else {
-            updateAct2(cameraX, cameraY, frameCounter, fgScroll);
+            updateAct2(cameraX, cameraY, frameCounter, fgScroll, runtimeState);
         }
 
         if (screenShakeOffset != 0) {
-            composer.setVscrollFactorBG((short) (composer.getVscrollFactorBG() + screenShakeOffset));
+            if (actId == 0) {
+                composer.setVscrollFactorBG((short) (composer.getVscrollFactorBG() + screenShakeOffset));
+            }
             composer.setVscrollFactorFG((short) (cameraY + screenShakeOffset));
         }
-
+        // ROM LBZ2BGE_PlatformDetach: once the copied platform is exposed in
+        // the VDP window, Events_bg+$16 is still added to Scroll A so the
+        // uncovered Death Egg/top band detaches.
+        int detachScroll = runtimeState != null ? runtimeState.getDetachScroll() : 0;
+        if (detachScroll != 0) {
+            short base = composer.getVscrollFactorFG() != 0
+                    ? composer.getVscrollFactorFG()
+                    : (short) cameraY;
+            composer.setVscrollFactorFG((short) (base + detachScroll));
+        }
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         currentBgPeriodWidth = computeBgPeriodWidth(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
@@ -174,17 +195,21 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
                 NEGATE_WORD);
     }
 
-    private void updateAct2(int cameraX, int cameraY, int frameCounter, short fgScroll) {
+    private void updateAct2(int cameraX,
+                            int cameraY,
+                            int frameCounter,
+                            short fgScroll,
+                            LbzZoneRuntimeState runtimeState) {
         lbz2HScroll.clear();
 
-        int relativeY = (short) (cameraY - 0x5F0);
+        int relativeY = (short) (cameraY - screenShakeOffset - 0x5F0);
         int bgYFixed = fixedFromWord(relativeY) >> 1;
         int step = bgYFixed >> 3;
         bgYFixed -= step;
         bgYFixed -= step >> 2;
         int bgYWithoutBase = wordFromFixed(bgYFixed);
         int equilibriumDelta = (short) (bgYWithoutBase - relativeY);
-        composer.setVscrollFactorBG((short) (bgYWithoutBase + 0x2C0));
+        composer.setVscrollFactorBG((short) (bgYWithoutBase + 0x2C0 + screenShakeOffset));
 
         int cameraXFixed = fixedFromWord(cameraX);
         buildWaterlineGradient(cameraXFixed, equilibriumDelta);
@@ -192,6 +217,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         buildCloudBands(cameraXFixed);
         buildLowerBackgroundBands(cameraXFixed, equilibriumDelta);
         applyWaterWaves(equilibriumDelta, frameCounter);
+        publishLbz2DeformOutputs(runtimeState, equilibriumDelta, lastLbz2ScrollArtPhaseSource, lastBgCameraX);
 
         DeformationPlan.applyFlaggedTableBands(
                 composer,
@@ -203,6 +229,155 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
                 NEGATE_WORD);
     }
 
+    private void updateAct2DeathEgg(int cameraX,
+                                    int cameraY,
+                                    int frameCounter,
+                                    short fgScroll,
+                                    LbzZoneRuntimeState runtimeState) {
+        lbz2HScroll.clear();
+
+        int adjustedCameraY = cameraY
+                - screenShakeOffset
+                - (runtimeState.getFgAccum() >> 16)
+                - (runtimeState.getBgAccum() >> 16);
+        int relativeY = (short) (adjustedCameraY - 0x5F0);
+        int bgYFixed = fixedFromWord(relativeY) >> 1;
+        int step = bgYFixed >> 3;
+        bgYFixed -= step;
+        bgYFixed -= step >> 2;
+        int bgYWithoutBase = wordFromFixed(bgYFixed);
+        int equilibriumDelta = (short) (bgYWithoutBase - relativeY);
+        int bgY = (short) (bgYWithoutBase + 0x2C0 - (runtimeState.getFgAccum() >> 16) + screenShakeOffset);
+        int latch = runtimeState.getDeathEggDeformWrapLatch();
+        if (bgY < 0) {
+            int wrap = 0;
+            int wrapped = bgY;
+            while (wrapped < 0) {
+                wrap += 0x100;
+                wrapped += 0x100;
+            }
+            if (wrap >= latch) {
+                latch = wrap;
+                runtimeState.setDeathEggDeformWrapLatch(latch);
+            }
+        }
+        bgY = (short) (bgY + latch);
+        if (latch != 0) {
+            while (bgY >= 0x100) {
+                bgY -= 0x100;
+            }
+        }
+        composer.setVscrollFactorBG((short) bgY);
+        // ROM LBZ2BGE_PlatformDetach writes Camera_Y_pos_copy into
+        // V_scroll_value before layering Events_bg+$16 on top.
+        composer.setVscrollFactorFG((short) cameraY);
+
+        int cameraXFixed = fixedFromWord(cameraX);
+        buildDeathEggUpperGradient(cameraXFixed);
+        buildDeathEggUnderwaterBands(cameraXFixed, equilibriumDelta);
+        buildDeathEggCloudBands(cameraXFixed);
+        buildDeathEggLowerBackgroundBands(cameraXFixed);
+        applyDeathEggWaterWaves(equilibriumDelta, frameCounter);
+        int waterlinePhase = (runtimeState.getBgLaunchSpeed() < 0 || equilibriumDelta < 0)
+                ? 0x7FFF
+                : equilibriumDelta;
+        publishLbz2DeformOutputs(
+                runtimeState,
+                waterlinePhase,
+                runtimeState.lbz2ScrollArtPhaseSource(),
+                runtimeState.publishedBgCameraX());
+
+        DeformationPlan.applyFlaggedTableBands(
+                composer,
+                composer.getVscrollFactorBG(),
+                fgScroll,
+                lbz2HScroll,
+                LBZ2_DEATH_EGG_BG_DEFORM,
+                0,
+                NEGATE_WORD);
+    }
+
+    private void buildDeathEggUpperGradient(int cameraXFixed) {
+        int value = cameraXFixed;
+        int step = cameraXFixed >> 6;
+        step -= step >> 3;
+        int index = 0x0AC / 2;
+        for (int i = 0; i < 0x20 && index > 1; i++) {
+            lbz2HScroll.set(--index, wordFromFixed(value));
+            value -= step;
+            lbz2HScroll.set(--index, wordFromFixed(value));
+            value -= step;
+        }
+    }
+
+    private void buildDeathEggUnderwaterBands(int cameraXFixed, int equilibriumDelta) {
+        int value = cameraXFixed >> 1;
+        int step = value >> 3;
+        lastBgCameraX = wordFromFixed(value);
+        for (int i = 0; i < 7; i++) {
+            value -= step;
+        }
+
+        int count = 0x60 - 1 - equilibriumDelta;
+        if (count < 0) {
+            return;
+        }
+        int index = 0x0EC / 2;
+        short word = wordFromFixed(value);
+        for (int i = 0; i <= count && index > 0; i++) {
+            lbz2HScroll.set(--index, word);
+        }
+    }
+
+    private void buildDeathEggCloudBands(int cameraXFixed) {
+        int value = cameraXFixed >> 6;
+        int step = value;
+        int cloudPhase = cloudAccumulator;
+        cloudAccumulator += 0xE00;
+        int baseIndex = 0x00C / 2;
+
+        for (int offset : LBZ2_CLOUD_DEFORM_OFFSETS) {
+            value += cloudPhase;
+            int index = baseIndex + (offset / 2);
+            if (index >= 0 && index < lbz2HScroll.size()) {
+                lbz2HScroll.set(index, wordFromFixed(value));
+            }
+            value += step;
+        }
+        for (int i = 0; i < 8; i++) {
+            lbz2HScroll.set(i, lbz2HScroll.get(8 + i));
+        }
+    }
+
+    private void buildDeathEggLowerBackgroundBands(int cameraXFixed) {
+        int value = cameraXFixed >> 4;
+        int step = value >> 1;
+        int index = 0x026 / 2;
+
+        for (int i = 0; i < 3 && index < lbz2HScroll.size(); i++) {
+            lbz2HScroll.set(index++, wordFromFixed(value));
+            value += step;
+        }
+    }
+
+    private void applyDeathEggWaterWaves(int equilibriumDelta, int frameCounter) {
+        int count = 0x40 - 1 - equilibriumDelta + 0x20;
+        if (count < 0) {
+            return;
+        }
+        if (count >= 0x60) {
+            count = 0x60 - 1;
+        }
+
+        int waveIndex = (frameCounter >> 1) & 0x3F;
+        int tableIndex = 0x0EC / 2;
+        for (int i = 0; i <= count && tableIndex > 0; i++) {
+            waveIndex = (waveIndex - 1) & 0x3F;
+            tableIndex--;
+            lbz2HScroll.set(tableIndex, (short) (lbz2HScroll.get(tableIndex) + LBZ_WATER_WAVE_ARRAY[waveIndex]));
+        }
+    }
+
     private void buildWaterlineGradient(int cameraXFixed, int equilibriumDelta) {
         if (equilibriumDelta == 0) {
             return;
@@ -211,19 +386,54 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         int value = cameraXFixed;
         int gradientStep = (cameraXFixed >> 6) - (cameraXFixed >> 9);
         if (equilibriumDelta <= -0x40) {
-            fillForwardGradient(15, value, gradientStep, 64);
+            fillForwardGradient(LBZ2_WATERLINE_UPPER_START_INDEX, value, gradientStep, LBZ2_WATERLINE_LOOKUP_STRIDE);
             return;
         }
 
-        fillBackwardGradient(143, value, gradientStep, 64);
-        if (equilibriumDelta < 0x40) {
-            WATERLINE_BLEND.apply(
-                    lbz2HScroll,
-                    (short) equilibriumDelta,
-                    lbz2HScroll.get(78),
-                    lbz2HScroll.get(143),
-                    waterlineData);
+        fillBackwardGradient(LBZ2_WATERLINE_LOWER_END_INDEX, value, gradientStep, LBZ2_WATERLINE_LOOKUP_STRIDE);
+        if (equilibriumDelta >= 0x40) {
+            return;
         }
+        applyLbz2WaterlineLookup(equilibriumDelta);
+    }
+
+    private void applyLbz2WaterlineLookup(int equilibriumDelta) {
+        if (waterlineData == null) {
+            return;
+        }
+        if (equilibriumDelta > 0) {
+            int dataOffset = (LBZ2_WATERLINE_LOOKUP_STRIDE - equilibriumDelta) * LBZ2_WATERLINE_LOOKUP_STRIDE;
+            for (int i = 0; i < equilibriumDelta; i++) {
+                int lookupIndex = dataOffset + i;
+                if (lookupIndex >= waterlineData.length) {
+                    break;
+                }
+                int readIndex = LBZ2_WATERLINE_ANCHOR_INDEX + (waterlineData[lookupIndex] & 0xFF);
+                int writeIndex = LBZ2_WATERLINE_ANCHOR_INDEX + i;
+                copyWaterlineLookupWord(readIndex, writeIndex);
+            }
+            return;
+        }
+
+        int count = -equilibriumDelta;
+        int dataOffset = (equilibriumDelta + LBZ2_WATERLINE_LOOKUP_STRIDE) * LBZ2_WATERLINE_LOOKUP_STRIDE;
+        for (int i = 0; i < count; i++) {
+            int lookupIndex = dataOffset + i;
+            if (lookupIndex >= waterlineData.length) {
+                break;
+            }
+            int readIndex = LBZ2_WATERLINE_ANCHOR_INDEX + (waterlineData[lookupIndex] & 0xFF);
+            int writeIndex = LBZ2_WATERLINE_ANCHOR_INDEX - 1 - i;
+            copyWaterlineLookupWord(readIndex, writeIndex);
+        }
+    }
+
+    private void copyWaterlineLookupWord(int readIndex, int writeIndex) {
+        if (readIndex < 0 || readIndex >= lbz2HScroll.size()
+                || writeIndex < 0 || writeIndex >= lbz2HScroll.size()) {
+            return;
+        }
+        lbz2HScroll.set(writeIndex, lbz2HScroll.get(readIndex));
     }
 
     private void fillForwardGradient(int startIndex, int value, int step, int count) {
@@ -250,8 +460,10 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         int index = 241;
         lbz2HScroll.set(--index, wordFromFixed(value));
         value -= step;
+        lastLbz2ScrollArtPhaseSource = wordFromFixed(value) & 0xFFFF;
         lbz2HScroll.set(--index, wordFromFixed(value));
 
+        value -= step;
         for (int range : LBZ2_BG_UNDERWATER_DEFORM_RANGE) {
             value -= step;
             short word = wordFromFixed(value);
@@ -305,7 +517,6 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             }
             if (count >= 0x30) {
                 count -= 0x30;
-            } else {
                 fillCountedPairs(index, value, 0x18 - 1);
                 value += step;
                 index += 0x18 * 2;
@@ -348,6 +559,15 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             waveIndex = (waveIndex - 1) & 0x3F;
             tableIndex--;
             lbz2HScroll.set(tableIndex, (short) (lbz2HScroll.get(tableIndex) + LBZ_WATER_WAVE_ARRAY[waveIndex]));
+        }
+    }
+
+    private static void publishLbz2DeformOutputs(LbzZoneRuntimeState runtimeState,
+                                                 int waterlinePhase,
+                                                 int scrollArtPhaseSource,
+                                                 int bgCameraX) {
+        if (runtimeState != null) {
+            runtimeState.publishLbz2DeformOutputs(waterlinePhase, scrollArtPhaseSource, bgCameraX);
         }
     }
 
