@@ -797,6 +797,15 @@ public class Sonic3kObjectArt {
                 : S3kSpriteDataLoader.loadMappingFrames(reader, entry.mappingAddr(), entry.mappingFormat());
         if (Sonic3kObjectArtKeys.CNZ_CLAMER_SHOT.equals(entry.key())) {
             mappings = List.of(mappings.get(9));
+        } else if (Sonic3kObjectArtKeys.MGZ_ENDBOSS.equals(entry.key())) {
+            mappings = selectFramesPreservingIndices(mappings,
+                    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                    0x0C, 0x0F,
+                    0x12, 0x13, 0x14,
+                    0x18, 0x19, 0x1A, 0x1B,
+                    0x1E, 0x1F, 0x20,
+                    0x23, 0x24, 0x25,
+                    0x2E, 0x2F, 0x30);
         } else if (Sonic3kObjectArtKeys.MHZ_END_BOSS_PILLAR.equals(entry.key())) {
             mappings = selectFramesPreservingIndices(mappings, 0, 1);
         } else if (Sonic3kObjectArtKeys.MHZ_END_BOSS_SPIKES.equals(entry.key())) {
