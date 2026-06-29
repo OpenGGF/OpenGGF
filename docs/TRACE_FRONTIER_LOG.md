@@ -23525,3 +23525,51 @@ Verification:
 - `mvn "-Dtest=TestRewindCoverageGuard" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
   passed `TestRewindCoverageGuard`; the MSE aggregate again only reported the
   expected ARZ2 frontier replay at f888.
+
+### 2026-06-29 -- S2 MCZ2 Obj57 debris VBlank phase and live boss collision flags: f8606 -> f8965
+
+Worktree `bugfix/ai-trace-s2-mcz2-r12` from integration parent
+`77ba48d34239b9c6871852ab0a4a1dbbe3491501`.
+
+Root fixed: MCZ Obj57 falling stone/spike selection was advancing from a
+boss-local counter, but ROM `Obj57_SpawnStoneSpike` reads the global
+`(Vint_runcount+3).w` byte before applying the `$1F` spike gate and `$07` stone
+gate (`docs/s2disasm/s2.asm:66128-66160`). At the prior f8606 blocker the engine
+classified the falling Obj57 at `x=$21A2` as a spike and hurt Sonic; the ROM
+trace has Sonic still rolling/bouncing with `status=$06`, `stand_on_obj=$10`,
+`y_speed=-$03E0`. Obj57 defeat explosions also use the same global VBlank phase
+through `Boss_LoadExplosion`, so the local counter was removed rather than
+retimed.
+
+Follow-up same-frontier root: after the debris fix, Sonic and CPU Tails both
+overlapped MCZ boss slot 18 at f8639. ROM S2 runs `TouchResponse` once per
+character slot against shared object RAM (`docs/s2disasm/s2.asm:36263-36265,
+85013-85353`); Sonic's earlier boss hit clears the live `collision_flags` byte
+before Tails' later pass can read it. The engine was still feeding Tails the
+frame-start collision-flags snapshot, so it applied an extra same-frame boss
+bounce. MCZ Obj57 now keeps frame-start position snapshots for touch geometry but
+reads its live collision flags for later character passes.
+
+Fix:
+- `Sonic2MCZBossInstance` uses the trace/gameplay frame counter as Obj57's
+  `Vint_runcount` phase for debris type selection and defeat explosion cadence.
+- `Sonic2MCZBossInstance#getPreUpdateCollisionFlags()` returns the live collision
+  byte so same-frame Sonic -> Tails boss-hit ordering matches the ROM's shared
+  object RAM behavior.
+
+Result:
+- `TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace`: f8606 / 317 errors
+  (`y_speed` expected `-03E0`, actual `-0400`) -> f8965 / 156 errors
+  (`y` expected `0x063E`, actual `0x0643`).
+- `TestS2MczLevelSelectTraceReplay#replayMatchesTrace`: remains green.
+
+Verification:
+- Focused command:
+  `mvn -q '-Dmse=relaxed' '-Dsurefire.forkCount=1' '-DreuseForks=true' '-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' '-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' '-Dtest=TestS2Mcz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay' '-DfailIfNoTests=false' test`
+  exited 1 with MCZ2 at the improved f8965 / 156 frontier and MCZ1 passing.
+- S2 green guard:
+  `mvn -q '-Dmse=relaxed' '-Dsurefire.forkCount=1' '-DreuseForks=true' '-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' '-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' '-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay' test`
+  exited 0; the listed green traces remained green while the expected MCZ2 red
+  trace reported the improved f8965 / 156 frontier.
+- `mvn -q '-Dmse=relaxed' '-Dtest=TestRewindCoverageGuard' test` exited 0;
+  `TestRewindCoverageGuard` passed 1/1.
