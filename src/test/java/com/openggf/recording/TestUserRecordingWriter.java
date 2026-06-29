@@ -1,0 +1,89 @@
+package com.openggf.recording;
+
+import com.openggf.debug.playback.Bk2Movie;
+import com.openggf.debug.playback.Bk2MovieLoader;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.version.BuildIdentity;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
+import java.util.zip.ZipFile;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TestUserRecordingWriter {
+    @TempDir
+    Path tempDir;
+
+    @Test
+    void writesBk2WithOpenGgfEntriesAndLoadsWithBk2MovieLoader() throws Exception {
+        Path bk2Path = tempDir.resolve("s3k-aiz1-test.bk2");
+        UserRecordingManifest manifest = sampleManifest(2);
+        List<RecordedFrameInput> inputs = List.of(
+                new RecordedFrameInput(
+                        0,
+                        AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
+                        0x01,
+                        false,
+                        0,
+                        0,
+                        false),
+                new RecordedFrameInput(
+                        1,
+                        0,
+                        0,
+                        true,
+                        AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_JUMP,
+                        0x01,
+                        true));
+
+        UserRecordingWriter.write(bk2Path, manifest, inputs, List.of());
+
+        try (ZipFile zip = new ZipFile(bk2Path.toFile())) {
+            assertNotNull(zip.getEntry("Header.txt"));
+            assertNotNull(zip.getEntry("Input Log.txt"));
+            assertNotNull(zip.getEntry("OpenGGF/manifest.json"));
+            assertNotNull(zip.getEntry("OpenGGF/desync-lite.jsonl"));
+        }
+
+        Bk2Movie movie = new Bk2MovieLoader().load(bk2Path);
+
+        assertEquals(2, movie.getFrameCount());
+        assertEquals(UserRecordingWriter.LOG_KEY, movie.getLogKey());
+        assertEquals("OpenGGF", movie.getHeaderMetadata().get("Author"));
+        assertEquals("s3k", movie.getHeaderMetadata().get("GameName"));
+        assertEquals("2", movie.getHeaderMetadata().get("Frames"));
+        assertTrue((movie.getFrame(0).p1InputMask() & AbstractPlayableSprite.INPUT_RIGHT) != 0);
+        assertEquals(0x01, movie.getFrame(0).p1ActionMask());
+        assertTrue(movie.getFrame(1).p1StartPressed());
+        assertTrue((movie.getFrame(1).p2InputMask() & AbstractPlayableSprite.INPUT_LEFT) != 0);
+        assertEquals(0x01, movie.getFrame(1).p2ActionMask());
+        assertTrue(movie.getFrame(1).p2StartPressed());
+    }
+
+    private static UserRecordingManifest sampleManifest(int frameCount) {
+        return new UserRecordingManifest(
+                UserRecordingManifest.CURRENT_SCHEMA_VERSION,
+                "s3k-aiz1-test",
+                new BuildIdentity("0.6.prerelease", "abcdef123", false),
+                new RecordingLaunchContext(
+                        "s3k",
+                        0,
+                        1,
+                        "sonic",
+                        List.of("tails"),
+                        true,
+                        "current-act-fresh-start"),
+                UserRecordingSidecarMetadata.everyFrame(),
+                new RecordingDeterminismMetadata(0, null),
+                "A",
+                frameCount,
+                UserRecordingStopReason.USER_STOPPED,
+                Instant.parse("2026-06-29T14:30:22Z"));
+    }
+}

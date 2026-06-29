@@ -2,6 +2,7 @@ package com.openggf.tests.playback;
 
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
+import com.openggf.recording.UserRecordingWriter;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -130,6 +131,27 @@ public class TestBk2MovieLoader {
     }
 
     @Test
+    public void parsesExactWriterLogKey() throws Exception {
+        Path bk2 = createBk2("""
+                [Input]
+                LogKey:%s
+                |.....A..|...R.A..|
+                [/Input]
+                """.formatted(UserRecordingWriter.LOG_KEY));
+
+        Bk2Movie movie = loader.load(bk2);
+
+        assertEquals(1, movie.getFrameCount());
+        assertEquals(0x01, movie.getFrame(0).p1ActionMask());
+        assertTrue((movie.getFrame(0).p1InputMask() & AbstractPlayableSprite.INPUT_JUMP) != 0);
+        assertEquals(0, movie.getFrame(0).p1ActionMask() & 0x06);
+        assertTrue((movie.getFrame(0).p2InputMask() & AbstractPlayableSprite.INPUT_RIGHT) != 0);
+        assertEquals(0x01, movie.getFrame(0).p2ActionMask());
+        assertTrue((movie.getFrame(0).p2InputMask() & AbstractPlayableSprite.INPUT_JUMP) != 0);
+        assertTrue((movie.getFrame(0).p1InputMask() & AbstractPlayableSprite.INPUT_RIGHT) == 0);
+    }
+
+    @Test
     public void failsWhenInputLogMissing() throws Exception {
         Path file = Files.createTempFile("missing-input-log", ".bk2");
         file.toFile().deleteOnExit();
@@ -161,5 +183,4 @@ public class TestBk2MovieLoader {
         zip.closeEntry();
     }
 }
-
 
