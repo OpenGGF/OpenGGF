@@ -163,6 +163,24 @@ class TestUserRecordingManifestJson {
     }
 
     @Test
+    void readManifestRejectsMissingEngineIdentityDirty() throws Exception {
+        String json = removeJsonLine(
+                UserRecordingJson.writeManifest(sampleManifest()),
+                "    \"dirty\" : false");
+
+        assertThrows(IOException.class, () -> UserRecordingJson.readManifest(json));
+    }
+
+    @Test
+    void readManifestRejectsNullEngineIdentityDirty() throws Exception {
+        String json = UserRecordingJson.writeManifest(sampleManifest())
+                .replace("\"dirty\" : false",
+                        "\"dirty\" : null");
+
+        assertThrows(IOException.class, () -> UserRecordingJson.readManifest(json));
+    }
+
+    @Test
     void readManifestRejectsMissingSidecarSampleMode() throws Exception {
         String json = removeJsonLine(
                 UserRecordingJson.writeManifest(sampleManifest()),

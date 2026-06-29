@@ -38,7 +38,7 @@ public final class UserRecordingJson {
     private record ManifestDto(
             Integer schemaVersion,
             String movieName,
-            BuildIdentity engineIdentity,
+            EngineIdentityDto engineIdentity,
             LaunchContextDto launchContext,
             UserRecordingSidecarMetadata sidecar,
             RecordingDeterminismMetadata determinism,
@@ -51,7 +51,7 @@ public final class UserRecordingJson {
             return new ManifestDto(
                     manifest.schemaVersion(),
                     manifest.movieName(),
-                    manifest.engineIdentity(),
+                    EngineIdentityDto.from(manifest.engineIdentity()),
                     LaunchContextDto.from(manifest.launchContext()),
                     manifest.sidecar(),
                     manifest.determinism(),
@@ -66,7 +66,7 @@ public final class UserRecordingJson {
             return new UserRecordingManifest(
                     schemaVersion,
                     movieName,
-                    engineIdentity,
+                    engineIdentity.toBuildIdentity(),
                     launchContext.toLaunchContext(),
                     sidecar,
                     determinism,
@@ -109,8 +109,9 @@ public final class UserRecordingJson {
             }
         }
 
-        private static void validateEngineIdentity(BuildIdentity engineIdentity) throws IOException {
+        private static void validateEngineIdentity(EngineIdentityDto engineIdentity) throws IOException {
             requireNonBlank(engineIdentity.baseVersion(), "engineIdentity.baseVersion");
+            requirePresent(engineIdentity.dirty(), "engineIdentity.dirty");
         }
 
         private static void validateLaunchContext(LaunchContextDto launchContext) throws IOException {
@@ -150,6 +151,20 @@ public final class UserRecordingJson {
             } catch (DateTimeParseException ex) {
                 throw new IOException("Invalid manifest createdAt timestamp: " + value, ex);
             }
+        }
+    }
+
+    private record EngineIdentityDto(
+            String baseVersion,
+            String commit,
+            Boolean dirty
+    ) {
+        static EngineIdentityDto from(BuildIdentity identity) {
+            return new EngineIdentityDto(identity.baseVersion(), identity.commit(), identity.dirty());
+        }
+
+        BuildIdentity toBuildIdentity() {
+            return new BuildIdentity(baseVersion, commit, dirty);
         }
     }
 
