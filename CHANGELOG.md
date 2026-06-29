@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **User recording catalog now classifies playback version warnings:** Added a catalog scanner for `recordings/<game-id>/*.bk2` that reads OpenGGF manifests, counts BK2 frames through the playback loader, sorts newest recordings first, and reports non-blocking warnings for missing metadata, dirty builds, official version mismatches, and prerelease build mismatches.
 - **User recording desync-lite verifier:** Added the expanded desync-lite snapshot schema, live snapshot capture, configured-main-player resolution, and a playback observer verifier that reports the first comparison mismatch without mutating gameplay state.
 - **User recording BK2 writer now emits OpenGGF sidecar entries:** Added `UserRecordingWriter` and `RecordedFrameInput` so engine-authored recordings produce BK2 zip files with `Header.txt`, exact P1/P2 grouped `Input Log.txt`, `OpenGGF/manifest.json`, and `OpenGGF/desync-lite.jsonl` entries that round-trip through `Bk2MovieLoader`.
 - **User recording manifests now have stable metadata and JSON codecs:** Added recording launch-context, sidecar, determinism, stop-reason, and manifest models plus a Jackson helper that round-trips `OpenGGF/manifest.json` timestamps without requiring Java-time module support.
