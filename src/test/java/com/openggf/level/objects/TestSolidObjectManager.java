@@ -479,6 +479,45 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void earlierSlotMultiPiecePushSurvivesRiddenPieceShortcut() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        SlotOrderedMultiPieceSolidObject object =
+                new SlotOrderedMultiPieceSolidObject(80, 120, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(true);
+        player.setYSpeed((short) 0x100);
+        player.setCentreX((short) 120);
+        player.setCentreY((short) 83);
+
+        manager.updateSolidContacts(player);
+        assertTrue(player.isOnObject());
+        assertEquals(1, object.lastStandingPieceIndex);
+        assertFalse(player.getPushing());
+
+        object.setPieceX(0, 135);
+        object.setPieceY(0, 96);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setGSpeed((short) 0x100);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(object.piece0Contacted,
+                "Earlier piece should contact before the ridden piece shortcut; player="
+                        + player.getCentreX() + "," + player.getCentreY());
+        assertTrue(object.piece0Pushed,
+                "Earlier piece contact should push; standing=" + object.piece0Standing
+                        + " side=" + object.piece0Side);
+        assertTrue(player.getPushing(),
+                "Earlier ROM-slot side push must survive the later ridden-piece shortcut");
+        assertTrue(object.lastPushingState);
+    }
+
+    @Test
     public void multiPieceRiderCarryDoesNotReapplyNewLandingSnapOnSamePiece() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         MutableMultiPieceSolidObject object = new MutableMultiPieceSolidObject(100, 100, params);
@@ -1463,6 +1502,79 @@ public class TestSolidObjectManager {
         public void setPlayerPushing(PlayableEntity player, boolean pushing) {
             lastPushingState = pushing;
             pushingStateChanges++;
+        }
+    }
+
+    private static final class SlotOrderedMultiPieceSolidObject extends TestSolidObject
+            implements MultiPieceSolidProvider {
+        private final int[] pieceX;
+        private final int[] pieceY;
+        private boolean lastPushingState;
+        private boolean piece0Contacted;
+        private boolean piece0Pushed;
+        private boolean piece0Standing;
+        private boolean piece0Side;
+        private int lastStandingPieceIndex = -1;
+
+        private SlotOrderedMultiPieceSolidObject(int firstPieceX, int secondPieceX, int y,
+                SolidObjectParams params) {
+            super(secondPieceX, y, params);
+            this.pieceX = new int[] { firstPieceX, secondPieceX };
+            this.pieceY = new int[] { y, y };
+        }
+
+        private void setPieceX(int pieceIndex, int x) {
+            pieceX[pieceIndex] = x;
+        }
+
+        private void setPieceY(int pieceIndex, int y) {
+            pieceY[pieceIndex] = y;
+        }
+
+        @Override
+        public int getPieceCount() {
+            return pieceX.length;
+        }
+
+        @Override
+        public int getPieceX(int pieceIndex) {
+            return pieceX[pieceIndex];
+        }
+
+        @Override
+        public int getPieceY(int pieceIndex) {
+            return pieceY[pieceIndex];
+        }
+
+        @Override
+        public boolean resolvesEarlierPiecesBeforeRidingPiece() {
+            return true;
+        }
+
+        @Override
+        public boolean usesPieceScopedStandingBits() {
+            return true;
+        }
+
+        @Override
+        public void setPlayerPushing(PlayableEntity player, boolean pushing) {
+            lastPushingState = pushing;
+        }
+
+        @Override
+        public void onPieceContact(int pieceIndex, PlayableEntity player,
+                SolidContact contact, int frameCounter) {
+            if (contact.standing()) {
+                lastStandingPieceIndex = pieceIndex;
+            }
+            if (pieceIndex == 0) {
+                piece0Contacted = true;
+                piece0Standing = contact.standing();
+                piece0Side = contact.touchSide();
+            }
+            if (pieceIndex == 0 && contact.pushing()) {
+                piece0Pushed = true;
+            }
         }
     }
 
