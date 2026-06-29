@@ -295,6 +295,41 @@ class TestOOZPlacedObjectGaps {
     }
 
     @Test
+    void horizontalOozPressureSpringExactEdgeHoldsWithoutVelocityClamp() throws Exception {
+        ObjectInstance spring = newOOZSpring(0x04B4, 0x03D0, 0x10, 1);
+        TestablePlayableSprite sonic = playerAt(0x0497, 0x03CC);
+        sonic.setDirection(Direction.RIGHT);
+        sonic.setGSpeed((short) 0x0040);
+        sonic.setXSpeed((short) 0x004C);
+        setIntField(spring, "currentX", 0x04B6);
+        setIntField(spring, "mappingFrame", 0x0C);
+
+        PlayerSolidContactResult exactEdgePush = new PlayerSolidContactResult(
+                ContactKind.SIDE,
+                false,
+                false,
+                true,
+                true,
+                PreContactState.ZERO,
+                PostContactState.ZERO,
+                0);
+        ((AbstractObjectInstance) spring).setServices(new TestObjectServices()
+                .withSolidExecutionRegistry(new ScriptedSolidRegistry(
+                        spring,
+                        Map.of(sonic, exactEdgePush),
+                        Map.of(sonic, new PlayerStandingState(ContactKind.SIDE, false, true)))));
+
+        spring.update(0, sonic);
+
+        assertEquals(0x04B6, spring.getX(),
+                "Obj45 d0==0 path only sets objoff_36; it does not addq/subq x_pos(a0)");
+        assertEquals(0x004C, sonic.getXSpeed() & 0xFFFF,
+                "Obj45 d0==0 path does not clear x_vel(a1)");
+        assertEquals(0x0040, sonic.getGSpeed() & 0xFFFF,
+                "Obj45 d0==0 path does not overwrite inertia(a1)");
+    }
+
+    @Test
     void oozPoppingPlatformKeepsRomSolidLatchAndObjectControlledSupport() throws Exception {
         ObjectInstance object = newObject("com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance",
                 new ObjectSpawn(0x1000, 0x0500, 0x33, 0x00, 0, false, 0));
