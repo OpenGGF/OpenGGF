@@ -47,6 +47,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private AnimalType definition;
     private boolean firstDisplayFrame;
     private boolean spawnedPoints;
+    private boolean deferArtVariantRng;
     private transient DestructionEffects.PointsFactory pointsFactory;
 
     public AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services) {
@@ -58,6 +59,12 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         this(spawn, services, services.rng().nextBits(1), pointsFactory);
     }
 
+    public static AnimalObjectInstance sonic2DeferredArtVariant(
+            ObjectSpawn spawn, ObjectServices services,
+            DestructionEffects.PointsFactory pointsFactory) {
+        return new AnimalObjectInstance(spawn, services, 0, pointsFactory, true);
+    }
+
     /**
      * Rewind recreate path uses {@link SpawnServicesDefaultArgsRewindRecreatable}
      * to skip the {@code services.rng()} draw. The captured {@code artVariant}
@@ -65,6 +72,11 @@ public class AnimalObjectInstance extends AbstractObjectInstance
      */
     private AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services, int artVariant,
             DestructionEffects.PointsFactory pointsFactory) {
+        this(spawn, services, artVariant, pointsFactory, false);
+    }
+
+    private AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services, int artVariant,
+            DestructionEffects.PointsFactory pointsFactory, boolean deferArtVariantRng) {
         super(spawn, "Animal");
         ObjectRenderManager renderManager = services.renderManager();
         this.renderer = renderManager != null ? renderManager.getAnimalRenderer() : null;
@@ -75,27 +87,32 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         this.state = State.MAIN;
         this.firstDisplayFrame = true;
 
+        this.artVariant = artVariant;
+        this.pointsValue = spawn.rawYWord();
+        this.pointsFactory = pointsFactory;
+        this.deferArtVariantRng = deferArtVariantRng;
+        applyAnimalDefinition(renderManager);
+        this.xVelocity = 0;
+        this.yVelocity = INITIAL_POP_VEL;
+    }
+
+    private void applyAnimalDefinition(ObjectRenderManager renderManager) {
         int typeA = AnimalType.RABBIT.ordinal();
         int typeB = AnimalType.RABBIT.ordinal();
         if (renderManager != null) {
             typeA = renderManager.getAnimalTypeA();
             typeB = renderManager.getAnimalTypeB();
         }
-
-        this.artVariant = artVariant;
-        this.pointsValue = spawn.rawYWord();
-        this.pointsFactory = pointsFactory;
         int animalIndex = artVariant == 0 ? typeA : typeB;
         this.definition = AnimalType.fromIndex(animalIndex);
         this.mappingSetIndex = definition.mappingSet().ordinal();
         this.groundXVelocity = definition.xVel();
         this.groundYVelocity = definition.yVel();
-        this.xVelocity = 0;
-        this.yVelocity = INITIAL_POP_VEL;
     }
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        initializeDeferredArtVariant();
         if (firstDisplayFrame) {
             firstDisplayFrame = false;
             spawnPointsOnce();
@@ -106,6 +123,16 @@ public class AnimalObjectInstance extends AbstractObjectInstance
             case WALK -> updateWalk();
             case FLY -> updateFly();
         }
+    }
+
+    private void initializeDeferredArtVariant() {
+        if (!deferArtVariantRng) {
+            return;
+        }
+        deferArtVariantRng = false;
+        ObjectServices svc = services();
+        this.artVariant = svc.rng().nextBits(1);
+        applyAnimalDefinition(svc.renderManager());
     }
 
     private void spawnPointsOnce() {
