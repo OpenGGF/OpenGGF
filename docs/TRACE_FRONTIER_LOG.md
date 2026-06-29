@@ -148,20 +148,22 @@ branch-local measurements.
     `TestS2Ooz2LevelSelectTraceReplay` from f3830 / 691 to f3835 / 797 while
     holding OOZ1 f1790 / 614, HTZ2 f3322 / 1057, MTZ1 f5713 / 560, CPZ1
     f4351 / 181, CPZ2 f2976 / 1232, and the S2 green guard.
+  - MCZ2 MCZ boss Tails max-X mirror greened
+    `TestS2Mcz2LevelSelectTraceReplay` from f10119 / 26 while holding the
+    current S2 accepted red/green frontier set.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f5298 / 920 (`x_speed` expected `-09CE`, actual `-08E8`);
   `CPZ1` f4351 / 181 (`tails_x` expected `0x20D4`, actual `0x20D3`);
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
-  `MCZ2` f10119 / 26 (`tails_x_sub` expected `0x5200`, actual `0x0000`);
   `MTZ1` f5713 / 560 (`tails_y_speed` expected `0x0ED0`, actual `0x0000`);
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
   `MTZ3` f2588 / 939 (`tails_cpu_ctrl2_held` expected `0x0012`, actual `0x0002`);
   `OOZ1` f1790 / 614 (`tails_x_speed` expected `0x0080`, actual `-008C`);
   `OOZ2` f3835 / 797 (`x` expected `0x1140`, actual `0x114C`).
-- Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `HTZ1`,
-  `MCZ1`, `SCZ`, and `WFZ`.
+- Current green traces: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `HTZ1`, `MCZ1`,
+  `MCZ2`, `SCZ`, and `WFZ`.
 
 ## 2026-06-29 - S2 OOZ2 Obj3D rolling-radius landing snap (f3830 -> f3835)
 
