@@ -1,11 +1,14 @@
 package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.GameModule;
 import com.openggf.graphics.GLCommand;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.PhysicsProvider;
 
 import java.util.List;
 
@@ -17,6 +20,8 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private static final int ANIM_TIMER_INIT = 7;
     private static final int FRAMES_PER_MAPPING = 3;
     private static final int ART_VARIANT_COUNT = 2;
+    private static final int S2_RENDER_HALF_WIDTH = 8;
+    private static final int APPROX_RENDER_HALF_HEIGHT = 32;
 
     private enum State {
         MAIN,
@@ -27,6 +32,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private final PatternSpriteRenderer renderer;
     private int currentX;
     private int currentY;
+    private int xSubpixel;
     private int ySubpixel;
     private int xVelocity;
     private int yVelocity;
@@ -136,6 +142,14 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     }
 
     private void objectMoveAndFall() {
+        if (preservesObjectMoveXSubpixel()) {
+            SubpixelMotion.State motion = new SubpixelMotion.State(
+                    currentX, currentY, xSubpixel, ySubpixel, xVelocity, yVelocity);
+            SubpixelMotion.objectFallXY(motion, GRAVITY);
+            applyMotion(motion);
+            return;
+        }
+
         currentX += (xVelocity >> 8);
         SubpixelMotion.State motion = new SubpixelMotion.State(
                 currentX, currentY, 0, ySubpixel, 0, yVelocity);
@@ -144,6 +158,14 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     }
 
     private void objectMove() {
+        if (preservesObjectMoveXSubpixel()) {
+            SubpixelMotion.State motion = new SubpixelMotion.State(
+                    currentX, currentY, xSubpixel, ySubpixel, xVelocity, yVelocity);
+            SubpixelMotion.speedToPos(motion);
+            applyMotion(motion);
+            return;
+        }
+
         currentX += (xVelocity >> 8);
         SubpixelMotion.State motion = new SubpixelMotion.State(
                 currentX, currentY, 0, ySubpixel, 0, yVelocity);
@@ -151,10 +173,33 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         applyVerticalMotion(motion);
     }
 
+    private void applyMotion(SubpixelMotion.State motion) {
+        currentX = motion.x;
+        xSubpixel = motion.xSub;
+        applyVerticalMotion(motion);
+    }
+
     private void applyVerticalMotion(SubpixelMotion.State motion) {
         currentY = motion.y;
         ySubpixel = motion.ySub;
         yVelocity = motion.yVel;
+    }
+
+    private boolean preservesObjectMoveXSubpixel() {
+        PhysicsFeatureSet featureSet = animalFeatureSet();
+        return featureSet != null && featureSet.animalObjectPreservesObjectMoveXSubpixel();
+    }
+
+    private boolean usesRenderFlagDeleteBounds() {
+        PhysicsFeatureSet featureSet = animalFeatureSet();
+        return featureSet != null && featureSet.animalObjectUsesRenderFlagDeleteBounds();
+    }
+
+    private PhysicsFeatureSet animalFeatureSet() {
+        ObjectServices ctx = tryServices();
+        GameModule module = ctx != null ? ctx.gameModule() : null;
+        PhysicsProvider physProvider = module != null ? module.getPhysicsProvider() : null;
+        return physProvider != null ? physProvider.getFeatureSet() : null;
     }
 
     private boolean checkFloorCollision() {
@@ -188,6 +233,15 @@ public class AnimalObjectInstance extends AbstractObjectInstance
 
     private boolean onScreen(int margin) {
         Camera camera = services().camera();
+        if (usesRenderFlagDeleteBounds()) {
+            int cameraX = camera.getX();
+            int cameraY = camera.getY();
+            return currentX >= cameraX - getOnScreenHalfWidth()
+                    && currentX < cameraX + viewportWidth() + getOnScreenHalfWidth()
+                    && currentY >= cameraY - APPROX_RENDER_HALF_HEIGHT
+                    && currentY < cameraY + viewportHeight() + APPROX_RENDER_HALF_HEIGHT;
+        }
+
         int cameraX = camera.getX();
         int cameraY = camera.getY();
         int screenWidth = viewportWidth();
@@ -197,6 +251,11 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         if (currentY < cameraY - margin || currentY > cameraY + screenHeight + margin)
             return false;
         return true;
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return S2_RENDER_HALF_WIDTH;
     }
 
     public int getX() {

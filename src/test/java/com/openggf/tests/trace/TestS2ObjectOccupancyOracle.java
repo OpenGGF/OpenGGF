@@ -301,6 +301,39 @@ public class TestS2ObjectOccupancyOracle {
                         + "before snapping and changing routine; slots " + check.summary());
     }
 
+    @Test
+    public void arz2ChopChopAnimalCarriesXSubpixelAfterLanding() throws Exception {
+        AnimalPositionCheck check = animalPositionAtArz2Frame(595);
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj28_Walk calls ObjectMoveAndFall, whose longword x_pos update preserves x_sub "
+                        + "(docs/s2disasm/s2.asm:24670-24673,30164-30174); slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj28_Walk must keep sharing ObjectMoveAndFall vertical carry after landing; slots "
+                        + check.summary());
+    }
+
+    @Test
+    public void arz2ChopChopAnimalFreesSlotWhenRenderFlagClears() throws Exception {
+        SlotCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 626) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x0A, expected.get(24),
+                            "ROM fixture should reuse slot 24 for the mouth bubble after Obj28 deletes at f626");
+                    return new SlotCheck(actual.get(24), describeSlots(actual, 19, 25));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x0A, slotCheck.actualId(),
+                "S2 Obj28_Walk deletes when render_flags.on_screen is clear; the animal must free slot 24 "
+                        + "for the next AllocateObject bubble (docs/s2disasm/s2.asm:24570-24594,24670-24688). "
+                        + "Actual slots " + slotCheck.summary());
+    }
+
     private AnimalPositionCheck animalPositionAtArz2Frame(int targetFrame) throws Exception {
         return driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {

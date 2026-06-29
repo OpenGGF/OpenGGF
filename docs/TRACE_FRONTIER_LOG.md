@@ -451,6 +451,58 @@ branch-local measurements.
   `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\trace-s2-ooz2-r3\s2.gen"" ""-Dtest=TestS2*TraceReplay"" test"`
   ran 19 trace classes and failed expected-red with 15 known red frontiers and
   4 greens; OOZ1 held its accepted f1784 frontier and OOZ2 advanced to f1603.
+
+## 2026-06-29 - S2 ARZ2 Obj28 x-subpixel/render-flag lifetime - ENGINE FIX (4 files, ARZ2 f595 -> f643)
+
+- Scope: continued the ARZ2 ChopChop Obj28 animal window in
+  `.worktrees/trace-s2-arz2-r4` / `bugfix/ai-trace-s2-arz2-r4`. The accepted
+  patch is limited to shared animal-object movement/lifetime flags, the S2
+  feature-set constants, focused comparison-only occupancy coverage, and
+  release notes. No trace data is hydrated into engine state and no zone,
+  route, or frame carve-out was added.
+- Root 1: at f595 ROM slot `0x18` is the ChopChop-spawned Obj28 animal at
+  `0x0676,0x053E`, while the engine held the same animal at `0x0675,0x053E`.
+  Sonic 2 `Obj28_Walk` calls `ObjectMoveAndFall`; `ObjectMoveAndFall` updates
+  the full `x_pos` longword, preserving `x_sub` as it adds `x_vel << 8`
+  (docs/s2disasm/s2.asm:24670-24673,30164-30174). The engine only applied
+  `xVelocity >> 8`, so the ARZ penguin ground speed `-$180` moved left by two
+  pixels every frame instead of carrying the fractional half-pixel.
+- Root 2: after the X carry is corrected, ROM frees Obj28's slot before f626
+  and reuses slot `0x18` for an Obj0A mouth bubble. S2 Obj28 initializes
+  `width_pixels=8` and Walk/Fly delete when `render_flags.on_screen` is clear
+  (docs/s2disasm/s2.asm:24570-24594,24670-24727). The engine used a broad
+  64px point-margin test, so the animal stayed alive after its 8px render box
+  had left the screen and shifted the next `AllocateObject` bubble into slot
+  `0x19`.
+- Fix: `PhysicsFeatureSet` now exposes S2-scoped animal movement/lifetime
+  feature flags. When enabled, `AnimalObjectInstance` routes Obj28 movement
+  through the existing 16.16 XY `SubpixelMotion` helpers, preserves `xSubpixel`,
+  and uses the ROM render bounds (`width_pixels=8`, approximate 32px height)
+  for the Obj28 delete gate. S1 keeps its separate animal implementation; S3K
+  stays on the previous shared-animal baseline until its MoveSprite/MoveSprite2
+  animal path is validated separately.
+- Result: `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from
+  f595 / 3171 errors (`obj_extra_s18_x` expected absent, actual `0x0675`) to
+  f643 / 3172 errors (`obj_s11_type` expected `0x2C`, actual missing). The new
+  frontier is a distinct Obj2C leaves-generator allocation/windowing issue that
+  was already visible as a cascading block after the f626 slot shift.
+- Verification:
+  Focused Obj28 oracle command
+  `mvn "-Dtest=TestS2ObjectOccupancyOracle#arz2ChopChopAnimalDoesNotMoveOnCreationFrame+arz2ChopChopAnimalKeepsObjectMoveAndFallSubpixelCarry+arz2ChopChopAnimalDoesNotWalkOnLandingTransitionFrame+arz2ChopChopAnimalCarriesXSubpixelAfterLanding+arz2ChopChopAnimalFreesSlotWhenRenderFlagClears" "-DfailIfNoTests=false" test`
+  exited 0; the five selected oracle methods passed.
+  Targeted ARZ2 command
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  fails expected-red at f643 with 3172 errors / 0 warnings.
+  Guard traces
+  `TestS2ArzLevelSelectTraceReplay`, `TestS2CnzLevelSelectTraceReplay`,
+  `TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay`,
+  `TestS2SczLevelSelectTraceReplay`, and `TestS2WfzLevelSelectTraceReplay`
+  each report 1 test run / 0 failures / 0 errors in Surefire.
+  Full S2 sweep
+  `mvn "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 19 trace classes and failed expected-red with 13 failures / 0 errors:
+  6 green traces remain green, ARZ2 advances to f643, and the other red
+  frontiers match the integration baseline.
 ## 2026-06-29 - S2 ARZ2 Obj28 negative floor-distance landing gate - ENGINE FIX (2 files, ARZ2 f593 -> f595)
 
 - Scope: continued the ARZ2 ChopChop Obj28 animal window in
