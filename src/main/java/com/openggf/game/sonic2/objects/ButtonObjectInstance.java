@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -75,9 +76,6 @@ public class ButtonObjectInstance extends AbstractObjectInstance
     // Adjusted Y position (after init offset)
     private int adjustedY;
 
-    // Standing detection via SolidObjectListener callback
-    private boolean contactStanding;
-
     // Current mapping frame (0=unpressed, 1=pressed)
     private int mappingFrame = FRAME_UNPRESSED;
 
@@ -130,12 +128,12 @@ public class ButtonObjectInstance extends AbstractObjectInstance
         // ROM: move.b #0,mapping_frame(a0) - reset to unpressed each frame
         mappingFrame = FRAME_UNPRESSED;
 
-        // Determine if any player is currently standing on this button.
-        // ROM: move.b status(a0),d0 / andi.b #standing_mask,d0 / bne.s +
-        // The onSolidContact callback sets contactStanding when contact.standing() is true.
-        // We read and clear the flag each frame in update().
-        boolean standing = contactStanding;
-        contactStanding = false;
+        // ROM Obj47_Main calls SolidObject before it reads status(a0)'s standing
+        // bits and writes ButtonVine_Trigger (s2.asm:50885-50913). The engine's
+        // automatic solid checkpoint runs after update(), so this object resolves
+        // its checkpoint manually here to make same-frame trigger consumers such
+        // as Obj65 see the ROM trigger timing.
+        boolean standing = hasStandingContact(checkpointAll());
 
         if (!standing) {
             // ROM: bclr d3,(a3) - clear the trigger bit when nobody is standing
@@ -174,16 +172,18 @@ public class ButtonObjectInstance extends AbstractObjectInstance
         return SOLID_PARAMS;
     }
 
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
     // ========================================================================================
     // SolidObjectListener
     // ========================================================================================
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (contact.standing()) {
-            contactStanding = true;
-        }
+        // Manual checkpoints drive current-frame press state from update().
     }
 
     // ========================================================================================
