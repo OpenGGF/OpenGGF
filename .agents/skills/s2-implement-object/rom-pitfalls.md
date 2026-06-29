@@ -2726,7 +2726,7 @@ negative on the immediately following frame.
 `Obj57_Main_Sub6` only consumes it after `Boss_Countdown` goes negative
 (`docs/s2disasm/s2.asm:65987-65996`).
 
-**Originating commit.** `<pending>` S2 MCZ2 Obj57 boss_hurt_sonic latch
+**Originating commit.** `9e8c0ca84` S2 MCZ2 Obj57 boss_hurt_sonic latch
 lifetime: `TestS2Mcz2LevelSelectTraceReplay` advances f9662 -> f10111.
 
 ---
