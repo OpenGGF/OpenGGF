@@ -208,6 +208,16 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
+        // Obj64_Main updates y_pos before JmpTo9_SolidObject (s2.asm:52726-52750),
+        // but the MTZ1 trace shows the continued top ride remains seated on the
+        // previous surface while loc_269FA starts retracting (s2.asm:52766-52805).
+        // Keep this to downward/retracting motion so MTZ3 side-push cleanup still
+        // observes the live post-update body position.
+        return moveMode == 1 && !extending && currentY < getPreUpdateY();
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Crush detection is handled automatically by the engine's SolidContacts collision

@@ -442,6 +442,19 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether continued-riding flat-top re-seat should use the object's
+     * pre-update Y for this frame.
+     * <p>
+     * Most objects carry riders against their current post-update Y. Concrete
+     * object ports can opt in when the ROM evidence shows the rider's Y is held
+     * on the pre-move surface for a movement transition, without changing the
+     * object's actual current position or side-contact cleanup.
+     */
+    default boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Number of newly-pressed horizontal-input frames to ignore while this
      * object is the player's current riding solid.
      * <p>
