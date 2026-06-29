@@ -689,7 +689,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
     private void wfzJumpToShipCommon() {
         AbstractPlayableSprite player = getMainPlayer();
-        boolean jumpingToShip = scriptTimer >= WFZ_JUMP_TO_SHIP_START && scriptTimer < WFZ_JUMP_TO_SHIP_END;
+        // ROM writes Ctrl_1_Logical from ObjB2_Jump_to_ship after Sonic's player
+        // step for that frame has already run (docs/s2disasm/s2.asm:79075-79089).
+        // Engine forced input persists into the next player step, so latch it one
+        // ObjB2 tick later than the ROM counter compare.
+        boolean jumpingToShip = scriptTimer > WFZ_JUMP_TO_SHIP_START && scriptTimer < WFZ_JUMP_TO_SHIP_END;
         if (jumpingToShip) {
             applyScriptInput(player, INPUT_JUMP, true);
         } else {
@@ -705,7 +709,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             spawnTornadoChild(SUBTYPE_BLINKER, 0x3090, 0x0410);
         }
 
-        boolean keepPlayerOnPlane = scriptTimer < WFZ_JUMP_TO_SHIP_START + 1;
+        boolean keepPlayerOnPlane = scriptTimer <= WFZ_JUMP_TO_SHIP_START + 1;
         if (keepPlayerOnPlane) {
             placePlayerOnWfzPlane(player);
         }
