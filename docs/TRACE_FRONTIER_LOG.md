@@ -38,6 +38,43 @@ branch-local measurements.
 | `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
 | `TestS2MtzLevelSelectTraceReplay` | f4835 `tails_x` expected `0x16D6`, actual `0x16D7`; 845 errors |
 
+## 2026-06-29 - S2 ARZ2 Obj0A surface-pop + Obj28 points ownership - ENGINE FIX (ARZ2 f669 -> f687)
+
+- Scope: branch `bugfix/ai-trace-s2-arz2-r7` in worktree
+  `.worktrees/trace-s2-arz2-r7`, branched from
+  `bugfix/ai-s2-trace-develop`. Comparison-only; no zone, route, frame, or
+  known-failing-trace carve-outs.
+- Root/fix part 1: f669 had ROM reusing slot 19 for Obj28 at
+  `0x078E,0x0538`, while the engine still held Obj0A BreathingBubble at
+  `0x06F2,0x0510`. ROM `Obj0A_ChkWater` sets routine 6/display at the surface
+  and reaches `DeleteObject` after one display tail
+  (`docs/s2disasm/s2.asm:41913-41921,41966-41980,30330-30346`), so
+  `BreathingBubbleInstance` now frees the slot on the next `ExecuteObjects`
+  pass.
+- Root/fix part 2: after slot 19 aligned, f670 exposed Obj29 points allocated
+  too early/from the wrong owner. ROM `Obj27_InitWithAnimal` only allocates
+  Obj28 and copies `objoff_3E` (`docs/s2disasm/s2.asm:46707-46715`);
+  `Obj28_InitRandom` later allocates Obj29 from the animal's own first routine
+  pass and maps copied score scratch to the points frame
+  (`docs/s2disasm/s2.asm:24596-24636`). S2 badnik config now lets
+  `AnimalObjectInstance` spawn Obj29 on its first pass while
+  `ExplosionObjectInstance` passes the score scratch through the animal spawn.
+- Frontier movement: advances from f669 / 3098 errors (`obj_extra_s13_x`
+  expected absent, actual `0x06F2`) to f687 / 2966 errors (`obj_s40_slot`
+  expected `0x40`, actual `0x3D`). The new blocker appears to be a separate
+  later ARZ allocation drift around Obj8F/Obj0A streaming at f687, not the
+  Obj0A/Obj28/Obj29 chain.
+- Verification:
+  - `mvn "-Dtest=com.openggf.level.objects.TestObjectManagerCounterBasedDynamicUnload,com.openggf.level.objects.TestDestructionEffects" test`
+    -> focused object coverage passed.
+  - `mvn "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" test`
+    -> passed.
+  - `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" test`
+    -> expected-red at f687 / 2966 errors, 0 warnings.
+  - `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" test`
+    -> command exited 0; individual surefire reports show all six guard classes
+    passed.
+
 ## 2026-06-29 - S2 ARZ2 Obj2C leaf d7 slot parity - ENGINE FIX (ARZ2 f662 -> f669)
 
 - Scope: branch `bugfix/ai-trace-s2-arz2-r6` in worktree

@@ -2332,6 +2332,36 @@ parent/child X offsets; OOZ2 advances from f1751 to f1873.
 
 ---
 
+## P57 — Badnik points Obj29 is allocated by S2 Obj28 animal init, not by Obj27 explosion
+
+**Pattern.** The S2 badnik death chain is not a single parent-owned spawn burst.
+`Obj27_InitWithAnimal` allocates Obj28, copies `x_pos`, `y_pos`, and
+`objoff_3E`, then returns through the explosion routine. Obj28's own first
+routine pass later allocates Obj29 and maps the copied `objoff_3E` scratch to
+the points frame.
+
+**Engine symptom.** The points popup appears visually correct but takes the
+wrong SST slot or appears one `ExecuteObjects` pass too early. This is easiest
+to miss when Obj28 receives a lower slot than Obj27: ROM has already passed that
+slot for the current object loop, so Obj28 cannot allocate Obj29 until the next
+frame, while a parent-owned engine spawn creates Obj29 immediately.
+
+**What to check / fix.** Trace which object routine actually owns each
+`AllocateObject` call. If parent object A allocates child B, and B's routine-0
+code allocates child C, spawn C from B's first update rather than from A's
+factory or destruction helper. Preserve the ROM scratch fields copied between
+objects so child B can perform its own allocation without hydrating trace data.
+
+**ROM citation.** `Obj27_InitWithAnimal` allocates Obj28 and copies
+`objoff_3E` (`docs/s2disasm/s2.asm:46707-46715`). `Obj28_InitRandom` allocates
+Obj29 and derives `mapping_frame` from the copied scratch value
+(`docs/s2disasm/s2.asm:24596-24636`).
+
+**Originating commit.** `fix: advance S2 ARZ2 bubble and animal slot cadence`
+(`TestS2Arz2LevelSelectTraceReplay` advances f669 -> f687).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

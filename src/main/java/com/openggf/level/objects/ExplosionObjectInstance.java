@@ -146,7 +146,7 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
         // its animation/SFX (docs/skdisasm/sonic3k.asm:42157-42180).
         if (animalFactory != null) {
             objectManager.createDynamicObject(() -> animalFactory.create(
-                    new ObjectSpawn(x, y, 0x28, 0, 0, false, 0), svc));
+                    new ObjectSpawn(x, y, 0x28, 0, 0, false, pointsValue), svc));
         }
         if (!pointsAllocatedBeforeAnimal && pointsFactory != null) {
             objectManager.createDynamicObject(() -> pointsFactory.create(

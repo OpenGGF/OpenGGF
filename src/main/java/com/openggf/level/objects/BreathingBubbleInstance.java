@@ -65,11 +65,13 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
     private static final int COUNTDOWN_NUMBER_VISIBLE_UPDATES = 91;
 
     /**
-     * Drown_ChkWater does not delete a small bubble immediately at the water
-     * surface. It changes routine to Drown_Display, bumps the animation, and
-     * AnimateSprite advances to Drown_Delete on the following display tail.
+     * Obj0A_ChkWater does not delete a small bubble immediately at the water
+     * surface. It changes routine to Obj0A_Display and lets AnimateSprite run
+     * once before the delete script frees the slot.
+     *
+     * @see docs/s2disasm/s2.asm:41913-41921,41966-41980,30330-30346
      */
-    private static final int SURFACE_POP_DISPLAY_UPDATES = 2;
+    private static final int SURFACE_POP_DISPLAY_UPDATES = 1;
 
     /** Current X position */
     private int currentX;
@@ -259,9 +261,11 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
             if (waterSystem.hasWater(zoneId, actId)) {
                 int waterY = waterSystem.getGameplayWaterLevelY(zoneId, actId);
                 if (currentY <= waterY) {
-                    // docs/s1disasm/s1disasm/_incObj/0A LZ Drowning Countdown.asm:
-                    // Drown_ChkWater sets routine 6 and falls into Drown_Display;
-                    // Drown_Delete is reached after the display animation tail.
+                    // S2 Obj0A_ChkWater sets routine 6 and falls into
+                    // Obj0A_Display; the next AnimateSprite tail reaches
+                    // DeleteObject, freeing the SST slot before later
+                    // FindFreeObj scans (docs/s2disasm/s2.asm:41913-41921,
+                    // 41966-41980,30330-30346).
                     surfacePopUpdatesRemaining = SURFACE_POP_DISPLAY_UPDATES;
                     return;
                 }

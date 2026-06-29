@@ -42,12 +42,20 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private int animFrame;
     private int mappingSetIndex;
     private int artVariant;
+    private int pointsValue;
     private State state;
     private AnimalType definition;
     private boolean firstDisplayFrame;
+    private boolean spawnedPoints;
+    private transient DestructionEffects.PointsFactory pointsFactory;
 
     public AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services) {
-        this(spawn, services, services.rng().nextBits(1));
+        this(spawn, services, null);
+    }
+
+    public AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services,
+            DestructionEffects.PointsFactory pointsFactory) {
+        this(spawn, services, services.rng().nextBits(1), pointsFactory);
     }
 
     /**
@@ -55,7 +63,8 @@ public class AnimalObjectInstance extends AbstractObjectInstance
      * to skip the {@code services.rng()} draw. The captured {@code artVariant}
      * and all other scalars are reapplied by the generic scalar pass.
      */
-    private AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services, int artVariant) {
+    private AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services, int artVariant,
+            DestructionEffects.PointsFactory pointsFactory) {
         super(spawn, "Animal");
         ObjectRenderManager renderManager = services.renderManager();
         this.renderer = renderManager != null ? renderManager.getAnimalRenderer() : null;
@@ -74,6 +83,8 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         }
 
         this.artVariant = artVariant;
+        this.pointsValue = spawn.rawYWord();
+        this.pointsFactory = pointsFactory;
         int animalIndex = artVariant == 0 ? typeA : typeB;
         this.definition = AnimalType.fromIndex(animalIndex);
         this.mappingSetIndex = definition.mappingSet().ordinal();
@@ -87,6 +98,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     public void update(int frameCounter, PlayableEntity player) {
         if (firstDisplayFrame) {
             firstDisplayFrame = false;
+            spawnPointsOnce();
             return;
         }
         switch (state) {
@@ -94,6 +106,23 @@ public class AnimalObjectInstance extends AbstractObjectInstance
             case WALK -> updateWalk();
             case FLY -> updateFly();
         }
+    }
+
+    private void spawnPointsOnce() {
+        if (spawnedPoints || pointsFactory == null || pointsValue <= 0) {
+            return;
+        }
+        spawnedPoints = true;
+        ObjectServices svc = tryServices();
+        ObjectManager objectManager = svc != null ? svc.objectManager() : null;
+        if (objectManager == null) {
+            return;
+        }
+        // S2 Obj28_InitRandom allocates Obj29 from the animal's own first
+        // routine pass, after Obj27 copied objoff_3E into Obj28
+        // (docs/s2disasm/s2.asm:46711-46715,24596-24636).
+        objectManager.createDynamicObject(() -> pointsFactory.create(
+                new ObjectSpawn(currentX, currentY, 0x29, 0, 0, false, 0), svc, pointsValue));
     }
 
     private void updateMain() {
