@@ -39,6 +39,43 @@ branch-local measurements.
   `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
   exited 0; all six current S2 green guard traces passed.
 
+## 2026-06-29 - S2 CPZ1 Obj1E release/handoff split - ENGINE FIX (CPZ1 f3723 -> f3871)
+
+- Worktree/branch: `.worktrees/trace-s2-cpz1-r5` /
+  `bugfix/ai-trace-s2-cpz1-r5`, from integration branch
+  `bugfix/ai-s2-trace-develop` at `2cda199e6`.
+- Root: CPZ Obj1E's main-path completion was using the full release path, while
+  the full release path itself was over-deferred. ROM `loc_227A6` masks `y_pos`,
+  sets mode 6, and directly clears `obj_control(a1)`, but `loc_22858` only masks
+  `y_pos`, clears this tube's mode byte, and plays the release sound; it
+  deliberately leaves `obj_control=$81` for the neighbouring Obj1E handoff
+  (`docs/s2disasm/s2.asm:48683-48688,48748-48752`). Treating `loc_22858` as a
+  full release opened a one-frame free movement/collision window at the CPZ1
+  main-path handoff, while deferring `loc_227A6` suppressed the vertical exit
+  movement/gravity step one frame too long.
+- Fix: split `CPZSpinTubeObjectInstance`'s main-path completion into a separate
+  handoff path that preserves object-control movement suppression and only clears
+  the current tube's character mode; keep the full-release path as a direct
+  object-control clear. Focused unit coverage now pins both ROM exit contracts.
+  No trace data was changed.
+- Focused CPZ command:
+  `mvn "-Dtest=TestS2CpzLevelSelectTraceReplay#replayMatchesTrace,TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  (expected-red failures only).
+- Result: CPZ1 advances from f3723 / 354 errors (`x` expected `0x24E0`,
+  actual `0x24D8`) to f3871 / 154 errors (`y_speed` expected `0x0638`, actual
+  `0x0000`; new downstream spring/collision frontier). CPZ2 holds first error
+  f2889 (`tails_x` expected `0x10E8`, actual `0x10F0`) and improves total errors
+  1271 -> 1222.
+- Focused unit command:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestCPZSpinTubeObjectInstance" test`
+  -> PASS, 4 tests.
+- Current S2 green guard command:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  -> PASS for ARZ1, CNZ1, EHZ1, MCZ1, SCZ, WFZ. MSE echoed stale CPZ failures
+  from the prior focused-red run, but the guard command exited 0 and the six
+  guard Surefire XML reports show `failures=0 errors=0`.
+- `git diff --check` -> PASS.
+
 ## 2026-06-29 - S2 integration sweep after ARZ2 Obj2C + CPZ Obj1E + MTZ1 Obj47 merges (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /

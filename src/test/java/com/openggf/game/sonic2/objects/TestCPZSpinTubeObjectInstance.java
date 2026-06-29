@@ -69,7 +69,7 @@ class TestCPZSpinTubeObjectInstance {
     }
 
     @Test
-    void releaseDefersMovementSuppressionThroughCurrentFrameAndPreservesYSubpixel() throws Exception {
+    void fullReleaseClearsObjectControlAndPreservesYSubpixel() throws Exception {
         ObjectSpawn spawn = new ObjectSpawn(0x2480, 0x0500, 0x1E, 0x02, 0, false, 0);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x24E8, (short) 0x0B30);
         player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
@@ -93,14 +93,56 @@ class TestCPZSpinTubeObjectInstance {
                 "Obj1E loc_227A6 masks y_pos with $7FF before release.");
         assertEquals(0xAA00, player.getYSubpixelRaw(),
                 "andi.w #$7FF,y_pos(a1) leaves the sibling y_sub word untouched.");
-        assertTrue(player.isObjectControlled(),
-                "Obj1E clears obj_control after the player slot has already run; engine release must defer to endOfTick.");
-        assertTrue(player.isObjectControlSuppressesMovement(),
-                "The release-side frame must still skip normal movement/gravity.");
+        assertFalse(player.isObjectControlled(),
+                "Obj1E loc_227A6 directly clears obj_control(a1).");
+        assertFalse(player.isObjectControlSuppressesMovement(),
+                "The loc_227A6 full-release path must allow the next player movement step to consume exit velocity.");
 
         player.endOfTick();
 
-        assertFalse(player.isObjectControlled(), "deferred release lands at endOfTick");
-        assertFalse(player.isObjectControlSuppressesMovement(), "movement suppression clears with deferred release");
+        assertFalse(player.isObjectControlled());
+        assertFalse(player.isObjectControlSuppressesMovement());
+    }
+
+    @Test
+    void mainPathCompletionKeepsObjectControlForNeighborTubeHandoff() throws Exception {
+        ObjectSpawn spawn = new ObjectSpawn(0x2480, 0x0500, 0x1E, 0x02, 0, false, 0);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x24E8, (short) 0x0B30);
+        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setSubpixelRaw(0x4000, 0xAA00);
+        player.setObjectControlled(true);
+        player.setObjectControlSuppressesMovement(true);
+
+        CPZSpinTubeObjectInstance tube = new CPZSpinTubeObjectInstance(spawn, "CPZSpinTube");
+        tube.setServices(new TestObjectServices());
+        var characterStateConstructor = Class.forName(CPZSpinTubeObjectInstance.class.getName() + "$CharacterState")
+                .getDeclaredConstructor();
+        characterStateConstructor.setAccessible(true);
+        Object characterState = characterStateConstructor.newInstance();
+        var stateField = characterState.getClass().getDeclaredField("state");
+        stateField.setAccessible(true);
+        stateField.setInt(characterState, 4);
+        var completeMainPathHandoff = CPZSpinTubeObjectInstance.class.getDeclaredMethod(
+                "completeMainPathHandoff", AbstractPlayableSprite.class, characterState.getClass());
+        completeMainPathHandoff.setAccessible(true);
+
+        completeMainPathHandoff.invoke(tube, player, characterState);
+
+        assertEquals(0x0330, player.getCentreY(),
+                "Obj1E loc_22858 masks y_pos with $7FF at main-path completion.");
+        assertEquals(0xAA00, player.getYSubpixelRaw(),
+                "andi.w #$7FF,y_pos(a1) leaves the sibling y_sub word untouched.");
+        assertEquals(0, stateField.getInt(characterState),
+                "Obj1E loc_22858 clears this tube's character mode byte.");
+        assertTrue(player.isObjectControlled(),
+                "Obj1E loc_22858 does not clear obj_control(a1); neighboring Obj1E owns the next handoff.");
+        assertTrue(player.isObjectControlSuppressesMovement(),
+                "Leaving obj_control=$81 must keep normal movement/gravity suppressed through the handoff.");
+
+        player.endOfTick();
+
+        assertTrue(player.isObjectControlled(),
+                "Unlike loc_227A6, loc_22858 does not schedule a deferred object-control release.");
+        assertTrue(player.isObjectControlSuppressesMovement());
     }
 }
