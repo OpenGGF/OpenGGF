@@ -6,6 +6,48 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 HTZ2 DropOnFloor ride-wall deferred speed frontier move (f3317 -> f3322)
+
+- Worktree/branch: `.worktrees/trace-s2-htz2-r12` /
+  `bugfix/ai-trace-s2-htz2-r12`, forked from reverted integration commit
+  `4133b286b`.
+- Review/revert context: the first HTZ2 f3317 -> f3322 candidate
+  (`9c3b932f`) used a broad S2 predicate for any already-pushing object rider
+  at a flush wall. It was merged then reverted in integration as `4133b286b`
+  because the full S2 sweep regressed expected-red totals: CNZ2 749 -> 804 and
+  OOZ1 1256 -> 1336, while MTZ3 changed 3742 -> 3717.
+- Revised evidence/fix: HTZ2 f3317 has CPU Tails riding Obj30 Rising Lava
+  while `Status_Push` is set and `CalcRoomInFront` is exactly flush. Obj30
+  routes its `SolidObject_Always` / `SlopedSolid` helper through `DropOnFloor`
+  (`docs/s2disasm/s2.asm:49560-49604,49674-49676`). The revised
+  `CollisionSystem` predicate now stages the post-`ObjectMove` velocity
+  correction only when the live ridden solid provider opts into
+  `dropOnFloor()`, under the existing S2 repeated object-ride response flag.
+  This keeps the rule tied to ROM helper state rather than zone, route, frame,
+  test name, or any generic object-rider push.
+- Focused target/sentinel verification:
+  `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: HTZ2 advances to f3322 / 1060 errors (`tails_x_sub` expected
+  `0x7500`, actual `0x8D00`); HTZ1 remains unchanged at f6586 / 226 errors.
+- Regression checks requested by review:
+  `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result on the worker branch: CNZ2 held f5213 / 749 errors (`y_speed`
+  expected `0x0000`, actual `0x0400`); OOZ1 held its then-current f1784 /
+  1256 baseline before the OOZ1 Obj36 fix was integrated.
+- S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: command exited 0; selected guard XMLs show `failures="0"`.
+- Full S2 sweep on the worker branch:
+  `mvn "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: 19 trace classes ran; 7 green / 12 expected-red. Red summary:
+  ARZ2 f870 / 2794; CNZ2 f5213 / 749; CPZ1 f4225 / 264; CPZ2 f2889 / 1238;
+  HTZ1 f6586 / 226; HTZ2 f3322 / 1060; MCZ2 f8606 / 317; MTZ1 f5647 / 616;
+  MTZ2 f1857 / 3209; MTZ3 f2048 / 3742; OOZ1 f1784 / 1256; OOZ2 f2623 / 946.
+- New HTZ2 frontier: f3322 sidekick ride/CPU steering state, with
+  `tails_cpu_ctrl2_held` expected `0x0004`, actual `0x0008`,
+  `tails_status_byte` expected `0x0029`, actual `0x0008`, and matching
+  integer `tails_x` at `0x170A`.
+
 ## 2026-06-29 - S2 OOZ1 Obj36 sidekick push-grace window (f1784 -> f1790)
 
 - Worktree/branch: `.worktrees/trace-s2-ooz-r10` /
@@ -70,8 +112,8 @@ branch-local measurements.
   errors regressed 1256 -> 1336. MTZ3 stayed at f2048 and improved total
   errors 3742 -> 3717, but the cross-trace blast radius confirmed the shared
   `CollisionSystem` flush-wall predicate was too broad to accept.
-- Current accepted integration state keeps HTZ2 at f3317 / 1058 until a revised
-  ROM-state predicate advances HTZ2 without worsening CNZ2 or OOZ1.
+- Superseded by the revised `DropOnFloor`-scoped predicate above, which keeps
+  the affected red trace totals stable.
 
 ## 2026-06-29 - S2 full-sweep routing baseline after CNZ2/MTZ2 integration
 
@@ -87,7 +129,7 @@ branch-local measurements.
   `CPZ1` f4225 / 264 (`tails_x_speed` expected `0x0024`, actual `0x0018`);
   `CPZ2` f2889 / 1238 (`tails_x` expected `0x10E8`, actual `0x10F0`);
   `HTZ1` f6586 / 226 (`y_speed` expected `-0178`, actual `-0078`);
-  `HTZ2` f3317 / 1058 (`tails_x_speed` expected `0x00E8`, actual `-0018`);
+  `HTZ2` f3322 / 1060 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
   `MCZ2` f8606 / 317 (`y_speed` expected `-03E0`, actual `-0400`) after
   integrating the MCZ2 Obj80 fix above;
   `MTZ1` f5647 / 616 (`tails_y_sub` expected `0x6500`, actual `0x3D00`);
@@ -95,9 +137,11 @@ branch-local measurements.
   `MTZ3` f2048 / 3742 (`tails_x` expected `0x07CA`, actual `0x07BE`);
   `OOZ1` f1790 / 1125 (`tails_x_speed` expected `0x0080`, actual `-008C`);
   `OOZ2` f2623 / 946 (`tails_x` expected `0x04A1`, actual `0x049D`).
-- Routing decisions from this sweep: CPZ and HTZ2 were delegated to isolated
-  workers; OOZ1 advanced through the Obj36 fix above after the revised worker
-  avoided the earlier OOZ2 regression; MCZ2 advanced through the Obj80 fix above.
+- Routing decisions from this sweep: CPZ remains with a revision worker because
+  its first candidate regressed CPZ2 total errors; HTZ2 advanced through the
+  revised `DropOnFloor`-scoped fix above; OOZ1 advanced through the Obj36 fix
+  above after the revised worker avoided the earlier OOZ2 regression; MCZ2
+  advanced through the Obj80 fix above.
 
 ## 2026-06-29 - S2 HTZ1 Obj84 flying-sidekick regression repair (256 -> 226 errors)
 
