@@ -6,6 +6,47 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 integration sweep after ARZ2 leaf lifetime merge (7 green, 12 expected-red)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop` after local commit `c9ddcab0d` and merge of
+  `bugfix/ai-trace-s2-arz2-r10` (`a53ecb860`).
+- Accepted changes in this round: CNZ2 Obj86 raw-P2 launch gate and ARZ2 Obj2C
+  leaf render-flag lifetime. No CPZ r8 candidate was accepted because its
+  CPZ2 movement also regressed CPZ1.
+- Focused ARZ2 verification:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ObjectOccupancyOracle,TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: focused oracle coverage passed; ARZ2 advanced to f741 / 2852 errors
+  (`obj_extra_s16_x` expected absent, actual `0x081C`).
+- Green guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+  Result: passed, no current S2 green trace regressed.
+- Full sweep command:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+- Result: all 19 concrete S2 trace classes ran: 7 green, 12 expected-red. No
+  current S2 green trace regressed. ARZ2 and CNZ2 advanced; other first-error
+  frontiers held.
+- Green traces: `TestS2ArzLevelSelectTraceReplay`,
+  `TestS2CnzLevelSelectTraceReplay`, `TestS2DezEndingLevelSelectTraceReplay`,
+  `TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay`,
+  `TestS2SczLevelSelectTraceReplay`, `TestS2WfzLevelSelectTraceReplay`.
+- Current red frontiers:
+
+| Trace | First error |
+|---|---|
+| `TestS2Arz2LevelSelectTraceReplay` | f741 `obj_extra_s16_x` expected absent, actual `0x081C`; 2852 errors |
+| `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
+| `TestS2Ooz2LevelSelectTraceReplay` | f2484 `g_speed` expected `0x0040`, actual `0x0000`; 1176 errors |
+| `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
+| `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
+| `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1222 errors |
+| `TestS2Htz2LevelSelectTraceReplay` | f3317 `tails_x_speed` expected `0x00E8`, actual `-0018`; 1058 errors |
+| `TestS2CpzLevelSelectTraceReplay` | f4194 `y` expected `0x032C`, actual `0x032D`; 356 errors |
+| `TestS2Mcz2LevelSelectTraceReplay` | f6429 `tails_y` expected `0x0647`, actual `0x0648`; 425 errors |
+| `TestS2Cnz2LevelSelectTraceReplay` | f4730 `tails_y` expected `0x0368`, actual `0x0386`; 994 errors |
+| `TestS2HtzLevelSelectTraceReplay` | f6467 `tails_cpu_respawn_counter` expected `0x003F`, actual `0x0000`; 234 errors |
+| `TestS2MtzLevelSelectTraceReplay` | f5647 `tails_y_sub` expected `0x6500`, actual `0x3D00`; 616 errors |
+
 ## 2026-06-29 - S2 integration sweep after CNZ2 Obj86 raw-P2 launch gate (7 green, 12 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
@@ -191,7 +232,7 @@ branch-local measurements.
 
 | Trace | First error |
 |---|---|
-| `TestS2Arz2LevelSelectTraceReplay` | f723 `obj_s11_slot` expected `0x11`, actual `0x16`; 2924 errors |
+| `TestS2Arz2LevelSelectTraceReplay` | f741 `obj_extra_s16_x` expected absent, actual `0x081C`; 2852 errors |
 | `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
 | `TestS2Ooz2LevelSelectTraceReplay` | f2484 `g_speed` expected `0x0040`, actual `0x0000`; 1176 errors |
 | `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
@@ -204,6 +245,39 @@ branch-local measurements.
 | `TestS2DezEndingLevelSelectTraceReplay` | f7503 `y_speed` expected `-0450`, actual `-03C8`; 11 errors |
 | `TestS2HtzLevelSelectTraceReplay` | f6467 `tails_cpu_respawn_counter` expected `0x003F`, actual `0x0000`; 234 errors |
 | `TestS2MtzLevelSelectTraceReplay` | f5647 `tails_y_sub` expected `0x6500`, actual `0x3D00`; 616 errors |
+
+## 2026-06-29 - S2 ARZ2 Obj2C leaf render-flag lifetime - ENGINE FIX (ARZ2 f723 -> f741)
+
+- Worktree/branch: `.worktrees/trace-s2-arz2-r10` /
+  `bugfix/ai-trace-s2-arz2-r10`.
+- Root/fix: ARZ2 f723 expected the next Obj0A mouth bubble in ROM slot `0x11`,
+  but the engine still held older Obj2C leaf children in low dynamic slots long
+  enough to push that bubble to slot `0x16`. ROM `Obj2C_CreateLeaves` initializes
+  leaf children with `width_pixels(a1)=8`, and `Obj2C_Leaf` deletes when
+  `render_flags.on_screen` is clear before `DisplaySprite`
+  (`docs/s2disasm/s2.asm:52166,52232-52237`). The engine was using a broad
+  `isOnScreen(64)` margin, so leaf particles survived longer than the ROM
+  render-flag lifetime. `LeafParticleObjectInstance` now uses Render_Sprites
+  bounds with half-width 8 for this delete gate.
+- Focused guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ObjectOccupancyOracle#arz2DynamicSlotOccupancyMatchesThroughArrowShooterStream+arz2ArrowProjectileAllocatesInRomSlot65OnRomFrame696+arz2LeafParticlesDoNotDisplaceMouthBubbleSlotOnRomFrame723" test`
+  passed the three selected oracle methods. MSE also echoed the stale
+  expected-red ARZ2 replay report from the previous Surefire output.
+- Targeted ARZ2 replay:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.context.diagnosticChars=full" test`
+  remains expected-red but advances from f723 / 2924 errors to f741 / 2852
+  errors.
+- User-pasted ARZ2 + green bundle:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`
+  ran all 7 classes: 6 passed, with the only failure being expected-red ARZ2
+  at f741 / 2852 errors.
+- Current-green no-regression guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`
+  exited 0. MSE echoed the cached ARZ2 expected-red report from the prior run,
+  but Surefire selected only the six current-green classes.
+- New frontier: f741 `obj_extra_s16_x` expected absent, actual `0x081C`;
+  context shows slot `0x11` now contains the ROM Obj0A at `07EB,052F`, while a
+  separate extra Obj0A in slot `0x16` remains (`081C,0541`).
 
 ## 2026-06-29 - S2 integration sweep after MCZ2 Obj6A/ObjA3 merge (6 green, 13 expected-red)
 

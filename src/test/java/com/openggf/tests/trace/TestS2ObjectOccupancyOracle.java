@@ -419,6 +419,35 @@ public class TestS2ObjectOccupancyOracle {
                         + "(docs/s2disasm/s2.asm:51590-51607); actual slots " + slotCheck.summary());
     }
 
+    @Test
+    public void arz2LeafParticlesDoNotDisplaceMouthBubbleSlotOnRomFrame723() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 723) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x0A, expected.get(17),
+                            "ARZ2 ROM fixture should allocate the f723 mouth bubble into slot 0x11 "
+                                    + "after Obj2C leaves have observed render_flags.on_screen and deleted");
+                    ObjectOccupancyOracle.Divergence divergence =
+                            ObjectOccupancyOracle.firstDivergence(trace, om, frame, FIRST_DYNAMIC_SLOT);
+                    Assertions.assertNull(divergence,
+                            "ARZ2 dynamic slots should still match at f723 after Obj2C_Leaf deletes "
+                                    + "through render_flags.on_screen "
+                                    + "(docs/s2disasm/s2.asm:52232-52237); expected "
+                                    + describeSlots(expected, 16, 22) + " actual "
+                                    + describeSlots(actual, 16, 22));
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 22));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x0A, slotCheck.idAt(17),
+                "Obj0A mouth bubble should take the ROM slot 0x11 once off-screen Obj2C leaves "
+                        + "delete through the render-flag path; actual slots " + slotCheck.summary());
+    }
+
     private record SlotWindowCheck(Map<Integer, Integer> slots, String summary) {
         int idAt(int slot) {
             return slots.getOrDefault(slot, -1);
