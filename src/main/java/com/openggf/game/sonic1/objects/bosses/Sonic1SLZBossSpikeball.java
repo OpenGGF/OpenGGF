@@ -447,19 +447,37 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
     private void updateFlying() {
         boolean hitBoss = false;
 
-        // Check collision with boss
-        if (boss != null && !boss.isDestroyed() && !boss.getState().defeated) {
+        // Check collision with boss.
+        // ROM BossSpikeball_HitBoss (loc_18EAA/loc_18EC0) scans for id_BossStarLight
+        // and tests the ball/boss hitbox overlap WITHOUT ever checking the boss's
+        // defeated flag (obStatus bit 7) or its obColType. A ball flying into the
+        // boss therefore still explodes on contact even AFTER the boss is defeated
+        // (the boss main object persists at its position through the Explode/Recover
+        // phases until it escapes). Gating the overlap on !defeated made a ball that
+        // the player launched just after the final hit sail straight past the
+        // defeated boss, arc back down, and spuriously hurt the standing player
+        // (SLZ3 f12712: engine ball slot 41 descended onto the player; ROM's
+        // equivalent exploded against the defeated boss instead, ~f12646).
+        // (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:665-734)
+        if (boss != null && !boss.isDestroyed()) {
             if (checkBossCollision()) {
                 // ROM: addq.b #2,obRoutine(a0) — advance to EXPLODING
                 // ROM: clr.w obSubtype(a0) — no fragments on boss hit
+                boolean bossWasDefeated = boss.getState().defeated;
                 subtypeCounter = 0;
                 hitBoss = true;
 
-                // ROM: clr.b obColType(a1) / subq.b #1,obColProp(a1)
+                // ROM loc_18EC0: clr.b obColType(a1) / subq.b #1,obBossHits(a1).
+                // When the boss is already defeated, processHit is a no-op (it early
+                // returns on state.defeated), matching ROM's subq that simply runs
+                // obBossHits negative without re-defeating (bne loc_18F38).
                 boss.onSpikeballHit();
 
-                // ROM: if boss defeated, clear ball velocity
-                if (boss.getState().defeated) {
+                // ROM clears the ball velocity only on the hit that DEFEATS the boss
+                // (the `else` branch: bset #7 / clr obVelX / clr obVelY). A hit on an
+                // already-defeated boss leaves the ball's velocity for its final
+                // pre-explosion physics step (loc_18F38).
+                if (!bossWasDefeated && boss.getState().defeated) {
                     xVel = 0;
                     yVel = 0;
                 }
