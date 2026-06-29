@@ -481,10 +481,27 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             }
         }
 
-        // Check if all prizes spawned AND all collected/expired
-        // (eject when prizesToSpawn == 0 AND activePrizeCount == 0)
-        if (prizesToSpawn <= 0 && activePrizeCount[0] <= 0) {
-            ejectPlayer(player);
+        releaseIfAllPrizesSettled(player);
+    }
+
+    void onPrizeCounterChanged(AbstractPlayableSprite contextPlayer) {
+        releaseIfAllPrizesSettled(contextPlayer);
+    }
+
+    private void releaseIfAllPrizesSettled(AbstractPlayableSprite contextPlayer) {
+        // ObjDC/ObjD3 decrement ObjD6's objoff_2C through a shared pointer.
+        // If a child runs earlier than the cage slot, the release path must see
+        // that decrement in the same frame rather than waiting for ObjD6's next
+        // scheduled update.
+        if (playerState != STATE_SPAWNING_PRIZES
+                || prizesToSpawn > 0
+                || activePrizeCount[0] > 0
+                || !playerOccupied) {
+            return;
+        }
+        AbstractPlayableSprite activePlayer = capturedPlayerFor(contextPlayer);
+        if (activePlayer != null) {
+            ejectPlayer(activePlayer);
         }
     }
 
@@ -670,13 +687,13 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             // Bombs
             spawnFreeChild(() -> new BombPrizeObjectInstance(
                     startX, startY, spawn.x(), spawn.y(),
-                    displayDelay, activePrizeCount));
+                    displayDelay, activePrizeCount, this));
             prizeAngle += BOMB_ANGLE_INCREMENT;
         } else {
             // Rings
             spawnFreeChild(() -> new RingPrizeObjectInstance(
                     startX, startY, spawn.x(), spawn.y(),
-                    displayDelay, activePrizeCount));
+                    displayDelay, activePrizeCount, this));
             prizeAngle += RING_ANGLE_INCREMENT;
         }
 

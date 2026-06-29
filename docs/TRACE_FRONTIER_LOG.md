@@ -6,6 +6,43 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 CNZ2 linked Point Pokey shared-prize counter release (f5242 -> f5298)
+
+- Worktree/branch: `.worktrees/trace-s2-cnz2-r14` /
+  `bugfix/ai-trace-s2-cnz2-r14`, based on integration head
+  `e3af6ccf5` including the OOZ2 commit.
+- Baseline reproduction before the fix:
+  `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: CNZ2 f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`).
+- Triage/evidence: at f5242 ROM has Sonic still centered in ObjD6 with
+  `obj_control` active, but `y_vel=$400` has already been written by
+  `loc_2BE2E`. Engine state matched position/subpixels and showed ObjD6 in
+  linked prize state with `prizes=0`, `active=0`, and `occupied=1`, so the
+  remaining mismatch was the same-frame visibility of the shared active-prize
+  counter. ROM ObjDC decrements the parent counter through `objoff_2A(a0)` as
+  part of its collect transition before ObjD6's release path checks
+  `objoff_2C`; ObjD3 uses the same parent counter for bomb prizes. The fix
+  models that shared parent RAM by notifying Point Pokey when a prize child
+  decrements the counter to zero. No trace data hydration, tolerance, route,
+  frame, or zone carve-out is used.
+- Disassembly cited: ObjDC prize collect/counter decrement at
+  `docs/s2disasm/s2.asm:25470-25494`; ObjD6 linked prize and `loc_2BE2E`
+  release at `docs/s2disasm/s2.asm:59151-59188,59215-59224`.
+- Focused checks:
+  `mvn "-Dtest=TestPointPokeyObjectInstance,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault" "-DfailIfNoTests=false" test`.
+  Result: passed 15/15.
+- Focused trace:
+  `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: CNZ2 advances to f5298 / 920 (`x_speed` expected `-09CE`, actual
+  `-08E8`).
+- Preservation checks, each run in a fresh Maven invocation with clean Surefire
+  reports: ARZ1, CNZ1, DEZ ending, EHZ1, HTZ1, MCZ1, SCZ, and WFZ all pass.
+  OOZ2 holds f3830 / 691; OOZ1 holds f1790 / 614; HTZ2 holds f3322 / 1057;
+  MTZ1 holds f5713 / 560; CPZ1 holds f4351 / 181; CPZ2 holds f2976 / 1232.
+- `TestRewindCoverageGuard` was also tried and still fails on unrelated,
+  pre-existing S3K LBZ gap keys; it reported no new PointPokey, RingPrize, or
+  BombPrize coverage keys from this change.
+
 ## 2026-06-29 - S2 accepted routing baseline after CPZ1, OOZ2, and HTZ1 integrations
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
@@ -72,7 +109,7 @@ branch-local measurements.
     and the S2 green guard including HTZ1.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
-  `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
+  `CNZ2` f5298 / 920 (`x_speed` expected `-09CE`, actual `-08E8`);
   `CPZ1` f4351 / 181 (`tails_x` expected `0x20D4`, actual `0x20D3`);
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
