@@ -698,6 +698,28 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void verticalFlipperRollOwnershipClearsStaleObj85PreservedRollLatch() {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        tails.setAir(false);
+        tails.preserveRollingOnNextRollStop();
+        FlipperObjectInstance flipper = new FlipperObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x86, 0x00, 0, false, 0),
+                "Flipper");
+        flipper.setServices(new QueryOnlyPlayerServices(main, List.of(tails))
+                .withCheckpointBatch(new SolidCheckpointBatch(
+                        flipper,
+                        Map.of(tails, standingContact()))));
+
+        flipper.update(0, main);
+
+        assertTrue(tails.getRolling(), "Obj86 first stand curls the player");
+        assertTrue(tails.getPinballMode(), "Obj86 owns a temporary pinball-mode guard while standing");
+        assertFalse(tails.shouldPreserveRollingOnNextRollStop(),
+                "Obj86's explicit roll ownership must clear stale Obj85 preserved-roll handoff state");
+    }
+
+    @Test
     void springboardLaunchesQueryOnlySidekick() {
         TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);

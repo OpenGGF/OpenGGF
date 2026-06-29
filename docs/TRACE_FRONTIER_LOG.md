@@ -6,6 +6,31 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 CNZ2 Obj86 clears stale Obj85 preserved-roll latch (f4894 -> f5213)
+
+- Worktree/branch: `.worktrees/trace-s2-cnz2-r10` /
+  `bugfix/ai-trace-s2-cnz2-r10`, forked from
+  `bugfix/ai-s2-trace-develop`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: f4894 / 766 errors (`tails_y` expected `0x0670`,
+  actual `0x0671`; `tails_rolling` expected `0`, actual `1`).
+- Evidence/fix: the engine f4894 diagnostic showed Tails no longer had
+  Obj84/Obj86 pinball mode (`pin=false`) but still carried the Obj85
+  preserved-roll handoff (`prs=true`). ROM records `tails mode rolling 1->0`
+  on that frame, so the old Obj85 handoff cannot still own the zero-speed
+  roll-stop after Obj86 explicitly curls the player. Obj86 now clears the
+  object-preserved roll handoff when its vertical or horizontal flipper path
+  takes roll/pinball ownership (`docs/s2disasm/s2.asm:40072-40081,
+  58040-58044,58323-58325`).
+- Target frontier check:
+  `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: advanced to f5213 / 749 errors (`y_speed` expected `0x0000`,
+  actual `0x0400`).
+- New frontier: f5213 main-player `y_speed` expected `0x0000`, actual
+  `0x0400` with `y` still matching `0x0368`. Continue from the slot-prize /
+  bumper field around Sonic, not from the stale Tails roll latch.
+
 ## 2026-06-29 - S2 CNZ2 Obj84/Obj86 sidekick pinball-spindash advancement (f4892 -> f4894)
 
 - Worktree/branch: `.worktrees/trace-s2-cnz2-r9` /

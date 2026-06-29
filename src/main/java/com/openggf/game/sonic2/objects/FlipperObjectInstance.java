@@ -182,6 +182,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
                     applySkippedRideObjectRollClear(player, result);
                     // First frame standing: enter rolling state (loc_2B20A)
                     // We use pinball_mode to prevent rolling from being cleared
+                    player.clearObjectPreservedRollingHandoff();
                     player.setPinballMode(true);
                     // ROM: bset #status.player.rolling / bne.s loc_2B238 / addq.w #5,y_pos
                     // (s2.asm:58323-58325): on the first stand frame the flipper
@@ -382,6 +383,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
         // ROM: move.w #$F,move_lock(a1) - lock player input for 15 frames
         player.setMoveLockTimer(15);
+        player.clearObjectPreservedRollingHandoff();
         // ROM: bset #status.player.rolling / bne.s loc_2B3BC / addq.w #5,y_pos
         // Only adjust Y if not already rolling
         if (!player.getRolling()) {
