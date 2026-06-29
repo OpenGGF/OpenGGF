@@ -430,6 +430,8 @@ final class ObjectSolidContactController {
     // side-push here and record how many were resolved so the main multi-piece pass
     // skips re-pushing them. -1 means "no earlier-piece pre-resolution this frame".
     private int multiPieceEarlierPiecesResolvedUpTo = -1;
+    private ObjectInstance multiPieceEarlierPiecesInstance;
+    private boolean multiPieceEarlierPiecesPushing;
 
     private final Map<PlayableEntity, PlayerStandingState> latestStandingSnapshots =
             new IdentityHashMap<>(2);
@@ -1084,6 +1086,8 @@ final class ObjectSolidContactController {
         // tracking; set only when resolveEarlierMultiPieceSiblings runs below and
         // consumed by the multi-piece pass for this same instance.
         multiPieceEarlierPiecesResolvedUpTo = -1;
+        multiPieceEarlierPiecesInstance = null;
+        multiPieceEarlierPiecesPushing = false;
 
         RidingState state = ridingStates.get(player);
         ObjectInstance ridingObject = state != null ? state.object : null;
@@ -1249,9 +1253,10 @@ final class ObjectSolidContactController {
                     && provider.isSolidFor(player)
                     && !blocksSolidContacts(player, instance)
                     && !instance.isSkipSolidContactThisFrame()) {
-                resolveEarlierMultiPieceSiblings(
+                multiPieceEarlierPiecesPushing = resolveEarlierMultiPieceSiblings(
                         player, earlyMulti, instance, ridingPieceIndex,
                         frameCounter, solidProfile.stickyContactBuffer());
+                multiPieceEarlierPiecesInstance = instance;
                 multiPieceEarlierPiecesResolvedUpTo = ridingPieceIndex;
             }
             SolidContact ridingContact = processInlineRidingObject(
@@ -1289,7 +1294,8 @@ final class ObjectSolidContactController {
         if (provider instanceof MultiPieceSolidProvider multiPiece) {
             MultiPieceContactResult result = processMultiPieceCollision(
                     player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer());
-            if (result.pushing()) {
+            if (result.pushing()
+                    || (instance == multiPieceEarlierPiecesInstance && multiPieceEarlierPiecesPushing)) {
                 player.setPushing(true);
                 setObjectPushingBit(player, instance);
                 provider.setPlayerPushing(player, true);
@@ -2020,6 +2026,9 @@ final class ObjectSolidContactController {
         // beginInlineFrame note. ROM a0.d6 persists across frames.
         objectStandingBitSnapshot.clear();
         standingBitEstablishedThisFrame.clear();
+        multiPieceEarlierPiecesResolvedUpTo = -1;
+        multiPieceEarlierPiecesInstance = null;
+        multiPieceEarlierPiecesPushing = false;
         if (player == null || objectManager == null || player.getDead()) {
             if (player != null) ridingStates.remove(player);
             return;
@@ -2089,6 +2098,20 @@ final class ObjectSolidContactController {
                     currentX = ridingObject.getX();
                     currentY = ridingObject.getY();
                     params = provider.getSolidParams();
+                }
+
+                if (ridingPieceIndex > 0
+                        && ridingObject instanceof MultiPieceSolidProvider earlyMulti
+                        && earlyMulti.resolvesEarlierPiecesBeforeRidingPiece()
+                        && !player.getAir()
+                        && provider.isSolidFor(player)
+                        && !blocksSolidContacts(player, ridingObject)
+                        && !ridingObject.isSkipSolidContactThisFrame()) {
+                    multiPieceEarlierPiecesPushing = resolveEarlierMultiPieceSiblings(
+                            player, earlyMulti, ridingObject, ridingPieceIndex,
+                            frameCounter, solidProfile.stickyContactBuffer());
+                    multiPieceEarlierPiecesInstance = ridingObject;
+                    multiPieceEarlierPiecesResolvedUpTo = ridingPieceIndex;
                 }
 
                 int halfWidth = params.halfWidth();
@@ -2251,7 +2274,9 @@ final class ObjectSolidContactController {
             if (provider instanceof MultiPieceSolidProvider multiPiece) {
                 MultiPieceContactResult result = processMultiPieceCollision(
                         player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer());
-                if (result.pushing()) {
+                boolean earlierSlotPushing =
+                        instance == multiPieceEarlierPiecesInstance && multiPieceEarlierPiecesPushing;
+                if (result.pushing() || earlierSlotPushing) {
                     player.setPushing(true);
                     // ROM: s2.asm:35220-35226 — also set pushing bit on the object
                     setObjectPushingBit(player, instance);
@@ -2392,9 +2417,10 @@ final class ObjectSolidContactController {
      * side-push matters here — the ridden piece's own riding/Y handling runs
      * afterward — so pieces that would register STANDING are left to the main pass.
      */
-    private void resolveEarlierMultiPieceSiblings(PlayableEntity player,
+    private boolean resolveEarlierMultiPieceSiblings(PlayableEntity player,
             MultiPieceSolidProvider multiPiece, ObjectInstance instance, int ridingPieceIndex,
             int frameCounter, boolean useStickyBuffer) {
+        boolean anyPushing = false;
         SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
         for (int i = 0; i < ridingPieceIndex && i < multiPiece.getPieceCount(); i++) {
             SolidObjectParams params = multiPiece.getPieceParams(i);
@@ -2417,9 +2443,13 @@ final class ObjectSolidContactController {
                         solidProfile, useStickyBuffer, instance, i, true);
             }
             if (contact != null) {
+                if (contact.pushing()) {
+                    anyPushing = true;
+                }
                 multiPiece.onPieceContact(i, player, contact, frameCounter);
             }
         }
+        return anyPushing;
     }
 
     private MultiPieceContactResult processMultiPieceCollision(PlayableEntity player,
@@ -2484,7 +2514,7 @@ final class ObjectSolidContactController {
             // (resolveEarlierMultiPieceSiblings set multiPieceEarlierPiecesResolvedUpTo
             // for this instance+player), skip them here so a single ROM SolidObject
             // side-push per slot is not applied twice in one frame.
-            if (i < multiPieceEarlierPiecesResolvedUpTo) {
+            if (instance == multiPieceEarlierPiecesInstance && i < multiPieceEarlierPiecesResolvedUpTo) {
                 continue;
             }
             if (multiPiece.usesPieceScopedStandingBits()

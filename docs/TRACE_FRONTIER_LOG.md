@@ -33,6 +33,39 @@ branch-local measurements.
   Obj84 flying-sidekick error-count regression is repaired. CNZ2 remains a
   f4894 post-release/landing vertical-position frontier.
 
+## 2026-06-29 - S2 MTZ2 Obj70 earlier-slot push frontier move (f1297 -> f1857)
+
+- Worktree/branch: `.worktrees/trace-s2-mtz2-r10` /
+  `bugfix/ai-trace-s2-mtz2-r10`, branched from
+  `bugfix/ai-s2-trace-develop`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: f1297 / 3324 errors (`tails_x_speed` expected
+  `0x000B`, actual `0x0000`).
+- Evidence/fix: Obj70 allocates each cog tooth as an SST slot and runs
+  `SolidObject` in slot order. An earlier tooth can set the player/object push
+  bit before the ridden tooth's standing-bit `ExitPlatform` path re-seats the
+  rider (`docs/s2disasm/s2.asm:55039-55141,35196-35214`). The engine's folded
+  multi-piece pre-pass already applied that earlier-slot side contact, but the
+  aggregate pass skipped those pieces and could immediately clear the object
+  pushing bit. `ObjectSolidContactController` now carries the pre-pass push
+  result into the folded aggregate handling for both normal and inline solid
+  sweeps.
+- Focused object coverage:
+  `mvn "-Dtest=TestSolidObjectManager#earlierSlotMultiPiecePushSurvivesRiddenPieceShortcut" "-DfailIfNoTests=false" test`.
+  Result: selected unit test passed.
+- Focused target trace after the fix:
+  `mvn "-Dtest=TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: advanced to f1857 / 3209 errors (`g_speed` expected `0x0381`,
+  actual `0x02CB`).
+- Green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: command exited 0; the selected S2 guard report XMLs all show
+  `failures="0"`.
+- Rewind coverage: not run; this change adds only transient controller state
+  and does not touch rewind-captured object fields.
+- New MTZ2 frontier: f1857 `g_speed` expected `0x0381`, actual `0x02CB`.
+
 ## 2026-06-29 - S2 CNZ2 Obj84/Obj86 sidekick pinball-spindash advancement (f4892 -> f4894)
 
 - Worktree/branch: `.worktrees/trace-s2-cnz2-r9` /
