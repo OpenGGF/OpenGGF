@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
@@ -273,14 +274,26 @@ public class NutObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite sidekickPlayer = resolveSidekick();
 
         if (mainPlayer != null) {
-            processPlayerAction(p1, mainPlayer, standingP1);
+            processPlayerAction(p1, mainPlayer, isStandingOnThis(mainPlayer, standingP1));
         }
         // Only run the sidekick pass when the routine is still MAIN. (The first
         // pass can advance routine to FALLING; the ROM would still fall through
         // to loc_278F4, but the second Obj69_Action selector reads objoff_3C and
         // would no-op on a falling nut since the sidekick's standing bit clears.)
         if (sidekickPlayer != null && routine == ROUTINE_MAIN) {
-            processPlayerAction(p2, sidekickPlayer, standingP2);
+            processPlayerAction(p2, sidekickPlayer, isStandingOnThis(sidekickPlayer, standingP2));
+        }
+    }
+
+    private boolean isStandingOnThis(AbstractPlayableSprite player, boolean callbackStanding) {
+        if (callbackStanding) {
+            return true;
+        }
+        try {
+            ObjectManager objectManager = services().objectManager();
+            return objectManager != null && objectManager.hasObjectStandingBit(player, this);
+        } catch (RuntimeException e) {
+            return false;
         }
     }
 

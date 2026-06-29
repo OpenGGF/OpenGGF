@@ -36,7 +36,35 @@ branch-local measurements.
 | `TestS2Cnz2LevelSelectTraceReplay` | f4632 `tails_y` expected `0x02B8`, actual `0x02B4`; 955 errors |
 | `TestS2DezEndingLevelSelectTraceReplay` | f7503 `y_speed` expected `-0450`, actual `-03C8`; 11 errors |
 | `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
-| `TestS2MtzLevelSelectTraceReplay` | f5602 `tails_x` expected `0x16C0`, actual `0x16C1`; 608 errors |
+| `TestS2MtzLevelSelectTraceReplay` | f5647 `tails_y_sub` expected `0x6500`, actual `0x3D00`; 616 errors |
+
+## 2026-06-29 - S2 MTZ1 Obj69 nut standing-bit action gate - ENGINE FIX (MTZ1 f5602 -> f5647)
+
+- Scope: branch `bugfix/ai-trace-s2-mtz-r6` in worktree
+  `.worktrees/trace-s2-mtz-r6`, branched from
+  `.worktrees/ai-s2-trace-develop` / `bugfix/ai-s2-trace-develop`.
+- Root/fix: MTZ1 f5602 had Tails already riding Obj69 Nut slot 38 (`status(a0)`
+  p2 standing bit set in ROM object status), but the engine's Obj69 sidekick
+  action pass only consumed the object-local deferred `onSolidContact` latch.
+  That left the P2 action mode one standing frame behind, so the mode-2
+  direction-1 align gate observed Tails one pixel right of the nut and skipped
+  the native X snap (`dx + $F == $10`, `bhs`). Obj69 in ROM runs the
+  MainCharacter action pass, then the Sidekick action pass, then the shared
+  `SolidObject` tail; each action pass tests the live per-player standing bit
+  in `status(a0)` before the helper tail (`docs/s2disasm/s2.asm:54000-54013,
+  54017-54061, 54095-54107`). `NutObjectInstance` now seeds each player's
+  action gate from `ObjectManager.hasObjectStandingBit(player, this)` in
+  addition to the callback latch, so the mode reaches screwing on the ROM frame
+  and writes only `x_pos(a1)` while preserving `x_sub`.
+- Frontier movement: `TestS2MtzLevelSelectTraceReplay#replayMatchesTrace`
+  advances from f5602 / 608 errors (`tails_x` expected `0x16C0`, actual
+  `0x16C1`) to f5647 / 616 errors (`tails_y_sub` expected `0x6500`, actual
+  `0x3D00`). MTZ2 remains f1277 / 3385 errors and MTZ3 remains f1973 / 3705
+  errors.
+- Commands/results:
+  - `mvn "-Dtest=TestSonic2TriggerParticipation#nutSidekickActionSeesLiveObjectStandingBit" "-DfailIfNoTests=false" test` -> focused Obj69 regression test passed.
+  - `mvn "-Dtest=TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test` -> expected-red MTZ trio with MTZ1 f5647, MTZ2 f1277, MTZ3 f1973.
+- PC probes: none used.
 
 ## 2026-06-29 - S2 integration sweep after OOZ Obj45 launch-gate merge (6 green, 13 expected-red)
 
