@@ -66,6 +66,9 @@ branch-local measurements.
     `TestS2Ooz2LevelSelectTraceReplay` from f3226 / 945 to f3672 / 692 and
     improved `TestS2OozLevelSelectTraceReplay` from 1125 to 614 errors while
     holding its first frontier at f1790.
+  - OOZ2 Tails normal-despawn horizontal render-entry timing advanced
+    `TestS2Ooz2LevelSelectTraceReplay` from f3672 / 692 to f3830 / 691 while
+    holding `TestS2OozLevelSelectTraceReplay` at f1790 / 614.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
@@ -77,7 +80,7 @@ branch-local measurements.
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
   `MTZ3` f2588 / 939 (`tails_cpu_ctrl2_held` expected `0x0012`, actual `0x0002`);
   `OOZ1` f1790 / 614 (`tails_x_speed` expected `0x0080`, actual `-008C`);
-  `OOZ2` f3672 / 692 (`tails_cpu_respawn_counter` expected `0x0079`, actual `0x0000`).
+  `OOZ2` f3830 / 691 (`y` expected `0x024C`, actual `0x0247`).
 - Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `HTZ1`,
   `MCZ1`, `SCZ`, and `WFZ`.
 
@@ -222,6 +225,44 @@ branch-local measurements.
   A combined run that also included `TestObjectPhysicsStandardizationGuard`
   failed only on pre-existing source-guard budget/legacy violations unrelated
   to Obj14; the S2 guard trace XML reports all had zero failures.
+## 2026-06-29 - S2 OOZ2 Tails render-entry despawn-counter timing (f3672 -> f3830)
+
+- Worktree/branch: `.worktrees/trace-s2-ooz2-respawn-counter` /
+  `bugfix/ai-trace-s2-ooz2-respawn-counter`, forked from
+  `bugfix/ai-s2-trace-develop` at integration head `39f371a50`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: OOZ2 f3672 / 692 errors
+  (`tails_cpu_respawn_counter` expected `0x0079`, actual `0x0000`).
+- Evidence/fix: frame 3672 showed Tails airborne/rolling at the left horizontal
+  render-entry band (`relX=-12`, `width_pixels=$18`) with the ROM
+  `Tails_respawn_counter` still ticking to `$0079`, then resetting on frame
+  3673. ROM `Obj02_Control` calls `TailsCPU_Control` before `Tails_Display`,
+  and `Level_MainLoop` runs `BuildSprites` later, so an airborne horizontal
+  re-entry can leave `TailsCPU_CheckDespawn` reading the previous clear
+  `render_flags.on_screen` bit for one more CPU tick
+  (`docs/s2disasm/s2.asm:38963-38970,39016-39024,39409-39440,5095-5111`).
+  The engine now latches that S2-only stale edge for airborne/rolling sidekicks
+  in the interior horizontal entry band; exact-edge and grounded re-entries
+  continue to reset immediately, matching OOZ2 frames 3253 and 3318.
+- Focused behavior test:
+  `mvn "-Dtest=com.openggf.sprites.playable.TestSidekickCpuDespawnParity#s2NormalDespawnConsumesFreshRenderEntryOneCpuTickLate" test`.
+  The test was verified red before the production change (`0x0079` expected,
+  actual `0x0000`) and green after the fix. The full
+  `TestSidekickCpuDespawnParity` class also passes.
+- Focused OOZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result after the fix: OOZ2 advances to f3830 / 691 errors (`y` expected
+  `0x024C`, actual `0x0247`).
+- S2 green guard:
+  `TestS2ArzLevelSelectTraceReplay`, `TestS2CnzLevelSelectTraceReplay`, and
+  `TestS2DezEndingLevelSelectTraceReplay` passed in the initial guard batch;
+  `TestS2Ehz1TraceReplay` passed when rerun cleanly after a transient LWJGL
+  native-library initializer error in the batch; `TestS2MczLevelSelectTraceReplay`,
+  `TestS2SczLevelSelectTraceReplay`, and `TestS2WfzLevelSelectTraceReplay`
+  passed together. `TestS2OozLevelSelectTraceReplay` remains at its accepted
+  f1790 / 614 frontier.
+
 ## 2026-06-29 - S2 OOZ OilSlides logical input slot timing (f3226 -> f3672)
 
 - Worktree/branch: `.worktrees/trace-s2-ooz2-obj45-speed` /
