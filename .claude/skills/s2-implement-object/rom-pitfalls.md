@@ -2692,7 +2692,7 @@ its solid helper:
 23273-23301`). `Obj18_Nudge` computes `y_pos` from `obj18_y_offset`
 (`docs/s2disasm/s2.asm:23311-23320`).
 
-**Originating commit.** `<pending>` S2 ARZ2 Obj18 platform standing-latch
+**Originating commit.** `38ffa3bb5` S2 ARZ2 Obj18 platform standing-latch
 nudge: `TestS2Arz2LevelSelectTraceReplay` advances f888 -> f1028.
 
 ---
