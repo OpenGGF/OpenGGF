@@ -6,6 +6,50 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 OOZ2 Obj45 ordered sidekick carry - ENGINE FIX (Obj45 + focused tests, OOZ2 f1601 -> f1603)
+
+- Scope: continued the OOZ2 Obj45 pressure-spring window in
+  `.worktrees/trace-s2-ooz2-r3` / `bugfix/ai-trace-s2-ooz2-r3`. The accepted
+  patch is limited to S2 `OOZSpringObjectInstance` horizontal spring carry
+  timing plus focused comparison-only object coverage; no trace data is
+  hydrated into engine state and no zone, route, or frame carve-out was added.
+- Root: at f1601, ROM Tails was one pixel farther right (`0x04A1`) than the
+  engine (`0x04A0`) while both traces agreed Tails was standing on the
+  horizontal Obj45 spring. ROM `Obj45_Horizontal` calls
+  `SolidObject_Always_SingleCharacter` for Sonic, reacts to the push, restores
+  `d1-d4`, then calls the same solid routine for Sidekick
+  (docs/s2disasm/s2.asm:50393-50420). The horizontal compression branch moves
+  `x_pos(a0)` and adds the same delta to `x_pos(a1)`
+  (docs/s2disasm/s2.asm:50465-50510), and `SolidObject45` uses the restored
+  routine-entry `d4` for an existing rider (docs/s2disasm/s2.asm:35193-35234).
+  The engine compressed Obj45 from Sonic's pass but did not immediately carry
+  a later sidekick participant that was already standing on the spring.
+- Fix: `OOZSpringObjectInstance.updateHorizontal()` now processes participants
+  in ROM order and, after one player compresses the horizontal spring, applies
+  that same delta to later non-airborne participants whose previous solid state
+  was standing on the spring. A one-pass native-player latch prevents duplicating
+  that ordered carry on the following frame, when the engine's normal riding
+  baseline has caught up.
+- Result: `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` advances from
+  f1601 / 1303 errors (`tails_x` expected `0x04A1`, actual `0x04A0`) to
+  f1603 / 1250 errors (`x_speed` expected `0x004C`, actual `0x0000`). The new
+  frontier is a distinct Sonic/Obj45 compression-release boundary: at f1603
+  the context shows Sonic/Obj45 one pixel apart from ROM and Sonic `x_speed`
+  still zero while ROM has already resumed `0x004C`.
+- Verification:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed ""-Dtest=com.openggf.game.sonic2.objects.TestOOZPlacedObjectGaps"" test"`
+  exited 0 with focused Obj45 coverage passing.
+  Targeted OOZ2 command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\trace-s2-ooz2-r3\s2.gen"" ""-Dtest=TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace"" test"`
+  fails expected-red at f1603 with 1250 errors / 0 warnings.
+  Guard command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\trace-s2-ooz2-r3\s2.gen"" ""-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay"" test"`
+  exited 0 with 4 trace classes passed.
+  Full S2 sweep
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\trace-s2-ooz2-r3\s2.gen"" ""-Dtest=TestS2*TraceReplay"" test"`
+  ran 19 trace classes and failed expected-red with 15 known red frontiers and
+  4 greens; OOZ1 held its accepted f1784 frontier and OOZ2 advanced to f1603.
+
 ## 2026-06-29 - S2 ARZ2 Obj28 negative floor-distance landing gate - ENGINE FIX (2 files, ARZ2 f593 -> f595)
 
 - Scope: continued the ARZ2 ChopChop Obj28 animal window in

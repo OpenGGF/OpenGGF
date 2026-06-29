@@ -52,6 +52,8 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     private boolean pendingMainHorizontalLaunch;
     private boolean pendingSidekickHorizontalLaunch;
     private boolean compressedThisFrame;
+    private boolean mainFreshOrderedCarry;
+    private boolean sidekickFreshOrderedCarry;
 
     public OOZSpringObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -98,11 +100,14 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         List<PlayableEntity> participants = playerParticipants(playerEntity);
         if (!solidExecutionIsInert()) {
             SolidCheckpointBatch batch = checkpointAll();
-            for (PlayableEntity participant : participants) {
+            for (int i = 0; i < participants.size(); i++) {
+                PlayableEntity participant = participants.get(i);
                 PlayerSolidContactResult result = batch.perPlayer().get(participant);
                 if (result != null && result.kind() != ContactKind.NONE && result.pushingNow()
                         && participant instanceof AbstractPlayableSprite player) {
+                    int beforeX = currentX;
                     compressHorizontalSpring(player);
+                    carryLaterStandingRiders(participants, i + 1, player, currentX - beforeX);
                 }
             }
         }
@@ -186,6 +191,58 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         setPendingHorizontalLaunch(player);
         compressedThisFrame = true;
         updateDynamicSpawn(currentX, currentY);
+    }
+
+    private void carryLaterStandingRiders(
+            List<PlayableEntity> participants,
+            int startIndex,
+            AbstractPlayableSprite pusher,
+            int deltaX) {
+        if (deltaX == 0) {
+            return;
+        }
+        ObjectServices services = tryServices();
+        if (services == null || services.solidExecutionRegistry() == null) {
+            return;
+        }
+        for (int i = startIndex; i < participants.size(); i++) {
+            PlayableEntity participant = participants.get(i);
+            if (participant == pusher || !(participant instanceof AbstractPlayableSprite rider) || rider.getAir()) {
+                continue;
+            }
+            if (consumeFreshOrderedCarry(rider)) {
+                continue;
+            }
+            PlayerStandingState previous = services.solidExecutionRegistry().previousStanding(this, participant);
+            if (previous.standing()) {
+                // ROM Obj45_Horizontal restores routine-entry d4 before the later
+                // Sidekick SolidObject call, so later existing riders inherit
+                // another player's first push delta (s2.asm:50393-50510). The
+                // engine-side riding baseline observes that carry one frame
+                // later, so suppress this same ordered carry on the next pass.
+                NativePositionOps.addXPosPreserveSubpixel(rider, deltaX);
+                markFreshOrderedCarry(rider);
+            }
+        }
+    }
+
+    private boolean consumeFreshOrderedCarry(AbstractPlayableSprite rider) {
+        if (isNativeSidekick(rider)) {
+            boolean pending = sidekickFreshOrderedCarry;
+            sidekickFreshOrderedCarry = false;
+            return pending;
+        }
+        boolean pending = mainFreshOrderedCarry;
+        mainFreshOrderedCarry = false;
+        return pending;
+    }
+
+    private void markFreshOrderedCarry(AbstractPlayableSprite rider) {
+        if (isNativeSidekick(rider)) {
+            sidekickFreshOrderedCarry = true;
+        } else {
+            mainFreshOrderedCarry = true;
+        }
     }
 
     private void releaseHorizontalSpring(List<PlayableEntity> participants) {

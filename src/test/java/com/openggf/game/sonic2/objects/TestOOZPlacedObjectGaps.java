@@ -2,9 +2,13 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
+import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PlayerStandingState;
+import com.openggf.game.solid.PostContactState;
+import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -26,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -222,6 +227,74 @@ class TestOOZPlacedObjectGaps {
     }
 
     @Test
+    void horizontalOozPressureSpringCarriesExistingSidekickWhenOtherPlayerCompresses() throws Exception {
+        ObjectInstance spring = newOOZSpring(0x04B4, 0x03D0, 0x10, 1);
+        TestablePlayableSprite sonic = playerAt(0x04A7, 0x03B4);
+        TestablePlayableSprite tails = playerAt(0x04A0, 0x03B4);
+        sonic.setDirection(Direction.RIGHT);
+        tails.setDirection(Direction.LEFT);
+
+        PlayerSolidContactResult sonicPush = new PlayerSolidContactResult(
+                ContactKind.SIDE,
+                false,
+                false,
+                true,
+                false,
+                PreContactState.ZERO,
+                PostContactState.ZERO,
+                1);
+        ((AbstractObjectInstance) spring).setServices(new TestObjectServices()
+                .withSidekicks(List.of(tails))
+                .withSolidExecutionRegistry(new ScriptedSolidRegistry(
+                        spring,
+                        Map.of(sonic, sonicPush),
+                        Map.of(tails, new PlayerStandingState(ContactKind.TOP, true, false)))));
+
+        spring.update(0, sonic);
+
+        assertEquals(0x04B5, spring.getX(), "Obj45 flipped horizontal spring compresses one pixel right");
+        assertEquals(0x04A1, tails.getCentreX() & 0xFFFF,
+                "ROM Obj45_Horizontal restores routine-entry d4 before the Sidekick SolidObject call, "
+                        + "so an existing sidekick rider is carried by Sonic's compression delta");
+    }
+
+    @Test
+    void horizontalOozPressureSpringDoesNotDuplicateCarryAfterSidekickIsAlreadyPushing() throws Exception {
+        ObjectInstance spring = newOOZSpring(0x04B4, 0x03D0, 0x10, 1);
+        TestablePlayableSprite sonic = playerAt(0x04A1, 0x03B4);
+        TestablePlayableSprite tails = playerAt(0x04A0, 0x03B4);
+        sonic.setDirection(Direction.RIGHT);
+        tails.setDirection(Direction.LEFT);
+
+        PlayerSolidContactResult sonicPush = new PlayerSolidContactResult(
+                ContactKind.SIDE,
+                false,
+                true,
+                true,
+                true,
+                PreContactState.ZERO,
+                PostContactState.ZERO,
+                1);
+        ((AbstractObjectInstance) spring).setServices(new TestObjectServices()
+                .withSidekicks(List.of(tails))
+                .withSolidExecutionRegistry(new ScriptedSolidRegistry(
+                        spring,
+                        Map.of(sonic, sonicPush),
+                        Map.of(tails, new PlayerStandingState(ContactKind.SIDE, true, true)))));
+
+        spring.update(0, sonic);
+        assertEquals(0x04B5, spring.getX());
+        tails.setCentreX((short) 0x04A0);
+
+        spring.update(1, sonic);
+
+        assertEquals(0x04B6, spring.getX(), "Obj45 keeps compressing while push bits are already latched");
+        assertEquals(0x04A0, tails.getCentreX() & 0xFFFF,
+                "Once the sidekick push bit is already latched, the normal riding update owns the carry; "
+                        + "Obj45 must not add the ordered first-push carry again");
+    }
+
+    @Test
     void oozPoppingPlatformKeepsRomSolidLatchAndObjectControlledSupport() throws Exception {
         ObjectInstance object = newObject("com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance",
                 new ObjectSpawn(0x1000, 0x0500, 0x33, 0x00, 0, false, 0));
@@ -289,6 +362,33 @@ class TestOOZPlacedObjectGaps {
         @Override public ObjectSolidExecutionContext currentObject() { return ObjectSolidExecutionContext.inert(); }
         @Override public PlayerStandingState previousStanding(ObjectInstance object, com.openggf.game.PlayableEntity player) {
             return new PlayerStandingState(ContactKind.TOP, true, false);
+        }
+        @Override public void publishCheckpoint(SolidCheckpointBatch batch) {}
+        @Override public void endObject(ObjectInstance object) {}
+        @Override public void finishFrame() {}
+        @Override public void clearTransientState() {}
+    }
+
+    private static final class ScriptedSolidRegistry implements SolidExecutionRegistry {
+        private final ObjectSolidExecutionContext context;
+        private final Map<PlayableEntity, PlayerStandingState> previousStanding;
+
+        private ScriptedSolidRegistry(
+                ObjectInstance object,
+                Map<PlayableEntity, PlayerSolidContactResult> checkpoint,
+                Map<PlayableEntity, PlayerStandingState> previousStanding) {
+            this.previousStanding = previousStanding;
+            this.context = new ObjectSolidExecutionContext(
+                    this,
+                    object,
+                    () -> new SolidCheckpointBatch(object, checkpoint));
+        }
+
+        @Override public void beginFrame(int frameCounter, List<? extends PlayableEntity> players) {}
+        @Override public void beginObject(ObjectInstance object, ObjectSolidExecutionContext.Resolver resolver) {}
+        @Override public ObjectSolidExecutionContext currentObject() { return context; }
+        @Override public PlayerStandingState previousStanding(ObjectInstance object, PlayableEntity player) {
+            return previousStanding.getOrDefault(player, PlayerStandingState.NONE);
         }
         @Override public void publishCheckpoint(SolidCheckpointBatch batch) {}
         @Override public void endObject(ObjectInstance object) {}
