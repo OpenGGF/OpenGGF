@@ -96,6 +96,51 @@ class TestUserRecordingManifestJson {
     }
 
     @Test
+    void readManifestRejectsMissingLaunchContextGameId() throws Exception {
+        String json = removeJsonLine(
+                UserRecordingJson.writeManifest(sampleManifest()),
+                "    \"gameId\" : \"s3k\",");
+
+        assertThrows(IOException.class, () -> UserRecordingJson.readManifest(json));
+    }
+
+    @Test
+    void readManifestRejectsMissingEngineIdentityBaseVersion() throws Exception {
+        String json = removeJsonLine(
+                UserRecordingJson.writeManifest(sampleManifest()),
+                "    \"baseVersion\" : \"0.6.prerelease\",");
+
+        assertThrows(IOException.class, () -> UserRecordingJson.readManifest(json));
+    }
+
+    @Test
+    void readManifestRejectsMissingSidecarSampleMode() throws Exception {
+        String json = removeJsonLine(
+                UserRecordingJson.writeManifest(sampleManifest()),
+                "    \"sampleMode\" : \"every-frame\",");
+
+        assertThrows(IOException.class, () -> UserRecordingJson.readManifest(json));
+    }
+
+    @Test
+    void readManifestRejectsMissingSidecarDesyncLiteSchemaVersion() throws Exception {
+        String json = removeJsonLine(
+                UserRecordingJson.writeManifest(sampleManifest()),
+                "    \"desyncLiteSchemaVersion\" : 1,");
+
+        assertThrows(IOException.class, () -> UserRecordingJson.readManifest(json));
+    }
+
+    @Test
+    void readManifestRejectsZeroSidecarDesyncLiteSchemaVersion() throws Exception {
+        String json = UserRecordingJson.writeManifest(sampleManifest())
+                .replace("\"desyncLiteSchemaVersion\" : 1",
+                        "\"desyncLiteSchemaVersion\" : 0");
+
+        assertThrows(IOException.class, () -> UserRecordingJson.readManifest(json));
+    }
+
+    @Test
     void readManifestRejectsInvalidCreatedAt() throws Exception {
         String json = UserRecordingJson.writeManifest(sampleManifest())
                 .replace("\"createdAt\" : \"2026-06-29T14:30:22Z\"",

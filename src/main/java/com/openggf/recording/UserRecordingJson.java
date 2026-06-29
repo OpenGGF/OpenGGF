@@ -90,12 +90,46 @@ public final class UserRecordingJson {
             requirePresent(frameCount, "frameCount");
             requirePresent(stopReason, "stopReason");
             requirePresent(createdAt, "createdAt");
+            validateEngineIdentity(engineIdentity);
+            validateLaunchContext(launchContext);
+            validateSidecar(sidecar);
+            validateDeterminism(determinism);
         }
 
         private static void requirePresent(Object value, String fieldName) throws IOException {
             if (value == null) {
                 throw new IOException("Missing required manifest field: " + fieldName);
             }
+        }
+
+        private static void requireNonBlank(String value, String fieldName) throws IOException {
+            requirePresent(value, fieldName);
+            if (value.trim().isEmpty()) {
+                throw new IOException("Missing required manifest field: " + fieldName);
+            }
+        }
+
+        private static void validateEngineIdentity(BuildIdentity engineIdentity) throws IOException {
+            requireNonBlank(engineIdentity.baseVersion(), "engineIdentity.baseVersion");
+        }
+
+        private static void validateLaunchContext(RecordingLaunchContext launchContext) throws IOException {
+            requireNonBlank(launchContext.gameId(), "launchContext.gameId");
+            requireNonBlank(launchContext.mainCharacter(), "launchContext.mainCharacter");
+            requireNonBlank(launchContext.launchRoute(), "launchContext.launchRoute");
+        }
+
+        private static void validateSidecar(UserRecordingSidecarMetadata sidecar) throws IOException {
+            if (sidecar.desyncLiteSchemaVersion() != UserRecordingSidecarMetadata.CURRENT_DESYNC_LITE_SCHEMA_VERSION) {
+                throw new IOException("Unsupported desync-lite sidecar schema version: "
+                        + sidecar.desyncLiteSchemaVersion());
+            }
+            requireNonBlank(sidecar.sampleMode(), "sidecar.sampleMode");
+        }
+
+        private static void validateDeterminism(RecordingDeterminismMetadata determinism) throws IOException {
+            requirePresent(determinism.initialLevelFrameCounter(), "determinism.initialLevelFrameCounter");
+            requirePresent(determinism.initialRngSeed(), "determinism.initialRngSeed");
         }
 
         private static UserRecordingStopReason parseStopReason(String value) {
