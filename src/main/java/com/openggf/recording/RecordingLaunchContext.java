@@ -1,0 +1,14 @@
+package com.openggf.recording;
+
+import java.util.List;
+
+public record RecordingLaunchContext(
+        String gameId,
+        int zone,
+        int act,
+        String mainCharacter,
+        List<String> sidekickCharacters,
+        boolean debugToolsEnabled,
+        String launchRoute
+) {
+}
