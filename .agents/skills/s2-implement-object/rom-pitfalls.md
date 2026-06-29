@@ -2658,7 +2658,7 @@ captures on `tst.w d4 / bpl` after `SolidObject_Always_SingleCharacter`
 `loc_2BE2E` and clears the state in `loc_2BE9C`
 (`docs/s2disasm/s2.asm:59188-59256`).
 
-**Originating commit.** `<pending>` S2 CNZ2 ObjD6 bottom-capture/sidekick
+**Originating commit.** `82e595b5b` S2 CNZ2 ObjD6 bottom-capture/sidekick
 ownership fix: `TestS2Cnz2LevelSelectTraceReplay` advances f4730 -> f4892.
 
 ---
