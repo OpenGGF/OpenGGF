@@ -6,6 +6,52 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 MTZ3 Obj65 no-balancing panic spindash (f2588 -> f3618)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz3-frontier` /
+  `bugfix/ai-s2-mtz3-frontier`, based on integration head `dd8710e47`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: MTZ3 f2588 / 939 (`tails_cpu_ctrl2_held`
+  expected `0x0012`, actual `0x0002`).
+- Triage/evidence: ROM enters `TailsCPU_Panic` at f2545 and keeps
+  `move_lock` active until f2587, then writes DOWN. On the following frame
+  ROM sees `spindash_flag` set and the panic charging branch ORs A/B/C on
+  the `$20` phase. The engine entered PANIC on the same frame and cleared
+  `moveLockTimer` on the same cadence, but the sidekick stayed in animation
+  `0x06` (object-edge balance) on the Obj65 long platform, so the normal
+  movement pass never reached Tails' duck/spindash setup and f2588 only
+  emitted DOWN. Obj65's ROM init sets `status.npc.no_balancing` when
+  `mapping_frame == 1`; `Tails_Move` tests that bit before object-edge
+  balance and falls through to look/duck input handling.
+- Disassembly cited: Obj65 `mapping_frame == 1` no-balancing bit at
+  `docs/s2disasm/s2.asm:52865-52870`; Tails object-edge balance
+  no-balancing check at `docs/s2disasm/s2.asm:39703-39714`; Tails panic
+  charging/rev branch at `docs/s2disasm/s2.asm:39458-39505`; Tails
+  spindash setup at `docs/s2disasm/s2.asm:40473-40511`.
+- Fix: shared object instances now expose a ROM `status.npc.no_balancing`
+  predicate for rider balance. `PlayableSpriteMovement` skips object-edge
+  balance when the ridden object sets it, and `MTZLongPlatformObjectInstance`
+  maps Obj65 `mappingFrame == 1` to that predicate. This is object ROM state,
+  not a zone, route, frame, or trace carve-out.
+- Focused regression tests:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mtzLongPlatformMappingFrameOneSuppressesObjectEdgeBalance,com.openggf.sprites.playable.TestSidekickCpuFollowParity#s2PanicRevPulseEmitsJumpOnThirtyTwoFramePhase" test`.
+  Result: passed 2/2.
+- Focused traces:
+  `mvn "-Dtest=TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; MTZ3 advances to f3618 / 933
+  (`tails_status_byte` expected `0x0003`, actual `0x000B`).
+  Preservation checks: MTZ1 holds f5713 / 560; MTZ2 holds f4375 / 950;
+  HTZ2 holds f3322 / 1057.
+- Full S2 sweep:
+  `mvn clean test "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-Dsurefire.failIfNoSpecifiedTests=false"`.
+  Result: expected nonzero; 19 trace classes, 9 green / 10 expected-red.
+  Green: ARZ1, CNZ1, DEZ ending, EHZ1, HTZ1, MCZ1, MCZ2, SCZ, WFZ.
+  Preserved reds: ARZ2 f1028 / 2688; CNZ2 f6144 / 994; CPZ1 f4547 /
+  177; CPZ2 f2976 / 1232; OOZ2 f3835 / 797; OOZ1 f1790 / 614; HTZ2
+  f3322 / 1057; MTZ1 f5713 / 560; MTZ2 f4375 / 950. MTZ3 is the only
+  changed frontier, now f3618 / 933.
+
 ## 2026-06-29 - S2 CPZ Obj78 side-overlap push latch (f4351 -> f4547)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz1-frontier` /

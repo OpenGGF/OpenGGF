@@ -239,6 +239,19 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void mtzLongPlatformMappingFrameOneSuppressesObjectEdgeBalance() {
+        MTZLongPlatformObjectInstance normalPlatform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x0B20, 0x076C, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x00, 0, false, 0));
+        MTZLongPlatformObjectInstance noBalancePlatform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x0B20, 0x076C, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x10, 0, false, 0));
+
+        assertFalse(normalPlatform.suppressesObjectEdgeBalance(),
+                "Obj65 mapping_frame 0 leaves status.npc.no_balancing clear");
+        assertTrue(noBalancePlatform.suppressesObjectEdgeBalance(),
+                "Obj65_Init sets status.npc.no_balancing when mapping_frame == 1 (s2.asm:52865-52870)");
+    }
+
+    @Test
     void mtzLongPlatformOptsIntoZeroXSpeedLeftSideStopCharacter() {
         MTZLongPlatformObjectInstance platform = new MTZLongPlatformObjectInstance(
                 new ObjectSpawn(0x1090, 0x01EC, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x00, 0, false, 0));
