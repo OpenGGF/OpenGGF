@@ -30,6 +30,14 @@ branch-local measurements.
 - Green guard:
   `mvn "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
   Result: passed, no current S2 green trace regressed.
+- Integration verification after merging to `.worktrees/ai-s2-trace-develop`
+  (`8dcadbbd2`): focused CPZ rerun held the same post-fix state above, the
+  S2 green guard exited 0, and the full concrete S2 trace sweep ran 19 classes:
+  7 green, 12 expected-red, no current green trace regressed. Current changed
+  CPZ rows are `TestS2CpzLevelSelectTraceReplay` f4225 / 264 errors
+  (`tails_x_speed` expected `0x0024`, actual `0x0018`) and
+  `TestS2Cpz2LevelSelectTraceReplay` f2889 / 1238 errors (`tails_x`
+  expected `0x10E8`, actual `0x10F0`).
 - New CPZ1 frontier: f4225 `tails_x_speed` expected `0x0024`, actual
   `0x0018`; context shows ROM keeps Tails on Obj78/Obj1E support while the
   engine drops Tails to airborne/rolling. Treat this as a sidekick support /
