@@ -107,6 +107,10 @@ branch-local measurements.
     `TestS2Ooz2LevelSelectTraceReplay` from f3672 / 692 to f3830 / 691 while
     holding OOZ1 f1790 / 614, HTZ1 green, HTZ2 f3322 / 1057, MTZ1 f5713 / 560,
     and the S2 green guard including HTZ1.
+  - OOZ2 Obj3D launcher break-frame rolling-radius snap advanced
+    `TestS2Ooz2LevelSelectTraceReplay` from f3830 / 691 to f3835 / 797 while
+    holding OOZ1 f1790 / 614, HTZ2 f3322 / 1057, MTZ1 f5713 / 560, CPZ1
+    f4351 / 181, CPZ2 f2976 / 1232, and the S2 green guard.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f5298 / 920 (`x_speed` expected `-09CE`, actual `-08E8`);
@@ -118,9 +122,35 @@ branch-local measurements.
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
   `MTZ3` f2588 / 939 (`tails_cpu_ctrl2_held` expected `0x0012`, actual `0x0002`);
   `OOZ1` f1790 / 614 (`tails_x_speed` expected `0x0080`, actual `-008C`);
-  `OOZ2` f3830 / 691 (`y` expected `0x024C`, actual `0x0247`).
+  `OOZ2` f3835 / 797 (`x` expected `0x1140`, actual `0x114C`).
 - Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `HTZ1`,
   `MCZ1`, `SCZ`, and `WFZ`.
+
+## 2026-06-29 - S2 OOZ2 Obj3D rolling-radius landing snap (f3830 -> f3835)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-frontier` /
+  `bugfix/ai-s2-ooz2-frontier`.
+- Baseline reproduction at branch start:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: OOZ2 f3830 / 691 (`y` expected `0x024C`, actual `0x0247`).
+- Triage/evidence: OOZ2 reaches Obj3D at `0x1140,0x0270` as a horizontal
+  launcher (`subtype=1`). Obj3D calls `SolidObject`, then `loc_24EB8` restores
+  the rolling bit, ball radii, roll animation, saved `y_vel`, airborne state,
+  and clears `on_object` without running `Sonic_ResetOnFloor`
+  (`docs/s2disasm/s2.asm:50981,51003-51017`). The shared S2 solid landing path
+  was snapping against the standing-radius surface on this break frame, leaving
+  Sonic 5 px high at f3830. Obj3D now opts into preserving rolling on landing
+  and adjusts the top-landing snap by the standing-vs-rolling radius delta.
+- Rejected candidate: keeping Obj3D's routine-6 folded launcher child scanning
+  until a later window entry advanced OOZ2 further to f3919 / 1116, but changed
+  OOZ1 from the accepted f1790 / 614 to f1790 / 892. That lifetime broadening
+  was rejected for this patch.
+- Clean preservation run:
+  `mvn clean "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay,com.openggf.game.sonic2.objects.TestOOZLauncherObjectInstance" "-DfailIfNoTests=false" test`.
+  Result: object test passed 4/4; green guard passed 8/8; OOZ2 advanced to
+  f3835 / 797 (`x` expected `0x1140`, actual `0x114C`); OOZ1 held
+  f1790 / 614; HTZ2 held f3322 / 1057; MTZ1 held f5713 / 560; CPZ1 held
+  f4351 / 181; CPZ2 held f2976 / 1232.
 
 ## 2026-06-29 - S2 OOZ2 sidekick render-entry despawn timing (f3672 -> f3830)
 
