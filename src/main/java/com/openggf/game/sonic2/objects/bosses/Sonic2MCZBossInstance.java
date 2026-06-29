@@ -433,6 +433,15 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
             // Collision enabled (handled by getCollisionFlags)
         }
 
+        // ROM BossCollision_MCZ starts by clearing boss_hurt_sonic every
+        // collision pass (s2.asm:85732-85733). While Boss_Countdown is still
+        // nonnegative, Obj57_Main_Sub6 does not consume the flag
+        // (s2.asm:65991-65996), so a previous-frame hurt cannot stay latched
+        // until a later reascend decision.
+        if (countdown >= 0) {
+            bossHurtSonic = false;
+        }
+
         if (countdown < 0) {
             // Timer expired - check for hurt sonic flag
             if (bossHurtSonic) {

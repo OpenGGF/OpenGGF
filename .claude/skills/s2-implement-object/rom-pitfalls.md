@@ -2697,6 +2697,40 @@ nudge: `TestS2Arz2LevelSelectTraceReplay` advances f888 -> f1028.
 
 ---
 
+## P66 - Collision-result latches may be cleared at the start of every ROM collision pass
+
+**Pattern.** Some object-local flags are not persistent state-machine latches.
+They are cleared at the start of a collision helper, then re-set only if the
+current collision pass produces a specific result. The owning object routine may
+read the flag on the next frame, but if the routine does not consume it
+immediately, the next collision pass clears it.
+
+**Engine symptom.** A boss or object reacts to a player contact long after the
+ROM would have forgotten it. In MCZ2, Obj57 reascended early because the engine
+kept `bossHurtSonic` true from a drill hurt that occurred while
+`Boss_Countdown` was still nonnegative; ROM cleared `boss_hurt_sonic` on each
+`BossCollision_MCZ` pass and only consumed it when the countdown crossed
+negative on the immediately following frame.
+
+**What to check / fix.** When a ROM helper starts with `sf`, `clr`, or `move.b
+#0` on an object-local "event" flag before running collision/effect logic:
+1. Treat that flag as a collision-pass result, not a cycle-long latch.
+2. Preserve the routine's consume timing. If the object routine only reads the
+   flag after a timer crosses a threshold, clear stale values on frames where
+   the ROM would run another helper pass first.
+3. Keep the fix object-local and keyed on the ROM timer/routine state, not on a
+   route or trace frame.
+
+**ROM citation.** Obj57 `BossCollision_MCZ` clears and conditionally re-sets
+`boss_hurt_sonic` (`docs/s2disasm/s2.asm:85732-85763,85769-85788`);
+`Obj57_Main_Sub6` only consumes it after `Boss_Countdown` goes negative
+(`docs/s2disasm/s2.asm:65987-65996`).
+
+**Originating commit.** `<pending>` S2 MCZ2 Obj57 boss_hurt_sonic latch
+lifetime: `TestS2Mcz2LevelSelectTraceReplay` advances f9662 -> f10111.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
