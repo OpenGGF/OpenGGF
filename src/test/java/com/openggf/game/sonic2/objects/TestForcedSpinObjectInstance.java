@@ -14,6 +14,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestForcedSpinObjectInstance {
@@ -39,6 +40,29 @@ class TestForcedSpinObjectInstance {
         assertEquals((short) (centreY + 5), player.getCentreY());
         assertTrue(player.getRolling());
         assertTrue(player.getPinballMode());
+        assertTrue(player.getSpindash(),
+                "S2 Obj84 writes pinball_mode, which aliases the spindash flag byte");
+    }
+
+    @Test
+    void disableClearsPinballSpindashAliasWithoutTouchingCounter() throws Exception {
+        ForcedSpinObjectInstance trigger = new ForcedSpinObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, Sonic2ObjectIds.FORCED_SPIN, 0, 0, false, 0),
+                "ForcedSpin");
+        TestablePlayableSprite player = new TestablePlayableSprite("tails_p2", (short) 0x0100, (short) 0x0100);
+        player.setPinballMode(true);
+        player.setSpindash(true);
+        player.setSpindashCounter((short) 0x0400);
+
+        Method disablePinballMode = ForcedSpinObjectInstance.class
+                .getDeclaredMethod("disablePinballMode", AbstractPlayableSprite.class);
+        disablePinballMode.setAccessible(true);
+        disablePinballMode.invoke(trigger, player);
+
+        assertFalse(player.getPinballMode());
+        assertFalse(player.getSpindash());
+        assertEquals((short) 0x0400, player.getSpindashCounter(),
+                "Obj84 only clears pinball_mode/spindash_flag; spindash_counter is a separate word");
     }
 
     @Test
@@ -56,6 +80,8 @@ class TestForcedSpinObjectInstance {
 
         assertTrue(sidekick.getPinballMode(),
                 "Obj84 has only native P1/P2 crossing flags, so P2 must come from ObjectPlayerQuery NATIVE_P1_P2");
+        assertTrue(sidekick.getSpindash(),
+                "Obj84's pinball_mode byte is the same flag Tails_UpdateSpindash later consumes");
         assertTrue(sidekick.getRolling());
     }
 

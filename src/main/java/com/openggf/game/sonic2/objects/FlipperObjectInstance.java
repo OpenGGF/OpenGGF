@@ -118,6 +118,8 @@ public class FlipperObjectInstance extends BoxObjectInstance
     // (objoff_36 / objoff_37 are independent).
     private final IdentityHashMap<AbstractPlayableSprite, Boolean> lockedPlayerPrevSuppressed =
             new IdentityHashMap<>();
+    private final IdentityHashMap<AbstractPlayableSprite, Boolean> lockedPlayerPrevPinballMode =
+            new IdentityHashMap<>();
 
     public FlipperObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name, 8, 8, 0.8f, 0.4f, 0.2f, false);
@@ -566,16 +568,18 @@ public class FlipperObjectInstance extends BoxObjectInstance
      */
     private void releaseLockedPlayer(AbstractPlayableSprite player) {
         Boolean prevSuppressed = lockedPlayerPrevSuppressed.remove(player);
+        Boolean prevPinballMode = lockedPlayerPrevPinballMode.remove(player);
         if (prevSuppressed != null) {
             ObjectControlState.setMovementSuppressionPreservingOwnership(
                     player, prevSuppressed);
-            player.setPinballMode(false);
+            player.setPinballMode(Boolean.TRUE.equals(prevPinballMode));
         }
     }
 
     private void suppressMovementForLockedPlayer(AbstractPlayableSprite player) {
         if (!lockedPlayerPrevSuppressed.containsKey(player)) {
             lockedPlayerPrevSuppressed.put(player, player.isObjectControlSuppressesMovement());
+            lockedPlayerPrevPinballMode.put(player, player.getPinballMode());
         }
         ObjectControlState.setMovementSuppressionPreservingOwnership(player, true);
     }
