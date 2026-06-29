@@ -312,7 +312,7 @@ app.dirty=false
 Prerelease/nightly example:
 
 ```properties
-app.version=0.6.prerelease-84f1f269d
+app.version=0.6.prerelease
 app.baseVersion=0.6.prerelease
 app.commit=84f1f269d
 app.dirty=false
@@ -324,6 +324,12 @@ prerelease/nightly builds should be visibly marked, for example
 `0.6.prerelease-84f1f269d-dirty`, so recordings made from uncommitted code are
 distinguishable. Official release builds should be clean and should not carry
 the dirty suffix.
+
+`app.version` and `app.baseVersion` both carry the raw Maven version for
+backward-compatible resource parsing. Runtime display text is computed from the
+structured fields: `AppVersion.get()` returns
+`AppVersion.identity().displayVersion()`, which appends the commit and dirty
+suffix only for prerelease/nightly builds.
 
 ### `OpenGGF/desync-lite.jsonl`
 

@@ -20,18 +20,33 @@ Build identity is needed before recording metadata and menu warnings. The commit
 - Modify: `pom.xml`
 - Modify: `src/main/resources-filtered/version.properties`
 - Modify: `src/main/java/com/openggf/version/AppVersion.java`
+- Modify: `docs/superpowers/specs/2026-06-29-user-recording-playback-design.md`
 - Create: `src/main/java/com/openggf/version/BuildIdentity.java`
 - Create: `src/test/java/com/openggf/version/TestBuildIdentity.java`
 
-- [ ] **Step 1: Extend `version.properties` to carry generated metadata**
+- [ ] **Step 1: Extend `version.properties` to carry generated metadata and align the spec**
 
 Update `src/main/resources-filtered/version.properties`:
 
 ```properties
 app.version=${project.version}
-app.git.commit=${openggf.git.commit}
-app.git.dirty=${openggf.git.dirty}
+app.baseVersion=${project.version}
+app.commit=${openggf.git.commit}
+app.dirty=${openggf.git.dirty}
 ```
+
+`app.version` remains the raw Maven version for legacy callers and fallback parsing. `AppVersion.get()` must not return the raw property directly after this task; it returns `AppVersion.identity().displayVersion()`.
+
+Update the properties examples in `docs/superpowers/specs/2026-06-29-user-recording-playback-design.md` to match this schema:
+
+```properties
+app.version=0.6.prerelease
+app.baseVersion=0.6.prerelease
+app.commit=84f1f269d
+app.dirty=false
+```
+
+and state that the display value is computed by `AppVersion.identity().displayVersion()`.
 
 - [ ] **Step 2: Generate `openggf.git.commit` and `openggf.git.dirty` in Maven**
 
@@ -94,8 +109,15 @@ public record BuildIdentity(String baseVersion, String commit, boolean dirty) {
         if (!isPrerelease() && !other.isPrerelease()) {
             return baseVersion.equals(other.baseVersion);
         }
+        if (isBlank(commit) || isBlank(other.commit)) {
+            return false;
+        }
         return baseVersion.equals(other.baseVersion)
                 && normalized(commit).equals(normalized(other.commit));
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private static String normalized(String value) {
@@ -114,7 +136,7 @@ public static BuildIdentity identity() {
 }
 ```
 
-`IDENTITY` is loaded from `/version.properties`. Official versions display as `0.6.1`; prerelease versions display as `0.6.prerelease-84f1f269d` or `0.6.prerelease-84f1f269d-dirty`.
+`IDENTITY` is loaded from `/version.properties`. `AppVersion.get()` returns `identity().displayVersion()`. Official versions display as `0.6.1`; prerelease versions display as `0.6.prerelease-84f1f269d` or `0.6.prerelease-84f1f269d-dirty`.
 
 - [ ] **Step 5: Test compatibility behavior**
 
@@ -137,6 +159,8 @@ These types are pure data and should be implemented before writer/catalog/runtim
 **Files:**
 - Create: `src/main/java/com/openggf/recording/RecordingLaunchContext.java`
 - Create: `src/main/java/com/openggf/recording/UserRecordingManifest.java`
+- Create: `src/main/java/com/openggf/recording/UserRecordingSidecarMetadata.java`
+- Create: `src/main/java/com/openggf/recording/RecordingDeterminismMetadata.java`
 - Create: `src/main/java/com/openggf/recording/UserRecordingStopReason.java`
 - Create: `src/main/java/com/openggf/recording/UserRecordingJson.java`
 - Create: `src/test/java/com/openggf/recording/TestUserRecordingManifestJson.java`
@@ -177,6 +201,8 @@ public record UserRecordingManifest(
         String movieName,
         BuildIdentity engineIdentity,
         RecordingLaunchContext launchContext,
+        UserRecordingSidecarMetadata sidecar,
+        RecordingDeterminismMetadata determinism,
         String jumpActionButton,
         int frameCount,
         UserRecordingStopReason stopReason,
@@ -188,7 +214,40 @@ public record UserRecordingManifest(
 
 `jumpActionButton` must be `"A"` for this implementation.
 
-- [ ] **Step 3: Add stop reasons**
+- [ ] **Step 3: Add sidecar metadata record**
+
+```java
+package com.openggf.recording;
+
+public record UserRecordingSidecarMetadata(
+        int desyncLiteSchemaVersion,
+        String sampleMode,
+        Integer sampleInterval
+) {
+    public static final int CURRENT_DESYNC_LITE_SCHEMA_VERSION = 1;
+
+    public static UserRecordingSidecarMetadata everyFrame() {
+        return new UserRecordingSidecarMetadata(CURRENT_DESYNC_LITE_SCHEMA_VERSION, "every-frame", null);
+    }
+}
+```
+
+`sampleInterval` is reserved for future sparse modes and remains `null` for `"every-frame"`.
+
+- [ ] **Step 4: Add deterministic-start metadata record**
+
+```java
+package com.openggf.recording;
+
+public record RecordingDeterminismMetadata(
+        Integer initialLevelFrameCounter,
+        Long initialRngSeed
+) {}
+```
+
+Set fields to `null` when the current runtime does not expose the value. Do not block recording on unavailable seed/counter fields.
+
+- [ ] **Step 5: Add stop reasons**
 
 ```java
 package com.openggf.recording;
@@ -202,13 +261,13 @@ public enum UserRecordingStopReason {
 }
 ```
 
-- [ ] **Step 4: Add Jackson codec helper**
+- [ ] **Step 6: Add Jackson codec helper**
 
 `UserRecordingJson` owns one configured `ObjectMapper` with `findAndRegisterModules()` disabled unless the project already registers Java time modules. If Java time support is missing, serialize `Instant` as ISO string through a manifest DTO inside this helper. Do not add a new dependency.
 
-- [ ] **Step 5: Test roundtrip**
+- [ ] **Step 7: Test roundtrip**
 
-`TestUserRecordingManifestJson` creates a manifest with `BuildIdentity("0.6.prerelease", "abcdef123", false)`, writes JSON, reads it back, and asserts `jumpActionButton == "A"` and the sidekick list survives.
+`TestUserRecordingManifestJson` creates a manifest with `BuildIdentity("0.6.prerelease", "abcdef123", false)`, writes JSON, reads it back, and asserts `jumpActionButton == "A"`, the sidekick list survives, `sidecar.desyncLiteSchemaVersion == 1`, `sidecar.sampleMode == "every-frame"`, and a JSON fixture containing reserved `sampleInterval` is tolerated.
 
 Run: `mvn "-Dtest=com.openggf.recording.TestUserRecordingManifestJson" test`
 
@@ -293,6 +352,7 @@ The sidecar is comparison-only. It must not hydrate gameplay state.
 
 **Files:**
 - Create: `src/main/java/com/openggf/recording/DesyncLiteFrame.java`
+- Create: `src/main/java/com/openggf/recording/RecordingMainPlayerResolver.java`
 - Create: `src/main/java/com/openggf/recording/DesyncLiteSnapshotter.java`
 - Create: `src/main/java/com/openggf/recording/UserRecordingVerifier.java`
 - Create: `src/main/java/com/openggf/recording/UserRecordingVerificationResult.java`
@@ -327,12 +387,39 @@ Plan for sparse versions by keeping the frame field authoritative and making ver
 - [ ] **Step 2: Snapshot from live state**
 
 `DesyncLiteSnapshotter.capture(int movieFrame)` reads:
-- main playable sprite from `GameServices.sprites().getSprite("main")`, cast after an `instanceof AbstractPlayableSprite` check;
+- main playable sprite through `RecordingMainPlayerResolver.resolve(GameServices.configuration(), GameServices.sprites())`;
 - `getCentreX()` and `getCentreY()`, never `getX()` or `getY()`;
 - camera from `GameServices.camera()`;
 - timers/rings/score from existing `GameStateManager` and timer services.
 
 If one field is not directly exposed, add a narrow getter on the owning manager rather than reading private fields by reflection.
+
+Add `RecordingMainPlayerResolver` so snapshotter, verifier, and smoke harness use the same player lookup:
+
+```java
+package com.openggf.recording;
+
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
+import com.openggf.sprites.Sprite;
+import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+
+public final class RecordingMainPlayerResolver {
+    private RecordingMainPlayerResolver() {
+    }
+
+    public static AbstractPlayableSprite resolve(SonicConfigurationService configService,
+                                                 SpriteManager spriteManager) {
+        String mainCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
+        Sprite sprite = spriteManager.getSprite(mainCode);
+        if (sprite instanceof AbstractPlayableSprite playable) {
+            return playable;
+        }
+        throw new IllegalStateException("Main playable sprite not available for code: " + mainCode);
+    }
+}
+```
 
 - [ ] **Step 3: Verifier result model**
 
@@ -364,6 +451,8 @@ public boolean hasMismatch();
 ```
 
 `afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped)` captures live state after each gameplay frame and compares to the expected `DesyncLiteFrame` for that movie frame. `shouldSkipGameplayTick` returns `false`; user recordings do not encode trace lag frames.
+
+Verifier live capture must call the same `RecordingMainPlayerResolver` path as `DesyncLiteSnapshotter` so recording and playback compare the same player identity.
 
 - [ ] **Step 5: Test comparison logic**
 
@@ -532,6 +621,8 @@ This is the Step-0 gate from the spec. If it fails, stop feature work and fix de
 - replay through `RecordingFrameDriver.stepFrameFromRecording()`;
 - verify clean through `UserRecordingVerifier`.
 
+This gate proves the shared core frame driver can record and replay a fresh-start window deterministically. It is necessary but not sufficient for the final runtime wrapper because `GameLoop.updateLevelMode` also owns mode routing, title cards, rendering suppression, and transitions; Task 11 and Task 12 close that integration coverage.
+
 - [ ] **Step 2: Make ROM-dependent test skip cleanly**
 
 If no matching ROM path exists, use JUnit `Assumptions.assumeTrue` with a clear message. Prefer S3K when `-Ds3k.rom.path` is present, otherwise S2, then S1.
@@ -583,6 +674,8 @@ public UserRecordingHudState hudState();
 - [ ] **Step 2: Capture live inputs**
 
 Use configured P1/P2 keys from `SonicConfigurationService`. For P1/P2 jump, record action bit `A` when the collapsed engine jump input is pressed. Do not set B or C in engine-authored rows.
+
+For Sonic+Tails or other CPU-sidekick configurations, sidekick determinism comes from P1 input plus deterministic sidekick AI. The P2 lane records explicit P2 controller input only; an empty P2 lane is not a sidekick-recording bug.
 
 - [ ] **Step 3: Finalize recordings**
 
@@ -781,6 +874,8 @@ For recording playback:
 - [ ] **Step 5: Fast-forward behavior**
 
 When playback options have `fastForward == true`, skip normal scene rendering while playback is running. Render only a frame counter overlay such as `PLAYBACK FF 1234/4567`.
+
+The fast-forward pump must be bounded. Advance multiple gameplay frames per outer loop only up to a fixed frame budget or time budget, then yield back to the main loop so GLFW/window events, Escape, pause, and stop input remain responsive. Do not implement fast-forward as an unbounded tight loop inside one event-poll interval.
 
 End fast-forward and resume normal rendering when:
 - pause-on-desync trips;
