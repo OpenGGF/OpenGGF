@@ -28,6 +28,10 @@ public final class AppVersion {
         return loadIdentity(AppVersion.class.getResourceAsStream(RESOURCE_PATH));
     }
 
+    private static String loadVersion(InputStream input) {
+        return loadIdentity(input).displayVersion();
+    }
+
     static BuildIdentity loadIdentity(InputStream input) {
         try (InputStream stream = input) {
             if (stream == null) {
