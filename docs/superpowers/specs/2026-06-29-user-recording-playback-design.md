@@ -33,6 +33,9 @@ That sidecar is comparison-only and must never hydrate or correct engine state.
 - Optionally fast-forward playback by skipping normal scene rendering and
   showing only progress/status until a target, desync, movie end, or level
   boundary is reached.
+- Store exact engine build identity in each recording and show a non-blocking
+  amber warning in the recordings menu when the highlighted movie was made by a
+  different build, a dirty build, or an unknown legacy build.
 
 ### Out Of Scope For MVP
 
@@ -119,7 +122,8 @@ Playback starts from master title:
 2. The user presses `Shift+Record`.
 3. A recordings menu opens for `recordings/<game-id>/`.
 4. The menu lists loadable BK2s newest first, showing game, zone/act, frame
-   count, schema status, and verification-sidecar availability.
+   count, schema status, verification-sidecar availability, and engine-version
+   compatibility.
 5. `Enter` opens playback options:
    - target frame, optional; blank means run to movie end or a boundary;
    - pause on desync, default off;
@@ -206,6 +210,10 @@ Carries recording metadata:
 
 - manifest schema version;
 - desync-lite schema version;
+- engine display version;
+- engine base version;
+- engine commit hash;
+- engine dirty flag;
 - game id;
 - zone and act;
 - team/profile/session overrides;
@@ -216,6 +224,22 @@ Carries recording metadata:
 - deterministic start seed/counter inputs where available;
 - `sidecar.sampleMode: "every-frame"`;
 - reserved optional `sidecar.sampleInterval` for future sparse modes.
+
+The engine version fields are build metadata, not hand-edited source metadata.
+`pom.xml` remains the human release/prerelease version, while the built
+`version.properties` should carry generated metadata such as:
+
+```properties
+app.version=0.6.prerelease-84f1f269d
+app.baseVersion=0.6.prerelease
+app.commit=84f1f269d
+app.dirty=false
+```
+
+The short commit hash must be injected at build time, not committed into source
+as a generated file. Dirty working-tree builds should be visibly marked, for
+example `0.6.prerelease-84f1f269d-dirty`, so recordings made from uncommitted
+code are distinguishable.
 
 ### `OpenGGF/desync-lite.jsonl`
 
@@ -290,8 +314,15 @@ The recordings menu can follow `TestModeTracePicker`'s text-list pattern:
 - newest-first list;
 - selected-recording info panel;
 - schema/sidecar status;
+- engine-version status;
 - `Enter` for options/playback;
 - `Esc` to return.
+
+When the highlighted movie's recorded engine identity differs from the current
+engine identity, the menu shows amber warning text. This warning is visual only:
+it must not block playback, fast-forward, target-frame playback, or verifier
+use. Warn when the commit hash differs, either side is dirty, or the recording
+lacks build metadata.
 
 It should be a sibling to the trace picker, not a trace picker mode.
 
@@ -325,6 +356,12 @@ Unit tests:
 - Fast-forward exits on level boundary/completion.
 - Menu scrolling/selection/options behavior, modeled after
   `TestModeTracePickerTest`.
+- Recordings-menu version status:
+  - no warning when the highlighted movie's engine commit matches the current
+    engine commit and neither side is marked dirty;
+  - amber warning when the commit differs;
+  - amber warning when either side is dirty;
+  - amber legacy/unknown warning when the movie lacks build metadata.
 
 Integration tests:
 
@@ -345,3 +382,7 @@ Integration tests:
   until explicit stop.
 - Whether finalized recordings should be retained after zero gameplay frames
   or deleted as cancelled recordings.
+- Exact Maven mechanism for injecting Git metadata. Candidate approaches are
+  `git-commit-id-maven-plugin`, a lightweight antrun/exec step that writes a
+  generated filtered resource under `target`, or CI-provided environment
+  variables with local Git fallback.
