@@ -164,6 +164,32 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // updateDynamicSpawn() tracks the moving parent surface for placement and
+        // diagnostics, but ROM keeps SolidObject standing/pushing bits in the live
+        // Obj78 SST slot status byte while y_pos changes
+        // (docs/s2disasm/s2.asm:56025-56033). Key the folded status latch by this
+        // instance, not by the per-frame dynamic spawn record.
+        return true;
+    }
+
+    @Override
+    public boolean preservesRidingPushStatus(PlayableEntity playerEntity) {
+        int masterOffset = yOffsets[0];
+        if (masterOffset == 0) {
+            return false;
+        }
+        // Obj78's four adjacent pieces are separate ROM solid slots. While a
+        // rider moves toward the lower neighbouring step face, that neighbour's
+        // side status remains visible even on continued-ride frames where the
+        // folded engine instance no longer reports a fresh side contact.
+        boolean lowerStepIsLeft = (masterOffset > 0) ^ xFlip;
+        return lowerStepIsLeft
+                ? playerEntity.getDirection() == com.openggf.physics.Direction.LEFT
+                : playerEntity.getDirection() == com.openggf.physics.Direction.RIGHT;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();

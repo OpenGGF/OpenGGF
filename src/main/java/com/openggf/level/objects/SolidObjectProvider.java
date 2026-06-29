@@ -354,6 +354,20 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object's continued-riding path should keep the player's
+     * {@code Status_Push} bit set even when the current frame does not produce
+     * a fresh side-contact classification.
+     * <p>
+     * Ordinary solids should return false: their push bit is owned by current
+     * side contact and the normal movement/animation clear paths. Multi-piece
+     * ROM objects with adjacent-slot geometry can opt in when a rider remains
+     * pressed into a neighbouring step face during the continued ride path.
+     */
+    default boolean preservesRidingPushStatus(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Minimum remaining push-grace frames for the CPU sidekick riding bridge.
      * <p>
      * The default keeps the conservative shared threshold. Objects with ROM

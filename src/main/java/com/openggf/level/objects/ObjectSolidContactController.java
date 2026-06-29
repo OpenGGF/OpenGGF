@@ -1315,6 +1315,7 @@ final class ObjectSolidContactController {
                 // markStandingBitEstablishedThisFrame).
                 markStandingBitEstablishedThisFrame(player, instance, result.pieceIndex());
                 clearGroundWallSuppressionForNormalSolidSupport(player, instance);
+                preserveRidingPushStatusIfNeeded(player, instance, provider);
                 inlineSupportedPlayers.add(player);
             }
             // Solid_ResetFloor takeover (pieceScoped multi-piece only): an adjacent
@@ -1332,6 +1333,7 @@ final class ObjectSolidContactController {
                 setObjectStandingBit(player, instance, result.overridePieceIndex());
                 markStandingBitEstablishedThisFrame(player, instance, result.overridePieceIndex());
                 clearGroundWallSuppressionForNormalSolidSupport(player, instance);
+                preserveRidingPushStatusIfNeeded(player, instance, provider);
                 inlineSupportedPlayers.add(player);
                 return result.aggregateContact();
             }
@@ -1636,6 +1638,7 @@ final class ObjectSolidContactController {
             putRidingState(player, instance, currentX, rideY, ridingPieceIndex);
             setObjectStandingBit(player, instance, ridingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
+            preserveRidingPushStatusIfNeeded(player, instance, provider);
 
             if (solidProfile.dropOnFloor()) {
                 TerrainCheckResult floorCheck = ObjectTerrainUtils.checkFloorDist(
@@ -1714,6 +1717,16 @@ final class ObjectSolidContactController {
     private boolean carriesAirborneRiderAfterExitPlatform(ObjectInstance object) {
         return object instanceof SolidObjectProvider provider
                 && provider.getSolidRoutineProfile().carriesAirborneRiderAfterExitPlatform();
+    }
+
+    private void preserveRidingPushStatusIfNeeded(PlayableEntity player, ObjectInstance instance,
+            SolidObjectProvider provider) {
+        if (!provider.preservesRidingPushStatus(player)) {
+            return;
+        }
+        player.setPushing(true);
+        setObjectPushingBit(player, instance);
+        provider.setPlayerPushing(player, true);
     }
 
     private void applyRidingCarry(PlayableEntity player, ObjectInstance instance,
@@ -2290,6 +2303,7 @@ final class ObjectSolidContactController {
                     nextRidingX = result.ridingX();
                     nextRidingY = result.ridingY();
                     nextRidingPieceIndex = result.pieceIndex();
+                    preserveRidingPushStatusIfNeeded(player, instance, provider);
                 }
                 if (result.aggregateContact() != null && instance instanceof SolidObjectListener listener) {
                     listener.onSolidContact(player, result.aggregateContact(), frameCounter);

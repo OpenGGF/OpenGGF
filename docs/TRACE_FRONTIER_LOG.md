@@ -307,6 +307,55 @@ branch-local measurements.
   revised `DropOnFloor`-scoped fix above; OOZ1 advanced through the Obj36 fix
   above after the revised worker avoided the earlier OOZ2 regression; MCZ2
   advanced through the Obj80 fix above.
+## 2026-06-29 - S2 CPZ1 Obj78 dynamic-spawn latch frontier move (f4225 -> f4281)
+
+- Worktree/branch: `.worktrees/ai-trace-s2-cpz-r11` /
+  `bugfix/ai-trace-s2-cpz-r11`, branched from
+  `bugfix/ai-s2-trace-develop` at `be8376438`.
+- Baseline reproduced from the integration sweep:
+  `TestS2CpzLevelSelectTraceReplay#replayMatchesTrace` first failed at f4225 /
+  264 errors (`tails_x_speed` expected `0x0024`, actual `0x0018`);
+  `TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace` first failed at f2889 /
+  1238 errors (`tails_x` expected `0x10E8`, actual `0x10F0`).
+- Evidence/root: CPZ1 context showed engine Tails had stale
+  `status.player.pushing` before the CPU routine while ROM had only
+  `status.player.on_object`. Temporary setter/latch diagnostics isolated the
+  stale bit to Obj78's folded multi-piece `SolidObject` push latch: the engine
+  set the push bit on the same frame ROM did, but `clearObjectPushingBit` missed
+  the next no-contact frame because `CPZStaircaseObjectInstance.updateDynamicSpawn`
+  rebuilt `getSpawn()` as the staircase moved. ROM keeps Obj78 standing/pushing
+  bits in the live SST `status(a0)` byte while `y_pos` changes through
+  `loc_29280 -> SolidObject` (`docs/s2disasm/s2.asm:56025-56033`), so the
+  folded engine latch must key by the live instance, not the per-frame dynamic
+  spawn record. CPZ2 regression probing then showed the broad instance latch
+  could clear the push bit too aggressively while Tails was still riding the
+  down-step side of the folded staircase: ROM's separate Obj78 slots keep that
+  side status visible even when the folded engine instance has no fresh side
+  contact on the current frame.
+- Fix: `CPZStaircaseObjectInstance` opts into
+  `usesInstanceSolidStateLatchKey()`. `ObjectSolidContactController` now exposes
+  an object-local `preservesRidingPushStatus` hook for folded multi-piece solids,
+  and Obj78 uses it only when the rider faces the lower neighbouring step face.
+  This is ROM-state/object-geometry modelling, comparison-only, with no trace
+  hydration and no zone/route/frame carve-out.
+- Result:
+  `TestS2CpzLevelSelectTraceReplay#replayMatchesTrace` advances from f4225 /
+  264 errors to f4281 / 246 errors (`tails_x_speed` expected `-0018`, actual
+  `0x0000`). `TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace` holds first
+  error f2889 (`tails_x` expected `0x10E8`, actual `0x10F0`; total 1238 ->
+  1236).
+- Verification:
+  `mvn "-Dtest=TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay" test "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full"`
+  produced the CPZ frontiers above.
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test "-DfailIfNoTests=false"`
+  exited 0; fresh XML for all seven requested S2 green-guard traces reports
+  `failures="0"` / `errors="0"`.
+  `mvn "-Dtest=TestS2*TraceReplay" test "-DfailIfNoTests=false"` was run in
+  this candidate and in a detached baseline worktree at `be8376438`; the full
+  S2 comparison changed only CPZ: CPZ1 f4225 / 264 -> f4281 / 246, CPZ2
+  f2889 / 1238 -> f2889 / 1236. Every other S2 trace had identical first-error
+  frame and total error count. `mvn "-Dtest=TestCpzStaircaseWallCollision" test
+  "-DfailIfNoTests=false"` exited 0 with 2 tests, 0 failures, 0 errors.
 
 ## 2026-06-29 - S2 HTZ1 Obj84 flying-sidekick regression repair (256 -> 226 errors)
 
