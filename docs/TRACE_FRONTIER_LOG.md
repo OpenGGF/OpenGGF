@@ -536,6 +536,39 @@ branch-local measurements.
   exited 0; fresh Surefire reports show ARZ, EHZ1, MCZ, and SCZ all green.
   MSE also printed the stale WFZ report from the previous focused run, but that
   class was not part of the guard invocation.
+## 2026-06-29 - S1 SLZ3 f12784 boss-escape boundary opens 1f early - ENGINE FIX -> SLZ3 GREEN (1 file, 4 -> 0 errors)
+
+- Command: `mvn -q "-Dtest=TestS1Slz3CompleteRunTraceReplay" test`
+  (worktree `bugfix/ai-slz3-f12784` off develop 668149221). Result: PASS (GREEN).
+- Frontier RESOLVED: `TestS1Slz3CompleteRunTraceReplay` 4 -> 0 errors. Prior first
+  error f12784 (`camera_x` exp 0x2000 act 0x2002); the f12932 x/x_speed/g_speed
+  cascade flowed from it. SLZ3 is the 18th S1 green (only MZ2 f2823 red remains).
+- Root: the SLZ boss defeat->escape timeline ran one frame early, so the escape
+  boundary scroll (`addq.w #2,(v_limitright2)` via runCameraExpandEscape) opened
+  one frame too soon. CORRECTS the prior f12784 entry's hypothesis (a "shared
+  cross-zone camera/boundary-unlock root" shared with SBZ2 f8941) -- it is NOT a
+  camera bug and NOT shared with SBZ2; it is the SLZ-boss defeat-routine dispatch
+  off-by-one, identical in shape to the just-merged MZ3 f16868 fix. The killing
+  hit only sets `obStatus` bit 7; the boss acts on it in its own
+  `BSLZ_StatusUpdate` pass, where `BSLZ_Defeated` (loc_18A46, docs/s1disasm/_incObj/
+  `7A, 7B Boss - SLZ Main and Spike Balls.asm`:186-192) does `move.b #6,ob2ndRout`
+  + set GenericTimer 120 + `rts` -- it returns WITHOUT falling through to
+  `BSLZ_Explode`, so the defeat-timer's first decrement (`BSLZ_Explode subq.b #1`
+  loc_18B48, lines 313-314) lands the NEXT frame when `BossStarLight_ShipMain`
+  re-reads `ob2ndRout` (lines 102-104). The engine selects the defeat routine in
+  the spikeball-update/touch pass that runs before the boss's own `update()`, so
+  without a one-frame deferral `updateDefeatWait()` decremented the $78 timer on
+  the routine-change frame, shifting the entire defeat->exit-jump->escape chain
+  (and thus the camera scroll) one frame early.
+- Fix (1 file): override `Sonic1SLZBossInstance.defeatDeferralAppliesToThisBoss()`
+  to return `true`, mirroring `Sonic1GHZBossInstance` / `Sonic1SYZBossInstance` /
+  `Sonic1MZBossInstance`. The shared `AbstractBossInstance` deferral skips one
+  `updateBossLogic()` dispatch after defeat selection, restoring the ROM
+  read-once-at-top settle frame. ROM-cited, S1-boss-only (S1-only class),
+  comparison-only, no zone/route/frame carve-out.
+- Zero regression: full S1 `*TraceReplay` sweep + S2 EHZ1 + `TestRewindCoverageGuard`
+  + `TestArchitecturalSourceGuard` + `TestS1SlzBossSpikeballGraphRewind` all green
+  except the pre-existing MZ2 f2823 (1116 errors, byte-identical pre/post fix).
 
 ## 2026-06-29 - S1 SBZ2 f8941 title-card PLC-decompression wait - ENGINE FIX -> SBZ2 GREEN (1 file, 11 -> 0 errors)
 
