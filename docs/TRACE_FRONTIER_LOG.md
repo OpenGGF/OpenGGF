@@ -6,19 +6,17 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-## 2026-06-29 - S2 integration sweep after OOZ2 Obj45 merge (5 green, 14 expected-red)
+## 2026-06-29 - S2 integration sweep after OOZ2 Obj45 exact-edge merge (5 green, 14 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
-  `bugfix/ai-s2-trace-develop` at merge commit `5b1d8cb96`, after merging
-  `bugfix/ai-trace-s2-ooz2-r3` and confirming local `develop` plus
-  `origin/develop` were already contained.
+  `bugfix/ai-s2-trace-develop` at merge commit `7ba205591`, after first
+  merging `origin/develop` at `b263d3a4d`, then merging
+  `bugfix/ai-trace-s2-ooz2-r4`.
 - Command:
-  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-trace-develop\s2.gen"" ""-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay"" test"`.
-- Result: the Maven invocation still emitted a Surefire fork error for the
-  abstract S2 base class, so the routing table below is based on the concrete
-  class reports under `target/surefire-reports/`. All 19 concrete S2 trace
-  classes produced reports: 5 green, 14 expected-red. No green guard regressed;
-  WFZ remains green and OOZ2 holds the new f1603 frontier.
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2*TraceReplay"" test"`.
+- Result: all 19 concrete S2 trace classes ran: 5 green, 14 expected-red. No
+  green guard regressed; WFZ remains green and OOZ2 advances from f1603 to the
+  new f1751 frontier.
 - Green traces: `TestS2ArzLevelSelectTraceReplay`, `TestS2Ehz1TraceReplay`,
   `TestS2MczLevelSelectTraceReplay`, `TestS2SczLevelSelectTraceReplay`,
   `TestS2WfzLevelSelectTraceReplay`.
@@ -29,7 +27,7 @@ branch-local measurements.
 | `TestS2Arz2LevelSelectTraceReplay` | f595 `obj_extra_s18_x` expected absent, actual `0x0675`; 3171 errors |
 | `TestS2MtzLevelSelectTraceReplay` | f1267 `y` expected `0x00AC`, actual `0x00A4`; 1092 errors |
 | `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
-| `TestS2Ooz2LevelSelectTraceReplay` | f1603 `x_speed` expected `0x004C`, actual `0x0000`; 1250 errors |
+| `TestS2Ooz2LevelSelectTraceReplay` | f1751 `y_speed` expected `0x0420`, actual `-0400`; 1338 errors |
 | `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
 | `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
 | `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1299 errors |
