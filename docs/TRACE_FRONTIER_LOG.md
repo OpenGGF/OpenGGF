@@ -21689,3 +21689,49 @@ Verification:
   only CPZ1/CPZ2 changed relative to the exact parent. ARZ2, CNZ2, DEZ, HTZ1,
   HTZ2, MCZ2, MTZ1, MTZ2, MTZ3, OOZ1, and OOZ2 first-error frontiers/counts match
   the exact-parent baseline.
+
+### 2026-06-29 -- S2 CPZ1 Obj1E post-release roll animation: f3871 -> f4194
+
+Worktree `bugfix/ai-trace-s2-cpz-r7` from integration parent
+`0223d5e6746f251f49cafa3d8a8729f276b260a7`.
+
+Root fixed: after CPZ Obj1E's full release, the engine kept a tube-exit
+collision-immunity latch that was needed for the tube geometry but allowed the
+normal playable animation profile to replace the ROM Roll animation byte before
+later objects ran. ROM Obj1E capture writes `anim(a1)=AniIDSonAni_Roll`, sets
+`status.player.in_air`, and writes `obj_control=$81` (`docs/s2disasm/s2.asm:
+48612-48616`). The full release at `loc_227A6` masks `y_pos`, clears
+`obj_control`, and plays the release sound, but does not write a new animation
+or set `status.player.rolling` (`docs/s2disasm/s2.asm:48683-48688`). S2 Obj26
+monitor solidity/touch gates then key on `anim(a1)==Roll` (`docs/s2disasm/s2.asm:
+25611-25616,85293-85311`), so CPZ1's post-tube monitor contact must see the
+persisted Roll byte even though `obj_control` is already clear.
+
+BizHawk RAM evidence (read-only diag over trace frames 3868-3874; BK2 offset
+2868, BizHawk frames 6736-6742) captured Sonic after release with
+`anim=02`, `status=03`, `obj_control=00`, and downward velocity through the
+monitor window. Representative rows:
+- trace 3871 sample: `x=2473.F700 y=02C9.D400 yv=0600 anim=02 status=03 objctl=00`
+- trace 3872 sample: `x=2473.6700 y=02CF.D400 yv=0638 anim=02 status=03 objctl=00`
+
+Fix: `CPZSpinTubeObjectInstance` now keeps a short CharacterState-local
+post-release Roll-animation hold while preserving the existing collision-immunity
+latch. This is CPZ Obj1E-local and models the ROM animation byte visible to later
+same-frame object gates; it does not set `status.player.rolling`, does not hydrate
+from the trace, and does not branch on route/frame/zone.
+
+Result:
+- `TestS2CpzLevelSelectTraceReplay#replayMatchesTrace`: f3871 / 154 errors
+  (`y_speed` expected `0x0638`, actual `0x0000`) -> f4194 / 356 errors
+  (`y` expected `0x032C`, actual `0x032D`).
+- `TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace`: holds f2889 / 1222
+  errors (`tails_x` expected `0x10E8`, actual `0x10F0`).
+
+Verification:
+- `mvn "-Dtest=com.openggf.game.sonic2.objects.TestCPZSpinTubeObjectInstance#fullReleaseClearsObjectControlAndPreservesYSubpixel" test`
+  passed the focused Obj1E unit coverage.
+- `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace,TestS2CpzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  produced the CPZ frontiers above.
+- `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 0; the requested S2 green-guard traces stayed green while the expected
+  CPZ reds remained at the frontiers above.
