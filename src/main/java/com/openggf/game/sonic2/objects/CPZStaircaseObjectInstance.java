@@ -179,20 +179,28 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
         if (masterOffset == 0) {
             return false;
         }
-        // Obj78's four adjacent pieces are separate ROM solid slots. While a
-        // rider moves into either neighbouring step face, that child slot's side
-        // status remains visible even on continued-ride frames where the folded
-        // engine instance no longer reports a fresh side contact.
-        return true;
+        // Obj78's four adjacent pieces are separate ROM solid slots. Preserve
+        // the ordinary folded push bit only when the rider faces the lower
+        // neighbouring step; broader CPU slot timing is handled by the
+        // sidekick-specific grace hook below.
+        boolean lowerStepIsLeft = (masterOffset > 0) ^ xFlip;
+        return lowerStepIsLeft
+                ? playerEntity.getDirection() == com.openggf.physics.Direction.LEFT
+                : playerEntity.getDirection() == com.openggf.physics.Direction.RIGHT;
     }
 
     @Override
     public boolean preservesSidekickCpuPushGraceWhileRiding(PlayableEntity playerEntity) {
         // TailsCPU_Normal tests Tails' current Status_Push before later Obj78
         // child SolidObject calls can refresh or clear the live SST push bits
-        // (docs/s2disasm/s2.asm:39291-39294; Obj78 SolidObject at 56084-56094).
+        // (docs/s2disasm/s2.asm:39291-39294; Obj78 SolidObject at 56006-56021).
+        // The lower-neighbouring-step face is already modelled by the ordinary
+        // live push-status latch above. The CPU-only bridge covers the opposite
+        // folded child-slot ordering case without extending that latch into
+        // later lower-step windows.
         return playerEntity != null && playerEntity.isCpuControlled()
-                && preservesRidingPushStatus(playerEntity);
+                && yOffsets[0] != 0
+                && !preservesRidingPushStatus(playerEntity);
     }
 
     @Override

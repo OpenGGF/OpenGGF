@@ -24,6 +24,11 @@ branch-local measurements.
   - CPZ1 Obj78 sidekick CPU push-grace preservation advanced
     `TestS2CpzLevelSelectTraceReplay` from f4281 / 246 to f4351 / 259 while
     holding the S2 green guard.
+  - CPZ Obj78 CPU-only push grace was then narrowed to displaced non-flat
+    staircase cases outside the lower-step live push predicate, restoring
+    `TestS2Cpz2LevelSelectTraceReplay` from the post-CPZ regression
+    f2976 / 1244 to f2976 / 1232 and improving
+    `TestS2CpzLevelSelectTraceReplay` total errors from 259 to 181 at f4351.
   - ARZ2 Obj18 platform standing-latch nudge advanced
     `TestS2Arz2LevelSelectTraceReplay` from f888 / 2720 to f1028 / 2688 and
     reduced `TestS2Htz2LevelSelectTraceReplay` total errors from 1060 to 1057
@@ -64,7 +69,7 @@ branch-local measurements.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
-  `CPZ1` f4351 / 259 (`tails_x` expected `0x20D4`, actual `0x20D3`);
+  `CPZ1` f4351 / 181 (`tails_x` expected `0x20D4`, actual `0x20D3`);
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
   `MCZ2` f10119 / 26 (`tails_x_sub` expected `0x5200`, actual `0x0000`);
@@ -75,6 +80,38 @@ branch-local measurements.
   `OOZ2` f3672 / 692 (`tails_cpu_respawn_counter` expected `0x0079`, actual `0x0000`).
 - Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `HTZ1`,
   `MCZ1`, `SCZ`, and `WFZ`.
+
+## 2026-06-29 - S2 CPZ Obj78 CPU push grace narrowed (CPZ2 1244 -> 1232)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop`.
+- Baseline triage: pre-CPZ integration commit `4f3193788` held
+  `TestS2Cpz2LevelSelectTraceReplay` at f2976 / 1232; post-CPZ merge
+  `e651912e3` regressed the same first frontier to f2976 / 1244. A local split
+  with the old lower-step live predicate and broad CPU grace reproduced the
+  remaining CPZ2 total at f2976 / 1236 while preserving the CPZ1 bridge in
+  integration.
+- Triage/evidence: Obj78 allocates four child SST slots with separate
+  `SolidObject` calls, ORs each child's push/standing bits back into the parent,
+  and recomputes child Y from the parent's staircase offsets
+  (`docs/s2disasm/s2.asm:55978-55995,56006-56021`). `TailsCPU_Normal` tests
+  native Tails' current `Status_Push` bit before later object slots can refresh
+  or clear it (`docs/s2disasm/s2.asm:39291-39300`). The lower-neighbouring-step
+  face is already the ROM-like live push-latch case; the CPU-only bridge is
+  therefore limited to the opposite displaced child-slot ordering case while
+  `yOffsets[0] != 0`.
+- Fix: `CPZStaircaseObjectInstance.preservesSidekickCpuPushGraceWhileRiding`
+  now requires CPU Tails on a displaced staircase and excludes the ordinary
+  `preservesRidingPushStatus` lower-step predicate. This models Obj78 child-slot
+  geometry and native sidekick control state only; it does not edit trace data,
+  hydrate engine state from the trace, or add zone/route/frame carve-outs.
+- Focused CPZ traces:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result after the fix: CPZ1 f4351 / 181 (`tails_x` expected `0x20D4`, actual
+  `0x20D3`), CPZ2 f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`).
+- S2 green guard including HTZ1:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: passed 8/8; no S2 green guard regressions.
 
 ## 2026-06-29 - S2 HTZ1 Obj2F smashable-ground support release (f7805 -> green)
 
