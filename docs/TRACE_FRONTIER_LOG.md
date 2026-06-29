@@ -23419,3 +23419,41 @@ Verification:
 - `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
   exited 0; fresh surefire XML for all seven requested S2 green-guard traces
   reports `failures="0"` / `errors="0"`.
+
+### 2026-06-29 -- S2 ARZ2 Obj91 ChopChop patrol bubbles: f870 -> f888
+
+Worktree `bugfix/ai-trace-s2-arz2-r12` from integration parent
+`a007ab67306128779f86c83f6525f120b2cc1dfa`.
+
+Root fixed: Obj91/ChopChop was not allocating the small Obj0A patrol bubble that
+the ROM emits from `Obj91_Main` when the low byte of `Obj91_bubble_timer`
+pre-decrements to zero. ROM `Obj91_MakeBubble` resets the timer to `$50`, calls
+`AllocateObject`, writes Obj0A subtype 6, offsets `x_pos` by `$14` according to
+the source flip bit, and writes `y_pos+6` (`docs/s2disasm/s2.asm:73687-73769`).
+At ARZ2 trace f598, that places an Obj0A into dynamic slot `0x13` at
+`$05BC,$05EE`. The engine skipped that allocation, so later Obj18 platform
+allocation landed one SST slot early and the trace first diverged at f870.
+
+Fix: `ChopChopBadnikInstance` now runs the Obj91 bubble timer while patrolling
+and spawns a normal `BreathingBubbleInstance` child through the lowest-free slot
+path with the ROM mouth offsets, art profile, subtype, and rise velocity. This is
+object-local ROM state; it does not hydrate from trace data and does not branch
+on zone, route, or frame. `TestS2ObjectOccupancyOracle` now asserts the f598
+slot-`0x13` Obj0A allocation and position directly.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f870 / 2794 errors
+  (`obj_s18_slot` expected `0x18`, actual `0x17`) -> f888 / 2720 errors
+  (`obj_extra_s1F_x` expected absent, actual `0x0AE0`).
+
+Verification:
+- `mvn "-Dtest=TestS2ObjectOccupancyOracle" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  passed all 23 object-occupancy oracle tests; the only reported failure in the
+  MSE aggregate was the expected ARZ2 frontier replay at f888.
+- `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  left fresh surefire reports for all seven requested S2 green-guard traces with
+  `Failures: 0` / `Errors: 0`; the MSE aggregate also reported the expected ARZ2
+  frontier replay at f888.
+- `mvn "-Dtest=TestRewindCoverageGuard" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  passed `TestRewindCoverageGuard`; the MSE aggregate again only reported the
+  expected ARZ2 frontier replay at f888.

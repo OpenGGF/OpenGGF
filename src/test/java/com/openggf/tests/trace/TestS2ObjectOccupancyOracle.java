@@ -5,6 +5,7 @@ import com.openggf.game.sonic2.objects.ArrowProjectileInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.BreathingBubbleInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -551,6 +552,51 @@ public class TestS2ObjectOccupancyOracle {
                         + "delete through the render-flag path; actual slots " + slotCheck.summary());
     }
 
+    @Test
+    public void arz2ChopChopEmitsPatrolBubbleIntoRomSlot19AtFrame598() throws Exception {
+        SlotBubbleCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 598) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    TraceEvent.ObjectAppeared expectedBubble = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectAppeared.class::isInstance)
+                            .map(TraceEvent.ObjectAppeared.class::cast)
+                            .filter(appeared -> appeared.slot() == 19)
+                            .filter(appeared -> parseObjectType(appeared.objectType()) == 0x0A)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedBubble,
+                            "ARZ2 ROM fixture should allocate the f598 Obj91 patrol bubble into slot 0x13");
+                    BreathingBubbleInstance actualBubble = om.activeObjectsOfType(BreathingBubbleInstance.class)
+                            .stream()
+                            .filter(bubble -> bubble.getSlotIndex() == 19)
+                            .findFirst()
+                            .orElse(null);
+                    return new SlotBubbleCheck(actual.get(19),
+                            actualBubble == null ? -1 : actualBubble.getX(),
+                            actualBubble == null ? -1 : actualBubble.getY(),
+                            expectedBubble.x() & 0xFFFF,
+                            expectedBubble.y() & 0xFFFF,
+                            describeSlots(expected, 16, 26),
+                            describeSlots(actual, 16, 26));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x0A, slotCheck.actualId(),
+                "Obj91 must spawn its Obj0A patrol bubble through the normal free-slot path at f598; "
+                        + "expected slots " + slotCheck.expectedSummary()
+                        + " actual slots " + slotCheck.actualSummary());
+        Assertions.assertEquals(slotCheck.expectedX(), slotCheck.actualX(),
+                "Obj91_MakeBubble offsets x_pos by 0x14 from the ChopChop mouth "
+                        + "(docs/s2disasm/s2.asm:73751-73764)");
+        Assertions.assertEquals(slotCheck.expectedY(), slotCheck.actualY(),
+                "Obj91_MakeBubble offsets y_pos by +6 from the ChopChop mouth "
+                        + "(docs/s2disasm/s2.asm:73765-73769)");
+    }
+
     private record SlotWindowCheck(Map<Integer, Integer> slots, String summary) {
         int idAt(int slot) {
             return slots.getOrDefault(slot, -1);
@@ -558,6 +604,16 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     private record SlotProjectileCheck(Integer actualId, int actualX, int expectedX, String summary) {
+    }
+
+    private record SlotBubbleCheck(
+            Integer actualId,
+            int actualX,
+            int actualY,
+            int expectedX,
+            int expectedY,
+            String expectedSummary,
+            String actualSummary) {
     }
 
     private AnimalPositionCheck animalPositionAtArz2Frame(int targetFrame) throws Exception {
