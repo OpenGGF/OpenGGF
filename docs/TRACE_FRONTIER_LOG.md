@@ -6,6 +6,39 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 HTZ1 Tails fly-in render-flag edge (6 green, 2 expected-red in guard subset)
+
+- Worktree/branch: `.worktrees/trace-s2-htz-r3` /
+  `bugfix/ai-trace-s2-htz-r3`.
+- Fix: `TailsRespawnStrategy` now preserves the S2 `TailsCPU_Flying`
+  respawn counter through the two-frame top-edge cached-render-flag window
+  observed at HTZ1, while allowing later fly-in top-edge passes such as CNZ
+  to reset once `render_flags.on_screen` has refreshed.
+- Evidence: targeted BizHawk probe over HTZ1 captured `gfc=$193F` with
+  Tails at `1C97,04AD`, `Camera_Y=$04CC`, `render_flags=$04`, and
+  `Tails_respawn_counter=$003F`; the render flag flips to `$84` on the next
+  frame. Existing aux-state for CNZ shows the same top-edge shape much later
+  in `TailsCPU_Flying` (`flight_timer=$5B`), where ROM resets the counter;
+  `TestSidekickCpuDespawnParity` now covers both shapes.
+- Focused command:
+  `mvn -q '-Dmse=relaxed' '-Dsurefire.forkCount=1' '-DreuseForks=true' '-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' '-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' '-Dtest=TestSidekickCpuDespawnParity#s2FlyingRespawnTopEdgeKeepsCounterUntilRomRenderFlagRefreshes+s2FlyingRespawnLaterTopEdgeUsesRefreshedRenderFlag,TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay' test`.
+- Focused result: targeted unit coverage and `TestS2CnzLevelSelectTraceReplay`
+  passed. `TestS2HtzLevelSelectTraceReplay` advanced to f6586 / 233 errors;
+  `TestS2Htz2LevelSelectTraceReplay` held f3317 / 1058 errors.
+- S2 green guard command:
+  `mvn -q '-Dmse=relaxed' '-Dsurefire.forkCount=1' '-DreuseForks=true' '-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' '-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen' '-Dtest=TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay' test`.
+- S2 green guard result: 8 trace classes ran. The six current green traces
+  (`TestS2ArzLevelSelectTraceReplay`, `TestS2CnzLevelSelectTraceReplay`,
+  `TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay`,
+  `TestS2SczLevelSelectTraceReplay`, `TestS2WfzLevelSelectTraceReplay`)
+  passed; only the expected HTZ red traces failed.
+- Current red frontiers in this guard subset:
+
+| Trace | First error |
+|---|---|
+| `TestS2Htz2LevelSelectTraceReplay` | f3317 `tails_x_speed` expected `0x00E8`, actual `-0018`; 1058 errors |
+| `TestS2HtzLevelSelectTraceReplay` | f6586 `y_speed` expected `-0178`, actual `-0078`; 233 errors |
+
 ## 2026-06-29 - S2 integration sweep after CPZ Obj1E release animation merge (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /

@@ -214,6 +214,86 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s2FlyingRespawnTopEdgeKeepsCounterUntilRomRenderFlagRefreshes() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) 0x1CAE);
+        sonic.setCentreY((short) 0x052C);
+        sonic.resetPositionAndStatTableHistory();
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1C97);
+        tails.setCentreY((short) 0x04AD);
+        tails.setAir(true);
+        tails.setRenderFlagOnScreen(true);
+
+        GameServices.camera().setX((short) 0x1C0E);
+        GameServices.camera().setY((short) 0x04CC);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x04, 0, 0, 0x74, false, 0x1CA4, 0x052C);
+        controller.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
+
+        for (int i = 0; i < 0x3E; i++) {
+            tails.setRenderFlagOnScreen(false);
+            controller.update(i);
+            assertEquals(SidekickCpuController.State.APPROACHING, controller.getState());
+        }
+
+        tails.setCentreX((short) 0x1C97);
+        tails.setCentreY((short) 0x04AD);
+        tails.setRenderFlagOnScreen(true);
+
+        controller.update(0x193F);
+
+        assertEquals(SidekickCpuController.State.APPROACHING, controller.getState());
+        assertEquals(0x003F, controller.getDiagnosticRespawnCounter(),
+                "HTZ1 BizHawk gfc $193F: TailsCPU_Flying still sees render_flags=$04 at relY=-31 "
+                        + "and increments Tails_respawn_counter before BuildSprites refreshes it to $84");
+    }
+
+    @Test
+    void s2FlyingRespawnLaterTopEdgeUsesRefreshedRenderFlag() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) 0x0427);
+        sonic.setCentreY((short) 0x0425);
+        sonic.resetPositionAndStatTableHistory();
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0423);
+        tails.setCentreY((short) 0x03A9);
+        tails.setAir(true);
+        tails.setRenderFlagOnScreen(true);
+
+        GameServices.camera().setX((short) 0x03B1);
+        GameServices.camera().setY((short) 0x03C8);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x04, 0, 0, 0x74, false, 0x0427, 0x0425);
+        controller.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
+
+        for (int i = 0; i < 0x5B; i++) {
+            tails.setRenderFlagOnScreen(false);
+            controller.update(i);
+            assertEquals(SidekickCpuController.State.APPROACHING, controller.getState());
+        }
+
+        tails.setCentreX((short) 0x0423);
+        tails.setCentreY((short) 0x03A9);
+        tails.setRenderFlagOnScreen(true);
+
+        controller.update(0x045A);
+
+        assertEquals(SidekickCpuController.State.APPROACHING, controller.getState());
+        assertEquals(0x0000, controller.getDiagnosticRespawnCounter(),
+                "CNZ f1115 guard: a later TailsCPU_Flying top-edge pass has refreshed render_flags "
+                        + "and must reset Tails_respawn_counter instead of carrying $5C");
+    }
+
+    @Test
     void s2FlyingOffscreenCounterCarriesIntoNormalDespawnAfterApproachCompletes() {
         TestableSprite sonic = new TestableSprite("sonic");
         sonic.setCentreX((short) 0x2908);
