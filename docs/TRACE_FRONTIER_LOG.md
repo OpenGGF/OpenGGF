@@ -151,9 +151,12 @@ branch-local measurements.
   - MCZ2 MCZ boss Tails max-X mirror greened
     `TestS2Mcz2LevelSelectTraceReplay` from f10119 / 26 while holding the
     current S2 accepted red/green frontier set.
+  - CNZ2 Point Pokey release / bumper handoff advanced
+    `TestS2Cnz2LevelSelectTraceReplay` from f5298 / 920 to f6144 / 994 while
+    holding the current S2 accepted red/green frontier set.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
-  `CNZ2` f5298 / 920 (`x_speed` expected `-09CE`, actual `-08E8`);
+  `CNZ2` f6144 / 994 (`tails_y_speed` expected `0x0038`, actual `0x0000`);
   `CPZ1` f4351 / 181 (`tails_x` expected `0x20D4`, actual `0x20D3`);
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
