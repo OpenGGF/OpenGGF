@@ -267,6 +267,10 @@ public class DrowningController {
      * @param countdownNumber Countdown number (-1 for regular bubble)
      */
     private void spawnBubble(int countdownNumber) {
+        spawnBubble(countdownNumber, true);
+    }
+
+    private void spawnBubble(int countdownNumber, boolean skipFirstUpdate) {
         LevelManager levelManager = player.currentLevelManagerIfAvailable();
         if (levelManager == null || levelManager.getObjectManager() == null) {
             return;
@@ -294,7 +298,8 @@ public class DrowningController {
         // Create bubble with game-specific art configuration
         BreathingBubbleInstance bubble = new BreathingBubbleInstance(
             bubbleX, bubbleY, startsFacingLeft, countdownNumber,
-            bubbleArtKey, bubbleCountdownFrames, bubbleMaxFrame, riseVelocity
+            bubbleArtKey, bubbleCountdownFrames, bubbleMaxFrame, riseVelocity,
+            skipFirstUpdate
         );
 
         levelManager.getObjectManager().addDynamicObjectNextFrame(bubble);
@@ -306,6 +311,16 @@ public class DrowningController {
      */
     public void spawnFixedCountdownBubble(int countdownNumber) {
         spawnBubble(countdownNumber);
+    }
+
+    /**
+     * S2's fixed Obj0A sidecars run after dynamic SST slots. Their visible
+     * child bubble therefore reaches its first dynamic Obj0A pass on the next
+     * RunObjects scan, without the extra skip needed by player-side early
+     * allocation paths.
+     */
+    public void spawnFixedCountdownBubble(int countdownNumber, boolean skipFirstUpdate) {
+        spawnBubble(countdownNumber, skipFirstUpdate);
     }
 
     /**

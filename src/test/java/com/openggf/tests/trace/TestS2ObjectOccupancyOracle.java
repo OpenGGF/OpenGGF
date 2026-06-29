@@ -334,6 +334,47 @@ public class TestS2ObjectOccupancyOracle {
                         + "Actual slots " + slotCheck.summary());
     }
 
+    @Test
+    public void arz2DynamicSlotOccupancyMatchesThroughArrowShooterStream() throws Exception {
+        SlotWindowCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 687) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x8F, expected.get(61),
+                            "ROM fixture should allocate Obj8F Grounder wall child into slot 61 at f687");
+                    Assertions.assertEquals(0x8F, expected.get(62),
+                            "ROM fixture should allocate Obj8F Grounder wall child into slot 62 at f687");
+                    Assertions.assertEquals(0x8F, expected.get(63),
+                            "ROM fixture should allocate Obj8F Grounder wall child into slot 63 at f687");
+                    Assertions.assertEquals(0x0A, expected.get(64),
+                            "ROM fixture should allocate the next Obj0A mouth bubble into slot 64 at f687");
+                    return new SlotWindowCheck(actual, describeSlots(actual, 57, 64));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(0x8F, check.idAt(61),
+                "S2 Obj8D loc_36C64 uses AllocateObject for Obj8F wall pieces before the "
+                        + "same-frame Obj0A mouth bubble; actual slots " + check.summary());
+        Assertions.assertEquals(0x8F, check.idAt(62),
+                "S2 Obj8D loc_36C64 uses AllocateObject for Obj8F wall pieces before the "
+                        + "same-frame Obj0A mouth bubble; actual slots " + check.summary());
+        Assertions.assertEquals(0x8F, check.idAt(63),
+                "S2 Obj8D loc_36C64 uses AllocateObject for Obj8F wall pieces before the "
+                        + "same-frame Obj0A mouth bubble; actual slots " + check.summary());
+        Assertions.assertEquals(0x0A, check.idAt(64),
+                "Obj0A should take the next lowest slot after the Obj8F wall pieces; actual slots "
+                        + check.summary());
+    }
+
+    private record SlotWindowCheck(Map<Integer, Integer> slots, String summary) {
+        int idAt(int slot) {
+            return slots.getOrDefault(slot, -1);
+        }
+    }
+
     private AnimalPositionCheck animalPositionAtArz2Frame(int targetFrame) throws Exception {
         return driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {

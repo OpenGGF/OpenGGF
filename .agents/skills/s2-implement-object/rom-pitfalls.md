@@ -2009,6 +2009,16 @@ chain links `9f47f557f` (`docs/s1disasm/_incObj/15 Swinging Platforms.asm:67-105
 render-only children spawned as real slots). See `s1-implement-object/rom-pitfalls.md`
 P8.
 
+**Follow-up example.** S2 ARZ Grounder Obj8D uses `AllocateObject` for its
+four Obj8F wall children, and Obj8E uses `AllocateObject` for five Obj90 rocks.
+Using after-current child allocation let same-frame Obj0A mouth bubbles take
+the wrong SST slot before the wall pieces in ARZ2. Keep Grounder children on
+`spawnFreeChild`.
+
+**Additional ROM citation.** `docs/s2disasm/s2.asm:73497-73516`
+(`loc_36C2C` Obj90 rocks) and `docs/s2disasm/s2.asm:73520-73533`
+(`loc_36C64` Obj8F walls).
+
 ---
 
 ## P47 — `make_art_tile` priority bit must reach render commands
@@ -2408,6 +2418,41 @@ SolidObject" but shows a one-pixel side-stop delay:
 
 **Originating commit.** `fix: advance S2 MTZ1 monitor side-entry solid timing`
 (`TestS2MtzLevelSelectTraceReplay` advances f4835 -> f5602).
+
+---
+
+## P59 — Fixed Obj0A air-countdown sidecars own S2 mouth-bubble cadence
+
+**Pattern.** S2 player water-entry code installs Obj0A into fixed level-only
+object RAM (`Sonic_BreathingBubbles` / `Tails_BreathingBubbles`). Those fixed
+sidecars own `obj0a_timer`, `obj0a_flags`, `obj0a_next_bubble_timer`, and the
+visible dynamic Obj0A allocations. The visible bubbles are still ordinary
+dynamic SST children, but their allocation happens from the fixed object pass
+after dynamic SST slots, not from the player physics update.
+
+**Engine symptom.** Mouth bubbles appear visually correct but steal a lower SST
+slot before a dynamic object that ROM executes earlier in `RunObjects`. In ARZ2
+f687, a generic player-side mouth-bubble update allocated Obj0A into slot 61
+before Grounder's Obj8D routine allocated its Obj8F wall children, while ROM
+puts Obj8F into slots 61-63 and the mouth bubble into slot 64.
+
+**What to check / fix.** Do not run S2 mouth-bubble RNG/allocation cadence from
+generic per-player water code when the player has a fixed Obj0A sidecar. Model
+the sidecar in the level-event/fixed-object owner, snapshot its timers for
+rewind, and let it allocate visible Obj0A children via the lowest-free dynamic
+object path. Preserve S2's `(RandomNumber & $F) + 8` next-bubble delay. Because
+the fixed sidecar executes after dynamic SST slots, a child allocated into a
+lower dynamic slot should run its first Obj0A dynamic pass on the next
+`RunObjects` scan without an extra engine-only first-update skip.
+
+**ROM citation.** Water-entry installs:
+`docs/s2disasm/s2.asm:36385-36387` and `39552-39554`; fixed object RAM slots:
+`docs/s2disasm/s2.constants.asm:1149-1157`; main loop / `RunObjects` order:
+`docs/s2disasm/s2.asm:5094-5095`; Obj0A countdown and visible bubble
+allocation: `docs/s2disasm/s2.asm:42088-42214`.
+
+**Originating commit.** `fix: advance S2 ARZ2 Grounder bubble cadence`
+(`TestS2Arz2LevelSelectTraceReplay` advances f687 -> f694).
 
 ---
 

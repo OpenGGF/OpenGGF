@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.runtime.HtzRuntimeStateView;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.zone.NoOpZoneRuntimeState;
@@ -49,7 +50,9 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
     private static final int CPZ_EXTRA_BYTES = 1;
     private static final int CNZ_EXTRA_BYTES = 16;
     private static final int LEGACY_EXTRA_BYTES = HANDLER_BYTES + HTZ_EXTRA_BYTES + CPZ_EXTRA_BYTES + CNZ_EXTRA_BYTES;
-    private static final int EXTRA_BYTES = LEGACY_EXTRA_BYTES + Sonic2WFZEvents.SNAPSHOT_BYTES;
+    private static final int EXTRA_BYTES = LEGACY_EXTRA_BYTES
+            + Sonic2WFZEvents.SNAPSHOT_BYTES
+            + Sonic2FixedAirCountdownManager.REWIND_STATE_BYTES;
 
     /** Cached player character resolved from config (lazy init). */
     private PlayerCharacter resolvedPlayerCharacter;
@@ -66,6 +69,8 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
     private final Sonic2WFZEvents wfzEvents;
     private final Sonic2DEZEvents dezEvents;
     private final Sonic2SCZEvents sczEvents;
+    private final Sonic2FixedAirCountdownManager fixedAirCountdownManager =
+            new Sonic2FixedAirCountdownManager();
 
     public Sonic2LevelEventManager() {
         super();
@@ -118,6 +123,7 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         if (handler != null) {
             handler.init(act);
         }
+        fixedAirCountdownManager.reset();
         if (!GameServices.hasRuntime()) {
             return;
         }
@@ -163,6 +169,16 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         if (handler != null) {
             handler.updatePrePhysics(currentAct, frameCounter);
         }
+    }
+
+    @Override
+    public void updateFixedInLevelObjects() {
+        fixedAirCountdownManager.update();
+    }
+
+    @Override
+    public boolean ownsFixedDrowningBubbleCadence(AbstractPlayableSprite player) {
+        return fixedAirCountdownManager.ownsCadenceFor(player);
     }
 
     // =========================================================================
@@ -255,7 +271,8 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
 
     @Override
     protected byte[] captureExtra() {
-        // 11 handlers × 8 bytes + HTZ (22) + CPZ (1) + CNZ (16) + WFZ (32)
+        // 11 handlers x 8 bytes + HTZ (22) + CPZ (1) + CNZ (16) + WFZ (32)
+        // + fixed Sonic/Tails Obj0A air-countdown sidecars (28).
         ByteBuffer buf = ByteBuffer.allocate(EXTRA_BYTES);
         writeHandler(buf, ehzEvents);
         writeHandler(buf, cpzEvents);
@@ -285,6 +302,7 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         buf.putInt(cnzEvents.getCnzRightWallY());
         // WFZ extra
         wfzEvents.captureSnapshot(buf);
+        fixedAirCountdownManager.writeRewindState(buf);
         return buf.array();
     }
 
@@ -323,6 +341,9 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         // WFZ extra was added after the original S2 event snapshot schema.
         if (buf.remaining() >= Sonic2WFZEvents.SNAPSHOT_BYTES) {
             wfzEvents.restoreSnapshot(buf);
+        }
+        if (buf.remaining() >= Sonic2FixedAirCountdownManager.REWIND_STATE_BYTES) {
+            fixedAirCountdownManager.readRewindState(buf);
         }
     }
 }

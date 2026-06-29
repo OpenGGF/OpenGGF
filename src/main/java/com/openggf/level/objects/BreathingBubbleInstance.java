@@ -151,6 +151,13 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
     public BreathingBubbleInstance(int x, int y, boolean startsFacingLeft, int countdownNumber,
                                    String artKey, int[] countdownFrameMap, int maxBubbleFrame,
                                    int riseVelocity) {
+        this(x, y, startsFacingLeft, countdownNumber, artKey, countdownFrameMap, maxBubbleFrame,
+                riseVelocity, true);
+    }
+
+    public BreathingBubbleInstance(int x, int y, boolean startsFacingLeft, int countdownNumber,
+                                   String artKey, int[] countdownFrameMap, int maxBubbleFrame,
+                                   int riseVelocity, boolean skipFirstUpdate) {
         super(buildSpawn(x, y, startsFacingLeft, countdownNumber, artKey, riseVelocity),
                 "BreathingBubble");
         this.currentX = x;
@@ -163,7 +170,7 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
         this.countdownFrame = 0;
         this.numberFormed = false;
         this.lifetime = 0;
-        this.spawnFrameSkipPending = true;
+        this.spawnFrameSkipPending = skipFirstUpdate;
         this.artKey = artKey;
         this.countdownFrameMap = countdownFrameMap;
         this.maxBubbleFrame = maxBubbleFrame;
