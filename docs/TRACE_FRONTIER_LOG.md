@@ -66,7 +66,8 @@ branch-local measurements.
     `TestS2Ooz2LevelSelectTraceReplay` from f3226 / 945 to f3672 / 692 and
     improved `TestS2OozLevelSelectTraceReplay` from 1125 to 614 errors while
     holding its first frontier at f1790.
-  - OOZ2 Tails normal-despawn horizontal render-entry timing advanced
+  - OOZ2 Tails normal-despawn late airborne-rolling horizontal render-entry
+    timing advanced
     `TestS2Ooz2LevelSelectTraceReplay` from f3672 / 692 to f3830 / 691 while
     holding `TestS2OozLevelSelectTraceReplay` at f1790 / 614.
 - Current red routing table:
@@ -242,9 +243,10 @@ branch-local measurements.
   re-entry can leave `TailsCPU_CheckDespawn` reading the previous clear
   `render_flags.on_screen` bit for one more CPU tick
   (`docs/s2disasm/s2.asm:38963-38970,39016-39024,39409-39440,5095-5111`).
-  The engine now latches that S2-only stale edge for airborne/rolling sidekicks
-  in the interior horizontal entry band; exact-edge and grounded re-entries
-  continue to reset immediately, matching OOZ2 frames 3253 and 3318.
+  The engine now latches that S2-only stale edge for sidekicks in the
+  late-counter airborne-rolling interior horizontal entry band; exact-edge,
+  grounded-only, and airborne-only re-entries continue to reset immediately,
+  matching OOZ2 frames 3253 and 3318 and preserving HTZ1 f1555/f5223.
 - Focused behavior test:
   `mvn "-Dtest=com.openggf.sprites.playable.TestSidekickCpuDespawnParity#s2NormalDespawnConsumesFreshRenderEntryOneCpuTickLate" test`.
   The test was verified red before the production change (`0x0079` expected,

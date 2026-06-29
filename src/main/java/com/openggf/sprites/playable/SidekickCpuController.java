@@ -3939,7 +3939,9 @@ public class SidekickCpuController {
                 && fs.sidekickNormalDespawnDelaysFreshRenderEntry()
                 && normalDespawnLastRenderFlagOffscreen
                 && !normalDespawnFreshRenderEntryDelayConsumed
-                && (sidekick.getAir() || sidekick.getRolling())
+                && despawnCounter >= 0x78
+                && sidekick.getAir()
+                && sidekick.getRolling()
                 && isNearHorizontalRenderEntryEdge()) {
             onScreen = false;
             delayingFreshRenderEntry = true;

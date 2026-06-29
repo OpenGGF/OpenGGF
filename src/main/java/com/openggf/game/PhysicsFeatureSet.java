@@ -345,8 +345,9 @@ public record PhysicsFeatureSet(
          * (s2.asm:38963-38970,39016-39024,39409-39440,5095-5111). When
          * {@code BuildSprites} first re-sets {@code render_flags.on_screen},
          * the CPU despawn routine has already read the old clear bit for that
-         * frame, so the respawn counter ticks once more and resets on the next
-         * CPU update.
+         * frame, so the respawn counter can tick once more and reset on the
+         * next CPU update. The engine gates this to the late-counter
+         * airborne-rolling horizontal entry window observed in S2 traces.
          * <p>S3K: {@code false} for the current sidekick catch-up-flight model.
          * <p>S1: unreachable (no Tails CPU).
          */
@@ -1434,7 +1435,7 @@ public record PhysicsFeatureSet(
             true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
             true /* playerControlAppliesVerticalWrapMask: S2 Obj01_Control applies the active $7FF y_pos mask in vertical-wrap loops */,
             true /* sidekickDespawnUsesObjectIdMismatch: S2 cmp.b id(a3),d0 in TailsCPU_CheckDespawn (s2.asm:39067) */,
-            true /* sidekickNormalDespawnDelaysFreshRenderEntry: S2 TailsCPU_CheckDespawn reads render_flags before Tails_Display/BuildSprites refreshes it (s2.asm:38963-38970,39016-39024,39409-39440,5095-5111) */,
+            true /* sidekickNormalDespawnDelaysFreshRenderEntry: S2 TailsCPU_CheckDespawn reads render_flags before Tails_Display/BuildSprites refreshes it in the late-counter airborne-rolling horizontal entry window (s2.asm:38963-38970,39016-39024,39409-39440,5095-5111) */,
             SIDEKICK_FLY_LAND_BLOCKERS_S2, false /* sidekickFlyLandRequiresLeaderAlive: S2 TailsCPU_Flying_Part2 has no Sonic-routine check */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
             SIDEKICK_FLIGHT_MAX_X_STEP_S3K, SIDEKICK_FLIGHT_Y_STEP_S3K,
