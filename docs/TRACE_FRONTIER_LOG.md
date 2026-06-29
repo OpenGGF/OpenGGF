@@ -6,6 +6,42 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 MTZ1 Obj47 button same-frame trigger - ENGINE FIX (MTZ1 f1840 -> f3081)
+
+- Scope: branch `bugfix/ai-trace-s2-mtz1-r3` in worktree
+  `.worktrees/trace-s2-mtz1-r3`, branched from
+  `bugfix/ai-s2-trace-develop` at `a5832907e`. The diff is limited to S2
+  Obj47 button solid/trigger timing, a focused object unit guard, and docs. It
+  does not hydrate trace data and does not add zone, route, frame, or
+  known-failing-trace carve-outs.
+- Root/fix: MTZ1 f1840 had Obj65's vine/platform consumer still seeing the
+  previous `ButtonVine_Trigger` bit, so the MTZ long platform remained one
+  frame behind ROM and stopped Sonic's ground speed during the post-movement
+  solid side path. ROM `Obj47_Main` calls `SolidObject` before reading
+  `status(a0)` standing bits and writing `ButtonVine_Trigger`
+  (`docs/s2disasm/s2.asm:50885-50913`). `ButtonObjectInstance` now opts into a
+  manual solid checkpoint inside `update()` and derives its pressed state from
+  that same-frame checkpoint before writing the trigger byte.
+- Frontier movement: `TestS2MtzLevelSelectTraceReplay#replayMatchesTrace`
+  advances from f1840 / 1277 errors (`g_speed` expected `0x0311`, actual
+  `0x0000`) to f3081 / 846 errors (`g_speed` expected `0x0000`, actual
+  `-04F0`). MTZ2 holds f1277 / 3385 errors and MTZ3 holds f1973 / 3705 errors.
+- Verification:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Dtest=TestButtonObjectInstance"" test"`
+  exited 0; the requested unit test passed.
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtrace.context.diagnosticChars=full"" ""-Dtest=TestS2MtzLevelSelectTraceReplay#replayMatchesTrace"" test"`
+  remains expected-red at f3081 / 846 errors.
+  MTZ trio command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2MtzLevelSelectTraceReplay#replayMatchesTrace,TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace,TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace"" test"`
+  remains expected-red with MTZ1 at f3081, MTZ2 at f1277, and MTZ3 at f1973.
+  Current S2 green guard command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace"" test"`
+  exited 0; all six current S2 green traces passed.
+  Full concrete S2 sweep command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay"" test"`
+  ran all 19 concrete S2 trace classes: 6 green, 13 expected-red. Only MTZ1
+  changed relative to the integration baseline.
+
 ## 2026-06-29 - S2 integration sweep after ARZ2 Obj28 + MTZ1 Obj64 merges (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
