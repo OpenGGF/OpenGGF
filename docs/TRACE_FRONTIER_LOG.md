@@ -6,6 +6,55 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S1 MZ2 f2823 lava-geyser eruption drift - ENGINE FIX -> MZ2 frontier f2823 -> f4610 (2 files, 1116 -> 824 errors; MZ1/MZ3 held GREEN)
+
+- Command: `mvn -q "-Dtest=TestS1Mz1CompleteRunTraceReplay,TestS1Mz2CompleteRunTraceReplay,TestS1Mz3CompleteRunTraceReplay" test`
+  (worktree `bugfix/ai-mz2-maker-respawn` off develop c147c3bc6). Result: MZ1 PASS,
+  MZ3 PASS, MZ2 FAIL but advanced (first error f2823 -> f4610; 1116 -> 824 errors).
+- The original f2823 blocker (the MZ lava-BODY column failing to hurt the player:
+  `x_speed` exp 0x0200 act 0x0000) is RESOLVED. MZ2 now diverges at f4610 on a
+  SEPARATE object: a Basaran badnik (obID 0x55, slot 40 @0x764,0x48C) bounce -
+  ROM destroys it (spawning ExplosionItem/Animals/Points 0x27/0x28/0x29 and
+  setting the rebound `y_speed`=0x01A0) but the engine misses the bounce and keeps
+  falling (`y_speed`=0x02A0). NOT geyser-related; same Basaran slot-cadence family
+  flagged for MZ1 f6222.
+- CORRECTS the pinned "PART 2 = maker respawns 3 frames early" hypothesis. RAM
+  ground truth (the trace's `object_appeared` + `object_near objoff_32/routine`
+  aux): the lavafall maker (obID 0x4C @0x380,0x4D0) RESPAWNS at the ROM-correct
+  frame (trace f1728) and first-erupts at the correct frame (trace f1731); camera
+  position was never the issue. The real root was an eruption-PERIOD drift of one
+  EXECUTED frame per cycle (ROM 255, engine 254), accumulating until the 5th
+  eruption's body column arrived ~4 frames early.
+- Roots + fixes (2 files, all ROM-cited, comparison-only, no zone/route/frame
+  carve-out):
+  - PART A `Sonic1LavaGeyserObjectInstance`: removed the `ranGeyserMainThisFrame`
+    head-deferral. ROM `Geyser_Main` (docs/s1disasm/_incObj/`4C, 4D MZ Lava Geyser
+    and Maker.asm`:157) does NOT rts - it falls through `.configureLavaObjects`
+    (172/206) -> `.sound` (230) -> `Geyser_Action` (235), so the head applies its
+    first gravity+SpeedToPos on its SPAWN frame, not spawn+1.
+  - PART B `Sonic1LavaGeyserMakerObjectInstance.updateAnimation`: rewrote to match
+    ROM `AnimateSprite` (docs/s1disasm/_incObj/`sub AnimateSprite.asm`) exactly via
+    a countdown (`subq.b #1,obTimeFrame; bpl Anim_Wait`). The old version advanced
+    the frame index one call early on the first frame (held frame 0 for `speed`
+    calls instead of `speed+1`), so every `afRoutine` fired one frame early. The
+    lavafall maker's rt8->A advance via `.bubble3` (afRoutine) therefore
+    under-counted by one frame PER eruption - the accumulating drift. Speed
+    constants switched to the raw ROM script bytes (2/2/2/$F from
+    docs/s1disasm/_anim/`Lava Geyser.asm`).
+  - PART C (same file, push-block-spawned maker ctor): `timer = 1` -> `timer = 0`.
+    The `timer=1` seed was itself compensating the PART-B off-by-one; with the anim
+    count now ROM-exact it must be 0 (a fresh maker's cleared SST gives
+    `gmake_timer`=0, and `GMake_Wait`'s first `subq` underflows 0 -> -1 on the
+    first executed frame, like the ObjPosLoad maker). Without PART C the MZ3
+    push-block geyser fired one frame late (player rode the launched block up one
+    frame late: y exp 0x0696 act 0x069C at f4401), which had been masked by the old
+    anim error.
+- Zero regression: full S1 `*TraceReplay` sweep = 18 GREEN (incl MZ1 + MZ3) with
+  MZ2 advanced to f4610; S2 `TestS2Ehz1TraceReplay`, `TestS3kAiz1SkipHeadless`,
+  `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+  `TestSonic3kDecodingUtils`, `TestRewindCoverageGuard`,
+  `TestArchitecturalSourceGuard` all GREEN.
+
 ## 2026-06-29 - S2 ARZ2 Obj2C leaves generator touch latch - ENGINE FIX (ARZ2 f643 -> f662)
 
 - Scope: branch `bugfix/ai-trace-s2-arz2-r5` in worktree
