@@ -296,6 +296,64 @@ public class TestTornadoObjectInstance {
     }
 
     @Test
+    public void wfzJumpToShipDefersScriptedJumpInputOnFirstCounterFrame() throws Exception {
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x311F, (short) 0x0439);
+        TornadoObjectInstance tornado = createTornado(
+                0x311F,
+                0x0455,
+                0x54,
+                new QueryOnlyPlayerServices(main, List.of()));
+        GameServices.camera().setFocusedSprite(main);
+
+        setField(tornado, "routineSecondary", 0x0E);
+        setField(tornado, "scriptTimer", 0x437);
+        setField(tornado, "xVel", -0x100);
+        setField(tornado, "yVel", -0x100);
+        setField(tornado, "dockVelocityIndex", 12);
+
+        invokePrivate(tornado, "wfzJumpToShip",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0, main.getForcedInputMask(),
+                "ObjB2_Jump_to_ship writes Ctrl_1_Logical after Sonic's player step, so the engine must not latch jump on the first counter frame");
+        assertEquals(0x311F, main.getCentreX());
+        assertEquals(0x0439, main.getCentreY());
+        assertEquals(0x438, getField(tornado, "scriptTimer"));
+    }
+
+    @Test
+    public void wfzJumpToShipKeepsPlayerOnPlaneWhileLatchingNextFrameJump() throws Exception {
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x311F, (short) 0x0439);
+        TornadoObjectInstance tornado = createTornado(
+                0x311E,
+                0x0454,
+                0x54,
+                new QueryOnlyPlayerServices(main, List.of()));
+        GameServices.camera().setFocusedSprite(main);
+
+        setField(tornado, "routineSecondary", 0x0E);
+        setField(tornado, "scriptTimer", 0x438);
+        setField(tornado, "xVel", -0x100);
+        setField(tornado, "yVel", -0x100);
+        setField(tornado, "dockVelocityIndex", 12);
+
+        invokePrivate(tornado, "wfzJumpToShip",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP, main.getForcedInputMask(),
+                "The delayed ObjB2_Jump_to_ship latch should feed the following player step");
+        assertEquals(0x311E, main.getCentreX(),
+                "Sonic remains seated on the pre-dock plane position for the latch frame");
+        assertEquals(0x0438, main.getCentreY(),
+                "Sonic y_pos is still ObjB2 y_pos-$1C before the delayed jump is consumed");
+        assertEquals(0x311D, tornado.getX(),
+                "ObjB2_Dock_on_DEZ still advances the plane after seating Sonic");
+        assertEquals(0x0453, tornado.getY(),
+                "ObjB2_Dock_on_DEZ still applies y_vel after seating Sonic");
+        assertEquals(0x439, getField(tornado, "scriptTimer"));
+    }
+
+    @Test
     public void tornadoSczMainReadsStandingStateFromManualCheckpointBeforeFollowMotion() throws Exception {
         TornadoObjectInstance tornado = new TornadoObjectInstance(new ObjectSpawn(
                 100, 0x100, Sonic2ObjectIds.TORNADO, 0x50, 0, false, 0));

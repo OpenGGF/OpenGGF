@@ -6,6 +6,43 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 WFZ ObjB2 jump-to-ship latch and plane seating - ENGINE FIX (ObjB2 + focused tests, WFZ f15010 -> GREEN)
+
+- Scope: branch `bugfix/ai-trace-s2-wfz-r3` in worktree
+  `.worktrees/trace-s2-wfz-r3`. The diff is limited to S2 ObjB2/Tornado WFZ
+  end handoff logic and focused unit coverage; no trace data is hydrated into
+  engine state and no zone, route, or frame carve-out was added.
+- Root/fix: at f15010 ROM still has Sonic grounded/on-object at the pre-dock
+  plane position (`0x311E,0x0438`) while the engine had already consumed the
+  scripted jump and moved to `0x311F,0x043E` with `y_speed=-0x680`. ROM
+  `ObjB2_Approaching_ship` falls through to `ObjB2_Jump_to_ship`, writes
+  `Ctrl_1_Logical` only after Sonic's player step for that frame, then
+  `ObjB2_Dock_on_DEZ` increments `objoff_2A` and calls `ObjB2_Align_plane`
+  (`docs/s2disasm/s2.asm:79075-79122`). Because engine forced input persists
+  into the next player step, ObjB2 now delays the forced jump latch by one
+  ObjB2 tick and keeps Sonic seated on the pre-dock plane position through
+  the latch frame.
+- Frontier movement: `TestS2WfzLevelSelectTraceReplay#replayMatchesTrace`
+  advances from f15010 / 7 errors (`x` expected `0x311E`, actual `0x311F`) to
+  green.
+- Verification:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Dtest=com.openggf.game.sonic2.objects.TestTornadoObjectInstance"" ""-DfailIfNoTests=false"" test"`
+  exited 0 with 22 Tornado unit tests passed.
+  Targeted WFZ command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\trace-s2-wfz-r3\s2.gen"" ""-Dtest=TestS2WfzLevelSelectTraceReplay#replayMatchesTrace"" ""-DfailIfNoTests=false"" test"`
+  exited 0.
+  Guard command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\trace-s2-wfz-r3\s2.gen"" ""-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay"" ""-DfailIfNoTests=false"" test"`
+  exited 0 with all four green guard traces passed.
+  Full S2 sweep command
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\trace-s2-wfz-r3\s2.gen"" ""-Dtest=TestS2*TraceReplay"" ""-DfailIfNoTests=false"" test"`
+  ran 19 S2 trace classes; 5 were green and 14 remain expected-red. The
+  expected-red frontiers match the current integration baseline
+  (`ARZ2 f595`, `CNZ1 f3967`, `CNZ2 f4632`, `CPZ1 f3365`, `CPZ2 f2889`,
+  `DEZ ending f5952`, `HTZ1 f6114`, `HTZ2 f3315`, `MCZ2 f4485`,
+  `MTZ1 f1267`, `MTZ2 f1277`, `MTZ3 f1973`, `OOZ1 f1784`, `OOZ2 f1601`);
+  WFZ is no longer red.
+
 ## 2026-06-29 - S2 ARZ2 Obj28 negative floor-distance landing gate - ENGINE FIX (2 files, ARZ2 f593 -> f595)
 
 - Scope: continued the ARZ2 ChopChop Obj28 animal window in
