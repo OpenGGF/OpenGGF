@@ -6,7 +6,7 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-## 2026-06-29 - S2 accepted routing baseline after ARZ2, CPZ2, and HTZ1 integration
+## 2026-06-29 - S2 accepted routing baseline after ARZ2, CPZ2, HTZ1, and MTZ3 integration
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
   `bugfix/ai-s2-trace-develop`.
@@ -28,6 +28,10 @@ branch-local measurements.
   - HTZ1 Obj92 closest-native-player throw gate advanced
     `TestS2HtzLevelSelectTraceReplay` from f6586 / 226 to f7108 / 221 while
     holding `TestS2Htz2LevelSelectTraceReplay` at f3322 / 1057.
+  - MTZ3 Obj70 airborne stale-rider sibling side push advanced
+    `TestS2Mtz3LevelSelectTraceReplay` from f2048 / 3742 to f2588 / 939 while
+    holding `TestS2MtzLevelSelectTraceReplay` and
+    `TestS2Mtz2LevelSelectTraceReplay` at their current frontiers.
   - A later MTZ1 offscreen sidekick-latch candidate advanced MTZ1 but regressed
     MTZ2 total errors from 951 to 971 at f3055; it was rejected and reverted in
     `a01e0fedc`.
@@ -41,7 +45,7 @@ branch-local measurements.
   `MCZ2` f8965 / 156 (`y` expected `0x063E`, actual `0x0643`);
   `MTZ1` f5647 / 616 (`tails_y_sub` expected `0x6500`, actual `0x3D00`);
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
-  `MTZ3` f2048 / 3742 (`tails_x` expected `0x07CA`, actual `0x07BE`);
+  `MTZ3` f2588 / 939 (`tails_cpu_ctrl2_held` expected `0x0012`, actual `0x0002`);
   `OOZ1` f1790 / 1125 (`tails_x_speed` expected `0x0080`, actual `-008C`);
   `OOZ2` f3226 / 945 (`g_speed` expected `0x0528`, actual `0x0520`).
 - Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `MCZ1`,
@@ -185,7 +189,7 @@ branch-local measurements.
   `mvn "-Dtest=TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
   Result: MTZ3 advances to f2588 / 939 errors (`tails_cpu_ctrl2_held`
   expected `0x0012`, actual `0x0002`); MTZ1 remains f5647 / 616 and MTZ2
-  remains f3055 / 951.
+  remains f4375 / 950.
 - Focused unit coverage:
   `mvn "-Dtest=com.openggf.level.objects.TestSolidObjectManager" test`.
   Result: command exited 0; 44 tests passed.
@@ -195,9 +199,12 @@ branch-local measurements.
 - Full S2 sweep after clearing `target/surefire-reports`:
   `mvn "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
   Result: 19 trace classes ran; 7 green / 12 expected-red. Red summary:
-  ARZ2 f888 / 2720; CNZ2 f5242 / 875; CPZ1 f4281 / 246; CPZ2 f2889 / 1236;
-  HTZ1 f6586 / 226; HTZ2 f3322 / 1060; MCZ2 f8965 / 156; MTZ1 f5647 / 616;
-  MTZ2 f3055 / 951; MTZ3 f2588 / 939; OOZ1 f1790 / 1125; OOZ2 f3226 / 945.
+  ARZ2 f1028 / 2688; CNZ2 f5242 / 875; CPZ1 f4281 / 246; CPZ2 f2976 / 1232;
+  HTZ1 f7108 / 221; HTZ2 f3322 / 1057; MCZ2 f8965 / 156; MTZ1 f5647 / 616;
+  MTZ2 f4375 / 950; MTZ3 f2588 / 939; OOZ1 f1790 / 1125; OOZ2 f3226 / 945.
+- Cross-game sanity:
+  `mvn "-Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`.
+  Result: command exited 0; 54 selected cross-game keep-green tests passed.
 
 ## 2026-06-29 - S2 OOZ2 Obj45 SideAir push-clear compression (f2623 -> f3226)
 
