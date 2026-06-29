@@ -822,6 +822,73 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testLandingFrameClearedEngineSidekickCpuInteractIdDoesNotOwnFrontier() {
+        TraceCharacterState landedTails = new TraceCharacterState(true,
+                (short) 0x0640, (short) 0x01B8,
+                (short) 0x0168, (short) 0x0000, (short) 0x0168,
+                (byte) 0x00, false, false, 0,
+                0x9800, 0xE300, 0x02, 0x08, 0x13);
+        TraceFrame frame = frameWithSidekick(3055, landedTails);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                3055, "tails", 0x66, 0, 0, 0x06,
+                (short) 0x05D4, (short) 0x01CC, 0,
+                0, 0x08, 0x00, 0, 0x0800,
+                0x80, 0x3C, (short) 0x0645, (short) 0x01B7,
+                0x0800, 0x13, 0x08, 0x06, 0x0168);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x00, 0x06, 0x05D4, 0x01CC,
+                0x08, 0x00, 15, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x08D3, (short) 0x0693,
+                (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+                (byte) 0xCC, false, true, 3,
+                null, null, "tails", landedTails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_interact").severity());
+        assertFalse(result.hasError(),
+                "MTZ2 f3055 lands with ROM Tails_interact_ID still holding the old Obj66 "
+                        + "snapshot until the next TailsCPU_UpdateObjInteract pass "
+                        + "(docs/s2disasm/s2.asm:39435-39446)");
+    }
+
+    @Test
+    void testLandingFrameClearedEngineSidekickCpuInteractIdStillReportsWithMotionDelta() {
+        TraceCharacterState expectedTails = new TraceCharacterState(true,
+                (short) 0x0640, (short) 0x01B8,
+                (short) 0x0168, (short) 0x0000, (short) 0x0168,
+                (byte) 0x00, false, false, 0,
+                0x9800, 0xE300, 0x02, 0x08, 0x13);
+        TraceCharacterState actualTails = new TraceCharacterState(true,
+                (short) 0x0641, (short) 0x01B8,
+                (short) 0x0168, (short) 0x0000, (short) 0x0168,
+                (byte) 0x00, false, false, 0,
+                0x9800, 0xE300, 0x02, 0x08, 0x13);
+        TraceFrame frame = frameWithSidekick(3055, expectedTails);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                3055, "tails", 0x66, 0, 0, 0x06,
+                (short) 0x05D4, (short) 0x01CC, 0,
+                0, 0x08, 0x00, 0, 0x0800,
+                0x80, 0x3C, (short) 0x0645, (short) 0x01B7,
+                0x0800, 0x13, 0x08, 0x06, 0x0168);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x00, 0x06, 0x05D4, 0x01CC,
+                0x08, 0x00, 15, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x08D3, (short) 0x0693,
+                (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+                (byte) 0xCC, false, true, 3,
+                null, null, "tails", actualTails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.ERROR, result.fields().get("tails_cpu_interact").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_x").severity());
+        assertTrue(result.hasError());
+    }
+
+    @Test
     void testLandingFrameStaleSidekickCpuInteractIdStillReportsWithMotionDelta() {
         TraceCharacterState expectedTails = new TraceCharacterState(true,
                 (short) 0x1537, (short) 0x041A,

@@ -6,13 +6,15 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-## 2026-06-29 - S2 accepted routing baseline after MTZ2 and CPZ Obj78 integration
+## 2026-06-29 - S2 accepted routing baseline after MTZ2 comparator and CPZ Obj78 integration
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
-  `bugfix/ai-s2-trace-develop` at accepted head `a01e0fedc`.
+  `bugfix/ai-s2-trace-develop`.
 - Accepted since the prior OOZ2 baseline:
   - MTZ2 Obj70 first-main low-byte-zero rotation advanced
     `TestS2Mtz2LevelSelectTraceReplay` from f1857 / 3209 to f3055 / 951.
+  - MTZ2 landing-frame Tails CPU interact refresh-lag comparison advanced
+    `TestS2Mtz2LevelSelectTraceReplay` again from f3055 / 951 to f4375 / 950.
   - CPZ Obj78 dynamic-spawn/live-SST latch handling advanced
     `TestS2CpzLevelSelectTraceReplay` from f4225 / 264 to f4281 / 246 and
     improved `TestS2Cpz2LevelSelectTraceReplay` from 1238 to 1236 errors while
@@ -29,13 +31,53 @@ branch-local measurements.
   `HTZ2` f3322 / 1060 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
   `MCZ2` f8965 / 156 (`y` expected `0x063E`, actual `0x0643`);
   `MTZ1` f5647 / 616 (`tails_y_sub` expected `0x6500`, actual `0x3D00`);
-  `MTZ2` f3055 / 951 (`tails_cpu_interact` expected `0x0066`, actual
-  `0x0000`);
+  `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
   `MTZ3` f2048 / 3742 (`tails_x` expected `0x07CA`, actual `0x07BE`);
   `OOZ1` f1790 / 1125 (`tails_x_speed` expected `0x0080`, actual `-008C`);
   `OOZ2` f3226 / 945 (`g_speed` expected `0x0528`, actual `0x0520`).
 - Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `MCZ1`,
   `SCZ`, and `WFZ`.
+
+## 2026-06-29 - S2 MTZ2 landing-frame Tails CPU interact refresh lag (f3055 -> f4375)
+
+- Worktree/branch: `.worktrees/trace-s2-mtz2-r13` /
+  `bugfix/ai-trace-s2-mtz2-r13`, forked from
+  `bugfix/ai-s2-trace-develop` at integration head `a01e0fedc`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: MTZ2 f3055 / 951 errors (`tails_cpu_interact`
+  expected `0x0066`, actual `0x0000`).
+- Evidence/fix: MTZ2 f3055 is a one-frame landing diagnostic mismatch, not a
+  physics divergence. ROM Tails has landed on the current object
+  (`Tails_interact_ID=$13`, status object bit set) while `TailsCPU_Obj_interact`
+  still holds the previous Obj66 snapshot until the next
+  `TailsCPU_UpdateObjInteract` pass (`docs/s2disasm/s2.asm:39435-39446`).
+  Engine sidekick position, subpixels, speed, inertia, status, CPU routine, and
+  post-physics ridden object matched, but its stale interact slot was empty and
+  reported zero. `TraceBinder` now extends the existing landing-frame stale
+  sidekick interact diagnostic exemption to an engine-cleared interact byte only
+  when the full sidekick motion state is identical and Tails is already on an
+  object. This remains comparison-only and does not hydrate engine state from
+  trace data.
+- Unit verification:
+  `mvn "-Dtest=com.openggf.tests.trace.TestTraceBinder" test`.
+  Result: command exited 0; the new tests cover the cleared-engine-interact
+  landing case and prove the same exemption still reports an error when sidekick
+  motion diverges.
+- Focused MTZ verification:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: MTZ1 remained f5647 / 616 (`tails_y_sub` expected `0x6500`, actual
+  `0x3D00`); MTZ2 advanced to f4375 / 950 (`tails_status_byte` expected
+  `0x0002`, actual `0x0003`); MTZ3 remained f2048 / 3742 (`tails_x` expected
+  `0x07CA`, actual `0x07BE`).
+- Full S2 sweep:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: 19 trace classes ran; 7 green / 12 expected-red. Red summary:
+  ARZ2 f888 / 2720; CNZ2 f5242 / 875; CPZ1 f4281 / 246; CPZ2 f2889 / 1236;
+  HTZ1 f6586 / 226; HTZ2 f3322 / 1060; MCZ2 f8965 / 156; MTZ1 f5647 / 616;
+  MTZ2 f4375 / 950; MTZ3 f2048 / 3742; OOZ1 f1790 / 1125; OOZ2 f3226 / 945.
+  Green guard traces remained green: ARZ1, CNZ1, DEZ ending, EHZ1, MCZ1, SCZ,
+  and WFZ.
 
 ## 2026-06-29 - S2 OOZ2 Obj45 SideAir push-clear compression (f2623 -> f3226)
 
