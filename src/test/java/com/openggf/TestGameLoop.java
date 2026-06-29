@@ -253,6 +253,40 @@ public class TestGameLoop {
     }
 
     @Test
+    public void userRecordingPlaybackPolicyRunsForLevelBoundaryReturns() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int helperStart = source.indexOf("private void finishUserRecordingPlaybackAtLevelBoundary(");
+        int helperEnd = source.indexOf("private void updateSpecialStageMode()", helperStart);
+        assertTrue(helperStart >= 0 && helperEnd > helperStart,
+                "GameLoop must centralize user-recording playback boundary handling");
+        String helperBody = source.substring(helperStart, helperEnd);
+
+        int appliedFrame = helperBody.indexOf("int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();");
+        int advance = helperBody.indexOf("playbackDebugManager.onLevelFrameAdvanced();");
+        int classify = helperBody.indexOf("userRecordingControls.afterPlaybackFrame(\n" +
+                "                appliedPlaybackFrame,\n" +
+                "                true,");
+        assertTrue(appliedFrame >= 0,
+                "Boundary playback handling must classify the already-applied BK2 row");
+        assertTrue(advance > appliedFrame,
+                "Boundary playback handling must capture the applied BK2 frame before advancing the cursor");
+        assertTrue(classify > advance,
+                "Boundary playback handling must mark levelEnded after the boundary cursor advance");
+
+        int updateLevel = source.indexOf("private boolean updateLevelMode(");
+        int updateLevelEnd = source.indexOf("private void updateBonusStageMode(", updateLevel);
+        assertTrue(updateLevel >= 0 && updateLevelEnd > updateLevel, "updateLevelMode method must exist");
+        String levelBody = source.substring(updateLevel, updateLevelEnd);
+
+        for (String required : List.of(
+                "finishUserRecordingPlaybackAtLevelBoundary(true);",
+                "finishUserRecordingPlaybackAtLevelBoundary(false);")) {
+            assertTrue(levelBody.contains(required),
+                    "Level-boundary returns must notify playback policy via " + required);
+        }
+    }
+
+    @Test
     public void returnToMasterTitleTearsDownUserRecordingSessionsBeforeLeavingLevel() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int methodStart = source.indexOf("void returnToMasterTitle()");

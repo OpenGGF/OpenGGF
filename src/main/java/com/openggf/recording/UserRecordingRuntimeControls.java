@@ -123,14 +123,15 @@ public final class UserRecordingRuntimeControls {
         UserRecordingPlaybackOptions options = runtime.activePlaybackOptions();
         if (options != null && runtime.activePlaybackState() == UserRecordingPlaybackState.PLAYING) {
             int frame = runtime.currentPlaybackFrame();
+            UserRecordingVerificationResult verification = runtime.activePlaybackVerificationResult();
             return new UserRecordingHudState(
                     true,
                     options.fastForward()
                             ? "PLAYBACK FF " + frame + "/" + runtime.playbackFrameCount()
                             : "PLAYBACK " + frame + "/" + runtime.playbackFrameCount(),
-                    "",
+                    verification == null ? "" : "VERIFY " + verification.status(),
                     frame,
-                    false,
+                    verification != null && !verification.clean(),
                     false);
         }
         return UserRecordingHudState.hidden();
@@ -178,6 +179,10 @@ public final class UserRecordingRuntimeControls {
 
         default boolean playbackHasDesynced() {
             return false;
+        }
+
+        default UserRecordingVerificationResult activePlaybackVerificationResult() {
+            return null;
         }
 
         default int currentPlaybackFrame() {

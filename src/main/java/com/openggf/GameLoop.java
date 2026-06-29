@@ -80,6 +80,7 @@ import com.openggf.recording.UserRecordingRuntimeControls;
 import com.openggf.recording.UserRecordingSessionLauncher;
 import com.openggf.recording.UserRecordingStopReason;
 import com.openggf.recording.UserRecordingPlaybackState;
+import com.openggf.recording.UserRecordingVerificationResult;
 import com.openggf.recording.menu.UserRecordingMenu;
 import com.openggf.testmode.TraceCameraFocusController;
 
@@ -266,6 +267,11 @@ public class GameLoop {
         @Override
         public boolean playbackHasDesynced() {
             return userRecordingSessionLauncher.activePlaybackHasDesynced();
+        }
+
+        @Override
+        public UserRecordingVerificationResult activePlaybackVerificationResult() {
+            return userRecordingSessionLauncher.currentPlaybackVerificationResult();
         }
 
         @Override
@@ -857,6 +863,23 @@ public class GameLoop {
         inputHandler.update();
     }
 
+    private void finishUserRecordingPlaybackAtLevelBoundary(boolean advancePlaybackFrame) {
+        int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();
+        if (advancePlaybackFrame) {
+            playbackDebugManager.onLevelFrameAdvanced();
+        }
+        userRecordingControls.afterPlaybackFrame(
+                appliedPlaybackFrame,
+                true,
+                isAppliedPlaybackFrameMovieEnd(appliedPlaybackFrame));
+    }
+
+    private boolean isAppliedPlaybackFrameMovieEnd(int appliedPlaybackFrame) {
+        return playbackDebugManager.getMovieFrameCount() > 0
+                && !playbackDebugManager.isSessionPlaying()
+                && appliedPlaybackFrame >= playbackDebugManager.getMovieFrameCount() - 1;
+    }
+
     /**
      * SPECIAL_STAGE per-frame update: debug shortcuts, sprite-debug navigation,
      * the special-stage input/update tick, and the completion → results-screen
@@ -1080,7 +1103,7 @@ public class GameLoop {
             // transition-only frame. Headless replay advances its movie
             // cursor after applySeamlessTransition(); keep the live
             // comparator cursor aligned with the same ordering.
-            playbackDebugManager.onLevelFrameAdvanced();
+            finishUserRecordingPlaybackAtLevelBoundary(true);
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
             if (traceSession != null) {
                 traceSession.recordExternalRewindFrameAtBoundary();
@@ -1101,6 +1124,7 @@ public class GameLoop {
         // Check if a title card was requested (new level loaded)
         if (levelManager.consumeTitleCardRequest()) {
             enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
+            finishUserRecordingPlaybackAtLevelBoundary(false);
             updateNonGameplayAudio(doFrameStep);
             return false; // Skip normal level update this frame
         }
@@ -1110,30 +1134,35 @@ public class GameLoop {
         if (!fadeManager.isActive()) {
             if (levelManager.consumeRespawnRequest()) {
                 startRespawnFade();
+                finishUserRecordingPlaybackAtLevelBoundary(false);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
             if (levelManager.consumeNextActRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 startNextActFade();
+                finishUserRecordingPlaybackAtLevelBoundary(false);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
             if (levelManager.consumeNextZoneRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 startNextZoneFade();
+                finishUserRecordingPlaybackAtLevelBoundary(false);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
             if (levelManager.consumeZoneActRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 startZoneActFade(levelManager.getRequestedZone(), levelManager.getRequestedAct());
+                finishUserRecordingPlaybackAtLevelBoundary(false);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
             if (levelManager.consumeCreditsRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 startEndingFade();
+                finishUserRecordingPlaybackAtLevelBoundary(false);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
@@ -1195,9 +1224,7 @@ public class GameLoop {
             userRecordingControls.afterPlaybackFrame(
                     appliedPlaybackFrame,
                     false,
-                    playbackDebugManager.getMovieFrameCount() > 0
-                            && !playbackDebugManager.isSessionPlaying()
-                            && appliedPlaybackFrame >= playbackDebugManager.getMovieFrameCount() - 1);
+                    isAppliedPlaybackFrameMovieEnd(appliedPlaybackFrame));
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
             if (traceSession != null) {
                 traceSession.recordExternalRewindFrame();

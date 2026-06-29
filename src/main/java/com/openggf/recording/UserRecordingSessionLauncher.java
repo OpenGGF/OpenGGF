@@ -192,6 +192,10 @@ public final class UserRecordingSessionLauncher {
         return activeVerifier != null && activeVerifier.hasMismatch();
     }
 
+    public UserRecordingVerificationResult currentPlaybackVerificationResult() {
+        return activeVerifier == null ? null : activeVerifier.result();
+    }
+
     public void updateActivePlaybackState(UserRecordingPlaybackState state) {
         activePlaybackState = state == null ? UserRecordingPlaybackState.STOPPED : state;
     }

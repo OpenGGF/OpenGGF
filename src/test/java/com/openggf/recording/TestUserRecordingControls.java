@@ -137,6 +137,41 @@ class TestUserRecordingControls {
     }
 
     @Test
+    void playbackHudSurfacesVerifierStatusAsNonBlockingWarning() {
+        Fixture fixture = new Fixture();
+        fixture.playbackOptions = new UserRecordingPlaybackOptions(120, true, true);
+        fixture.playbackState = UserRecordingPlaybackState.PLAYING;
+        fixture.currentPlaybackFrame = 42;
+        fixture.playbackFrameCount = 120;
+        fixture.verificationResult = UserRecordingVerificationResult.missingSidecar(0);
+
+        UserRecordingHudState hud = fixture.controls.hudState();
+
+        assertTrue(hud.visible());
+        assertEquals("PLAYBACK FF 42/120", hud.primaryText());
+        assertEquals("VERIFY missing-sidecar", hud.secondaryText());
+        assertTrue(hud.amberWarning());
+        assertFalse(hud.redWarning());
+    }
+
+    @Test
+    void playbackHudShowsCleanVerifierStatusWithoutWarning() {
+        Fixture fixture = new Fixture();
+        fixture.playbackOptions = new UserRecordingPlaybackOptions(120, true, false);
+        fixture.playbackState = UserRecordingPlaybackState.PLAYING;
+        fixture.currentPlaybackFrame = 5;
+        fixture.playbackFrameCount = 120;
+        fixture.verificationResult = UserRecordingVerificationResult.clean(5);
+
+        UserRecordingHudState hud = fixture.controls.hudState();
+
+        assertEquals("PLAYBACK 5/120", hud.primaryText());
+        assertEquals("VERIFY clean", hud.secondaryText());
+        assertFalse(hud.amberWarning());
+        assertFalse(hud.redWarning());
+    }
+
+    @Test
     void masterTitleShiftRecordUsesConfiguredRecordKey() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(SonicConfiguration.RECORDING_RECORD_KEY, GLFW_KEY_F10);
@@ -256,6 +291,9 @@ class TestUserRecordingControls {
         UserRecordingStopReason stopReason;
         UserRecordingPlaybackOptions playbackOptions;
         UserRecordingPlaybackState playbackState = UserRecordingPlaybackState.STOPPED;
+        UserRecordingVerificationResult verificationResult;
+        int currentPlaybackFrame;
+        int playbackFrameCount;
         boolean desynced;
         boolean enginePausedForPlayback;
         final UserRecordingRuntimeControls controls = new UserRecordingRuntimeControls(this);
@@ -304,6 +342,21 @@ class TestUserRecordingControls {
         @Override
         public boolean playbackHasDesynced() {
             return desynced;
+        }
+
+        @Override
+        public UserRecordingVerificationResult activePlaybackVerificationResult() {
+            return verificationResult;
+        }
+
+        @Override
+        public int currentPlaybackFrame() {
+            return currentPlaybackFrame;
+        }
+
+        @Override
+        public int playbackFrameCount() {
+            return playbackFrameCount;
         }
 
         @Override
