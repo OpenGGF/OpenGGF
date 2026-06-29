@@ -2350,8 +2350,7 @@ public class SidekickCpuController {
         boolean autoJumpPushBypass =
                 ((currentStatusPush
                         && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0)
-                        || objectOrderGrace)
-                        && !(sidekick.getRolling() && sidekick.shouldPreserveRollingOnNextRollStop());
+                        || objectOrderGrace);
         if (jumpingFlag && !autoJumpPushBypass) {
             inputJump = true;
             boolean delayedJumpOnly = (recordedInput & (AbstractPlayableSprite.INPUT_UP
@@ -2394,6 +2393,7 @@ public class SidekickCpuController {
         // grounded pushing sidekick that re-qualifies on a later $3F frame
         // (S2 HTZ2 f1343: Tails pushing the breakable block, dy=-10 so only the
         // bypass passes the height gate, latch stuck from the prior $3F jump).
+        boolean generatedAutoJumpThisFrame = false;
         if (!jumpingFlag || autoJumpPushBypass) {
             // ROM runs the auto-jump distance/height/gate path regardless of
             // Status_InAir; the in-air check only belongs to the existing
@@ -2422,15 +2422,12 @@ public class SidekickCpuController {
             // Ordinary stale grace still falls through loc_13E7C and must pass
             // the normal distance/height gates.
             // Vertical S2 Obj85 can hand Tails into a curled, zero-speed push
-            // state after release. That object-owned state preserves rolling
-            // without ROM's pinball-mode auto-push, and the CNZ trace shows it
-            // must not take the generic push auto-jump shortcut at the $3F
-            // frame gate (s2.asm:38943-38946, 39015-39022; Obj85 release:
-            // s2.asm:57611-57625).
-            boolean suppressObjectPreservedPushJump =
-                    sidekick.getRolling() && sidekick.shouldPreserveRollingOnNextRollStop();
-            boolean pushingBypass = (currentPushBypass || objectOrderGrace)
-                    && !suppressObjectPreservedPushJump;
+            // state after release, but ROM still lets the current-push bypass
+            // reach the $3F auto-jump gate in TailsCPU_Normal (s2.asm:39287-
+            // 39300, 39369-39378). The preserved-roll flag only suppresses a
+            // stale delayed jump hold below; it must not block the push-bypass
+            // jump that launches Tails out of the stopper chamber.
+            boolean pushingBypass = currentPushBypass || objectOrderGrace;
             // resolveCpuFrameCounter() already yields the ROM-visible
             // Level_frame_counter: the per-frame sprite cadence is the
             // post-increment value, and bootstrap paths preload LevelManager with
@@ -2456,6 +2453,7 @@ public class SidekickCpuController {
                 diagnosticGeneratedPressedInput |= AbstractPlayableSprite.INPUT_JUMP;
                 lastNormalAutoJumpPressFrameCounter = autoJumpFrameCounter;
                 jumpingFlag = true;
+                generatedAutoJumpThisFrame = true;
             }
         }
 
@@ -2468,6 +2466,8 @@ public class SidekickCpuController {
         if (sidekick.getRolling()
                 && sidekick.shouldPreserveRollingOnNextRollStop()
                 && !sidekick.getAir()
+                && !generatedAutoJumpThisFrame
+                && !autoJumpPushBypass
                 && (currentPushBypass || localGracePushBypass || !recordedJumpPress)) {
             inputJump = false;
             inputJumpPress = false;
