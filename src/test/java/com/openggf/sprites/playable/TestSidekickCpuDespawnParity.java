@@ -1399,4 +1399,35 @@ class TestSidekickCpuDespawnParity {
                 controller.getDiagnosticGeneratedPressedInput() & AbstractPlayableSprite.INPUT_JUMP,
                 "The movement guard must not rewrite the ROM-visible Ctrl_2_Press_Logical byte");
     }
+
+    @Test
+    void s2DeadSidekickRoutinePreservesPreviousCtrl2LogicalLatch() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        sonic.setCentreX((short) 0x1200);
+        sonic.setCentreY((short) 0x0324);
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1100);
+        tails.setCentreY((short) 0x0340);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+        controller.setController2Input(AbstractPlayableSprite.INPUT_RIGHT, AbstractPlayableSprite.INPUT_RIGHT);
+        controller.update(1);
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_RIGHT,
+                "The setup frame seeds the ROM-visible Ctrl_2_Logical latch.");
+
+        controller.setController2Input(0, 0);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 16);
+        tails.setDead(true);
+        controller.update(2);
+
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_RIGHT,
+                "S2 Obj02_Dead bypasses TailsCPU_Control, so Ctrl_2_Logical must keep its previous word.");
+    }
 }

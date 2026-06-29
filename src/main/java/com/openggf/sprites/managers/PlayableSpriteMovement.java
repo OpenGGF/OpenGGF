@@ -3186,11 +3186,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// bounce: the flip frame's wall hit re-sets push, but ROM's prev_anim
 		// sentinel still clears it that frame, so push is gone entering the next
 		// no-hit frame.)
-		if (left && !right && sprite.getDirection() == Direction.RIGHT && gSpeed <= 0) {
+		if (left && !right && sprite.getDirection() == Direction.RIGHT && gSpeed <= 0 && !sprite.getRolling()) {
 			sprite.setPushing(false);
 			forceGroundFacingFlipAnimationRestart();
 			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
-		} else if (right && !left && sprite.getDirection() == Direction.LEFT && gSpeed >= 0) {
+		} else if (right && !left && sprite.getDirection() == Direction.LEFT && gSpeed >= 0 && !sprite.getRolling()) {
 			sprite.setPushing(false);
 			forceGroundFacingFlipAnimationRestart();
 			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
