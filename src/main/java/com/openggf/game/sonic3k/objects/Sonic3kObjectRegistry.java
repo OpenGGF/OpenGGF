@@ -38,6 +38,7 @@ import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance;
+import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
@@ -1239,6 +1240,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet == S3kZoneSet.S3KL && currentRomZoneId() == Sonic3kZoneIds.ZONE_LBZ) {
                         return new LbzEndBossInstance(spawn);
+                    }
+                    return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                });
+        factories.put(Sonic3kObjectIds.LBZ_FINAL_BOSS_2,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.S3KL && currentRomZoneId() == Sonic3kZoneIds.ZONE_LBZ) {
+                        return new LbzFinalBoss2Instance(spawn);
                     }
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });

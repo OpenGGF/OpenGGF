@@ -4,6 +4,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance;
+import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -28,6 +29,8 @@ class TestLbz2EndSequenceRegistry {
                 createWithServices(registry, spawn(Sonic3kObjectIds.LBZ_FINAL_BOSS_1)));
         assertInstanceOf(LbzEndBossInstance.class,
                 createWithServices(registry, spawn(Sonic3kObjectIds.LBZ_END_BOSS)));
+        assertInstanceOf(LbzFinalBoss2Instance.class,
+                createWithServices(registry, spawn(Sonic3kObjectIds.LBZ_FINAL_BOSS_2)));
     }
 
     @Test
@@ -49,6 +52,7 @@ class TestLbz2EndSequenceRegistry {
         assertPlaceholder(registry.create(spawn(Sonic3kObjectIds.LBZ_KNUX_PILLAR)));
         assertPlaceholder(registry.create(spawn(Sonic3kObjectIds.LBZ_FINAL_BOSS_1)));
         assertPlaceholder(registry.create(spawn(Sonic3kObjectIds.LBZ_END_BOSS)));
+        assertPlaceholder(registry.create(spawn(Sonic3kObjectIds.LBZ_FINAL_BOSS_2)));
     }
 
     @Test
@@ -67,6 +71,7 @@ class TestLbz2EndSequenceRegistry {
         assertEquals(0xC8, Sonic3kObjectIds.LBZ_KNUX_PILLAR);
         assertEquals(0xCA, Sonic3kObjectIds.LBZ_FINAL_BOSS_1);
         assertEquals(0xCB, Sonic3kObjectIds.LBZ_END_BOSS);
+        assertEquals(0xCC, Sonic3kObjectIds.LBZ_FINAL_BOSS_2);
     }
 
     private static ObjectSpawn spawn(int objectId) {

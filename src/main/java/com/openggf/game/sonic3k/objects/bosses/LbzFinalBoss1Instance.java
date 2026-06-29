@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionController;
@@ -86,6 +87,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private static final int FLAG_DETACH_MID = 1 << 1;
     private static final int FLAG_DETACH_BOTTOM = 1 << 2;
     private static final int FLAG_LASER_FIRING_NOTCH = 1 << 3;
+    private static final int FLAG_FINAL_BOSS_2_HANDOFF = 1 << 5;
     private static final int STATUS_HIT_SHIFT = 1 << 5;
     private static final int STATUS_HIT_FLASH = 1 << 6;
     private static final int STATUS_DEFEATED = 1 << 7;
@@ -93,17 +95,27 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private static final int[] FLASH_COLOR_INDICES = {4, 14};
     private static final int[] FLASH_NORMAL_WORDS = {0x0026, 0x0020};
     private static final int[] FLASH_WHITE_WORDS = {0x0EEE, 0x0EEE};
+    /*
+     * ROM byte_7386A/byte_73874. Animate_ExternalPlayerSprite clears render_flags bit0,
+     * then sets it when the following delay byte is nonzero; Direction.LEFT models set bit0.
+     * The terminal 1,0 byte pair transfers control without writing mapping_frame, so this
+     * ExternalPlayerFrame model omits it rather than displaying frame 0.
+     */
     private static final ExternalPlayerFrame[] SONIC_LAUNCH_LOOK_FRAMES = {
-            new ExternalPlayerFrame(5, 0x55, Direction.RIGHT),
-            new ExternalPlayerFrame(0, 0x59, Direction.RIGHT),
-            new ExternalPlayerFrame(0, 0x5A, Direction.LEFT),
+            new ExternalPlayerFrame(5, 0xC4, Direction.RIGHT),
+            new ExternalPlayerFrame(0, 0x55, Direction.RIGHT),
+            new ExternalPlayerFrame(0, 0x59, Direction.LEFT),
             new ExternalPlayerFrame(1, 0x5A, Direction.LEFT)
     };
     private static final ExternalPlayerFrame[] SIDEKICK_LAUNCH_LOOK_FRAMES = {
             new ExternalPlayerFrame(5, 0xC4, Direction.RIGHT),
-            new ExternalPlayerFrame(0, 0xBE, Direction.RIGHT),
-            new ExternalPlayerFrame(0, 0xBF, Direction.LEFT),
-            new ExternalPlayerFrame(1, 0xBF, Direction.LEFT)
+            new ExternalPlayerFrame(0, 0x55, Direction.RIGHT),
+            new ExternalPlayerFrame(0, 0x59, Direction.LEFT),
+            new ExternalPlayerFrame(1, 0x5A, Direction.LEFT),
+            new ExternalPlayerFrame(1, 0x5A, Direction.LEFT),
+            new ExternalPlayerFrame(1, 0x5A, Direction.LEFT),
+            new ExternalPlayerFrame(1, 0x5A, Direction.LEFT),
+            new ExternalPlayerFrame(1, 0x5A, Direction.LEFT)
     };
 
     private int x;
@@ -134,7 +146,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private boolean launchMilestoneA;
     private boolean launchMilestoneB;
     private boolean playersReadyForResults;
-    private boolean knucklesBigArmStubbed;
     private boolean engineFlamesSpawned;
     private boolean bossExplosionPlcQueued;
     private boolean deathEggSmallArtQueued;
@@ -166,7 +177,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         EXPLOSION_SEQUENCER,
         DEATH_EGG_MINIATURE,
         DEATH_EGG_SMOKE,
-        MUSIC_FADE
+        MUSIC_FADE,
+        FINAL_BOSS_2_HANDOFF
     }
 
     public enum FinalePhase {
@@ -180,7 +192,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         LOOK_UP,
         WAIT_LAUNCH_MILESTONE_B,
         FINAL_FALL,
-        KNUCKLES_STUB
+        KNUCKLES_HANDOFF
     }
 
     public LbzFinalBoss1Instance(ObjectSpawn spawn) {
@@ -466,9 +478,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         recordChild(ChildKind.BOSS_EXPLOSION,
                 spawnChild(() -> new ExplosionShowerChild(this, getCentreX(), getCentreY(), 4)));
         if (currentPlayerCharacter() == PlayerCharacter.KNUCKLES) {
-            finalePhase = FinalePhase.KNUCKLES_STUB;
-            knucklesBigArmStubbed = true;
-            LOG.info("Obj_LBZFinalBoss1 Knuckles defeat branch reached; Obj_LBZFinalBoss2/Big Arm is stubbed.");
+            finalePhase = FinalePhase.KNUCKLES_HANDOFF;
         } else {
             finalePhase = FinalePhase.SINK;
         }
@@ -491,10 +501,27 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 updateExternalPlayerSprites(player);
                 updateFinalFall(player);
             }
-            case KNUCKLES_STUB, NONE -> {
-                // Stubbed/idle.
+            case KNUCKLES_HANDOFF -> updateKnucklesFinalBoss2Handoff();
+            case NONE -> {
+                // Idle.
             }
         }
+    }
+
+    /** ROM loc_73054: rise above Camera_Y_pos-$50, allocate Obj_LBZFinalBoss2, then delete. */
+    private void updateKnucklesFinalBoss2Handoff() {
+        int targetY = (cameraY() - 0x50) & 0xFFFF;
+        int nextY = (getCentreY() - 1) & 0xFFFF;
+        if (unsignedCompare(nextY, targetY) >= 0) {
+            setCentreY(nextY);
+            return;
+        }
+        setCentreY(targetY);
+        flags |= FLAG_FINAL_BOSS_2_HANDOFF;
+        LbzFinalBoss2Instance finalBoss2 = spawnFreeChild(() -> new LbzFinalBoss2Instance(
+                new ObjectSpawn(0, 0, Sonic3kObjectIds.LBZ_FINAL_BOSS_2, 0, 0, false, 0)));
+        recordChild(ChildKind.FINAL_BOSS_2_HANDOFF, finalBoss2);
+        ObjectLifetimeOps.deleteNoRespawn(this);
     }
 
     /** ROM loc_72B18: sink off the bottom of the screen, then lock P2 controls. */
@@ -993,8 +1020,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         return finalePhase;
     }
 
-    public boolean isKnucklesBigArmStubbedForTest() {
-        return knucklesBigArmStubbed;
+    public boolean isFinalBoss2HandoffFlagSetForTest() {
+        return (flags & FLAG_FINAL_BOSS_2_HANDOFF) != 0;
     }
 
     public boolean isBossExplosionPlcQueuedForTest() {
@@ -1774,7 +1801,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             this.x = x & 0xFFFF;
             this.y = y & 0xFFFF;
             this.visible = false;
-            this.controller = new S3kBossExplosionController(this.x, this.y, subtype);
+            this.controller = new S3kBossExplosionController(this.x, this.y, subtype, boss.services().rng());
         }
 
         @Override

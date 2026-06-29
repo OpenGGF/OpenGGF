@@ -191,6 +191,8 @@ public final class Sonic3kObjectIds {
     public static final int LBZ_FINAL_BOSS_1 = 0xCA;
     // S3KL object table: Obj_LBZEndBoss.
     public static final int LBZ_END_BOSS = 0xCB;
+    // S3KL object table: Obj_LBZFinalBoss2.
+    public static final int LBZ_FINAL_BOSS_2 = 0xCC;
     public static final int PACHINKO_TRIANGLE_BUMPER = 0xE6;
     public static final int PACHINKO_FLIPPER = 0xE7;
     public static final int PACHINKO_ENERGY_TRAP = 0xE8;

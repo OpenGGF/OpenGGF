@@ -1,7 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -9,9 +11,11 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance;
+import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.physics.Direction;
@@ -294,7 +298,7 @@ class TestLbzFinalBoss1Instance {
     }
 
     @Test
-    void sonicDefeatSinksThenSpawnsResultsWithoutBigArm() {
+    void sonicDefeatSinksThenSpawnsResultsWithoutFinalBoss2Handoff() {
         HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
         LbzFinalBoss1Instance boss = newBoss(services);
         boss.update(0, null);
@@ -314,7 +318,7 @@ class TestLbzFinalBoss1Instance {
         assertTrue(boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.RESULTS_SCREEN).stream()
                 .anyMatch(S3kResultsScreenObjectInstance.class::isInstance));
         assertFalse(boss.spawnedClassNamesForTest().contains("Obj_LBZFinalBoss2"),
-                "Sonic/Tails route must not enter the Knuckles Big Arm branch");
+                "Sonic/Tails route must not enter the Knuckles handoff branch");
     }
 
     @Test
@@ -348,19 +352,38 @@ class TestLbzFinalBoss1Instance {
     }
 
     @Test
-    void knucklesDefeatIsLoggedStubAndNeverSpawnsBigArm() {
+    void knucklesDefeatRisesToCameraMinus50ThenSpawnsFinalBoss2Placeholder() {
         HarnessServices services = new HarnessServices(PlayerCharacter.KNUCKLES);
         LbzFinalBoss1Instance boss = newBoss(services);
         boss.update(0, null);
+        boss.setCentreYForTest(services.cameraY() - 0x4E);
 
         boss.forceHitCountForTest(1);
         boss.onPlayerAttack(null, null);
         boss.update(1, null);
 
-        assertEquals(LbzFinalBoss1Instance.FinalePhase.KNUCKLES_STUB, boss.getFinalePhase());
-        assertTrue(boss.isKnucklesBigArmStubbedForTest());
-        assertFalse(boss.spawnedClassNamesForTest().contains("Obj_LBZFinalBoss2"),
-                "Task D intentionally stubs Obj_LBZFinalBoss2/Big Arm");
+        assertEquals(LbzFinalBoss1Instance.FinalePhase.KNUCKLES_HANDOFF, boss.getFinalePhase(),
+                "loc_735FC switches FinalBoss1 to loc_73054 instead of the Sonic/Tails sink path");
+        assertEquals(services.cameraY() - 0x4F, boss.getCentreY(),
+                "loc_73054 decrements y_pos by 1 while still at or below Camera_Y_pos-$50");
+        assertFalse(boss.isDestroyed(), "FinalBoss1 stays visible during the upward handoff travel");
+
+        boss.update(2, null);
+        assertEquals(services.cameraY() - 0x50, boss.getCentreY(),
+                "the equality frame is still drawn before the ROM's blo branch takes the handoff");
+        assertTrue(boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.FINAL_BOSS_2_HANDOFF).isEmpty());
+
+        boss.update(3, null);
+
+        assertEquals(services.cameraY() - 0x50, boss.getCentreY(),
+                "loc_73070 snaps y_pos to Camera_Y_pos-$50 before allocating Obj_LBZFinalBoss2");
+        assertTrue(boss.isFinalBoss2HandoffFlagSetForTest(), "loc_73070 sets bit 5 in FinalBoss1 $38");
+        assertTrue(boss.isDestroyed(), "loc_73088 deletes FinalBoss1 after allocating Obj_LBZFinalBoss2");
+        LbzFinalBoss2Instance handoffTarget = assertInstanceOf(LbzFinalBoss2Instance.class,
+                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.FINAL_BOSS_2_HANDOFF)
+                        .stream().findFirst().orElseThrow());
+        assertEquals("LBZFinalBoss2", handoffTarget.getName());
+        assertEquals(0xCC, handoffTarget.getSpawn().objectId(), "S3KL object $CC is Obj_LBZFinalBoss2");
     }
 
     @Test
@@ -433,6 +456,8 @@ class TestLbzFinalBoss1Instance {
         HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
         LbzFinalBoss1Instance boss = newBoss(services);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x44A0, (short) 0x0740);
+        TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x4480, (short) 0x0740);
+        services.withPlayers(player, sidekick);
         boss.update(0, null);
         boss.forceSonicFinalePhaseForTest(LbzFinalBoss1Instance.FinalePhase.WAIT_LAUNCH_MILESTONE_A);
 
@@ -444,18 +469,43 @@ class TestLbzFinalBoss1Instance {
                 "loc_72C68 switches to external player sprite animation, not the regular LOOK_UP anim");
         assertEquals(LbzFinalBoss1Instance.FinalePhase.LOOK_UP, boss.getFinalePhase());
 
-        boss.update(41, player);
+        int frame = 41;
+        boss.update(frame++, player);
 
         assertTrue(player.isObjectMappingFrameControl(),
                 "Animate_ExternalPlayerSprite writes mapping_frame directly under object control");
-        assertEquals(0x55, player.getMappingFrame(),
-                "byte_7386A first Sonic frame is the turn-away/Death Egg look frame $55");
+        assertEquals(0xC4, player.getMappingFrame(),
+                "byte_7386A starts Sonic on mapping frame $C4 before the turn-away/look-up frames");
         assertEquals(Direction.RIGHT, player.getDirection(),
-                "byte_7386A frame $55 leaves render_flags bit0 clear, so Sonic faces away/right first");
+                "Animate_ExternalPlayerSprite leaves render_flags bit0 clear when the following delay byte is 0");
+        assertEquals(0xC4, sidekick.getMappingFrame(),
+                "byte_73874 starts P2 on the same $C4 frame as Sonic");
+        assertEquals(Direction.RIGHT, sidekick.getDirection(),
+                "P2 $C4 also sees a following delay byte of 0, so render_flags bit0 remains clear");
         assertEquals(LbzFinalBoss1Instance.FinalePhase.WAIT_LAUNCH_MILESTONE_B, boss.getFinalePhase());
 
+        for (int i = 0; i < 6; i++) {
+            boss.update(frame++, player);
+        }
+        assertExternalFrame(player, 0x55, Direction.RIGHT, "byte_7386A second Sonic frame");
+        assertExternalFrame(sidekick, 0x55, Direction.RIGHT, "byte_73874 second P2 frame");
+
+        boss.update(frame++, player);
+        assertExternalFrame(player, 0x59, Direction.LEFT, "byte_7386A third Sonic frame");
+        assertExternalFrame(sidekick, 0x59, Direction.LEFT, "byte_73874 third P2 frame");
+
+        boss.update(frame++, player);
+        assertExternalFrame(player, 0x5A, Direction.LEFT, "byte_7386A fourth Sonic frame");
+        assertExternalFrame(sidekick, 0x5A, Direction.LEFT, "byte_73874 fourth P2 frame");
+
+        for (int i = 0; i < 8; i++) {
+            boss.update(frame++, player);
+        }
+        assertExternalFrame(sidekick, 0x5A, Direction.LEFT,
+                "byte_73874 keeps P2 on five $5A entries before the terminal zero byte");
+
         boss.signalLaunchMilestoneBForTest();
-        boss.update(42, player);
+        boss.update(frame, player);
 
         assertTrue(services.lbzState.consumeFinalFallRequested());
         assertFalse(player.getAir(),
@@ -480,6 +530,26 @@ class TestLbzFinalBoss1Instance {
 
         assertTrue(services.sfxIds.contains(Sonic3kSfx.EXPLODE.id),
                 "sub_83E84 creates Obj_BossExplosion1, whose init routine plays sfx_Explode");
+    }
+
+    @Test
+    void explosionShowerConsumesHarnessRngStream() throws Exception {
+        HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
+        LbzFinalBoss1Instance boss = newBoss(services);
+        boss.update(0, null);
+        services.rng().setSeed(0x13572468L);
+        GameRng expected = new GameRng(GameRng.Flavour.S3K, 0x13572468L);
+        expected.nextRaw();
+        AbstractObjectInstance shower = newExplosionShowerForTest(boss, 0x44A0, 0x0780, 0);
+
+        shower.update(0, null);
+        shower.update(1, null);
+        shower.update(2, null);
+
+        assertEquals(expected.getSeed(), services.rng().getSeed(),
+                "sub_83E84 calls global Random_Number for the first boss-explosion offset");
+        assertTrue(services.sfxIds.contains(Sonic3kSfx.EXPLODE.id),
+                "Obj_BossExplosion1 init plays sfx_Explode after the first global RNG draw");
     }
 
     @Test
@@ -567,6 +637,20 @@ class TestLbzFinalBoss1Instance {
         return (AbstractObjectInstance) ctor.newInstance(boss);
     }
 
+    private static AbstractObjectInstance newExplosionShowerForTest(
+            LbzFinalBoss1Instance boss,
+            int x,
+            int y,
+            int subtype)
+            throws Exception {
+        Class<?> cls = Class.forName(
+                "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$ExplosionShowerChild");
+        Constructor<?> ctor = cls.getDeclaredConstructor(
+                LbzFinalBoss1Instance.class, int.class, int.class, int.class);
+        ctor.setAccessible(true);
+        return (AbstractObjectInstance) ctor.newInstance(boss, x, y, subtype);
+    }
+
     private static void writeIntField(Object target, String fieldName, int value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -586,13 +670,24 @@ class TestLbzFinalBoss1Instance {
         return hFlip.getBoolean(child);
     }
 
+    private static void assertExternalFrame(
+            TestablePlayableSprite sprite,
+            int mappingFrame,
+            Direction direction,
+            String message) {
+        assertEquals(mappingFrame, sprite.getMappingFrame(), message + " mapping_frame");
+        assertEquals(direction, sprite.getDirection(), message + " render_flags bit0 direction");
+    }
+
     private static final class HarnessServices extends StubObjectServices {
         private final Camera camera = new Camera();
         private final LbzZoneRuntimeState lbzState;
         private final GameStateManager gameState = new GameStateManager();
         private final List<Integer> musicIds = new ArrayList<>();
         private final List<Integer> sfxIds = new ArrayList<>();
+        private final List<PlayableEntity> sidekicks = new ArrayList<>();
         private final int levelMusicId = 0x17;
+        private PlayableEntity mainPlayer;
         private boolean transitionRequested;
 
         private HarnessServices(PlayerCharacter character) {
@@ -602,8 +697,16 @@ class TestLbzFinalBoss1Instance {
         }
 
         @Override
-        public com.openggf.level.objects.ObjectPlayerQuery playerQuery() {
-            return new com.openggf.level.objects.ObjectPlayerQuery(() -> null, List::of);
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> mainPlayer, () -> sidekicks);
+        }
+
+        private void withPlayers(PlayableEntity mainPlayer, PlayableEntity... sidekicks) {
+            this.mainPlayer = mainPlayer;
+            this.sidekicks.clear();
+            for (PlayableEntity sidekick : sidekicks) {
+                this.sidekicks.add(sidekick);
+            }
         }
 
         private int cameraY() {
