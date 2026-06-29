@@ -43,6 +43,12 @@ branch-local measurements.
   ARZ2 f870 / 2794; CNZ2 f5213 / 749; CPZ1 f4225 / 264; CPZ2 f2889 / 1238;
   HTZ1 f6586 / 226; HTZ2 f3322 / 1060; MCZ2 f8606 / 317; MTZ1 f5647 / 616;
   MTZ2 f1857 / 3209; MTZ3 f2048 / 3742; OOZ1 f1784 / 1256; OOZ2 f2623 / 946.
+- Full S2 sweep after integration with the accepted OOZ1 Obj36 fix:
+  `mvn "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: 19 trace classes ran; 7 green / 12 expected-red. Red summary:
+  ARZ2 f870 / 2794; CNZ2 f5213 / 749; CPZ1 f4225 / 264; CPZ2 f2889 / 1238;
+  HTZ1 f6586 / 226; HTZ2 f3322 / 1060; MCZ2 f8606 / 317; MTZ1 f5647 / 616;
+  MTZ2 f1857 / 3209; MTZ3 f2048 / 3742; OOZ1 f1790 / 1125; OOZ2 f2623 / 946.
 - New HTZ2 frontier: f3322 sidekick ride/CPU steering state, with
   `tails_cpu_ctrl2_held` expected `0x0004`, actual `0x0008`,
   `tails_status_byte` expected `0x0029`, actual `0x0008`, and matching
