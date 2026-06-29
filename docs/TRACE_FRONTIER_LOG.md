@@ -6,6 +6,51 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 CPZ Obj78 side-overlap push latch (f4351 -> f4547)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz1-frontier` /
+  `bugfix/ai-s2-cpz1-frontier`, based on integration head `0d8252511`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: CPZ1 f4351 / 181 (`tails_x` expected `0x20D4`,
+  actual `0x20D3`); CPZ2 f2976 / 1232 (`tails_y` expected `0x0208`,
+  actual `0x020C`).
+- Triage/evidence: at CPZ1 f4351 ROM Tails is riding Obj78 child slot
+  `0x1F` with no `Status_Push`, while the engine was riding the folded
+  Obj78 parent with stale push preserved. That stale push sent
+  `TailsCPU_Normal` down `current_push_bypass`, so the sidekick applied only
+  velocity and missed the ROM's +1 `FollowRight` nudge. The failing context
+  showed `eng-tails-cpu` skip=true, grace=16, branch=`current_push_bypass`;
+  the gzipped trace showed ROM moving from `20D1.9D00` to `20D4.1A00`,
+  while the engine reached `20D3.1A00`.
+- Disassembly cited: Tails CPU push bypass at
+  `docs/s2disasm/s2.asm:39291-39294`; Obj78 child allocation/setup at
+  `docs/s2disasm/s2.asm:55978-55995`; child `SolidObject` calls and status
+  merge at `docs/s2disasm/s2.asm:56006-56021`.
+- Fix: `CPZStaircaseObjectInstance` now preserves ordinary folded riding
+  push only when the rider is actually side-overlapping a lower neighbouring
+  child slot, and the sidekick CPU grace hook is also gated on adjacent
+  child-slot side overlap. This keeps the accepted CPZ2 staircase grace
+  narrow and does not add trace hydration, tolerance, route, frame, or zone
+  carve-outs.
+- Focused regression test:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#cpzStaircasePreservesRidingPushOnlyAtLowerStepSideOverlap" test`.
+  Result: the new test failed before the production change on the centered
+  CPZ1 rider case, then passed after the side-overlap predicate was added.
+- Focused trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CPZ1 advances to f4547 / 177 (`x_speed`
+  expected `0x01E0`, actual `-0200`), and CPZ2 holds exactly f2976 / 1232
+  (`tails_y` expected `0x0208`, actual `0x020C`).
+- Full S2 sweep:
+  `mvn "-DforkCount=1" "-DreuseForks=true" "-Dtest=com.openggf.tests.trace.s2.*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; 19 trace classes, 9 green / 10 expected-red, no
+  native errors. Green: ARZ1, CNZ1, DEZ ending, EHZ1, HTZ1, MCZ1, MCZ2, SCZ,
+  WFZ. Preserved reds: ARZ2 f1028 / 2688; CNZ2 f5298 / 920; OOZ2 f3835 /
+  797; OOZ1 f1790 / 614; HTZ2 f3322 / 1057; MTZ1 f5713 / 560; MTZ2 f4375 /
+  950; MTZ3 f2588 / 939; CPZ2 f2976 / 1232. CPZ1 is the only changed
+  frontier, now f4547 / 177.
+
 ## 2026-06-29 - S2 MCZ2 MCZ boss Tails max-X mirror (f10119 -> green)
 
 - Worktree/branch: `.worktrees/trace-s2-mcz2-r14` /
@@ -154,10 +199,14 @@ branch-local measurements.
   - CNZ2 Point Pokey release / bumper handoff advanced
     `TestS2Cnz2LevelSelectTraceReplay` from f5298 / 920 to f6144 / 994 while
     holding the current S2 accepted red/green frontier set.
+  - CPZ1 Obj78 side-overlap push latch advanced
+    `TestS2CpzLevelSelectTraceReplay` from f4351 / 181 to f4547 / 177 while
+    preserving CPZ2 f2976 / 1232 and the current S2 accepted red/green
+    frontier set.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f6144 / 994 (`tails_y_speed` expected `0x0038`, actual `0x0000`);
-  `CPZ1` f4351 / 181 (`tails_x` expected `0x20D4`, actual `0x20D3`);
+  `CPZ1` f4547 / 177 (`x_speed` expected `0x01E0`, actual `-0200`);
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
   `MTZ1` f5713 / 560 (`tails_y_speed` expected `0x0ED0`, actual `0x0000`);

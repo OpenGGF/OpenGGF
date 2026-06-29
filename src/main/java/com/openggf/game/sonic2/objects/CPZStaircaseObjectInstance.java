@@ -13,6 +13,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -183,10 +184,7 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
         // the ordinary folded push bit only when the rider faces the lower
         // neighbouring step; broader CPU slot timing is handled by the
         // sidekick-specific grace hook below.
-        boolean lowerStepIsLeft = (masterOffset > 0) ^ xFlip;
-        return lowerStepIsLeft
-                ? playerEntity.getDirection() == com.openggf.physics.Direction.LEFT
-                : playerEntity.getDirection() == com.openggf.physics.Direction.RIGHT;
+        return isFacingAdjacentStepSide(playerEntity, true);
     }
 
     @Override
@@ -200,12 +198,53 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
         // later lower-step windows.
         return playerEntity != null && playerEntity.isCpuControlled()
                 && yOffsets[0] != 0
+                && isFacingAdjacentStepSide(playerEntity, false)
                 && !preservesRidingPushStatus(playerEntity);
     }
 
     @Override
     public int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity playerEntity) {
         return preservesSidekickCpuPushGraceWhileRiding(playerEntity) ? 8 : Integer.MAX_VALUE;
+    }
+
+    private boolean isFacingAdjacentStepSide(PlayableEntity playerEntity, boolean requireLowerNeighbor) {
+        if (playerEntity == null) {
+            return false;
+        }
+        Direction direction = playerEntity.getDirection();
+        int step = direction == Direction.RIGHT ? 1 : direction == Direction.LEFT ? -1 : 0;
+        if (step == 0) {
+            return false;
+        }
+
+        int pieceIndex = nearestPieceIndex(playerEntity.getCentreX());
+        int neighbourIndex = pieceIndex + step;
+        if (neighbourIndex < 0 || neighbourIndex >= NUM_PIECES) {
+            return false;
+        }
+        if (requireLowerNeighbor && getPieceY(neighbourIndex) <= getPieceY(pieceIndex)) {
+            return false;
+        }
+
+        SolidObjectParams neighbourParams = getPieceParams(neighbourIndex);
+        int neighbourX = getPieceX(neighbourIndex);
+        int playerX = playerEntity.getCentreX();
+        return step > 0
+                ? playerX >= neighbourX - neighbourParams.halfWidth()
+                : playerX <= neighbourX + neighbourParams.halfWidth();
+    }
+
+    private int nearestPieceIndex(int x) {
+        int bestIndex = 0;
+        int bestDistance = Integer.MAX_VALUE;
+        for (int i = 0; i < NUM_PIECES; i++) {
+            int distance = Math.abs(x - getPieceX(i));
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestIndex = i;
+            }
+        }
+        return bestIndex;
     }
 
     @Override
