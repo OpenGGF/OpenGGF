@@ -286,6 +286,18 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a zero horizontal velocity on the object's left side still routes
+     * through {@code SolidObject_StopCharacter}.
+     * <p>
+     * Most existing solids keep the established engine-side sign convention.
+     * Objects that have trace coverage for the S2 {@code SolidObject_InsideLeft}
+     * boundary can opt in with a concrete disassembly citation.
+     */
+    default boolean zeroXSpeedStopsOnLeftSideContact() {
+        return false;
+    }
+
+    /**
      * Whether a side classification should return no contact before applying
      * side correction or speed zeroing.
      * <p>

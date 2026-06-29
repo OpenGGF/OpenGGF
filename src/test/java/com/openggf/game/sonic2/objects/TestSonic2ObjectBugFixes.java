@@ -238,6 +238,16 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void mtzLongPlatformOptsIntoZeroXSpeedLeftSideStopCharacter() {
+        MTZLongPlatformObjectInstance platform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x1090, 0x01EC, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x00, 0, false, 0));
+
+        assertTrue(platform.zeroXSpeedStopsOnLeftSideContact(),
+                "Obj65 reaches S2 SolidObject_InsideLeft with x_vel == 0; that falls through to "
+                        + "SolidObject_StopCharacter and clears inertia (docs/s2disasm/s2.asm:35424-35439)");
+    }
+
+    @Test
     void mtzConveyorUsesPlatformObjectD3ForLandingSnap() {
         ConveyorObjectInstance conveyor = new ConveyorObjectInstance(
                 new ObjectSpawn(0x1720, 0x0519, Sonic2ObjectIds.CONVEYOR, 0x01, 0, false, 0),
