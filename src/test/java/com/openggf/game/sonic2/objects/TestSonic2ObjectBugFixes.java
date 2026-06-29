@@ -248,6 +248,27 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void mczRotPformsUseSolidObjectContStatusTiming() {
+        MCZRotPformsObjectInstance platform = new MCZRotPformsObjectInstance(
+                new ObjectSpawn(0x0E80, 0x05A0, Sonic2ObjectIds.MCZ_ROT_PFORMS, 0x00, 0, false, 0),
+                "MCZRotPforms");
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0EAB, (short) 0x05F0);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0EAB, (short) 0x05F0);
+        tails.setCpuControlled(true);
+
+        assertTrue(platform.usesInclusiveRightEdge(),
+                "Obj6A reaches JmpTo13_SolidObject, and SolidObject_cont rejects the right edge with bhi "
+                        + "(docs/s2disasm/s2.asm:54276,54301,35344-35354)");
+        assertTrue(platform.usesInstanceSolidStateLatchKey(),
+                "Obj6A rewrites dynamic spawn coordinates while ROM keeps standing/pushing bits in the live SST slot");
+        assertFalse(platform.preservesSidekickCpuPushGraceWhileRiding(sonic));
+        assertTrue(platform.preservesSidekickCpuPushGraceWhileRiding(tails),
+                "TailsCPU_Normal reads Status_Push before the next Obj6A SolidObject pass clears it");
+        assertEquals(8, platform.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
+                "MCZ2 f4485 keeps the post-Obj6A push bit visible to the Tails CPU slot with eight grace frames");
+    }
+
+    @Test
     void mtzConveyorUsesPlatformObjectD3ForLandingSnap() {
         ConveyorObjectInstance conveyor = new ConveyorObjectInstance(
                 new ObjectSpawn(0x1720, 0x0519, Sonic2ObjectIds.CONVEYOR, 0x01, 0, false, 0),

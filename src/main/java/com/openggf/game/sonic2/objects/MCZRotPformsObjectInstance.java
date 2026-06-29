@@ -260,6 +260,36 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj6A reaches JmpTo13_SolidObject after moving in MCZ and MTZ
+        // (s2.asm:54276,54301). SolidObject_cont rejects only with `bhi`
+        // (s2.asm:35354), so relX == width*2 remains a live contact.
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Obj6A rewrites dynamic spawn coordinates via updateDynamicSpawn as it
+        // moves, while ROM stores standing/pushing bits in the live SST status
+        // byte for this slot. Keep the latch keyed to the Java instance/slot,
+        // not the mutable spawn coordinates.
+        return true;
+    }
+
+    @Override
+    public boolean preservesSidekickCpuPushGraceWhileRiding(PlayableEntity player) {
+        // TailsCPU_Normal reads Status_Push before the later Obj6A
+        // SolidObject pass can clear or refresh the object's live status byte
+        // (s2.asm:39297-39300, Obj6A solid call at s2.asm:54301).
+        return player != null && player.isCpuControlled();
+    }
+
+    @Override
+    public int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity player) {
+        return preservesSidekickCpuPushGraceWhileRiding(player) ? 8 : Integer.MAX_VALUE;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         ensureInitialized();
         // ROM parity (s2.asm:54125-54167): the MCZ subtype-0x18 #$18 check
