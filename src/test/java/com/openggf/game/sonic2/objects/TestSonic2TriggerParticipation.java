@@ -116,6 +116,31 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void nutSidekickActionSeesLiveObjectStandingBit() {
+        TestablePlayableSprite main = player("sonic", 0x1600, 0x0600);
+        TestablePlayableSprite tails = player("tails", 0x16C0, 0x04D2);
+        tails.setSubpixelRaw(0xB500, 0x8500);
+        NutObjectInstance nut = new NutObjectInstance(
+                new ObjectSpawn(0x16C0, 0x04EE, Sonic2ObjectIds.NUT, 0, 0, false, 0),
+                "Nut");
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.hasObjectStandingBit(tails, nut)).thenReturn(true);
+        nut.setServices(new QueryOnlyPlayerServices(main, List.of(tails)).withObjectManager(objectManager));
+
+        nut.update(0, main);
+
+        tails.setCentreXPreserveSubpixel((short) 0x16C1);
+        tails.setSubpixelRaw(0x4D00, 0x8500);
+        nut.update(1, main);
+
+        assertEquals(0x16C0, tails.getCentreX(),
+                "Obj69's P2 action pass reads status(a0)'s p2 standing bit before SolidObject "
+                        + "and writes x_pos(a0) to x_pos(a1) (s2.asm:54000-54013, 54017-54061, 54095-54107)");
+        assertEquals(0x4D00, tails.getXSubpixelRaw(),
+                "Obj69 writes only the native x_pos word, preserving x_sub");
+    }
+
+    @Test
     void nutSolidBottomBoundsUseLiveRollingRadius() {
         NutObjectInstance nut = new NutObjectInstance(
                 new ObjectSpawn(0x13C0, 0x064C, Sonic2ObjectIds.NUT, 0x15, 0, false, 0),
