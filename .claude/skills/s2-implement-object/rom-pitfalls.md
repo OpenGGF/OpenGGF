@@ -2663,6 +2663,40 @@ ownership fix: `TestS2Cnz2LevelSelectTraceReplay` advances f4730 -> f4892.
 
 ---
 
+## P65 - Platform nudge gates may read object standing bits, not live riding state
+
+**Pattern.** Some S2 solid platform routines update bob, sag, nudge, or falling
+state from `status(a0)&standing_mask` before calling `PlatformObject` or
+`SolidObject` in the same object routine. That bit is the object's prior
+standing latch, not a freshly computed current-frame ride query.
+
+**Engine symptom.** A jump-off frame leaves a platform one pixel out of phase
+even though player physics and object allocation otherwise match. In ARZ2, Obj18
+slot `0x1F` relaxed its nudge angle one step early at f888, producing
+`y_pos=$059A` where ROM still had `$059B`.
+
+**What to check / fix.** When a routine reads `status(a0)&standing_mask` before
+its solid helper:
+1. Use the object standing latch from the previous solid pass, such as
+   `ObjectManager.hasObjectStandingBit`, not `isPlayerRiding()` or a
+   current-frame collision query.
+2. Include Sonic and Sidekick bits when the object routine's standing mask
+   covers both players.
+3. Let the later solid helper clear or refresh the latch after movement. Do not
+   replace this order dependency with a zone, route, frame, or trace-name
+   exception.
+
+**ROM citation.** Obj18 `Obj18_TopSolid` and `Obj18_FullSolid` read
+`status(a0)&standing_mask`, run `Obj18_Move`/`Obj18_Nudge`, then call
+`PlatformObject`/`SolidObject` (`docs/s2disasm/s2.asm:23219-23243,
+23273-23301`). `Obj18_Nudge` computes `y_pos` from `obj18_y_offset`
+(`docs/s2disasm/s2.asm:23311-23320`).
+
+**Originating commit.** `<pending>` S2 ARZ2 Obj18 platform standing-latch
+nudge: `TestS2Arz2LevelSelectTraceReplay` advances f888 -> f1028.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

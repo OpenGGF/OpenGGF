@@ -1,6 +1,7 @@
 package com.openggf.tests.trace;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.objects.ARZPlatformObjectInstance;
 import com.openggf.game.sonic2.objects.ArrowProjectileInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.objects.AnimalObjectInstance;
@@ -524,6 +525,45 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void arz2PlatformBobUsesRomStandingLatchOnJumpFrame888() throws Exception {
+        PlatformPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 888) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedPlatform = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 0x1F)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x18)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedPlatform,
+                            "ARZ2 ROM fixture should report the ridden Obj18 platform in slot 0x1F at f888");
+                    ARZPlatformObjectInstance actualPlatform = om.activeObjectsOfType(ARZPlatformObjectInstance.class)
+                            .stream()
+                            .filter(platform -> platform.getSlotIndex() == 0x1F)
+                            .findFirst()
+                            .orElse(null);
+                    return new PlatformPositionCheck(
+                            expectedPlatform.x() & 0xFFFF,
+                            expectedPlatform.y() & 0xFFFF,
+                            actualPlatform == null ? -1 : actualPlatform.getX(),
+                            actualPlatform == null ? -1 : actualPlatform.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 0x1B, 0x24));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "ARZ2 Obj18 slot 0x1F should keep ROM X on Sonic's jump-off frame; slots "
+                        + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj18_TopSolid reads status(a0)&standing_mask before PlatformObject clears "
+                        + "the jump-off ride, so Obj18_Nudge must use the prior standing latch "
+                        + "at f888 (docs/s2disasm/s2.asm:23219-23243,23311-23320); slots "
+                        + check.summary());
+    }
+
+    @Test
     public void arz2LeafParticlesDoNotDisplaceMouthBubbleSlotOnRomFrame723() throws Exception {
         SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {
@@ -614,6 +654,9 @@ public class TestS2ObjectOccupancyOracle {
             int expectedY,
             String expectedSummary,
             String actualSummary) {
+    }
+
+    private record PlatformPositionCheck(int expectedX, int expectedY, int actualX, int actualY, String summary) {
     }
 
     private AnimalPositionCheck animalPositionAtArz2Frame(int targetFrame) throws Exception {

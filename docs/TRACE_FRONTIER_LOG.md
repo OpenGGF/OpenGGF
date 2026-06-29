@@ -23830,3 +23830,44 @@ Verification:
   trace reported the improved f8965 / 156 frontier.
 - `mvn -q '-Dmse=relaxed' '-Dtest=TestRewindCoverageGuard' test` exited 0;
   `TestRewindCoverageGuard` passed 1/1.
+
+### 2026-06-29 -- S2 ARZ2 Obj18 platform standing-latch nudge: f888 -> f1028
+
+Worktree `bugfix/ai-trace-s2-arz2-r13` from integration parent
+`a01e0fedc537573c92bc3f01d8caa6121dfd9c8d`.
+
+Root fixed: S2 Obj18 reads `status(a0)&standing_mask` at the start of
+`Obj18_TopSolid`/`Obj18_FullSolid`, before `PlatformObject`/`SolidObject`
+clear or refresh ride state for the current frame. On Sonic's ARZ2 jump-off
+frame f888, ROM still has the previous object standing bit set while the engine
+had already stopped reporting a live ride. That made Obj18 relax its nudge angle
+one step early and left slot `0x1F` at `y_pos=$059A` instead of ROM `$059B`.
+
+Fix: `ARZPlatformObjectInstance` now drives the Obj18 nudge/falling standing
+gate from `ObjectManager.hasObjectStandingBit` for Sonic and sidekicks, falling
+back to the live ride query only if the object manager is unavailable. The
+change is object-local ROM state modeling; it does not hydrate from trace data
+and does not branch on zone, route, or frame. `TestS2ObjectOccupancyOracle` now
+asserts the f888 slot-`0x1F` Obj18 position directly.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f888 / 2720 errors
+  (`obj_extra_s1F_x` expected absent, actual `0x0AE0`) -> f1028 / 2688 errors
+  (`obj_extra_s16_x` expected absent, actual `0x0B7B`).
+- Full `TestS2*TraceReplay` sweep found no first-frontier or total-count
+  regressions versus the accepted S2 baseline. HTZ2 stayed at f3322 and improved
+  from 1060 to 1057 errors.
+
+Verification:
+- `mvn "-Dtest=TestS2ObjectOccupancyOracle" "-DfailIfNoTests=false" test`
+  passed all 24 object-occupancy oracle tests.
+- `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  produced the improved f1028 / 2688 ARZ2 frontier above.
+- `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  exited 0; all seven S2 green-guard traces remained green.
+- `mvn "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test` exited 1
+  with the expected accepted red traces only; parsed summaries matched the
+  accepted first frontiers and totals except for the ARZ2 advance and HTZ2 total
+  improvement noted above.
+- `mvn "-Dtest=TestRewindCoverageGuard" "-DfailIfNoTests=false" test`
+  exited 0; `TestRewindCoverageGuard` passed 1/1.

@@ -11,6 +11,7 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PlatformBobHelper;
@@ -97,7 +98,7 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         x = baseX;
 
-        boolean standing = isPlayerRiding();
+        boolean standing = hasAnyPlayerStandingLatch(playerEntity);
         if (routine == 2 || routine == 8) {
             bobHelper.update(standing);
         }
@@ -288,6 +289,22 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
                 return false;
             }
         }
+    }
+
+    private boolean hasAnyPlayerStandingLatch(PlayableEntity player) {
+        ObjectManager om = services().objectManager();
+        if (om == null) {
+            return isPlayerRiding();
+        }
+        if (player != null && om.hasObjectStandingBit(player, this)) {
+            return true;
+        }
+        for (PlayableEntity sidekick : services().sidekicks()) {
+            if (sidekick != null && om.hasObjectStandingBit(sidekick, this)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void handleFallTrigger(boolean standing) {
