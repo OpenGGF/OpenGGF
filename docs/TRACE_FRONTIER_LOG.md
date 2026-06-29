@@ -6,6 +6,41 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 ARZ2 Obj2C leaves generator touch latch - ENGINE FIX (ARZ2 f643 -> f662)
+
+- Scope: branch `bugfix/ai-trace-s2-arz2-r5` in worktree
+  `.worktrees/trace-s2-arz2-r5`, branched from
+  `bugfix/ai-s2-trace-develop` at `a5832907e`. The diff is limited to S2
+  Obj2C leaves-generator behavior plus changelog/frontier docs. It does not
+  hydrate trace data and does not add zone, route, frame, or known-failing-trace
+  carve-outs.
+- Root/fix: ARZ2 f643 expected ROM slot `0x11` to contain Obj2C leaves, but the
+  engine still had only the invisible parent generator. ROM `Obj2C_Init` writes
+  subtype-selected `collision_flags` from `Obj2C_CollisionFlags`, and
+  `Obj2C_Main` consumes the S2 `Touch_Loop`-written `collision_property` bits
+  for MainCharacter bit 0 and Sidekick bit 1 (`docs/s2disasm/s2.asm:52046-52123`).
+  The Java port had bypassed the touch framework with a main-player-only manual
+  rectangle and a generic cooldown, so no ROM-style bit latch existed for the
+  object routine. Obj2C now exposes the ROM collision flags through
+  `TouchResponseProvider`, ORs the main/sidekick collision bits in the continuous
+  S2 special-touch callback, and runs the parent routine's saved
+  `objoff_2E`/`Level_frame_counter` phase using the object-visible level counter.
+  Child creation also preserves the REV01 `FixBugs=0` typo where
+  `Obj2C_CreateLeaves` writes `RandomNumber`'s `d1` to parent `angle(a0)`, not
+  child `angle(a1)`, so spawned leaf angle starts at zero
+  (`docs/s2disasm/s2.asm:52126-52182`).
+- Frontier movement: `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`
+  advances from f643 / 3172 errors (`obj_s11_type` expected `0x2C`, actual
+  missing) to f662 / 3408 errors (`obj_extra_s1E_x` expected absent, actual
+  `0x0749`). The new frontier is downstream Obj2C leaf child slot/position churn
+  after the f643 and f651 leaf bursts are present.
+- Verification:
+  `mvn "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  remains expected-red at the new f662 frontier above (3408 errors, 0
+  warnings).
+  `mvn "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 0; all six current S2 green guard traces passed.
+
 ## 2026-06-29 - S2 integration sweep after ARZ2 Obj28 + MTZ1 Obj64 merges (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
