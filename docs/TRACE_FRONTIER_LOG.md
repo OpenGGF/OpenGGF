@@ -43,6 +43,45 @@ branch-local measurements.
   `MTZ1 f1267`, `MTZ2 f1277`, `MTZ3 f1973`, `OOZ1 f1784`, `OOZ2 f1601`);
   WFZ is no longer red.
 
+## 2026-06-29 - S2 CNZ1 Obj85 preserved-roll push-bypass auto-jump latch - ENGINE FIX (Sidekick CPU + focused test, CNZ1 f3967 -> f4024)
+
+- Scope: branch `bugfix/ai-trace-s2-cnz1-r3` in worktree
+  `.worktrees/trace-s2-cnz1-r3`. The diff is limited to the S2 sidekick CPU
+  normal-follow auto-jump/latch path and focused unit coverage; it does not
+  hydrate trace data and does not add zone, route, or frame carve-outs.
+- Root: after the prior Obj85 re-capture seat fix, the f3967 frontier had ROM
+  Tails holding right+jump (`Ctrl_2_held=$0014`) while the engine held only
+  right (`$0004`). Diagnostic context showed ROM Tails grounded, rolling,
+  pushing, `Tails_CPU_routine=6`, `Tails_CPU_jumping=1`, delayed Sonic input
+  right, and delayed Sonic status not pushing. Sonic 2 `TailsCPU_Normal`
+  branches from live `Status_Push` plus non-pushing delayed Sonic status
+  directly to `TailsCPU_Normal_FilterAction_Part2`, where the `$3F` frame gate
+  can fire the auto-jump (`docs/s2disasm/s2.asm:39287-39300,39369-39378`).
+  The engine's Obj85 preserved-roll stale-jump suppression incorrectly blocked
+  that fresh push-bypass auto-jump, then cleared the CPU jump latch on the next
+  grounded push-bypass frame.
+- Fix: `SidekickCpuController` now lets the current-push/object-order bypass
+  reach the ROM auto-jump gate even while Obj85's preserved-roll handoff is
+  active, tracks a fresh auto-jump generated in the current frame, and only
+  applies the preserved-roll stale delayed-jump suppression when the ROM
+  push-bypass latch path is not active.
+- Frontier movement: `TestS2CnzLevelSelectTraceReplay#replayMatchesTrace`
+  advances from f3967 / 39 errors (`tails_cpu_ctrl2_held` expected `0x0014`,
+  actual `0x0004`) to f4024 / 30 errors (`tails_cpu_ctrl2_held` expected
+  `0x0010`, actual `0x0000`). The new frontier appears to be a later
+  follow-history/delayed-input timing mismatch; player kinematics still match
+  through the former f3967 cluster.
+- Verification:
+  `mvn "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s2Obj85PreservedRollPushBypassStillGeneratesAutoJumpAndPreservesLatch" test`
+  exited 0 with the focused sidekick parity test passed.
+  `mvn "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity" test`
+  exited 0 with 82 tests passed.
+  Combined target/guard command
+  `mvn "-Dtest=TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+  remains expected-red only for CNZ1 and CNZ2: CNZ1 advances to f4024 / 30
+  errors, CNZ2 holds f4632 / 1001 errors, and the ARZ/EHZ1/MCZ/SCZ green guard
+  traces pass.
+
 ## 2026-06-29 - S2 ARZ2 Obj28 negative floor-distance landing gate - ENGINE FIX (2 files, ARZ2 f593 -> f595)
 
 - Scope: continued the ARZ2 ChopChop Obj28 animal window in

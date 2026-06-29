@@ -883,6 +883,56 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s2Obj85PreservedRollPushBypassStillGeneratesAutoJumpAndPreservesLatch() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(false);
+        tails.setRolling(true);
+        tails.setPushing(true);
+        tails.setPinballMode(true);
+        tails.preserveRollingOnNextRollStop();
+        tails.setCentreX((short) 0x106A);
+        tails.setCentreY((short) 0x06F1);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0E5B);
+        Arrays.fill(yHistory, (short) 0x0398);
+        inputHistory[4] = AbstractPlayableSprite.INPUT_RIGHT;
+        statusHistory[4] = AbstractPlayableSprite.STATUS_FACING_LEFT | AbstractPlayableSprite.STATUS_IN_AIR;
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x0F80);
+
+        Assertions.assertAll(
+                () -> assertTrue(controller.getInputRight()),
+                () -> assertTrue(controller.getInputJump()),
+                () -> assertTrue(controller.getInputJumpPress(),
+                        "S2 TailsCPU_Normal branches from live Status_Push directly to "
+                                + "FilterAction_Part2 and still fires the $3F auto-jump gate "
+                                + "while Obj85's preserved-roll handoff is active "
+                                + "(docs/s2disasm/s2.asm:39287-39300,39369-39378)."),
+                () -> assertEquals(1, controller.getDiagnosticJumpingFlag()));
+
+        controller.update(0x0F81);
+
+        Assertions.assertAll(
+                () -> assertFalse(controller.getInputJump(),
+                        "Push-bypass frames skip the auto-jump carry path, so Ctrl_2 "
+                                + "returns to the delayed directional word."),
+                () -> assertEquals(1, controller.getDiagnosticJumpingFlag(),
+                        "The same push-bypass path also skips the grounded latch clear "
+                                + "in FilterAction, so Tails_CPU_jumping remains set."));
+    }
+
+    @Test
     void objectOrderPushAutoJumpUsesFreshDelayedInputOnFirstAirborneTick() {
         GameModule previous = GameModuleRegistry.getBootstrapDefault();
         try {
