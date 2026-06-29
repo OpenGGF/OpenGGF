@@ -6,6 +6,24 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S1 MZ2 directional vertical camera boundary clamp - ENGINE FIX -> all 19/19 S1 complete-run traces green
+
+- Merged from `origin/develop` commit `84f1f269d` into
+  `.worktrees/ai-s2-trace-develop`.
+- Root: MZ2 f13473 had `camera_y` expected `0x0201`, actual `0x0200` because
+  the engine re-clamped an upward scroll against the just-eased bottom boundary.
+  ROM `ScrollVertical` applies vertical boundaries directionally: up-scroll
+  clamps only `v_limittop2`, down-scroll clamps only `v_limitbtm2`, and the
+  no-scroll sweet-spot path clamps bottom only when `f_bgscrollvert` is set
+  (`docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:148-261`).
+- Fix: `Camera.updatePosition` now uses top-only, bottom-only, or moving-bottom
+  clamp paths instead of a symmetric `[minY, maxY]` clamp. This is shared
+  camera code, so the following S2 sweep must verify no S2 regressions.
+- Origin verification: all 29 S1 trace tests green (19 complete-run traces plus
+  8 credits demos and short GHZ1/MZ1 traces), `TestS2Ehz1TraceReplay` green,
+  `TestCamera`, `TestRewindCoverageGuard`, and `TestArchitecturalSourceGuard`
+  green; S3K AIZ/HCZ complete-run frontier counts unchanged.
+
 ## 2026-06-29 - S2 integration sweep after HTZ1 Tails fly-in render-flag merge (7 green, 12 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /

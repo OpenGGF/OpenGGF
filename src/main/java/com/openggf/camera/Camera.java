@@ -312,13 +312,26 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// camera to a different position than Sonic was wrapped to.
 		// Normal (non-wrap) frames still clamp, which handles pit death in SBZ2
 		// where v_limitbtm2=$510 constrains the camera even though wrapping is active.
-		// ROM: ScrollVertical's SV_OnGround / SV_NotInAir path consults
-		// f_bgscrollvert (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:148-149,
-		// 157-158): when the bottom level boundary moved on the PREVIOUS frame, it
-		// branches to SV_BottomBoundaryMoving (line 210) which forces d0=0 and falls
-		// through SV_SweetSpot -> SV_BottomBoundary (line 259), clamping the camera to
-		// v_limitbtm2 EVEN when Sonic is exactly at the sweet spot and the normal
-		// grounded scroll produced no movement.
+		// ROM applies the VERTICAL level boundaries DIRECTIONALLY, mirroring the
+		// horizontal MoveScreenHoriz split — NOT as a symmetric [minY, maxY] clamp:
+		//   - SV_MoveCameraUp (camera scrolling up) falls through to SV_TopBoundary
+		//     (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:204-218), which
+		//     clamps ONLY against the top boundary (v_limittop2 / engine minY).
+		//   - SV_MoveCameraDown (camera scrolling down) falls through to
+		//     SV_BottomBoundary (line 248-261), which clamps ONLY against the bottom
+		//     boundary (v_limitbtm2 / engine maxY).
+		//   - The sweet-spot path consults f_bgscrollvert (lines 148-149, 157-158):
+		//     when the bottom level boundary moved on the PREVIOUS frame it branches
+		//     to SV_BottomBoundaryMoving (line 210), forcing d0=0 and falling through
+		//     SV_SweetSpot -> SV_BottomBoundary (line 259) — a BOTTOM-only clamp,
+		//     EVEN when the normal scroll produced no movement. Without that flag it
+		//     hits SV_NoUpdate (line 152) and clamps against NOTHING.
+		// A symmetric [minY, maxY] clamp wrongly re-clamps an upward scroll against
+		// the bottom boundary: when the bottom boundary eases UP into the rising
+		// camera (S1 MZ2 f13473, camera air-tracking up to 0x201 while v_limitbtm2
+		// just eased to 0x200), the bottom clamp yanked the camera one pixel early to
+		// 0x200. The ROM's up path never consults the bottom boundary, so the camera
+		// is allowed to sit transiently below it.
 		//
 		// ROM order (DeformLayers (REV01).asm:16-18): ScrollVertical runs BEFORE
 		// DynamicLevelEvents, so it clamps to the v_limitbtm2 left by the PREVIOUS
@@ -330,10 +343,27 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// one-frame deferral. (The airborne +8 boundary acceleration applied by
 		// updateBoundaryEasing later this frame therefore reaches the camera on the
 		// NEXT frame, matching ROM — S1 MZ1 f2101.) The GHZ2 f3349 rising-boundary
-		// case is covered because maxYChanging keeps the clamp live on a sweet-spot
-		// frame whose grounded scroll produced no movement.
-		if (!lastFrameWrapped && (y != yBeforeVerticalScroll || maxYChanging)) {
-			y = clampAxisWithWrap(y, minY, maxY);
+		// case is covered because maxYChanging keeps the bottom clamp live on a
+		// sweet-spot frame whose scroll produced no movement.
+		//
+		// After a vertical wrap, ROM DeformLayers.asm branches directly to loc_6724
+		// (the store), skipping the normal boundary clamp, so a wrapped frame clamps
+		// nothing here. Non-wrap frames still clamp (handles SBZ2 pit death where
+		// v_limitbtm2=$510 constrains the downward camera even though wrapping is
+		// active).
+		if (!lastFrameWrapped) {
+			if (y < yBeforeVerticalScroll) {
+				// Camera scrolled up -> SV_TopBoundary (top boundary only).
+				y = clampTopBoundary(y);
+			} else if (y > yBeforeVerticalScroll) {
+				// Camera scrolled down -> SV_BottomBoundary (bottom boundary only).
+				y = clampBottomBoundary(y);
+			} else if (maxYChanging) {
+				// No scroll, but bottom boundary moved last frame
+				// (f_bgscrollvert) -> SV_BottomBoundaryMoving -> SV_BottomBoundary.
+				y = clampBottomBoundary(y);
+			}
+			// else: ROM SV_NoUpdate - no scroll, no boundary clamp.
 		}
 		fastVerticalScrollRequested = false;
 		applyDeferredMaxYWrite();
@@ -465,6 +495,30 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public void deferHorizontalBoundaryClampOnce() {
 		deferHorizontalBoundaryClampOnce = true;
+	}
+
+	/**
+	 * ROM SV_TopBoundary clamp: enforce only the top boundary (v_limittop2 / minY)
+	 * when the camera scrolled up. The bottom boundary is never consulted on the
+	 * up path (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:204-218).
+	 */
+	private short clampTopBoundary(short value) {
+		return value < minY ? minY : value;
+	}
+
+	/**
+	 * ROM SV_BottomBoundary clamp: enforce only the bottom boundary (v_limitbtm2 /
+	 * maxY) when the camera scrolled down (or the bottom boundary is moving). The
+	 * top boundary is never consulted on the down path
+	 * (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:248-261). Mirror
+	 * {@link #clampAxisWithWrap}'s degenerate handling: if the bottom bound is
+	 * transiently above the top bound, enforce only the top bound.
+	 */
+	private short clampBottomBoundary(short value) {
+		if (maxY < minY) {
+			return value < minY ? minY : value;
+		}
+		return value > maxY ? maxY : value;
 	}
 
 	private short clampAxisWithWrap(short value, short min, short max) {
