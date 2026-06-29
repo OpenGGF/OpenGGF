@@ -5,6 +5,7 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -164,5 +165,42 @@ class TestCPZSpinTubeObjectInstance {
         assertTrue(player.isObjectControlled(),
                 "Unlike loc_227A6, loc_22858 does not schedule a deferred object-control release.");
         assertTrue(player.isObjectControlSuppressesMovement());
+    }
+
+    @Test
+    void lowerSlotDestinationHandoffPreservesOwnerOverwriteTiming() {
+        ObjectSpawn spawn = new ObjectSpawn(0x1000, 0x0200, 0x1E, 0x3D, 0, false, 0);
+        TestablePlayableSprite player = new TestablePlayableSprite("tails", (short) 0x10F8, (short) 0x0230);
+        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setSubpixelRaw(0xD900, 0x0500);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        player.capturePrePhysicsSnapshot();
+
+        // Engine order has already run the source tube this frame. ROM's lower
+        // destination slot would still see the frame-start position, capture,
+        // then let the source tube apply Obj1E_MoveCharacter afterward.
+        player.setCentreXPreserveSubpixel((short) 0x10F0);
+
+        CPZSpinTubeObjectInstance tube = new CPZSpinTubeObjectInstance(spawn, "CPZSpinTube");
+        tube.setServices(new TestObjectServices());
+
+        tube.update(0, player);
+
+        assertEquals(0x10E8, player.getCentreX() & 0xFFFF,
+                "Lower-slot destination capture must include the source tube's later same-frame move.");
+        assertEquals(0x0230, player.getCentreY() & 0xFFFF);
+        assertEquals((short) 0xF800, player.getXSpeed());
+        assertTrue(player.isObjectControlled());
+
+        player.setCentreXPreserveSubpixel((short) 0x10F0);
+        tube.update(1, player);
+
+        assertEquals(0x10F0, player.getCentreX() & 0xFFFF,
+                "The destination's first entry tick runs before the source tube's final waypoint snap in ROM.");
+
+        tube.update(2, player);
+
+        assertEquals(0x10E8, player.getCentreX() & 0xFFFF,
+                "After the source handoff clears, the destination tube resumes normal entry movement.");
     }
 }

@@ -198,6 +198,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         int completedSegmentCount = 0;     // Number of segments actually completed
         String expectedExitDirection = ""; // Expected exit direction (UP, DOWN, LEFT, RIGHT)
         int releaseRollAnimationHoldFrames = 0;
+        boolean skipNextEntryMoveForOwnerOverwrite = false;
     }
 
     // One independent state slot per playable, mirroring ROM objoff_2C (main)
@@ -318,6 +319,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         cs.completedSegmentCount = 0;
         cs.expectedSegmentCount = 0;
         cs.releaseRollAnimationHoldFrames = 0;
+        cs.skipNextEntryMoveForOwnerOverwrite = false;
     }
 
     private void preserveReleasedRollAnimation(AbstractPlayableSprite player, CharacterState cs) {
@@ -361,6 +363,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
                 && player.isObjectControlSuppressesMovement();
         int playerX = midTraversal ? player.getPrePhysicsCentreX() : player.getCentreX();
         int playerY = midTraversal ? player.getPrePhysicsCentreY() : player.getCentreY();
+        boolean ownerAlreadyMovedThisFrame = midTraversal
+                && (player.getCentreX() != player.getPrePhysicsCentreX()
+                || player.getCentreY() != player.getPrePhysicsCentreY());
 
         // Check X range: player must be within collisionDistance of object
         int dx = playerX - objX;
@@ -502,6 +507,18 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         // Calculate velocity to next waypoint
         calculateVelocity(player, cs, nextX, nextY, TUBE_SPEED);
 
+        if (ownerAlreadyMovedThisFrame) {
+            // ROM lower-slot destination tubes run before the current owning
+            // tube, but the engine can reach this destination after the owner
+            // already advanced the player. The later ROM owner pass uses the
+            // freshly written x_vel/y_vel(a1) in Obj1E_MoveCharacter(_2)
+            // (docs/s2disasm/s2.asm:48657-48669,48732-48744), so apply that
+            // post-capture movement here and suppress the destination's next
+            // position write that the still-active owner would overwrite.
+            moveCharacter(player);
+            cs.skipNextEntryMoveForOwnerOverwrite = true;
+        }
+
         // Play rolling sound
         playSound(GameSound.ROLLING);
 
@@ -520,6 +537,10 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
     private void updateEntryPath(AbstractPlayableSprite player, CharacterState cs) {
         cs.duration--;
         if (cs.duration >= 0) {
+            if (cs.skipNextEntryMoveForOwnerOverwrite) {
+                cs.skipNextEntryMoveForOwnerOverwrite = false;
+                return;
+            }
             // Continue moving along current segment
             moveCharacter(player);
             return;

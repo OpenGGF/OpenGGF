@@ -6,7 +6,7 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-## 2026-06-29 - S2 accepted routing baseline after MTZ2 comparator and CPZ Obj78 integration
+## 2026-06-29 - S2 accepted routing baseline after MTZ2 comparator and CPZ2 integration
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
   `bugfix/ai-s2-trace-develop`.
@@ -19,6 +19,8 @@ branch-local measurements.
     `TestS2CpzLevelSelectTraceReplay` from f4225 / 264 to f4281 / 246 and
     improved `TestS2Cpz2LevelSelectTraceReplay` from 1238 to 1236 errors while
     holding first error f2889.
+  - CPZ2 Obj1E lower-slot tube handoff advanced
+    `TestS2Cpz2LevelSelectTraceReplay` from f2889 / 1236 to f2976 / 1232.
   - A later MTZ1 offscreen sidekick-latch candidate advanced MTZ1 but regressed
     MTZ2 total errors from 951 to 971 at f3055; it was rejected and reverted in
     `a01e0fedc`.
@@ -26,7 +28,7 @@ branch-local measurements.
   `ARZ2` f888 / 2720 (`obj_extra_s1F_x` expected absent, actual `0x0AE0`);
   `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
   `CPZ1` f4281 / 246 (`tails_x_speed` expected `-0018`, actual `0x0000`);
-  `CPZ2` f2889 / 1236 (`tails_x` expected `0x10E8`, actual `0x10F0`);
+  `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
   `HTZ1` f6586 / 226 (`y_speed` expected `-0178`, actual `-0078`);
   `HTZ2` f3322 / 1060 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
   `MCZ2` f8965 / 156 (`y` expected `0x063E`, actual `0x0643`);
@@ -78,6 +80,48 @@ branch-local measurements.
   MTZ2 f4375 / 950; MTZ3 f2048 / 3742; OOZ1 f1790 / 1125; OOZ2 f3226 / 945.
   Green guard traces remained green: ARZ1, CNZ1, DEZ ending, EHZ1, MCZ1, SCZ,
   and WFZ.
+
+## 2026-06-29 - S2 CPZ2 Obj1E lower-slot tube handoff (f2889 -> f2976)
+
+- Worktree/branch: `.worktrees/trace-s2-cpz-r13` /
+  `bugfix/ai-trace-s2-cpz-r13`, forked from
+  `.worktrees/ai-s2-trace-develop` / `bugfix/ai-s2-trace-develop` at
+  integration head `a01e0fedc`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: CPZ1 f4281 / 246 errors (`tails_x_speed` expected
+  `-0018`, actual `0x0000`); CPZ2 f2889 / 1236 errors (`tails_x` expected
+  `0x10E8`, actual `0x10F0`).
+- Evidence/fix: CPZ2's remaining f2889 mismatch is the legitimate Obj1E
+  tube-to-tube handoff. ROM runs objects in slot order; the lower-slot
+  destination tube captures first using the frame-start player position, then
+  the still-owning source tube runs later and applies `Obj1E_MoveCharacter` /
+  its final waypoint snap (`docs/s2disasm/s2.asm:48447-48457,48657-48669,
+  48732-48752`). The engine reached the destination after the source had
+  already advanced the player, so `CPZSpinTubeObjectInstance` now detects this
+  mid-traversal ordering inversion, applies the source's post-capture move
+  using the freshly written Obj1E velocity, and suppresses the destination's
+  next position write that the still-active source would overwrite in ROM.
+  This is Obj1E-local slot-order modelling, not a zone/route/frame carve-out.
+- Focused verification:
+  `mvn "-Dtest=TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: CPZ2 advances to f2976 / 1232 errors (`tails_y` expected `0x0208`,
+  actual `0x020C`); CPZ1 remains f4281 / 246.
+- Unit verification:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestCPZSpinTubeObjectInstance,com.openggf.game.sonic2.objects.TestCpzStaircaseWallCollision" "-DfailIfNoTests=false" test`.
+  Result: 7 tests passed, failures/errors 0.
+- S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: 7 tests passed, failures/errors 0.
+- Full S2 sweep after clearing `target/surefire-reports` and
+  `target/trace-reports`:
+  `mvn "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: 19 trace classes ran; 7 green / 12 expected-red. Red summary:
+  ARZ2 f888 / 2720; CNZ2 f5242 / 875; CPZ1 f4281 / 246; CPZ2 f2976 / 1232;
+  HTZ1 f6586 / 226; HTZ2 f3322 / 1060; MCZ2 f8965 / 156; MTZ1 f5647 / 616;
+  MTZ2 f3055 / 951; MTZ3 f2048 / 3742; OOZ1 f1790 / 1125; OOZ2 f3226 / 945.
+  Compared to the accepted r13 baseline, only CPZ2 moved and no first frontier
+  or total error count regressed.
 
 ## 2026-06-29 - S2 OOZ2 Obj45 SideAir push-clear compression (f2623 -> f3226)
 
