@@ -39,6 +39,47 @@ branch-local measurements.
 | `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
 | `TestS2MtzLevelSelectTraceReplay` | f5602 `tails_x` expected `0x16C0`, actual `0x16C1`; 608 errors |
 
+## 2026-06-29 - S2 HTZ1 Obj30 DropOnFloor airborne release - ENGINE FIX (HTZ1 f6114 -> f6467)
+
+- Worktree/branch: `.worktrees/trace-s2-htz1-r2` /
+  `bugfix/ai-trace-s2-htz1-r2`, fast-forwarded from
+  `.worktrees/ai-s2-trace-develop` / `bugfix/ai-s2-trace-develop`
+  (`0223d5e67`).
+- Root cause: S2 Obj30 Rising Lava calls `JmpTo_SolidObject_Always`, then
+  `DropOnFloor` in the same object routine for subtype 0/2 and via `jsrto`
+  for subtype 4/6 (`docs/s2disasm/s2.asm:49598-49642`). ROM `DropOnFloor`
+  checks the standing bit, calls `ChkFloorEdge2`, and when the distance is
+  zero or negative clears `Status_OnObj`, sets `Status_InAir`, and clears the
+  object's standing bit (`docs/s2disasm/s2.asm:36114-36128`). The engine's
+  fresh-contact path never ran `dropOnFloor`, and the inline riding path
+  cleared support while preserving the previous air state. HTZ1 f6114 therefore
+  left Sonic grounded/on-object on Obj30 (`air` actual 0) after ROM had detached
+  him into air (`air` expected 1).
+- Fix: the shared solid contact controller now runs drop-on-floor terrain
+  release after fresh standing contacts as well as continued riding contacts,
+  clears the object standing latch, clears `OnObj`, and sets `InAir` when the
+  floor distance is zero/negative. This is a ROM-state model of Obj30's helper
+  sequence, not a zone/route/frame carve-out and not trace hydration.
+- Focused verification:
+  `mvn "-Dtest=TestS2HtzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  now fails at the new expected-red frontier: f6467 / 234 errors,
+  `tails_cpu_respawn_counter` expected `0x003F`, actual `0x0000`.
+- HTZ1 advances from f6114 / 451 errors (`air` expected `1`, actual `0`) to
+  f6467 / 234 errors (`tails_cpu_respawn_counter` expected `0x003F`, actual
+  `0x0000`). The new blocker is downstream sidekick respawn/CPU state.
+- Regression guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  exited 0. Surefire XML for all six selected current-green S2 traces reports
+  `failures="0"`; the MSE aggregate also surfaced the known HTZ1 expected-red
+  at f6467 from the focused replay output.
+- Focused headless coverage:
+  `mvn "-Dtest=TestS2Htz1Headless#sonicDetachesFromLavaPlatformAtFloor" test`
+  exited 0 for the selected headless regression; it now observes the ROM-style
+  `OnObj` cleared + `InAir` set DropOnFloor release.
+- PC probe: not used. The existing trace context identified Obj30 as the live
+  support object, and the disassembly lines above prove the exact branch/state
+  transition.
+
 ## 2026-06-29 - S2 integration sweep after DEZ ObjC7 sensor slot/order merge (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
