@@ -51,24 +51,29 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance
     // Animation Data (from Ani_Geyser)
     // ========================================================================
 
-    /** Anim 0 (.bubble1): speed=2, {0,1,0,1,4,5,4,5}, afRoutine. */
+    // Animation speeds below are the raw ROM script speed BYTES
+    // (docs/s1disasm/_anim/"Lava Geyser.asm"), consumed by the ROM-faithful
+    // countdown in updateAnimation(): each frame is shown for (speedByte + 1)
+    // AnimateSprite calls, matching docs/s1disasm/_incObj/"sub AnimateSprite.asm".
+
+    /** Anim 0 (.bubble1): speed byte 2, {0,1,0,1,4,5,4,5}, afRoutine. */
     private static final int[] ANIM0_FRAMES = {0, 1, 0, 1, 4, 5, 4, 5};
-    private static final int ANIM0_SPEED = 3;
+    private static final int ANIM0_SPEED = 2;
     private static final boolean ANIM0_ADVANCE_ROUTINE = true;
 
-    /** Anim 1 (.bubble2): speed=2, {2,3}, afEnd (loop). */
+    /** Anim 1 (.bubble2): speed byte 2, {2,3}, afEnd (loop). */
     private static final int[] ANIM1_FRAMES = {2, 3};
-    private static final int ANIM1_SPEED = 3;
+    private static final int ANIM1_SPEED = 2;
     private static final boolean ANIM1_ADVANCE_ROUTINE = false;
 
-    /** Anim 3 (.bubble3): speed=2, {2,3,0,1,0,1}, afRoutine. */
+    /** Anim 3 (.bubble3): speed byte 2, {2,3,0,1,0,1}, afRoutine. */
     private static final int[] ANIM3_FRAMES = {2, 3, 0, 1, 0, 1};
-    private static final int ANIM3_SPEED = 3;
+    private static final int ANIM3_SPEED = 2;
     private static final boolean ANIM3_ADVANCE_ROUTINE = true;
 
-    /** Anim 4 (.blank): speed=$F, {19}, afEnd. */
+    /** Anim 4 (.blank): speed byte $F, {19}, afEnd. */
     private static final int[] ANIM4_FRAMES = {19};
-    private static final int ANIM4_SPEED = 16;
+    private static final int ANIM4_SPEED = 15;
     private static final boolean ANIM4_ADVANCE_ROUTINE = false;
 
     /** Wait timer reload value: move.w #120,gmake_time(a0). */
@@ -140,12 +145,15 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance
         super(new ObjectSpawn(x, y, 0x4C, subtype, 0, false, 0), "GeyserMaker");
         this.subtype = subtype;
         this.timerReload = TIMER_RELOAD;
-        // PushB_LoadLava-created makers are inserted during ExecuteObjects.
-        // The ROM slot appears one frame before its proximity-triggered
-        // bubble animation advances, so start with one live tick here while
-        // normal ObjPosLoad-created makers keep the routine-0 fall-through
-        // timer=0 behaviour.
-        this.timer = 1;
+        // ROM parity: a freshly spawned maker has a cleared SST slot, so
+        // gmake_timer (objoff_32) = 0. GMake_Main (rt0) sets gmake_time = 120 and
+        // falls through to GMake_Wait, whose first subq.w #1,gmake_timer underflows
+        // 0 -> -1 and runs the proximity check on the maker's first executed frame
+        // -- identical to the ObjPosLoad-created maker below. (A previous timer=1
+        // seed here was compensating the old AnimateSprite off-by-one in
+        // updateAnimation(); now that the animation count is ROM-exact the seed
+        // must be 0 too, or the geyser/push-block eruption fires one frame late.)
+        this.timer = 0;
         this.routine = 2;
         this.visible = false;
         this.parentBlock = parentBlock;
@@ -353,6 +361,23 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance
     // Animation
     // ========================================================================
 
+    /**
+     * ROM-faithful re-implementation of {@code AnimateSprite}
+     * (docs/s1disasm/_incObj/"sub AnimateSprite.asm").
+     * <p>
+     * {@code animTimer} is {@code obTimeFrame}, {@code animFrameIndex} is
+     * {@code obAniFrame}; {@link #setCurrentAnim(int)} resets both to 0 (the
+     * {@code obAnim != obPrevAni} branch). Each call does
+     * {@code subq.b #1,obTimeFrame; bpl Anim_Wait} — so a frame is held for
+     * {@code (speedByte + 1)} calls, and the terminator ({@code afRoutine} /
+     * {@code afEnd}) is only read on the call <em>after</em> the last frame has
+     * been shown for its full duration. The previous engine version advanced the
+     * index one call early on the first frame (holding frame 0 for only
+     * {@code speedByte} calls), which made every {@code afRoutine} fire one frame
+     * early. For the MZ lavafall maker that under-counted the {@code .bubble3}
+     * routine-advance by one frame per eruption, drifting the eruption schedule
+     * earlier each cycle.
+     */
     private void updateAnimation() {
         int[] frames;
         int speed;
@@ -366,23 +391,25 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance
             default -> { return; }
         }
 
-        animTimer++;
-        if (animTimer >= speed) {
-            animTimer = 0;
-            animFrameIndex++;
-            if (animFrameIndex >= frames.length) {
-                if (advancesRoutine) {
-                    // afRoutine: signal routine advancement
-                    animRoutineTriggered = true;
-                    animFrameIndex = frames.length - 1; // stay on last frame
-                } else {
-                    // afEnd: loop
-                    animFrameIndex = 0;
-                }
-            }
+        // Anim_Run: subq.b #1,obTimeFrame / bpl.s Anim_Wait
+        if (--animTimer >= 0) {
+            return; // time remains: keep the current frame
         }
 
+        // Anim_LoadNextFrame: reload duration, read next script entry
+        animTimer = speed; // move.b (a1),obTimeFrame
+        if (animFrameIndex >= frames.length) {
+            // Script terminator reached (the byte past the last frame ID).
+            if (advancesRoutine) {
+                // Anim_End_FC (afRoutine): addq.b #2,obRoutine; obFrame/obAniFrame untouched.
+                animRoutineTriggered = true;
+                return;
+            }
+            // Anim_End_FF (afEnd): restart from the first frame and display it.
+            animFrameIndex = 0;
+        }
         displayFrame = frames[animFrameIndex];
+        animFrameIndex++;
     }
 
     // ========================================================================
