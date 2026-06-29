@@ -45,6 +45,46 @@ branch-local measurements.
   OOZ1 f1790 / 614; MTZ1 f5713 / 560; MTZ2 f4375 / 950; MTZ3 f2588 / 939.
   HTZ2 is the only changed trace, now f3618 / 993.
 
+## 2026-06-29 - S2 CPZ Obj1E tube capture clears jump-height latch (CPZ2 f2976 -> f4018)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz2-frontier` /
+  `bugfix/ai-s2-cpz2-frontier`, based on integration head `dd8710e47`.
+- Baseline reproduction:
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace" test`.
+  Result before the fix: CPZ2 f2976 / 1232 (`tails_y` expected `0x0208`,
+  actual `0x020C`; `tails_y_speed` expected `-07C8`, actual `-03C8`).
+- Triage/evidence: at f2976 Tails entered physics with `y_vel=-0800`, but
+  the engine applied the variable jump-height cap before gravity, producing
+  `-03C8`. The same context showed Tails had just come out of Obj1E tube
+  traversal (`near tails s16 0x1E @1000,0200`) and the CPU was only carrying a
+  held auto-jump bit (`gen=0008`, `jp=false`), matching the ROM path where
+  Obj1E capture is an object launch rather than a normal player jump.
+- Disassembly cited: Obj1E capture at `docs/s2disasm/s2.asm:48605-48618`
+  writes `obj_control=$81`, `anim=Roll`, `inertia=$800`, clears `x_vel/y_vel`,
+  sets `Status_InAir`, and then `move.b #0,jumping(a1)`.
+- Fix: `CPZSpinTubeObjectInstance` now clears `jumping(a1)` when capturing a
+  player into tube traversal, so the later tube-exit velocity follows the
+  ROM's spring/external-launch path and is not capped by
+  `Sonic_JumpHeight` / `Tails_JumpHeight`. No trace hydration, tolerance,
+  route, frame, or zone carve-out is used.
+- Focused regression test added:
+  `TestCPZSpinTubeObjectInstance.captureUsesObjectControlWithoutGlobalControlLockedLatch`
+  now seeds `jumping=true` before capture and asserts Obj1E capture clears it.
+- Focused traces:
+  - CPZ2 command above now fails later at f4018 / 1334 (`x` expected
+    `0x0490`, actual `0x0480`), a tube-position/camera handoff frontier.
+  - `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2CpzLevelSelectTraceReplay#replayMatchesTrace" test`
+    preserves CPZ1 at f4547 / 177 (`x_speed` expected `0x01E0`, actual
+    `-0200`).
+- Full S2 sweep:
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2*LevelSelectTraceReplay,TestS2Ehz1TraceReplay" test`.
+  Result: expected nonzero; 19 trace classes, 9 green / 10 expected-red, no
+  native errors. Green: ARZ1, CNZ1, DEZ ending, EHZ1, HTZ1, MCZ1, MCZ2, SCZ,
+  WFZ. Preserved reds: ARZ2 f1028 / 2688; CNZ2 f6144 / 994; CPZ1 f4547 /
+  177; OOZ2 f3835 / 797; OOZ1 f1790 / 614; HTZ2 f3322 / 1057; MTZ1 f5713 /
+  560; MTZ2 f4375 / 950; MTZ3 f2588 / 939. CPZ2 is the only changed
+  frontier, now f4018 / 1334.
+
 ## 2026-06-29 - S2 CPZ Obj78 side-overlap push latch (f4351 -> f4547)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz1-frontier` /
@@ -245,11 +285,15 @@ branch-local measurements.
   - HTZ2 Obj30 subtype-6 sidekick current-push input slot bridge advanced
     `TestS2Htz2LevelSelectTraceReplay` from f3322 / 1057 to f3618 / 993 while
     preserving the current S2 accepted red/green frontier set.
+  - CPZ2 Obj1E tube capture jump-latch clear advanced
+    `TestS2Cpz2LevelSelectTraceReplay` from f2976 / 1232 to f4018 / 1334 while
+    preserving CPZ1 f4547 / 177 and the current S2 accepted red/green frontier
+    set.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f6144 / 994 (`tails_y_speed` expected `0x0038`, actual `0x0000`);
   `CPZ1` f4547 / 177 (`x_speed` expected `0x01E0`, actual `-0200`);
-  `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
+  `CPZ2` f4018 / 1334 (`x` expected `0x0490`, actual `0x0480`);
   `HTZ2` f3618 / 993 (`g_speed` expected `0x03F8`, actual `0x02A8`);
   `MTZ1` f5713 / 560 (`tails_y_speed` expected `0x0ED0`, actual `0x0000`);
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
