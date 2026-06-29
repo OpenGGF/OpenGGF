@@ -6,6 +6,38 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 integration sweep after ARZ2 Obj0A/Obj28 cadence merge (6 green, 13 expected-red)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop` after merging
+  `bugfix/ai-trace-s2-arz2-r7` (`7d8111939`) and confirming
+  `origin/develop` and local `develop` were already up to date.
+- Command:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+- Result: all 19 concrete S2 trace classes ran: 6 green, 13 expected-red. No
+  current S2 green trace regressed.
+- Green traces: `TestS2ArzLevelSelectTraceReplay`,
+  `TestS2CnzLevelSelectTraceReplay`, `TestS2Ehz1TraceReplay`,
+  `TestS2MczLevelSelectTraceReplay`, `TestS2SczLevelSelectTraceReplay`,
+  `TestS2WfzLevelSelectTraceReplay`.
+- Current red frontiers:
+
+| Trace | First error |
+|---|---|
+| `TestS2Arz2LevelSelectTraceReplay` | f687 `obj_s40_slot` expected `0x40`, actual `0x3D`; 2966 errors |
+| `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
+| `TestS2Ooz2LevelSelectTraceReplay` | f1873 `x` expected `0x04A6`, actual `0x04A2`; 1072 errors |
+| `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
+| `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
+| `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1222 errors |
+| `TestS2Htz2LevelSelectTraceReplay` | f3315 `tails_x_speed` expected `0x01E8`, actual `0x00E8`; 1059 errors |
+| `TestS2CpzLevelSelectTraceReplay` | f3871 `y_speed` expected `0x0638`, actual `0x0000`; 154 errors |
+| `TestS2Mcz2LevelSelectTraceReplay` | f4485 `tails_x` expected `0x0EAB`, actual `0x0EAC`; 543 errors |
+| `TestS2Cnz2LevelSelectTraceReplay` | f4632 `tails_y` expected `0x02B8`, actual `0x02B4`; 955 errors |
+| `TestS2DezEndingLevelSelectTraceReplay` | f5952 `y_speed` expected `0x0098`, actual `-0098`; 46 errors |
+| `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
+| `TestS2MtzLevelSelectTraceReplay` | f4835 `tails_x` expected `0x16D6`, actual `0x16D7`; 845 errors |
+
 ## 2026-06-29 - S2 integration sweep after CPZ Obj1E release/handoff split (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
