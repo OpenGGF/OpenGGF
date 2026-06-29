@@ -502,17 +502,6 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             if (!wasTouchingMonitor(playable)) {
                 continue;
             }
-            if (objectManager != null
-                    && !objectManager.isRidingObject(playable, this)
-                    && !playable.getPushing()) {
-                // Obj26_Break clears another character only when this monitor's
-                // own p1/p2 standing or pushing bit still describes live
-                // contact (docs/s2disasm/s2.asm:25675-25688). A stale monitor
-                // bit must not clear a separate object latch, e.g. an offscreen
-                // Sidekick still carrying MTZ Obj69's Status_OnObj bit.
-                clearTouchingMonitor(playable);
-                continue;
-            }
             spriteManager.deferCrossPlayableMutationUntilPostTick(
                     playable,
                     () -> releaseTouchingCharacterOnBreak(objectManager, playable));
