@@ -366,6 +366,11 @@ public class MasterTitleScreen {
         int rightKey = configService.getInt(SonicConfiguration.RIGHT);
         int jumpKey = configService.getInt(SonicConfiguration.JUMP);
 
+        boolean recordingMenuRequested = inputHandler.isKeyPressed(GLFW_KEY_TAB) && inputHandler.isShiftDown();
+        if (handleUserRecordingMenuRequest(recordingMenuRequested) || recordingMenuRequested) {
+            return;
+        }
+
         if (inputHandler.isKeyPressed(GLFW_KEY_TAB) && romAvailable[selectedIndex]) {
             GameEntry entry = GameEntry.values()[selectedIndex];
             launchConfigPanel = new LaunchConfigPanel(
@@ -857,6 +862,13 @@ public class MasterTitleScreen {
             LOGGER.warning("Failed to open recordings menu for " + entry.gameId + ": " + ex.getMessage());
             return false;
         }
+    }
+
+    public boolean handleUserRecordingMenuRequest(boolean recordingMenuRequested) {
+        if (!recordingMenuRequested) {
+            return false;
+        }
+        return tryOpenUserRecordingMenuForSelectedGame();
     }
 
     private UserRecordingMenu createUserRecordingMenu(String gameId, PixelFont font) throws IOException {

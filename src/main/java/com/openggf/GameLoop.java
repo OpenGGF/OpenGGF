@@ -74,6 +74,8 @@ import com.openggf.integration.presence.RuntimePresenceSnapshotProvider;
 import com.openggf.integration.presence.discord.DiscordIpcPresenceClient;
 import com.openggf.integration.presence.discord.DiscordIpcTransports;
 import com.openggf.recording.RecordingLaunchContext;
+import com.openggf.recording.UserRecordingSessionLauncher;
+import com.openggf.recording.menu.UserRecordingMenu;
 import com.openggf.testmode.TraceCameraFocusController;
 
 import java.io.IOException;
@@ -154,6 +156,8 @@ public class GameLoop {
     private Supplier<LegalDisclaimerScreen> legalDisclaimerSupplier;
     private Runnable legalDisclaimerExitHandler;
     private Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler;
+    private final UserRecordingSessionLauncher userRecordingSessionLauncher;
+    private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
     private long gameplayAudioFrame;
     private boolean audioUpdatedThisStep;
 
@@ -217,6 +221,8 @@ public class GameLoop {
         this.profiler = this.engineServices.profiler();
         this.playbackDebugManager = this.engineServices.playbackDebug();
         this.liveRewindManager = new LiveRewindManager(configService);
+        this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
+        this.userRecordingPlaybackStarter = userRecordingSessionLauncher::beginPlayback;
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
                 () -> resolveFadeManager().isActive(),
@@ -328,6 +334,12 @@ public class GameLoop {
 
     public void setMasterTitleScreenSupplier(Supplier<MasterTitleScreen> masterTitleScreenSupplier) {
         this.masterTitleScreenSupplier = masterTitleScreenSupplier;
+    }
+
+    public void setUserRecordingPlaybackStarter(UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter) {
+        this.userRecordingPlaybackStarter = Objects.requireNonNull(
+                userRecordingPlaybackStarter, "userRecordingPlaybackStarter");
+        installUserRecordingPlaybackStarter(currentMasterTitleScreen());
     }
 
     public void setMasterTitleExitHandler(Consumer<String> masterTitleExitHandler) {
@@ -564,8 +576,9 @@ public class GameLoop {
 
         if (currentGameMode == GameMode.MASTER_TITLE_SCREEN) {
             escapeToMasterTitleController.update(currentGameMode, inputHandler);
+            MasterTitleScreen masterScreen = currentMasterTitleScreen();
             bootScreenModeController.updateMasterTitle(
-                    masterTitleScreenSupplier != null ? masterTitleScreenSupplier.get() : null,
+                    masterScreen,
                     inputHandler,
                     this::exitMasterTitleScreen);
             return;
@@ -2537,8 +2550,7 @@ public class GameLoop {
     }
 
     void launchGameByEntry(MasterTitleScreen.GameEntry entry, Runnable afterGameLoaded) {
-        MasterTitleScreen masterScreen = masterTitleScreenSupplier != null
-                ? masterTitleScreenSupplier.get() : null;
+        MasterTitleScreen masterScreen = currentMasterTitleScreen();
         if (masterScreen == null) {
             throw new IllegalStateException("No master title screen available");
         }
@@ -2567,6 +2579,19 @@ public class GameLoop {
 
     void setMasterTitleLaunchFailureHandler(Runnable masterTitleLaunchFailureHandler) {
         masterTitleLaunchCoordinator.setLaunchFailureHandler(masterTitleLaunchFailureHandler);
+    }
+
+    private MasterTitleScreen currentMasterTitleScreen() {
+        MasterTitleScreen masterScreen = masterTitleScreenSupplier != null
+                ? masterTitleScreenSupplier.get() : null;
+        installUserRecordingPlaybackStarter(masterScreen);
+        return masterScreen;
+    }
+
+    private void installUserRecordingPlaybackStarter(MasterTitleScreen masterScreen) {
+        if (masterScreen != null) {
+            masterScreen.setUserRecordingPlaybackStarter(userRecordingPlaybackStarter);
+        }
     }
 
     /**

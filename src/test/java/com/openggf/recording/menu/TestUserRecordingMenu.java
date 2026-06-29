@@ -1,8 +1,15 @@
 package com.openggf.recording.menu;
 
+import com.openggf.GameLoop;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.InputHandler;
+import com.openggf.game.GameMode;
 import com.openggf.game.MasterTitleScreen;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
+import com.openggf.recording.DesyncLiteFrame;
+import com.openggf.recording.RecordedFrameInput;
 import com.openggf.recording.RecordingDeterminismMetadata;
 import com.openggf.recording.RecordingLaunchContext;
 import com.openggf.recording.RecordingVersionWarning;
@@ -11,20 +18,28 @@ import com.openggf.recording.UserRecordingManifest;
 import com.openggf.recording.UserRecordingPlaybackOptions;
 import com.openggf.recording.UserRecordingSidecarMetadata;
 import com.openggf.recording.UserRecordingStopReason;
+import com.openggf.recording.UserRecordingWriter;
 import com.openggf.version.BuildIdentity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
+import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
+import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 class TestUserRecordingMenu {
     @TempDir
@@ -65,6 +80,102 @@ class TestUserRecordingMenu {
 
         assertTrue(openedGameIds.isEmpty());
         assertFalse(screen.isUserRecordingMenuOpenForTest());
+    }
+
+    @Test
+    void masterTitleRecordingMenuRequestOpensSelectedGameInNormalMode() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        List<String> openedGameIds = new ArrayList<>();
+        MasterTitleScreen screen = new MasterTitleScreen(config);
+        screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
+        screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_1.ordinal());
+        screen.setUserRecordingMenuFactoryForTest((gameId, font) -> {
+            openedGameIds.add(gameId);
+            return new UserRecordingMenu(gameId, List.of(entry("s1", 90)), null, (recording, options) -> { });
+        });
+
+        assertTrue(screen.handleUserRecordingMenuRequest(true));
+
+        assertEquals(List.of("s1"), openedGameIds);
+        assertTrue(screen.isUserRecordingMenuOpenForTest());
+    }
+
+    @Test
+    void masterTitleRecordingMenuRequestDoesNotOpenInTestMode() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, true);
+        List<String> openedGameIds = new ArrayList<>();
+        MasterTitleScreen screen = new MasterTitleScreen(config);
+        screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
+        screen.setUserRecordingMenuFactoryForTest((gameId, font) -> {
+            openedGameIds.add(gameId);
+            return new UserRecordingMenu(gameId, List.of(entry("s2", 90)), null, (recording, options) -> { });
+        });
+
+        assertFalse(screen.handleUserRecordingMenuRequest(true));
+
+        assertTrue(openedGameIds.isEmpty());
+        assertFalse(screen.isUserRecordingMenuOpenForTest());
+    }
+
+    @Test
+    void shiftTabUpdatePathRequestsRecordingMenuInNormalMode() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        List<String> openedGameIds = new ArrayList<>();
+        MasterTitleScreen screen = new MasterTitleScreen(config);
+        screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
+        screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_3K.ordinal());
+        screen.setUserRecordingMenuFactoryForTest((gameId, font) -> {
+            openedGameIds.add(gameId);
+            return new UserRecordingMenu(gameId, List.of(entry("s3k", 90)), null, (recording, options) -> { });
+        });
+        InputHandler input = new InputHandler();
+
+        pressShiftTab(screen, input);
+
+        assertEquals(List.of("s3k"), openedGameIds);
+        assertTrue(screen.isUserRecordingMenuOpenForTest());
+    }
+
+    @Test
+    void gameLoopInstalledPlaybackStarterRunsWhenMasterTitleMenuStartsRecording() throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        String oldUserDir = System.getProperty("user.dir");
+        Path bk2 = writeRecording("s3k", 4);
+        AtomicReference<UserRecordingEntry> startedEntry = new AtomicReference<>();
+        AtomicReference<UserRecordingPlaybackOptions> startedOptions = new AtomicReference<>();
+
+        try {
+            System.setProperty("user.dir", tempDir.toString());
+            SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+            MasterTitleScreen screen = new MasterTitleScreen(config);
+            screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
+            screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_3K.ordinal());
+            InputHandler input = new InputHandler();
+            GameLoop loop = new GameLoop(input);
+            loop.setUserRecordingPlaybackStarter((entry, options) -> {
+                startedEntry.set(entry);
+                startedOptions.set(options);
+            });
+            loop.setMasterTitleScreenSupplier(() -> screen);
+            loop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+
+            pressShiftTab(loop, input);
+            pressLoopKey(loop, input, GLFW_KEY_ENTER);
+            pressLoopKey(loop, input, GLFW_KEY_ENTER);
+            pressLoopKey(loop, input, GLFW_KEY_ENTER);
+        } finally {
+            if (oldUserDir == null) {
+                System.clearProperty("user.dir");
+            } else {
+                System.setProperty("user.dir", oldUserDir);
+            }
+        }
+
+        assertNotNull(startedEntry.get());
+        assertEquals(bk2, startedEntry.get().path());
+        assertNotNull(startedOptions.get());
+        assertEquals(3, startedOptions.get().targetFrame());
     }
 
     @Test
@@ -179,5 +290,50 @@ class TestUserRecordingMenu {
                 frameCount,
                 UserRecordingStopReason.USER_STOPPED,
                 Instant.parse("2026-06-29T14:30:22Z"));
+    }
+
+    private Path writeRecording(String gameId, int frameCount) throws Exception {
+        Path bk2 = tempDir.resolve("recordings").resolve(gameId).resolve(gameId + "-" + frameCount + ".bk2");
+        Files.createDirectories(bk2.getParent());
+        UserRecordingWriter.write(bk2, manifest(gameId, frameCount), inputs(frameCount), sidecarFrames(frameCount));
+        return bk2;
+    }
+
+    private static List<RecordedFrameInput> inputs(int count) {
+        return java.util.stream.IntStream.range(0, count)
+                .mapToObj(frame -> new RecordedFrameInput(frame, 0, 0, false, 0, 0, false))
+                .toList();
+    }
+
+    private static List<DesyncLiteFrame> sidecarFrames(int count) {
+        return java.util.stream.IntStream.range(0, count)
+                .mapToObj(frame -> new DesyncLiteFrame(frame, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0))
+                .toList();
+    }
+
+    private static void pressShiftTab(MasterTitleScreen screen, InputHandler input) {
+        input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
+        screen.update(input);
+        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_RELEASE);
+        input.update();
+    }
+
+    private static void pressShiftTab(GameLoop loop, InputHandler input) {
+        input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
+        loop.step();
+        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_RELEASE);
+        input.update();
+    }
+
+    private static void pressLoopKey(GameLoop loop, InputHandler input, int key) {
+        input.handleKeyEvent(key, GLFW_PRESS);
+        loop.step();
+        input.handleKeyEvent(key, GLFW_RELEASE);
+        input.update();
     }
 }
