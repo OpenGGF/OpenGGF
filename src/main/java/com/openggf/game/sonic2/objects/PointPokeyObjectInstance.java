@@ -116,6 +116,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     // Track when player is occupied for priority control (Bug fix #4)
     private boolean playerOccupied = false;
     private boolean capturedPlayerUsesRideState = false;
+    private boolean capturedPlayerPinballMode = false;
     private int capturedSidekickIndex = -1;
 
     // Reference to level manager (for spawning prizes)
@@ -196,6 +197,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         // Force rolling state FIRST - this changes player height from 38 to 28.
         // Must be done before setCentreY, otherwise the center calculation uses
         // wrong height and shifts when setRolling changes it.
+        capturedPlayerPinballMode = player.getPinballMode();
         player.setPinballMode(true);
         player.setRolling(true);
 
@@ -282,7 +284,9 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         // Release player obj_control; ObjD6 does not touch global Control_Locked
         // (s2.asm:58746-58756).
         ObjectControlState.none().applyTo(player);
-        player.setPinballMode(false);
+        // ObjD6 does not write pinball_mode on release. Restore the ROM byte
+        // mirror that was active before the engine-only cage hold set it.
+        player.setPinballMode(capturedPlayerPinballMode);
 
         // Enter the ROM post-release delay. loc_2BE9C clears the cage state
         // and SlotMachineInUse only after this timer expires.
@@ -292,6 +296,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         animationTimer = 0;
         playerOccupied = false;
         capturedPlayerUsesRideState = false;
+        capturedPlayerPinballMode = false;
         capturedSidekickIndex = -1;
         activePrizeCount[0] = 0;
         prizesToSpawn = 0;
@@ -309,6 +314,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         animationTimer = 0;
         playerOccupied = false;
         capturedPlayerUsesRideState = false;
+        capturedPlayerPinballMode = false;
 
         // Clear the cage ownership latch without stopping the reels. ROM
         // ObjD6 clears SlotMachineInUse here, while LevEvents_CNZ keeps
