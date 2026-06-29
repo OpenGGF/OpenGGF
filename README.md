@@ -246,6 +246,7 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
 Highlights:
 
 - S3K coverage has expanded across AIZ, HCZ, CNZ, MGZ, ICZ, MHZ, and LBZ, with route objects, badniks, bosses/minibosses, events, scroll/parallax, animated tiles, palette/PLC state, transitions, and rendering fixes advancing by route impact.
+- S3K Launch Base Act 2 boss polish now matches the disassembly's two laser-bearing turret segments on Robotnik's final ship: the top and middle segments each spawn their laser-head pair while the bottom segment keeps the gun pods.
 - Trace replay is now the main parity workflow: complete-run and level-select traces cover broad S1/S2/S3K routes, diagnostics default to frontier-focused output, and frame-by-frame evidence lives in [`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md) instead of this README.
 - Sonic 2 placed-object parity now reports 122/122 implemented after adding Oil Ocean's SlidingSpike and pressure spring objects with ROM-backed art/PLC registration and focused behavior coverage; the remaining OOZ item is the dynamic boss path.
 - Rewind now has broader gameplay coverage, object identity capture, construction-child restore adoption, generic recreate support, coverage analysis, and round-trip guards for captured objects.

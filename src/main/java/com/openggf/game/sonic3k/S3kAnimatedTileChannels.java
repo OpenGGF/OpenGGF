@@ -167,7 +167,17 @@ final class S3kAnimatedTileChannels {
                                                       List<AniPlcScriptState> scripts,
                                                       int actIndex,
                                                       int regularScriptCount) {
-        List<AnimatedTileChannel> channels = new ArrayList<>(scripts.size() + 3);
+        List<AnimatedTileChannel> channels = new ArrayList<>(scripts.size() + 4);
+        if (actIndex == 1) {
+            channels.add(new AnimatedTileChannel(
+                    "s3k.lbz2.rideTrigger",
+                    owner::shouldRunLbz2RideTriggerChannel,
+                    ctx -> ctx.frameCounter(),
+                    DestinationPlan.single(0),
+                    AnimatedTileCachePolicy.ALWAYS,
+                    ctx -> owner.consumeLbz2RideTriggerForGraph()
+            ));
+        }
         channels.add(new AnimatedTileChannel(
                 "s3k.lbz.shared",
                 owner::shouldRunLbzSharedChannel,

@@ -117,6 +117,21 @@ public class Sonic3kObjectArt {
             int artTileBase, int sheetPalette, S3kSpriteDataLoader.MappingFormat mappingFormat) {
         if (reader == null) return null;
         List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr, mappingFormat);
+        return buildLevelArtSheetFromRomFrames(artTileBase, sheetPalette, frames);
+    }
+
+    public ObjectSpriteSheet buildLevelArtSheetFromRom(int mappingAddr,
+            int artTileBase, int sheetPalette, S3kSpriteDataLoader.MappingFormat mappingFormat,
+            int mappingFrameCount) {
+        if (reader == null) return null;
+        List<SpriteMappingFrame> frames = mappingFrameCount > 0
+                ? S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr, mappingFrameCount, mappingFormat)
+                : S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr, mappingFormat);
+        return buildLevelArtSheetFromRomFrames(artTileBase, sheetPalette, frames);
+    }
+
+    private ObjectSpriteSheet buildLevelArtSheetFromRomFrames(
+            int artTileBase, int sheetPalette, List<SpriteMappingFrame> frames) {
         if (frames.isEmpty()) return null;
 
         int minTile = Integer.MAX_VALUE;
@@ -365,8 +380,17 @@ public class Sonic3kObjectArt {
     public ObjectSpriteSheet buildLevelArtSheetFromRomFiltered(int mappingAddr,
             int artTileBase, int sheetPalette, int[] frameIndices,
             S3kSpriteDataLoader.MappingFormat mappingFormat) {
+        return buildLevelArtSheetFromRomFiltered(mappingAddr, artTileBase, sheetPalette,
+                frameIndices, mappingFormat, -1);
+    }
+
+    public ObjectSpriteSheet buildLevelArtSheetFromRomFiltered(int mappingAddr,
+            int artTileBase, int sheetPalette, int[] frameIndices,
+            S3kSpriteDataLoader.MappingFormat mappingFormat, int mappingFrameCount) {
         if (reader == null || frameIndices == null || frameIndices.length == 0) return null;
-        List<SpriteMappingFrame> allFrames = S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr, mappingFormat);
+        List<SpriteMappingFrame> allFrames = mappingFrameCount > 0
+                ? S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr, mappingFrameCount, mappingFormat)
+                : S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr, mappingFormat);
         if (allFrames.isEmpty()) return null;
 
         List<SpriteMappingFrame> selected = new ArrayList<>(frameIndices.length);

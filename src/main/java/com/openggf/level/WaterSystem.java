@@ -737,6 +737,31 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
     }
 
     /**
+     * Set the movement speed for a dynamic water level.
+     *
+     * <p>Mirrors ROM writes to {@code Water_speed}. Object/event code should use
+     * this when a concrete ROM routine changes water movement speed as part of a
+     * state transition, rather than reaching into {@link DynamicWaterState}.
+     */
+    public void setWaterSpeed(int zoneId, int actId, int speed) {
+        DynamicWaterState state = dynamicWaterStates.get(makeKey(zoneId, actId));
+        if (state != null) {
+            state.setSpeed(speed);
+        }
+    }
+
+    /**
+     * Returns the dynamic water handler for a level, if one is active.
+     *
+     * <p>This is used by object/event bridges that need to set handler-owned ROM
+     * state, such as LBZ2 Knuckles' pipe-plug flag.
+     */
+    public DynamicWaterHandler getDynamicWaterHandler(int zoneId, int actId) {
+        DynamicWaterState state = dynamicWaterStates.get(makeKey(zoneId, actId));
+        return state != null ? state.getHandler() : null;
+    }
+
+    /**
      * Set the current water level directly (instant, no gradual movement).
      * ROM equivalent: writing directly to v_waterpos2.
      * Used by Sonic 1 LZ water events where the ROM sets both v_waterpos2

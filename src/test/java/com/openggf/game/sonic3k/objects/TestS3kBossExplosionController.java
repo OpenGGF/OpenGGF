@@ -37,6 +37,33 @@ public class TestS3kBossExplosionController {
     }
 
     @Test
+    public void subtype0CUsesFinalLaunchExplosionParameters() {
+        var controller = new S3kBossExplosionController(160, 112, 0x0C);
+        int spawnCount = 0;
+        int maxDx = 0;
+        int maxDy = 0;
+
+        for (int frame = 0; frame < 240 && !controller.isFinished(); frame++) {
+            controller.tick();
+            for (var explosion : controller.drainPendingExplosions()) {
+                int dx = Math.abs(explosion.x() - 160);
+                int dy = Math.abs(explosion.y() - 112);
+                assertTrue(dx <= 0x80, "CreateBossExp0C X offset must stay within $80");
+                assertTrue(dy <= 0x20, "CreateBossExp0C Y offset must stay within $20");
+                maxDx = Math.max(maxDx, dx);
+                maxDy = Math.max(maxDy, dy);
+                spawnCount++;
+            }
+        }
+
+        assertEquals(63, spawnCount,
+                "CreateBossExp0C timer $40 should spawn for $3F..$01 and delete at $00 "
+                        + "(sonic3k.asm:176702-176718,176775-176792)");
+        assertTrue(maxDx > 0x10, "CreateBossExp0C must use wider than the clamped $10 X range");
+        assertTrue(maxDy > 0x10, "CreateBossExp0C must use wider than the clamped $10 Y range");
+    }
+
+    @Test
     public void initialWaitBeforeFirstExplosion() {
         var controller = new S3kBossExplosionController(160, 112, 2);
         controller.tick();
@@ -91,4 +118,3 @@ public class TestS3kBossExplosionController {
         }
     }
 }
-

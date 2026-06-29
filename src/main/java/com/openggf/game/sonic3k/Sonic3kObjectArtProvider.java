@@ -951,10 +951,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             } else if (entry.mappingAddr() > 0 && entry.frameFilter() != null) {
                 sheet = art.buildLevelArtSheetFromRomFiltered(
                         entry.mappingAddr(), entry.artTileBase(), entry.palette(),
-                        entry.frameFilter(), entry.mappingFormat());
+                        entry.frameFilter(), entry.mappingFormat(), entry.mappingFrameCount());
             } else if (entry.mappingAddr() > 0) {
                 sheet = art.buildLevelArtSheetFromRom(
-                        entry.mappingAddr(), entry.artTileBase(), entry.palette(), entry.mappingFormat());
+                        entry.mappingAddr(), entry.artTileBase(), entry.palette(), entry.mappingFormat(),
+                        entry.mappingFrameCount());
             } else {
                 LOG.warning("LevelArtEntry '" + entry.key() + "' has no builder or mapping addr");
                 continue;

@@ -60,6 +60,11 @@ public final class Sonic3kObjectArtKeys {
     public static final String ROBOTNIK_SHIP = "robotnik_ship";
     public static final String LBZ_MINIBOSS = "lbz_miniboss";
     public static final String LBZ_MINIBOSS_BOX = "lbz_miniboss_box";
+    public static final String LBZ_END_BOSS = "lbz_end_boss";
+    public static final String LBZ_FINAL_BOSS_1 = "lbz_final_boss_1";
+    public static final String LBZ2_DEATH_EGG_SMALL = "lbz2_death_egg_small";
+    public static final String LBZ_KNUX_PILLAR = "lbz_knux_pillar";
+    public static final String FBZ_ROBOTNIK_RUN = "fbz_robotnik_run";
     // AIZ2 Battleship bombing sequence
     public static final String AIZ2_BOMB_EXPLODE = "aiz2_bomb_explode";
     public static final String AIZ2_SHIP_PROPELLER = "aiz2_ship_propeller";
@@ -248,6 +253,11 @@ public final class Sonic3kObjectArtKeys {
     public static final String LBZ_FLAME_THROWER = "lbz_flame_thrower";
     public static final String LBZ_RIDE_GRAPPLE = "lbz_ride_grapple";
     public static final String LBZ_CUP_ELEVATOR = "lbz_cup_elevator";
+    public static final String LBZ_PIPE_PLUG = "lbz_pipe_plug";
+    public static final String LBZ_TUNNEL_EXHAUST = "lbz_tunnel_exhaust";
+    public static final String LBZ_SPIN_LAUNCHER = "lbz_spin_launcher";
+    public static final String LBZ_LOWERING_GRAPPLE = "lbz_lowering_grapple";
+    public static final String LBZ_GATE_LASER = "lbz_gate_laser";
     public static final String ORBINAUT = "lbz_orbinaut";
     public static final String RIBOT = "lbz_ribot";
     public static final String CORKEY = "lbz_corkey";

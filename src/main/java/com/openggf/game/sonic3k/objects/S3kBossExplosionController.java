@@ -23,10 +23,23 @@ import java.util.List;
  */
 public class S3kBossExplosionController {
     private static final int[][] SUBTYPE_PARAMS = {
-            {0x20, 0x20, 0x20},
-            {0x28, 0x80, 0x80},
-            {0x80, 0x20, 0x20},
-            {0x04, 0x10, 0x10},
+            {0x20, 0x20, 0x20, 0x00},
+            {0x28, 0x80, 0x80, 0x18},
+            {0x80, 0x20, 0x20, 0x08},
+            {0x04, 0x10, 0x10, 0x00},
+            {0x08, 0x20, 0x20, 0x10},
+            {0x20, 0x20, 0x20, 0x00},
+            {0x40, 0x80, 0x20, 0x00},
+            {0x80, 0x40, 0x40, 0x08},
+            {0x20, 0x20, 0x20, 0x18},
+            {0x80, 0x20, 0x20, 0x20},
+            {0x08, 0x80, 0x20, 0x10},
+            {0x80, 0x80, 0x80, 0x08},
+            {0x80, 0x80, 0x80, 0x28},
+            {0x80, 0x40, 0x40, 0x28},
+            {0x80, 0x80, 0x40, 0x08},
+            {0x80, 0x10, 0x10, 0x08},
+            {0x80, 0x20, 0x20, 0x30},
     };
     // ROM: move.w #3-1,$2E(a0) — Obj_Wait counts $2E down, fires at -1 = 3 frame cycle
     private static final int SPAWN_INTERVAL = 3;
@@ -50,7 +63,10 @@ public class S3kBossExplosionController {
         this.centreX = centreX;
         this.centreY = centreY;
         this.rng = rng;
-        int paramIndex = Math.min((subtype & 0xFF) >> 1, SUBTYPE_PARAMS.length - 1);
+        int paramIndex = (subtype & 0xFF) >> 1;
+        if (paramIndex >= SUBTYPE_PARAMS.length) {
+            throw new IllegalArgumentException("Unsupported boss explosion subtype: " + subtype);
+        }
         int[] params = SUBTYPE_PARAMS[paramIndex];
         this.timer = params[0];
         this.xRange = params[1];
