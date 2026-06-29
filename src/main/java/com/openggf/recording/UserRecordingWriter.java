@@ -20,6 +20,7 @@ public final class UserRecordingWriter {
             "#P1 Up|P1 Down|P1 Left|P1 Right|P1 Start|P1 A|P1 B|P1 C|"
                     + "#P2 Up|P2 Down|P2 Left|P2 Right|P2 Start|P2 A|P2 B|P2 C|";
 
+    private static final int ACTION_A_MASK = 0x01;
     private static final ObjectMapper SIDECAR_MAPPER = new ObjectMapper();
 
     private UserRecordingWriter() {
@@ -31,17 +32,19 @@ public final class UserRecordingWriter {
         Objects.requireNonNull(manifest, "manifest");
         Objects.requireNonNull(inputs, "inputs");
         Objects.requireNonNull(sidecarFrames, "sidecarFrames");
+        validate(manifest, inputs, sidecarFrames);
 
-        Path parent = bk2Path.toAbsolutePath().getParent();
+        Path target = bk2Path.toAbsolutePath();
+        Path parent = target.getParent();
         if (parent != null) {
             Files.createDirectories(parent);
         }
 
-        Path tmp = temporaryPathFor(bk2Path);
+        Path tmp = temporaryPathFor(target);
         boolean moved = false;
         try {
             writeZip(tmp, manifest, inputs, sidecarFrames);
-            moveIntoPlace(tmp, bk2Path);
+            moveIntoPlace(tmp, target);
             moved = true;
         } finally {
             if (!moved) {
@@ -50,11 +53,50 @@ public final class UserRecordingWriter {
         }
     }
 
-    private static Path temporaryPathFor(Path bk2Path) {
-        Path fileName = bk2Path.getFileName();
-        String tmpName = (fileName == null ? "recording.bk2" : fileName.toString()) + ".tmp";
-        Path sibling = bk2Path.getParent();
-        return sibling == null ? Path.of(tmpName) : sibling.resolve(tmpName);
+    private static void validate(UserRecordingManifest manifest, List<RecordedFrameInput> inputs,
+            List<DesyncLiteFrame> sidecarFrames) {
+        if (manifest.frameCount() != inputs.size()) {
+            throw new IllegalArgumentException(
+                    "Manifest frameCount " + manifest.frameCount() + " does not match input count " + inputs.size());
+        }
+        for (int i = 0; i < inputs.size(); i++) {
+            RecordedFrameInput input = Objects.requireNonNull(inputs.get(i), "inputs[" + i + "]");
+            if (input.frame() != i) {
+                throw new IllegalArgumentException(
+                        "Input frame " + input.frame() + " at index " + i + " does not match timeline");
+            }
+            validateActionMask("p1ActionMask", i, input.p1ActionMask());
+            validateActionMask("p2ActionMask", i, input.p2ActionMask());
+        }
+        if (!sidecarFrames.isEmpty()) {
+            if (sidecarFrames.size() != inputs.size()) {
+                throw new IllegalArgumentException("Sidecar frame count " + sidecarFrames.size()
+                        + " does not match input count " + inputs.size());
+            }
+            for (int i = 0; i < sidecarFrames.size(); i++) {
+                DesyncLiteFrame sidecarFrame = Objects.requireNonNull(sidecarFrames.get(i), "sidecarFrames[" + i + "]");
+                if (sidecarFrame.frame() != i) {
+                    throw new IllegalArgumentException(
+                            "Sidecar frame " + sidecarFrame.frame() + " at index " + i + " does not match timeline");
+                }
+            }
+        }
+    }
+
+    private static void validateActionMask(String fieldName, int frame, int actionMask) {
+        if (actionMask != 0 && actionMask != ACTION_A_MASK) {
+            throw new IllegalArgumentException(fieldName + " at frame " + frame
+                    + " must be 0 or " + ACTION_A_MASK + " for A-only BK2 output");
+        }
+    }
+
+    private static Path temporaryPathFor(Path target) throws IOException {
+        Path fileName = target.getFileName();
+        String prefix = fileName == null ? "recording-" : fileName.toString() + "-";
+        if (prefix.length() < 3) {
+            prefix = "bk2-" + prefix;
+        }
+        return Files.createTempFile(target.getParent(), prefix, ".tmp");
     }
 
     private static void writeZip(Path tmp, UserRecordingManifest manifest, List<RecordedFrameInput> inputs,

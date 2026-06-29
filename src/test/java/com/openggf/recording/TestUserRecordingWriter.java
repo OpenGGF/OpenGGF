@@ -7,13 +7,17 @@ import com.openggf.version.BuildIdentity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.zip.ZipFile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestUserRecordingWriter {
@@ -64,6 +68,75 @@ class TestUserRecordingWriter {
         assertTrue((movie.getFrame(1).p2InputMask() & AbstractPlayableSprite.INPUT_LEFT) != 0);
         assertEquals(0x01, movie.getFrame(1).p2ActionMask());
         assertTrue(movie.getFrame(1).p2StartPressed());
+    }
+
+    @Test
+    void rejectsP1ActionMasksWithUnsupportedBOrCBitsBeforeWriting() {
+        Path bk2Path = tempDir.resolve("invalid-p1-action.bk2");
+        List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(0, 0, 0x02, false, 0, 0, false));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, List.of()));
+        assertFalse(Files.exists(bk2Path));
+    }
+
+    @Test
+    void rejectsP2ActionMasksWithUnsupportedBOrCBitsBeforeWriting() {
+        Path bk2Path = tempDir.resolve("invalid-p2-action.bk2");
+        List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(0, 0, 0, false, 0, 0x04, false));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, List.of()));
+        assertFalse(Files.exists(bk2Path));
+    }
+
+    @Test
+    void rejectsManifestFrameCountThatDoesNotMatchInputCountBeforeWriting() {
+        Path bk2Path = tempDir.resolve("bad-frame-count.bk2");
+        List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(0, 0, 0, false, 0, 0, false));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> UserRecordingWriter.write(bk2Path, sampleManifest(2), inputs, List.of()));
+        assertFalse(Files.exists(bk2Path));
+    }
+
+    @Test
+    void rejectsRecordedFrameInputsThatDoNotMatchSequentialTimelineBeforeWriting() {
+        Path bk2Path = tempDir.resolve("bad-input-timeline.bk2");
+        List<RecordedFrameInput> inputs = List.of(
+                new RecordedFrameInput(0, 0, 0, false, 0, 0, false),
+                new RecordedFrameInput(2, 0, 0, false, 0, 0, false));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> UserRecordingWriter.write(bk2Path, sampleManifest(2), inputs, List.of()));
+        assertFalse(Files.exists(bk2Path));
+    }
+
+    @Test
+    void rejectsSidecarFramesThatDoNotMatchInputTimelineBeforeWriting() {
+        Path bk2Path = tempDir.resolve("bad-sidecar-timeline.bk2");
+        List<RecordedFrameInput> inputs = List.of(
+                new RecordedFrameInput(0, 0, 0, false, 0, 0, false),
+                new RecordedFrameInput(1, 0, 0, false, 0, 0, false));
+        List<DesyncLiteFrame> sidecarFrames = List.of(new DesyncLiteFrame(0), new DesyncLiteFrame(3));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> UserRecordingWriter.write(bk2Path, sampleManifest(2), inputs, sidecarFrames));
+        assertFalse(Files.exists(bk2Path));
+    }
+
+    @Test
+    void preservesPreExistingDeterministicTmpSibling() throws Exception {
+        Path bk2Path = tempDir.resolve("with-sentinel.bk2");
+        Path deterministicTmp = tempDir.resolve("with-sentinel.bk2.tmp");
+        Files.writeString(deterministicTmp, "sentinel", StandardCharsets.UTF_8);
+        List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(0, 0, 0, false, 0, 0, false));
+
+        UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, List.of());
+
+        assertTrue(Files.exists(bk2Path));
+        assertTrue(Files.exists(deterministicTmp));
+        assertEquals("sentinel", Files.readString(deterministicTmp, StandardCharsets.UTF_8));
     }
 
     private static UserRecordingManifest sampleManifest(int frameCount) {
