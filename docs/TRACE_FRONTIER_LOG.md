@@ -35,6 +35,9 @@ branch-local measurements.
   - MCZ2 Obj57 boss-specific drill hurt regions advanced
     `TestS2Mcz2LevelSelectTraceReplay` from f8965 / 156 to f9662 / 83 while
     holding every other S2 accepted red/green frontier in the full sweep.
+  - MCZ2 Obj57 `boss_hurt_sonic` latch lifetime advanced
+    `TestS2Mcz2LevelSelectTraceReplay` from f9662 / 83 to f10111 / 22 while
+    holding every other S2 accepted red/green frontier in the full sweep.
   - A later MTZ1 offscreen sidekick-latch candidate advanced MTZ1 but regressed
     MTZ2 total errors from 951 to 971 at f3055; it was rejected and reverted in
     `a01e0fedc`.
@@ -49,7 +52,7 @@ branch-local measurements.
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
   `HTZ1` f7108 / 221 (`tails_x` expected `0x231F`, actual `0x2320`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
-  `MCZ2` f9662 / 83 (`y` expected `0x0631`, actual `0x062C`);
+  `MCZ2` f10111 / 22 (`camera_x` expected `0x21A1`, actual `0x219C`);
   `MTZ1` f5713 / 560 (`tails_y_speed` expected `0x0ED0`, actual `0x0000`);
   `MTZ2` f4375 / 950 (`tails_status_byte` expected `0x0002`, actual `0x0003`);
   `MTZ3` f2588 / 939 (`tails_cpu_ctrl2_held` expected `0x0012`, actual `0x0002`);
@@ -57,6 +60,54 @@ branch-local measurements.
   `OOZ2` f3226 / 945 (`g_speed` expected `0x0528`, actual `0x0520`).
 - Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `MCZ1`,
   `SCZ`, and `WFZ`.
+
+## 2026-06-29 - S2 MCZ2 Obj57 boss_hurt_sonic latch lifetime (f9662 -> f10111)
+
+- Worktree/branch: `.worktrees/trace-s2-mcz2-obj57-phase` /
+  `bugfix/ai-trace-s2-mcz2-obj57-phase`, forked from
+  `bugfix/ai-s2-trace-develop` at integration head `0f00c10e8`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result before the fix: MCZ2 f9662 / 83 errors (`y` expected `0x0631`,
+  actual `0x062C`). The context showed engine Obj57 already in routine `$00`
+  with `bossHurtSonic=true` while ROM Obj57 was still in routine `$06`.
+- Evidence/fix: `boss_hurt_sonic` is a one-frame collision result, not a sticky
+  "hurt sometime this cycle" latch. ROM `BossCollision_MCZ` starts each boss
+  collision pass with `sf boss_hurt_sonic(a1)` before re-setting it only if
+  `Boss_DoCollision` just raised the main character's `invulnerable_time` to
+  `$78` (`docs/s2disasm/s2.asm:85732-85763,85769-85788`). ROM
+  `Obj57_Main_Sub6` does not inspect that flag until after `Boss_Countdown`
+  has gone negative (`docs/s2disasm/s2.asm:65987-65996`). The engine now clears
+  stale `bossHurtSonic` during nonnegative Sub6 countdown frames, so a drill hit
+  that occurred too early in the horizontal phase cannot force a later early
+  reascend. This is Obj57-local ROM-state modelling, not trace hydration or a
+  zone/route/frame carve-out.
+- Focused Obj57 verification:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestTodo4_MCZBossCollision" test`.
+  Result: command exited 0; the new red/green coverage proves stale
+  `bossHurtSonic` clears while Sub6 countdown is nonnegative and still
+  reascends when the previous-frame hurt coincides with countdown crossing
+  negative. MSE echoed the already-accepted MCZ2 frontier report, but the
+  focused unit class passed.
+- Focused MCZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result after the fix: MCZ2 advances to f10111 / 22 errors (`camera_x`
+  expected `0x21A1`, actual `0x219C`).
+- S2 green guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: command exited 0; ARZ1, CNZ1, DEZ ending, EHZ1, MCZ1, SCZ, and WFZ
+  held green. MSE also echoed the accepted MCZ2 f10111 / 22 report from the
+  current target reports.
+- Full S2 sweep comparison:
+  Current branch command:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Integration comparison command run from `.worktrees/ai-s2-trace-develop` at
+  `0f00c10e8`:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: both sweeps ran 19 trace classes with the same 7 green / 12 expected-red
+  shape. Red summaries were identical except MCZ2: integration MCZ2 was f9662 /
+  83, current branch MCZ2 is f10111 / 22. No accepted non-MCZ2 red or green
+  frontier changed.
 
 ## 2026-06-29 - S2 MCZ2 Obj57 boss-specific drill collision (f8965 -> f9662)
 

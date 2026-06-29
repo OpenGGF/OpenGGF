@@ -282,6 +282,45 @@ public class TestTodo4_MCZBossCollision {
                 "main-character drill hurt should latch boss_hurt_sonic");
     }
 
+    /**
+     * BossCollision_MCZ clears boss_hurt_sonic before each collision pass
+     * (s2.asm:85732-85733), and Obj57_Main_Sub6 only consumes the flag after
+     * Boss_Countdown has gone negative (s2.asm:65987-65996). A hurt that happened
+     * while the countdown was still nonnegative must therefore not stay latched
+     * until a later re-ascend decision.
+     */
+    @Test
+    public void testObj57StaleHurtLatchClearsWhileSub6CountdownIsNonnegative() throws Exception {
+        Sonic2MCZBossInstance boss = newMczBossAt(0x2200, 0x0660);
+        setState(boss, "routineSecondary", 0x06);
+        setField(boss, "countdown", 2);
+        setBooleanField(boss, "bossHurtSonic", true);
+
+        boss.update(0, null);
+
+        assertEquals(0x06, bossState(boss).routineSecondary,
+                "Sub6 stays active while Boss_Countdown is still nonnegative");
+        assertFalse(getBooleanField(boss, "bossHurtSonic"),
+                "BossCollision_MCZ clears stale boss_hurt_sonic before the next frame can consume it");
+    }
+
+    @Test
+    public void testObj57HurtLatchReascendsWhenPreviousFrameHurtCrossesNegativeCountdown() throws Exception {
+        Sonic2MCZBossInstance boss = newMczBossAt(0x2200, 0x0660);
+        setState(boss, "routineSecondary", 0x06);
+        setField(boss, "countdown", 0);
+        setBooleanField(boss, "bossHurtSonic", true);
+
+        boss.update(0, null);
+
+        assertEquals(0x00, bossState(boss).routineSecondary,
+                "Sub6 consumes boss_hurt_sonic when Boss_Countdown crosses negative");
+        assertFalse(getBooleanField(boss, "bossHurtSonic"),
+                "Consumed boss_hurt_sonic is cleared by Obj57_Main_Sub6_ReAscend1");
+        assertEquals(0x64, getIntField(boss, "countdown"),
+                "Reascend resets Boss_Countdown to the cycle delay");
+    }
+
     private static Sonic2MCZBossInstance newMczBossAt(int x, int y) throws Exception {
         Sonic2MCZBossInstance boss = new Sonic2MCZBossInstance(
                 new ObjectSpawn(x, y, 0x57, 0, 0, false, y));
@@ -309,6 +348,18 @@ public class TestTodo4_MCZBossCollision {
         Field field = Sonic2MCZBossInstance.class.getDeclaredField(name);
         field.setAccessible(true);
         field.setInt(boss, value);
+    }
+
+    private static int getIntField(Sonic2MCZBossInstance boss, String name) throws Exception {
+        Field field = Sonic2MCZBossInstance.class.getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getInt(boss);
+    }
+
+    private static void setBooleanField(Sonic2MCZBossInstance boss, String name, boolean value) throws Exception {
+        Field field = Sonic2MCZBossInstance.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.setBoolean(boss, value);
     }
 
     private static boolean getBooleanField(Sonic2MCZBossInstance boss, String name) throws Exception {
