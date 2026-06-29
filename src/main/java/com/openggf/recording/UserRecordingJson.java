@@ -93,7 +93,6 @@ public final class UserRecordingJson {
             validateEngineIdentity(engineIdentity);
             validateLaunchContext(launchContext);
             validateSidecar(sidecar);
-            validateDeterminism(determinism);
         }
 
         private static void requirePresent(Object value, String fieldName) throws IOException {
@@ -125,11 +124,6 @@ public final class UserRecordingJson {
                         + sidecar.desyncLiteSchemaVersion());
             }
             requireNonBlank(sidecar.sampleMode(), "sidecar.sampleMode");
-        }
-
-        private static void validateDeterminism(RecordingDeterminismMetadata determinism) throws IOException {
-            requirePresent(determinism.initialLevelFrameCounter(), "determinism.initialLevelFrameCounter");
-            requirePresent(determinism.initialRngSeed(), "determinism.initialRngSeed");
         }
 
         private static UserRecordingStopReason parseStopReason(String value) {

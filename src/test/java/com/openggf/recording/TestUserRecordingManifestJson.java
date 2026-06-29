@@ -39,6 +39,28 @@ class TestUserRecordingManifestJson {
     }
 
     @Test
+    void manifestJsonRoundtripsNullableDeterminismMetadata() throws Exception {
+        UserRecordingManifest sample = sampleManifest();
+        UserRecordingManifest manifest = new UserRecordingManifest(
+                sample.schemaVersion(),
+                sample.movieName(),
+                sample.engineIdentity(),
+                sample.launchContext(),
+                sample.sidecar(),
+                new RecordingDeterminismMetadata(null, null),
+                sample.jumpActionButton(),
+                sample.frameCount(),
+                sample.stopReason(),
+                sample.createdAt());
+
+        String json = UserRecordingJson.writeManifest(manifest);
+        UserRecordingManifest roundtripped = UserRecordingJson.readManifest(json);
+
+        assertNull(roundtripped.determinism().initialLevelFrameCounter());
+        assertNull(roundtripped.determinism().initialRngSeed());
+    }
+
+    @Test
     void launchContextDefensivelyCopiesSidekickCharacters() {
         List<String> sidekickCharacters = new ArrayList<>(List.of("tails"));
 
