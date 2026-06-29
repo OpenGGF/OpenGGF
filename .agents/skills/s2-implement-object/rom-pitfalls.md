@@ -2324,7 +2324,7 @@ cycle and hurt Sonic at f1751 while the ROM was still in normal airborne motion.
 (`docs/s2disasm/s2.asm:49972-50003`). The table rows use `-$18` and `-$58`
 (`docs/s2disasm/s2.asm:49958-49961`), which become `$E8` and `$A8`.
 
-**Originating commit.** `<pending>` S2 OOZ2 Obj43 unsigned travel span:
+**Originating commit.** `5b5c3ec30` S2 OOZ2 Obj43 unsigned travel span:
 `SlidingSpikeObjectInstance` separates unsigned `originSpan` from signed
 parent/child X offsets; OOZ2 advances from f1751 to f1873.
 
