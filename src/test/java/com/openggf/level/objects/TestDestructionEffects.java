@@ -128,6 +128,48 @@ class TestDestructionEffects {
                 "Explosion update should allocate animal and points children from the explosion routine");
     }
 
+    @Test
+    void sonic2AnimalAllocatesPointsOnItsOwnFirstExecuteObjectsPass() {
+        DestructionConfig config = new DestructionConfig(
+                -1,
+                (spawn, svc) -> new AnimalObjectInstance(spawn, svc,
+                        (pointsSpawn, pointsSvc, points) -> new RecordingChildObject(
+                                pointsSpawn, "Points-" + points)),
+                true,
+                null,
+                null,
+                false);
+
+        DestructionEffects.destroyBadnik(
+                0x078E,
+                0x0538,
+                new ObjectSpawn(0x078E, 0x0538, 0xA7, 0, 0, false, 0),
+                22,
+                null,
+                services,
+                config);
+
+        objectManager.update(0x06DD, null, List.of(), 1);
+
+        assertEquals(1, objectManager.getActiveObjects().stream()
+                        .filter(AnimalObjectInstance.class::isInstance)
+                        .count(),
+                "S2 Obj27_InitWithAnimal allocates Obj28 from the explosion routine "
+                        + "(docs/s2disasm/s2.asm:46707-46715)");
+        assertEquals(0, objectManager.getActiveObjects().stream()
+                        .filter(RecordingChildObject.class::isInstance)
+                        .count(),
+                "When Obj28 receives a lower free slot than Obj27, ExecuteObjects has already passed it");
+
+        objectManager.update(0x06DD, null, List.of(), 2);
+
+        assertEquals(1, objectManager.getActiveObjects().stream()
+                        .filter(RecordingChildObject.class::isInstance)
+                        .count(),
+                "S2 Obj28_InitRandom allocates Obj29 during the animal's own first routine pass "
+                        + "(docs/s2disasm/s2.asm:24596-24636)");
+    }
+
     private static final class NoOpObjectRegistry implements ObjectRegistry {
         @Override
         public ObjectInstance create(ObjectSpawn spawn) {

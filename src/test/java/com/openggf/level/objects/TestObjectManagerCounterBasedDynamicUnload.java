@@ -11,6 +11,8 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.Level;
+import com.openggf.level.WaterSystem;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 public class TestObjectManagerCounterBasedDynamicUnload {
 
@@ -277,6 +280,50 @@ public class TestObjectManagerCounterBasedDynamicUnload {
 
         assertEquals(0x0514, bubble.getY() & 0xFFFF,
                 "The following update should begin the ROM y_vel=-$88 rise");
+    }
+
+    @Test
+    public void breathingBubbleSurfacePopFreesSlotOnNextExecuteObjectsPass() {
+        GameServices.camera().setX((short) 0x0600);
+        ObjectServices waterServices = new StubObjectServices() {
+            private final Level level = mock(Level.class);
+            private final WaterSystem water = new SurfaceAtBubbleWaterSystem(0x0510);
+
+            @Override
+            public com.openggf.camera.Camera camera() {
+                return GameServices.camera();
+            }
+
+            @Override
+            public Level currentLevel() {
+                return level;
+            }
+
+            @Override
+            public WaterSystem waterSystem() {
+                return water;
+            }
+        };
+        objectManager = new ObjectManager(List.of(), new TrackingRegistry(), 0, null, null,
+                null, GameServices.camera(), waterServices);
+        objectManager.reset(0);
+
+        BreathingBubbleInstance bubble = new BreathingBubbleInstance(
+                0x06F2, 0x0510, false, -1, ObjectArtKeys.BUBBLES, new int[] { 11, 10, 9, 8, 7, 6 }, 3, -0x88);
+        objectManager.addDynamicObject(bubble);
+
+        objectManager.update(0x0600, null, List.of(), 0);
+        objectManager.update(0x0600, null, List.of(), 1);
+
+        assertTrue(objectManager.getActiveObjects().contains(bubble),
+                "Obj0A_ChkWater changes to Obj0A_Display at the surface but does not call DeleteObject yet "
+                        + "(docs/s2disasm/s2.asm:41913-41921)");
+
+        objectManager.update(0x0600, null, List.of(), 2);
+
+        assertFalse(objectManager.getActiveObjects().contains(bubble),
+                "The following Obj0A_Display animation tail reaches DeleteObject and frees the SST slot "
+                        + "(docs/s2disasm/s2.asm:41966-41980,30330-30346)");
     }
 
     @Test
@@ -553,6 +600,24 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         @Override
         public String getPrimaryName(int objectId) {
             return "Orbinaut";
+        }
+    }
+
+    private static final class SurfaceAtBubbleWaterSystem extends WaterSystem {
+        private final int surfaceY;
+
+        private SurfaceAtBubbleWaterSystem(int surfaceY) {
+            this.surfaceY = surfaceY;
+        }
+
+        @Override
+        public boolean hasWater(int zoneId, int actId) {
+            return true;
+        }
+
+        @Override
+        public int getGameplayWaterLevelY(int zoneId, int actId) {
+            return surfaceY;
         }
     }
 }
