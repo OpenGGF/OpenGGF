@@ -6,6 +6,39 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 CNZ2 linked Point Pokey keeps SlotMachine_Routine alive (f5213 -> f5242)
+
+- Worktree/branch: `.worktrees/trace-s2-cnz2-r12` /
+  `bugfix/ai-trace-s2-cnz2-r12`, forked from
+  `bugfix/ai-s2-trace-develop` at `057ba3d37`.
+- Baseline reproduction:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cnz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: CNZ2 f5213 / 749 errors (`y_speed` expected
+  `0x0000`, actual `0x0400`); CNZ1 green.
+- Evidence/fix: ROM ObjD6 clears `SlotMachineInUse` when a linked Point Pokey
+  releases, but `LevEvents_CNZ` keeps `SlotMachine_Routine` ticking until the
+  reels naturally complete (`docs/s2disasm/s2.asm:59185-59253,59300-59313`).
+  The engine's cage cleanup stopped the shared slot-machine manager mid-spin,
+  preserving `601F/888C/8DBE` reel positions from the first CNZ2 cage instead
+  of letting them finish to the ROM-visible `0500/0100/0100` state before the
+  second cage. `CNZSlotMachineManager.releaseUse()` now clears only the
+  ownership latch, leaving the routine active.
+- Focused unit coverage:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtest=com.openggf.game.sonic2.slotmachine.TestCNZSlotMachineRng" "-DfailIfNoTests=false" test`.
+  Result: command exited 0; the new linked-release slot-machine regression
+  passed.
+- Target verification:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cnz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: CNZ2 advances to f5242 / 875 errors (`y_speed` expected `0x0400`,
+  actual `0x0000`); CNZ1 remains green.
+- Green guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+  Result: command exited 0; all selected S2 guard XMLs show `failures="0"`.
+- New frontier: f5242 is a one-frame linked-prize release ordering mismatch.
+  ROM has already ejected from ObjD6 after the active prize count drains, while
+  the engine still has PointPokey state 3 with `active=0` and releases on the
+  next frame.
+
 ## 2026-06-29 - S2 ARZ2 Obj91 ChopChop patrol bubble integration (f870 -> f888)
 
 - Integrated worker commit: `fc335afd79618a2df5932b68607c2c96b6e9eb33` from

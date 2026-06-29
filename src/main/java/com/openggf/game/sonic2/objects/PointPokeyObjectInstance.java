@@ -310,9 +310,11 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         playerOccupied = false;
         capturedPlayerUsesRideState = false;
 
-        // Deactivate slot machine state (preserves visual reel positions)
+        // Clear the cage ownership latch without stopping the reels. ROM
+        // ObjD6 clears SlotMachineInUse here, while LevEvents_CNZ keeps
+        // SlotMachine_Routine ticking until the reel sequence finishes.
         if (slotMachineManager != null) {
-            slotMachineManager.deactivate();
+            slotMachineManager.releaseUse();
         }
         slotMachineManager = null;
         slotReward = 0;
