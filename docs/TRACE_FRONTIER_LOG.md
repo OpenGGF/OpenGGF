@@ -6,6 +6,48 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 HTZ2 DropOnFloor ride-wall deferred speed frontier move (f3317 -> f3322)
+
+- Worktree/branch: `.worktrees/trace-s2-htz2-r12` /
+  `bugfix/ai-trace-s2-htz2-r12`, forked from reverted integration commit
+  `4133b286b`.
+- Review/revert context: the first HTZ2 f3317 -> f3322 candidate
+  (`9c3b932f`) used a broad S2 predicate for any already-pushing object rider
+  at a flush wall. It was merged then reverted in integration as `4133b286b`
+  because the full S2 sweep regressed expected-red totals: CNZ2 749 -> 804 and
+  OOZ1 1256 -> 1336, while MTZ3 changed 3742 -> 3717.
+- Revised evidence/fix: HTZ2 f3317 has CPU Tails riding Obj30 Rising Lava
+  while `Status_Push` is set and `CalcRoomInFront` is exactly flush. Obj30
+  routes its `SolidObject_Always` / `SlopedSolid` helper through `DropOnFloor`
+  (`docs/s2disasm/s2.asm:49560-49604,49674-49676`). The revised
+  `CollisionSystem` predicate now stages the post-`ObjectMove` velocity
+  correction only when the live ridden solid provider opts into
+  `dropOnFloor()`, under the existing S2 repeated object-ride response flag.
+  This keeps the rule tied to ROM helper state rather than zone, route, frame,
+  test name, or any generic object-rider push.
+- Focused target/sentinel verification:
+  `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: HTZ2 advances to f3322 / 1060 errors (`tails_x_sub` expected
+  `0x7500`, actual `0x8D00`); HTZ1 remains unchanged at f6586 / 226 errors.
+- Regression checks requested by review:
+  `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: CNZ2 holds f5213 / 749 errors (`y_speed` expected `0x0000`,
+  actual `0x0400`); OOZ1 holds f1784 / 1256 errors (`tails_x_speed` expected
+  `0x000C`, actual `-000C`).
+- S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: command exited 0; selected guard XMLs show `failures="0"`.
+- Full S2 sweep:
+  `mvn "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: 19 trace classes ran; 7 green / 12 expected-red. Red summary:
+  ARZ2 f870 / 2794; CNZ2 f5213 / 749; CPZ1 f4225 / 264; CPZ2 f2889 / 1238;
+  HTZ1 f6586 / 226; HTZ2 f3322 / 1060; MCZ2 f8606 / 317; MTZ1 f5647 / 616;
+  MTZ2 f1857 / 3209; MTZ3 f2048 / 3742; OOZ1 f1784 / 1256; OOZ2 f2623 / 946.
+- New HTZ2 frontier: f3322 sidekick ride/CPU steering state, with
+  `tails_cpu_ctrl2_held` expected `0x0004`, actual `0x0008`,
+  `tails_status_byte` expected `0x0029`, actual `0x0008`, and matching
+  integer `tails_x` at `0x170A`.
+
 ## 2026-06-29 - S2 MCZ2 Obj80 vine-release monitor landing (f7328 -> f8606)
 
 - Worktree/branch: `.worktrees/ai-trace-s2-mcz2-r11` /

@@ -5,6 +5,7 @@ import com.openggf.game.GroundMode;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
@@ -314,6 +315,10 @@ public class CollisionSystem {
         // the per-frame follow nudge (loc_13E34 addq.w #1,x_pos,
         // sonic3k.asm:26734-26741), so no zero-distance seam override is required.
         int distance = result.distance();
+        if (distance == 0 && shouldDeferFlushWallResponseForRiddenDropOnFloor(sprite, mode, gSpeed)) {
+            sprite.deferGroundWallVelocityResponse(mode, -1);
+            return;
+        }
         if (distance >= 0) {
             return;
         }
@@ -332,6 +337,29 @@ public class CollisionSystem {
                 && sprite.isOnObject()
                 && sprite.getPushing()
                 && ((mode == 0x40 && predictedDx < 0) || (mode == 0xC0 && predictedDx > 0));
+    }
+
+    private boolean shouldDeferFlushWallResponseForRiddenDropOnFloor(
+            AbstractPlayableSprite sprite, int mode, short gSpeed) {
+        var featureSet = sprite.getPhysicsFeatureSet();
+        if (featureSet == null
+                || !featureSet.repeatedObjectRideGroundWallResponseDeferred()
+                || objectManager == null
+                || !sprite.isOnObject()
+                || !sprite.getPushing()) {
+            return false;
+        }
+        ObjectInstance ridingObject = objectManager.getRidingObject(sprite);
+        if (!(ridingObject instanceof SolidObjectProvider provider)
+                || !provider.dropOnFloor()) {
+            return false;
+        }
+        // S2 Obj30 routes its SolidObject_Always/SlopedSolid helper through
+        // DropOnFloor (s2.asm:49560-49604,49674-49676). While riding that support,
+        // the ROM stores the repeated push correction after this frame's position
+        // update, so the engine must defer this exact flush-wall correction.
+        return (mode == 0x40 && gSpeed <= -0x18)
+                || (mode == 0xC0 && gSpeed >= 0x18);
     }
 
     public void applyDeferredGroundWallVelocityResponse(AbstractPlayableSprite sprite) {
