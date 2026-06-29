@@ -6,6 +6,36 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 ARZ2 Grounder/fixed Obj0A allocation cadence - ENGINE FIX (ARZ2 f687 -> f694)
+
+- Scope: branch `bugfix/ai-trace-s2-arz2-r8` in worktree
+  `.worktrees/trace-s2-arz2-r8`, branched from
+  `bugfix/ai-s2-trace-develop`. Comparison-only; no zone, route, frame, or
+  known-failing-trace carve-outs.
+- Root/fix part 1: f687 had ROM allocating Obj8F Grounder wall children into
+  slots 61-63 before the same-frame Obj0A mouth bubble took slot 64, while
+  the engine still let the mouth bubble take slot 61. S2 now models the fixed
+  `Sonic_BreathingBubbles` / `Tails_BreathingBubbles` Obj0A sidecars installed
+  by player water-entry code (`docs/s2disasm/s2.asm:36385-36387,39552-39554`)
+  and executes their visible bubble allocation in the fixed level-object phase
+  after dynamic SST objects, matching `RunObjects` order and Obj0A's
+  `AllocateObject` path (`docs/s2disasm/s2.asm:5094-5095,42088-42214`).
+- Root/fix part 2: Grounder Obj8D wall children and Obj90 rocks use
+  lowest-free `AllocateObject`, not after-current allocation. The engine now
+  uses `spawnFreeChild` for both loops
+  (`docs/s2disasm/s2.asm:73497-73516,73520-73533`), so the ARZ2 f687 slot
+  order is ROM-shaped: Obj8F in slots 61-63 and Obj0A in slot 64.
+- Focused coverage: `TestS2ObjectOccupancyOracle#arz2DynamicSlotOccupancyMatchesThroughArrowShooterStream`
+  asserts the comparison-only f687 slot order against the trace oracle.
+- Command:
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+- Result: `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from
+  f687 / 2966 errors (`obj_s40_slot` expected `0x40`, actual `0x3D`) to
+  f694 / 2927 errors (`obj_extra_s41_x` expected absent, actual `0x0720`).
+- New frontier: separate duplicate Obj22 ArrowShooter occupancy after the
+  corrected ARZ allocation cadence; ROM has Obj22 only in slot 21 at f694, but
+  the engine also reports an extra Obj22 at x=`0x0720`, y=`0x04F8` in slot 65.
+
 ## 2026-06-29 - S2 integration sweep after ARZ2 Obj0A/Obj28 cadence merge (6 green, 13 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
