@@ -679,7 +679,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
             if (cs.pathIndex < 0) {
                 // End of main path - completed all segments
                 LOGGER.fine("Main path complete: completed " + cs.completedSegmentCount + "/" + cs.expectedSegmentCount + " segments");
-                exitTube(player, cs, currentFrameCounter);
+                completeMainPathHandoff(player, cs);
                 return;
             }
         } else {
@@ -687,7 +687,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
             if (cs.pathIndex >= cs.path.length) {
                 // End of main path - completed all segments
                 LOGGER.fine("Main path complete: completed " + cs.completedSegmentCount + "/" + cs.expectedSegmentCount + " segments");
-                exitTube(player, cs, currentFrameCounter);
+                completeMainPathHandoff(player, cs);
                 return;
             }
         }
@@ -771,6 +771,31 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         cs.state = 6;
 
         LOGGER.fine("Player exited spin tube");
+    }
+
+    /**
+     * Complete a main-path segment without clearing object control.
+     *
+     * <p>ROM Obj1E has two distinct endings. {@code loc_227A6} masks y_pos,
+     * sets mode 6, and clears {@code obj_control(a1)} (docs/s2disasm/s2.asm:
+     * 48683-48688). The main-path ending at {@code loc_22858} only masks y_pos,
+     * clears this tube's mode byte, and plays the release sound; it deliberately
+     * leaves {@code obj_control(a1)} set for the neighbouring Obj1E handoff
+     * (docs/s2disasm/s2.asm:48748-48752).
+     */
+    private void completeMainPathHandoff(AbstractPlayableSprite player, CharacterState cs) {
+        if (cs.expectedSegmentCount > 0 && cs.completedSegmentCount < cs.expectedSegmentCount) {
+            LOGGER.warning("EARLY MAIN-PATH HANDOFF WARNING: Completed " + cs.completedSegmentCount + "/" + cs.expectedSegmentCount +
+                    " segments! Expected exit direction was " + cs.expectedExitDirection +
+                    ", subtype=0x" + Integer.toHexString(spawn.subtype()) +
+                    ", pos=(" + player.getCentreX() + "," + player.getCentreY() + ")" +
+                    ", xSpeed=" + player.getXSpeed() + ", ySpeed=" + player.getYSpeed());
+        }
+
+        int y = player.getCentreY() & 0x7FF;
+        NativePositionOps.writeYPosPreserveSubpixel(player, y);
+        cs.state = 0;
+        playSound(GameSound.SPINDASH_RELEASE);
     }
 
     /**
