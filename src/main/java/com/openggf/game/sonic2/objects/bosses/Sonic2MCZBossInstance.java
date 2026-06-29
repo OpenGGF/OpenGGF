@@ -139,7 +139,6 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance implements Spawn
     private boolean screenShaking; // ROM: Screen_Shaking_Flag
     private int sineCounter;
     private int currentFrameCounter;
-    private int vintRuncount; // pseudo-random counter for stone/spike spawning
 
     // ── Digger animation sequences (pre-expanded from ROM Ani_obj57 chained anims) ──
     // Speed byte is always 1, so each data frame shows for 2 ticks.
@@ -256,7 +255,6 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance implements Spawn
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         currentFrameCounter = frameCounter;
-        vintRuncount++;
 
         // ROM's AnimateBoss is only called in Sub0/Sub2/Sub4/Sub6.
         // Sub8/SubA/SubC set mapframes directly and do NOT call AnimateBoss.
@@ -286,7 +284,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance implements Spawn
             // ROM: check countdown == $28 to disable collision
             if (countdown == COLLISION_ENABLE_THRESHOLD) {
                 // ROM: move.b #0,(Boss_CollisionRoutine).w
-                // collision disabled during rising
+                // The current engine response models only the generic body byte here.
             }
             handleHits();
             return;
@@ -507,7 +505,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance implements Spawn
 
             // ROM: Boss_LoadExplosion checks (Vint_runcount+3) & 7 == 0
             // Only spawn explosion every 8th frame (~22 total over 179 frames)
-            if ((vintRuncount & 7) == 0) {
+            if ((currentFrameCounter & 7) == 0) {
                 spawnDefeatExplosion();
             }
         } else {
@@ -666,8 +664,10 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance implements Spawn
             return;
         }
 
-        // ROM: move.b (Vint_runcount+3).w,d1 - pseudo-random using frame counter
-        int d1 = vintRuncount & 0xFF;
+        // ROM: move.b (Vint_runcount+3).w,d1 - use the global gameplay frame
+        // counter, not a boss-local phase, so stone/spike selection stays aligned
+        // with Obj57_SpawnStoneSpike (s2.asm:66128-66160).
+        int d1 = currentFrameCounter & 0xFF;
         boolean isSpike;
 
         // ROM: sf d2 (d2=0=spike default), andi.b #$1F,d1 / beq.s Obj57_LoadStoneSpike
@@ -822,6 +822,15 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance implements Spawn
     @Override
     protected int getCollisionSizeIndex() {
         return 0x0F; // ROM: move.b #$F,collision_flags(a0)
+    }
+
+    @Override
+    public int getPreUpdateCollisionFlags() {
+        // S2 runs TouchResponse once per character slot against shared object RAM.
+        // If Sonic hits Obj57 first, BossHitHandler clears the live collision byte
+        // before CPU Tails' later touch pass can read it. Position still comes from
+        // the frame-start snapshot; only the mutable collision_flags byte must be live.
+        return getCollisionFlags();
     }
 
     @Override
