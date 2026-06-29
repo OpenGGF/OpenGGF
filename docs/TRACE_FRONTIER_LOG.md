@@ -6,6 +6,32 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 MTZ2 Obj70 grounded leftward side-push advancement (f1282 -> f1297)
+
+- Worktree/branch: `.worktrees/trace-s2-mtz-r8` /
+  `bugfix/ai-trace-s2-mtz-r8`, forked from
+  `bugfix/ai-s2-trace-develop` at `a21fe2ee2`.
+- Baseline: `TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace` failed at
+  f1282 / 3417 errors (`tails_x` expected `0x047C`, actual `0x047D`).
+- Evidence/fix: the previous Obj70 folded multi-piece no-contact predicate was
+  still treating ordinary grounded leftward CPU side contact like stale folded
+  jump-off geometry. ROM only returns no-contact for the stale cog/slot branch;
+  grounded side hits with no standing bit still reach `SolidObject_AtEdge` and
+  can set `Status_Push` (`docs/s2disasm/s2.asm:35021-35044,55080-55141`).
+  `ObjectSolidContactController` now keeps the stale path for airborne,
+  rolling, or jumping geometry while allowing the grounded leftward push path.
+- Focused verification:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestSonic2ObjectBugFixes,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: focused Obj70 coverage passed; MTZ2 advanced to f1297 / 3324
+  errors (`tails_x_speed` expected `0x000B`, actual `0x0000`); MTZ1 and MTZ3
+  held their current first-error frames.
+- Green guard:
+  `mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`.
+  Result: passed, no current S2 green trace regressed.
+- New frontier: f1297 `tails_x_speed` expected `0x000B`, actual `0x0000`.
+  Continue from the post-push Obj70/sidekick speed state, not the stale
+  no-contact branch fixed here.
+
 ## 2026-06-29 - S2 integration sweep after CNZ2 ObjD6 merge (7 green, 12 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /

@@ -3786,16 +3786,27 @@ final class ObjectSolidContactController {
                     || wasObjectStandingBitSetThisFrame(player, instance, pieceIndex)
                     || hasAnyPieceStandingBit(player, instance, multiPiece)
                     || wasAnyPieceStandingBitSetThisFrame(player, instance, multiPiece)
-                    // Folded ROM-slot solids such as S2 Obj70 can classify
-                    // a stale leftward rider as a fresh side hit after the
-                    // player movement phase even though the ROM slot branch
-                    // returned d4=0 before SolidObject_cont. Keep the
-                    // no-contact opt-in for that leftward stale geometry, but
-                    // allow rightward grounded side hits to reach
-                    // SolidObject_StopCharacter.
-                    || player.getXSpeed() < 0;
+                    // Folded ROM-slot solids such as S2 Obj70 can classify a
+                    // stale airborne leftward rider as a fresh side hit after
+                    // the player movement phase even though the ROM slot branch
+                    // returned d4=0 before SolidObject_cont. Keep that
+                    // no-contact opt-in for jump-off stale geometry, but allow
+                    // ordinary grounded leftward side hits with no standing bit
+                    // to reach SolidObject_AtEdge and set Status_Push.
+                    || (isJumpOffStaleSideGeometry(player) && player.getXSpeed() < 0)
+                    || (preContactXSpeed <= -0x100 && player.getXSpeed() < 0);
         }
         return true;
+    }
+
+    private boolean isJumpOffStaleSideGeometry(PlayableEntity player) {
+        if (player.getAir()) {
+            return true;
+        }
+        if (preContactRolling) {
+            return true;
+        }
+        return player instanceof AbstractPlayableSprite sprite && sprite.isJumping();
     }
 
     private boolean hasAnyPieceStandingBit(PlayableEntity player, ObjectInstance instance,
