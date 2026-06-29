@@ -6,7 +6,7 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-## 2026-06-29 - S2 accepted routing baseline after OOZ2 and HTZ1 integrations
+## 2026-06-29 - S2 accepted routing baseline after CPZ1, OOZ2, and HTZ1 integrations
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
   `bugfix/ai-s2-trace-develop`.
@@ -21,6 +21,9 @@ branch-local measurements.
     holding first error f2889.
   - CPZ2 Obj1E lower-slot tube handoff advanced
     `TestS2Cpz2LevelSelectTraceReplay` from f2889 / 1236 to f2976 / 1232.
+  - CPZ1 Obj78 sidekick CPU push-grace preservation advanced
+    `TestS2CpzLevelSelectTraceReplay` from f4281 / 246 to f4351 / 259 while
+    holding the S2 green guard.
   - ARZ2 Obj18 platform standing-latch nudge advanced
     `TestS2Arz2LevelSelectTraceReplay` from f888 / 2720 to f1028 / 2688 and
     reduced `TestS2Htz2LevelSelectTraceReplay` total errors from 1060 to 1057
@@ -55,7 +58,7 @@ branch-local measurements.
 - Current red routing table:
   `ARZ2` f1028 / 2688 (`obj_extra_s16_x` expected absent, actual `0x0B7B`);
   `CNZ2` f5242 / 875 (`y_speed` expected `0x0400`, actual `0x0000`);
-  `CPZ1` f4281 / 246 (`tails_x_speed` expected `-0018`, actual `0x0000`);
+  `CPZ1` f4351 / 259 (`tails_x` expected `0x20D4`, actual `0x20D3`);
   `CPZ2` f2976 / 1232 (`tails_y` expected `0x0208`, actual `0x020C`);
   `HTZ1` f7805 / 138 (`y_speed` expected `0x0038`, actual `0x0000`);
   `HTZ2` f3322 / 1057 (`tails_x_sub` expected `0x7500`, actual `0x8D00`);
@@ -67,6 +70,41 @@ branch-local measurements.
   `OOZ2` f3672 / 692 (`tails_cpu_respawn_counter` expected `0x0079`, actual `0x0000`).
 - Current green guard remains: `ARZ1`, `CNZ1`, `DEZ ending`, `EHZ1`, `MCZ1`,
   `SCZ`, and `WFZ`.
+
+## 2026-06-29 - S2 CPZ1 Obj78 sidekick CPU push grace (f4281 -> f4351)
+
+- Worktree/branch: `.worktrees/trace-s2-cpz1-tails-speed` /
+  `bugfix/ai-trace-s2-cpz1-tails-speed`, forked from
+  `.worktrees/ai-s2-trace-develop` / `bugfix/ai-s2-trace-develop` at
+  integration head `13367aa5213b7d5ef4017a33111f52fe45d2c6e7`.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" compile test-compile` followed by
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result before the fix: CPZ1 f4281 / 246 errors (`tails_x_speed` expected
+  `-0018`, actual `0x0000`).
+- Evidence/root: CPZ1 context showed Tails already riding Obj78 with ROM
+  `Status_Push` visible when `TailsCPU_Normal` tested the current sidekick
+  status, while the folded engine instance had no fresh side contact and let CPU
+  follow logic apply a left nudge before the later side-stop zeroed speed. ROM
+  Obj78 allocates four child slots for the stair pieces
+  (`docs/s2disasm/s2.asm:55978-55995`); each child computes its own `y_pos` and
+  calls `SolidObject` (`docs/s2disasm/s2.asm:56084-56094`). That means the
+  current `Status_Push` bit observed by `TailsCPU_Normal`
+  (`docs/s2disasm/s2.asm:39291-39294`) can reflect an adjacent child side face
+  even while the rider remains seated on another stair piece.
+- Fix: `CPZStaircaseObjectInstance` now preserves folded riding push status for
+  any non-flat moving stair piece and opts into a CPU-sidekick push-grace bridge
+  while that ROM Obj78 child-slot condition is true. This is Obj78-local ROM
+  state modelling, not trace hydration or a zone/route/frame carve-out.
+- Focused CPZ1 trace:
+  `mvn -q "-Dmse=off" compile test-compile` followed by
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result after the fix: CPZ1 advances to f4351 / 259 errors (`tails_x`
+  expected `0x20D4`, actual `0x20D3`).
+- S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: command exited 0; ARZ1, CNZ1, DEZ ending, EHZ1, MCZ1, SCZ, and WFZ
+  held green.
 
 ## 2026-06-29 - S2 HTZ1 Obj14 seesaw ball touch center (f7108 -> f7805)
 
