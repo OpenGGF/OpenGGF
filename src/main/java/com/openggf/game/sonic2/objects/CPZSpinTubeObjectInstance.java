@@ -743,13 +743,10 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         int y = player.getCentreY() & 0x7FF;
         NativePositionOps.writeYPosPreserveSubpixel(player, y);
 
-        // ROM loc_227A6 clears obj_control from Obj1E's later object slot after
-        // the player routine has already run for this frame
-        // (docs/s2disasm/s2.asm:48683-48688). Keep movement suppression active
-        // until endOfTick so the engine does not run one same-frame
-        // gravity/movement step after release.
-        player.deferObjectControlRelease();
-        player.setObjectControlSuppressesMovement(true);
+        // ROM loc_227A6 directly clears obj_control(a1)
+        // (docs/s2disasm/s2.asm:48683-48688). The main-path loc_22858 handoff is
+        // handled separately because it deliberately leaves obj_control set.
+        player.releaseFromObjectControl(frameCounter);
 
         // ROM loc_227A6/loc_22858 do NOT set spindash_flag/pinball_mode or
         // status.player.rolling on exit; they mask y_pos and play the

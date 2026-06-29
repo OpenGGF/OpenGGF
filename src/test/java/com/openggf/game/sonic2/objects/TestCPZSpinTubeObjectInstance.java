@@ -69,7 +69,7 @@ class TestCPZSpinTubeObjectInstance {
     }
 
     @Test
-    void releaseDefersMovementSuppressionThroughCurrentFrameAndPreservesYSubpixel() throws Exception {
+    void fullReleaseClearsObjectControlAndPreservesYSubpixel() throws Exception {
         ObjectSpawn spawn = new ObjectSpawn(0x2480, 0x0500, 0x1E, 0x02, 0, false, 0);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x24E8, (short) 0x0B30);
         player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
@@ -93,15 +93,15 @@ class TestCPZSpinTubeObjectInstance {
                 "Obj1E loc_227A6 masks y_pos with $7FF before release.");
         assertEquals(0xAA00, player.getYSubpixelRaw(),
                 "andi.w #$7FF,y_pos(a1) leaves the sibling y_sub word untouched.");
-        assertTrue(player.isObjectControlled(),
-                "Obj1E clears obj_control after the player slot has already run; engine release must defer to endOfTick.");
-        assertTrue(player.isObjectControlSuppressesMovement(),
-                "The release-side frame must still skip normal movement/gravity.");
+        assertFalse(player.isObjectControlled(),
+                "Obj1E loc_227A6 directly clears obj_control(a1).");
+        assertFalse(player.isObjectControlSuppressesMovement(),
+                "The loc_227A6 full-release path must allow the next player movement step to consume exit velocity.");
 
         player.endOfTick();
 
-        assertFalse(player.isObjectControlled(), "deferred release lands at endOfTick");
-        assertFalse(player.isObjectControlSuppressesMovement(), "movement suppression clears with deferred release");
+        assertFalse(player.isObjectControlled());
+        assertFalse(player.isObjectControlSuppressesMovement());
     }
 
     @Test
