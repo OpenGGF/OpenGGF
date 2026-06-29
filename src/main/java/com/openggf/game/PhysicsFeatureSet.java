@@ -1069,7 +1069,23 @@ public record PhysicsFeatureSet(
          *  <p>S3K: {@code false}. {@code Process_Sprites} (the object/player loop)
          *  runs BEFORE {@code Handle_Onscreen_Water_Height} (sonic3k.asm main
          *  loop), so the player reads the PREVIOUS frame's water level. */
-        boolean advanceWaterLevelBeforePlayerPhysics
+        boolean advanceWaterLevelBeforePlayerPhysics,
+        /** Whether shared animal objects preserve x_sub through the S2
+         *  ObjectMove/ObjectMoveAndFall longword position update. S2 Obj28
+         *  Walk/Fly uses ObjectMoveAndFall/ObjectMove (s2.asm:24670-24691);
+         *  ObjectMoveAndFall updates the full x_pos longword (s2.asm:
+         *  30164-30174), so fractional leftward ground speeds carry between
+         *  frames. S1 uses a separate animal object implementation; S3K animals
+         *  dispatch through MoveSprite/MoveSprite2 (sonic3k.asm:61104-61170),
+         *  so keep the existing shared-object baseline there until that path is
+         *  validated separately. */
+        boolean animalObjectPreservesObjectMoveXSubpixel,
+        /** Whether shared animal objects self-delete from the ROM render flag
+         *  bounds instead of the engine's legacy 64px margin point test. S2
+         *  Obj28 initializes width_pixels=8 and deletes from Walk/Fly when
+         *  render_flags.on_screen is clear (s2.asm:24570-24594,
+         *  24670-24727). */
+        boolean animalObjectUsesRenderFlagDeleteBounds
 ) {
     /** S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp directly modifies v_lookshift). */
     public static final short LOOK_SCROLL_DELAY_NONE = 0;
@@ -1288,7 +1304,9 @@ public record PhysicsFeatureSet(
                     source.mouthBubbleRiseVelocity(),
                     source.solidObjectKeepsOnObjWhenJumpedOffSameFrame(),
                     source.levelBoundaryLockUsesScreenLockFlag(),
-                    source.advanceWaterLevelBeforePlayerPhysics()
+                    source.advanceWaterLevelBeforePlayerPhysics(),
+                    source.animalObjectPreservesObjectMoveXSubpixel(),
+                    source.animalObjectUsesRenderFlagDeleteBounds()
             );
         }
     }
@@ -1354,7 +1372,9 @@ public record PhysicsFeatureSet(
             -0x88 /* mouthBubbleRiseVelocity: S1 Obj0A small bubbles use y_vel=-$88 with SpeedToPos */,
             false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S1 unaffected (no CPU sidekick; existing same-frame unseat ordering preserved by gating) */,
             true /* levelBoundaryLockUsesScreenLockFlag: S1 Sonic_LevelBound gates the +64 right-extension on f_lockscreen (s1disasm/_incObj/01 Sonic.asm:1047-1049), which persists past boss defeat (FZ has no Egg Prison) */,
-            true /* advanceWaterLevelBeforePlayerPhysics: S1 LZWaterFeatures runs before ExecuteObjects (sonic.asm:2986-2987) */);
+            true /* advanceWaterLevelBeforePlayerPhysics: S1 LZWaterFeatures runs before ExecuteObjects (sonic.asm:2986-2987) */,
+            false /* animalObjectPreservesObjectMoveXSubpixel: S1 uses Sonic1AnimalsObjectInstance */,
+            false /* animalObjectUsesRenderFlagDeleteBounds: S1 uses Sonic1AnimalsObjectInstance */);
 
     /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
      *  preserves high ground speed on input (s2.asm:36610-36616),
@@ -1423,7 +1443,9 @@ public record PhysicsFeatureSet(
             -0x88 /* mouthBubbleRiseVelocity: S2 Obj0A small bubbles use y_vel=-$88 with SpeedToPos (s2.asm:41899,41941-41942) */,
             false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S2 unaffected; existing same-frame unseat ordering preserved by gating */,
             false /* levelBoundaryLockUsesScreenLockFlag: S2 Sonic_LevelBound gates the +$40 right-extension on Current_Boss_ID (s2.asm:37247-37250), i.e. boss-alive; engine uses isBossFightActive() */,
-            true /* advanceWaterLevelBeforePlayerPhysics: S2 WaterEffects runs before RunObjects (s2.asm:5094-5095) */);
+            true /* advanceWaterLevelBeforePlayerPhysics: S2 WaterEffects runs before RunObjects (s2.asm:5094-5095) */,
+            true /* animalObjectPreservesObjectMoveXSubpixel: Obj28_Walk/Fly call ObjectMoveAndFall/ObjectMove, which update full x_pos longword (s2.asm:24670-24691,30164-30199) */,
+            true /* animalObjectUsesRenderFlagDeleteBounds: Obj28 Walk/Fly delete when render_flags.on_screen is clear after BuildSprites width_pixels=8 (s2.asm:24570-24594,24670-24727) */);
 
     /** Sonic 3&K: spindash with same speed table as S2, dual collision paths, delayed look scroll,
      *  preserves high ground speed on input, elemental shields,
@@ -1494,7 +1516,9 @@ public record PhysicsFeatureSet(
             -0x100 /* mouthBubbleRiseVelocity: S3K AirCountdown uses y_vel=-$100 with MoveSprite2 (sonic3k.asm:33312,33347) */,
             true /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S3K SolidObjectFull runs once/object/frame. A land-and-jump-off frame keeps Status_OnObj|Status_InAir (RideObject_SetRide bset Status_OnObj sonic3k.asm:42033; Tails_Jump bset Status_InAir without clearing OnObj sonic3k.asm:28553-28554); the airborne-rider unseat (loc_1DC98 41016-41035 / loc_1DCF0 41066-41084) fires only on the NEXT frame. AIZ1 f2590 Tails-on-Spikes: ROM 0x0A, engine was 0x02. */,
             false /* levelBoundaryLockUsesScreenLockFlag: S3K has levelBoundaryRightStrict=true so the +64 extension is never added and this gate is never consulted */,
-            false /* advanceWaterLevelBeforePlayerPhysics: S3K Process_Sprites runs before Handle_Onscreen_Water_Height, so the player reads the previous frame's water level */);
+            false /* advanceWaterLevelBeforePlayerPhysics: S3K Process_Sprites runs before Handle_Onscreen_Water_Height, so the player reads the previous frame's water level */,
+            false /* animalObjectPreservesObjectMoveXSubpixel: S3K Obj_Animal uses MoveSprite/MoveSprite2, not S2 ObjectMoveAndFall/ObjectMove (sonic3k.asm:61104-61170) */,
+            false /* animalObjectUsesRenderFlagDeleteBounds: preserve current S3K animal lifetime baseline until validated */);
 
     /** Returns true when the game supports dual collision paths (primary/secondary). */
     public boolean hasDualCollisionPaths() {
