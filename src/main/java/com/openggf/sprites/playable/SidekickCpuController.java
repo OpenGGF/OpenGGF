@@ -2095,6 +2095,7 @@ public class SidekickCpuController {
                 && sidekick.isOnObject()
                 && !sidekick.getRolling()
                 && normalPushingGraceFrames >= sidekickCpuPushGraceMinimumFramesWhileRiding(ridingObject)
+                && normalPushingGraceFrames <= sidekickCpuPushGraceMaximumFramesWhileRiding(ridingObject)
                 && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
@@ -2770,6 +2771,16 @@ public class SidekickCpuController {
             if (provider.preservesSidekickCpuPushGraceWhileRiding(sidekick)) {
                 return RIDING_OBJECT_PUSH_BRIDGE_MIN_GRACE;
             }
+        }
+        return Integer.MAX_VALUE;
+    }
+
+    private int sidekickCpuPushGraceMaximumFramesWhileRiding(ObjectInstance ridingObject) {
+        if (!hasLiveRidingObject(ridingObject)) {
+            return Integer.MIN_VALUE;
+        }
+        if (ridingObject instanceof SolidObjectProvider provider) {
+            return provider.sidekickCpuPushGraceMaximumFramesWhileRiding(sidekick);
         }
         return Integer.MAX_VALUE;
     }

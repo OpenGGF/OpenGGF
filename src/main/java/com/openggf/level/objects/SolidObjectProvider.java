@@ -365,6 +365,17 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Maximum remaining push-grace frames for the CPU sidekick riding bridge.
+     * <p>
+     * Some object-local ROM visibility windows are late-tail handoffs rather
+     * than the whole grace span. The default leaves existing providers
+     * unconstrained.
+     */
+    default int sidekickCpuPushGraceMaximumFramesWhileRiding(PlayableEntity player) {
+        return Integer.MAX_VALUE;
+    }
+
+    /**
      * Whether the right edge of the full solid X window is inclusive.
      * <p>
      * Most engine objects keep the established exclusive bound. S3K horizontal

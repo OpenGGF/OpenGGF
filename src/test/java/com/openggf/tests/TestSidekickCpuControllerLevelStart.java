@@ -7,6 +7,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import org.junit.jupiter.api.AfterEach;
@@ -205,6 +206,169 @@ class TestSidekickCpuControllerLevelStart {
     }
 
     @Test
+    void s2StationaryObj36RidingPushGracePreservesDelayedRightAtOozFrontier() throws Exception {
+        TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        leader.setCentreX((short) 0x0C78);
+        leader.setCentreY((short) 0x0574);
+        seedLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT, false);
+
+        TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x0CE3);
+        tails.setCentreY((short) 0x0574);
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setRolling(false);
+        tails.setPushing(false);
+        tails.setDirection(Direction.LEFT);
+        tails.setGSpeed((short) 0);
+        tails.setXSpeed((short) 0);
+        tails.setLatchedSolidObject(0x36, new DummyRidingObject());
+
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        setNormalPushingGraceFrames(controller, 6);
+        controller.update(1785);
+
+        assertEquals("riding_push_grace", controller.getLatestNormalStepDiagnostics().followBranch(),
+                "Stationary Obj36 ride keeps the live SolidObject push bit visible to TailsCPU_Normal "
+                        + "for the zero-inertia OOZ handoff.");
+        assertFalse(controller.getInputLeft());
+        assertTrue(controller.getInputRight(),
+                "Delayed RIGHT should reach Tails_MoveRight's ordinary +$0C acceleration path");
+    }
+
+    @Test
+    void s2RightFacingStationaryObj36RidingPushGraceStillFallsThroughBeforeOozFlip() throws Exception {
+        TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        leader.setCentreX((short) 0x0C78);
+        leader.setCentreY((short) 0x0574);
+        seedLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT, false);
+
+        TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x0CE4);
+        tails.setCentreY((short) 0x0574);
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setRolling(false);
+        tails.setPushing(false);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0);
+        tails.setXSpeed((short) 0);
+        tails.setLatchedSolidObject(0x36, new DummyRidingObject());
+
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        setNormalPushingGraceFrames(controller, 9);
+        controller.update(1782);
+
+        assertEquals("follow_steering", controller.getLatestNormalStepDiagnostics().followBranch(),
+                "Right-facing stationary Obj36 state must not use the later left-facing push bridge.");
+        assertTrue(controller.getInputLeft());
+        assertFalse(controller.getInputRight());
+    }
+
+    @Test
+    void s2LowGracePositiveObj36RidingPushGraceContinuesOozAccelerationLadder() throws Exception {
+        TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        leader.setCentreX((short) 0x0C78);
+        leader.setCentreY((short) 0x0574);
+        seedLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT, false);
+
+        TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x0CE3);
+        tails.setCentreY((short) 0x0574);
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setRolling(false);
+        tails.setPushing(false);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x000C);
+        tails.setXSpeed((short) 0x000C);
+        tails.setLatchedSolidObject(0x36, new DummyRidingObject());
+
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        setNormalPushingGraceFrames(controller, 5);
+        controller.update(1786);
+
+        assertEquals("riding_push_grace", controller.getLatestNormalStepDiagnostics().followBranch(),
+                "Late low-grace Obj36 positive-speed samples keep delayed RIGHT visible after the zero-speed handoff.");
+        assertFalse(controller.getInputLeft());
+        assertTrue(controller.getInputRight());
+    }
+
+    @Test
+    void s2LateThirtySpeedObj36RidingPushGraceCompletesOozAccelerationLadder() throws Exception {
+        TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        leader.setCentreX((short) 0x0C78);
+        leader.setCentreY((short) 0x0574);
+        seedLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT, false);
+
+        TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x0CE3);
+        tails.setCentreY((short) 0x0574);
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setRolling(false);
+        tails.setPushing(false);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0030);
+        tails.setXSpeed((short) 0x0030);
+        tails.setLatchedSolidObject(0x36, new DummyRidingObject());
+
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        setNormalPushingGraceFrames(controller, 3);
+        controller.update(1789);
+
+        assertEquals("riding_push_grace", controller.getLatestNormalStepDiagnostics().followBranch(),
+                "The late branch-time $30 sample still sees Obj36's status byte before the bridge expires.");
+        assertFalse(controller.getInputLeft());
+        assertTrue(controller.getInputRight());
+    }
+
+    @Test
+    void s2WideLeftEdgeObj36LowSpeedPushGraceFallsThrough() throws Exception {
+        TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        leader.setCentreX((short) 0x113D);
+        leader.setCentreY((short) 0x026C);
+        seedLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT, false);
+
+        TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x115A);
+        tails.setCentreY((short) 0x0278);
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setRolling(false);
+        tails.setPushing(false);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0018);
+        tails.setXSpeed((short) 0x0018);
+        tails.setLatchedSolidObject(0x36, new DummyRidingObject(0x1170, 0x0298));
+
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        setNormalPushingGraceFrames(controller, 5);
+        controller.update(4224);
+
+        assertEquals("follow_steering", controller.getLatestNormalStepDiagnostics().followBranch(),
+                "Obj36 low-speed riding grace is only ROM-visible near the inner solid edge; "
+                        + "the wider left-edge contact should fall through to follow steering.");
+        assertTrue(controller.getInputLeft());
+        assertFalse(controller.getInputRight());
+    }
+
+    @Test
     void delayedDirectionalEdgeReportsCtrl2PressedLogical() {
         TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         leader.setCentreX((short) 0x100);
@@ -353,7 +517,15 @@ class TestSidekickCpuControllerLevelStart {
     }
 
     private static final class DummyRidingObject implements ObjectInstance, SolidObjectProvider {
-        private final ObjectSpawn spawn = new ObjectSpawn(0x0CF0, 0x0594, 0x36, 0, 0, false, 0x0594);
+        private final ObjectSpawn spawn;
+
+        private DummyRidingObject() {
+            this(0x0CF0, 0x0594);
+        }
+
+        private DummyRidingObject(int x, int y) {
+            this.spawn = new ObjectSpawn(x, y, 0x36, 0, 0, false, y);
+        }
 
         @Override
         public ObjectSpawn getSpawn() {
@@ -390,7 +562,34 @@ class TestSidekickCpuControllerLevelStart {
 
         @Override
         public int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity player) {
-            return player != null && player.getGSpeed() < 0 ? 11 : 14;
+            if (player == null) {
+                return Integer.MAX_VALUE;
+            }
+            int gSpeed = player.getGSpeed();
+            if (!usesInnerLeftEdgeSidekickPushGraceLadder(player)) {
+                return gSpeed < 0 ? 11 : 14;
+            }
+            return gSpeed == 0 && player.getXSpeed() == 0 && player.getDirection() == Direction.LEFT ? 6
+                    : gSpeed > 0 && gSpeed < 0x30 ? 2
+                    : gSpeed == 0x30 ? 2
+                    : gSpeed < 0 ? 11 : 14;
+        }
+
+        @Override
+        public int sidekickCpuPushGraceMaximumFramesWhileRiding(PlayableEntity player) {
+            if (player == null) {
+                return Integer.MIN_VALUE;
+            }
+            if (!usesInnerLeftEdgeSidekickPushGraceLadder(player)) {
+                return Integer.MAX_VALUE;
+            }
+            int gSpeed = player.getGSpeed();
+            return gSpeed == 0x30 ? 3
+                    : Integer.MAX_VALUE;
+        }
+
+        private boolean usesInnerLeftEdgeSidekickPushGraceLadder(PlayableEntity player) {
+            return player.getCentreX() - spawn.x() >= -0x10;
         }
     }
 }
