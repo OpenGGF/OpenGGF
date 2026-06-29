@@ -16,6 +16,40 @@ implementation, ROM citation, originating fix commit.
 
 ---
 
+## P0 — LoadChildObject child accidentally uses lowest-free slot/order
+
+**Symptom.** A boss or compound object is position-correct for most of a trace,
+then a child-to-parent report arrives one frame early or with a player target a
+few pixels off. Slot diagnostics show the child below its parent even though the
+ROM child runs after the parent.
+
+**Root cause.** Engine code used `spawnFreeChild` / lowest-free allocation for a
+ROM path that calls `LoadChildObject`. In S2, `LoadChildObject` allocates after
+the current SST slot, so the child should normally execute after the parent in
+the same `ExecuteObjects` pass. If the child is lower than the parent, it can
+run before the parent and make report bytes like `objoff_28` visible too early.
+If the parent also manually advances that managed child to model a
+body-before-child handoff, the managed child may need to defer its spawn-frame
+update so it does not consume init outside the parent-owned ordering.
+
+**What to check.** When porting a boss part, targeting sensor, projectile, lock
+marker, or other object spawned from a parent routine, verify whether the ROM
+uses `FindFreeObj` / `AllocateObject` or `LoadChildObject` /
+`AllocateObjectAfterCurrent`. Choose `spawnFreeChild` only for the former and
+`spawnChild` for the latter. If the parent keeps an explicit child reference and
+calls the child's `update` inline for ROM order, add focused coverage proving
+both the allocated slot and whether same-frame ObjectManager execution is
+suppressed.
+
+**ROM citation.** `docs/s2disasm/s2.asm:72978-72986` (`LoadChildObject` uses
+`AllocateObjectAfterCurrent`); DEZ Death Egg Robot sensor call site and report
+handoff at `docs/s2disasm/s2.asm:82785-82786,82792-82808,83478-83559`.
+
+**Originating commit.** `fix(s2): advance DEZ robot sensor slot/order trace
+frontier`.
+
+---
+
 ## P1 — Touch-response directional/state guards diverge from ROM
 
 **Symptom.** Object rejects a rolling / spindash / invincible touch under a

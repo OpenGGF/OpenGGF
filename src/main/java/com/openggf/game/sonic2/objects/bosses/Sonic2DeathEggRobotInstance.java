@@ -1464,7 +1464,11 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         if (player == null) return;
         int playerX = player.getCentreX();
         int playerY = player.getCentreY();
-        sensorChild = spawnFreeChild(() -> new SensorChild(this, playerX, playerY));
+        // ROM loc_3D744 calls LoadChildObject, whose helper uses
+        // AllocateObjectAfterCurrent (docs/s2disasm/s2.asm:82785-82786,
+        // 72978-72986). Keeping the sensor above the body slot preserves the
+        // body-before-sensor report handoff in loc_3D784/loc_3DE62.
+        sensorChild = spawnChild(() -> new SensorChild(this, playerX, playerY));
     }
 
     /** Report player X from targeting sensor */
@@ -2148,6 +2152,15 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             this.lockOnActive = false;
             this.lockOnPaletteFlip = false;
             this.lockOnFlashCounter = 0;
+        }
+
+        @Override
+        protected boolean skipsSameFrameUpdateAfterSpawn() {
+            // The Java body routine owns the sensor step while waiting in phase 6
+            // so the body can read objoff_28 before the sensor reports. Deferring
+            // the manager's spawn-frame update prevents the same managed child
+            // from consuming its init frame outside that parent-owned ordering.
+            return true;
         }
 
         @Override
