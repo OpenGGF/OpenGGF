@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -289,6 +290,30 @@ public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
     @Override
     public boolean carriesAirborneRiderAfterExitPlatform() {
         return true;
+    }
+
+    @Override
+    public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
+        // ROM Obj52 evaluates its solid helper at a different point depending on
+        // whether the player is already standing on the block:
+        //   - Routine 2 (MBlock_Platform, no rider): MBlock_Move runs FIRST, then
+        //     PlatformObject, so a fresh landing observes the block's POST-move
+        //     x_pos (docs/s1disasm/_incObj/52 Moving Blocks.asm:55-61).
+        //   - Routine 4 (MBlock_StandOn, rider): ExitPlatform runs FIRST (the
+        //     walk-off bounds check), then MBlock_Move, then MvSonicOnPtfm2 (same
+        //     file:64-83). ExitPlatform therefore observes the block's PRE-move
+        //     x_pos (docs/s1disasm/_incObj/sub ExitPlatform.asm:24-29).
+        // The engine moves the block in update() before the solid checkpoint, so
+        // the continued-ride bounds check must use the pre-update x to match
+        // ExitPlatform's pre-move evaluation; the fresh-landing PlatformObject
+        // check keeps the post-move x. Without the pre-move bounds for the rider,
+        // an oscillating block carried the rider one frame too long at the right
+        // edge (MZ2 f8661: ROM clears Status_OnObj at f8660 and goes airborne at
+        // f8661; the engine walked off one frame late and re-landed instead of
+        // ever going airborne). The carry delta (currentX - ridingX) is unchanged
+        // because it is still measured against the same pre-move ridingX.
+        ObjectManager objectManager = services().objectManager();
+        return objectManager != null && objectManager.isRidingObject(player, this);
     }
 
     @Override
