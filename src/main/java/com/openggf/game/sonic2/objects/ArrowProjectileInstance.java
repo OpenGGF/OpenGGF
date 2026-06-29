@@ -110,17 +110,14 @@ public class ArrowProjectileInstance extends AbstractObjectInstance
     }
 
     private boolean checkWallCollision() {
-        // Check wall collision in direction of movement
-        // ROM uses d3 offset of 8 pixels in front of arrow
+        // ROM Obj22_Arrow probes the opposite-side wall helper after ObjectMove:
+        // right-moving arrows call ObjCheckLeftWallDist with d3=-8, and left-moving
+        // arrows call ObjCheckRightWallDist with d3=8 (docs/s2disasm/s2.asm:51607-51623).
         if (facingLeft) {
-            // Check left wall (arrow moving left)
-            TerrainCheckResult result = ObjectTerrainUtils.checkLeftWallDist(currentX - 8, currentY);
-            // Collision when distance is negative (wall is past check point)
+            TerrainCheckResult result = ObjectTerrainUtils.checkRightWallDist(currentX + 8, currentY);
             return result.hasCollision() && result.distance() < 0;
         } else {
-            // Check right wall (arrow moving right)
-            TerrainCheckResult result = ObjectTerrainUtils.checkRightWallDist(currentX + 8, currentY);
-            // Collision when distance is negative (wall is past check point)
+            TerrainCheckResult result = ObjectTerrainUtils.checkLeftWallDist(currentX - 8, currentY);
             return result.hasCollision() && result.distance() < 0;
         }
     }
