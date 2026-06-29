@@ -26,7 +26,9 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.sprites.playable.SidekickCpuController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -664,6 +666,35 @@ class TestSonic2TriggerParticipation {
                 "Obj86 still suppresses movement while standing on the vertical flipper");
         assertFalse(tails.isTouchResponseSuppressedByObjectControl(),
                 "Preserved bit-0-to-6 control must keep touch response active");
+    }
+
+    @Test
+    void verticalFlipperLaunchReadsLogicalP1ButRawP2JumpPress() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        tails.setCpuControlled(true);
+        SidekickCpuController cpuController = new SidekickCpuController(tails, main);
+        tails.setCpuController(cpuController);
+
+        FlipperObjectInstance flipper = new FlipperObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x86, 0x00, 0, false, 0),
+                "Flipper");
+        Method hasVerticalLaunchPress = FlipperObjectInstance.class
+                .getDeclaredMethod("hasVerticalLaunchPress", AbstractPlayableSprite.class);
+        hasVerticalLaunchPress.setAccessible(true);
+
+        main.setLogicalInputState(false, false, false, false, true, true);
+        assertTrue((boolean) hasVerticalLaunchPress.invoke(flipper, main),
+                "Obj86 reads Ctrl_1_Logical's jump-press bit for the MainCharacter");
+
+        tails.setJumpInputPressed(true, true);
+        cpuController.setController2Input(0, 0);
+        assertFalse((boolean) hasVerticalLaunchPress.invoke(flipper, tails),
+                "CPU Tails' synthesized follow jump is not raw Ctrl_2 and must not trigger Obj86 launch");
+
+        cpuController.setController2Input(0, AbstractPlayableSprite.INPUT_JUMP);
+        assertTrue((boolean) hasVerticalLaunchPress.invoke(flipper, tails),
+                "Obj86 reads raw Ctrl_2 jump press for the Sidekick");
     }
 
     @Test

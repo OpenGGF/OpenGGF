@@ -206,7 +206,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
                     // loc_2B288 sets the SHARED objoff_38 trigger).  ROM tests
                     // d5 & (A|B|C): the leader's d5 is Ctrl_1_Logical, the
                     // sidekick's is raw Ctrl_2 (s2.asm:58288/58293,58333).
-                    if (player.isJumpPressed()) {
+                    if (hasVerticalLaunchPress(player)) {
                         verticalLaunchTriggered = true;
                     } else {
                         // Slide player based on animation frame (loc_2B254)
@@ -225,6 +225,20 @@ public class FlipperObjectInstance extends BoxObjectInstance
                 }
             }
         }
+    }
+
+    private boolean hasVerticalLaunchPress(AbstractPlayableSprite player) {
+        if (player == null) {
+            return false;
+        }
+        // Obj86 reads the low byte of Ctrl_1_Logical for the MainCharacter and
+        // raw Ctrl_2 for the Sidekick (s2.asm:58345-58350,58390). CPU Tails'
+        // follow jump is written to Ctrl_2_Logical, never raw Ctrl_2, so it must
+        // not trigger the shared objoff_38 launch.
+        if (player.isCpuControlled()) {
+            return player.isRawControllerJumpJustPressed();
+        }
+        return player.isLogicalJumpPressActive();
     }
 
     private void applySkippedRideObjectRollClear(AbstractPlayableSprite player, PlayerSolidContactResult result) {

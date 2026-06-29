@@ -2561,6 +2561,36 @@ the first visible X was already `$0724` rather than the shooter X `$0720`.
 
 ---
 
+## P62 - Native sidekick checks may read raw Ctrl_2, not logical CPU follow input
+
+**Pattern.** Some S2 object routines inspect the MainCharacter through
+`Ctrl_1_Logical` but inspect the Sidekick through raw `Ctrl_2` before masking
+button press bits. CPU Tails' autonomous follow jump is written to the logical
+sidekick input path; it is not a raw player-2 pad press.
+
+**Engine symptom.** A CPU sidekick triggers an object action that the ROM only
+allows for a physical P2 input. In CNZ2, Obj86's vertical flipper launched
+Tails from a synthesized follow jump, while ROM continued the flipper slide
+because raw `Ctrl_2` had no A/B/C press edge.
+
+**What to check / fix.** When porting an object that has separate
+MainCharacter and Sidekick input branches:
+1. Read whether the Sidekick branch loads `Ctrl_2`, `Ctrl_2_Logical`, or an
+   object-local control byte.
+2. Use raw P2 helpers for `Ctrl_2` branches; do not treat CPU-generated follow
+   jumps as raw P2 input.
+3. Keep the distinction object-local unless the ROM routine is a shared player
+   control routine. Do not patch by zone, route, frame, or trace name.
+
+**ROM citation.** Obj86 upward flipper input selection:
+`docs/s2disasm/s2.asm:58345-58350`; low-byte A/B/C press mask:
+`docs/s2disasm/s2.asm:58390`.
+
+**Originating commit.** `<pending>` S2 CNZ2 Obj86 raw-P2 launch gate:
+`TestS2Cnz2LevelSelectTraceReplay` advances f4644 -> f4730.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
