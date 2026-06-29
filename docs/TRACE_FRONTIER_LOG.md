@@ -34,9 +34,49 @@ branch-local measurements.
 | `TestS2CpzLevelSelectTraceReplay` | f3871 `y_speed` expected `0x0638`, actual `0x0000`; 154 errors |
 | `TestS2Mcz2LevelSelectTraceReplay` | f4485 `tails_x` expected `0x0EAB`, actual `0x0EAC`; 543 errors |
 | `TestS2Cnz2LevelSelectTraceReplay` | f4632 `tails_y` expected `0x02B8`, actual `0x02B4`; 955 errors |
-| `TestS2DezEndingLevelSelectTraceReplay` | f5952 `y_speed` expected `0x0098`, actual `-0098`; 46 errors |
+| `TestS2DezEndingLevelSelectTraceReplay` | f7503 `y_speed` expected `-0450`, actual `-03C8`; 11 errors |
 | `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
 | `TestS2MtzLevelSelectTraceReplay` | f4835 `tails_x` expected `0x16D6`, actual `0x16D7`; 845 errors |
+
+## 2026-06-29 - S2 DEZ Death Egg Robot sensor after-current slot/order - ENGINE FIX (DEZ f5952 -> f7503)
+
+- Branch/worktree context: `bugfix/ai-trace-s2-dez-ending-r4` in
+  `.worktrees/trace-s2-dez-ending-r4`, based on
+  `bugfix/ai-s2-trace-develop`.
+- Frontier movement:
+  `TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace` advances from
+  f5952 / 46 errors (`y_speed` expected `0x0098`, actual `-0098`) to f7503 /
+  11 errors (`y_speed` expected `-0450`, actual `-03C8`).
+- Root/fix: ROM `loc_3D744` spawns `ChildObjC7_TargettingSensor` via
+  `LoadChildObject`, and `LoadChildObject` allocates after the current SST slot
+  (`docs/s2disasm/s2.asm:82785-82786,72978-72986`). The engine used
+  `spawnFreeChild`, so later DEZ cycles could put the sensor below the body
+  (observed engine final cycle sensor slot 16 vs body slot 17). A lower-slot
+  sensor runs before the body in `ExecuteObjects`, so `loc_3DE62`'s report is
+  visible to the body before the body models `loc_3D784`'s start-of-frame
+  `objoff_28` read. The sensor now uses after-current allocation. Because the
+  Java body phase owns the sensor step while waiting, the managed child also
+  defers its ObjectManager spawn-frame update so the parent-owned ordering does
+  not consume the sensor init routine outside the body/sensor handoff.
+- Evidence: ROM aux/PC-probe data for the relevant cycles shows sensor spawns
+  and lock targets at f3722 -> `0x080E`, f4873 -> `0x0831`, and f5642 ->
+  `0x080C` (final lock child appears in ROM slot 29 while the sensor is in slot
+  22, above the body in slot 17). Clean engine baseline had spawns
+  f3721/f4871/f5639 and final target `0x080E`; with this fix the engine probe
+  matches the ROM cadence and targets at f3722/f4873/f5642 and
+  `0x080E`/`0x0831`/`0x080C`.
+- Scope: object-local to S2 DEZ ObjC7; no trace data hydrates engine state, and
+  there is no zone/route/frame carve-out.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.TestDEZDeathEggRobot#targetingSensorAllocatesAfterBodyAndDefersSpawnFrameUpdate" "-DfailIfNoTests=false" test`
+    -> selected focused guard passed (MSE also prints the expected-red DEZ
+    replay summary from generated reports).
+  - `mvn "-Dtest=com.openggf.tests.TestDEZDeathEggRobot" "-DfailIfNoTests=false" test`
+    -> selected focused DEZ robot suite passed.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    -> expected-red at f7503 / 11 errors, 0 warnings.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    -> 6 passed, 0 failed, 0 errors, 0 skipped.
 
 ## 2026-06-29 - S2 integration sweep after CPZ Obj1E release/handoff split (6 green, 13 expected-red)
 
