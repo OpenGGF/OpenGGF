@@ -6,6 +6,52 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 integration sweep after CNZ1 Obj86/control-latch merge (6 green, 13 expected-red)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop` at merge commit `d74a99484`, after merging
+  `bugfix/ai-trace-s2-cnz1-r4`.
+- Commands:
+  - Sidekick parity:
+    `cmd /c "mvn.cmd -q -Dmse=relaxed ""-Dtest=TestSidekickCpuDespawnParity,TestSidekickCpuFollowParity"" test"`
+    exited 0 for the requested tests. MSE echoed stale trace failures from the
+    target report directory, but the command succeeded.
+  - Focused S2 guard:
+    `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestS2MczLevelSelectTraceReplay#replayMatchesTrace,TestS2SczLevelSelectTraceReplay#replayMatchesTrace,TestS2WfzLevelSelectTraceReplay#replayMatchesTrace"" test"`.
+  - Full S2 sweep:
+    `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2*TraceReplay"" test"`.
+  - Cross-game sanity:
+    `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen"" ""-Dsonic1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen"" ""-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen"" ""-Dsonic3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen"" ""-Dtest=TestS1Ghz2CompleteRunTraceReplay#replayMatchesTrace,TestS1Syz2CompleteRunTraceReplay#replayMatchesTrace,TestS1Sbz3CompleteRunTraceReplay#replayMatchesTrace,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils"" test"`.
+- Result: all 19 concrete S2 trace classes ran: 6 green, 13 expected-red.
+  CNZ1 is now green; CNZ2 stays at f4632 with fewer total errors; OOZ2 holds
+  the accepted f1873 frontier. No S2 green guard regressed.
+- Cross-game note: the sanity command failed only on
+  `TestS1Sbz3CompleteRunTraceReplay` f5259 / 10 errors. A temporary pre-CNZ
+  worktree at `efb19cbbb` reproduced the exact same S1 SBZ3 failure, so it is
+  pre-existing and not introduced by the CNZ merge. The requested S1 GHZ2/SYZ2
+  traces and S3K must-keep tests passed.
+- Green traces: `TestS2ArzLevelSelectTraceReplay`,
+  `TestS2CnzLevelSelectTraceReplay`, `TestS2Ehz1TraceReplay`,
+  `TestS2MczLevelSelectTraceReplay`, `TestS2SczLevelSelectTraceReplay`,
+  `TestS2WfzLevelSelectTraceReplay`.
+- Current red frontiers:
+
+| Trace | First error |
+|---|---|
+| `TestS2Arz2LevelSelectTraceReplay` | f595 `obj_extra_s18_x` expected absent, actual `0x0675`; 3171 errors |
+| `TestS2MtzLevelSelectTraceReplay` | f1267 `y` expected `0x00AC`, actual `0x00A4`; 1092 errors |
+| `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
+| `TestS2Ooz2LevelSelectTraceReplay` | f1873 `x` expected `0x04A6`, actual `0x04A2`; 1072 errors |
+| `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
+| `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
+| `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1299 errors |
+| `TestS2Htz2LevelSelectTraceReplay` | f3315 `tails_x_speed` expected `0x01E8`, actual `0x00E8`; 1059 errors |
+| `TestS2CpzLevelSelectTraceReplay` | f3544 `y` expected `0x0510`, actual `0x050B`; 350 errors |
+| `TestS2Mcz2LevelSelectTraceReplay` | f4485 `tails_x` expected `0x0EAB`, actual `0x0EAC`; 543 errors |
+| `TestS2Cnz2LevelSelectTraceReplay` | f4632 `tails_y` expected `0x02B8`, actual `0x02B4`; 955 errors |
+| `TestS2DezEndingLevelSelectTraceReplay` | f5952 `y_speed` expected `0x0098`, actual `-0098`; 46 errors |
+| `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
+
 ## 2026-06-29 - S2 CNZ1 Obj86/control-latch parity - ENGINE FIX (CNZ1 f4024 -> GREEN; sweep 6 green, 13 expected-red)
 
 - Scope: branch `bugfix/ai-trace-s2-cnz1-r4` in worktree

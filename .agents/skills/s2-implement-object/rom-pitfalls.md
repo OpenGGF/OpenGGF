@@ -2076,9 +2076,11 @@ Point Pokey writes `#$81` to player `obj_control`); `docs/s2disasm/s2.asm:58746-
 (ObjD6 release path clears object-control state without touching global
 `Control_Locked`).
 
-**Originating commit.** `<pending>` S2 CNZ1 Point Pokey capture no longer
+**Originating commits.** `<pending>` S2 CNZ1 Point Pokey capture no longer
 maps player `obj_control` to global control lock; CNZ1 frontier advances from
-frame 1637 to frame 3675 after the preceding Tails live-push fix.
+frame 1637 to frame 3675 after the preceding Tails live-push fix. `8e946a794`
+applies the same rule to Obj86 flippers: per-player `obj_control=1` suppresses
+movement without freezing global logical input, greening the CNZ1 trace.
 
 ---
 
