@@ -96,6 +96,8 @@ public class TestS2Htz1Headless {
         int baseY = sprite.getY();
         int maxY = baseY;
         boolean detectedClip = false;
+        boolean observedDropOnFloorAirRelease = false;
+        boolean wasOnObject = sprite.isOnObject();
 
         // Run 1200 frames -- enough for full oscillation cycles.
         // Platform rises (Sonic rides up to ~Y=1337) then descends.
@@ -105,6 +107,10 @@ public class TestS2Htz1Headless {
 
             int y = sprite.getY();
             if (y > maxY) maxY = y;
+            if (wasOnObject && !sprite.isOnObject() && sprite.getAir()) {
+                observedDropOnFloorAirRelease = true;
+            }
+            wasOnObject = sprite.isOnObject();
 
             // Tolerance: 31px accounts for DropOnFloor detach timing with properly
             // advancing oscillation. Previously oscillation was stuck in headless mode
@@ -117,6 +123,8 @@ public class TestS2Htz1Headless {
 
         assertFalse(detectedClip, "Sonic should not clip through floor when riding descending platform "
                 + "(Y should stay <= " + (baseY + 30) + " but reached " + maxY + ")");
+        assertTrue(observedDropOnFloorAirRelease,
+                "ROM DropOnFloor clears OnObj and sets InAir when ChkFloorEdge2 distance is <= 0");
     }
 
     /**
@@ -798,5 +806,4 @@ public class TestS2Htz1Headless {
                 .orElseThrow(() -> new AssertionError("Expected HTZ runtime state to be installed"));
     }
 }
-
 

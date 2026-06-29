@@ -1476,6 +1476,21 @@ final class ObjectSolidContactController {
             // see markStandingBitEstablishedThisFrame).
             markStandingBitEstablishedThisFrame(player, instance, -1);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
+            if (solidProfile.dropOnFloor()) {
+                TerrainCheckResult floorCheck = ObjectTerrainUtils.checkFloorDist(
+                        player.getCentreX(), player.getCentreY(), player.getYRadius());
+                if (floorCheck.distance() <= 0) {
+                    ridingStates.remove(player);
+                    clearObjectStandingBit(player, instance);
+                    player.setOnObject(false);
+                    // Obj30 calls DropOnFloor immediately after SolidObject_Always;
+                    // if ChkFloorEdge2 reports zero/negative distance, ROM clears
+                    // OnObj and sets InAir for the same frame
+                    // (docs/s2disasm/s2.asm:49598-49604, 36114-36128).
+                    player.setAir(true);
+                    return null;
+                }
+            }
             inlineSupportedPlayers.add(player);
         }
         return contact;
@@ -1621,10 +1636,11 @@ final class ObjectSolidContactController {
                         player.getCentreX(), player.getCentreY(), player.getYRadius());
                 if (floorCheck.distance() <= 0) {
                     ridingStates.remove(player);
+                    clearObjectStandingBit(player, instance, ridingPieceIndex);
                     player.setOnObject(false);
-                    // Inline solid execution runs after terrain resolution for the frame.
-                    // Releasing the object here should not force airborne state; preserve
-                    // whatever the terrain/object pipeline already established.
+                    // ROM DropOnFloor clears OnObj and sets InAir when ChkFloorEdge2
+                    // reports zero or negative distance (docs/s2disasm/s2.asm:36123-36128).
+                    player.setAir(true);
                     return null;
                 }
             }
