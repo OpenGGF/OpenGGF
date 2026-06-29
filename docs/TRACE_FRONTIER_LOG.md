@@ -20776,3 +20776,48 @@ which throws silently on the Windows JVM).
      per-frame slot position/speed diverges from ROM and validates the
      `(Vint_runcount+3)` seed fix.
    - Detail: memory `cnz1-f1691-slotmachine-timing.md`.
+
+### 2026-06-29 -- S2 CPZ1 Obj1E spin-tube capture/release: f3544 -> f3723
+
+Worktree `bugfix/ai-trace-s2-cpz1-r4` is based on exact parent
+`eae8f29c8491b36f3ec58d0211f1df0ca4726ae3`. The integration worktree named in
+the handoff had already drifted to `a5832907e67ee6b7c8230e8b8a5fcf96b4f93087`,
+so the regression baseline below uses a temporary detached checkout of the exact
+parent instead.
+
+Root fixed: CPZ Obj1E capture previously called `setRolling(true)`, which applied
+engine rolling radii and shifted Sonic upward before the f3544 tube exit. ROM
+`loc_22688` writes `anim(a1)=AniIDSonAni_Roll`, sets object control, air, inertia,
+and zeroes velocity, but does not set `status.player.rolling` or write
+`y_radius(a1)` (`docs/s2disasm/s2.asm:48612-48614`). Obj1E release also used a
+plain centre-Y setter; ROM `loc_227A6`/`loc_22858` use `andi.w #$7FF,y_pos(a1)`,
+which masks only the native pixel word and leaves `y_sub` intact. Engine release
+now preserves that subpixel word and defers object-control release through the
+current frame because Obj1E runs after the player slot; the same-frame physics
+step should not run after `loc_227A6` clears `obj_control`.
+
+Result:
+- `TestS2CpzLevelSelectTraceReplay#replayMatchesTrace`: f3544 / 350 errors
+  (`y` expected `0x0510`, actual `0x050B`; rolling expected 0 actual 1) ->
+  f3723 / 354 errors (`x` expected `0x24E0`, actual `0x24D8`; `y` expected
+  `0x0330`, actual `0x0333`; `y_speed` expected `0x0000`, actual `0x0038`).
+- `TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace`: f2889 holds, error count
+  improves 1299 -> 1271.
+- Focused Obj1E unit coverage now asserts capture forces only animation, and
+  release preserves `y_sub` plus current-frame movement suppression.
+
+Remaining CPZ1 root is downstream. Temporary probes showed Obj1E itself reaches
+the ROM position through f3722, and on f3723 the engine's object-move/fall step
+first produces the ROM `x/y` before later collision/solid handling shifts Sonic
+to `0x24D8,0x0333`. `loc_22858` does not clear `obj_control`, so the next fix
+needs a more precise main-path handoff / neighboring Obj1E / solid-contact
+investigation rather than a broad player-physics change.
+
+Verification:
+- Exact-parent full `TestS2*TraceReplay` baseline with
+  `JAVA_TOOL_OPTIONS=-Dorg.lwjgl.librarypath=C:\Users\farre\.lwjgl\3.3.3+5\x64`:
+  19 run, 6 passed, 13 failed, 0 errors.
+- Candidate full `TestS2*TraceReplay`: 19 run, 6 passed, 13 failed, 0 errors;
+  only CPZ1/CPZ2 changed relative to the exact parent. ARZ2, CNZ2, DEZ, HTZ1,
+  HTZ2, MCZ2, MTZ1, MTZ2, MTZ3, OOZ1, and OOZ2 first-error frontiers/counts match
+  the exact-parent baseline.
