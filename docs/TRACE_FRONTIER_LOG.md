@@ -6,6 +6,37 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 integration sweep after OOZ2 Obj43 merge (5 green, 14 expected-red)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop` at merge commit `48462cf6d`, after merging
+  `bugfix/ai-trace-s2-ooz2-r5`.
+- Command:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=TestS2*TraceReplay"" test"`.
+- Result: all 19 concrete S2 trace classes ran: 5 green, 14 expected-red. No
+  green guard regressed; WFZ remains green. OOZ2 advances from f1751 to f1873.
+- Green traces: `TestS2ArzLevelSelectTraceReplay`, `TestS2Ehz1TraceReplay`,
+  `TestS2MczLevelSelectTraceReplay`, `TestS2SczLevelSelectTraceReplay`,
+  `TestS2WfzLevelSelectTraceReplay`.
+- Current red frontiers:
+
+| Trace | First error |
+|---|---|
+| `TestS2Arz2LevelSelectTraceReplay` | f595 `obj_extra_s18_x` expected absent, actual `0x0675`; 3171 errors |
+| `TestS2MtzLevelSelectTraceReplay` | f1267 `y` expected `0x00AC`, actual `0x00A4`; 1092 errors |
+| `TestS2Mtz2LevelSelectTraceReplay` | f1277 `tails_x` expected `0x047D`, actual `0x047F`; 3385 errors |
+| `TestS2Ooz2LevelSelectTraceReplay` | f1873 `x` expected `0x04A6`, actual `0x04A2`; 1072 errors |
+| `TestS2OozLevelSelectTraceReplay` | f1784 `tails_x_speed` expected `0x000C`, actual `-000C`; 1256 errors |
+| `TestS2Mtz3LevelSelectTraceReplay` | f1973 `tails_g_speed` expected `0x0000`, actual `0x03C1`; 3705 errors |
+| `TestS2Cpz2LevelSelectTraceReplay` | f2889 `tails_x` expected `0x10E8`, actual `0x10F0`; 1299 errors |
+| `TestS2Htz2LevelSelectTraceReplay` | f3315 `tails_x_speed` expected `0x01E8`, actual `0x00E8`; 1059 errors |
+| `TestS2CpzLevelSelectTraceReplay` | f3544 `y` expected `0x0510`, actual `0x050B`; 350 errors |
+| `TestS2CnzLevelSelectTraceReplay` | f4024 `tails_cpu_ctrl2_held` expected `0x0010`, actual `0x0000`; 30 errors |
+| `TestS2Mcz2LevelSelectTraceReplay` | f4485 `tails_x` expected `0x0EAB`, actual `0x0EAC`; 543 errors |
+| `TestS2Cnz2LevelSelectTraceReplay` | f4632 `tails_y` expected `0x02B8`, actual `0x02B4`; 1001 errors |
+| `TestS2DezEndingLevelSelectTraceReplay` | f5952 `y_speed` expected `0x0098`, actual `-0098`; 46 errors |
+| `TestS2HtzLevelSelectTraceReplay` | f6114 `air` expected `1`, actual `0`; 451 errors |
+
 ## 2026-06-29 - S2 OOZ2 Obj43 unsigned travel-span fix - ENGINE FIX (Obj43 + focused test, OOZ2 f1751 -> f1873)
 
 - Worktree/branch: `.worktrees/trace-s2-ooz2-r5` /
