@@ -120,6 +120,7 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
     public int getY() {
         return baseY;
     }
+
     // MultiPieceSolidProvider implementation
 
     @Override
@@ -214,16 +215,19 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
      * States 0, 4: Wait for player contact on TOP, then 30-frame countdown.
      */
     private void updateWaitTop(boolean touchTop) {
-        if (touchTop && timer == 0) {
-            timer = TOP_CONTACT_DELAY;
+        if (timer == 0) {
+            if (touchTop) {
+                // loc_292C8 writes objoff_2C=$1E and returns; loc_292E0
+                // decrements only on later frames where the timer was already set.
+                timer = TOP_CONTACT_DELAY;
+            }
+            return;
         }
 
-        if (timer > 0) {
-            timer--;
-            if (timer == 0) {
-                // Transition to rise state
-                state++;
-            }
+        timer--;
+        if (timer == 0) {
+            // Transition to rise state
+            state++;
         }
     }
 

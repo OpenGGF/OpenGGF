@@ -6,6 +6,35 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S2 CPZ1 Obj78 top-trigger timer frontier move (f4194 -> f4225)
+
+- Worktree/branch: `.worktrees/trace-s2-cpz-r9` /
+  `bugfix/ai-trace-s2-cpz-r9`, fast-forwarded to
+  `bugfix/ai-s2-trace-develop` at `dbd6be0a3`.
+- Baseline reproduction:
+  `mvn "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: CPZ1 failed at f4194 / 356 errors (`y` expected `0x032C`,
+  actual `0x032D`); CPZ2 failed at f2889 / 1222 errors (`tails_x`
+  expected `0x10E8`, actual `0x10F0`).
+- Evidence/fix: Obj78 top-contact wait code sets `objoff_2C=$1E` and
+  returns from `loc_292C8`; the decrement/advance path is the separate
+  `loc_292E0` branch reached only on later frames
+  (`docs/s2disasm/s2.asm:56048-56062`). The engine decremented on the trigger
+  frame, moving the staircase one frame early and producing the one-pixel
+  CPZ1 rider/camera Y mismatch.
+- Focused object coverage:
+  `mvn "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=com.openggf.game.sonic2.objects.TestCpzStaircaseWallCollision#topContactTimerDoesNotDecrementOnTriggerFrame,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: focused Obj78 timer test passed; CPZ1 advanced to f4225 / 264
+  errors (`tails_x_speed` expected `0x0024`, actual `0x0018`); CPZ2 held
+  first error f2889, with total errors 1222 -> 1238.
+- Green guard:
+  `mvn "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: passed, no current S2 green trace regressed.
+- New CPZ1 frontier: f4225 `tails_x_speed` expected `0x0024`, actual
+  `0x0018`; context shows ROM keeps Tails on Obj78/Obj1E support while the
+  engine drops Tails to airborne/rolling. Treat this as a sidekick support /
+  Obj78 standing-state frontier, not the one-frame staircase descent fixed here.
+
 ## 2026-06-29 - S2 integration sweep after MTZ2 Obj70 merge (7 green, 12 expected-red)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
