@@ -42,7 +42,7 @@ import java.util.logging.Logger;
  * 16 fragments and spawns an invisible child object that tracks the player and
  * launches them toward the nearest LauncherBall (Object 0x48).
  * <p>
- * <b>Disassembly Reference:</b> s2.asm lines 50465-50742 (Obj3D)
+ * <b>Disassembly Reference:</b> docs/s2disasm/s2.asm Obj3D (around 50934-51211)
  * <p>
  * <h3>Subtypes</h3>
  * <table border="1">
@@ -471,6 +471,26 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     @Override
     public boolean hasMonitorSolidity() {
         return false;
+    }
+
+    @Override
+    public boolean landingPreservesRolling(PlayableEntity playerEntity) {
+        // Obj3D_Main calls JmpTo7_SolidObject, then loc_24EB8 restores the
+        // rolling bit and ball radii itself before forcing the player airborne
+        // (docs/s2disasm/s2.asm:50981, 51003-51017). It never runs
+        // Sonic_ResetOnFloor, so the SolidObject_Landed y_pos must survive
+        // without the generic roll-clear's stand-radius lift.
+        return true;
+    }
+
+    @Override
+    public int getTopLandingSnapAdjustment(PlayableEntity playerEntity, int solidTopYRadius) {
+        // The shared S2 full-solid overlap keeps the standing radius on the
+        // bottom half, but Obj3D's break-frame top landing is immediately
+        // followed by loc_24EB8's explicit roll-radius restore. Move the
+        // SolidObject_Landed snap back to the live rolling y_radius surface
+        // before that object-local launch state runs.
+        return Math.max(0, solidTopYRadius - playerEntity.getYRadius());
     }
 
     // ========================================================================

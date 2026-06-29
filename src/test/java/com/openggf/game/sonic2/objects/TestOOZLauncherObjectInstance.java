@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -44,9 +45,64 @@ class TestOOZLauncherObjectInstance {
         assertTrue(extraSidekick.getAir());
     }
 
+    @Test
+    void solidLandingKeepsRollingRadiusForBreakFrame() {
+        OOZLauncherObjectInstance launcher = newLauncher();
+        TestablePlayableSprite player = player("sonic");
+        player.setRolling(true);
+
+        assertTrue(launcher.landingPreservesRolling(player),
+                "Obj3D loc_24EB8 sets roll radii after SolidObject_Landed and never runs Sonic_ResetOnFloor");
+        assertEquals(player.getStandYRadius() - player.getYRadius(),
+                launcher.getTopLandingSnapAdjustment(player, player.getStandYRadius()),
+                "Obj3D's break-frame landing uses the live roll radius, not the standing-radius overlap surface");
+    }
+
+    @Test
+    void horizontalLauncherCapturesPlayerInWindowOnFirstScan() {
+        OOZLauncherObjectInstance launcher = newLauncherAt(0x1140, 0x0270, 1);
+        TestablePlayableSprite player = player("sonic");
+        player.setAnimationId(Sonic2AnimationIds.ROLL);
+        player.setRolling(true);
+        player.setYSpeed((short) 0x0418);
+        launcher.setServices(new QueryOnlyPlayerServices(player, List.of()));
+
+        launcher.update(0, player);
+        launcher.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+        player.setCentreX((short) 0x114C);
+        player.setCentreY((short) 0x0263);
+        launcher.update(1, player);
+
+        assertTrue(player.isObjectControlled());
+        assertTrue(player.isOnObject());
+        assertEquals(0x1140, player.getCentreX() & 0xFFFF);
+        assertEquals((short) -0x0800, player.getYSpeed());
+    }
+
+    @Test
+    void horizontalLauncherDeletesIfNeitherPlayerEntersWindow() {
+        OOZLauncherObjectInstance launcher = newLauncherAt(0x1140, 0x0270, 1);
+        TestablePlayableSprite player = player("sonic");
+        player.setAnimationId(Sonic2AnimationIds.ROLL);
+        player.setRolling(true);
+        player.setYSpeed((short) 0x0418);
+        launcher.setServices(new QueryOnlyPlayerServices(player, List.of()));
+
+        launcher.update(0, player);
+        launcher.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+        launcher.update(1, player);
+
+        assertFalse(launcher.isPersistent());
+        assertFalse(player.isObjectControlled());
+    }
+
     private static OOZLauncherObjectInstance newLauncher() {
+        return newLauncherAt(0x0100, 0x0100, 0);
+    }
+
+    private static OOZLauncherObjectInstance newLauncherAt(int x, int y, int subtype) {
         return new OOZLauncherObjectInstance(
-                new ObjectSpawn(0x0100, 0x0100, Sonic2ObjectIds.OOZ_LAUNCHER, 0, 0, false, 0),
+                new ObjectSpawn(x, y, Sonic2ObjectIds.OOZ_LAUNCHER, subtype, 0, false, 0),
                 "OOZLauncher");
     }
 
