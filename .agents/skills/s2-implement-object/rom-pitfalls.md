@@ -2526,6 +2526,41 @@ starts by testing `status(a0) & pushing_mask` or `bclr #pN_pushing_bit,status(a0
 
 ---
 
+## P61 - AnimateSprite `$FC` advances routine before child allocation, and higher-slot children execute same frame
+
+**Pattern.** Some animation scripts use `$FC` as a routine-control opcode, not
+as an immediate callback. S2 `AnimateSprite` handles `$FC` by adding 2 to
+`routine(a0)`, clearing `anim_frame_duration(a0)`, advancing `anim_frame(a0)`,
+and returning. The target routine runs on the object's next dispatch. If that
+routine allocates a child into a higher SST slot, the child can still execute
+later in the same `RunObjects` pass.
+
+**Engine symptom.** A projectile or effect appears in the correct slot family
+but one or more frames too early, or appears at its spawn coordinates instead
+of after its init routine's first movement. In ARZ2, Obj22's arrow occupied slot
+`0x41` at f694 while the ROM did not allocate it until f696; when the ROM did
+allocate it, `Obj22_Arrow_Init` fell through into `Obj22_Arrow/ObjectMove`, so
+the first visible X was already `$0724` rather than the shooter X `$0720`.
+
+**What to check / fix.** When an animation script contains `$FC`:
+1. Model `$FC` as a pending routine dispatch, not as same-call object logic.
+2. Let the destination routine call `AnimateSprite` again if the ROM routine
+   does so after returning to the main routine.
+3. Do not add a blanket first-update skip for children allocated by that
+   destination routine. If `AllocateObject` puts the child in a higher slot,
+   it should execute later in the same object pass; if it lands in a lower or
+   already-processed slot, the manager's slot-order rules should defer it.
+
+**ROM citation.** Generic `$FC` handling:
+`docs/s2disasm/s2.asm:30481-30487`. Obj22 shoot routine and arrow init/move:
+`docs/s2disasm/s2.asm:51570-51607`. Obj22 firing script:
+`docs/s2disasm/s2.asm:51630-51638`.
+
+**Originating commit.** `fix: advance S2 ARZ2 arrow shooter routine timing`
+(`TestS2Arz2LevelSelectTraceReplay` advances f694 -> f723).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

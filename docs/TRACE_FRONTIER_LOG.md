@@ -144,6 +144,55 @@ branch-local measurements.
   push/ride path at f1784; OOZ2 is now f2484, likely a later post-Obj45
   low-speed ground/inertia handoff rather than the previous release strength
   mismatch.
+## 2026-06-29 - S2 ARZ2 Obj22 `$FC` routine timing - ENGINE FIX (ARZ2 f694 -> f723)
+
+- Scope: branch `bugfix/ai-trace-s2-arz2-r9` in worktree
+  `.worktrees/trace-s2-arz2-r9`, branched from
+  `bugfix/ai-s2-trace-develop` at `c2cc1fb478`. Comparison-only; no zone,
+  route, frame, or known-failing-trace carve-outs.
+- Diagnostic evidence: the previous f694 report named `obj_extra_s41_x`, where
+  `s41` is the hex slot label for SST slot `0x41` (decimal 65), not decimal
+  slot 41. A runtime dump at f694 showed slot 65 was an
+  `ArrowProjectileInstance` at `0x0720,0x04F8`, while the trace aux stream has
+  no slot 65 allocation until:
+  `{"frame":696,"event":"object_appeared","slot":65,"object_type":"0x22","x":"0x0724","y":"0x04F8"}`.
+  The f696 `slot_dump` then includes `[65,"0x22"]`.
+- Root/fix: Obj22's firing animation script is
+  `7, 3, 4, $FC, 4, 3, 1, $FD, 0`
+  (`docs/s2disasm/s2.asm:51630-51638`). Generic `AnimateSprite` handles `$FC`
+  by incrementing `routine(a0)`, clearing `anim_frame_duration(a0)`, advancing
+  `anim_frame(a0)`, and returning (`docs/s2disasm/s2.asm:30481-30487`); it
+  does not allocate the arrow immediately. The next object dispatch runs
+  `Obj22_ShootArrow`, allocates the child, returns the parent to main, and
+  calls `AnimateSprite` again (`docs/s2disasm/s2.asm:51570-51587`). The child
+  routine `Obj22_Arrow_Init` falls through into `Obj22_Arrow/ObjectMove` on
+  the allocation frame (`docs/s2disasm/s2.asm:51590-51607`), so the first ROM
+  position is already `0x0724`. The engine now models `$FC` as a pending
+  routine dispatch and allows the higher-slot arrow child to execute on its
+  allocation frame instead of reserving slot `0x41` early with a skipped first
+  update.
+- Focused coverage:
+  `TestS2ObjectOccupancyOracle#arz2ArrowProjectileAllocatesInRomSlot65OnRomFrame696`
+  asserts slot 65 is absent at f694/f695 and present at f696 with the ROM first
+  moved X position.
+- Verification:
+  `mvn "-Dtest=TestS2ObjectOccupancyOracle#arz2ArrowProjectileAllocatesInRomSlot65OnRomFrame696" "-DfailIfNoTests=false" test`
+  -> Maven OK; focused oracle passed. MSE also echoed the stale ARZ2
+  expected-red report from the previous run.
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  -> expected-red at f723 / 2924 errors
+  (`obj_s11_slot` expected `0x11`, actual `0x16`).
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,TestS2ArzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  -> ARZ1 passed; ARZ2 expected-red at f723 / 2924 errors.
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  -> Maven OK; all six requested S2 green traces passed (`failures="0"` in
+  the generated Surefire XML). MSE again printed the cached ARZ2 expected-red
+  report, but the command exited successfully.
+- Result: `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from
+  f694 / 2927 errors (`obj_extra_s41_x` expected absent, actual `0x0720`) to
+  f723 / 2924 errors (`obj_s11_slot` expected `0x11`, actual `0x16`). The new
+  frontier is a later slot identity mismatch around slot `0x11`, not the Obj22
+  arrow allocation frame.
 
 ## 2026-06-29 - S2 integration sweep after CNZ2 Obj86 seating merge (6 green, 13 expected-red)
 

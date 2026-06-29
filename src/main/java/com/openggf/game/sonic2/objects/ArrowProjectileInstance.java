@@ -23,7 +23,7 @@ import java.util.logging.Logger;
 /**
  * Arrow projectile fired by ArrowShooter (Object 22) in Aquatic Ruin Zone.
  * <p>
- * Behavior from disassembly (s2.asm lines 51094-51130):
+ * Behavior from disassembly (s2.asm lines 51590-51626):
  * <ul>
  *   <li>Travels horizontally at $400 velocity (4 pixels/frame)</li>
  *   <li>Direction based on shooter's x_flip render flag</li>
@@ -79,11 +79,6 @@ public class ArrowProjectileInstance extends AbstractObjectInstance
                 parent.renderFlags(),
                 false, // Don't track respawn for projectiles
                 parent.rawYWord());
-    }
-
-    @Override
-    public boolean skipsSameFrameUpdateAfterSpawn() {
-        return true;
     }
 
     @Override
