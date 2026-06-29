@@ -6,6 +6,37 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-29 - S1 MZ2 f13473 directional vertical camera boundary clamp - ENGINE FIX -> MZ2 GREEN = ALL 19/19 S1 COMPLETE-RUN TRACES GREEN (1 file, 1 -> 0 errors)
+
+- Command: `mvn -Dmse=off -DreuseForks=false -DforkCount=1 "-Dtest=com.openggf.tests.trace.s1.*TraceReplay" test`
+  -> all 29 S1 trace tests GREEN (19 complete-runs incl. MZ2 + 8 credits demos +
+  GHZ1/MZ1 short). `TestS2Ehz1TraceReplay` GREEN, `TestCamera` (26) GREEN,
+  `TestRewindCoverageGuard` + `TestArchitecturalSourceGuard` GREEN. Worktree
+  `bugfix/ai-mz2-f13473` off develop 9bb0ac1cc.
+- Root (camera_y exp 0x0201 act 0x0200, single 1px frame): player jumps upward
+  on a ChainedStomper while `DLE_MZ2` eases the bottom boundary `v_limitbtm1`
+  from 0x520 -> 0x200 (camera_x crossed 0x1700 at f13472; `f_bgscrollvert` set,
+  engine `maxYChanging`). At f13473 the airborne fast-up scroll (realY=62 < 64
+  after the -5 roll/jump compensation) moves camera 0x203 -> 0x201, matching ROM.
+  The engine then ran an UNCONDITIONAL `clampAxisWithWrap(y, minY, maxY)` and,
+  because `maxYChanging` was set, clamped 0x201 -> maxY 0x200 one frame early.
+- ROM `ScrollVertical` is DIRECTIONAL (docs/s1disasm/_inc/`ScrollHoriz &
+  ScrollVertical.asm`:148-261): `SV_MoveCameraUp` -> `SV_TopBoundary` clamps ONLY
+  v_limittop2; `SV_MoveCameraDown` -> `SV_BottomBoundary` clamps ONLY
+  v_limitbtm2; sweet-spot clamps bottom only when `f_bgscrollvert`
+  (`SV_BottomBoundaryMoving`), else `SV_NoUpdate` clamps nothing. The up path
+  NEVER consults the bottom boundary, so ROM lets the camera sit transiently 1px
+  below it (0x201 with v_limitbtm2=0x200). Confirmed by instrumentation
+  (PRE/POSTSCROLL/POSTCLAMP dump at f13468-13476): POSTSCROLL=0x201 matched ROM,
+  only the bottom clamp diverged.
+- Fix (`Camera.updatePosition`): replace the symmetric clamp with
+  `clampTopBoundary` on up-scroll, `clampBottomBoundary` on down-scroll, and
+  `clampBottomBoundary` on a no-scroll frame only while `maxYChanging`. Shared
+  cross-game camera code; strictly more ROM-faithful (only differs when the
+  camera is beyond the wrong-direction boundary, which a green trace cannot
+  contain). No carve-out. S3K AIZ/HCZ complete-run frontiers unchanged
+  (identical pre-existing error counts 4309 / 4200 before & after).
+
 ## 2026-06-29 - S1 MZ2 f8661 MovingBlock (Obj0x52) walk-off uses pre-move x for ridden bounds - ENGINE FIX -> MZ2 frontier f8661 -> f13473 (1 file, 665 -> 1 error; full S1 sweep + S2 EHZ1 + guards held GREEN)
 
 - Command: `mvn -Dmse=off "-Dtest=TestS1*CompleteRunTraceReplay" test` +
