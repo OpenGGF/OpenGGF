@@ -2731,6 +2731,42 @@ lifetime: `TestS2Mcz2LevelSelectTraceReplay` advances f9662 -> f10111.
 
 ---
 
+## P67 - Touch response positions use ROM `x_pos` / `y_pos`, not sprite top-left
+
+**Pattern.** S2 `TouchResponse` tests an object's `collision_flags` size box
+around the object's SST `x_pos(a1)` / `y_pos(a1)`. Objects whose Java
+`getX()` / `getY()` intentionally return sprite top-left render bounds must
+publish an explicit touch region at their ROM center position instead of
+letting the shared touch loop reuse the render coordinate.
+
+**Engine symptom.** A harmful object hurts the player one frame early or from
+several pixels away even though the object's live center position matches ROM.
+In HTZ1, the Obj14 seesaw ball was visually/post-update aligned with ROM, but
+touch response tested its sprite top-left (`x_pos - width_pixels`,
+`y_pos - 8`) and overlapped Sonic where ROM's center-based `TouchResponse`
+missed. The false hurt at f7108 cascaded into Tails/player/camera drift.
+
+**What to check / fix.** For every S2 `TouchResponseProvider` whose
+`getX()` / `getY()` are render extents or sprite bounds:
+1. Compare those methods to the ROM `x_pos` / `y_pos` fields used by the touch
+   routine.
+2. If they differ, implement `getMultiTouchRegions()` with a single
+   `TouchRegion(getCentreX(), getCentreY(), collision_flags)` or the exact
+   ROM child/piece positions.
+3. Keep render/bounds coordinates separate from touch coordinates. Do not fix
+   a touch bug by changing `getX()` / `getY()` if rendering, culling, or
+   balance/out-of-range logic depends on top-left semantics.
+
+**ROM citation.** S2 `TouchResponse` reads `x_pos(a1)` and `y_pos(a1)` for the
+overlap test (`docs/s2disasm/s2.asm:85075,85092`), after loading the size from
+`collision_flags(a1)` (`docs/s2disasm/s2.asm:85048-85063`). Obj14 writes the
+ball's `collision_flags=$8B` during init (`docs/s2disasm/s2.asm:47596`).
+
+**Originating commit.** `63753cbc` S2 HTZ1 Obj14 seesaw ball touch center:
+`TestS2HtzLevelSelectTraceReplay` advances f7108 -> f7805.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
