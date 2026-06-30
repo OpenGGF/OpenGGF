@@ -495,7 +495,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         if (!isSolidAngle() || player.isObjectControlled()) {
             return false;
         }
-        if (!isPlayerStandingOnThis(player) && activationFlag == 0) {
+        if (!isPlayerStandingOnThis(player)) {
             return false;
         }
         if (activationFlag != 0) {
