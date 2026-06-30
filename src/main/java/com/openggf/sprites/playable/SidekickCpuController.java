@@ -4122,6 +4122,10 @@ public class SidekickCpuController {
      */
     private int rawInteractSlotObjectId() {
         int slot = sidekick.getInteractSlotIndex();
+        if (slot == AbstractPlayableSprite.SYNTHETIC_INTERACT_SLOT) {
+            int latchedId = sidekick.getLatchedSolidObjectId() & 0xFF;
+            return latchedId != 0 ? latchedId : -1;
+        }
         if (slot < 0) {
             return -1;
         }

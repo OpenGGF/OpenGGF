@@ -6,6 +6,54 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 OOZ2 Obj07 synthetic interact latch (f6633 -> f8487)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-tails-round4` /
+  `bugfix/ai-s2-ooz2-tails-round4`, based on `bugfix/ai-s2-trace-next` at
+  `2da6eab1d564e69313d1a070cbfdea719013b8e4`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected nonzero; OOZ2 f6633 / 656
+  (`tails_x` expected `0x4000`, actual `0x1DC4`).
+- Triage/evidence: aux trace rows around f6632/f6633 showed ROM Tails landing
+  on manager-hosted Obj07 oil at slot `$0E`, then the next CPU check
+  despawning because `Tails_interact_ID` still held the prior id while
+  `interact(a0)` now pointed at live Obj07. The engine set `Status_OnObj` from
+  `OilSurfaceManager` but had no live object slot/id for
+  `rawInteractSlotObjectId()`, so Tails stayed in CPU routine `$06` around
+  `$1DC4,$071A` instead of taking ROM `TailsCPU_Despawn` to `$4000,0`.
+- ROM basis: Obj07 runs `PlatformObject_SingleCharacter` for each player,
+  whose `RideObject_SetRide` tail writes `interact(a1)` from the support
+  object's SST slot; `TailsCPU_CheckDespawn` later dereferences that slot and
+  compares the live object id against `Tails_interact_ID`, branching to
+  `TailsCPU_Despawn` on mismatch. `PlatformObject_ChkYRange` also returns
+  before support when `obj_control(a1)` has bit 7 set, which keeps Obj07 from
+  re-supporting Tails after the same-frame despawn write
+  (`docs/s2disasm/s2.asm:50157,50189,35999-36006,39409-39429,35978-35981`).
+- Fix: `OilSurfaceManager` now publishes a synthetic Obj07 interact marker
+  through the existing playable latched-solid fields when it supports a player,
+  and skips oil support while object-control bit 7 suppresses movement.
+  `SidekickCpuController` treats only that explicit synthetic marker as a live
+  ROM object id for the CPU despawn comparison. This models ROM object state
+  without trace fixture edits, trace hydration, or zone/route/frame carve-outs.
+- Result: `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` advances to
+  f8487 / 387 (`tails_cpu_routine` expected `0x0008`, actual `0x0006`). The
+  original f6633 Tails despawn now matches; the new frontier is a separate
+  later sidekick CPU routine transition while Tails is near Obj07 oil at
+  `$2679,$02E9`.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestOilSurfaceManager" "-DfailIfNoTests=false" test`
+    exited 0; 6 tests passed.
+  - `mvn "-Dmse=off" "-Dtest=TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red with the improved f8487 / 387 OOZ2 frontier.
+  - `mvn "-Dmse=off" "-Dtest=TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 at the existing OOZ1 first frontier f1803
+    (`tails_x` expected `0x0CE3`, actual `0x0CE4`; 1095 errors in this branch).
+  - `mvn "-Dmse=off" "-Dtest=TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" test`
+    exited 0; 1 test passed.
+  - `mvn "-Dmse=off" "-Dtest=TestS3kAiz1SkipHeadless" "-DfailIfNoTests=false" test`
+    exited 0; 8 tests passed.
+
 ## 2026-06-30 - S2 ARZ2 Obj8C Whisp routine cadence (f1178 -> f1225)
 
 - Worktree/branch: `.worktrees/ai-s2-arz2-round3` /

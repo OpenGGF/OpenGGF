@@ -4,6 +4,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -161,6 +162,14 @@ public class OilSurfaceManager {
             clearOilTrackingOnly(state);
             return;
         }
+        if (player.isObjectControlSuppressesMovement()) {
+            // PlatformObject_ChkYRange returns before support when
+            // obj_control bit 7 is set (s2.asm:35978-35981). This matters
+            // after TailsCPU_Despawn writes $81: Obj07 runs later in the same
+            // object phase and must not re-seat Tails on the oil surface.
+            clearOilTrackingOnly(state);
+            return;
+        }
 
         if (state.standingOnOil) {
             // Movement runs before this manager and can temporarily set air=true.
@@ -193,6 +202,7 @@ public class OilSurfaceManager {
             int targetY = oilY - state.submersion - player.getYRadius();
             player.setAir(false);
             player.setOnObject(true);
+            latchOilSupport(player);
             player.setCentreYPreserveSubpixel((short) targetY);
         } else {
             // Not on oil - recover submersion counter
@@ -208,6 +218,7 @@ public class OilSurfaceManager {
                 state.standingOnOil = true;
                 player.setAir(false);
                 player.setOnObject(true);
+                latchOilSupport(player);
 
                 // ROM RideObject_SetRide (s2.asm:35741-35743):
                 //   move.b #0, angle(a1)
@@ -300,6 +311,15 @@ public class OilSurfaceManager {
 
     private void clearOilTrackingOnly(PlayerOilState state) {
         state.standingOnOil = false;
+    }
+
+    private void latchOilSupport(AbstractPlayableSprite player) {
+        // Obj07 calls PlatformObject_SingleCharacter (s2.asm:50157,50189),
+        // whose RideObject_SetRide tail writes interact(a1) to Obj07's SST slot
+        // before TailsCPU_CheckDespawn re-dereferences that slot on the next
+        // CPU tick (s2.asm:35999-36006,39409-39429). Obj07 is manager-hosted
+        // in the engine, so publish a synthetic live id for the same compare.
+        player.setSyntheticLatchedSolidObject(Sonic2ObjectIds.OIL);
     }
 
     // =========================================================================
