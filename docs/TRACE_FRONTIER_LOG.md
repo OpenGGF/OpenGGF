@@ -6,6 +6,60 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CPZ2 Obj5D pipe/container handoff (f10601 -> f10907)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r2` /
+  `bugfix/ai-s2-cpz2-frontier-r2`, reset from integration commit
+  `ee41957a7b6370bfd33772a57cdd6f40e83f25d7`, then fast-forwarded through
+  conductor updates `38b7dec5c`, `0e73340a5`, and final verification base
+  `6088b92b3`.
+- Baseline reproduction on final integration before the fix:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: CPZ2 f10601 / 74 (`x_speed` expected `0x014F`, actual
+  `-014F`).
+- Triage/evidence: the f10601 context matched ROM player position and
+  subpixels but showed another false boss touch. The ROM Obj5D main object had
+  moved on to roughly `$2A75,$04BF`, while the engine kept the boss body near
+  `$2A52,$04BF` with collision active. Object diagnostics around the second
+  attack showed the ROM spawning the next pipe from the returning container
+  path, deleting pump/pipe segments around f10552-f10564, then letting the main
+  vehicle follow. The engine was deleting the pump without switching the
+  control pipe segment into the retract routine, clearing container action bits
+  when the main vehicle started the pipe cycle, and letting pipe completion own
+  the next-pipe/action-0 handoff.
+- Disassembly cited: Obj5D stop zeroes velocity, flips side, and sets
+  `Obj5D_status` bit 0 without clearing the container action bits
+  (`docs/s2disasm/s2.asm:61849-61884`). `Obj5D_Pipe_Pump_4` writes routine 8
+  (`Obj5D_Pipe_Retract`) and `Obj5D_y_offset = $B*8` into the control segment
+  before deleting the pump child (`docs/s2disasm/s2.asm:62193-62210`).
+  `Obj5D_Pipe_Retract` removes segments by scanning their current Y and
+  subtracting 8 from the control y offset (`docs/s2disasm/s2.asm:62214-62231,
+  62269-62272`). `Obj5D_Container_Extend` clears bit 0 only when the fill
+  animation reaches `$17` (`docs/s2disasm/s2.asm:62727-62742`), and the
+  returning container path clears bits 4 and 2, resets the container routine,
+  and allocates the next pipe (`docs/s2disasm/s2.asm:62638-62664`).
+- Fix: `CPZBossPipePump` now calls the pipe control object's ROM retract
+  handoff before deleting itself, `CPZBossPipe` resets the retract state and
+  y offset to `$58`, `Sonic2CPZBossInstance` leaves the container action bits
+  owned by the container code when setting action 0, and pipe completion no
+  longer clears action 0 or spawns the next pipe. The fix changes engine
+  behavior only; it does not edit trace data, add comparison tolerance,
+  hydrate from trace state, or branch on trace route, frame, zone, game id, or
+  a known failing fixture.
+- Focused target after final conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CPZ2 advances to f10907 / 37 (`camera_x`
+  expected `0x2A20`, actual `0x2A22`).
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; 11 selected S2 green traces passed.
+- Updated red preservation set after the MTZ1 acceptance merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero and preserves ARZ2 f1028 / 2686, CNZ2 f9183 /
+  441, HTZ2 f4387 / 1049, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2
+  f3993 / 749. CPZ2 is the only moved red frontier in this worker change, now
+  f10907 / 37.
+
 ## 2026-06-30 - S2 MTZ1 Obj68 spike touch render-flag gate removal (f8655 -> green)
 
 - Worktree/branch: `.worktrees/trace-s2-mtz1-r15` /
