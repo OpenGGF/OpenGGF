@@ -2982,6 +2982,43 @@ equality via `tst.w d2; bpl.s` for X and `sub.w y_pos(a1),d3; bhs.s` for Y
 
 ---
 
+## P73 -- Some object movement helpers use high-word-only position temporaries
+
+**Pattern.** Not every S2 object movement routine preserves a persistent
+subpixel low word. Some routines rebuild a temporary 16.16 value from the
+integer `x_pos(a0)` / `y_pos(a0)` every call, add shifted velocity, then write
+only the high word back to object position.
+
+**Engine symptom.** A projectile or child object follows the right broad arc
+but drifts one or more pixels over several frames, making touch/hurt timing
+early or late. In CNZ2, Obj51 split electric balls carried a Java
+fixed-point low word between frames; the right-moving ball reached Tails'
+touch box at f9183 even though ROM slot `$1B` was still just outside it.
+
+**What to check / fix.**
+1. Read the exact object-local movement helper before choosing a generic
+   subpixel integrator.
+2. If the ROM helper starts with `move.w x_pos(a0),dN; swap dN` and never
+   loads `x_sub/y_sub`, rebuild the engine's working fixed-point value from
+   integer x/y each call instead of preserving the prior low word.
+3. If the split/spawn routine copies the object after such a helper, copy the
+   integer position and velocity state, but do not invent persistent subpixel
+   state for the clone.
+4. Keep the rule object-local. Other helpers such as `ObjectMove` and
+   playable-sprite movement do preserve real subpixel state and should keep
+   using the longword position path.
+
+**ROM citation.** Obj51 `loc_31FF8` rebuilds local longword temporaries from
+`x_pos/y_pos`, adds `x_vel/y_vel << 8`, increments `y_vel` by `$38`, and writes
+only the high word back (`docs/s2disasm/s2.asm:67059-67079`). Obj51 split
+allocation copies the object after setting split velocities
+(`docs/s2disasm/s2.asm:67082-67108`).
+
+**Originating commit.** `<pending>` S2 CNZ2 Obj51 high-word movement temporary:
+`TestS2Cnz2LevelSelectTraceReplay` advances f9183 -> f9487.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

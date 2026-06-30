@@ -6,6 +6,50 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CNZ2 Obj51 high-word movement temporary (f9183 -> f9487)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next`, based on `next` campaign head
+  `f7aca684c`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay" "-Dtrace.context.diagnosticChars=full" "-Dtrace.context.rows=all" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected nonzero; CNZ2 f9183 / 441
+  (`tails_x_speed` expected `0x0000`, actual `0x0200`).
+- Triage/evidence: the first visible mismatch was a false Tails hurt from a
+  split Obj51 electric ball. ROM aux at f9183 had the right-moving split ball
+  at slot `$1B` / x `$28E4`, y `$06DF`, just outside the S2 `Touch_Boss`
+  overlap window for Tails' touch origin `$28E9`. Engine diagnostics showed
+  the corresponding right-moving ball at x `$28E5/$28E6`, y `$06E2/$06E1`
+  across touch/update, causing the false hurt velocity `$0200,-$0400`.
+- Diagnostic note: a temporary file-backed engine probe showed the Java ball
+  path carried a low-word fixed-point remainder between frames. Reading Obj51
+  `loc_31FF8` showed the ROM instead rebuilds the temporary longword from
+  `x_pos(a0)` and `y_pos(a0)` each call, then adds `x_vel/y_vel << 8`; there
+  is no persistent object subpixel low word for this projectile.
+- ROM basis: Obj51 falling runs `loc_31FF8`, checks `ObjCheckFloorDist`, and
+  on split calls `loc_32030`. `loc_31FF8` moves `x_pos/y_pos` into the high
+  word of local registers, adds shifted velocity, increments y velocity by
+  `$38`, then swaps the high word back to `x_pos/y_pos`. `loc_32030` sets
+  `y_vel=-$300`, `x_vel=-$100`, collision `$98`, and allocates the clone via
+  `AllocateObjectAfterCurrent` before negating clone x velocity
+  (`docs/s2disasm/s2.asm:67049-67079,67082-67108`).
+- Fix: `CNZBossElectricBall.applyBallPhysics()` now rebuilds its working
+  fixed-point value from integer x/y every call, and split clone allocation
+  uses `spawnChild` to preserve after-current slot order. The change is
+  Obj51-local and does not edit traces, hydrate engine state from traces,
+  weaken comparison, or branch on zone, route, frame, or fixture.
+- Result: `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` advances to
+  f9487 / 288 (`g_speed` expected `0x0000`, actual `0x0100`).
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.bosses.TestSonic2CNZBossCollision,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; CNZ boss unit tests passed and CNZ2 advanced to
+    f9487 / 288.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; 19 tests ran, 13 stayed green, and the six
+    expected reds held except CNZ2 advancing to f9487 / 288. Remaining reds:
+    ARZ2 f1294 / 2396, CNZ2 f9487 / 288, HTZ2 f4442 / 1033, MTZ3 f7853 / 864,
+    OOZ1 f1803 / 1095, OOZ2 f8487 / 387.
+
 ## 2026-06-30 - S2 HTZ2 Obj30 leading-side ride-wall response (f4422 -> f4442)
 
 - Worktree/branch: `.worktrees/ai-s2-htz2-obj30-round4` /
