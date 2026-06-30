@@ -533,6 +533,11 @@ public interface SolidObjectProvider {
         return 0;
     }
 
+    default int staleHorizontalLogicalInputFramesWhileRiding(
+            PlayableEntity player, int rideFrames, boolean left, boolean right) {
+        return right && !left ? staleHorizontalLogicalInputFramesWhileRiding(player, rideFrames) : 0;
+    }
+
     /**
      * Whether the stale-horizontal-input edge tracker should remain attached to
      * this riding object while the player has nonzero ground speed.

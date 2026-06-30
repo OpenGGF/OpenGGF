@@ -300,11 +300,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// right bit through Sonic_MoveRight (docs/s2disasm/s2.asm:35860-35874,
 		// 36233-36243, 36560-36567, 36945-36962).
 		if (sprite.getGSpeed() == 0
-				&& right
-				&& !left
+				&& horizontal
 				&& !staleHorizontalInputPreviousHorizontal) {
 			staleHorizontalInputSuppressFrames =
-					provider.staleHorizontalLogicalInputFramesWhileRiding(sprite, staleHorizontalInputRideFrames);
+					provider.staleHorizontalLogicalInputFramesWhileRiding(sprite, staleHorizontalInputRideFrames, left, right);
 		}
 		staleHorizontalInputPreviousHorizontal = horizontal;
 
