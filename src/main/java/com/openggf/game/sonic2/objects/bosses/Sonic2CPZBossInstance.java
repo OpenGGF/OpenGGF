@@ -204,6 +204,9 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
         int diff = Math.abs(target - baseX);
         if (diff <= 3) {
             if ((state.yFixed >> 16) == MAIN_TARGET_Y) {
+                // ROM Obj5D_Main_2_Stop branches straight to Pos_and_Collision after halting.
+                state.xVel = 0;
+                state.yVel = 0;
                 state.routine = MAIN_WAIT;
                 status ^= STATUS_SIDE;
                 // Clear stale container flags before starting new attack cycle
@@ -211,6 +214,8 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
                 status2 &= ~STATUS2_ACTION4;  // Clear container returning
                 status2 |= STATUS2_ACTION0;   // Activate pipe
             }
+            updateMainPositionAndHover();
+            return;
         } else {
             state.xVel = target > baseX ? MAIN_MOVE_VEL : -MAIN_MOVE_VEL;
         }
