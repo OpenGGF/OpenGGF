@@ -128,6 +128,8 @@ public final class Sonic2PlcArtRegistry {
                 Sonic2ObjectArtKeys.ARROW_SHOOTER, Sonic2ObjectArt::loadArrowShooterSheet);
         reg(Sonic2Constants.ART_NEM_LEAVES_ADDR,
                 Sonic2ObjectArtKeys.LEAVES, Sonic2ObjectArt::loadLeavesSheet);
+        reg(Sonic2Constants.ART_NEM_BUBBLE_GENERATOR_ADDR,
+                Sonic2ObjectArtKeys.BUBBLES, Sonic2ObjectArt::loadBubblesSheet);
         reg(Sonic2Constants.ART_NEM_BUBBLES_ADDR,
                 Sonic2ObjectArtKeys.BUBBLES, Sonic2ObjectArt::loadBubblesSheet);
 

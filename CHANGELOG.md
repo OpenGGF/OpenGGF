@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S2 ARZ bubble generator art parity:** Obj24 now registers the ROM `ArtNem_BigBubbles` PLC entry, builds the S2 bubble sheet with the ROM's sparse BigBubbles/standard-bubbles VRAM layout, and renders the negative-subtype generator's frames 14/15 instead of leaving the spawner invisible while its child bubbles remain interactable.
 - **Player object-balance animation parity:** released directional input now clears `Status_Push` before the standing-on-object balance branch, matching S1/S2/S3K and preventing Sonic from sticking in the push animation on object edges; top-solid objects also default their balance edge width to their ROM standable half-width so the right-edge balance animation no longer triggers early on wide platforms.
 - **S1 SYZ boss block and spike visual parity:** Robotnik's pick-up blocks now render from the Spring Yard level tile palette line used by Obj76 in the ROM, and the retracting spike renders behind the Eggman ship in the engine's collapsed parent/child draw order.
 - **S3K LBZ1 Knuckles bomb/cup sequence parity:** the bomb screen shake now starts after the bomb-drop wait and remains active through the building collapse handoff until the collapse finishes, while the cup elevator keeps captured players locked in their riding state until Knuckles leaves and only releases them on a later jump press.
