@@ -6,6 +6,60 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CPZ2 Obj5D stop-branch movement overshoot (f10068 -> f10286)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r13` /
+  `bugfix/ai-s2-cpz2-frontier-r13`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at accepted HEAD `781d62678`, then merged to
+  current accepted integration `84846bc08` before worker verification. The
+  conductor merged it after the latest `origin/develop` merge at `c8a3cf217`,
+  then reran the acceptance guard on the updated integration tree.
+- Baseline reproduction on initial worker base `781d62678`:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: CPZ2 f10068 / 128 (`y_speed` expected `-03E0`,
+  actual `0x03E0`).
+- Triage/evidence: expanded context at f10068 showed Sonic's position matched
+  the ROM (`x=$2B0F`, `y=$04B2`), but the engine had just touched Obj5D slot
+  30 while its boss body was at `$2B2F,$04BC`; the ROM nearest Obj5D body was
+  at `$2B32,$04BC`. The 3-pixel X delta matched one stale `-$300` boss
+  movement step after the boss entered the within-3-pixel stop branch. That
+  false overlap ran the S2 boss/enemy hit path and negated Sonic's x/y
+  velocities, producing the exact sign-flipped `x_speed`/`y_speed`.
+- Disassembly cited: CPZ Obj5D initializes the main boss vehicle with
+  `collision_flags=$0F` and `collision_property=8`
+  (`docs/s2disasm/s2.asm:61489-61499`). `Obj5D_Main_MoveTowardTarget` branches
+  to `Obj5D_Main_2_Stop` when the target delta is `<= 3`
+  (`docs/s2disasm/s2.asm:61849-61871`). The stop branch zeroes `x_vel` and
+  `y_vel`, sets the wait/action bits, then branches directly to
+  `Obj5D_Main_Pos_and_Collision`; it does not call `Obj5D_Main_Move`
+  (`docs/s2disasm/s2.asm:61871-61884`). When the false engine overlap happens,
+  S2 `Touch_Enemy_Part2` negates both `x_vel` and `y_vel`
+  (`docs/s2disasm/s2.asm:85339-85343`).
+- Fix: `Sonic2CPZBossInstance.updateMainMoveTowardTarget()` now zeroes the
+  boss velocities and returns straight through the position/hover publication
+  when the boss reaches the ROM stop branch. This prevents the extra movement
+  step without changing collision tolerances, trace data, route/frame/zone
+  carve-outs, or trace-state hydration.
+- Focused target after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CPZ2 advances to f10286 / 91 (`y_speed` expected
+  `-02B0`, actual `0x02B0`).
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; 11 selected S2 green traces passed.
+- Updated red preservation set:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 1 as expected and preserves ARZ2 f1028 / 2686, CNZ2 f9117 /
+  386, HTZ2 f4165 / 1129, MTZ1 f7906 / 407, MTZ3 f7853 / 864, OOZ1 f1803 /
+  1069, and OOZ2 f3919 / 1117. CPZ2 is the only moved frontier from this
+  worker change, now f10286 / 91.
+- Full S2 sweep after conductor merge:
+  `mvn "-Dtest=TestS2*TraceReplay" test`.
+  Result: expected nonzero; 19 S2 traces run, 11 green, 8 expected red:
+  ARZ2 f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10286 / 91, HTZ2 f4165 /
+  1129, MTZ1 f7906 / 407, MTZ3 f7853 / 864, OOZ1 f1803 / 1069, and OOZ2
+  f3919 / 1117.
+
 ## 2026-06-30 - S2 CNZ2 Obj51 player-slot boss touch timing (f8870 -> f9117)
 
 - Worktree/branch: `.worktrees/trace-s2-cnz2-r15` /
