@@ -6,6 +6,52 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 ARZ2 Obj8C Whisp orientation equality (f1225 -> f1294)
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round4` /
+  `bugfix/ai-s2-arz2-round4`, based on `bugfix/ai-s2-trace-next` at
+  `5ecece4c8`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected nonzero; ARZ2 f1225 / 2404
+  (`obj_extra_s13_x` expected absent, actual `0x0D79`).
+- Triage/evidence: `target/trace-reports/s2_arz2_context.txt` showed ROM
+  slot `$13` / decimal 19 as Obj8C Whisp at `$0D79,$049D`, while the engine
+  had the same slot and X at `$0D79,$049E`. A temporary unit probe showed the
+  engine matched until f1224, carried Y one frame early at f1225-f1227, and
+  converged again at f1228, so the comparator's expected-absent/actual-extra
+  object report was a one-pixel trajectory mismatch rather than allocation or
+  lifetime loss.
+- BizHawk PC-execute diagnostic using a temporary untracked probe:
+  `$env:OGGF_DIAG_START='9216'; $env:OGGF_DIAG_STOP='9230'; $env:OGGF_TRACE_OFFSET='7998'; $env:OGGF_DIAG_OUT=(Resolve-Path '.').Path + '\target\trace-reports\diag_s2_arz2_whisp_objectmove.txt'; $lua=(Resolve-Path 'tools\bizhawk\diag_s2_arz2_whisp_objectmove.lua').Path; $movie=(Resolve-Path 'src\test\resources\traces\s2\arz2\s2-lvl-select-ARZ.bk2').Path; $rom=(Resolve-Path 's2.gen').Path; & 'C:\Users\farre\Downloads\_Sorted\Emulators\BizHawk-2.11-win-x64\EmuHawk.exe' --chromeless "--lua=$lua" "--movie=$movie" $rom | Out-Null`.
+  The probe showed ROM trace f1223 with Sonic and slot `$13` Whisp at equal
+  Y (`$049B`), then `ObjectMove.pre` using the up delta and reducing Obj8C
+  `y_vel` from `$0110` to `$0100`. The strict engine comparison selected the
+  down delta on equality, leaving Y velocity `$20` too high and producing the
+  f1225 carry.
+- ROM basis: `Obj_GetOrientationToPlayer` uses `tst.w d2; bpl.s` for X and
+  `sub.w y_pos(a1),d3; bhs.s` for Y, so zero deltas keep movement index 0
+  (left/up) before Obj8C indexes `Obj8C_MovementDeltas`
+  (`docs/s2disasm/s2.asm:72812-72848,73231-73249`). Obj8C then calls
+  `ObjectMove`, whose longword position update carries the corrected subpixel
+  velocity into the sampled frame (`docs/s2disasm/s2.asm:30191-30204`).
+- Fix: `WhispBadnikInstance` now treats equality as the left/up delta when
+  accelerating toward the player. This models the ROM orientation helper used
+  by Obj8C; it does not edit trace data, hydrate engine state from traces,
+  weaken comparison, or branch on zone id/name, route, frame, or fixture.
+- Result: `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances to
+  f1294 / 2396 (`obj_extra_s11_x` expected absent, actual `0x0F3F`). The f1225
+  slot `$13` Whisp now matches the ROM sampled position.
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2WhispSlot13MatchesRomSubpixelCarryAtFrame1225" "-DfailIfNoTests=false" test`
+    exited 0 for the selected oracle; Maven Silent Extension also echoed the
+    accepted ARZ2 expected-red replay from package discovery.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 with the improved f1294 / 2396 ARZ2 frontier above.
+  - `TestRewindCoverageGuard` was not run because this change does not alter
+    object recreate/lifetime/rewind coverage. Full `TestS2*TraceReplay` was
+    not run because ARZ2 is still expected-red rather than green.
+
 ## 2026-06-30 - S2 ARZ2 Obj8C Whisp routine cadence (f1178 -> f1225)
 
 - Worktree/branch: `.worktrees/ai-s2-arz2-round3` /
