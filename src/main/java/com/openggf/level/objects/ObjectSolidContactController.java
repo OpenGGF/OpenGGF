@@ -92,6 +92,9 @@ final class ObjectSolidContactController {
             int x, int y, int pieceIndex) {
         RidingState state = ridingStates.get(player);
         if (state != null) {
+            if (state.object != object || state.pieceIndex != pieceIndex) {
+                clearObjectStandingBit(player, state.object, state.pieceIndex);
+            }
             state.set(object, x, y, pieceIndex);
         } else {
             ridingStates.put(player, new RidingState(object, x, y, pieceIndex));
