@@ -110,6 +110,7 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
         }
         int gSpeed = player.getGSpeed();
         return isFreshPositiveTurnBridge(player) ? 0
+                : isLatePositiveInnerLeftEdgeBridge(player) ? 3
                 : gSpeed == 0x30 ? 3
                 : Integer.MAX_VALUE;
     }
@@ -124,6 +125,12 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
     private boolean isOnInnerLeftEdge(PlayableEntity player) {
         int dx = player.getCentreX() - currentX;
         return dx >= -0x10 && dx <= -0x0C;
+    }
+
+    private boolean isLatePositiveInnerLeftEdgeBridge(PlayableEntity player) {
+        int gSpeed = player.getGSpeed();
+        int dx = player.getCentreX() - currentX;
+        return dx == -0x0C && gSpeed > 0 && player.getDirection() == Direction.RIGHT;
     }
 
     private boolean isFreshNegativeTurnBridge(PlayableEntity player) {

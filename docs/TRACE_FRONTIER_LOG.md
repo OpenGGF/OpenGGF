@@ -6,6 +6,45 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 OOZ1 Obj36 late-edge CPU push grace (f1803 -> f1813)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-f1803-round8` /
+  `bugfix/ai-s2-ooz1-f1803-round8`, based on `bugfix/ai-s2-trace-next`
+  campaign head `6468c4665`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected nonzero; OOZ1 f1803 / 1095
+  (`tails_x` expected `0x0CE3`, actual `0x0CE4`; also
+  `tails_x_speed` / `tails_g_speed` expected `-0080`, actual `0x0018`).
+- Triage/evidence: the failure was in CPU Tails riding Obj36 spikes at slot
+  `$1D` near object x `$0CF0`. The existing Obj36 bridge correctly preserves
+  the long one-pixel-inside edge at f1775 (`x=$0CE3`, dx `-$0D`), where the
+  ROM still has the CPU-visible push/on-object cadence. By f1803/f1805 Tails
+  is at the late inner-left edge (`x=$0CE4`, dx `-$0C`) and the post-frame
+  trace Status_Push is produced by the later Obj36 `SolidObject` pass, after
+  `TailsCPU_Normal` has already sampled current status. S2 reads Tails'
+  current Status_Push before ordinary follow steering
+  (`docs/s2disasm/s2.asm:39291-39300`), while Obj36 calls `SolidObject` later
+  in its object slot (`docs/s2disasm/s2.asm:29402-29417`), and that helper
+  owns the live side/push bit update/clear paths
+  (`docs/s2disasm/s2.asm:35344-35466`).
+- Fix: `SpikeObjectInstance` now caps the Obj36 CPU-sidekick riding push grace
+  at three frames only for positive-speed, right-facing Tails on the late
+  `dx=-$0C` edge. The existing long bridge remains for the f1775
+  one-pixel-inside `dx=-$0D` edge.
+- Result:
+  `TestS2OozLevelSelectTraceReplay#replayMatchesTrace`: f1803 / 1095 errors
+  (`tails_x` expected `0x0CE3`, actual `0x0CE4`) -> f1813 / 1062 errors
+  (`tails_x` expected `0x0CE4`, actual `0x0CE3`). The new owner is the next
+  Obj36/Tails micro-cycle after the late-edge push bridge window.
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#s2SpikesUsePostObj33SidekickPushGraceThreshold" "-DfailIfNoTests=false" test`
+    exited 0 after the focused Obj36 boundary assertions were updated.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+    exited 1 as expected-red with the improved OOZ1 f1813 / 1062 frontier.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+    exited 1 as expected-red and preserved OOZ2 f9302 / 401.
+
 ## 2026-06-30 - S2 HTZ2 Obj30 side-gated input bridge + airborne push retention (f4442 -> f5002)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /

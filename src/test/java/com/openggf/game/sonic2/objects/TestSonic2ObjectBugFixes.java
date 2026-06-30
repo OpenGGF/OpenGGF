@@ -554,6 +554,27 @@ class TestSonic2ObjectBugFixes {
         tails.setGSpeed((short) 0x0080);
         assertEquals(14, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
                 "The faster positive-inertia spike ride keeps the conservative existing bridge window");
+
+        tails.setCentreX((short) 0x0CE3);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0018);
+        tails.setXSpeed((short) 0x0018);
+        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(tails),
+                "OOZ1 f1775 is still one pixel inside Obj36's left edge and keeps the long bridge");
+
+        tails.setCentreX((short) 0x0CE4);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0018);
+        tails.setXSpeed((short) 0x0018);
+        assertEquals(2, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
+                "OOZ1 f1803 is a late low-speed positive-inertia sample; only the immediate Obj36 bridge applies");
+        assertEquals(3, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(tails),
+                "At f1803 the later SolidObject pass sets Status_Push after TailsCPU_Normal, so grace=15 must fall through follow steering");
+
+        tails.setGSpeed((short) 0x0080);
+        tails.setXSpeed((short) 0x0080);
+        assertEquals(3, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(tails),
+                "OOZ1 f1805 is the late positive rebound at the same edge; grace=13 must not keep preserving delayed RIGHT");
     }
 
     @Test
