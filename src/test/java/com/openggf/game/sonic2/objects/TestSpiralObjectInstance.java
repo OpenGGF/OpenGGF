@@ -7,6 +7,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
@@ -208,6 +209,7 @@ class TestSpiralObjectInstance {
     void mtzCylinderCaptureUsesRomOverlapSnap() {
         SpiralObjectInstance cylinder = newCylinder();
         TestablePlayableSprite sonic = playerAt("sonic", 0x0B82, 0x03EC);
+        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
         sonic.setAir(false);
         sonic.setOnObject(false);
         sonic.setXSpeed((short) 0x0599);
@@ -229,9 +231,70 @@ class TestSpiralObjectInstance {
     }
 
     @Test
+    void mtzCylinderAirborneRollingCaptureRunsResetOnFloorPart2() {
+        SpiralObjectInstance cylinder = newCylinder();
+        TestablePlayableSprite sonic = playerAt("sonic", 0x0B82, 0x03ED);
+        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonic.setRolling(true);
+        sonic.setCentreY((short) 0x03ED);
+        sonic.setAir(true);
+        sonic.setOnObject(false);
+        sonic.setXSpeed((short) 0xFB74);
+        sonic.setYSpeed((short) 0x0450);
+        sonic.setGSpeed((short) 0xFBFB);
+
+        cylinder.update(11277, sonic);
+
+        assertTrue(sonic.isOnObject(), "Obj06_Cylinder should latch airborne Sonic via RideObject_SetRide");
+        assertFalse(sonic.getAir(), "RideObject_SetRide clears status.player.in_air");
+        assertFalse(sonic.getRolling(),
+                "RideObject_SetRide calls Sonic_ResetOnFloor_Part2 for airborne rolling Sonic");
+        assertEquals(0x03E8, sonic.getCentreY() & 0xFFFF,
+                "S2 Sonic_ResetOnFloor_Part2 applies the fixed -5 y_pos lift after the cylinder snap");
+        assertEquals(sonic.getStandYRadius(), sonic.getYRadius(),
+                "Sonic_ResetOnFloor_Part2 restores Sonic's standing y_radius");
+        assertEquals(0, sonic.getYSpeed(), "RideObject_SetRide clears y_vel");
+        assertEquals(0xFB74, sonic.getGSpeed() & 0xFFFF,
+                "RideObject_SetRide copies x_vel into inertia after capture");
+    }
+
+    @Test
+    void mtzCylinderPostPlayerHookCapturesAfterPlayerMovement() {
+        ObjectSpawn spawn = new ObjectSpawn(0x0C40, 0x03C0, Sonic2ObjectIds.SPIRAL, 0x80, 0, false, 0);
+        ObjectManager objectManager = newSpiralManager(List.of(spawn));
+        objectManager.reset(0x0B80);
+        objectManager.preloadInitialSpawnsForHydration();
+
+        TestablePlayableSprite sonic = playerAt("sonic", 0x0B82, 0x03EA);
+        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonic.setRolling(true);
+        sonic.setCentreY((short) 0x03EA);
+        sonic.setAir(true);
+        sonic.setOnObject(false);
+        sonic.setXSpeed((short) 0xFB74);
+        sonic.setYSpeed((short) 0x0450);
+        sonic.setGSpeed((short) 0xFBFB);
+
+        objectManager.update(0x0B80, sonic, List.of(), 11277, false);
+        assertFalse(sonic.isOnObject(),
+                "Pre-physics Obj06_Cylinder sees the pre-move foot at delta 0 and should not capture");
+
+        sonic.setCentreY((short) 0x03ED);
+        objectManager.runPostPlayerHooks(sonic, 11277);
+
+        assertTrue(sonic.isOnObject(),
+                "Later SST-slot Obj06_Cylinder must re-check Sonic's post-movement position");
+        assertFalse(sonic.getAir(), "Post-player cylinder capture should clear status.player.in_air");
+        assertFalse(sonic.getRolling(), "Post-player cylinder capture should run ResetOnFloor_Part2");
+        assertEquals(0x03E8, sonic.getCentreY() & 0xFFFF,
+                "Post-player capture should match the ROM's snap followed by Sonic's -5 lift");
+    }
+
+    @Test
     void mtzCylinderRidingUsesCosineYOffsetAndAdvancesAngle() {
         SpiralObjectInstance cylinder = newCylinder();
         TestablePlayableSprite sonic = playerAt("sonic", 0x0B82, 0x03EC);
+        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
         sonic.setAir(false);
         sonic.setOnObject(false);
         sonic.setXSpeed((short) 0x0599);

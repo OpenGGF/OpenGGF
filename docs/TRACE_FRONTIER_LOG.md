@@ -59,6 +59,67 @@ branch-local measurements.
   trace moved backward; the run emitted non-fatal `config.yaml` save
   `AccessDeniedException` warnings after producing the expected trace results.
 
+## 2026-06-30 - S2 MTZ2 Obj06 cylinder post-player capture (f11277 -> green)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz2-frontier-r7` /
+  `bugfix/ai-s2-mtz2-frontier-r7`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at `d5895ee07`, then fast-forward merged to
+  integration `cbde673e4` after HTZ2 r4 before final verification.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Mtz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix on current integration: MTZ2 f11277 / 200 (`y`
+  expected `0x0368`, actual `0x036D`).
+- Triage/evidence: f11276 matched ROM through Sonic's airborne rolling state
+  at `y=$0366`, `y_sub=$FC00`, `y_vel=$0450`, `ground_vel=$FBFB`, and
+  `standing_on_obj=$18`. On f11277 ROM had Sonic captured by Obj06 slot 10 at
+  `$1BC0,$0340`, with `Status_InAir` and `Status_Roll` cleared, `y_vel=0`,
+  `ground_vel=$FB74`, and `y=$0368`; the engine had already advanced Sonic to
+  the post-movement overlap state (`y=$036D`, `y_sub=$4C00`) but still reported
+  the same Obj06 as `no-touch`. The pre-player object pass saw the old foot
+  position exactly at the cylinder top (`delta=0`) and rejected it; the ROM
+  later Obj06 slot saw Sonic after player movement, snapped to `$036D`, then
+  `RideObject_SetRide` called reset-on-floor for the airborne rolling capture
+  and lifted Sonic five pixels to `$0368`.
+- Disassembly cited: Obj06_Cylinder scans MainCharacter and Sidekick, accepts
+  `-$C0 <= x_pos(player)-x_pos(obj) < $C0`, computes the shallow top overlap
+  from `y_pos(obj)+60 - (y_pos(player)+y_radius+4)`, rejects only `delta > 0`
+  or `< -$10`, snaps `y_pos += delta + 3`, sets `flip_turned`, and calls
+  `RideObject_SetRide` (`docs/s2disasm/s2.asm:47328-47367`).
+  `RideObject_SetRide` clears any previous standing object, writes `interact`,
+  angle, `y_vel=0`, `inertia=x_vel`, and when `status.player.in_air` is set
+  dispatches to `Sonic_ResetOnFloor_Part2` or `Tails_ResetOnFloor_Part2` before
+  setting `Status_OnObj` and clearing `Status_InAir`
+  (`docs/s2disasm/s2.asm:35986-36038`). Sonic's Part2 branch clears rolling,
+  restores `$13/$09` radii, writes walk animation, and subtracts 5 from
+  `y_pos`; Tails' equivalent restores `$0F/$09` and subtracts 1
+  (`docs/s2disasm/s2.asm:38128-38140,41024-41037`).
+- Fix: `SpiralObjectInstance` implements `PostPlayerUpdateHook` for fresh MTZ
+  cylinder captures only, so the legacy object-before-player path re-checks
+  Obj06_Cylinder against the main player's post-movement state without
+  double-advancing existing riders or applying EHZ spiral capture. Obj06's
+  ride engagement now mirrors the airborne reset-on-floor side effects for
+  rolling captures. This models ROM object order and state; it does not edit
+  trace data, add tolerance, or add route, frame, zone, game-id, or
+  known-failing carve-outs.
+- Focused unit check:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSpiralObjectInstance" "-DfailIfNoTests=false" test`
+  first failed with the new coverage because Obj06 did not clear airborne
+  rolling state and `runPostPlayerHooks` did not capture the post-movement
+  cylinder overlap; it exited 0 after the fix.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Mtz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exited 0; MTZ2 is green after previously failing at f11277 / 200.
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0. Test startup logged a non-fatal Windows `config.yaml` atomic-save
+  warning before continuing.
+- Worker red preservation set before the later CPZ2 r7 integration:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686, CNZ2 f7984 / 680,
+  CPZ2 f5494 / 352, HTZ2 f4136 / 1024, MTZ1 f5713 / 560,
+  MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. No checked red
+  trace moved backward.
+
 ## 2026-06-30 - S2 HTZ2 ride-transfer standing bit clear (f4012 -> f4136)
 
 - Worktree/branch: `.worktrees/ai-s2-htz2-frontier-r4` /
