@@ -744,11 +744,13 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public boolean isVisibleForRenderFlag(AbstractPlayableSprite sprite) {
 		int widthPixels = sprite.getRenderFlagWidthPixels();
-		int relX = sprite.getRenderCentreX() - x;
+		int cameraXCopy = getXWithShake();
+		int cameraYCopy = getYWithShake();
+		int relX = sprite.getRenderCentreX() - cameraXCopy;
 		if (relX + widthPixels < 0 || relX - widthPixels >= width) {
 			return false;
 		}
-		int relY = sprite.getRenderCentreY() - y;
+		int relY = sprite.getRenderCentreY() - cameraYCopy;
 		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
 		boolean useS3kMargin = fs != null && fs.useScreenYWrapValueForVisibility();
 		int yMargin = useS3kMargin ? widthPixels : 32;
