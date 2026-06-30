@@ -8,6 +8,7 @@ import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.BreathingBubbleInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
@@ -246,6 +247,14 @@ public class TestS2ObjectOccupancyOracle {
     private record RideCheck(int expectedY, int actualY, boolean actualAir, boolean actualOnObject) {
     }
 
+    private record DeadRideReleaseCheck(
+            boolean onObject,
+            boolean air,
+            boolean riding,
+            boolean objectStandingBit,
+            String summary) {
+    }
+
     @Test
     public void mtz1TwinStomperRetractionKeepsRiderOnPreMoveSurfaceAtRomFrame1267() throws Exception {
         RideCheck rideCheck = driveTrace("mtz", Sonic2ZoneConstants.ZONE_MTZ, 0,
@@ -271,6 +280,50 @@ public class TestS2ObjectOccupancyOracle {
                         + "pre-update surface for the transition frame");
         Assertions.assertFalse(rideCheck.actualAir());
         Assertions.assertTrue(rideCheck.actualOnObject());
+    }
+
+    @Test
+    public void mtz3DeadTailsObj6eStaleStandingBitClearsAtRomFrame3618() throws Exception {
+        DeadRideReleaseCheck check = driveTrace("mtz3", Sonic2ZoneConstants.ZONE_MTZ, 2,
+                (trace, om, frame) -> {
+                    if (frame != 3618) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    Assertions.assertNotNull(expected.sidekick(),
+                            "MTZ3 trace row f3618 must include Tails state");
+                    Assertions.assertEquals(0, expected.sidekick().statusByte() & 0x08,
+                            "ROM fixture should have cleared Tails Status_OnObj at MTZ3 f3618");
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have a CPU Tails sidekick at MTZ3 f3618");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    ObjectInstance obj6e = om.getActiveObjects().stream()
+                            .filter(AbstractObjectInstance.class::isInstance)
+                            .map(AbstractObjectInstance.class::cast)
+                            .filter(instance -> instance.getSlotIndex() == 16)
+                            .filter(instance -> instance.getSpawn() != null
+                                    && (instance.getSpawn().objectId() & 0xFF) == 0x6E)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(obj6e,
+                            "Engine fixture must still have the ridden Obj6E in slot 16 at MTZ3 f3618");
+                    return new DeadRideReleaseCheck(
+                            tails.isOnObject(),
+                            tails.getAir(),
+                            om.isRidingObject(tails),
+                            om.hasObjectStandingBit(tails, obj6e),
+                            describeSlots(om.occupiedDynamicSlotIds(), 16, 18));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertFalse(check.onObject(),
+                "S2 SolidObject must clear dead Tails' stale Status_OnObj on Obj6E; slots "
+                        + check.summary());
+        Assertions.assertTrue(check.air());
+        Assertions.assertFalse(check.riding(),
+                "Dead Tails should not retain an engine riding record after the Obj6E stale clear; slots "
+                        + check.summary());
+        Assertions.assertFalse(check.objectStandingBit(),
+                "Obj6E's sidekick standing bit must clear with Status_OnObj (docs/s2disasm/s2.asm:35022-35044)");
     }
 
     @Test

@@ -6,6 +6,53 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 MTZ3 Obj6E dead-sidekick stale standing clear (f3618 -> f4575)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz3-frontier-r2` /
+  `bugfix/ai-s2-mtz3-frontier-r2`, based on integration head `bbed44de4`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: MTZ3 f3618 / 933 (`tails_status_byte` expected
+  `0x0003`, actual `0x000B`).
+- Triage/evidence: ROM aux at f3617 showed Tails dead/falling with
+  `Status_OnObj` still set (`tails_status=0x0B`) and Obj6E slot 16 status
+  `0x18` (main + sidekick standing bits). At f3618 ROM had
+  `tails_status=0x03` and Obj6E slot 16 status `0x08`, clearing only the
+  sidekick standing bit while the platform remained live at `$0BAF,$0692`.
+  Engine diagnostics still showed Tails `onObj=true`, `st=0B`, riding Obj6E
+  slot 16. This was not a slot-cadence issue; it was the shared solid
+  controller returning early for `player.getDead()` before emulating the
+  ROM stale-rider clear.
+- Disassembly cited: Obj6E routine 2 updates x/y, then calls
+  `JmpTo15_SolidObject` at `docs/s2disasm/s2.asm:54979-55010`.
+  `SolidObject` processes on-screen Player 2, and when the object's standing
+  bit is set while the player `Status_InAir` bit is set, it clears
+  `Status_OnObj`, sets `Status_InAir`, clears the object's standing bit, and
+  returns without `SolidObject_cont` (`docs/s2disasm/s2.asm:35022-35044`).
+- Fix: dead players still skip fresh solid collision, but if they are
+  airborne and already own the current object's standing bit, the shared
+  solid controller performs only the ROM stale-standing-bit clear. This is
+  keyed on live object standing state and render/on-screen solid pass gates;
+  no trace hydration, tolerance, route, frame, or zone carve-out is used.
+- Focused regression check:
+  `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#mtz3DeadTailsObj6eStaleStandingBitClearsAtRomFrame3618" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: passed 1/1.
+- Focused trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; MTZ3 advances to f4575 / 932 (`x_speed`
+  expected `-00B8`, actual `-01B8`), a separate main-player MTZ platform
+  movement frontier.
+- Requested shared-code preservation sweep:
+  `mvn "-Dtest=TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; ARZ1, CNZ1, DEZ ending, EHZ1, HTZ1, MCZ1,
+  MCZ2, SCZ, and WFZ passed. Preserved expected reds: CPZ2 f4018 / 1334;
+  HTZ2 f3618 / 993; MTZ1 f5713 / 560; MTZ2 f4375 / 950.
+- Remaining named red preservation set:
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; all preserved at accepted frontiers/counts:
+  ARZ2 f1028 / 2688; CNZ2 f6144 / 994; CPZ1 f4547 / 177; OOZ1 f1790 /
+  614; OOZ2 f3835 / 797.
+
 ## 2026-06-29 - S2 HTZ2 Obj30 sidekick input slot bridge (f3322 -> f3618)
 
 - Worktree/branch: `.worktrees/ai-s2-htz2-frontier` /
