@@ -2948,6 +2948,40 @@ X and the approximate 32px Y band when `explicit_height` is clear
 
 ---
 
+## P72 -- Orientation-to-player equality selects left/up
+
+**Pattern.** S2 `Obj_GetOrientationToPlayer` does not treat equal X or Y as
+right/down. Its branch sequence leaves movement index 0 selected on a zero
+object-minus-player delta, so X equality selects the left delta and Y equality
+selects the up delta.
+
+**Engine symptom.** A chasing object appears in the correct slot and routine,
+but its velocity or subpixel carry is one increment off only on frames where it
+lines up exactly with the player on one axis. In ARZ2, Obj8C Whisp slot `$13`
+matched the ROM until its Y equaled Sonic's Y; the engine used a strict `<`
+test, accelerated down for one frame, and reached f1225 one pixel below the ROM.
+
+**What to check / fix.**
+1. When porting an object that calls `Obj_GetOrientationToPlayer`, mirror the
+   helper's equality behavior instead of using strict less-than tests for both
+   axes.
+2. Use `playerX <= objectX` for the left delta and `playerY <= objectY` for the
+   up delta when the movement table follows the standard index-0 left/up order.
+3. Confirm the object has not rearranged the movement table before applying the
+   rule. Keep the fix object-local and helper-driven; do not branch on zone,
+   route, trace frame, or a known failing trace.
+
+**ROM citation.** `Obj_GetOrientationToPlayer` leaves d0/d1 at index 0 on
+equality via `tst.w d2; bpl.s` for X and `sub.w y_pos(a1),d3; bhs.s` for Y
+(`docs/s2disasm/s2.asm:72812-72848`). Obj8C then indexes
+`Obj8C_MovementDeltas` before `ObjectMove`
+(`docs/s2disasm/s2.asm:73231-73249,30191-30204`).
+
+**Originating commit.** `8d114451a` S2 ARZ2 Obj8C Whisp orientation equality:
+`TestS2Arz2LevelSelectTraceReplay` advances f1225 -> f1294.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

@@ -235,8 +235,10 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
             int playerX = player.getCentreX();
             int playerY = player.getCentreY();
 
-            // Accelerate toward player on X axis
-            if (playerX < currentX) {
+            // Obj_GetOrientationToPlayer (s2.asm:72836-72848) leaves d0/d1 at
+            // index 0 when object-pos minus player-pos is zero. Obj8C therefore
+            // treats equality as the left/up delta, not the right/down delta.
+            if (playerX <= currentX) {
                 xVelFixed -= ACCELERATION;
                 if (xVelFixed < -MAX_VELOCITY) {
                     xVelFixed = -MAX_VELOCITY;
@@ -250,8 +252,7 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
                 facingLeft = false;
             }
 
-            // Accelerate toward player on Y axis
-            if (playerY < currentY) {
+            if (playerY <= currentY) {
                 yVelFixed -= ACCELERATION;
                 if (yVelFixed < -MAX_VELOCITY) {
                     yVelFixed = -MAX_VELOCITY;

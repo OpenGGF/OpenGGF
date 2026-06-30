@@ -3,6 +3,7 @@ package com.openggf.tests.trace;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.objects.ARZPlatformObjectInstance;
 import com.openggf.game.sonic2.objects.ArrowProjectileInstance;
+import com.openggf.game.sonic2.objects.badniks.WhispBadnikInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -871,6 +872,42 @@ public class TestS2ObjectOccupancyOracle {
         Assertions.assertEquals(slotCheck.expectedY(), slotCheck.actualY(),
                 "Obj91_MakeBubble offsets y_pos by +6 from the ChopChop mouth "
                         + "(docs/s2disasm/s2.asm:73765-73769)");
+    }
+
+    @Test
+    public void arz2WhispSlot13MatchesRomSubpixelCarryAtFrame1225() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1225) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedWhisp = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 0x13)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x8C)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedWhisp,
+                            "ARZ2 ROM fixture should report Obj8C Whisp in slot 0x13 at f1225");
+                    WhispBadnikInstance actualWhisp = om.activeObjectsOfType(WhispBadnikInstance.class)
+                            .stream()
+                            .filter(whisp -> whisp.getSlotIndex() == 0x13)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(expectedWhisp.x() & 0xFFFF, expectedWhisp.y() & 0xFFFF,
+                            actualWhisp == null ? -1 : actualWhisp.getX(),
+                            actualWhisp == null ? -1 : actualWhisp.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 0x10, 0x1A));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "ARZ2 Obj8C slot 0x13 X should still match ROM at f1225; slots "
+                        + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj8C ObjectMove must preserve the ROM y_sub carry phase for slot 0x13 "
+                        + "at ARZ2 f1225 (docs/s2disasm/s2.asm:73231-73249,30191-30204); "
+                        + "slots " + check.summary());
     }
 
     private record SlotWindowCheck(Map<Integer, Integer> slots, String summary) {
