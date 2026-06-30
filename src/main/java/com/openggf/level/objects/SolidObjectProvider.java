@@ -395,6 +395,20 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether CPU sidekick follow steering should treat this latched object as
+     * preserving a previous push bit after the live ride record has cleared.
+     * <p>
+     * This is narrower than {@link #preservesSidekickCpuPushGraceWhileRiding(PlayableEntity)}:
+     * it only applies when the player is no longer marked on-object locally, but
+     * ROM-visible object state can still feed the {@code Status_Push} branch at
+     * the sidekick CPU slot. Keep it object-local and do not use it to infer
+     * push from route/frame-specific trace data.
+     */
+    default boolean preservesSidekickCpuPushGraceAfterRideClears(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether a current {@code Status_Push} bypass while the CPU sidekick is
      * still riding this object should consume the object-order input history
      * slot rather than the ordinary already-loaded follow slot.

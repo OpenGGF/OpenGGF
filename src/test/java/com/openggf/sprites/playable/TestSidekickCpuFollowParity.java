@@ -10,6 +10,8 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.objects.RisingLavaObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -1421,6 +1423,52 @@ class TestSidekickCpuFollowParity {
                 () -> assertFalse(controller.getInputRight(),
                         "The bypass preserves the already-loaded zero Ctrl_2 word until the next "
                                 + "delayed RIGHT sample arrives."));
+    }
+
+    @Test
+    void s2Obj30LatchedPushGraceBypassesFollowSteeringAfterRideClears() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setOnObject(false);
+        tails.setCentreX((short) 0x1A1B);
+        tails.setCentreY((short) 0x04B0);
+        tails.setDirection(Direction.LEFT);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x1A1B);
+        Arrays.fill(yHistory, (short) 0x04AC);
+        Arrays.fill(statusHistory, (byte) AbstractPlayableSprite.STATUS_FACING_LEFT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        RisingLavaObjectInstance lowerRoutePlatform = new RisingLavaObjectInstance(
+                new ObjectSpawn(0x1920, 0x04F0, Sonic2ObjectIds.RISING_LAVA, 0x06, 0, false, 0),
+                "RisingLava");
+        tails.setLatchedSolidObject(Sonic2ObjectIds.RISING_LAVA, lowerRoutePlatform);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        controller.hydrateFromRomCpuState(0x06, 0, 0, Sonic2ObjectIds.RISING_LAVA,
+                true, 0x1A1B, 0x04AC);
+        setNormalPushingGraceFrames(controller, 8);
+
+        controller.update(0x138A);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("latched_push_grace", diagnostics.followBranch()),
+                () -> assertTrue(diagnostics.skipFollowSteering(),
+                        "HTZ2 f5002 keeps Obj30's ROM-visible Status_Push for TailsCPU_Normal "
+                                + "even after the engine ride record has cleared; s2.asm:39297-39300 "
+                                + "branches to the action filter before FollowLeft/FollowRight."),
+                () -> assertFalse(controller.getInputLeft(),
+                        "The push-bypass path preserves the already-loaded zero Ctrl_2 word."),
+                () -> assertEquals(1, controller.getDiagnosticJumpingFlag(),
+                        "The push-bypass path skips the grounded auto-jump clear at s2.asm:39349-39355."));
     }
 
     @Test

@@ -14,6 +14,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -2114,6 +2115,15 @@ public class SidekickCpuController {
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
                 && preservesSidekickCpuPushGraceWhileRiding(ridingObject);
+        ObjectInstance latchedPushGraceObject = latchedCpuPushGraceObject();
+        boolean latchedObjectPushGrace = !sidekick.getAir()
+                && !sidekick.isOnObject()
+                && !sidekick.getRolling()
+                && normalPushingGraceFrames > 0
+                && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
+                && preservesSidekickCpuPushGraceAfterRideClears(latchedPushGraceObject);
         int followSnapThreshold = resolveFollowSnapThreshold();
         boolean localBelowTargetFacingIntoFollowSide =
                 (dx > 0 && sidekick.getDirection() == Direction.RIGHT)
@@ -2223,10 +2233,12 @@ public class SidekickCpuController {
         boolean skipFollowSteering = currentPushBypass
                 || localBelowTargetGrace
                 || ridingObjectPushGrace
+                || latchedObjectPushGrace
                 || (objectOrderGrace && !supportGraceKeepsFollowSteering);
         String followBranch = currentPushBypass ? "current_push_bypass"
                 : localBelowTargetGrace ? "grace_push_bypass"
                 : ridingObjectPushGrace ? "riding_push_grace"
+                : latchedObjectPushGrace ? "latched_push_grace"
                 : (objectOrderGrace && !supportGraceKeepsFollowSteering) ? "grace_push_bypass"
                 : leaderStatusOnObject ? "leader_on_object"
                 : effectiveLeader.getGSpeed() >= 0x400 ? "leader_fast"
@@ -2392,7 +2404,8 @@ public class SidekickCpuController {
                 ((currentStatusPush
                         && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0)
                         || objectOrderGrace
-                        || ridingObjectPushGrace);
+                        || ridingObjectPushGrace
+                        || latchedObjectPushGrace);
         if (jumpingFlag && !autoJumpPushBypass) {
             inputJump = true;
             boolean delayedJumpOnly = (recordedInput & (AbstractPlayableSprite.INPUT_UP
@@ -2722,6 +2735,29 @@ public class SidekickCpuController {
         return sidekick.getLatchedSolidObjectInstance();
     }
 
+    private ObjectInstance latchedCpuPushGraceObject() {
+        ObjectInstance latched = sidekick.getLatchedSolidObjectInstance();
+        if (hasLiveRidingObject(latched)) {
+            return latched;
+        }
+        int slot = sidekick.getInteractSlotIndex();
+        if (slot < 0) {
+            return null;
+        }
+        LevelManager levelManager = sidekick.currentLevelManager();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return null;
+        }
+        for (ObjectInstance instance : levelManager.getObjectManager().getActiveObjects()) {
+            if (instance instanceof AbstractObjectInstance object
+                    && object.getSlotIndex() == slot
+                    && !instance.isDestroyed()) {
+                return instance;
+            }
+        }
+        return null;
+    }
+
     private boolean clearStaleUnderwaterPushBeforeNormalCpu() {
         ObjectInstance ridingObject = currentRidingObject();
         if (!sidekick.isInWater()
@@ -2784,6 +2820,16 @@ public class SidekickCpuController {
         }
         if (ridingObject instanceof SolidObjectProvider provider) {
             return provider.preservesSidekickCpuPushGraceWhileRiding(sidekick);
+        }
+        return false;
+    }
+
+    private boolean preservesSidekickCpuPushGraceAfterRideClears(ObjectInstance latchedObject) {
+        if (!hasLiveRidingObject(latchedObject)) {
+            return false;
+        }
+        if (latchedObject instanceof SolidObjectProvider provider) {
+            return provider.preservesSidekickCpuPushGraceAfterRideClears(sidekick);
         }
         return false;
     }
