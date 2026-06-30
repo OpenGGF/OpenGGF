@@ -56,6 +56,61 @@ branch-local measurements.
   864, OOZ1 f1795 / 1058, and OOZ2 f3919 / 1117. MTZ1 is the only moved red
   frontier in the set, now f7906 / 407.
 
+## 2026-06-30 - S2 CPZ2 deferred Obj02_Dead water-status preservation (f9781 -> f10068)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r12` /
+  `bugfix/ai-s2-cpz2-frontier-r12`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at accepted HEAD `aa77abe09`, then
+  fast-forwarded to latest integration `4221b6065` before worker verification.
+  The conductor merged it after MTZ1 r3 and the latest `origin/develop` merge,
+  then reran the acceptance guard on the updated integration tree.
+- Baseline reproduction on integration `9962fc504`:
+  `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Dtrace.context.diagnosticChars=full" test`.
+  Result before the fix: CPZ2 f9781 / 123 (`tails_status_byte` expected
+  `0x0042`, actual `0x0002`).
+- Triage/evidence: at f9781 ROM Tails is in object routine `$06`
+  (`Obj02_Dead`), at `$2A43,$0517`, airborne, and still has
+  `Status_Underwater` set (`status=$42`). The engine movement path preserved
+  `st42` through post-physics dead-fall movement, but the later generic
+  `updatePlayableWaterStateForCurrentLevel` recomputed water state and cleared
+  bit `$40`, leaving `status=$02`. The broad trial predicate that skipped all
+  CPU dead-fall modes moved CPZ2 but changed ARZ2 from 2686 to 2687 errors, so
+  the committed predicate is limited to the already-modeled deferred
+  Obj02_Dead continuation flag used by the movement/collision path.
+- Disassembly cited: Obj02_Control calls `Tails_Water` after movement,
+  display, and position recording (`docs/s2disasm/s2.asm:38972-38987`).
+  `Tails_Water` compares `y_pos(a0)` against `Water_Level_1` and sets or
+  clears `status.player.underwater` (`docs/s2disasm/s2.asm:39534-39590`).
+  Obj02_Dead calls `Obj02_CheckGameOver`, `ObjectMoveAndFall`,
+  `Tails_RecordPos`, animation/DPLC, and display, with no `Tails_Water` call
+  (`docs/s2disasm/s2.asm:41131-41137`).
+- Fix: `LevelManager` now preserves water state on
+  `SidekickCpuController.isDeferredDespawnDeadFallContinuingThisFrame()`,
+  matching the ROM Obj02_Dead continuation window without skipping normal CPU
+  following, zone-specific water checks, route-specific frames, or trace data
+  hydration.
+- Focused target after conductor merge:
+  `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay" test`.
+  Result: expected nonzero; CPZ2 advances to f10068 / 128 (`y_speed`
+  expected `-03E0`, actual `0x03E0`). The new boundary is a CPZ boss body
+  touch/position mismatch: the engine hits Obj5D near `$2B2F,$04BC` while ROM
+  has the boss body at `$2B32,$04BC` and continues the pre-hit trajectory.
+- Current S2 green guard:
+  `mvn clean test "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false"`
+  exits 0: 11 selected S2 green traces passed, no failures or errors.
+- Updated red preservation set:
+  `mvn test "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dmaven.test.failure.ignore=true"`
+  exits 0 with expected red failures ignored and preserves ARZ2 f1028 / 2686,
+  CNZ2 f8870 / 447, HTZ2 f4165 / 1129, MTZ1 f7906 / 407, MTZ3 f7853 / 864,
+  OOZ1 f1795 / 1058, and OOZ2 f3919 / 1117. CPZ2 is the only moved red
+  frontier in the set, now f10068 / 128.
+- Full S2 sweep after conductor merge:
+  `mvn "-Dtest=TestS2*TraceReplay" test`.
+  Result: expected nonzero; 19 S2 traces run, 11 green, 8 expected red:
+  ARZ2 f1028 / 2686, CNZ2 f8870 / 447, CPZ2 f10068 / 128, HTZ2 f4165 /
+  1129, MTZ1 f7906 / 407, MTZ3 f7853 / 864, OOZ1 f1795 / 1058, and OOZ2
+  f3919 / 1117.
+
 ## 2026-06-30 - S2 HTZ2 Obj18 grounded stale standing latch filter (f4138 -> f4165)
 
 - Worktree/branch: `.worktrees/ai-s2-htz2-frontier-r7` /
