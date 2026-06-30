@@ -1015,6 +1015,12 @@ public record PhysicsFeatureSet(
          *  not branch on the loaded bubble art key.
          *  S2/S3K: {@code 8}. S1: {@code 0}. */
         int mouthBubbleTimerBias,
+        /** Whether a newly allocated visible Obj0A bubble waits until a later
+         *  object pass before running its first update. S2/S3K allocate the
+         *  child into SST for a later slot pass; S1's fixed countdown manager
+         *  preserves the accepted immediate visible-bubble timing from the S1
+         *  complete-run traces. */
+        boolean breathingBubbleDefersFirstObjectPass,
         /** Obj0A small mouth-bubble rise velocity, in ROM subpixels/frame.
          *  S1/S2 set {@code y_vel=-$88} and call {@code SpeedToPos}
          *  (s1 Drowning Countdown.asm:47,86; s2.asm:41899,41941-41942).
@@ -1338,6 +1344,7 @@ public record PhysicsFeatureSet(
                     source.speedShoesTimerDecimation(),
                     source.initialDrowningCountdownFrameTimer(),
                     source.mouthBubbleTimerBias(),
+                    source.breathingBubbleDefersFirstObjectPass(),
                     source.mouthBubbleRiseVelocity(),
                     source.solidObjectKeepsOnObjWhenJumpedOffSameFrame(),
                     source.levelBoundaryLockUsesScreenLockFlag(),
@@ -1406,8 +1413,9 @@ public record PhysicsFeatureSet(
             false /* rightWallDeepProbePreservesPenetration: preserve S1 baseline until right-wall traces are revalidated */,
             true /* solidObjectBarelyPokingResolvesAsSide: S1 Solid_cont sends d1<=4 to Solid_SideAir (s1disasm/_incObj/sub SolidObject.asm:181-184), which returns moveq #1,d4 = side contact (lines 211-214) */,
             1 /* speedShoesTimerDecimation: S1 per-frame word timer */,
-            0 /* initialDrowningCountdownFrameTimer: S1 Drown_Main installs countdown sidecar with objoff_38 left at 0, so Drown_Countdown underflows immediately */,
+            60 /* initialDrowningCountdownFrameTimer: S1 fixed in-level Obj0A cadence is owned by Sonic1FixedAirCountdownManager; keep the generic fallback at the prior full-second start so it does not allocate duplicate mouth bubbles before the fixed manager owns the cadence */,
             0 /* mouthBubbleTimerBias: S1 LZ Obj64 air bubbles use a distinct bubble-maker structure with no (RandomNumber&$F)+8 mouth-bubble delay */,
+            false /* breathingBubbleDefersFirstObjectPass: S1 fixed countdown manager preserves the accepted visible bubble slot timing from complete-run traces */,
             -0x88 /* mouthBubbleRiseVelocity: S1 Obj0A small bubbles use y_vel=-$88 with SpeedToPos */,
             false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S1 unaffected (no CPU sidekick; existing same-frame unseat ordering preserved by gating) */,
             true /* levelBoundaryLockUsesScreenLockFlag: S1 Sonic_LevelBound gates the +64 right-extension on f_lockscreen (s1disasm/_incObj/01 Sonic.asm:1047-1049), which persists past boss defeat (FZ has no Egg Prison) */,
@@ -1482,6 +1490,7 @@ public record PhysicsFeatureSet(
             1 /* speedShoesTimerDecimation: S2 per-frame word timer (s2.asm:36008-36025) */,
             0 /* initialDrowningCountdownFrameTimer: Sonic_Water/Tails_Water install Obj0A with timer storage left at 0; Obj0A_Countdown underflows before setting #60-1 (s2.asm:36367-36387,39535-39554,42199-42225) */,
             8 /* mouthBubbleTimerBias: S2 Obj0A_Animate next mouth-bubble delay = (RandomNumber&$F)+8 (s2.asm:42201-42204) */,
+            true /* breathingBubbleDefersFirstObjectPass: S2 Obj0A children are allocated into SST and run when ExecuteObjects reaches the child slot */,
             -0x88 /* mouthBubbleRiseVelocity: S2 Obj0A small bubbles use y_vel=-$88 with SpeedToPos (s2.asm:41899,41941-41942) */,
             false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S2 unaffected; existing same-frame unseat ordering preserved by gating */,
             false /* levelBoundaryLockUsesScreenLockFlag: S2 Sonic_LevelBound gates the +$40 right-extension on Current_Boss_ID (s2.asm:37247-37250), i.e. boss-alive; engine uses isBossFightActive() */,
@@ -1558,6 +1567,7 @@ public record PhysicsFeatureSet(
             8 /* speedShoesTimerDecimation: S3K byte timer decremented every 8th level frame (sonic3k.asm:22072-22078; init 40818) */,
             60 /* initialDrowningCountdownFrameTimer: S3K fixed AirCountdown cadence is owned by zone/event managers; keep generic fallback at the previous full-second reset */,
             8 /* mouthBubbleTimerBias: S3K shares the S2 Obj0A mouth-bubble cadence (RandomNumber&$F)+8 */,
+            true /* breathingBubbleDefersFirstObjectPass: S3K AirCountdown visible children use allocated-object pass timing like S2 */,
             -0x100 /* mouthBubbleRiseVelocity: S3K AirCountdown uses y_vel=-$100 with MoveSprite2 (sonic3k.asm:33312,33347) */,
             true /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S3K SolidObjectFull runs once/object/frame. A land-and-jump-off frame keeps Status_OnObj|Status_InAir (RideObject_SetRide bset Status_OnObj sonic3k.asm:42033; Tails_Jump bset Status_InAir without clearing OnObj sonic3k.asm:28553-28554); the airborne-rider unseat (loc_1DC98 41016-41035 / loc_1DCF0 41066-41084) fires only on the NEXT frame. AIZ1 f2590 Tails-on-Spikes: ROM 0x0A, engine was 0x02. */,
             false /* levelBoundaryLockUsesScreenLockFlag: S3K has levelBoundaryRightStrict=true so the +64 extension is never added and this gate is never consulted */,

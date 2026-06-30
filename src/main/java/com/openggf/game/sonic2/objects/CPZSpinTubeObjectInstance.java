@@ -201,6 +201,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         String expectedExitDirection = ""; // Expected exit direction (UP, DOWN, LEFT, RIGHT)
         int releaseRollAnimationHoldFrames = 0;
         boolean skipNextEntryMoveForOwnerOverwrite = false;
+        boolean skipMoveAfterOwnerExit = false;
     }
 
     // One independent state slot per playable, mirroring ROM objoff_2C (main)
@@ -325,6 +326,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         cs.expectedSegmentCount = 0;
         cs.releaseRollAnimationHoldFrames = 0;
         cs.skipNextEntryMoveForOwnerOverwrite = false;
+        cs.skipMoveAfterOwnerExit = false;
     }
 
     private void preserveReleasedRollAnimation(AbstractPlayableSprite player, CharacterState cs) {
@@ -505,6 +507,11 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         player.setGSpeed((short) TUBE_SPEED);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
+        // ROM: move.b #0,jumping(a1). Without clearing this latch, normal
+        // airborne movement treats the tube release as a jump-button release
+        // and clamps the upward exit speed to -$400 instead of preserving
+        // Obj1E's -$800 launch velocity (docs/s2disasm/s2.asm:48130-48141).
+        player.setJumping(false);
         // ROM: bclr #high_priority_bit,art_tile(a1) - render behind tube graphics
         player.setHighPriority(false);
         player.setPriorityBucket(RenderPriority.MIN);
@@ -522,6 +529,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
             // active owner would overwrite.
             moveCharacter(player);
             cs.skipNextEntryMoveForOwnerOverwrite = true;
+            cs.skipMoveAfterOwnerExit = true;
+        } else {
+            cs.skipMoveAfterOwnerExit = false;
         }
 
         // Play rolling sound
@@ -564,6 +574,10 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
     private void updateEntryPath(AbstractPlayableSprite player, CharacterState cs) {
         cs.duration--;
         if (cs.duration >= 0) {
+            if (shouldSkipMoveAfterPriorOwnerExit(player, cs)) {
+                cs.skipNextEntryMoveForOwnerOverwrite = false;
+                return;
+            }
             if (cs.skipNextEntryMoveForOwnerOverwrite) {
                 cs.skipNextEntryMoveForOwnerOverwrite = false;
                 return;
@@ -717,6 +731,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
 
         cs.duration--;
         if (cs.duration >= 0) {
+            if (shouldSkipMoveAfterPriorOwnerExit(player, cs)) {
+                return;
+            }
             // Continue moving along current segment
             moveCharacter(player);
             return;
@@ -826,11 +843,6 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         // this release.
         cs.releaseRollAnimationHoldFrames = RELEASE_ROLL_ANIMATION_HOLD_FRAMES;
 
-        // Set springing frames to give the player ceiling collision immunity.
-        // This prevents the movement manager from immediately zeroing ySpeed when the
-        // exit point is inside the tube's solid geometry. 15 frames matches springs.
-        player.setSpringing(15);
-
         // Restore normal render priority
         player.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
 
@@ -841,6 +853,22 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         cs.state = 6;
 
         LOGGER.fine("Player exited spin tube");
+    }
+
+    private boolean shouldSkipMoveAfterPriorOwnerExit(AbstractPlayableSprite player, CharacterState cs) {
+        if (!cs.skipMoveAfterOwnerExit) {
+            return false;
+        }
+        if (player.isObjectControlled()) {
+            return false;
+        }
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        player.setAnimationId(Sonic2AnimationIds.ROLL);
+        player.setAir(true);
+        player.setHighPriority(false);
+        player.setPriorityBucket(RenderPriority.MIN);
+        cs.skipMoveAfterOwnerExit = false;
+        return true;
     }
 
     /**

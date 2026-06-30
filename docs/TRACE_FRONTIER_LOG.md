@@ -6,6 +6,50 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S1 guard restored after S2 ARZ2 breathing-bubble regression
+
+- Worktree/branch: `.worktrees/ai-s2-trace-develop` /
+  `bugfix/ai-s2-trace-develop`, while resolving the `origin/develop` merge
+  that added S2 ARZ bubble-generator art parity.
+- Regression isolation: detached bisect worktree `.worktrees/s1-regression-bisect`
+  used local `develop` `cb2cf1477` as good and integration head
+  `6aba2e1fd` as bad. The bisect identified `091952f6c0519dddc93b339a4f2de3b55c959edf`
+  (`fix(trace): advance S2 ARZ2 breathing bubbles`) as the first commit making
+  the S1 guard sample fail.
+- Failing S1 sample before the fix:
+  `mvn -q "-Dmse=off" "-Dtest=TestS1Lz1CompleteRunTraceReplay,TestS1Lz2CompleteRunTraceReplay,TestS1Sbz3CompleteRunTraceReplay" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dsonic1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-DfailIfNoTests=false" test`.
+  Result: LZ1 f5745 / 13 (`y` expected `0x02EE`, actual `0x02ED`), LZ2
+  f6418 / 121 (`obj_s44_slot` expected `0x44`, actual `0x45`), SBZ3 f5259 /
+  10 (`obj_s2B_slot` expected `0x2B`, actual `0x29`).
+- Fix: `PhysicsFeatureSet` now separates visible breathing-bubble object-pass
+  timing from mouth-bubble RNG/timer cadence. S1 keeps the fixed-air-countdown
+  manager's accepted immediate visible-bubble insertion/update cadence, while
+  S2/S3K keep deferred allocated-object timing for Obj0A children. This is a
+  per-game ROM-behavior flag, not a trace/zone/frame carve-out, and it does not
+  hydrate state from trace data.
+- Restored S1 guard command:
+  `mvn -q "-Dmse=off" "-Dtest=TestS1Lz1CompleteRunTraceReplay,TestS1Lz2CompleteRunTraceReplay,TestS1Sbz3CompleteRunTraceReplay" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dsonic1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; LZ1, LZ2, and SBZ3 complete-run traces pass again.
+- S2 preservation check:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; ARZ2 remains f1028 / 2686
+  (`obj_extra_s16_x` expected absent, actual `0x0B7B`), CPZ1 passes, and CPZ2
+  remains f10907 / 37 (`camera_x` expected `0x2A20`, actual `0x2A22`).
+- Full S1 sweep after the fix:
+  `mvn -q "-Dmse=off" "-Dtest=TestS1*TraceReplay" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dsonic1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; all S1 trace replay tests pass.
+- Full S2 sweep after the fix and `origin/develop` merge resolution:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; 19 run, 12 green, 7 expected red. Current S2
+  frontiers: ARZ2 f1028 / 2686 (`obj_extra_s16_x` expected absent, actual
+  `0x0B7B`), CNZ2 f9183 / 441 (`tails_x_speed` expected `0x0000`, actual
+  `0x0200`), CPZ2 f10907 / 37 (`camera_x` expected `0x2A20`, actual
+  `0x2A22`), HTZ2 f4387 / 1049 (`tails_cpu_respawn_counter` expected
+  `0x0000`, actual `0x002B`), MTZ3 f7853 / 864 (`tails_cpu_interact`
+  expected `0x0065`, actual `0x0070`), OOZ1 f1803 / 1067 (`tails_x`
+  expected `0x0CE3`, actual `0x0CE4`), and OOZ2 f5737 / 730 (`y_speed`
+  expected `0x0080`, actual `-0080`).
+
 ## 2026-06-30 - S2 CPZ2 Obj5D pipe/container handoff (f10601 -> f10907)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r2` /
@@ -25371,6 +25415,37 @@ now matches ROM -8 at f2888), not an artificial bump: the earlier obj_control
 the capture to the ROM frame via slot-order-accurate position basis. Remaining
 CPZ2 frontier f2889 (ROM -16 = owner + second-tube re-capture) is the next link:
 the deferred second-tube capture still does not fire at f2889 -- next target.
+
+## 2026-06-30 -- CPZ2 spin-tube handoff/release parity (f2889 -> f3077)
+
+Reviewed Obj1E against `docs/s2disasm/s2.asm:47981-48387` and fixed the next
+two tube-specific mismatches:
+- Tube-to-tube handoff at f2889: when engine object-slot order has the old owner
+  tube run before the capturing tube, the capture must still model the ROM case
+  where the capturing tube runs first and the old owner applies its same-frame
+  movement afterward. `CPZSpinTubeObjectInstance` now detects that prior owner
+  movement already happened (current centre differs from pre-physics centre),
+  replays that missing owner step on capture, and reasserts Obj1E control if the
+  old owner exits before the new tube's next update.
+- Tube release at f2976: Obj1E capture clears `jumping(a1)` (`move.b #0,jumping`
+  at s2.asm:48138). The engine kept the jump latch set, so normal airborne
+  movement treated the tube exit as a jump-button release and capped the upward
+  `-$800` exit velocity to about `-$400`. Clearing the latch preserves the ROM
+  `-$800` launch, then gravity advances it to `-$7C8`.
+- Removed the non-ROM springing-frame shim on tube exit; Obj1E only masks
+  `y_pos`, clears `obj_control`, and plays the spindash-release sound.
+
+Verification on `develop`:
+- `mvn -Dmse=off -Ds2.rom.path="Sonic The Hedgehog 2 (W) (REV01) [!].gen" -Dtest=com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace test -DfailIfNoTests=false`
+  now advances CPZ2 from f2889 to f3077. New frontier: `tails_air` expected 0,
+  actual 1 while position/velocity match; ROM has Tails landed on object slot
+  0x3B, so this is a downstream object-contact landing issue, not active Obj1E
+  tube control.
+- `mvn -Dmse=off -Ds2.rom.path="Sonic The Hedgehog 2 (W) (REV01) [!].gen" -Dtest=com.openggf.game.sonic2.objects.TestCPZSpinTubeObjectInstance test -DfailIfNoTests=false`
+  passes.
+- `mvn -Dmse=off -Ds2.rom.path="Sonic The Hedgehog 2 (W) (REV01) [!].gen" -Dtest=com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay#replayMatchesTrace test -DfailIfNoTests=false`
+  remains at CPZ1 f3365 (`tails_x` expected 0x24AB, actual 0x24AA), matching the
+  existing one-pixel frontier family; no new CPZ1 tube fall-out regression.
 
 ## 2026-06-21 -- Cluster 2 (radius/rolling): airborne-rolling y_vel reflection (MZ2 f2578, HTZ2 f1078)
 

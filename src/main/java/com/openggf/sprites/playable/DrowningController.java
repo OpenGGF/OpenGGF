@@ -293,16 +293,21 @@ public class DrowningController {
 
         PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
         int riseVelocity = fs != null ? fs.mouthBubbleRiseVelocity() : -0x88;
+        boolean deferFirstPass = fs == null || fs.breathingBubbleDefersFirstObjectPass();
         boolean startsFacingLeft = player.getDirection() == Direction.LEFT;
 
         // Create bubble with game-specific art configuration
         BreathingBubbleInstance bubble = new BreathingBubbleInstance(
             bubbleX, bubbleY, startsFacingLeft, countdownNumber,
             bubbleArtKey, bubbleCountdownFrames, bubbleMaxFrame, riseVelocity,
-            skipFirstUpdate
+            skipFirstUpdate && deferFirstPass
         );
 
-        levelManager.getObjectManager().addDynamicObjectNextFrame(bubble);
+        if (deferFirstPass) {
+            levelManager.getObjectManager().addDynamicObjectNextFrame(bubble);
+        } else {
+            levelManager.getObjectManager().addDynamicObject(bubble);
+        }
     }
 
     /**
