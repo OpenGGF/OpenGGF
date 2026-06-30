@@ -6,6 +6,48 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 HTZ2 Obj18 origin-X despawn (f3618 -> f4012)
+
+- Worktree/branch: `.worktrees/ai-s2-htz2-frontier-r2` /
+  `bugfix/ai-s2-htz2-frontier-r2`, based on integration branch
+  `bugfix/ai-s2-trace-develop` at `bbed44de4`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: HTZ2 f3618 / 993 (`g_speed` expected `0x03F8`,
+  actual `0x02A8`).
+- Triage/evidence: at f3618 the ROM lands on Obj18 slot `$2A`, subtype 1,
+  with `x_pos=$190D`, `y_pos=$06C8`, and `status=$08`. The layout record is
+  `x=$1940`, `y=$06C8`, `id=$18`, `subtype=$01`; Obj18 subtype 1 moves live
+  `x_pos` left from its origin via the oscillator. Engine instrumentation
+  showed that this platform streamed in, then immediately unloaded and
+  respawned/unloaded again before the player reached it, because the shared
+  S2 off-screen check used live `x_pos` instead of Obj18's saved origin.
+- Disassembly cited: Obj18 initialization stores `x_pos` into
+  `obj18_x_origin` (`docs/s2disasm/s2.asm:23198`); Obj18's local despawn
+  checks `obj18_x_origin` against `Camera_X_pos_coarse`
+  (`docs/s2disasm/s2.asm:23253-23262`); subtype 1 separately writes live
+  `x_pos = obj18_x_origin + angle - $40`
+  (`docs/s2disasm/s2.asm:23370-23385`).
+- Fix: `ARZPlatformObjectInstance#getOutOfRangeReferenceX()` now returns the
+  saved `baseX`, so the shared S2 object lifetime path matches Obj18's local
+  origin-X despawn. This is object ROM state, not a zone, route, frame, or
+  trace carve-out. Focused coverage:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#genericPlatformOutOfRangeUsesStoredOriginX" "-DfailIfNoTests=false" test`
+  passed 1/1.
+- Target trace:
+  `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; HTZ2 advances to f4012 / 1031 (`y` expected
+  `0x0695`, actual `0x0699`).
+- Green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: 9/9 passed.
+- Expected-red preservation:
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; first-frame frontiers preserved. ARZ2 stays
+  f1028 and improves 2688 -> 2687 errors; CNZ2 f6144 / 994; CPZ1 f4547 /
+  177; CPZ2 f4018 / 1334; MTZ1 f5713 / 560; MTZ2 f4375 / 950; MTZ3 f3618 /
+  933; OOZ1 f1790 / 614; OOZ2 f3835 / 797.
+
 ## 2026-06-29 - S2 HTZ2 Obj30 sidekick input slot bridge (f3322 -> f3618)
 
 - Worktree/branch: `.worktrees/ai-s2-htz2-frontier` /
