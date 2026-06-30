@@ -123,6 +123,57 @@ branch-local measurements.
   ARZ2 f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10286 / 91, HTZ2 f4286 /
   1128, MTZ1 f8655 / 53, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2
   f3993 / 749.
+## 2026-06-30 - S2 HTZ2 Obj30 SolidObject_Always visibility gate (f4286 -> f4387)
+
+- Worktree/branch: `.worktrees/trace-s2-htz2-r14` /
+  `bugfix/ai-s2-htz2-frontier-r14`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at `2a932d405`, then fast-forwarded to
+  conductor integration `6b82175cc` before worker verification.
+- Baseline reproduction after the conductor update:
+  `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: HTZ2 f4286 / 1128 (`tails_y_speed` expected
+  `0x0000`, actual `0x0630`).
+- Triage/evidence: at f4286 ROM Tails was still riding Obj30 rising lava
+  (`stand_on_obj=$27`, Obj30 subtype at `$1920,$06E0`) with `y_vel=$0000`,
+  while the engine skipped the same solid support and left Tails falling at
+  `y_vel=$0630`. The position/subpixel state matched before the object
+  contact, isolating the mismatch to Obj30's solid-support path rather than
+  player movement. Treating Obj30 as solid but leaving the generic off-screen
+  solid gate in place did not move the frontier; Obj30 had to follow the ROM
+  `SolidObject_Always` path as well.
+- Disassembly cited: `Obj30_Main` sets `y_pos` from
+  `objoff_32 + Camera_BG_Y_offset`, dispatches `Obj30_Modes`, and only then
+  tests `Screen_Shaking_Flag_HTZ` for `MarkObjGone3`
+  (`docs/s2disasm/s2.asm:49568-49581`). Obj30 subtype 0/2 and subtype 6 paths
+  call `SolidObject_Always` before `DropOnFloor` / supported-player hurt
+  handling (`docs/s2disasm/s2.asm:49598-49604,49635-49642`).
+- Fix: `RisingLavaObjectInstance.isSolidFor()` now keeps Obj30 solid after
+  route filtering instead of using the later earthquake flag as a solidity
+  gate, and `RisingLavaObjectInstance.bypassesOffscreenSolidGate()` returns
+  true so the shared solid controller honors the ROM `SolidObject_Always`
+  call. This models ROM object state and ordering; it does not edit trace
+  data, hydrate state from traces, weaken tolerances, or branch on route,
+  frame, zone id, or a known failing fixture.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; HTZ2 advances to f4387 / 1049
+  (`tails_cpu_respawn_counter` expected `0x0000`, actual `0x002B`).
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; 11 selected S2 green traces passed.
+- Updated red preservation set after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`.
+  Result: expected nonzero and preserves ARZ2 f1028 / 2686, CNZ2 f9117 /
+  386, CPZ2 f10601 / 74, MTZ1 f8655 / 53, MTZ3 f7853 / 864, OOZ1 f1803 /
+  1067, and OOZ2 f3993 / 749. HTZ2 is the only moved red frontier in this
+  worker change, now f4387 / 1049.
+- Full S2 sweep after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; 19 S2 traces run, 11 green, 8 expected red:
+  ARZ2 f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10601 / 74, HTZ2 f4387 /
+  1049, MTZ1 f8655 / 53, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2
+  f3993 / 749.
+
 ## 2026-06-30 - S2 MTZ1 Obj69 stale P1 standing-bit snap (f7906 -> f8655)
 
 - Worktree/branch: `.worktrees/trace-s2-mtz1-r14` /
