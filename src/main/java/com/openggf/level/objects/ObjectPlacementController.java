@@ -1358,10 +1358,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 if (sx <= newWindowStart) {
                     break;
                 }
-                // S2 ObjectsManager_GoingBackward loads the previous entry when
-                // (coarseCamera - $80) < object_x (s2.asm:33047-33061), so an
-                // object exactly at the old left edge enters on the crossing.
-                if (sx <= oldWindowStart) {
+                if (sx < oldWindowStart) {
                     if (legacyNoCreate) {
                         trySpawn(i);
                     } else {
