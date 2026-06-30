@@ -16,6 +16,7 @@ import com.openggf.tests.SharedLevel;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.trace.TraceCharacterState;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceEvent;
@@ -217,6 +218,46 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void htz2RisingLavaHurtClearsTailsPushButKeepsOnObjectAtRomFrame4165() throws Exception {
+        StatusCheck statusCheck = driveTrace("htz2", Sonic2ZoneConstants.ZONE_HTZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 4165) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    Assertions.assertNotNull(expected.sidekick(),
+                            "HTZ2 trace row f4165 must include Tails state");
+                    Assertions.assertEquals(0x0A, expected.sidekick().statusByte(),
+                            "ROM fixture should have Tails Status_InAir|Status_OnObj only at HTZ2 f4165");
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have a CPU Tails sidekick at HTZ2 f4165");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    return new StatusCheck(
+                            expected.sidekick().statusByte(),
+                            TraceCharacterState.statusByteFromSprite(tails),
+                            tails.getPushing(),
+                            tails.isOnObject(),
+                            tails.getAir(),
+                            tails.isHurt(),
+                            String.format("tails=(x=%04X y=%04X xs=%04X ys=%04X) slots %s",
+                                    tails.getCentreX() & 0xFFFF,
+                                    tails.getCentreY() & 0xFFFF,
+                                    tails.getXSpeed() & 0xFFFF,
+                                    tails.getYSpeed() & 0xFFFF,
+                                    describeSlots(om.occupiedDynamicSlotIds(), 36, 44)));
+                });
+        Assertions.assertNotNull(statusCheck);
+        Assertions.assertEquals(statusCheck.expectedStatus(), statusCheck.actualStatus(),
+                "S2 Obj30 subtype 6 hurts supported Tails after SolidObject_Always; Hurt_Sidekick "
+                        + "clears Status_Push through ResetOnFloor_Part2 but leaves Status_OnObj "
+                        + "for the next solid pass; " + statusCheck.summary());
+        Assertions.assertFalse(statusCheck.pushing());
+        Assertions.assertTrue(statusCheck.onObject());
+        Assertions.assertTrue(statusCheck.air());
+        Assertions.assertTrue(statusCheck.hurt());
+    }
+
+    @Test
     public void mtz3RotatingPlatformLoadKeepsRomSlot22Identity() throws Exception {
         SlotCheck slotCheck = driveTrace("mtz3", Sonic2ZoneConstants.ZONE_MTZ, 2,
                 (trace, om, frame) -> {
@@ -371,6 +412,16 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     private record PushCheck(boolean pushing, int tailsX, int tailsY, String summary) {
+    }
+
+    private record StatusCheck(
+            int expectedStatus,
+            int actualStatus,
+            boolean pushing,
+            boolean onObject,
+            boolean air,
+            boolean hurt,
+            String summary) {
     }
 
     private record ObjectSpawnState(boolean active, boolean dormant, int liveCount) {

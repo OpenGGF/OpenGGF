@@ -351,6 +351,9 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
         if ((subtype == 4 || subtype == 6) && contact.standing()) {
             if (!player.getInvulnerable()) {
                 applyHurt(player);
+                // Obj30 hurts supported players after SolidObject_Always and DropOnFloor.
+                // Hurt_Sidekick does not clear Status_OnObj; the next solid pass owns unseating.
+                player.setOnObject(true);
             }
         }
     }
@@ -378,6 +381,14 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     @Override
     public int getOnScreenHalfHeight() {
         return getSolidParams().groundHalfHeight();
+    }
+
+    @Override
+    public boolean keepsOnObjWhenAirborneAfterSameFrameStandingContact(PlayableEntity player) {
+        // Obj30 subtype 4/6 runs SolidObject_Always/DropOnFloor before
+        // Obj30_HurtSupportedPlayers; Hurt_Sidekick then sets InAir without
+        // clearing OnObj (docs/s2disasm/s2.asm:49603-49615,49635-49642,85468-85472).
+        return subtype == 4 || subtype == 6;
     }
 
     // ========================================================================
