@@ -27333,3 +27333,40 @@ Verification:
   MTZ3 f7853 / 864, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117.
 - `mvn clean "-Dtest=TestS2SidewaysPformGraphRewind,TestTopSolidRoutineProfileAdoption" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
   exited 0.
+
+### 2026-06-30 -- S2 next-branch baseline round start
+
+Prerequisite: `next` was updated in `C:\Users\farre\IdeaProjects\sonic-engine-next`
+by merging current `origin/develop` (`66dd7c4f1`) into `next`, producing merge
+commit `1b72202f4`. Local `develop` was not modified because that checkout had
+unrelated uncommitted edits; `origin/develop` was used as the current develop
+source.
+
+Baseline command in `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-trace-next`
+on `bugfix/ai-s2-trace-next` at `1b72202f4`:
+`$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -Ptrace-replay "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+
+Result: exited 1 with 19 S2 trace replay classes run, 12 passing and 7 expected
+red frontiers:
+- ARZ2: f1028 / 2686 errors, `obj_extra_s16_x` expected `absent`, actual
+  `0x0B7B`.
+- CNZ2: f9183 / 441 errors, `tails_x_speed` expected `0x0000`, actual
+  `0x0200`.
+- CPZ2: f10907 / 37 errors, `camera_x` expected `0x2A20`, actual `0x2A22`.
+- HTZ2: f4387 / 1049 errors, `tails_cpu_respawn_counter` expected `0x0000`,
+  actual `0x002B`.
+- MTZ3: f7853 / 864 errors, `tails_cpu_interact` expected `0x0065`, actual
+  `0x0070`.
+- OOZ1: f1803 / 1067 errors, `tails_x` expected `0x0CE3`, actual `0x0CE4`.
+- OOZ2: f5737 / 730 errors, `y_speed` expected `0x0080`, actual `-0080`.
+
+The 12 passing S2 trace classes were ARZ1, CNZ1, CPZ1, DEZ ending, EHZ1, HTZ1,
+MCZ1, MCZ2, MTZ1, MTZ2, SCZ, and WFZ.
+
+Round-1 worker branches were created from integration branch
+`bugfix/ai-s2-trace-develop` at `66dd7c4f1`:
+- `bugfix/ai-s2-arz2-round1` for the ARZ2 object/slot cadence frontier.
+- `bugfix/ai-s2-sidekick-round1` for CNZ2, HTZ2, MTZ3, and OOZ1 sidekick/contact
+  frontiers.
+- `bugfix/ai-s2-event-physics-round1` for CPZ2 camera/event and OOZ2
+  player/touch physics frontiers.
