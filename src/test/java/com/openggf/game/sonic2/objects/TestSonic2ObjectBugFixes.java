@@ -263,6 +263,34 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void mtzLongPlatformSubtype5StalesLogicalHorizontalInputWhileRiding() {
+        MTZLongPlatformObjectInstance conveyor = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x1C86, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x05, 0, false, 0));
+        MTZLongPlatformObjectInstance earlyConveyor = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x1A7E, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x05, 0, false, 0));
+        MTZLongPlatformObjectInstance stationary = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x1C86, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x00, 0, false, 0));
+        TestablePlayableSprite facingRight = new TestablePlayableSprite("sonic", (short) 0x1C9F, (short) 0x04A8);
+        TestablePlayableSprite facingLeft = new TestablePlayableSprite("sonic", (short) 0x1A96, (short) 0x04A8);
+        TestablePlayableSprite cpuTails = new TestablePlayableSprite("tails", (short) 0x1C9F, (short) 0x04A8);
+        facingLeft.setDirection(Direction.LEFT);
+        cpuTails.setCpuControlled(true);
+
+        assertEquals(3, conveyor.staleHorizontalLogicalInputFramesWhileRiding(facingRight, 1, false, true),
+                "Obj65 loc_26E4A changes x_pos before SolidObject, while Sonic_Move consumes "
+                        + "Ctrl_1_Held_Logical (docs/s2disasm/s2.asm:53159-53220,36552-36567)");
+        assertEquals(0, conveyor.staleHorizontalLogicalInputFramesWhileRiding(facingLeft, 1, false, true),
+                "Sonic_MoveRight flips status.player.x_flip and accelerates immediately when Sonic starts facing left");
+        assertEquals(0, conveyor.staleHorizontalLogicalInputFramesWhileRiding(cpuTails, 1, false, true),
+                "CPU Tails writes Ctrl_2_Logical before Tails_Move consumes it "
+                        + "(docs/s2disasm/s2.asm:39381,39673-39688)");
+        assertEquals(0, earlyConveyor.staleHorizontalLogicalInputFramesWhileRiding(facingRight, 1, false, true),
+                "Earlier subtype-5 movement before the MTZ3 $1CC0 stop approach consumes the right edge immediately");
+        assertEquals(0, stationary.staleHorizontalLogicalInputFramesWhileRiding(facingRight, 1, false, true),
+                "Only the subtype-5 conveyor carry path uses the stale logical-input window");
+    }
+
+    @Test
     void mtzLongPlatformProximityChecksNativeSidekick() throws Exception {
         MTZLongPlatformObjectInstance platform = new MTZLongPlatformObjectInstance(
                 new ObjectSpawn(0x0AA0, 0x076C, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x13, 0, false, 0x076C));
