@@ -40,4 +40,13 @@ class TestElevatorObjectInstance {
 
         assertTrue(elevator.preservesStaleHorizontalInputEdgeWhileMoving(null));
     }
+
+    @Test
+    void cnzElevatorSkipsNewContactWhenPlayerAlreadyRidesAnotherObject() {
+        ElevatorObjectInstance elevator = new ElevatorObjectInstance(
+                new ObjectSpawn(0x20B0, 0x0398, Sonic2ObjectIds.CNZ_ELEVATOR, 0, 0, false, 0),
+                "Elevator");
+
+        assertTrue(elevator.skipsNewContactWhilePlayerAlreadyOnObject(null));
+    }
 }

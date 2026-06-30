@@ -551,6 +551,19 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object returns no contact when the player is already riding
+     * another object.
+     * <p>
+     * Most shared solid helpers may still side-push or replace support while
+     * Status_OnObj is set. Concrete object routines can opt in when their ROM
+     * helper explicitly checks the player's on-object bit before resolving a
+     * new contact and returns early for non-riding instances.
+     */
+    default boolean skipsNewContactWhilePlayerAlreadyOnObject(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether full-solid lower-half overlap should use the player's current
      * y-radius rather than the standing y-radius.
      * <p>

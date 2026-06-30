@@ -164,6 +164,15 @@ public class ElevatorObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean skipsNewContactWhilePlayerAlreadyOnObject(PlayableEntity player) {
+        // PlatformObjectD5 checks ObjD5's own standing bit first. If this
+        // elevator is not already carrying the player but Status_OnObj is set
+        // on the player, it returns d4=0 instead of replacing the current
+        // support (docs/s2disasm/s2.asm:35860-35894, 58905-58915).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM (s2.asm lines 58412-58417): Platform collision only runs in states 0, 2, 4.
