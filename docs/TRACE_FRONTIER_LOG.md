@@ -44,14 +44,25 @@ branch-local measurements.
 - Focused object coverage:
   `mvn "-Dtest=TestSpikyBlockSpikeInstance" "-DfailIfNoTests=false" test`.
   Result: exits 0.
-- Focused target after fast-forward to conductor baseline:
+- Focused target after conductor merge:
   stale `target/trace-reports/s2_mtz1_*` files were removed, then
-  `mvn "-Dmse=off" "-Dtest=TestS2MtzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  `mvn -q "-Dmse=off" "-Dtest=TestS2MtzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
   Result: exits 0; MTZ1 is green and no new `s2_mtz1` divergence report is
   produced.
-- Current S2 green guard:
-  `mvn "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
-  Result: exits 0; 11 selected S2 green traces passed.
+- Focused object coverage plus current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestSpikyBlockSpikeInstance,TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; the focused Obj68 spike test and 11 selected S2 green
+  traces passed.
+- Updated red preservation set after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`.
+  Result: expected nonzero and preserves ARZ2 f1028 / 2686, CNZ2 f9183 /
+  441, CPZ2 f10601 / 74, HTZ2 f4387 / 1049, MTZ3 f7853 / 864, OOZ1
+  f1803 / 1067, and OOZ2 f3993 / 749. MTZ1 is no longer in the red set.
+- Full S2 sweep after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; 19 S2 traces run, 12 green, 7 expected red:
+  ARZ2 f1028 / 2686, CNZ2 f9183 / 441, CPZ2 f10601 / 74, HTZ2 f4387 /
+  1049, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2 f3993 / 749.
 
 ## 2026-06-30 - S2 CPZ2 Obj5D invented hit latch removed (f10286 -> f10601)
 
