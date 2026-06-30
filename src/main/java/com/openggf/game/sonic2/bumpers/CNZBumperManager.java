@@ -496,21 +496,28 @@ public class CNZBumperManager {
         return value >= 0x8000 ? value - 0x10000 : value;
     }
 
+    static int romWindowStartForCamera(int cameraX) {
+        return Placement.romWindowStart(cameraX);
+    }
+
+    static int romWindowEndExclusiveForCamera(int cameraX) {
+        return Placement.romWindowEndExclusive(cameraX);
+    }
+
     private static final class Placement extends AbstractPlacementManager<CNZBumperSpawn> {
-        private static final int EXTRA_AHEAD = 320; // native -> 640 window
-        private static final int UNLOAD_BEHIND = 768;
+        private static final int ROM_LEFT_OFFSET = 8;
+        private static final int ROM_WINDOW_WIDTH = 0x150;
 
         private int lastWindowStart = -1;
         private int lastWindowEnd = -1;
 
         private Placement(List<CNZBumperSpawn> bumpers) {
-            super(bumpers, EXTRA_AHEAD, UNLOAD_BEHIND,
-                    com.openggf.level.spawn.PlacementViewportWidth::current);
+            super(bumpers, 0, 0);
         }
 
         private void update(int cameraX) {
-            int windowStart = getWindowStart(cameraX);
-            int windowEnd = getWindowEnd(cameraX);
+            int windowStart = romWindowStart(cameraX);
+            int windowEnd = romWindowEndExclusive(cameraX);
 
             if (windowStart == lastWindowStart && windowEnd == lastWindowEnd) {
                 return;
@@ -522,11 +529,11 @@ public class CNZBumperManager {
             active.clear();
 
             int startIdx = lowerBound(windowStart);
-            int endIdx = upperBound(windowEnd);
+            int endIdx = lowerBound(windowEnd);
 
             for (int i = startIdx; i < endIdx && i < spawns.size(); i++) {
                 CNZBumperSpawn bumper = spawns.get(i);
-                if (bumper.x() >= windowStart && bumper.x() <= windowEnd) {
+                if (bumper.x() >= windowStart && bumper.x() < windowEnd) {
                     active.add(bumper);
                 }
             }
@@ -537,6 +544,14 @@ public class CNZBumperManager {
             lastWindowStart = -1;
             lastWindowEnd = -1;
             update(cameraX);
+        }
+
+        static int romWindowStart(int cameraX) {
+            return cameraX > ROM_LEFT_OFFSET ? cameraX - ROM_LEFT_OFFSET : 1;
+        }
+
+        static int romWindowEndExclusive(int cameraX) {
+            return romWindowStart(cameraX) + ROM_WINDOW_WIDTH;
         }
     }
 }
