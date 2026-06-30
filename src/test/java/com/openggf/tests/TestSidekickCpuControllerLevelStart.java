@@ -206,6 +206,40 @@ class TestSidekickCpuControllerLevelStart {
     }
 
     @Test
+    void s2FreshNegativeObj36RidingPushGracePreservesDelayedRightAtOozFrontier() throws Exception {
+        TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        leader.setCentreX((short) 0x0C78);
+        leader.setCentreY((short) 0x0574);
+        seedLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT, false);
+
+        TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x0CE3);
+        tails.setCentreY((short) 0x0574);
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setRolling(false);
+        tails.setPushing(false);
+        tails.setDirection(Direction.LEFT);
+        tails.setGSpeed((short) 0xFFE8);
+        tails.setXSpeed((short) 0xFFE8);
+        tails.setLatchedSolidObject(0x36, new DummyRidingObject());
+
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        setNormalPushingGraceFrames(controller, 0);
+        controller.update(1794);
+
+        assertEquals("riding_push_grace", controller.getLatestNormalStepDiagnostics().followBranch(),
+                "Obj36 inner-left-edge negative inertia keeps the live SolidObject status byte visible "
+                        + "before TailsCPU_Normal can synthesize FollowLeft.");
+        assertFalse(controller.getInputLeft());
+        assertTrue(controller.getInputRight(),
+                "Delayed RIGHT should reach Tails_TurnRight and flip inertia through the +$80 turn path");
+    }
+
+    @Test
     void s2StationaryObj36RidingPushGracePreservesDelayedRightAtOozFrontier() throws Exception {
         TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         leader.setCentreX((short) 0x0C78);
@@ -569,7 +603,8 @@ class TestSidekickCpuControllerLevelStart {
             if (!usesInnerLeftEdgeSidekickPushGraceLadder(player)) {
                 return gSpeed < 0 ? 11 : 14;
             }
-            return gSpeed == 0 && player.getXSpeed() == 0 && player.getDirection() == Direction.LEFT ? 6
+            return gSpeed == -0x80 || isFreshNegativeTurnBridge(player) ? 0
+                    : gSpeed == 0 && player.getXSpeed() == 0 && player.getDirection() == Direction.LEFT ? 6
                     : gSpeed > 0 && gSpeed < 0x30 ? 2
                     : gSpeed == 0x30 ? 2
                     : gSpeed < 0 ? 11 : 14;
@@ -590,6 +625,14 @@ class TestSidekickCpuControllerLevelStart {
 
         private boolean usesInnerLeftEdgeSidekickPushGraceLadder(PlayableEntity player) {
             return player.getCentreX() - spawn.x() >= -0x10;
+        }
+
+        private boolean isFreshNegativeTurnBridge(PlayableEntity player) {
+            int gSpeed = player.getGSpeed();
+            return gSpeed <= -0x18
+                    && gSpeed >= -0x80
+                    && player.getDirection() == Direction.LEFT
+                    && player.getXSpeed() == gSpeed;
         }
     }
 }

@@ -484,7 +484,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
             releasePlayer(player, state, OFFSCREEN_RELEASE_COOLDOWN, false);
             return;
         }
-        if (player.isJumpJustPressed()) {
+        if (player.isJumpJustPressed() && !isLbz1KnucklesCutsceneControlLocked()) {
             jumpReleasePlayer(player, state);
             return;
         }
@@ -518,6 +518,8 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     }
 
     private void holdPlayer(AbstractPlayableSprite player) {
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        player.setControlLocked(true);
         NativePositionOps.writeXPosPreserveSubpixel(player, x);
         NativePositionOps.writeYPosPreserveSubpixel(player, y + PLAYER_Y_OFFSET);
         player.setPriorityBucket(isPlayerBehindCup() ? PLAYER_PRIORITY : PLAYER_CUP_PRIORITY);
@@ -581,6 +583,12 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     private boolean isPlayerValidForCapture(AbstractPlayableSprite player) {
         return !player.getDead() && !player.isHurt() && !player.isDebugMode();
+    }
+
+    private boolean isLbz1KnucklesCutsceneControlLocked() {
+        return S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry())
+                .map(com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState::isLbz1KnucklesCutsceneControlLocked)
+                .orElse(false);
     }
 
     private void applyCupPlayerTwistFrame(AbstractPlayableSprite player) {

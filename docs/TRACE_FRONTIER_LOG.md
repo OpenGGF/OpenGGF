@@ -6,6 +6,100 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 HTZ2 Obj18 grounded stale standing latch filter (f4138 -> f4165)
+
+- Worktree/branch: `.worktrees/ai-s2-htz2-frontier-r7` /
+  `bugfix/ai-s2-htz2-frontier-r7`, created from integration branch
+  `bugfix/ai-s2-trace-develop` and fast-forwarded to accepted integration
+  HEAD `aa77abe09` before final verification.
+- Baseline reproduction on integration `aa77abe09`:
+  `mvn test "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false"`.
+  Result before the fix: HTZ2 f4138 / 1136 (`y` expected `0x0642`,
+  actual `0x0643`).
+- Triage/evidence: at f4138 the target Obj18 platform's base movement and
+  oscillator are aligned with ROM, but the engine final `y_pos` is one pixel
+  low because its sag gate still counts a CPU-sidekick standing latch. ROM aux
+  for the same Obj18 shows `status(a0)&standing_mask == 0` from the sidekick
+  walk-off window until Sonic's real landing, while the engine latch has Tails
+  grounded, `Status_OnObj` clear, and no active object support. That grounded,
+  support-clear state is not a ROM-visible Obj18 standing condition.
+- Disassembly cited: Obj18 reads `status(a0)&standing_mask`, adjusts
+  `obj18_y_offset`, then runs `Obj18_Move`, `Obj18_Nudge`, and
+  `PlatformObject` (`docs/s2disasm/s2.asm:23219-23242`). The shared
+  stale-rider path clears the player's `Status_OnObj`, sets `Status_InAir`, and
+  clears the object's standing bit when the rider is airborne or out of bounds
+  (`docs/s2disasm/s2.asm:35742-35755`). `RideObject_SetRide` pairs a live ride
+  with both the player `Status_OnObj` bit and the object's standing bit
+  (`docs/s2disasm/s2.asm:35990-36029`).
+- Fix: `ARZPlatformObjectInstance` now filters Obj18 sag input through
+  `isRomVisibleStandingLatch`: a standing bit is visible to Obj18 only while the
+  player is still on the object, or while the airborne stale-rider clear path is
+  active. This models ROM object/player status; it does not edit trace data,
+  add tolerance, hydrate/sync from trace data, or add route, frame, zone,
+  game-id, or known-failing carve-outs.
+- Focused target:
+  `mvn test "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false"`.
+  Result: expected nonzero; HTZ2 advances to f4165 / 1129
+  (`tails_status_byte` expected `0x000A`, actual `0x0022`).
+- Current S2 green guard:
+  `mvn clean test "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false"`
+  exits 0: 11 selected S2 green traces passed, no failures or errors.
+- Red preservation set:
+  `mvn test "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dmaven.test.failure.ignore=true"`
+  exits 0 with expected red failures ignored and preserves ARZ2 f1028 / 2686,
+  CNZ2 f8870 / 447, CPZ2 f9781 / 123, MTZ1 f5713 / 560, MTZ3 f7853 / 864,
+  OOZ1 f1794 / 905, and OOZ2 f3919 / 1117. HTZ2 is the only moved red
+  frontier in the set, now f4165 / 1129.
+
+## 2026-06-30 - S2 OOZ1 Obj36 fresh negative turn bridge (f1794 -> f1795)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-frontier-r4` /
+  `bugfix/ai-s2-ooz1-frontier-r4`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at accepted HEAD `3daed8e4b`, then
+  fast-forwarded to latest integration `aa77abe09` before final verification.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: OOZ1 f1794 / 905 (`tails_x_speed` expected
+  `0x0080`, actual `0x0000`).
+- Triage/evidence: f1794 has CPU Tails still riding Obj36 slot 29 at
+  `$0CF0,$0594` on the spike's inner left edge with negative inertia
+  `-$18`, delayed RIGHT in the sampled Sonic input, and no delayed Sonic
+  `Status_Push`. ROM has Obj36's standing/push status visible to the sidekick
+  CPU slot, so `TailsCPU_Normal` bypasses FollowLeft and preserves delayed
+  RIGHT into `Tails_TurnRight`. The engine had already cleared the local push
+  bit before the CPU read, synthesized LEFT, and zeroed the speed on the spike
+  side contact.
+- Disassembly cited: Obj36 Upright calls `MoveSpikes`, sets the solid width,
+  calls `SolidObject`, and then reads `status(a0)&standing_mask`
+  (`docs/s2disasm/s2.asm:29392-29418`). `TailsCPU_Normal` loads delayed
+  Sonic input/status, tests Tails' current `Status_Push`, and branches to
+  `TailsCPU_Normal_FilterAction_Part2` when delayed Sonic was not pushing
+  (`docs/s2disasm/s2.asm:39291-39300`). `Tails_TurnRight` adds turn
+  deceleration and clamps the sign-crossing case to `+$80`
+  (`docs/s2disasm/s2.asm:39985-39990`).
+- Fix: S2 `SpikeObjectInstance` extends its CPU-only Obj36 riding push bridge
+  for the inner-left-edge fresh negative turn sample (`-$18..-$80`, facing
+  left, `x_speed == ground_vel`). This is data-driven by live Obj36 ride,
+  sidekick CPU state, position within the spike's solid edge, and player
+  inertia; it does not hydrate trace data and does not branch on zone, route,
+  frame number, or known failing trace.
+- Focused coverage:
+  `mvn "-Dtest=TestSidekickCpuControllerLevelStart,TestSonic2ObjectBugFixes" test`
+  exits 0. Before the implementation, the real Obj36 threshold assertion
+  failed with minimum grace `8` instead of `0`.
+- Focused target after integration `aa77abe09`:
+  `mvn test "-Dtest=TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full"`.
+  Result: expected nonzero; OOZ1 advances to f1795 / 1058
+  (`tails_x_speed` expected `0x008C`, actual `0x0000`).
+- Current S2 green guard:
+  `mvn clean test "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false"`
+  exits 0 with 11 selected S2 green traces passing.
+- Updated red preservation set:
+  `mvn clean test "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false"`
+  exits nonzero as expected and preserves ARZ2 f1028 / 2686, CNZ2 f8870 /
+  447, CPZ2 f9781 / 123, HTZ2 f4138 / 1136, MTZ1 f5713 / 560, MTZ3
+  f7853 / 864, and OOZ2 f3919 / 1117.
+
 ## 2026-06-30 - S2 CPZ2 Obj0B high-nibble duration (f9745 -> f9781)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r11` /

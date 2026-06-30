@@ -363,6 +363,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private void finishEndingCollapse() {
         endingCollapseActive = false;
         endingCollapseFinished = true;
+        currentLbzRuntimeState().ifPresent(state -> state.setLbz1KnucklesBombShakeActive(false));
         Arrays.fill(endingCollapseScroll, 0);
         applyEndingLayout();
         audio().playSfx(Sonic3kSfx.CRASH.id);
@@ -452,6 +453,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             return;
         }
         endingCollapseFinished = true;
+        currentLbzRuntimeState().ifPresent(state -> state.setLbz1KnucklesBombShakeActive(false));
         spawnInvisibleBarrier();
         applyEndingLayout();
     }

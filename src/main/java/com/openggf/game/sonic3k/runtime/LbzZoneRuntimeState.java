@@ -35,6 +35,8 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int LAUNCH_FLAG_WATER_DISABLED = 1 << 11;
     private static final int LAUNCH_FLAG_FINALE_CUTSCENE_ANCHOR_REGISTERED = 1 << 12;
     private static final int LAUNCH_FLAG_FALLING_ACCEL_ACTIVE = 1 << 13;
+    private static final int LAUNCH_FLAG_LBZ1_KNUX_CONTROL_LOCKED = 1 << 14;
+    private static final int LAUNCH_FLAG_LBZ1_KNUX_BOMB_SHAKE_ACTIVE = 1 << 15;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -68,6 +70,8 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private boolean deathEggTerrainSwapQueued;
     private boolean deathEggTerrainSwapApplied;
     private boolean waterDisabled;
+    private boolean lbz1KnucklesCutsceneControlLocked;
+    private boolean lbz1KnucklesBombShakeActive;
     private int launchRiderAnchorId;
     private int launchRiderDelta;
     private boolean launchFallingAccelActive;
@@ -326,6 +330,31 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
 
     public void setWaterDisabled(boolean waterDisabled) {
         this.waterDisabled = waterDisabled;
+    }
+
+    /**
+     * ROM {@code _unkFAA9}: set by {@code CutsceneKnux_LBZ1}'s range helper
+     * while Knuckles owns player input, and cleared when Knuckles exits.
+     */
+    public boolean isLbz1KnucklesCutsceneControlLocked() {
+        return lbz1KnucklesCutsceneControlLocked;
+    }
+
+    public void setLbz1KnucklesCutsceneControlLocked(boolean locked) {
+        this.lbz1KnucklesCutsceneControlLocked = locked;
+    }
+
+    /**
+     * Continuous ROM {@code Screen_shake_flag=-1} bridge for the LBZ1 Knuckles
+     * bomb sequence from the post-drop wait through the completed building
+     * collapse.
+     */
+    public boolean isLbz1KnucklesBombShakeActive() {
+        return lbz1KnucklesBombShakeActive;
+    }
+
+    public void setLbz1KnucklesBombShakeActive(boolean active) {
+        this.lbz1KnucklesBombShakeActive = active;
     }
 
     public int getDeathEggDeformWrapLatch() {
@@ -589,6 +618,10 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         finaleCutsceneAnchorRegistered =
                 (flags & LAUNCH_FLAG_FINALE_CUTSCENE_ANCHOR_REGISTERED) != 0;
         launchFallingAccelActive = (flags & LAUNCH_FLAG_FALLING_ACCEL_ACTIVE) != 0;
+        lbz1KnucklesCutsceneControlLocked =
+                (flags & LAUNCH_FLAG_LBZ1_KNUX_CONTROL_LOCKED) != 0;
+        lbz1KnucklesBombShakeActive =
+                (flags & LAUNCH_FLAG_LBZ1_KNUX_BOMB_SHAKE_ACTIVE) != 0;
     }
 
     private void restoreLaunchInts(ByteBuffer buffer,
@@ -630,6 +663,8 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         deathEggTerrainSwapQueued = false;
         deathEggTerrainSwapApplied = false;
         waterDisabled = false;
+        lbz1KnucklesCutsceneControlLocked = false;
+        lbz1KnucklesBombShakeActive = false;
         deathEggDeformWrapLatch = 0;
         launchRiderDelta = 0;
         launchFallingAccelActive = false;
@@ -683,6 +718,12 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         }
         if (launchFallingAccelActive) {
             flags |= LAUNCH_FLAG_FALLING_ACCEL_ACTIVE;
+        }
+        if (lbz1KnucklesCutsceneControlLocked) {
+            flags |= LAUNCH_FLAG_LBZ1_KNUX_CONTROL_LOCKED;
+        }
+        if (lbz1KnucklesBombShakeActive) {
+            flags |= LAUNCH_FLAG_LBZ1_KNUX_BOMB_SHAKE_ACTIVE;
         }
         return flags;
     }
