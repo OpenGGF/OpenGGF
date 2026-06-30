@@ -102,6 +102,19 @@ public class TestOilSurfaceManager {
         assertTrue(sprite.isSliding());
     }
 
+    @Test
+    public void airborneSlideExitRefreshesMoveLockToRomDuration() {
+        sprite.setAir(true);
+        sprite.setSliding(true);
+        sprite.setMoveLockTimer(3);
+
+        manager.updateSlides(sprite);
+
+        assertFalse(sprite.isSliding());
+        assertEquals(5, sprite.getMoveLockTimer(),
+                "OilSlides writes #5 to move_lock every time sliding exits, even over a shorter active lock");
+    }
+
     private void landOnOilSurface() {
         int centreY = OIL_SURFACE_Y + 1 - sprite.getYRadius();
         sprite.setCentreY((short) centreY);
@@ -141,4 +154,3 @@ public class TestOilSurfaceManager {
         }
     }
 }
-

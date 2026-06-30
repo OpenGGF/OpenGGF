@@ -491,10 +491,7 @@ public class OilSurfaceManager {
 
     private void setMoveLock(AbstractPlayableSprite player, int frames) {
         // ROM: move.w #5,move_lock(a1)
-        // Only set if not already locked (don't override longer locks)
-        if (player.getMoveLockTimer() <= 0) {
-            player.setMoveLockTimer(frames);
-        }
+        player.setMoveLockTimer(frames);
     }
 
     /**
