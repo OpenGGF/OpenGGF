@@ -2905,7 +2905,7 @@ checks collision, and displays (`docs/s2disasm/s2.asm:56269-56272`). The child
 toggles both directions only on exact edge equality
 (`docs/s2disasm/s2.asm:56307-56317`).
 
-**Originating commit.** `<pending>` S2 CPZ2 Obj7A after-current child and pair
+**Originating commit.** `fca42ed8d` S2 CPZ2 Obj7A after-current child and pair
 lifetime: `TestS2Cpz2LevelSelectTraceReplay` advances f5689 -> f7035.
 
 ---
