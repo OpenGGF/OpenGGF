@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.GameServices;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
@@ -1062,7 +1061,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                 int worldX = getLbz2CopiedWindowRenderWorldXForTest(camera, col);
                 int patternIndex = descriptor & 0x7FF;
                 lbz2CopiedWindowPatternDesc.set(descriptor);
-                GameServices.graphics().renderPatternWithId(
+                graphics().renderPatternWithId(
                         patternIndex, lbz2CopiedWindowPatternDesc, worldX, worldY);
             }
         }
