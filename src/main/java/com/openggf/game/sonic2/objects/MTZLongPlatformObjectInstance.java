@@ -641,8 +641,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
      * Writes x_pos to MTZ_Platform_Cog_X shared variable.
      */
     private void moveConveyor() {
-        boolean isMtzAct3 = (services().currentZone() == Sonic2ZoneConstants.ROM_ZONE_MTZ
-                && services().currentAct() == 2);
+        boolean isMtzAct3 = services().currentZone() == Sonic2ZoneConstants.ROM_ZONE_MTZ_3;
 
         if (!triggered) {
             // Moving right: addq.w #2,x_pos(a0)

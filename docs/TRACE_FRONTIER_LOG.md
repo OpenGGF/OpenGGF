@@ -13,7 +13,8 @@ branch-local measurements.
   `bugfix/ai-s2-ooz1-f1803-round8` and
   `bugfix/ai-s2-mtz3-f7853-round8`, then the OOZ2 stale-roll contact fix from
   `bugfix/ai-s2-ooz2-round6`, then the stronger HTZ2 released-interact bridge
-  from `bugfix/ai-s2-htz2-f5002-round8`.
+  from `bugfix/ai-s2-htz2-f5002-round8`, then the MTZ3 Obj65 MTZ3-zone-id
+  conveyor fix.
 - Sweep command:
   `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
 - Result: expected nonzero; 19 S2 traces run, 13 green, 6 expected-red.
@@ -21,9 +22,52 @@ branch-local measurements.
   - ARZ2 f1294 / 2396 (`obj_extra_s11_x` expected absent, actual `0x0F3F`).
   - CNZ2 f9487 / 288 (`g_speed` expected `0x0000`, actual `0x0100`).
   - HTZ2 f5031 / 930 (`tails_cpu_ctrl2_held` expected `0x0018`, actual `0x0008`).
-  - MTZ3 f9035 / 863 (`x` expected `0x1BDD`, actual `0x1BD9`).
+  - MTZ3 f9134 / 936 (`x_speed` expected `0x0000`, actual `0x000C`).
   - OOZ1 f1813 / 1062 (`tails_x` expected `0x0CE4`, actual `0x0CE3`).
   - OOZ2 f9307 / 444 (`x_speed` expected `0x0150`, actual `-0150`).
+
+## 2026-06-30 - S2 MTZ3 Obj65 MTZ3 ROM-zone conveyor branch (f9035 -> f9134)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next`, based on campaign head `0e9200679`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" "-Dtrace.context.diagnosticChars=full" "-Dtrace.context.rows=all" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red MTZ3 f9035 / 863 (`x` expected
+  `0x1BDD`, actual `0x1BD9`).
+- Triage/evidence: the f9035 context showed ROM riding Obj65 slot `$2D` at
+  `$1BC2,$04C8`, while the engine rode Obj65 slot 18 at `$1BBE,$04C8` with
+  `pre=@1BC0,04C8`. ROM Obj65 subtype 5 increments `x_pos` by 2, then treats
+  `$1BC0` as a reverse point only when `Current_Zone != metropolis_zone_2`.
+  MTZ3 is the separate ROM zone id `$05` (`metropolis_zone_2`) with apparent
+  act 2, not `metropolis_zone` act 2. The engine had checked
+  `ROM_ZONE_MTZ && currentAct == 2`, so it took the MTZ1/2 reverse branch at
+  `$1BC0` and carried Sonic/Tails left instead of right
+  (`docs/s2disasm/s2.constants.asm:384-421`,
+  `docs/s2disasm/s2.asm:53159-53177`).
+- Fix: `Sonic2ZoneConstants` now exposes `ROM_ZONE_MTZ_3 = 0x05`, and
+  `MTZLongPlatformObjectInstance.moveConveyor()` keys its MTZ3 two-stop branch
+  from that ROM zone id. Focused coverage now verifies both the `$1CC0` MTZ3
+  stop point and the `$1BC0` pass-through that caused the trace divergence.
+- Result:
+  `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace`: f9035 / 863 errors
+  (`x` expected `0x1BDD`, actual `0x1BD9`) -> f9134 / 936 errors
+  (`x_speed` expected `0x0000`, actual `0x000C`). The new owner is Sonic
+  accumulating ground speed while riding the now-correctly advancing Obj65
+  platform; ROM still reports zero speed at f9134.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mtzAct3LongPlatformUsesRomZoneIdForTwoStopConveyor+mtzAct3LongPlatformKeepsMovingRightThroughMtz12StopPoint,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" "-Dtrace.context.diagnosticChars=full" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; the two Obj65 focused tests passed and MTZ3
+    advanced to f9134 / 936.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; 19 S2 traces ran, 13 stayed green, and six
+    expected reds remain: ARZ2 f1294 / 2396, CNZ2 f9487 / 288, HTZ2 f5031 /
+    930, MTZ3 f9134 / 936, OOZ1 f1813 / 1062, OOZ2 f9307 / 444.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 at the existing AIZ expected-red frontiers: complete-run f1095 /
+    4319 (`x_speed` expected `0x0000`, actual `0x000C`) and AIZ f8941 /
+    1160 (`camera_y` expected `0x02C1`, actual `0x02B9`).
 
 ## 2026-06-30 - S2 OOZ1 Obj36 late-edge CPU push grace (f1803 -> f1813)
 

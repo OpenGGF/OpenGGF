@@ -3019,6 +3019,41 @@ allocation copies the object after setting split velocities
 
 ---
 
+## P74 -- MTZ3 object code checks `metropolis_zone_2`, not MTZ act 3
+
+**Pattern.** Sonic 2 stores Metropolis Act 3 as a distinct ROM zone id:
+`metropolis_zone_2 = $05`, with apparent act 2. Object code that reads
+`Current_Zone` compares against `$05`; it does not see `metropolis_zone=$04`
+plus `currentAct == 2`.
+
+**Engine symptom.** An MTZ3 object takes the MTZ1/2 branch even though the
+trace metadata says act 3. In MTZ3, Obj65 subtype 5 treated `$1BC0` as the
+MTZ1/2 reverse point, moved from `$1BC0` to `$1BBE`, and carried Sonic/Tails
+left. ROM was in `metropolis_zone_2`, skipped that reverse branch, moved right
+to `$1BC2`, and kept the players on the advancing platform.
+
+**What to check / fix.**
+1. When porting S2 object code that reads `(Current_Zone).w`, compare against
+   the ROM zone id from `romZoneId()` / `currentZone()`, not the engine's
+   internal zone index plus act.
+2. For MTZ3-specific object behavior, use `Sonic2ZoneConstants.ROM_ZONE_MTZ_3`
+   (`0x05`) rather than `ROM_ZONE_MTZ && currentAct == 2`.
+3. Keep this distinction to ROM-state predicates. Display/apparent-act behavior
+   may still use `currentAct()` / `Apparent_act` when the ROM routine reads
+   those values instead of `Current_Zone`.
+
+**ROM citation.** S2 declares `metropolis_zone = $04` and
+`metropolis_zone_2 = $05`, and defines `metropolis_zone_act_3` as
+`(metropolis_zone_2<<8)|$00`
+(`docs/s2disasm/s2.constants.asm:384-421`). Obj65 `loc_26E4A` compares
+`Current_Zone` directly against `metropolis_zone_2`; `$1BC0` is a reverse point
+only on the not-MTZ3 branch (`docs/s2disasm/s2.asm:53159-53177`).
+
+**Originating commit.** `<pending>` S2 MTZ3 Obj65 MTZ3 ROM-zone conveyor branch:
+`TestS2Mtz3LevelSelectTraceReplay` advances f9035 -> f9134.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

@@ -237,7 +237,7 @@ class TestSonic2ObjectBugFixes {
     void mtzAct3LongPlatformUsesRomZoneIdForTwoStopConveyor() throws Exception {
         MTZLongPlatformObjectInstance platform = new MTZLongPlatformObjectInstance(
                 new ObjectSpawn(0x1CBE, 0x0300, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x05, 0, false, 0));
-        platform.setServices(new ZoneActServices(null, Sonic2ZoneConstants.ROM_ZONE_MTZ, 2, null));
+        platform.setServices(new ZoneActServices(null, Sonic2ZoneConstants.ROM_ZONE_MTZ_3, 0, null));
 
         platform.update(0, new TestablePlayableSprite("sonic", (short) 0x1CBE, (short) 0x02E0));
 
@@ -245,6 +245,21 @@ class TestSonic2ObjectBugFixes {
                 "MTZ Act 3 subtype-5 conveyor must stop at the first MTZ3 stop point");
         assertEquals(0x1CC0, platform.getX(),
                 "Regression setup should land exactly on the first MTZ3 stop point");
+    }
+
+    @Test
+    void mtzAct3LongPlatformKeepsMovingRightThroughMtz12StopPoint() throws Exception {
+        MTZLongPlatformObjectInstance platform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x1BBE, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x05, 0, false, 0));
+        platform.setServices(new ZoneActServices(null, Sonic2ZoneConstants.ROM_ZONE_MTZ_3, 0, null));
+
+        platform.update(0, new TestablePlayableSprite("sonic", (short) 0x1BBE, (short) 0x04AC));
+        platform.update(1, new TestablePlayableSprite("sonic", (short) 0x1BC0, (short) 0x04AC));
+
+        assertEquals(0x1BC2, platform.getX(),
+                "ROM Obj65 loc_26E4A only treats $1BC0 as a reverse point outside metropolis_zone_2");
+        assertEquals(5, intField(platform, "moveSubtype"),
+                "MTZ3 must continue subtype-5 conveyor motion until $1CC0 or $2940");
     }
 
     @Test
