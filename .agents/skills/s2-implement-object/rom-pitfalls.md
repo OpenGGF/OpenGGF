@@ -2864,7 +2864,8 @@ uses after-current allocation (`docs/s2disasm/s2.asm:48359-48365`).
 `Obj1D_Wait` and `Obj1D_MoveArc` are separate later routines
 (`docs/s2disasm/s2.asm:48393-48421`).
 
-**Originating commit.** `fix(s2): green CPZ1 BlueBalls init cadence`.
+**Originating commit.** `0cba2f7e` S2 CPZ1 BlueBalls init cadence:
+`TestS2CpzLevelSelectTraceReplay` advances f4547 -> green.
 
 ---
 
