@@ -328,6 +328,13 @@ final class ObjectSolidContactController {
         }
     }
 
+    private void clearObjectStandingBitOnContinuedRideExit(PlayableEntity player, ObjectInstance instance,
+            int pieceIndex, SolidObjectProvider provider) {
+        if (provider != null && provider.clearsStandingBitOnContinuedRideExit(player)) {
+            clearObjectStandingBit(player, instance, pieceIndex);
+        }
+    }
+
     private void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
         snapshotObjectStandingBit(player, instance, -1);
     }
@@ -1575,6 +1582,7 @@ final class ObjectSolidContactController {
                 applyRidingCarry(player, instance, provider, params,
                         currentX, currentY, ridingX);
             }
+            clearObjectStandingBitOnContinuedRideExit(player, instance, ridingPieceIndex, provider);
             ridingStates.remove(player);
             player.setOnObject(false);
             player.setAir(true);
@@ -1678,6 +1686,7 @@ final class ObjectSolidContactController {
             return SolidContact.STANDING;
         }
 
+        clearObjectStandingBitOnContinuedRideExit(player, instance, ridingPieceIndex, provider);
         ridingStates.remove(player);
         if (solidProfile.carriesAirborneRiderAfterExitPlatform()
                 && provider.carriesRiderOnHorizontalMove(player)) {
@@ -2156,6 +2165,10 @@ final class ObjectSolidContactController {
         if (ridingObject != null && player.getAir()
                 && !preserveAirborneRideForEarlierPieces
                 && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)) {
+            SolidObjectProvider rideExitProvider = ridingObject instanceof SolidObjectProvider solid
+                    ? solid
+                    : null;
+            clearObjectStandingBitOnContinuedRideExit(player, ridingObject, ridingPieceIndex, rideExitProvider);
             ridingStates.remove(player);
             ridingObject = null;
             ridingPieceIndex = -1;
@@ -2204,6 +2217,7 @@ final class ObjectSolidContactController {
                     // the ridden piece as airborne-unseated so processMultiPieceCollision
                     // can clear only that piece's standing bit and skip its
                     // SolidObject_cont path.
+                    clearObjectStandingBitOnContinuedRideExit(player, ridingObject, ridingPieceIndex, provider);
                     ridingStates.remove(player);
                     ridingObject = null;
                     ridingPieceIndex = -1;
@@ -2271,6 +2285,8 @@ final class ObjectSolidContactController {
                         if (floorCheck.distance() <= 0) {
                             dropOnFloorExclude = ridingObject;
                             ridingStates.remove(player);
+                            clearObjectStandingBitOnContinuedRideExit(
+                                    player, ridingObject, ridingPieceIndex, provider);
                             ridingObject = null;
                             ridingPieceIndex = -1;
                             player.setOnObject(false);
@@ -2300,6 +2316,7 @@ final class ObjectSolidContactController {
                             player.setAir(true);
                         }
                     }
+                    clearObjectStandingBitOnContinuedRideExit(player, ridingObject, ridingPieceIndex, provider);
                     ridingStates.remove(player);
                     ridingObject = null;
                     ridingPieceIndex = -1;

@@ -183,6 +183,40 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void htz2Obj18SidekickWalkOffClearsSagStandingBitAtRomFrame4104() throws Exception {
+        Boolean tailsStanding = driveTrace("htz2", Sonic2ZoneConstants.ZONE_HTZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 4104) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedObj18 = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 34)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x18)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedObj18,
+                            "HTZ2 ROM fixture should report Obj18 slot 34 at f4104");
+                    Assertions.assertEquals(0, parseObjectType(expectedObj18.status()) & 0x18,
+                            "ROM Obj18 standing bits are clear after Tails walks off the platform");
+                    ARZPlatformObjectInstance actualObj18 =
+                            om.activeObjectsOfType(ARZPlatformObjectInstance.class).stream()
+                                    .filter(platform -> platform.getX() == 0x1860)
+                                    .findFirst()
+                                    .orElse(null);
+                    Assertions.assertNotNull(actualObj18,
+                            "Engine should have the HTZ2 Obj18 platform at x=$1860 by f4104");
+                    AbstractPlayableSprite tails =
+                            (AbstractPlayableSprite) GameServices.sprites().getSidekicks().get(0);
+                    return om.hasObjectStandingBit(tails, actualObj18);
+                });
+        Assertions.assertNotNull(tailsStanding);
+        Assertions.assertFalse(tailsStanding,
+                "S2 Obj18 PlatformObject walk-off must clear Tails' standing bit before the next sag gate");
+    }
+
+    @Test
     public void mtz3RotatingPlatformLoadKeepsRomSlot22Identity() throws Exception {
         SlotCheck slotCheck = driveTrace("mtz3", Sonic2ZoneConstants.ZONE_MTZ, 2,
                 (trace, om, frame) -> {

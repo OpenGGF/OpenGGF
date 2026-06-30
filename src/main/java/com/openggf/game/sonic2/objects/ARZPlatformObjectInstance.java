@@ -199,6 +199,14 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
         return !isDestroyed();
     }
 
+    @Override
+    public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
+        // Obj18 reads status(a0)&standing_mask before Obj18_Move/Obj18_Nudge,
+        // then PlatformObject clears status(a0)'s player bit on air/walk-off
+        // exits (docs/s2disasm/s2.asm:23219-23242,35737-35755).
+        return true;
+    }
+
     private void init() {
         routine = 2;
         int initIndex = (spawn.subtype() >> 3) & 0x0E;
