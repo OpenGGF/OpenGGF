@@ -234,6 +234,13 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public String traceDebugDetails() {
+        int counter = prizeCounter != null && prizeCounter.length > 0 ? prizeCounter[0] : -1;
+        return String.format("state=%d delay=%d collected=%d counter=%d anim=%d/%d",
+                state, displayDelay, ringCollected ? 1 : 0, counter, animFrame, animTimer);
+    }
+
+    @Override
     public int getX() {
         return currentX >> 16;
     }

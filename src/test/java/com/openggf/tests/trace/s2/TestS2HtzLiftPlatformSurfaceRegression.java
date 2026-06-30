@@ -1,6 +1,7 @@
 package com.openggf.tests.trace.s2;
 
 import com.openggf.game.sonic2.objects.HTZLiftObjectInstance;
+import com.openggf.game.sonic2.objects.RisingLavaObjectInstance;
 import com.openggf.game.sonic2.objects.SeesawObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -61,6 +62,23 @@ class TestS2HtzLiftPlatformSurfaceRegression {
         // f1810 falsely enter the object-edge balance branch while centered on
         // the seesaw.
         assertEquals(0x30, seesaw.getBalanceWidthPixels());
+    }
+
+    @Test
+    void risingLavaUsesObj30WidthPixelsForObjectEdgeBalance() {
+        RisingLavaObjectInstance subtype6 = new RisingLavaObjectInstance(
+                new ObjectSpawn(0x1760, 0x07D1, 0x30, 0x06, 0, false, 0),
+                "RisingLava");
+        RisingLavaObjectInstance subtype8 = new RisingLavaObjectInstance(
+                new ObjectSpawn(0x1760, 0x07D1, 0x30, 0x08, 0, false, 0),
+                "RisingLava");
+
+        // Obj30_Init copies Obj30_Widths[subtype] into width_pixels(a0)
+        // (docs/s2disasm/s2.asm:49545-49547). The player balance routine reads
+        // that SST byte directly, so the wide lava surfaces must not fall back
+        // to the shared 16px sprite footprint.
+        assertEquals(0xE0, subtype6.getBalanceWidthPixels());
+        assertEquals(0xC0, subtype8.getBalanceWidthPixels());
     }
 
     @Test

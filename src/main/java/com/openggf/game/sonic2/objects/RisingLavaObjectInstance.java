@@ -412,6 +412,13 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Obj30_Init writes Obj30_Widths[subtype] to width_pixels(a0)
+        // before the player balance routines read it (docs/s2disasm/s2.asm:49545-49547).
+        return widthPixels;
+    }
+
+    @Override
     public int getOnScreenHalfHeight() {
         return getSolidParams().groundHalfHeight();
     }
