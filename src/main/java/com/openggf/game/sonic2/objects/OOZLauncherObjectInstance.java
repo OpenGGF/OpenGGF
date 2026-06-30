@@ -113,6 +113,15 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     private boolean launcherActive = false;
     private boolean invisibleLauncherOnly = false;
     private int sameFrameLauncherScanFrame = Integer.MIN_VALUE;
+    private boolean parentFragmentActive = false;
+    private int parentFragmentX;
+    private int parentFragmentY;
+    private int parentFragmentSubX;
+    private int parentFragmentSubY;
+    private int parentFragmentVelX;
+    private int parentFragmentVelY;
+    private int parentFragmentFrameIndex;
+    private int parentFragmentPieceIndex;
 
     // Invisible launcher states per player (ROM routine 6 states).
     private final Map<AbstractPlayableSprite, LauncherPlayerState> playerStates = new IdentityHashMap<>();
@@ -151,6 +160,8 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             if (launcherActive && frameCounter != sameFrameLauncherScanFrame) {
                 updateInvisibleLauncher(frameCounter, player);
             }
+        } else if (parentFragmentActive) {
+            updateParentFragment();
         } else if (!broken) {
             updateMainBlock(frameCounter, player);
         }
@@ -245,7 +256,9 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
                 spawnChild(() -> new OOZLauncherObjectInstance(spawn, "OOZLauncher", true));
         invisibleLauncher.updateInvisibleLauncher(frameCounter, player);
         invisibleLauncher.sameFrameLauncherScanFrame = frameCounter;
-        spawnFragments();
+        int fragmentFrameIndex = isVertical ? 1 : 3;
+        startParentFragment(fragmentFrameIndex);
+        spawnFragmentChildren(fragmentFrameIndex);
 
         // Play smash sound
         try {
@@ -253,12 +266,29 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         } catch (Exception e) {
             // Don't let audio failure break game logic
         }
+
+        updateParentFragment();
     }
 
     /**
-     * Spawn 16 fragment pieces with velocities from ROM table (ROM: JmpTo2_BreakObjectToPieces).
+     * Keep the current Obj3D slot as fragment piece 0.
      */
-    private void spawnFragments() {
+    private void startParentFragment(int fragmentFrameIndex) {
+        parentFragmentActive = true;
+        parentFragmentX = spawn.x();
+        parentFragmentY = spawn.y();
+        parentFragmentSubX = parentFragmentX << 8;
+        parentFragmentSubY = parentFragmentY << 8;
+        parentFragmentVelX = FRAGMENT_VELOCITIES[0][0];
+        parentFragmentVelY = FRAGMENT_VELOCITIES[0][1];
+        parentFragmentFrameIndex = fragmentFrameIndex;
+        parentFragmentPieceIndex = 0;
+    }
+
+    /**
+     * Spawn remaining fragment pieces with velocities from ROM table.
+     */
+    private void spawnFragmentChildren(int fragmentFrameIndex) {
         ObjectManager objectManager = services().objectManager();
         ObjectRenderManager renderManager = services().renderManager();
         if (objectManager == null || renderManager == null) {
@@ -272,9 +302,6 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM Obj3D_Init starts horizontal subtype mappings at frame 2; the
-        // fragment routine increments to frame 3 before piece rendering.
-        int fragmentFrameIndex = isVertical ? 1 : 3;
         SpriteMappingFrame fragmentFrame = sheet.getFrameCount() > fragmentFrameIndex
                 ? sheet.getFrame(fragmentFrameIndex) : null;
         if (fragmentFrame == null) {
@@ -284,13 +311,26 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         List<SpriteMappingPiece> pieces = fragmentFrame.pieces();
         int count = Math.min(pieces.size(), FRAGMENT_VELOCITIES.length);
 
-        for (int i = 0; i < count; i++) {
+        for (int i = 1; i < count; i++) {
             SpriteMappingPiece piece = pieces.get(i);
             final int index = i;
-            spawnFreeChild(() -> new LauncherFragmentInstance(
+            spawnChild(() -> new LauncherFragmentInstance(
                     spawn.x(), spawn.y(),
                     FRAGMENT_VELOCITIES[index][0], FRAGMENT_VELOCITIES[index][1],
                     piece, renderer));
+        }
+    }
+
+    private void updateParentFragment() {
+        parentFragmentSubX += parentFragmentVelX;
+        parentFragmentSubY += parentFragmentVelY;
+        parentFragmentX = parentFragmentSubX >> 8;
+        parentFragmentY = parentFragmentSubY >> 8;
+        parentFragmentVelY += FRAGMENT_GRAVITY;
+
+        Camera camera = services().camera();
+        if (camera != null && parentFragmentY > camera.getY() + 224 + 32) {
+            setDestroyed(true);
         }
     }
 
@@ -478,6 +518,21 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     @Override
+    public int getX() {
+        return parentFragmentActive ? parentFragmentX : spawn.x();
+    }
+
+    @Override
+    public int getY() {
+        return parentFragmentActive ? parentFragmentY : spawn.y();
+    }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        return getX();
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         return solidParams;
     }
@@ -524,6 +579,10 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (parentFragmentActive) {
+            appendParentFragmentRenderCommands();
+            return;
+        }
         if (broken) {
             return;
         }
@@ -540,6 +599,28 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         }
 
         renderer.drawFrameIndex(isVertical ? 0 : 2, spawn.x(), spawn.y(), false, false);
+    }
+
+    private void appendParentFragmentRenderCommands() {
+        ObjectRenderManager renderManager = services().renderManager();
+        if (renderManager == null) {
+            return;
+        }
+
+        String artKey = isVertical ? Sonic2ObjectArtKeys.OOZ_LAUNCHER_VERT : Sonic2ObjectArtKeys.OOZ_LAUNCHER_HORIZ;
+        PatternSpriteRenderer renderer = renderManager.getRenderer(artKey);
+        ObjectSpriteSheet sheet = renderManager.getSheet(artKey);
+        if (renderer == null || !renderer.isReady() || sheet == null
+                || sheet.getFrameCount() <= parentFragmentFrameIndex) {
+            return;
+        }
+
+        SpriteMappingFrame fragmentFrame = sheet.getFrame(parentFragmentFrameIndex);
+        if (fragmentFrame.pieces().size() <= parentFragmentPieceIndex) {
+            return;
+        }
+        renderer.drawPieces(List.of(fragmentFrame.pieces().get(parentFragmentPieceIndex)),
+                parentFragmentX, parentFragmentY, false, false);
     }
 
     @Override
@@ -623,18 +704,16 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
                 return;
             }
 
-            // ROM: JmpTo10_ObjectMove + addi.w #$18,y_vel(a0)
-            velY += GRAVITY;
-
-            // Update position (8.8 fixed point)
+            // ROM: JmpTo10_ObjectMove, then addi.w #$18,y_vel(a0)
             subX += velX;
             subY += velY;
             currentX = subX >> 8;
             currentY = subY >> 8;
+            velY += GRAVITY;
 
             // ROM: btst #render_flags.on_screen; beq JmpTo26_DeleteObject
-            int cameraY = services().camera().getY();
-            if (currentY > cameraY + 224 + 32) {
+            Camera camera = services().camera();
+            if (camera != null && currentY > camera.getY() + 224 + 32) {
                 setDestroyed(true);
             }
         }

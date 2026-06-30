@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
@@ -116,6 +117,30 @@ class TestS2OozBadnikParity {
             assertEquals(0x190 - 6, getInt(octus, "startY"));
             assertEquals(0x190 - 6, getInt(octus, "currentY"));
             terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(0x240, 0x190, 0x0B));
+        }
+    }
+
+    @Test
+    void octusBulletUsesCoarseMarkObjGoneUnloadWindow() {
+        AbstractObjectInstance.updateCameraBounds(0x0FFE, 0, 0x0FFE + 320, 224, 0);
+        try {
+            BadnikProjectileInstance projectile = new BadnikProjectileInstance(
+                    spawn(Sonic2ObjectIds.OCTUS, 0x1000, 0x0233),
+                    BadnikProjectileInstance.ProjectileType.OCTUS_BULLET,
+                    0x0F62,
+                    0x0233,
+                    -0x0200,
+                    0,
+                    false,
+                    false);
+
+            projectile.update(0, null);
+
+            assertFalse(projectile.isDestroyed(),
+                    "Obj4A_Bullet tails through MarkObjGone, so it survives while "
+                            + "(x_pos&$FF80)-Camera_X_pos_coarse is inside $280");
+        } finally {
+            AbstractObjectInstance.resetCameraBoundsForTests();
         }
     }
 
