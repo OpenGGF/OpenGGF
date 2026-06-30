@@ -208,9 +208,6 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
                 state.yVel = 0;
                 state.routine = MAIN_WAIT;
                 status ^= STATUS_SIDE;
-                // Clear stale container flags before starting new attack cycle
-                status2 &= ~STATUS2_ACTION2;  // Clear container moving
-                status2 &= ~STATUS2_ACTION4;  // Clear container returning
                 status2 |= STATUS2_ACTION0;   // Activate pipe
             }
             updateMainPositionAndHover();
@@ -425,8 +422,10 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
     }
 
     public void onPipeComplete() {
-        status2 &= ~STATUS2_ACTION0;
-        spawnPipe(); // Prepare for next cycle
+        // Obj5D_Pipe_Retract only deletes the pipe control object. Action 0 is
+        // cleared later by Obj5D_Container_Extend when the fill animation ends
+        // (s2.asm:62740-62742); the next pipe is spawned by the returning
+        // container path (s2.asm:62649-62664).
     }
 
     // Dripper state

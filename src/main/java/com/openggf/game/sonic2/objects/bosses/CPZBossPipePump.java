@@ -129,6 +129,7 @@ public class CPZBossPipePump extends AbstractObjectInstance implements RewindRec
             return;
         }
 
+        parentPipe.beginRetractFromPump();
         setDestroyed(true);
     }
 
