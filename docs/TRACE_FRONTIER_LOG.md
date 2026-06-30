@@ -6,6 +6,58 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CPZ1 Obj1D BlueBalls parent init return (f4547 -> green)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz1-frontier-r2` /
+  `bugfix/ai-s2-cpz1-frontier-r2`, based on integration head `341b53088`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: CPZ1 f4547 / 177 (`x_speed` expected `0x01E0`,
+  actual `-0200`).
+- Triage/evidence: the full diagnostic trace showed the engine had already
+  entered Sonic hurt routine 4 at f4547 with rings zero and velocities
+  `FE00/FC00`, while the ROM was still routine 2, grounded, moving at
+  `x_speed=01E0`, and holding 73 rings. The compressed trace then showed the
+  ROM hurt on the next frame, f4548. Obj-near diagnostics put Obj1D BlueBalls
+  in the contact slot with `y_pos` changing from `$0448` to `$0443`; ROM
+  touch response tests pre-object-update positions, so `$0448` should miss at
+  f4547 and `$0443` should hurt at f4548.
+- Disassembly cited: Obj1D dispatches through the routine table at
+  `docs/s2disasm/s2.asm:48317-48329`. `Obj1D_Init` advances the routine,
+  initializes parent/children, and returns without falling through into wait
+  or movement (`docs/s2disasm/s2.asm:48341-48390`). Child balls are allocated
+  after the current slot while already initialized
+  (`docs/s2disasm/s2.asm:48359-48365`), so higher-slot children may still run
+  `Obj1D_Wait` in the same object pass. `Obj1D_Wait` only decrements the timer,
+  advances the routine, reloads `$3B`, and returns; `Obj1D_MoveArc` starts on a
+  later pass (`docs/s2disasm/s2.asm:48393-48421`).
+- Fix: placed Obj1D parents now track a first-pass `initialized` flag. Their
+  first update performs ROM init/spawn work and returns. Sibling constructors
+  mark children initialized because the parent already filled their SST fields
+  before `AllocateObjectAfterCurrent` lets higher slots execute. This is
+  object-local and ROM-cadence based; no trace hydration, tolerance, route,
+  frame, or zone carve-out is used.
+- Focused regression check:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestBlueBallsObjectInstance" "-DfailIfNoTests=false" test`.
+  Result: passed 2/2 after the fix. The new
+  `placedParentWaitsOnePassAfterInitBeforeMoving` assertion failed before the
+  production change because the parent moved to y `$00FB` on the second update
+  instead of staying at `$0100`.
+- Focused trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.context.diagnosticChars=full" "-DfailIfNoTests=false" test`.
+  Result: passed; CPZ1 is green.
+- CPZ2 plus current green guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero because CPZ2 is red; CPZ2 preserved f4018 / 1334
+  (`x` expected `0x0490`, actual `0x0480`). ARZ1, CNZ1, DEZ ending, EHZ1,
+  HTZ1, MCZ1, MCZ2, SCZ, and WFZ all passed.
+- Object and coverage checks:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestBlueBallsObjectInstance,com.openggf.game.sonic2.objects.TestBlueBallsBackwardApproachRespawn" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: passed 3/3.
+  `mvn "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero from pre-existing unrelated S3K LBZ coverage gaps;
+  no S2 BlueBalls gap was reported.
+
 ## 2026-06-30 - S2 MTZ3 Obj6E dead-sidekick stale standing clear (f3618 -> f4575)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz3-frontier-r2` /
