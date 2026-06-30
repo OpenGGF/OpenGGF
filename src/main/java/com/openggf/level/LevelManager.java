@@ -1557,11 +1557,31 @@ public class LevelManager {
                 dustRenderer.setRenderContext(crossGame.getDonorRenderContext());
             }
             dustRenderer.ensureCached(graphicsManager);
-            playable.setSpindashDustController(new SpindashDustController(playable, dustRenderer));
+            playable.setSpindashDustController(new SpindashDustController(
+                    playable, dustRenderer, fixedDustSlotFor(playable)));
         } catch (IOException e) {
             LOGGER.log(SEVERE, "Failed to load spindash dust art.", e);
             playable.setSpindashDustController(null);
         }
+    }
+
+    private int fixedDustSlotFor(AbstractPlayableSprite playable) {
+        if (playable == null) {
+            return -1;
+        }
+        GameModule module = activeGameModule();
+        PhysicsProvider physics = module != null ? module.getPhysicsProvider() : null;
+        PhysicsFeatureSet features = physics != null ? physics.getFeatureSet() : null;
+        if (features == null || !features.waterSplashUsesFixedDustObject()) {
+            return -1;
+        }
+        if (!playable.isCpuControlled()) {
+            return features.fixedDustSlotIndex(false);
+        }
+        List<AbstractPlayableSprite> sidekicks = spriteManager != null ? spriteManager.getSidekicks() : List.of();
+        return !sidekicks.isEmpty() && sidekicks.get(0) == playable
+                ? features.fixedDustSlotIndex(true)
+                : -1;
     }
 
     /** Tracks how many dust DPLC banks have been allocated this level load. */

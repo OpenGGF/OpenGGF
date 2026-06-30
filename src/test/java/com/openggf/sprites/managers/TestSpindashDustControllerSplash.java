@@ -1,5 +1,7 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +20,26 @@ import static org.mockito.Mockito.mock;
  * controller plays and then ends the splash animation.
  */
 class TestSpindashDustControllerSplash {
+
+    @Test
+    void s3kDustSidecarsUseFixedLevelObjectSlotsOutsideDynamicAllocator() {
+        assertEquals(98, PhysicsFeatureSet.SONIC_3K.fixedDustSlotIndex(false),
+                "S3K Dust is fixed Level_object_RAM slot 98 (sonic3k.constants.asm:309-317)");
+        assertEquals(99, PhysicsFeatureSet.SONIC_3K.fixedDustSlotIndex(true),
+                "S3K Dust_P2 is fixed Level_object_RAM slot 99 (sonic3k.constants.asm:309-317)");
+        assertFalse(ObjectSlotLayout.SONIC_3K.isDynamicSlot(98),
+                "Dust must not consume S3K AllocateObject dynamic slot pressure");
+        assertFalse(ObjectSlotLayout.SONIC_3K.isDynamicSlot(99),
+                "Dust_P2 must not consume S3K AllocateObject dynamic slot pressure");
+    }
+
+    @Test
+    void s2DustSidecarsShareTheSameRelativeFixedSlotLayout() {
+        assertEquals(132, PhysicsFeatureSet.SONIC_2.fixedDustSlotIndex(false),
+                "S2 Sonic_Dust sits two slots before Sonic_Shield");
+        assertEquals(133, PhysicsFeatureSet.SONIC_2.fixedDustSlotIndex(true),
+                "S2 Tails_Dust sits one slot before Sonic_Shield");
+    }
 
     @Test
     void splashTriggersAndAnimatesToCompletion() {
@@ -83,5 +105,12 @@ class TestSpindashDustControllerSplash {
         SpindashDustController controller = new SpindashDustController(null, null);
         controller.triggerSurfaceSplash(null, 0, 0);
         assertFalse(controller.isSurfaceSplashActive(), "null renderer must not start a splash");
+    }
+
+    @Test
+    void controllerReportsAssignedFixedSlotWithoutAllocatingAnObject() {
+        SpindashDustController controller = new SpindashDustController(null, null, 98);
+        assertEquals(98, controller.fixedSlotIndex(),
+                "controller should carry the fixed Dust slot identity for diagnostics");
     }
 }

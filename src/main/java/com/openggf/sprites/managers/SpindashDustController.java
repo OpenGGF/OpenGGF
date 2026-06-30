@@ -35,6 +35,7 @@ public class SpindashDustController {
 
     private final AbstractPlayableSprite sprite;
     private final PlayerSpriteRenderer renderer;
+    private final int fixedSlotIndex;
     private int frameIndex;
     private int frameTick;
     private int currentFrame;
@@ -59,8 +60,13 @@ public class SpindashDustController {
     private int surfaceSplashMappingFrame = SURFACE_SPLASH_FIRST_FRAME;
 
     public SpindashDustController(AbstractPlayableSprite sprite, PlayerSpriteRenderer renderer) {
+        this(sprite, renderer, -1);
+    }
+
+    public SpindashDustController(AbstractPlayableSprite sprite, PlayerSpriteRenderer renderer, int fixedSlotIndex) {
         this.sprite = sprite;
         this.renderer = renderer;
+        this.fixedSlotIndex = fixedSlotIndex;
         this.frameIndex = 0;
         this.frameTick = 0;
         this.currentFrame = DASH_FRAMES[0];
@@ -168,6 +174,15 @@ public class SpindashDustController {
     /** Test/diagnostic: whether the water splash animation is currently playing. */
     public boolean isSplashActive() {
         return splashActive;
+    }
+
+    /**
+     * ROM object-table slot for the fixed Sonic_Dust/Dust sidecar represented by
+     * this controller, or {@code -1} for engine-extension sidekicks that have no
+     * native fixed dust slot.
+     */
+    public int fixedSlotIndex() {
+        return fixedSlotIndex;
     }
 
     private void updateSurfaceSplash() {

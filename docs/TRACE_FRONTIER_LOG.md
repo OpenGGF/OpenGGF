@@ -6,6 +6,31 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S3K fixed Dust slot identity (no frontier movement)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next`, after the S2 ARZ2 Obj08 fixed-dust merge.
+- Scope: split fixed Dust slot identity from S2's deferred skid-dust child
+  allocation timing. S3K now records native `Dust` / `Dust_P2` slots 98 / 99
+  from the ROM fixed level-object layout, S2 records 132 / 133, and extra
+  engine-extension sidekicks remain slotless. No S3K object-order timing was
+  changed in this pass.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.managers.TestSpindashDustControllerSplash,com.openggf.game.sonic3k.TestPachinkoTitleCardIntegration#trapContinuesUpdatingWhenInstaShieldWasRegisteredBeforeBonusEntry" "-DfailIfNoTests=false" test`
+    passed 7 / 7 focused tests.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; 19 S2 traces ran, 13 stayed green, and the
+    six red frontiers stayed unchanged from the round-8 merged baseline:
+    ARZ2 f1627 / 2258, CNZ2 f9487 / 288, HTZ2 f5031 / 930, MTZ3 f9134 /
+    936, OOZ1 f1813 / 1062, OOZ2 f9307 / 444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kBootstrapResolver,com.openggf.tests.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    exited 1 at the existing AIZ expected-red frontiers: complete-run f1095 /
+    4319 (`x_speed` expected `0x0000`, actual `0x000C`) and AIZ f8941 /
+    1160 (`camera_y` expected `0x02C1`, actual `0x02B9`). The S3K
+    must-keep non-trace tests in that command passed.
+
 ## 2026-06-30 - S2 round-8 merged sweep baseline
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /

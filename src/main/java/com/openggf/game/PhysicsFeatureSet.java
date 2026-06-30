@@ -1605,4 +1605,23 @@ public record PhysicsFeatureSet(
         return spindashEnabled;
     }
 
+    /**
+     * Fixed Sonic_Dust/Dust sidecar slot for the native player pair, or
+     * {@code -1} when the active game has no ROM fixed dust sidecar.
+     *
+     * <p>S2's {@code Sonic_Dust}/{@code Tails_Dust} sit immediately before
+     * {@code Sonic_Shield} in {@code LevelOnly_Object_RAM}
+     * (docs/s2disasm/s2.constants.asm:1149-1164). S3K's {@code Dust}/{@code
+     * Dust_P2} sit immediately before {@code Shield} in {@code Level_object_RAM}
+     * (docs/skdisasm/sonic3k.constants.asm:309-321). These fixed sidecars are
+     * slot-identifiable, but they do not consume the allocatable dynamic SST
+     * window used by {@code FindFreeObj}/{@code AllocateObject}.
+     */
+    public int fixedDustSlotIndex(boolean secondaryPlayer) {
+        if (!waterSplashUsesFixedDustObject() || shieldObjectFixedSlotIndex < 0) {
+            return -1;
+        }
+        return shieldObjectFixedSlotIndex - (secondaryPlayer ? 1 : 2);
+    }
+
 }
