@@ -78,11 +78,35 @@ class TestSpringObjectInstance {
         SolidRoutineProfile horizontalProfile = horizontal.getSolidRoutineProfile();
 
         assertEquals(SolidRoutineKind.FULL_SOLID, verticalProfile.kind());
-        assertFalse(verticalProfile.inclusiveRightEdge());
+        assertTrue(verticalProfile.inclusiveRightEdge());
         assertTrue(verticalProfile.bypassesOffscreenSolidGate());
         assertEquals(SolidRoutineKind.FULL_SOLID, horizontalProfile.kind());
         assertTrue(horizontalProfile.inclusiveRightEdge());
         assertTrue(horizontalProfile.bypassesOffscreenSolidGate());
+    }
+
+    @Test
+    void upSpringRightEdgeContactSetsPushAtInclusiveSolidObjectBoundary() {
+        SpringObjectInstance spring = new SpringObjectInstance(
+                new ObjectSpawn(0x0200, 0x0100, 0x41, 0x00, 0, false, 0),
+                "TestSpring");
+        spring.setServices(new TestObjectServices());
+
+        ObjectManager manager = buildManager(spring);
+        TestableSprite player = new TestableSprite("tails");
+        player.setWidth(18);
+        player.setHeight(30);
+        player.setAir(false);
+        player.setXSpeed((short) 0);
+        player.setYSpeed((short) 0);
+        player.setGSpeed((short) 0);
+        player.setCentreX((short) 0x021B);
+        player.setCentreY((short) 0x0100);
+
+        manager.update(0, player, List.of(), 0, false, true, true);
+
+        assertTrue(player.getPushing(),
+                "Obj41_Up uses SolidObject_cont's bhi right-edge gate, so relX == 2*d1 still pushes");
     }
 
     @Test
