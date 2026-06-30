@@ -82,24 +82,25 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
     // Generator Y positions during defeat fall-off
     private static final int GENERATOR_FLOOR_Y = 0x6F0;
 
-    // Mapping frame indices (Java 0-indexed, ROM is 1-indexed with entry 0 as null)
-    // ROM frame N = Java frame N-1 for frames 1+
-    // The main boss body is ALWAYS rendered as frame 0 (Eggman + machine)
+    // Mapping frame indices. Obj51's mapping table deliberately preserves ROM frame 0
+    // as an empty/no-overlay frame, so these are the ROM mapping_frame values.
+    // The main boss body is ALWAYS rendered as frame 1 (Eggman + machine).
     // Electricity frames are ADDITIONAL overlays when in collision mode
-    private static final int FRAME_BOSS_BODY = 0;           // Main boss with Eggman (always rendered)
-    private static final int FRAME_GENERATOR_LEFT = 1;      // Left generator arm
-    private static final int FRAME_GENERATOR_RIGHT = 2;     // Right generator arm
-    private static final int FRAME_ELECTRODE_SMALL = 3;     // Electrode piece
-    private static final int FRAME_ELECTRODE_EXTENDED = 4;  // Electrode extended
-    private static final int FRAME_PROPELLER_1 = 5;         // Propeller frame 1
-    private static final int FRAME_PROPELLER_2 = 6;         // Propeller frame 2
-    // Electricity frames (these are overlays, not replacements)
-    private static final int FRAME_ELEC_LOWER_1 = 11;       // Lower electricity frame 1 (ROM 0x0C)
-    private static final int FRAME_ELEC_LOWER_2 = 12;       // Lower electricity frame 2 (ROM 0x0D)
-    private static final int FRAME_ELEC_LOWER_3 = 13;       // Lower electricity frame 3 (ROM 0x0E)
-    private static final int FRAME_ZAP_WIDE_1 = 14;         // Zap field wide frame 1 (ROM 0x0F)
-    private static final int FRAME_ZAP_WIDE_2 = 15;         // Zap field wide frame 2 (ROM 0x10)
-    private static final int FRAME_ZAP_WIDE_3 = 16;         // Zap field wide frame 3 (ROM 0x11)
+    private static final int FRAME_NO_OVERLAY = 0;          // Empty/null frame
+    private static final int FRAME_BOSS_BODY = 1;           // Main boss with Eggman (always rendered)
+    private static final int FRAME_GENERATOR_LEFT = 2;      // Left generator arm
+    private static final int FRAME_GENERATOR_RIGHT = 3;     // Right generator arm
+    private static final int FRAME_ELECTRODE_SMALL = 4;     // Electrode piece
+    private static final int FRAME_ELECTRODE_EXTENDED = 5;  // Electrode extended
+    private static final int FRAME_PROPELLER_1 = 6;         // Propeller frame 1
+    private static final int FRAME_PROPELLER_2 = 7;         // Propeller frame 2
+    // Electricity frames (these are overlays, not replacements).
+    private static final int FRAME_ELEC_LOWER_1 = 0x0C;
+    private static final int FRAME_ELEC_LOWER_2 = 0x0D;
+    private static final int FRAME_ELEC_LOWER_3 = 0x0E;
+    private static final int FRAME_ZAP_WIDE_1 = 0x0F;
+    private static final int FRAME_ZAP_WIDE_2 = 0x10;
+    private static final int FRAME_ZAP_WIDE_3 = 0x11;
 
     // Animation IDs (ROM: Ani_obj51)
     private static final int ANIM_FACE_NORMAL = 8;
@@ -130,8 +131,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
     private int leftGenX, leftGenY;    // Left generator (sub5 in ROM)
 
     // Multi-sprite mapping frames
-    private int mainMapFrame;       // Electricity overlay frame (or -1 for none)
-    private int propellerFrame;     // Propeller animation frame
+    private int mainMapFrame;       // Electricity overlay frame, or frame 0 for none
     private int electricityFrame;   // Current electricity animation frame
     private int electricityTimer;   // Timer for electricity animation
 
@@ -186,16 +186,15 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
         bossXPos = state.x;
         bossYPos = state.y;
 
-        // ROM: move.b #0,mainspr_mapframe(a0) - starts with no electricity overlay
-        mainMapFrame = -1;  // No electricity overlay initially
-        propellerFrame = FRAME_PROPELLER_1;
+        // ROM: move.b #0,mainspr_mapframe(a0) - frame 0 is the empty/no-overlay mapping
+        mainMapFrame = FRAME_NO_OVERLAY;
         electricityFrame = FRAME_ELEC_LOWER_1;
         electricityTimer = 0;
 
         // ROM: sub2_mapframe = 5 (electrode extended), sub5_mapframe = 2 (generator right)
         // Initially in LOWER mode, animation is frozen at first frame of each sequence
-        electrodeFrame = FRAME_ELECTRODE_SMALL;    // Electrode small (ROM frame 4 = Java 3)
-        generatorFrame = FRAME_GENERATOR_LEFT;     // Generator left arm (ROM frame 2 = Java 1)
+        electrodeFrame = FRAME_ELECTRODE_EXTENDED;
+        generatorFrame = FRAME_GENERATOR_LEFT;
 
         // ROM: move.w #0,(Boss_Y_vel).w / move.w #-$180,(Boss_X_vel).w
         state.xVel = -VELOCITY_HORIZONTAL;
@@ -438,7 +437,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
      */
     private void updateElectricityAnimation() {
         if (bossCollisionRoutine == COLLISION_OFF) {
-            mainMapFrame = -1;  // No electricity overlay
+            mainMapFrame = FRAME_NO_OVERLAY;
             return;
         }
 
@@ -467,7 +466,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
      */
     private void updatePostTrigger() {
         bossCollisionRoutine = COLLISION_OFF;
-        mainMapFrame = -1;  // No electricity during post-trigger
+        mainMapFrame = FRAME_NO_OVERLAY;
         bossCountdown--;
 
         if (bossCountdown == 0) {
@@ -515,7 +514,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
                     state.xVel = -VELOCITY_HORIZONTAL;
                 }
                 // Clear electricity overlay when returning to patrol
-                mainMapFrame = -1;
+                mainMapFrame = FRAME_NO_OVERLAY;
                 bossCollisionRoutine = COLLISION_OFF;
             }
         }
@@ -529,7 +528,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
 
         if (bossCountdown >= 0) {
             bossCollisionRoutine = COLLISION_OFF;
-            mainMapFrame = -1;  // No electricity overlay during defeat
+            mainMapFrame = FRAME_NO_OVERLAY;
 
             // Spawn explosions every 8 frames
             if ((frameCounter & 7) == 0) {
@@ -837,11 +836,9 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
 
         boolean flipped = (state.renderFlags & 1) != 0;
 
-        // Update propeller animation (ROM: Anim 3 - delay 7, cycles frames 6,7)
-        // Delay 7 means change every 8 frames (delay + 1)
-        if ((lastFrameCounter & 0x07) == 0) {
-            propellerFrame = (propellerFrame == FRAME_PROPELLER_1) ? FRAME_PROPELLER_2 : FRAME_PROPELLER_1;
-        }
+        // ROM: sub4_mapframe starts at frame 6 and animates to frame 7 on the 8-frame cadence.
+        int currentPropellerFrame = ((lastFrameCounter >> 3) & 1) == 0
+                ? FRAME_PROPELLER_1 : FRAME_PROPELLER_2;
 
         // Note: electrode/generator frames are controlled by collision mode in updatePeriodicModeToggle()
         // - LOWER mode: electrode small (3), generator left (1)
@@ -849,24 +846,21 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
 
         // ROM renders 4 child sub-sprites at the boss position in this order:
         // (Rendering order matters for proper layering)
-        // - sub2 = frame 5 (ROM) = electrode extended (ROM cycles frames 4,5 via Anim 1)
-        // - sub3 = frame 1 (ROM) = main body with Eggman
-        // - sub4 = frame 6 (ROM) = propeller (animates between frames 6,7)
-        // - sub5 = frame 2 (ROM) = generator arm (second electrode)
+        // - sub2 = frame 5 (electrode extended; cycles frames 4,5 via Anim 1)
+        // - sub3 = frame 1 (main body with Eggman)
+        // - sub4 = frame 6 (propeller; animates between frames 6,7)
+        // - sub5 = frame 2 (generator arm; cycles frames 2,3 via Anim 2)
         //
         // Additionally, mainspr_mapframe holds the electricity overlay frame (or 0 for none)
         //
-        // ROM frame indices are 1-indexed in mappings, Java is 0-indexed
-        // ROM frame 1 = Java frame 0, ROM frame 5 = Java frame 4, etc.
-
-        // 1. Render sub2: electrode/claws (animated between frames 4-5 in ROM = 3-4 in Java)
+        // 1. Render sub2: electrode/claws (animated between frames 4-5)
         renderer.drawFrameIndex(electrodeFrame, state.x, state.y, flipped, false);
 
-        // 2. Render sub3: main boss body (frame 1 in ROM = frame 0 in Java)
+        // 2. Render sub3: main boss body (frame 1)
         renderer.drawFrameIndex(FRAME_BOSS_BODY, state.x, state.y, flipped, false);
 
-        // 3. Render sub4: propeller animation (frames 6-7 in ROM = 5-6 in Java)
-        renderer.drawFrameIndex(propellerFrame, state.x, state.y, flipped, false);
+        // 3. Render sub4: propeller animation (frames 6-7)
+        renderer.drawFrameIndex(currentPropellerFrame, state.x, state.y, flipped, false);
 
         // 4. Render sub5: generator arm (separate from electrode)
         // ROM: sub5 uses generator frames (1-2), not electrode frames (3-4)
@@ -876,8 +870,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
         }
 
         // 5. Render mainspr_mapframe: electricity overlay if active
-        // ROM frames $0C-$0E = lower electricity, $0F-$11 = wide zap
-        // Java frames 11-13 = lower, 14-16 = wide zap
+        // ROM frames $0C-$0E = lower electricity, $0F-$11 = wide zap.
         if (mainMapFrame >= FRAME_ELEC_LOWER_1 && mainMapFrame <= FRAME_ZAP_WIDE_3) {
             renderer.drawFrameIndex(mainMapFrame, state.x, state.y, flipped, false);
         }
