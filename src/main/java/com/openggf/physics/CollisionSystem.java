@@ -353,7 +353,8 @@ public class CollisionSystem {
         // 49674-49676). Plain PlatformObjectD5 does not call DropOnFloor
         // after MvSonicOnPtfm, so deferring here would apply CalcRoomInFront's
         // wall response twice (docs/s2disasm/s2.asm:35860-35894, 58905-58915).
-        return provider.dropOnFloor();
+        return provider.dropOnFloor()
+                && isRiderOnGroundWallProbeSide(sprite, ridingObject, mode);
     }
 
     private boolean shouldDeferFlushWallResponseForRiddenDropOnFloor(
@@ -373,10 +374,26 @@ public class CollisionSystem {
         }
         // S2 Obj30 routes its SolidObject_Always/SlopedSolid helper through
         // DropOnFloor (s2.asm:49560-49604,49674-49676). While riding that support,
-        // the ROM stores the repeated push correction after this frame's position
-        // update, so the engine must defer this exact flush-wall correction.
-        return (mode == 0x40 && gSpeed <= -0x18)
-                || (mode == 0xC0 && gSpeed >= 0x18);
+        // the ROM stores a repeated push correction only when the rider is on the
+        // probed wall side of the object. HTZ2 f3317 (Obj30 x=$1760, Tails left
+        // of centre) reaches d1=-1 in CalcRoomInFront; f4422 (Obj30 x=$1920,
+        // Tails right of centre) returns d1=0 and must not synthesize the push.
+        return isRiderOnGroundWallProbeSide(sprite, ridingObject, mode)
+                && ((mode == 0x40 && gSpeed <= -0x18)
+                || (mode == 0xC0 && gSpeed >= 0x18));
+    }
+
+    static boolean isRiderOnGroundWallProbeSide(
+            AbstractPlayableSprite sprite, ObjectInstance ridingObject, int mode) {
+        if (sprite == null || ridingObject == null) {
+            return false;
+        }
+        int dx = (short) (sprite.getCentreX() - ridingObject.getX());
+        return switch (mode) {
+            case 0x40 -> dx <= 0;
+            case 0xC0 -> dx >= 0;
+            default -> false;
+        };
     }
 
     public void applyDeferredGroundWallVelocityResponse(AbstractPlayableSprite sprite) {

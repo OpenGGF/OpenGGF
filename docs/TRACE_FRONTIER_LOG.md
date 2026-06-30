@@ -6,6 +6,58 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 HTZ2 Obj30 leading-side ride-wall response (f4422 -> f4442)
+
+- Worktree/branch: `.worktrees/ai-s2-htz2-obj30-round4` /
+  `bugfix/ai-s2-htz2-obj30-round4`, based on `bugfix/ai-s2-trace-next`
+  after fast-forwarding to launcher commit `0c114fa82`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn "-Dmse=off" "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-Ds2.rom.path=$env:SONIC_2_ROM_PATH" "-Dsonic2.rom.path=$env:SONIC_2_ROM_PATH" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected nonzero; HTZ2 f4422 / 1047
+  (`tails_g_speed` expected `-0018`, actual `0x0000`).
+- Triage/evidence: engine diagnostics showed Tails briefly had the ROM-like
+  negative motion after the CPU pass near f4422, then contact/physics overwrote
+  it to a positive object-wall push and zero ground speed. The active support
+  was S2 Obj30 subtype 6 using `SolidObject_Always -> DropOnFloor ->
+  Obj30_HurtSupportedPlayers`; prior removal of the DropOnFloor flush-wall
+  fallback regressed the trace to f3317, so the owner was the handoff predicate,
+  not the existence of the fallback.
+- BizHawk PC-execute probes used the repo launcher, not a raw EmuHawk command:
+  `$env:OGGF_START='15232'; $env:OGGF_STOP='15236'; $env:OGGF_OUT=(Join-Path (Resolve-Path 'tools\bizhawk').Path 'trace_output\diag_htz2_obj30_f3317_local.txt'); cmd /c tools\bizhawk\run_bizhawk_lua.bat tools\bizhawk\diag_htz2_obj30_round4.lua src\test\resources\traces\s2\htz2\s2-lvl-select-HTZ.bk2 s2.gen`.
+  The f4422 window used the same command shape with `OGGF_START=16339`,
+  `OGGF_STOP=16343`, and `diag_htz2_obj30_f4422_local.txt`.
+- ROM basis: at trace f3317 / BizHawk f15235, `Obj02_CheckWallsOnGround`'s
+  `CalcRoomInFront` return was `d1=$FFFF`, with Tails at x `$1709/$170A`
+  left of Obj30 subtype 6 at x `$1760`; ROM applied the wall response and set
+  Tails x velocity to `$00E8`. At trace f4422 / BizHawk f16340, the same
+  left-wall probe returned `d1=$0000`, with Tails at x `$19BA` right of Obj30
+  at x `$1920`; ROM kept negative velocity and did not synthesize a push. At
+  f4424 / BizHawk f16342, ROM finally returned `d1=$FFFF` and applied one
+  push to `$00D0`. The deciding state is the rider's signed position relative
+  to the ridden object for the current ground wall probe side.
+- Fix: `CollisionSystem` now keeps the S2 DropOnFloor zero-distance fallback
+  and the repeated negative-distance deferral only when the rider is on the
+  probed side of the ridden object. The predicate is object/rider state-driven;
+  it does not edit traces, hydrate engine state from traces, or branch on zone,
+  route, frame, or a known fixture.
+- Result: `TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace` advances to
+  f4442 / 1033 (`tails_x_sub` expected `0x1200`, actual `0xFA00`).
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn "-Dmse=off" "-Dtest=TestFrameCollisionPlan,TestS2Htz2LevelSelectTraceReplay" "-Ds2.rom.path=$env:SONIC_2_ROM_PATH" "-Dsonic2.rom.path=$env:SONIC_2_ROM_PATH" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; `TestFrameCollisionPlan` passed and HTZ2 advanced
+    to f4442 / 1033.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; 19 tests ran, 13 stayed green, and the six
+    expected reds held except HTZ2 advancing to f4442 / 1033. Remaining reds:
+    ARZ2 f1294 / 2396, CNZ2 f9183 / 441, HTZ2 f4442 / 1033, MTZ3 f7853 / 864,
+    OOZ1 f1803 / 1095, OOZ2 f8487 / 387.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 0; 29 tests passed.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:JAVA_TOOL_OPTIONS='-Xmx4g'; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS3kAizCompleteRunTraceReplay,TestS3kAizTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 with the known unchanged S3K signatures: AIZ complete-run f1095 /
+    4319 (`x_speed` expected `0x0000`, actual `0x000C`) and AIZ focused f8941 /
+    1160 (`camera_y` expected `0x02C1`, actual `0x02B9`).
+
 ## 2026-06-30 - S2 ARZ2 Obj8C Whisp orientation equality (f1225 -> f1294)
 
 - Worktree/branch: `.worktrees/ai-s2-arz2-round4` /
