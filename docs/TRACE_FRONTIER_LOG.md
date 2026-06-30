@@ -6,6 +6,50 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 MTZ3 backward object gap includes old left edge (f7853 -> f9035)
+
+- Worktree/branch: `.worktrees/trace-s2-mtz3-r14` /
+  `bugfix/ai-trace-s2-mtz3-r14`, created from integration branch
+  `bugfix/ai-s2-trace-develop`, fast-forwarded through conductor integrations
+  including `ee41957a7`, `38b7dec5c`, `0e73340a5`, `1c164114b`, and `6088b92b3` before
+  verification.
+- Baseline reproduction on merged integration:
+  `mvn "-Dtest=TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result before the fix: MTZ3 f7853 / 864 (`tails_cpu_interact` expected
+  `0x0065`, actual `0x0070`).
+- Triage/evidence: a throwaway comparison-only occupancy oracle showed the
+  first structural slot drift at f1201, before the visible sidekick CPU
+  mismatch. At ROM camera_x `$067F`, the trace loaded layout idx 28 (`Obj6E`
+  at x=`$0600`) into slot 34 and then layout idx 27 (`ObjA1`) into slot 36.
+  The engine skipped idx 28 in its post-camera backward gap scan, so idx 27
+  took slot 34 and the later Tails CPU stale `interact` slot resolved to the
+  wrong object id. The diagnostic probe was removed before commit; no trace
+  resources were edited.
+- Disassembly cited: S2 `ObjectsManager_Main` computes the coarse camera chunk
+  from `Camera_X_pos & $FF80` (`docs/s2disasm/s2.asm:33040-33044`).
+  `ObjectsManager_GoingBackward` subtracts `$80`, then continues loading while
+  `d6 < previous_object_x`, retreats `a0`, and calls `ChkLoadObj`
+  (`docs/s2disasm/s2.asm:33047-33065`). That means a spawn exactly at the
+  previous left edge enters on the chunk crossing; it is not excluded from the
+  post-camera gap.
+- Fix: `ObjectPlacementController.extendForPostCamera` now treats
+  `sx == oldWindowStart` as part of the S2 backward gap. This changes engine
+  object streaming behavior only; it does not edit trace data, hydrate engine
+  state from traces, weaken tolerances, or branch on route/frame/zone.
+- Focused target after merging integration `6088b92b3`:
+  `mvn "-Dtest=TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: expected nonzero; MTZ3 advances to f9035 / 864 (`x` expected
+  `0x1BDD`, actual `0x1BD9`).
+- Current S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: exits 0; 12 selected S2 green traces passed.
+- Updated red preservation set:
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: expected nonzero and preserves ARZ2 f1028 / 2667, CNZ2 f9183 /
+  441, CPZ2 f10601 / 74, HTZ2 f4387 / 1049, OOZ1 f1803 / 1067, and OOZ2
+  f3993 / 749. MTZ3 is the only moved red frontier in this worker change,
+  now f9035 / 864.
+
 ## 2026-06-30 - S2 MTZ1 Obj68 spike touch render-flag gate removal (f8655 -> green)
 
 - Worktree/branch: `.worktrees/trace-s2-mtz1-r15` /
