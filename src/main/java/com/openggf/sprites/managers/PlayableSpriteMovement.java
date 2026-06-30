@@ -2004,8 +2004,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// normal time by updateCrouchState(), so other traces are unaffected.
 			boolean lookGateActive = isOnFlatGround() && gSpeed == 0;
 			boolean balancingNow = lookGateActive && computeCurrentFrameBalancing();
-			if (lookGateActive && !balancingNow) {
+			if (lookGateActive && !inputLeft && !inputRight) {
+				// ROM clears Status_Push before choosing Wait/Balance/Look/Duck,
+				// so a released direction exits the push display even when the
+				// standing-on-object balance branch diverts to ResetScr
+				// (S1 01 Sonic.asm:327-351; S2 s2.asm:36242-36271;
+				// S3K sonic3k.asm:22450-22473).
 				sprite.setPushing(false);
+			}
+			if (lookGateActive && !balancingNow) {
 				short lookDelay = sprite.getLookDelayCounter();
 				PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 				short lookScrollDelay = (featureSet != null) ? featureSet.lookScrollDelay()

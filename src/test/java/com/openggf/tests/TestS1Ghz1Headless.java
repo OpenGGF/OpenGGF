@@ -1024,6 +1024,36 @@ public class TestS1Ghz1Headless {
         assertEquals(0, balanceState, "Should NOT balance when safely centered on platform");
     }
 
+    @Test
+    public void testObjectNoBalanceOnWidePlatformRightSideAwayFromEdge() {
+        edgeCreatePlatformAndLand();
+
+        int rightSideButNotEdgeX = EDGE_TESTBED_X + 0x30;
+
+        int balanceState = edgeSettleOnObjectAndCheckBalance(rightSideButNotEdgeX);
+        assertEquals(0, balanceState,
+                "Sonic should not balance merely from standing on the right half of a wide object");
+    }
+
+    @Test
+    public void testPushingClearsWhenDirectionReleasedWhileBalancingOnObject() {
+        edgeCreatePlatformAndLand();
+
+        int rightEdgeX = EDGE_TESTBED_X + EDGE_PLATFORM_HALF_WIDTH - 3;
+        fixture.sprite().setCentreX((short) rightEdgeX);
+        fixture.sprite().setGSpeed((short) 0);
+        fixture.sprite().setXSpeed((short) 0);
+        fixture.sprite().setYSpeed((short) 0);
+        fixture.sprite().setRolling(false);
+        fixture.sprite().setPushing(true);
+        fixture.sprite().setBalanceState(0);
+
+        fixture.stepFrame(false, false, false, false, false);
+
+        assertFalse(fixture.sprite().getPushing(),
+                "ROM clears Status_Push before the standing-on-object balance check when no direction is held");
+    }
+
     /**
      * Walk Sonic right through GHZ1 until the right side sensor (center+9)
      * detects a drop while the center probe does NOT. At this position
@@ -1815,5 +1845,4 @@ public class TestS1Ghz1Headless {
         assertFalse(fixture.sprite().getAir(), "Sonic should have landed somewhere");
     }
 }
-
 
