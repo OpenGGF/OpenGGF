@@ -6,6 +6,65 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 MTZ3 delayed Sonic jump-press carry (f6334 -> f7853)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz3-frontier-r4` /
+  `bugfix/ai-s2-mtz3-frontier-r4`, created from integration branch
+  `bugfix/ai-s2-trace-develop`, then merged forward through current
+  integration `7c8612bc8` (CNZ2 r8 and CPZ2 r8 accepted) before final
+  verification.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result before the fix on the accepted baseline: MTZ3 f6334 / 865
+  (`tails_cpu_ctrl2_pressed` expected `0x0010`, actual `0x0000`).
+- Triage/evidence: MTZ3 f6334 had matching Sonic/camera state and matching
+  delayed held input (`hist=16/04`, delayed input `0x0010`) but the engine
+  reported `jp=false`, so CPU Tails wrote no low-byte press to
+  `Ctrl_2_Logical`. The source delayed sample was Sonic's jump-takeoff frame:
+  the engine history write at the corresponding `Level_frame_counter=$186B`
+  recorded slot 4 with `input=0x0010`, `press=true`, and status
+  `Status_InAir|Status_Rolling|Status_FacingLeft`; the ROM aux row recorded
+  `delayed_input=0x1010`, delayed status `0x07`. A temporary diagnostic probe
+  (removed before commit) confirmed `delayedJumpPress()` returned true at the
+  MTZ3 CPU read, but the later `Tails_CPU_jumping` carry block cleared the
+  real delayed press as though it were only a latch-manufactured press.
+- Disassembly cited: `Sonic_RecordPos` stores x/y, increments the shared
+  record index, then stores the full `(Ctrl_1_Logical).w` and `status(a0)` into
+  `Sonic_Stat_Record_Buf` (`docs/s2disasm/s2.asm:36342-36353`). S2
+  `TailsCPU_Normal` reads the delayed input/status word pair from the same
+  index (`docs/s2disasm/s2.asm:39285-39295`), may OR high-byte A/B/C held bits
+  when `Tails_CPU_jumping` is set, but then writes `d1` unchanged to
+  `(Ctrl_2_Logical).w` (`docs/s2disasm/s2.asm:39348-39382`). Therefore that
+  carry path must not clear a genuine delayed low-byte press that came from
+  Sonic's Stat table slot. Delayed samples with `Status_OnObj` are still
+  suppressed by the existing latch-only guard because they represent the stale
+  object-carry cases that the accepted HTZ2 red frontier already exposes.
+- Fix: the airborne auto-jump carry suppression now preserves a delayed
+  low-byte jump press only when the delayed leader status is a no-OnObj
+  airborne rolling jump-takeoff sample and the game does not use the
+  history-edge delayed-press model. This models the ROM control/status word
+  shape; it does not edit trace data, add tolerance, or add route, frame, zone,
+  game-id, or known-failing carve-outs.
+- Focused oracle:
+  `mvn "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity" test`
+  exits 0. The new `s2AirborneAutoJumpFlagPreservesDelayedLeaderPressByte`
+  fixture covers the S2 delayed no-OnObj airborne rolling press sample while
+  the existing S3K latch-only carry test still suppresses repeated low-byte
+  presses.
+- Focused target:
+  `mvn "-Dtest=TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`.
+  Result: expected nonzero; MTZ3 advances to f7853 / 864
+  (`tails_cpu_interact` expected `0x0065`, actual `0x0070`).
+- Current S2 green guard after merging integration `7c8612bc8`:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  exits 0.
+- Red preservation set on current integration:
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dmaven.test.failure.ignore=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  exits 0 with expected red failures ignored and preserves ARZ2 f1028 / 2686,
+  CNZ2 f8381 / 592, CPZ2 f5689 / 317, HTZ2 f4136 / 1024, MTZ1 f5713 / 560,
+  OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. MTZ3 is the only moved red
+  frontier in the set, now f7853 / 864.
+
 ## 2026-06-30 - S2 CNZ2 Obj86 flipped sloped right edge (f7984 -> f8381)
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r8` /

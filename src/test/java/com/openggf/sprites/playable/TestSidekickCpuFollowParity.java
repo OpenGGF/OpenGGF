@@ -3216,6 +3216,49 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s2AirborneAutoJumpFlagPreservesDelayedLeaderPressByte() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(true);
+        tails.setRolling(true);
+        tails.setCentreX((short) 0x1675);
+        tails.setCentreY((short) 0x05E7);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x16B2);
+        Arrays.fill(yHistory, (short) 0x0451);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_JUMP);
+        Arrays.fill(statusHistory, (byte) (AbstractPlayableSprite.STATUS_IN_AIR
+                | AbstractPlayableSprite.STATUS_ROLLING));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        int delayedSlot = sonic.getHistorySlotIndex(SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES);
+        setJumpPressHistorySlot(sonic, delayedSlot, true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        controller.hydrateFromRomCpuState(0x06, 0, 0, 0, true, 0, 0);
+
+        controller.update(0x187B);
+
+        Assertions.assertAll(
+                () -> assertTrue(controller.getInputJump(),
+                        "S2 loc_1BDCE carries Tails_CPU_jumping by ORing only high-byte A/B/C held bits."),
+                () -> assertTrue(controller.getInputJumpPress(),
+                        "S2 TailsCPU_Normal sends the delayed Ctrl_1_Logical word unchanged; "
+                                + "the loc_1BDCE high-byte carry must not clear a real low-byte "
+                                + "press from Sonic_Stat_Record_Buf (s2.asm:39348-39382)."),
+                () -> assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+                        controller.getDiagnosticGeneratedPressedInput()
+                                & AbstractPlayableSprite.INPUT_JUMP));
+    }
+
+    @Test
     void normalAutoJumpCadenceUsesInlineFrameCounterForS3kObjectOrder() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

@@ -2395,9 +2395,17 @@ public class SidekickCpuController {
                     | AbstractPlayableSprite.INPUT_DOWN
                     | AbstractPlayableSprite.INPUT_LEFT
                     | AbstractPlayableSprite.INPUT_RIGHT)) == 0;
+            // S2 stores the real low-byte press in Sonic_Stat_Record_Buf; do not
+            // clear it when the delayed sample is a plain airborne roll jump.
+            boolean delayedLeaderJumpTakeoff = recordedJumpPress
+                    && (recordedStatus & AbstractPlayableSprite.STATUS_IN_AIR) != 0
+                    && (recordedStatus & AbstractPlayableSprite.STATUS_ROLLING) != 0
+                    && (recordedStatus & AbstractPlayableSprite.STATUS_ON_OBJECT) == 0
+                    && (fs == null || !fs.sidekickDelayedJumpPressUsesHistoryEdge());
             if (sidekick.getAir()
                     && delayedJumpOnly
-                    && normalPushingGraceFrames <= 2) {
+                    && normalPushingGraceFrames <= 2
+                    && !delayedLeaderJumpTakeoff) {
                 // ROM loc_13E64 carries Tails_CPU_auto_jump_flag by ORing the
                 // high-byte A/B/C held bits into Ctrl_2_Logical, then branches
                 // directly to the final write while airborne. It does not
