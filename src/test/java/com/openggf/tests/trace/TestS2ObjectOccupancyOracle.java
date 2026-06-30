@@ -148,6 +148,41 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void htz2Obj18StandingBitClearsWhenLaterRideWinsAtRomFrame4011() throws Exception {
+        Boolean obj18Standing = driveTrace("htz2", Sonic2ZoneConstants.ZONE_HTZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 4011) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedObj18 = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 34)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x18)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedObj18,
+                            "HTZ2 ROM fixture should report Obj18 slot 34 at f4011");
+                    Assertions.assertEquals(0, parseObjectType(expectedObj18.status()) & 0x18,
+                            "ROM Obj18 standing bits are clear before slot 22 becomes the active ride");
+                    ARZPlatformObjectInstance actualObj18 =
+                            om.activeObjectsOfType(ARZPlatformObjectInstance.class).stream()
+                                    .filter(platform -> platform.getX() == 0x1860)
+                                    .findFirst()
+                                    .orElse(null);
+                    Assertions.assertNotNull(actualObj18,
+                            "Engine should have the HTZ2 Obj18 platform at x=$1860 by f4011");
+                    AbstractPlayableSprite sonic =
+                            (AbstractPlayableSprite) GameServices.sprites().getSprite("sonic");
+                    return om.hasObjectStandingBit(sonic, actualObj18);
+                });
+        Assertions.assertNotNull(obj18Standing);
+        Assertions.assertFalse(obj18Standing,
+                "RideObject_SetRide must clear the previous object's standing bit when a later object "
+                        + "wins the ride (docs/s2disasm/s2.asm:35999-36006)");
+    }
+
+    @Test
     public void mtz3RotatingPlatformLoadKeepsRomSlot22Identity() throws Exception {
         SlotCheck slotCheck = driveTrace("mtz3", Sonic2ZoneConstants.ZONE_MTZ, 2,
                 (trace, om, frame) -> {

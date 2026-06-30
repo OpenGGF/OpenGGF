@@ -6,6 +6,58 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 HTZ2 ride-transfer standing bit clear (f4012 -> f4136)
+
+- Worktree/branch: `.worktrees/ai-s2-htz2-frontier-r4` /
+  `bugfix/ai-s2-htz2-frontier-r4`, based on integration branch
+  `bugfix/ai-s2-trace-develop` and merged forward through MTZ2 r5
+  (`9853be498`), CPZ2 r5 (`56b44a392`), CNZ2 r7 (`e9f399488`), CPZ2 r6
+  (`bba3372ce`), and MTZ2 r6 (`d5895ee07`) before final verification.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix on current integration: HTZ2 f4012 / 1031 (`y`
+  expected `0x0695`, actual `0x0699`).
+- Triage/evidence: the f4012 context showed ROM Sonic/Tails transferring to
+  Obj18 slot 34 at `$1860,$06B1`, while the engine still rode Obj30 and had the
+  same Obj18 at `$1860,$06B3`. Trace aux `object_near` showed ROM Obj18 status
+  stayed `0x00` through f4011 and only gained standing bits (`0x18`) at f4012.
+  A temporary engine probe (removed before commit) showed the engine's Obj18
+  latch had been treated as standing several frames earlier, adding sag through
+  `PlatformBobHelper` even after a later object won the ride. That made Obj18
+  two pixels too low at the contact frame and missed the ROM transfer.
+- Disassembly cited: Obj18 reads its own `status(a0) & standing_mask`, adjusts
+  `obj18_y_offset`, then runs `Obj18_Move`, `Obj18_Nudge`, and
+  `PlatformObject` in that order (`docs/s2disasm/s2.asm:23219-23242`).
+  `Obj18_Nudge` converts `obj18_y_offset` through `CalcSine`, multiplies by
+  `$400`, adds `obj18_y_actual`, and writes `y_pos(a0)`
+  (`docs/s2disasm/s2.asm:23311-23320`). `RideObject_SetRide` clears the old
+  `interact(a1)` object's standing bit before storing the new object slot, then
+  clears angle/y velocity and copies `x_vel` to inertia
+  (`docs/s2disasm/s2.asm:35997-36015`).
+- Fix: `ObjectSolidContactController.putRidingState` now clears the previous
+  object's standing latch when the ridden object or piece changes, before
+  storing the new ride state. This models ROM-backed `RideObject_SetRide`
+  state transfer; it does not edit trace data, add tolerance, or add route,
+  frame, zone, game-id, or known-failing carve-outs.
+- Focused oracle:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ObjectOccupancyOracle#htz2Obj18StandingBitClearsWhenLaterRideWinsAtRomFrame4011" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0. The added assertion drives HTZ2 to f4011 and verifies the engine
+  has cleared Obj18's standing latch while the ROM fixture reports Obj18 slot
+  34 status `0x00`.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; HTZ2 advanced to f4136 / 1024 (`y_speed` expected
+  `0x0000`, actual `0x02D8`), a later object-support/vertical-speed frontier.
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Red preservation set on current integration:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686, CNZ2 f7984 / 680,
+  CPZ2 f5494 / 352, MTZ1 f5713 / 560, MTZ2 f11277 / 200,
+  MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. No checked red
+  trace moved backward.
+
 ## 2026-06-30 - S2 MTZ2 Obj41 spring inclusive right edge (f8825 -> f11277)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz2-frontier-r6` /
