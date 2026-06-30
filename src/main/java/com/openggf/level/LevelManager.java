@@ -1211,12 +1211,14 @@ public class LevelManager {
         if (playable == null) {
             return;
         }
-        // S3K hurt movement (routine 4) runs its own path at loc_122D8
-        // (sonic3k.asm:24449-24467): MoveSprite_TestGravity2, hurt gravity,
-        // underwater gravity reduction from the existing status bit, collision,
-        // bounds, draw. It does not reach the normal loc_10C36 Sonic_Water call
-        // (sonic3k.asm:21993-21998), so preserve Status_Underwater while hurt.
-        if (playable.isHurt()) {
+        // Hurt/dead-fall movement runs its own path and does not reach the
+        // normal water-status routine, so preserve Status_Underwater there.
+        // S2 Tails: Obj02_Dead calls Obj02_CheckGameOver, ObjectMoveAndFall,
+        // Tails_RecordPos/Animate/LoadDPLC/Display and omits Tails_Water
+        // (docs/s2disasm/s2.asm:41131-41137); Obj02_Control is the path that
+        // calls Tails_Water (38972-38987). S3K hurt movement similarly runs
+        // loc_122D8 without reaching Sonic_Water.
+        if (playable.isHurt() || isDeferredSidekickDeadFallWaterBypass(playable)) {
             return;
         }
         // S3K Tails object_control bit 0 skips Tails_Modes but still runs
@@ -1229,6 +1231,14 @@ public class LevelManager {
             return;
         }
         playable.updateWaterState(waterY);
+    }
+
+    private static boolean isDeferredSidekickDeadFallWaterBypass(AbstractPlayableSprite playable) {
+        if (!playable.isCpuControlled()) {
+            return false;
+        }
+        SidekickCpuController cpu = playable.getCpuController();
+        return cpu != null && cpu.isDeferredDespawnDeadFallContinuingThisFrame();
     }
 
     boolean shouldSuppressUnderwaterPalette(int zoneId, int actId) {
