@@ -430,7 +430,7 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
         // FindFreeObj slot (which would fabricate a fuse the ROM never made and
         // drift OST cadence).
         final int mySlot = getSlotIndex();
-        final int fuseSlot = mySlot >= 0 ? objectManager.allocateSlotAfter(mySlot) : -1;
+        final int fuseSlot = ObjectLifetimeOps.reserveFindNextFreeChildSlot(objectManager, mySlot);
         if (fuseSlot < 0) {
             return; // bne.s .return: object RAM full after bomb, no fuse spawned
         }
@@ -529,7 +529,8 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
             if (firstPiece) {
                 assignedSlot = fuseSlot;            // movea.l a0,a1: reuse fuse slot
             } else if (fuseSlot >= 0) {
-                assignedSlot = objectManager.allocateSlotAfter(fuseSlot); // FindNextFreeObj
+                assignedSlot = ObjectLifetimeOps.reserveFindNextFreeChildSlot(
+                        objectManager, fuseSlot); // FindNextFreeObj
                 if (assignedSlot < 0) {
                     continue;                        // bne.s .nextShrapnel: skip this piece
                 }

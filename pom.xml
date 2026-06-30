@@ -569,6 +569,39 @@
                 <version>3.1.0</version>
                 <executions>
                     <execution>
+                        <id>capture-git-build-identity</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <exportAntProperties>true</exportAntProperties>
+                            <target>
+                                <exec executable="git" dir="${project.basedir}" outputproperty="openggf.git.commit.raw" failonerror="false">
+                                    <arg value="rev-parse"/>
+                                    <arg value="--short=9"/>
+                                    <arg value="HEAD"/>
+                                </exec>
+                                <exec executable="git" dir="${project.basedir}" outputproperty="openggf.git.dirty.raw" failonerror="false">
+                                    <arg value="status"/>
+                                    <arg value="--porcelain"/>
+                                </exec>
+                                <condition property="openggf.git.commit" value="${openggf.git.commit.raw}" else="">
+                                    <and>
+                                        <isset property="openggf.git.commit.raw"/>
+                                        <length string="${openggf.git.commit.raw}" when="greater" length="0"/>
+                                    </and>
+                                </condition>
+                                <condition property="openggf.git.dirty" value="true" else="false">
+                                    <and>
+                                        <isset property="openggf.git.dirty.raw"/>
+                                        <length string="${openggf.git.dirty.raw}" when="greater" length="0"/>
+                                    </and>
+                                </condition>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>install-git-hooks</id>
                         <phase>validate</phase>
                         <goals>

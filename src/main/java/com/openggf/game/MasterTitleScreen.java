@@ -9,9 +9,13 @@ import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.graphics.PngTextureLoader;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.TexturedQuadRenderer;
+import com.openggf.game.recording.UserRecordingCatalog;
+import com.openggf.game.recording.menu.UserRecordingMenu;
+import com.openggf.game.recording.menu.UserRecordingMenuState;
 import com.openggf.testmode.TestModeTracePicker;
 import com.openggf.trace.catalog.TraceCatalog;
 import com.openggf.trace.catalog.TraceEntry;
+import com.openggf.version.AppVersion;
 
 import org.lwjgl.system.MemoryUtil;
 
@@ -145,6 +149,10 @@ public class MasterTitleScreen {
     // of the debug overlay (no drop shadow).
     private PixelFont pickerFont;
     private TestModeTracePicker tracePicker;
+    private UserRecordingMenu userRecordingMenu;
+    private UserRecordingMenuFactory userRecordingMenuFactory = this::createUserRecordingMenu;
+    private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter =
+            (entry, options) -> LOGGER.info("User recording playback callback not configured.");
     private int bgTextureId;
     private int solidWhiteTextureId; // 1x1 white texture for solid color overlays
     private int titleTextId;
@@ -307,6 +315,7 @@ public class MasterTitleScreen {
         }
 
         if (configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
+            userRecordingMenu = null;
             if (tracePicker == null) {
                 Path root = Path.of(System.getProperty("user.dir"))
                         .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR))
@@ -334,6 +343,14 @@ public class MasterTitleScreen {
             return;
         }
 
+        if (userRecordingMenu != null) {
+            userRecordingMenu.update(inputHandler);
+            if (userRecordingMenu.consumeCloseRequested()) {
+                userRecordingMenu = null;
+            }
+            return;
+        }
+
         if (launchConfigPanel != null) {
             launchConfigPanel.update(inputHandler);
             if (launchConfigPanel.consumeResult() == LaunchConfigPanel.Result.CLOSED) {
@@ -348,6 +365,12 @@ public class MasterTitleScreen {
         int leftKey = configService.getInt(SonicConfiguration.LEFT);
         int rightKey = configService.getInt(SonicConfiguration.RIGHT);
         int jumpKey = configService.getInt(SonicConfiguration.JUMP);
+
+        int recordKey = configService.getInt(SonicConfiguration.RECORDING_RECORD_KEY);
+        boolean recordingMenuRequested = inputHandler.isKeyPressed(recordKey) && inputHandler.isShiftDown();
+        if (handleUserRecordingMenuRequest(recordingMenuRequested) || recordingMenuRequested) {
+            return;
+        }
 
         if (inputHandler.isKeyPressed(GLFW_KEY_TAB) && romAvailable[selectedIndex]) {
             GameEntry entry = GameEntry.values()[selectedIndex];
@@ -403,6 +426,13 @@ public class MasterTitleScreen {
             renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
                     0f, 0f, 0f, 1f);
             tracePicker.render();
+            return;
+        }
+
+        if (userRecordingMenu != null) {
+            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
+                    0f, 0f, 0f, 1f);
+            userRecordingMenu.render();
             return;
         }
 
@@ -755,11 +785,11 @@ public class MasterTitleScreen {
         return previewAnimationFrame;
     }
 
-    void setSelectedIndexForTest(int newIndex) {
+    public void setSelectedIndexForTest(int newIndex) {
         setSelectedIndex(newIndex);
     }
 
-    void setStateForTest(State state) {
+    public void setStateForTest(State state) {
         this.state = state;
     }
 
@@ -776,6 +806,22 @@ public class MasterTitleScreen {
 
     public void setRomAvailableForTest(GameEntry entry, boolean available) {
         romAvailable[entry.ordinal()] = available;
+    }
+
+    public void setUserRecordingMenuFactoryForTest(UserRecordingMenuFactory userRecordingMenuFactory) {
+        this.userRecordingMenuFactory = Objects.requireNonNull(userRecordingMenuFactory, "userRecordingMenuFactory");
+    }
+
+    public void setUserRecordingPlaybackStarter(UserRecordingMenu.PlaybackStarter playbackStarter) {
+        this.userRecordingPlaybackStarter = Objects.requireNonNull(playbackStarter, "playbackStarter");
+    }
+
+    public boolean isUserRecordingMenuOpenForTest() {
+        return userRecordingMenu != null;
+    }
+
+    public UserRecordingMenuState userRecordingMenuStateForTest() {
+        return userRecordingMenu == null ? null : userRecordingMenu.state();
     }
 
     void setTracePickerForTest(TestModeTracePicker tracePicker) {
@@ -801,6 +847,38 @@ public class MasterTitleScreen {
 
     public boolean isProgrammaticSelection() {
         return programmaticSelection;
+    }
+
+    public boolean tryOpenUserRecordingMenuForSelectedGame() {
+        if (state != State.ACTIVE
+                || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+                || launchConfigPanel != null) {
+            return false;
+        }
+        GameEntry entry = GameEntry.values()[selectedIndex];
+        try {
+            userRecordingMenu = userRecordingMenuFactory.create(entry.gameId, font);
+            return true;
+        } catch (IOException ex) {
+            LOGGER.warning("Failed to open recordings menu for " + entry.gameId + ": " + ex.getMessage());
+            return false;
+        }
+    }
+
+    public boolean handleUserRecordingMenuRequest(boolean recordingMenuRequested) {
+        if (!recordingMenuRequested) {
+            return false;
+        }
+        return tryOpenUserRecordingMenuForSelectedGame();
+    }
+
+    private UserRecordingMenu createUserRecordingMenu(String gameId, PixelFont font) throws IOException {
+        Path root = Path.of(System.getProperty("user.dir", "."));
+        return new UserRecordingMenu(
+                gameId,
+                UserRecordingCatalog.scan(root, gameId, AppVersion.identity()),
+                font,
+                userRecordingPlaybackStarter);
     }
 
     private void drawLaunchHoverLine() {
@@ -868,7 +946,13 @@ public class MasterTitleScreen {
             PngTextureLoader.deleteTexture(textureId);
         }
         if (renderer != null) renderer.cleanup();
+        userRecordingMenu = null;
         state = State.INACTIVE;
         LOGGER.info("Master title screen cleaned up");
+    }
+
+    @FunctionalInterface
+    public interface UserRecordingMenuFactory {
+        UserRecordingMenu create(String gameId, PixelFont font) throws IOException;
     }
 }
