@@ -63,6 +63,7 @@ public class BubbleObjectInstance extends AbstractObjectInstance
 
     // Wobble angle (0-255, wraps around) - ROM uses only low byte
     private int wobbleAngle;
+    private boolean wobbleAnglePendingRng;
 
     // Current display position
     private int displayX;
@@ -94,6 +95,10 @@ public class BubbleObjectInstance extends AbstractObjectInstance
      * @param wobbleAngle Initial wobble angle (0-255)
      */
     public BubbleObjectInstance(int x, int y, int bubbleSize, int wobbleAngle) {
+        this(x, y, bubbleSize, wobbleAngle, false);
+    }
+
+    BubbleObjectInstance(int x, int y, int bubbleSize, int wobbleAngle, boolean wobbleAnglePendingRng) {
         super(createDummySpawn(x, y), "Bubble");
 
         // Store position as 16.16 fixed point
@@ -102,6 +107,7 @@ public class BubbleObjectInstance extends AbstractObjectInstance
         this.baseX = x;
 
         this.wobbleAngle = wobbleAngle & 0xFF;
+        this.wobbleAnglePendingRng = wobbleAnglePendingRng;
         this.bubbleSize = bubbleSize;
         this.breathed = false;
         this.romRenderOnScreen = true;
@@ -129,6 +135,13 @@ public class BubbleObjectInstance extends AbstractObjectInstance
         if (breathed) {
             setDestroyed(true);
             return;
+        }
+
+        if (wobbleAnglePendingRng) {
+            // Obj24_Init consumes RandomNumber for the child bubble's angle on
+            // the child's own object pass, not in the generator that allocated it.
+            wobbleAngle = services().rng().nextByte();
+            wobbleAnglePendingRng = false;
         }
 
         // Update wobble angle (ROM: addq.b #1,objoff_32(a0))
