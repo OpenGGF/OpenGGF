@@ -1,6 +1,7 @@
 package com.openggf.physics;
 
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -68,6 +69,24 @@ class TestFrameCollisionPlan {
     }
 
     @Test
+    void riddenDropOnFloorFlushWallFallbackRequiresRiderOnProbedSide() {
+        ObjectInstance f3317Obj30 = Mockito.mock(ObjectInstance.class);
+        Mockito.when(f3317Obj30.getX()).thenReturn(0x1760);
+        ObjectInstance f4422Obj30 = Mockito.mock(ObjectInstance.class);
+        Mockito.when(f4422Obj30.getX()).thenReturn(0x1920);
+
+        assertTrue(CollisionSystem.isRiderOnGroundWallProbeSide(
+                newTestSpriteAt(0x170A), f3317Obj30, 0x40),
+                "HTZ2 f3317 has Tails left of Obj30 x=$1760 while CalcRoomInFront probes the left wall");
+        assertFalse(CollisionSystem.isRiderOnGroundWallProbeSide(
+                newTestSpriteAt(0x19BA), f4422Obj30, 0x40),
+                "HTZ2 f4422 has Tails right of Obj30 x=$1920, and ROM returns d1=0 for the left-wall probe");
+        assertTrue(CollisionSystem.isRiderOnGroundWallProbeSide(
+                newTestSpriteAt(0x19BA), f4422Obj30, 0xC0),
+                "A right-wall probe uses the mirrored leading side");
+    }
+
+    @Test
     void terrainPlayableApisExposePlanAwareOverloads() {
         assertPlanAwareCollisionMethod("resolveGroundWallCollision", AbstractPlayableSprite.class);
         assertPlanAwareCollisionMethod("resolveGroundAttachment",
@@ -118,7 +137,15 @@ class TestFrameCollisionPlan {
     }
 
     private static AbstractPlayableSprite newTestSprite() {
+        return newTestSpriteAt(0);
+    }
+
+    private static AbstractPlayableSprite newTestSpriteAt(int x) {
         return new AbstractPlayableSprite("sonic", (short) 0, (short) 0) {
+            {
+                setCentreX((short) x);
+            }
+
             @Override
             protected void defineSpeeds() {
             }
