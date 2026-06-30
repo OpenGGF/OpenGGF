@@ -227,6 +227,25 @@ class TestLbzCupElevatorInstance {
                 "raw mapping-frame control must reset when the player leaves the cup");
     }
 
+    @Test
+    void activeElevatorDoesNotRecaptureReleasedAirbornePlayer() {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0, 0, false, 0));
+        Sonic player = new Sonic("sonic", (short) 0x1900, (short) 0x0500);
+        player.setAir(true);
+        int startX = player.getCentreX();
+
+        setPrivateIntUnchecked(elevator, "activationFlag", 1);
+
+        elevator.update(0, player);
+
+        assertFalse(player.isObjectControlled(),
+                "LBZCupElevator_PlayerControl still requires the SolidObject standing bit before capture; "
+                        + "$34 only bypasses the center-position check");
+        assertEquals(startX, player.getCentreX(),
+                "Released airborne Sonic must not be snapped back to the moving cup");
+    }
+
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {
         private final int zoneId;
 
@@ -244,6 +263,14 @@ class TestLbzCupElevatorInstance {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setInt(target, value);
+    }
+
+    private static void setPrivateIntUnchecked(Object target, String fieldName, int value) {
+        try {
+            setPrivateInt(target, fieldName, value);
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
     }
 
     private static int getPrivateInt(Object target, String fieldName) throws Exception {
