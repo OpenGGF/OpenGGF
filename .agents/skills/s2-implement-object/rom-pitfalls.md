@@ -2869,6 +2869,47 @@ uses after-current allocation (`docs/s2disasm/s2.asm:48359-48365`).
 
 ---
 
+## P70 -- After-current linked children may need parent-owned lifetime
+
+**Pattern.** Some S2 parent objects allocate fully initialized linked children
+with `AllocateObjectAfterCurrent`, fill the child SST fields directly, and then
+own the whole pair's unload/delete policy from the parent routine. The child may
+have no generic `MarkObjGone` tail even though it moves and displays normally.
+
+**Engine symptom.** A linked platform child appears one slot or one phase away
+from ROM, reruns parent init on its first update, or disappears before it reaches
+the camera because generic dynamic-object lifetime deletes it. In CPZ2, Obj7A
+SidewaysPform's child was gone or phase-shifted by the f5689 Sonic landing
+frame, so Sonic missed the ROM child ride and kept falling with `g_speed=$003C`
+instead of landing with `g_speed=$01F9`.
+
+**What to check / fix.**
+1. For parent init loops that call `AllocateObjectAfterCurrent`, insert the
+   child after the current parent slot, including when the parent itself is
+   still being constructed by object placement.
+2. If the parent writes all child fields during init, mark the child initialized
+   so its first update runs the child routine rather than parent routine 0.
+3. Check whether child start coordinates are already parent-computed spawn
+   fields. Do not reapply the same offset in the child constructor.
+4. Read parent and child lifetime tails separately. If only the parent checks
+   range endpoints or clears the linked child, model that parent-owned lifetime
+   instead of giving the child a generic out-of-range delete.
+5. Keep collision toggles exact when the ROM uses equality tests; do not replace
+   them with overlap heuristics unless the disassembly does.
+
+**ROM citation.** Obj7A allocates children after the current object and fills
+their id/routine/position/linkage fields (`docs/s2disasm/s2.asm:56192-56230`).
+The parent owns pair deletion from range endpoints
+(`docs/s2disasm/s2.asm:56239-56266`), while the child routine only moves,
+checks collision, and displays (`docs/s2disasm/s2.asm:56269-56272`). The child
+toggles both directions only on exact edge equality
+(`docs/s2disasm/s2.asm:56307-56317`).
+
+**Originating commit.** `<pending>` S2 CPZ2 Obj7A after-current child and pair
+lifetime: `TestS2Cpz2LevelSelectTraceReplay` advances f5689 -> f7035.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
