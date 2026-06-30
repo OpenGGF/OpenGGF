@@ -25594,3 +25594,51 @@ Verification:
 - `mvn "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
   exited 1 with 19 trace tests run: 9 passed, 10 expected-red. The only changed
   accepted frontier was CNZ2 at f6144 / 994.
+
+### 2026-06-30 -- S2 CPZ2 gameplay waterline oscillation: f5464 -> f5494
+
+Worktree `bugfix/ai-s2-cpz2-frontier-r6` rebased onto integration merge
+`e9f399488`.
+
+Baseline reproduced before the fix from the original integration parent
+`56b44a392`: `TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace` failed at
+f5464 / 351 with `tails_x_speed` expected `0x00F4`, actual `0x007A`.
+
+Root fixed: CPZ2 entered water two frames early because gameplay water checks
+used the static `Water_Level_2` base at `0x0710`. The ROM's non-ARZ
+`MoveWater` path reads `(Oscillating_Data).w`, shifts it right once, adds it to
+`Water_Level_2`, and writes the result to `Water_Level_1`
+(`docs/s2disasm/s2.asm:5264-5282`). `DynamicWater` separately eases
+`Water_Level_2` toward `Water_Level_3` (`docs/s2disasm/s2.asm:5353-5368`),
+and the CPZ2 event routine only changes the dynamic target at the documented
+screen gate (`docs/s2disasm/s2.asm:5460-5464`). `Sonic_Water` then compares
+player `y_pos` against `Water_Level_1`, not the base level
+(`docs/s2disasm/s2.asm:36375-36380`). At the accepted f5464 blocker the ROM
+still had Tails out of water with `x_vel=0x00F4`; the engine had already
+halved/quartered water speeds to `0x007A`.
+
+Fix:
+- `Sonic2WaterDataProvider#getGameplayWaterLevelOffset` now returns
+  `OscillationManager.getByte(0) >> 1` for CPZ, modeling the ROM-visible
+  `Water_Level_1` offset used by player water entry checks.
+- ARZ keeps a zero gameplay offset because its disassembly path skips the
+  non-ARZ `Water_Level_1 = Water_Level_2 + oscillation/2` write.
+- `TestSonic2WaterDataProvider` covers the CPZ gameplay offset after stepping
+  the oscillator and asserts ARZ remains zero.
+
+Result:
+- `TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace`: f5464 / 351 errors
+  (`tails_x_speed` expected `0x00F4`, actual `0x007A`) -> f5494 / 352 errors
+  (`tails_y` expected `0x076D`, actual `0x076C`).
+
+Verification:
+- `mvn -q "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestSonic2WaterDataProvider" "-DfailIfNoTests=false" test`
+  exited 0.
+- `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 with the improved f5494 / 352 CPZ2 frontier above.
+- `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 with the accepted red preservation set unchanged: ARZ2 f1028 /
+  2686, CNZ2 f7984 / 680, HTZ2 f4012 / 1031, MTZ1 f5713 / 560, MTZ2 f8825 /
+  366, MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117.
