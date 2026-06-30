@@ -349,6 +349,12 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper",
                     "com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance",
+                    "com.openggf.game.sonic3k.objects.TestLbz2RideCameoInstances"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance$SwingChild",
+                    "com.openggf.game.sonic3k.objects.TestLbz2RideCameoInstances"),
+            Map.entry(
                     "com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild",
                     "com.openggf.game.sonic3k.objects.TestHczMinibossRocketTouchRewind"),
             Map.entry(
@@ -378,6 +384,108 @@ public final class RewindRoundTripHarness {
             Map.entry(
                     "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild",
                     "TestS3kNestedHurtboxGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance$ExhaustFlameChild",
+                    "com.openggf.game.sonic3k.objects.TestLbz2RideCameoInstances"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.LbzGateLaserBeamInstance",
+                    "com.openggf.game.sonic3k.objects.TestLbzGateLaserObjectInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.LbzPipePlugShardInstance",
+                    "com.openggf.game.sonic3k.objects.TestLbzPipePlugObjectInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.TunnelExhaustControlObjectInstance",
+                    "com.openggf.game.sonic3k.objects.TestAutomaticTunnelObjectInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance",
+                    "com.openggf.game.sonic3k.objects.TestLbzEndBossInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossCockpitChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzEndBossInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossDebrisChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzEndBossInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossExplosionControllerChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzEndBossInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossGradualMaxXExtenderChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzEndBossInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossPlatformChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzEndBossInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossRunnerChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzEndBossInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossSmokePuffChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzEndBossInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossSpikeBallChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzEndBossInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossTowerChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzEndBossInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossTubeSegmentChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzEndBossInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$DeathEggExplosionDebrisChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$DeathEggMiniatureChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$DeathEggSmokeChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$DeathEggSmokePuffChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$DebrisChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$EngineFlameChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$ExplosionSequencerChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$ExplosionShowerChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$GunPodChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$HitSparkChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$LaserHeadChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$LaserTrailChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$MuzzleLaserChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$OrbitingPodChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$P2EndingPoseWatcherChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$RobotnikHeadChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$TailsCpuReleaseChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$TopAttachmentChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$TurretSegmentChild",
+                    "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
             Map.entry(
                     "com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance",
                     "com.openggf.game.sonic3k.events.TestSonic3kMgz2CollapseEvents"),

@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects.bosses;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.palette.PaletteWriteSupport;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -15,8 +16,11 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.Level;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -37,7 +41,7 @@ import java.util.List;
  * 153341-154205. This owns only the local object graph; registry/profile wiring
  * is intentionally left to the integration task.
  */
-public final class LbzEndBossInstance extends AbstractBossInstance {
+public final class LbzEndBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
     private static final int HIT_COUNT = 8;
     private static final int COLLISION_INIT = 0x18;
     private static final int COLLISION_RISEN = 0x0F;
@@ -98,7 +102,9 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
     private List<AbstractBossChild> ownedChildren;
     private List<LbzEndBossPlatformChild> platformChildren;
     private List<Integer> launchedSpikeBallRomSubtypes;
+    @RewindTransient(reason = "Structural child link; child graph is owned by the boss reconstruction path.")
     private LbzEndBossRunnerChild runnerChild;
+    @RewindTransient(reason = "Structural child link; platform chain is rebuilt by the boss reconstruction path.")
     private LbzEndBossPlatformChild platformLeader;
 
     public LbzEndBossInstance(ObjectSpawn spawn) {
@@ -667,8 +673,15 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
         return (flags() & flag) != 0;
     }
 
+    private interface LbzEndBossGraphChild extends RewindRecreatable {
+        @Override
+        default AbstractBossChild recreateForRewind(RewindRecreateContext ctx) {
+            return null;
+        }
+    }
+
     /** Robotnik in the launcher cockpit: loc_73E0E, ObjDat3_74104. */
-    public static final class LbzEndBossCockpitChild extends AbstractBossChild {
+    public static final class LbzEndBossCockpitChild extends AbstractBossChild implements LbzEndBossGraphChild {
         private int frame;
         private int animTimer;
         private int animIndex;
@@ -732,10 +745,13 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
      * creation (boss spawn + (-$18,-$70)) and never refreshes it from the parent,
      * so it does NOT ride the boss upward during the rise.
      */
-    public static final class LbzEndBossTowerChild extends AbstractBossChild implements SolidObjectProvider {
+    public static final class LbzEndBossTowerChild extends AbstractBossChild
+            implements SolidObjectProvider, LbzEndBossGraphChild {
         private static final SolidObjectParams FULL_PARAMS = new SolidObjectParams(0x13, 0x80, 0x120);
         private static final SolidObjectParams SHORT_PARAMS = new SolidObjectParams(0x13, 0x14, 0);
+        @RewindTransient(reason = "Constructor-derived from parent position at child creation.")
         private final int baseX;
+        @RewindTransient(reason = "Constructor-derived from parent position at child creation.")
         private final int baseY;
         private boolean shortened;
 
@@ -784,9 +800,12 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
     }
 
     /** Tube segments: loc_73C0A, refreshed from the parent every frame. */
-    private static final class LbzEndBossTubeSegmentChild extends AbstractBossChild {
+    private static final class LbzEndBossTubeSegmentChild extends AbstractBossChild implements LbzEndBossGraphChild {
+        @RewindTransient(reason = "Constructor-derived tube offset; parent reconstruction recreates this child.")
         private final int dx;
+        @RewindTransient(reason = "Constructor-derived tube offset; parent reconstruction recreates this child.")
         private final int dy;
+        @RewindTransient(reason = "Constructor-derived tube subtype; parent reconstruction recreates this child.")
         private final int subtype;
         private int riseCounter;
         private boolean debrisSpawned;
@@ -856,13 +875,16 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
      * boss + (-$14,+$40) and only drives the phase byte; followers position
      * themselves at chainParent + (sin,cos)($3C)>>4 via MoveSprite_CircularSimple.
      */
-    public static final class LbzEndBossPlatformChild extends AbstractBossChild implements SolidObjectProvider {
+    public static final class LbzEndBossPlatformChild extends AbstractBossChild
+            implements SolidObjectProvider, LbzEndBossGraphChild {
         private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x12, 7, 7);
         private static final int MODE_WAIT = 0;
         private static final int MODE_SWING_OUT = 1;
         private static final int MODE_HOLD = 2;
         private static final int MODE_SWING_BACK = 3;
+        @RewindTransient(reason = "Constructor-derived chain subtype; parent reconstruction recreates the chain.")
         private final int subtype;
+        @RewindTransient(reason = "Structural sibling link; platform chain is rebuilt in order by the parent.")
         private final LbzEndBossPlatformChild chainParent;
         private int angle;
         private int mode;
@@ -987,7 +1009,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
     }
 
     /** Robotnik dash cameo: loc_73D74, ObjDat3_740F8. */
-    private static final class LbzEndBossRunnerChild extends AbstractBossChild {
+    private static final class LbzEndBossRunnerChild extends AbstractBossChild implements LbzEndBossGraphChild {
         private static final int[] RUN_SCRIPT = {0, 1, 2, 1};
         private int phase;
         private int timer;
@@ -1074,7 +1096,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
     }
 
     /** Spike ball projectile: loc_73A92, word_7412A (collision $9A). */
-    public static final class LbzEndBossSpikeBallChild extends AbstractBossChild implements TouchResponseProvider {
+    public static final class LbzEndBossSpikeBallChild extends AbstractBossChild
+            implements TouchResponseProvider, LbzEndBossGraphChild {
         private static final int TERRAIN_RADIUS = 0x10;
         // word_73F64: per-subtype (dx, dy, x_vel, y_vel).
         private static final int[][] SPAWN_DATA = {
@@ -1094,6 +1117,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
         private static final int[][] SPRAY_SMOKE_OFFSETS = {
                 {-8, 6}, {6, 8}, {-8, -6}, {6, -8}
         };
+        @RewindTransient(reason = "Constructor-derived ROM subtype; launch table recreates this projectile.")
         private final int romSubtype;
         private int phase;
         private int timer;
@@ -1310,7 +1334,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
      * so the engine implements the intended play-once-then-delete behaviour; see
      * docs/S3K_KNOWN_DISCREPANCIES.md.
      */
-    private static final class LbzEndBossSmokePuffChild extends AbstractBossChild {
+    private static final class LbzEndBossSmokePuffChild extends AbstractBossChild implements LbzEndBossGraphChild {
         private static final int[] ANIM_FRAMES = {7, 7, 8, 9};
         private int delayTimer;
         private int frame;
@@ -1369,10 +1393,14 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
      * Obj_FlickerMove pieces draw every other frame, platform pieces
      * (MoveChkDel) draw every frame. Both delete via camera-relative bounds.
      */
-    private static final class LbzEndBossDebrisChild extends AbstractBossChild {
+    private static final class LbzEndBossDebrisChild extends AbstractBossChild implements LbzEndBossGraphChild {
+        @RewindTransient(reason = "Constructor-derived mapping frame for this debris piece.")
         private final int frame;
+        @RewindTransient(reason = "Constructor-derived render flip for this debris piece.")
         private final boolean hFlip;
+        @RewindTransient(reason = "Constructor-derived render flip for this debris piece.")
         private final boolean vFlip;
+        @RewindTransient(reason = "Constructor-derived flicker mode for this debris piece.")
         private final boolean flicker;
         private int xVel;
         private int yVel;
@@ -1449,7 +1477,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
     }
 
     /** Child6_CreateBossExplosion subtype 4 controller wrapper. */
-    private static final class LbzEndBossExplosionControllerChild extends AbstractBossChild {
+    private static final class LbzEndBossExplosionControllerChild extends AbstractBossChild
+            implements LbzEndBossGraphChild {
         private final transient S3kBossExplosionController controller;
 
         private LbzEndBossExplosionControllerChild(LbzEndBossInstance parent) {
@@ -1496,7 +1525,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
      * part is added to Camera_max_X each frame (accelerating extension), then
      * snapped to Camera_stored_max_X_pos ($3AB8) and deleted.
      */
-    private static final class LbzEndBossGradualMaxXExtenderChild extends AbstractBossChild {
+    private static final class LbzEndBossGradualMaxXExtenderChild extends AbstractBossChild
+            implements LbzEndBossGraphChild {
         private int accumulator;
 
         private LbzEndBossGradualMaxXExtenderChild(LbzEndBossInstance parent) {

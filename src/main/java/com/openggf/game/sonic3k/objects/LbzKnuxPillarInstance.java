@@ -1,20 +1,24 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
-public final class LbzKnuxPillarInstance extends AbstractObjectInstance {
+public final class LbzKnuxPillarInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private int x;
     private int y;
+    @RewindTransient(reason = "Constructor-derived from spawn render flags.")
     private final boolean artPriority;
+    @RewindTransient(reason = "Constructor-derived from spawn render flags.")
     private final int priority;
 
     public LbzKnuxPillarInstance(ObjectSpawn spawn) {

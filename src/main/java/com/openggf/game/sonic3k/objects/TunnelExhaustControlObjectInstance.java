@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -19,7 +20,7 @@ import java.util.List;
  * sprite every four frames for 60 frames, then moves itself off-screen.
  */
 final class TunnelExhaustControlObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnTrailingZeroIntsRewindRecreatable {
     private static final int EMIT_PERIOD = 4;
     private static final int LIFETIME = 60;
     private static final int OFFSCREEN_X = 0x7FF0;

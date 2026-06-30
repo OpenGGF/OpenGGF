@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -43,9 +44,13 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
     private static final int PRIORITY_BUCKET = 1; // ROM priority $80.
     private static final int PALETTE_LINE = 2;
 
+    @RewindTransient(reason = "Constructor-derived from spawn x.")
     private final int anchorX;
+    @RewindTransient(reason = "Constructor-derived from spawn y.")
     private final int baseY;
+    @RewindTransient(reason = "Constructor-derived from spawn subtype.")
     private final int targetExtension;
+    @RewindTransient(reason = "Constructor-derived from spawn subtype.")
     private final boolean startLoweredMode;
     private final boolean[] grabbed = new boolean[PLAYER_SLOT_COUNT];
     private final int[] cooldown = new int[PLAYER_SLOT_COUNT];
