@@ -881,6 +881,42 @@ class TestSonic2ObjectBugFixes {
                 "The folded sibling side path must not run SolidObject_StopCharacter for the stale release");
     }
 
+    @Test
+    void mtzCogAirborneHurtCpuSideContactWithoutStandingBitReachesRomStopCharacterPath() {
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getFrameCounter()).thenReturn(0x04E7);
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0480, 0x0480, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+        cog.setServices(new StubObjectServices() {
+            @Override
+            public LevelManager levelManager() {
+                return levelManager;
+            }
+        });
+        cog.update(0, new TestablePlayableSprite("sonic", (short) 0x0480, (short) 0x0400));
+        cog.snapshotPreUpdatePosition();
+        ObjectManager manager = buildSingleObjectManager(cog);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x04B2, (short) 0x042E);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCpuControlled(true);
+        tails.setAir(true);
+        tails.setHurt(true);
+        tails.setXSpeed((short) -0x0200);
+        tails.setYSpeed((short) 0x0170);
+        tails.setGSpeed((short) -0x0200);
+
+        manager.updateSolidContacts(tails);
+
+        assertEquals(0, tails.getXSpeed(),
+                "Obj02_Hurt does not self-clear x_vel until landing; an airborne clear-bit Obj70 side hit "
+                        + "must still reach SolidObject_StopCharacter (s2.asm:41063-41110,35413-35436)");
+        assertEquals(0, tails.getGSpeed(),
+                "SolidObject_StopCharacter clears inertia/g_speed together with x_vel");
+    }
+
     private static int intField(Object target, String fieldName) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
