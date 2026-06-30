@@ -102,6 +102,21 @@ class TestLauncherSpringObjectInstance {
                 "S2 Obj85 runs SolidObject_Landed before writing Tails y_radius=$0E");
     }
 
+    @Test
+    void diagonalCapturePreservesRomYWriteWhenTailsAlreadyHasRollSizedHeight() {
+        LauncherSpringObjectInstance spring = new LauncherSpringObjectInstance(
+                new ObjectSpawn(0x21A1, 0x0448, Sonic2ObjectIds.LAUNCHER_SPRING, 0x81, 0, false, 0),
+                "LauncherSpring");
+        Tails tails = new Tails("tails", (short) 0x21B4, (short) 0x0430);
+        tails.setHeight(28);
+        tails.setYSpeed((short) 0);
+
+        spring.onSolidContact(tails, new SolidContact(true, false, false, true, false), 0);
+
+        assertEquals(0x0435, tails.getCentreY() & 0xFFFF,
+                "S2 Obj85 diagonal capture writes y_pos(a1)=y_pos(a0)-$13 before setting y_radius=$E");
+    }
+
     private static final class QueryOnlyPlayerServices extends TestObjectServices {
         private final PlayableEntity main;
         private final List<? extends PlayableEntity> queriedSidekicks;

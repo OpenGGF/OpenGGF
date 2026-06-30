@@ -6,6 +6,59 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CNZ2 Obj85 diagonal launcher capture center write (f6969 -> f7156)
+
+- Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r6` /
+  `bugfix/ai-s2-cnz2-frontier-r6`, based on integration branch
+  `bugfix/ai-s2-trace-develop` after the CPZ2 r4 merge at `fa2509b40`.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: CNZ2 f6969 / 739 (`tails_y` expected `0x0435`,
+  actual `0x0436`).
+- Triage/evidence: `TraceTriageTool` for `s2 cnz2` reported f6969 with Tails
+  captured by a diagonal CNZ launcher spring (Obj85 subtype `0x81`). ROM Tails
+  was at `x_pos=$21B4`, `y_pos=$0435`, subpixels `$9A00,$3F00`, status `$0C`,
+  on Obj85 slot 16 near `x_pos=$21A1`, `y_pos=$0448`. The engine matched the
+  same object and subpixels but reported `tails_y=$0436`; its Obj85 diagnostic
+  showed the diagonal head at `$21A1,$0448`, base `$21A5,$0444`, and sidekick
+  capture offset `p2d=(19,-18)`. The mismatch was not terrain, subpixel, or
+  slot order: the engine wrote the ROM-style capture center and then applied a
+  generic non-rolling radius lift even though this Tails state already had
+  roll-sized dimensions with the rolling bit clear.
+- Disassembly cited: `Obj85_Diagonal` derives the diagonal head position from
+  Obj85's saved base and travel distance, writing object `x_pos/y_pos`
+  directly (`docs/s2disasm/s2.asm:58103-58112`). The diagonal capture routine
+  then writes player `x_pos(a1)=x_pos(a0)+$13` and
+  `y_pos(a1)=y_pos(a0)-$13`, clears velocity and inertia, sets the rolling bit,
+  sets `y_radius=$E` / `x_radius=7`, and switches to the roll animation
+  (`docs/s2disasm/s2.asm:58179-58191`). The vertical launcher path uses a
+  separate Obj85 routine and contact helper (`docs/s2disasm/s2.asm:57949-57968`).
+- Fix: `LauncherSpringObjectInstance` now records the pre-roll height and, for
+  diagonal Obj85 captures, preserves the ROM center write by compensating only
+  for the actual height delta after `setRolling(true)`. The existing vertical
+  launcher lift remains on the vertical path. A broader first attempt that
+  applied the height-delta model to every Obj85 capture moved CNZ2 backward to
+  f4374, so the committed change is restricted to the disassembly-backed
+  diagonal path. The change models Obj85/player radius state and does not
+  hydrate trace data or add tolerance, route, zone, frame, game-id, or
+  known-failing-trace logic.
+- Focused unit check:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestLauncherSpringObjectInstance" "-DfailIfNoTests=false" test`
+  exited 0. The new regression test failed before the production change with
+  expected `0x0435`, actual `0x0436`.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CNZ2 advanced to f7156 / 738 (`tails_x_speed`
+  expected `0x0A3D`, actual `0x0A37`), a later Obj86 sidekick-speed frontier.
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Red preservation set on current integration:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686, CPZ2 f5285 / 376,
+  HTZ2 f4012 / 1031, MTZ1 f5713 / 560, MTZ2 f8659 / 429,
+  MTZ3 f6334 / 928, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117.
+
 ## 2026-06-30 - S2 CNZ2 ObjD5 ground-wall deferral narrowing (f6814 -> f6969)
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r5` /

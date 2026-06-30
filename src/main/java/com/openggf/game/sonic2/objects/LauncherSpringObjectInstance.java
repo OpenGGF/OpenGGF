@@ -279,13 +279,26 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
             // tick as InAir|Roll before Obj85 re-established Status_OnObj.
             player.setCentreYPreserveSubpixel((short) (player.getCentreY() - 1));
         }
+        int heightBeforeRolling = player.getHeight();
         player.setRolling(true);
         if (!wasRolling) {
-            // Obj85 writes the rolling flag/radii directly without changing
-            // y_pos (s2.asm:57535-57538, 57715-57718). The engine's height
-            // change is top-left based, so move by the radius delta only to
-            // keep the ROM centre coordinate stable.
-            player.setY((short) (player.getY() + (player.getRollHeightAdjustment() / 2)));
+            if (isDiagonal()) {
+                // Diagonal Obj85 writes y_pos(a1)=y_pos(a0)-$13 before setting
+                // y_radius=$E (s2.asm:58179-58191). Preserve that centre write
+                // by compensating only for the actual engine height delta; some
+                // trace states already have roll-sized dimensions while the
+                // rolling bit is clear.
+                int centrePreserveDelta = (heightBeforeRolling - player.getHeight()) / 2;
+                if (centrePreserveDelta != 0) {
+                    player.setY((short) (player.getY() + centrePreserveDelta));
+                }
+            } else {
+                // Vertical Obj85 relies on the generic SolidObject_Landed seat
+                // before its radius write (s2.asm:57949-57968). Preserve the
+                // historical radius-delta lift used by the vertical recapture
+                // path.
+                player.setY((short) (player.getY() + (player.getRollHeightAdjustment() / 2)));
+            }
         }
         // Explicitly set roll animation (ROM: move.b #AniIDSonAni_Roll,anim(a1))
         player.setAnimationId(Sonic2AnimationIds.ROLL);
