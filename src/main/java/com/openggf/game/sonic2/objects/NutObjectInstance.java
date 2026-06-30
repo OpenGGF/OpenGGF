@@ -189,12 +189,20 @@ public class NutObjectInstance extends AbstractObjectInstance
     @Override
     public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
         // Obj69 tail-calls S2 SolidObject after its action passes
-        // (docs/s2disasm/s2.asm:54006-54013). For native P2, SolidObject first
-        // gates on render_flags.on_screen and returns before SolidObject_cont
-        // when the CPU sidekick is offscreen (s2.asm:35022-35025).
-        return player instanceof AbstractPlayableSprite sprite
-                && sprite.isCpuControlled()
-                && !sprite.isRenderFlagOnScreen();
+        // (docs/s2disasm/s2.asm:54006-54013). Once the helper reaches the
+        // per-player stale-standing branch, an already-airborne rider clears
+        // Status_OnObj and returns before SolidObject_cont regardless of player
+        // slot; native P2 has an additional off-screen early return before this
+        // branch (s2.asm:35022-35046).
+        return player instanceof AbstractPlayableSprite;
+    }
+
+    @Override
+    public boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
+        // Obj69 runs player movement before its late SolidObject tail, so a
+        // stale airborne ride must not be converted back into ground support
+        // before Obj69 can clear it (s2.asm:35028-35046,54006-54013).
+        return player instanceof AbstractPlayableSprite;
     }
 
     @Override
