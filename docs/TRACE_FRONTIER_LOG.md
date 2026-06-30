@@ -6,6 +6,39 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 OOZ2 oil-slide move-lock refresh (f5762 -> f6633)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round3` /
+  `bugfix/ai-s2-ooz2-round3`, based on `bugfix/ai-s2-trace-next`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtest=TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" test`.
+  Result before the fix: expected nonzero; OOZ2 f5762 / 628
+  (`x_speed` expected `0x0046`, actual `0x0052`).
+- Triage/evidence: the trace CSV shows Sonic landing after the Aquis kill at
+  f5760 with RIGHT held, but ROM keeps `x_speed` / `g_speed` at `0x0046`
+  through f5763 and only accelerates to `0x0052` at f5764. The aux-state stream
+  records ROM `move_lock=0x0003` on the f5760 landing and the recorder's
+  `control_locked` flag clearing at f5763; that JSON field is the player
+  `move_lock` word at offset `$2E`, not global `Control_Locked`.
+- Disassembly cited: S2 `OilSlides` exits sliding on airborne / non-slide
+  chunks by executing `move.w #5,move_lock(a1)` and clearing
+  `status_secondary.sliding` (`docs/s2disasm/s2.asm:5537-5563`). Grounded
+  `Sonic_Move` skips left/right acceleration while `move_lock` is active, and
+  `Sonic_SlopeRepel` decrements the timer only on grounded/rolling frames
+  (`docs/s2disasm/s2.asm:36552-36628,37781-37788`).
+- Fix: `OilSurfaceManager` now rewrites the move-lock timer to five frames on
+  every oil-slide exit instead of leaving an already-active shorter lock alone.
+  This is S2 OOZ oil-slide ROM state, with no trace fixture edit, trace-to-engine
+  hydration, or zone/route/frame carve-out.
+- Focused regression:
+  `mvn -q "-Dmse=relaxed" "-Dtest=TestOilSurfaceManager#airborneSlideExitRefreshesMoveLockToRomDuration" test`.
+  Result: build OK; the new oil-slide assertion passes. MSE also reports the
+  current expected-red OOZ2 replay in the aggregate summary.
+- Focused OOZ2 target:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtest=TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" test`.
+  Result: expected nonzero; OOZ2 advances to f6633 / 656 (`tails_x` expected
+  `0x4000`, actual `0x1DC4`).
+
 ## 2026-06-30 - S2 ARZ2 Obj24 RNG/render cadence (f1028 -> f1178)
 
 - Worktree/branch: `.worktrees/ai-s2-arz2-round2` /
