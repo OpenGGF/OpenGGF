@@ -386,6 +386,18 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean preservesSidekickCpuPushGraceAfterRideClears(PlayableEntity player) {
+        // Obj30 subtype 6 keeps its ROM standing/pushing status visible to
+        // TailsCPU_Normal's Status_Push branch even after the engine has already
+        // reconciled the live ride record (docs/s2disasm/s2.asm:49636-49643,
+        // 39297-39300). This does not re-sample an older input word; ROM keeps
+        // the d1/d4 history entry already loaded before the Status_Push test.
+        return subtype == 6
+                && player != null
+                && player.isCpuControlled();
+    }
+
+    @Override
     public int getOnScreenHalfWidth() {
         return widthPixels;
     }
