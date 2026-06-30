@@ -407,10 +407,10 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             return 0;
         }
 
-        // Launch the player (ROM: loc_24FC2)
-        // ROM: move.b #$81,obj_control(a1)
+        // Launch the player (ROM: loc_24FC2).
+        // Obj3D does not write global Control_Locked; Obj01_Control keeps
+        // refreshing Ctrl_1_Logical while obj_control owns movement.
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
         // ROM: move.b #AniIDSonAni_Roll,anim(a1)
         player.setAnimationId(Sonic2AnimationIds.ROLL);
         // ROM: move.w #$800,inertia(a1)

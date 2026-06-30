@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
@@ -26,6 +27,7 @@ import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -46,6 +48,68 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestSonic2ObjectBugFixes {
+
+    @Test
+    void oozLauncherBallCaptureUsesObjectControlWithoutGlobalControlLockedLatch() {
+        LauncherBallObjectInstance.clearActiveCaptures();
+        ObjectSpawn spawn = new ObjectSpawn(0x1240, 0x02E0, Sonic2ObjectIds.LAUNCHER_BALL, 0x00, 0, false, 0);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) spawn.x(), (short) spawn.y());
+        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setLogicalInputState(false, false, true, false, false);
+        player.endOfTick();
+        assertEquals(AbstractPlayableSprite.INPUT_LEFT, player.getInputHistory(0));
+
+        LauncherBallObjectInstance launcherBall = new LauncherBallObjectInstance(spawn, "LauncherBall");
+        launcherBall.setServices(new StubObjectServices()
+                .withPlayerQuery(new ObjectPlayerQuery(() -> player, () -> List.of())));
+
+        launcherBall.update(0, player);
+
+        assertTrue(player.isObjectControlled(),
+                "Obj48 writes obj_control=$81, so launcher-ball capture must suppress normal movement.");
+        assertFalse(player.isControlLocked(),
+                "Obj48 loc_2535E writes obj_control(a1), not global Control_Locked; Obj01_Control must keep "
+                        + "refreshing Ctrl_1_Logical before Sonic_RecordPos stores the follower-history word "
+                        + "(docs/s2disasm/s2.asm:51341-51367,36233-36252,36342-36353).");
+
+        player.setLogicalInputState(false, false, false, false, false);
+        player.endOfTick();
+        assertEquals(0, player.getInputHistory(0),
+                "With Control_Locked untouched, raw neutral input refreshes Ctrl_1_Logical instead of preserving "
+                        + "stale pre-capture LEFT for TailsCPU_Normal's delayed read.");
+    }
+
+    @Test
+    void oozInvisibleLauncherCaptureUsesObjectControlWithoutGlobalControlLockedLatch() throws Exception {
+        ObjectSpawn spawn = new ObjectSpawn(0x1110, 0x0298, Sonic2ObjectIds.OOZ_LAUNCHER, 0x00, 0, false, 0);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) spawn.x(), (short) spawn.y());
+        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setLogicalInputState(false, false, true, false, false);
+        player.endOfTick();
+        assertEquals(AbstractPlayableSprite.INPUT_LEFT, player.getInputHistory(0));
+
+        OOZLauncherObjectInstance launcher = new OOZLauncherObjectInstance(spawn, "OOZLauncher");
+        launcher.setServices(new StubObjectServices());
+        Method proximity = OOZLauncherObjectInstance.class.getDeclaredMethod(
+                "processProximityDetection", AbstractPlayableSprite.class);
+        proximity.setAccessible(true);
+
+        int nextState = (int) proximity.invoke(launcher, player);
+
+        assertEquals(2, nextState, "Obj3D loc_24FC2 advances the per-player launcher state to tracking.");
+        assertTrue(player.isObjectControlled(),
+                "Obj3D writes obj_control=$81, so invisible-launcher tracking must suppress normal movement.");
+        assertFalse(player.isControlLocked(),
+                "Obj3D loc_24FC2 writes obj_control(a1), not global Control_Locked; Obj01_Control must keep "
+                        + "refreshing Ctrl_1_Logical before Sonic_RecordPos stores the follower-history word "
+                        + "(docs/s2disasm/s2.asm:51123-51158,36233-36252,36342-36353).");
+
+        player.setLogicalInputState(false, false, false, false, false);
+        player.endOfTick();
+        assertEquals(0, player.getInputHistory(0),
+                "With Control_Locked untouched, raw neutral input refreshes Ctrl_1_Logical while Obj3D owns "
+                        + "movement through obj_control.");
+    }
 
     @Test
     void steamSpringLaunchClearsObjectRideState() throws Exception {
