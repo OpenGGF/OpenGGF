@@ -6,6 +6,55 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 HTZ2 Obj30 side-gated input bridge + airborne push retention (f4442 -> f5002)
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next`, based on campaign head `9a56e0877`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay" "-Dtrace.context.diagnosticChars=full" "-Dtrace.context.rows=all" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected nonzero; HTZ2 f4442 / 1033
+  (`tails_x_sub` expected `0x1200`, actual `0xFA00`).
+- Triage/evidence: Obj30 subtype 6 still runs `SolidObject_Always`,
+  `DropOnFloor`, then the supported-player hurt path after `TailsCPU_Normal`
+  has sampled `Ctrl_2`
+  (`docs/s2disasm/s2.asm:49636-49643,39291-39294`). On the left/probed side
+  of the lower-route support, the object-order input bridge remains needed.
+  On the right side, `TailsCPU_Normal` keeps the already-loaded `d1` history
+  word from the same ring-buffer slot as `d4` (`docs/s2disasm/s2.asm:39285-39300`);
+  re-reading the adjacent older input manufactured stale LEFT at f4442.
+- Follow-up f4526 evidence: after side-gating the Obj30 bridge, the next first
+  error was a missing `Status_Push` bit. A temporary stack/file probe showed
+  `PlayableSpriteMovement.updatePushingOnDirectionChange` cleared push while
+  CPU Tails was already airborne. S2 `Tails_ChgJumpDir` / `Sonic_ChgJumpDir`
+  and S3K free-space acceleration change facing without clearing push; only
+  the grounded facing-flip path clears it through the ROM animation sentinel
+  (`docs/s2disasm/s2.asm:40184-40211`, `docs/skdisasm/sonic3k.asm:28330-28363`).
+- Fix: `RisingLavaObjectInstance` now applies the subtype-6 sidekick
+  object-order input bridge only for CPU sidekicks on the left/probed side of
+  Obj30, and shared player movement preserves `Status_Push` across airborne
+  facing flips while retaining the existing grounded clear.
+- Result:
+  `TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace`: f4442 / 1033 errors
+  (`tails_x_sub` expected `0x1200`, actual `0xFA00`) -> f5002 / 690 errors
+  (`tails_cpu_ctrl2_held` expected `0x0000`, actual `0x0010`). The new owner
+  is the later CPU-Tails control transition after the Obj30 drop/push window.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#airborneFacingFlipPreservesPushLikeRomJumpDirectionControl+testS3kFacingFlipClearsLeftWallPushLatchLikeRom,com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#htzRisingLavaSubtypeSixUsesCpuSidekickObjectOrderInputDelay" "-DfailIfNoTests=false" test`
+    passed the focused unit coverage before the docs update.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay" "-Dtrace.context.diagnosticChars=full" "-Dtrace.context.rows=all" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red with the improved HTZ2 f5002 / 690 frontier.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; 19 tests ran, 13 stayed green, and six expected
+    reds remain: ARZ2 f1294 / 2396, CNZ2 f9487 / 288, HTZ2 f5002 / 690,
+    MTZ3 f7853 / 864, OOZ1 f1803 / 1095, OOZ2 f9302 / 401.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests.
+  - S3K `TestS3kAizCompleteRunTraceReplay,TestS3kAizTraceReplay` still failed
+    at the same clean-baseline frontiers (AIZ complete f1095 / 4319 `x_speed`,
+    AIZ f8941 / 1160 `camera_y`). The full S3K trace sweep is not a usable
+    no-regression proof in this tree because it OOMs on CNZ even with
+    `JAVA_TOOL_OPTIONS=-Xmx4g`.
+
 ## 2026-06-30 - S2 OOZ2 boss-arena Obj07 oil Y event write (f9291 -> f9302)
 
 - Worktree/branch: `.worktrees/ai-s2-ooz2-round5` /

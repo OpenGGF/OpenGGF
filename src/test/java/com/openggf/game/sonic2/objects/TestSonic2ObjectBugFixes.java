@@ -365,6 +365,13 @@ class TestSonic2ObjectBugFixes {
                 "The bridge is only for CPU sidekick Ctrl_2 sampling");
         assertFalse(slopedPlatform.usesSidekickCpuCurrentPushObjectOrderInputDelay(tails),
                 "Subtype 8 uses SlopedSolid and is not part of the HTZ2 lower-route Obj30 ordering window");
+        tails.setCentreX((short) 0x19BA);
+        assertFalse(new RisingLavaObjectInstance(
+                        new ObjectSpawn(0x1920, 0x06B9, Sonic2ObjectIds.RISING_LAVA, 0x06, 0, false, 0),
+                        "RisingLavaRightSide")
+                        .usesSidekickCpuCurrentPushObjectOrderInputDelay(tails),
+                "HTZ2 f4442 rides subtype 6 on the right side; ROM keeps the normal d1 history word "
+                        + "already loaded at s2.asm:39291-39300 instead of the adjacent older input");
     }
 
     @Test

@@ -2526,6 +2526,25 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void airborneFacingFlipPreservesPushLikeRomJumpDirectionControl() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                mockSprite.setAir(true);
+                mockSprite.setRolling(false);
+                mockSprite.setDirection(Direction.LEFT);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setPushing(true);
+
+                Method updatePush = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "updatePushingOnDirectionChange", boolean.class, boolean.class);
+                updatePush.setAccessible(true);
+                updatePush.invoke(manager, false, true);
+
+                assertTrue(mockSprite.getPushing(),
+                                "S2 Tails_ChgJumpDir flips facing in air without clearing Status_Push "
+                                                + "(s2.asm:40184-40211); HTZ2 f4526 keeps the Obj30 drop push bit");
+        }
+
+        @Test
         public void groundedFacingFlipRestartsWalkScriptLikeRomPrevAnimSentinel() throws Exception {
                 setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
                 SpriteAnimationSet animations = new SpriteAnimationSet();

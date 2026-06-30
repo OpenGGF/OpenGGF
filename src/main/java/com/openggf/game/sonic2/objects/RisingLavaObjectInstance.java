@@ -375,8 +375,14 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
         // supported-player hurt path after TailsCPU_Normal has already sampled
         // Ctrl_2 (docs/s2disasm/s2.asm:49636-49643,39291-39294). The HTZ2
         // lower-route platform keeps that object-order push visible to the CPU
-        // slot while the adjacent history input word has already flipped.
-        return subtype == 6 && player != null && player.isCpuControlled();
+        // slot only on the left/probed side of the support. On the right side,
+        // TailsCPU_Normal keeps the already-loaded d1 history word from the same
+        // slot as d4 (s2.asm:39285-39300); re-reading the adjacent older input
+        // manufactures stale LEFT on HTZ2 f4442.
+        return subtype == 6
+                && player != null
+                && player.isCpuControlled()
+                && ((short) (player.getCentreX() - getX())) <= 0;
     }
 
     @Override

@@ -3230,14 +3230,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// bounce: the flip frame's wall hit re-sets push, but ROM's prev_anim
 		// sentinel still clears it that frame, so push is gone entering the next
 		// no-hit frame.)
+		//
+		// Airborne facing changes are handled by Sonic_ChgJumpDir /
+		// Tails_ChgJumpDir and S3K *_InputAcceleration_Freespace; those routines
+		// change Status_Facing without clearing Status_Push (s2.asm:40184-40211,
+		// sonic3k.asm:28330-28363). HTZ2 f4526 depends on that stale push bit
+		// surviving after Obj30 drops CPU Tails into the air.
+		boolean groundedFacingFlip = !sprite.getAir() && !sprite.getRolling();
 		if (left && !right && sprite.getDirection() == Direction.RIGHT && gSpeed <= 0 && !sprite.getRolling()) {
-			sprite.setPushing(false);
-			forceGroundFacingFlipAnimationRestart();
-			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
+			if (groundedFacingFlip) {
+				sprite.setPushing(false);
+				forceGroundFacingFlipAnimationRestart();
+				facingFlipForcesPushClearAfterGroundWall = true;
+			}
 		} else if (right && !left && sprite.getDirection() == Direction.LEFT && gSpeed >= 0 && !sprite.getRolling()) {
-			sprite.setPushing(false);
-			forceGroundFacingFlipAnimationRestart();
-			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
+			if (groundedFacingFlip) {
+				sprite.setPushing(false);
+				forceGroundFacingFlipAnimationRestart();
+				facingFlipForcesPushClearAfterGroundWall = true;
+			}
 		}
 	}
 
