@@ -2679,6 +2679,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setAir(true);
 		sprite.setSlopeRepelJustSlipped(true);
 		sprite.setMoveLockTimer(MOVE_LOCK_FRAMES);
+		if (fs != null && fs.animationChangeClearsPush()) {
+			// S2/S3K SlopeRepel sets Status_InAir and move_lock from the
+			// ground movement path; the same frame's Animate_Tails/Sonic
+			// then clears Status_Push when the movement-selected anim byte
+			// differs from prev_anim (docs/s2disasm/s2.asm:40687-40705,
+			// 40879-40884). Trace comparison samples before the engine's
+			// later animation pass, so mirror that same-frame status clear
+			// at the transition point.
+			sprite.setPushing(false);
+		}
 	}
 
 	/** Sonic_DoLevelCollision: Full airborne collision (s2.asm:37540) */
