@@ -84,14 +84,16 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
         // the same live Obj36 push bit preserves delayed RIGHT for the ordinary
         // +$0C acceleration step instead of a FollowLeft sample.
         // (docs/s2disasm/s2.asm:39291-39294, 39964-39981).
-        // The sharp -$80 turn sample is only bridged at Obj36's left edge:
-        // wider/centered rides fall through TailsCPU_Normal's ordinary follow
-        // steering before the next SolidObject status sample becomes visible.
+        // The sharp -$80 turn sample, and the immediate +$80 rebound after it,
+        // are only bridged at Obj36's left edge: wider/centered rides fall
+        // through TailsCPU_Normal's ordinary follow steering before the next
+        // SolidObject status sample becomes visible.
         int gSpeed = player.getGSpeed();
         if (!usesInnerLeftEdgeSidekickPushGraceLadder(player)) {
             return gSpeed < 0 ? 8 : 14;
         }
         return isOnInnerLeftEdge(player) && (gSpeed == -0x80 || isFreshNegativeTurnBridge(player)) ? 0
+                : isFreshPositiveTurnBridge(player) ? 0
                 : gSpeed == 0 && player.getXSpeed() == 0 && player.getDirection() == Direction.LEFT ? 6
                 : gSpeed > 0 && gSpeed < 0x30 ? 2
                 : gSpeed == 0x30 ? 2
@@ -107,7 +109,8 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
             return Integer.MAX_VALUE;
         }
         int gSpeed = player.getGSpeed();
-        return gSpeed == 0x30 ? 3
+        return isFreshPositiveTurnBridge(player) ? 0
+                : gSpeed == 0x30 ? 3
                 : Integer.MAX_VALUE;
     }
 
@@ -127,6 +130,14 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
         int gSpeed = player.getGSpeed();
         return gSpeed <= -0x18
                 && gSpeed >= -0x80
+                && player.getDirection() == Direction.LEFT
+                && player.getXSpeed() == gSpeed;
+    }
+
+    private boolean isFreshPositiveTurnBridge(PlayableEntity player) {
+        int gSpeed = player.getGSpeed();
+        return isOnInnerLeftEdge(player)
+                && gSpeed >= 0x80
                 && player.getDirection() == Direction.LEFT
                 && player.getXSpeed() == gSpeed;
     }

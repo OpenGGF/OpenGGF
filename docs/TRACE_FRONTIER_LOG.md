@@ -58,6 +58,59 @@ branch-local measurements.
   864, OOZ1 f1795 / 1058, and OOZ2 f3919 / 1117. CNZ2 is the only moved red
   frontier in the set, now f9117 / 386.
 
+## 2026-06-30 - S2 OOZ1 Obj36 positive rebound push bridge (f1795 -> f1803)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-frontier-r5` /
+  `bugfix/ai-s2-ooz1-frontier-r5`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at accepted HEAD `9962fc504`, then rebased to
+  current accepted integration `781d62678` before worker verification. The
+  conductor merged it after CNZ2 r15 and the latest `develop`/`origin/develop`
+  merges, then reran the acceptance guard on the updated integration tree.
+- Baseline reproduction on integration `9962fc504`:
+  `mvn "-Dtest=TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: OOZ1 f1795 / 1058 (`tails_x_speed` expected
+  `0x008C`, actual `0x0000`).
+- Triage/evidence: after the earlier Obj36 negative-turn bridge, ROM Tails
+  keeps the Obj36 live push path visible one frame longer for the immediate
+  left-facing `+$80` rebound at the spike's inner left edge. The engine fell
+  through to ordinary follow steering with no push grace, zeroing Tails'
+  horizontal speed at f1795. A wider rule that lowered the minimum without a
+  matching zero-frame maximum regressed the earlier f1784 handoff, so the fix
+  is limited to the fresh positive rebound and capped to the same zero-grace
+  frame that distinguishes this state.
+- Disassembly cited: Obj36 Upright calls `SolidObject`, then reads
+  `status(a0)&standing_mask` for the hurt path
+  (`docs/s2disasm/s2.asm:29392-29404`). `TailsCPU_Normal` samples delayed
+  position/input/status and tests Tails' current `Status_Push` before bypassing
+  follow steering when Sonic's delayed sample was not pushing
+  (`docs/s2disasm/s2.asm:39291-39300`). `Tails_MoveRight` consumes the delayed
+  right input, handles the sign crossing, and writes positive inertia through
+  the rebound path (`docs/s2disasm/s2.asm:39964-39990`).
+- Fix: `SpikeObjectInstance` now treats the fresh positive inner-left-edge
+  rebound as a CPU-only Obj36 push bridge with both minimum and maximum grace at
+  zero frames, preserving the ROM push sample without broadening centered rides
+  or earlier low-speed handoffs. This models object status and Tails CPU
+  control timing; it does not edit trace data, add tolerance, hydrate/sync from
+  trace data, or add zone, route, frame, or known-failing carve-outs.
+- Focused target after conductor merge:
+  `mvn "-Dtest=TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; OOZ1 advances to f1803 / 1069 (`tails_x` expected
+  `0x0CE3`, actual `0x0CE4`).
+- Current S2 green guard:
+  `mvn "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: exits 0; 11 selected S2 green traces passed.
+- Red preservation set: grouped ARZ2/CNZ2/CPZ2 plus isolated HTZ2, MTZ1,
+  MTZ3, and OOZ2 reruns with `-Dmaven.test.failure.ignore=true` preserve ARZ2
+  f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10068 / 128, HTZ2 f4165 / 1129,
+  MTZ1 f7906 / 407, MTZ3 f7853 / 864, and OOZ2 f3919 / 1117. OOZ1 is the
+  only moved red frontier in the set, now f1803 / 1069.
+- Full S2 sweep after conductor merge:
+  `mvn "-Dtest=TestS2*TraceReplay" test`.
+  Result: expected nonzero; 19 S2 traces run, 11 green, 8 expected red:
+  ARZ2 f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10068 / 128, HTZ2 f4165 /
+  1129, MTZ1 f7906 / 407, MTZ3 f7853 / 864, OOZ1 f1803 / 1069, and OOZ2
+  f3919 / 1117.
+
 ## 2026-06-30 - S2 MTZ1 Obj69 stale airborne grounding recovery (f5713 -> f7906)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz1-frontier-r3` /
