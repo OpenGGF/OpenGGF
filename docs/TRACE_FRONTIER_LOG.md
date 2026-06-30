@@ -6,6 +6,52 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 MTZ3 Obj65 main-player logical-input delay (f9134 -> f9555)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz3-round11-next` /
+  `bugfix/ai-s2-mtz3-round11-next`, based on campaign head `990a53758`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red MTZ3 f9134 / 936 (`x_speed`
+  expected `0x0000`, actual `0x000C`).
+- Triage/evidence: the f9134 context showed Sonic riding Obj65 slot `$2D`
+  subtype 5 at `$1C86,$04C8` while engine input had already exposed right.
+  A corrected fast/invisible BizHawk diagnostic launched through
+  `tools/bizhawk/run_bizhawk_lua.bat` with `OGGF_START`, `OGGF_STOP`, and an
+  absolute `OGGF_OUT` captured ROM `Ctrl_1_Held_Logical=0` through trace frame
+  9134, the logical right edge at 9135, and Sonic's first `x_vel=000C` at 9138.
+  Obj65 `loc_26E4A` is the subtype-5 path that increments `x_pos` by 2 and
+  stops at `$1CC0` / `$2940` in MTZ3; Sonic later consumes
+  `Ctrl_1_Held_Logical` in `Sonic_Move`, while CPU Tails writes
+  `Ctrl_2_Logical` in `TailsCPU_Normal` before `Tails_Move` consumes it
+  (`docs/s2disasm/s2.asm:53159-53220,36552-36567,39381,39673-39688`).
+- Fix: Obj65 subtype 5 opts only the main player into a three-frame stale
+  right-input window while the platform is in the ROM `$1C80..$1CBF`
+  first-stop approach. The hook is object-local, requires the subtype-5 carry
+  path, leaves the earlier subtype-5 conveyor segment immediate, and excludes
+  CPU-controlled sidekicks so the Tails CPU logical-control path remains
+  independent.
+- Result:
+  `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace`: f9134 / 936 errors
+  (`x_speed` expected `0x0000`, actual `0x000C`) -> f9555 / 907 errors
+  (`tails_x_speed` expected `0x0000`, actual `-0018`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mtzLongPlatformSubtype5StalesLogicalHorizontalInputWhileRiding" "-DfailIfNoTests=false" test`
+    passed 1 / 1 focused Obj65 test.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at f9555 / 907.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces, 13 green and 6 expected-red. The unchanged reds
+    stayed ARZ2 f1627 / 2258, CNZ2 f9487 / 288, HTZ2 f5031 / 930, OOZ1
+    f1813 / 1062, and OOZ2 f9307 / 444; MTZ3 moved to f9555 / 907.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests.
+  - `$env:S3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:SONIC_3K_ROM_PATH=$env:S3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Ds3k.rom.path=$env:S3K_ROM_PATH" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    completed 68 S3K smoke tests. Bootstrap, decoding, level-loading, and
+    AIZ skip headless checks passed; the two AIZ trace replays remained at the
+    existing expected-red frontiers: complete-run f1095 / 4319 and AIZ f8941 /
+    1160.
+
 ## 2026-06-30 - S3K fixed Dust slot identity (no frontier movement)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /
