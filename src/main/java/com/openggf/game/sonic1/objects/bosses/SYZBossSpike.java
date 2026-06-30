@@ -30,6 +30,7 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
 
     // ROM: obColType = $84 when active (harmful, size category)
     private static final int SPIKE_COLLISION_TYPE = 0x84;
+    private static final int ENGINE_BEHIND_SHIP_PRIORITY = 6;
 
     // Extension tracking
     private int extensionDepth; // objoff_3C — tracks how far the spike extends
@@ -41,7 +42,7 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
     private int bossTimer;
 
     public SYZBossSpike(AbstractBossInstance parent) {
-        super(parent, "SYZSpike", 5, Sonic1ObjectIds.SYZ_BOSS);
+        super(parent, "SYZSpike", ENGINE_BEHIND_SHIP_PRIORITY, Sonic1ObjectIds.SYZ_BOSS);
         this.extensionDepth = 0;
         this.spikeActive = false;
     }
@@ -97,7 +98,10 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
 
     @Override
     public int getPriorityBucket() {
-        return 5; // ROM: obPriority = 5
+        // ROM gives the SYZ boss parts the same obPriority, but the original
+        // sprite table order places the spike behind the ship. The engine
+        // renders the ship as one parent object, so use the next bucket back.
+        return ENGINE_BEHIND_SHIP_PRIORITY;
     }
 
     @Override
