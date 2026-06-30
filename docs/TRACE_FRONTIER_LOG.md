@@ -11,16 +11,16 @@ branch-local measurements.
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /
   `bugfix/ai-s2-trace-next`, after merging
   `bugfix/ai-s2-ooz1-f1803-round8` and
-  `bugfix/ai-s2-mtz3-f7853-round8`, then the HTZ2 latched-push bridge
-  from `bugfix/ai-s2-htz2-round6`, then the OOZ2 stale-roll contact fix from
-  `bugfix/ai-s2-ooz2-round6`.
+  `bugfix/ai-s2-mtz3-f7853-round8`, then the OOZ2 stale-roll contact fix from
+  `bugfix/ai-s2-ooz2-round6`, then the stronger HTZ2 released-interact bridge
+  from `bugfix/ai-s2-htz2-f5002-round8`.
 - Sweep command:
   `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
 - Result: expected nonzero; 19 S2 traces run, 13 green, 6 expected-red.
   Remaining red frontiers:
   - ARZ2 f1294 / 2396 (`obj_extra_s11_x` expected absent, actual `0x0F3F`).
   - CNZ2 f9487 / 288 (`g_speed` expected `0x0000`, actual `0x0100`).
-  - HTZ2 f5011 / 690 (`tails_cpu_ctrl2_held` expected `0x0000`, actual `0x0010`).
+  - HTZ2 f5031 / 930 (`tails_cpu_ctrl2_held` expected `0x0018`, actual `0x0008`).
   - MTZ3 f9035 / 863 (`x` expected `0x1BDD`, actual `0x1BD9`).
   - OOZ1 f1813 / 1062 (`tails_x` expected `0x0CE4`, actual `0x0CE3`).
   - OOZ2 f9307 / 444 (`x_speed` expected `0x0150`, actual `-0150`).
@@ -104,54 +104,54 @@ branch-local measurements.
     still fails independently on existing `TestRespawnStrategies` helper calls
     to `hydrateRecordedHistory(...)` at lines 472, 524, 630, 676, 700, and
     758; this branch does not touch that test-helper issue.
-## 2026-06-30 - S2 HTZ2 Obj30 latched interact push bridge (f5002 -> f5011)
+## 2026-06-30 - S2 HTZ2 Obj30 released-interact CPU push bridge (f5002 -> f5031)
 
-- Worktree/branch: `.worktrees/ai-s2-htz2-round6` /
-  `bugfix/ai-s2-htz2-round6`, based on campaign head `6468c4665`.
+- Worktree/branch: `.worktrees/ai-s2-htz2-f5002-round8` /
+  `bugfix/ai-s2-htz2-f5002-round8`, based on campaign head
+  `6468c4665` (`bugfix/ai-s2-trace-next`).
 - Baseline reproduction:
-  `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-Dtrace.context.diagnosticChars=full" test`.
-  Result before the fix: expected nonzero; HTZ2 f5002 / 690
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`.
+  Result before the fix: expected-red HTZ2 f5002 / 690
   (`tails_cpu_ctrl2_held` expected `0x0000`, actual `0x0010`).
-- Triage/evidence: ROM keeps `Status_Push` set for CPU Tails while
-  `TailsCPU_Normal` tests the current status byte before FollowLeft/FollowRight
-  (`docs/s2disasm/s2.asm:39297-39300`). The engine had already cleared the
-  live ride record (`OnObj=false`, no current riding object), but the persistent
-  `interact(a0)` slot still resolved to Obj30 subtype 6, the object whose
-  `SolidObject_Always` / `DropOnFloor` / supported-player hurt ordering owns
-  this lower-route push window (`docs/s2disasm/s2.asm:49636-49643`). A rejected
-  Obj2D barrier-height experiment moved the trace backward to f3113, so it was
-  reverted; this candidate keeps the owner focused on Obj30 and the ROM
-  interact/push state.
-- Fix: `SidekickCpuController` now resolves a provider-gated latched CPU push
-  object from the sidekick's live latched object or persistent interact slot
-  after the local ride record clears. `RisingLavaObjectInstance` opts Obj30
-  subtype 6 into that post-ride-clear push branch for CPU sidekicks. The bridge
-  suppresses follow steering and preserves the auto-jump latch, but it does not
-  re-sample the older object-order input word; the prior right-side Obj30 input
-  gate remains separate.
+- Triage/evidence: f5002 showed ROM Tails at `status=$21` with
+  `Tails_CPU_jumping=1` and `Ctrl_2=0`, while the engine had already cleared
+  the live push bit (`status=$01`) and carried `Tails_CPU_jumping` through
+  `loc_1BDCE` into held jump. The engine still had the persistent
+  `interact(a0)` slot pointing at Obj30 subtype 6, but no live ride state.
+  S2 `TailsCPU_Normal` tests current `Status_Push` before the auto-jump
+  carry/clear block, and Obj30 subtype 6 runs `SolidObject_Always`,
+  `DropOnFloor`, then supported-player handling after the CPU slot
+  (`docs/s2disasm/s2.asm:39291-39300,49635-49642`).
+- Fix: `SolidObjectProvider` now has a released-interact sidekick CPU push
+  hook. `SidekickCpuController` consults the object occupying the persistent
+  interact slot when CPU Tails is grounded, no longer riding, in the local
+  Obj30 band, and the delayed leader samples are not already pushing. Obj30
+  subtype 6 opts in for CPU sidekicks. Once normal push grace has decayed to
+  zero, the bridge also requires exact delayed-target X alignment; that keeps
+  the earlier HTZ2 f3384 moving-follow case on the normal steering path.
 - Result:
   `TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace`: f5002 / 690 errors
-  (`tails_cpu_ctrl2_held` expected `0x0000`, actual `0x0010`) -> f5011 / 690
-  errors (same field). The new owner appears after the Obj30 post-ride push
-  bridge expires; Obj2D barrier contact may be involved but was not changed in
-  this candidate.
+  (`tails_cpu_ctrl2_held` expected `0x0000`, actual `0x0010`) -> f5031 / 930
+  errors (`tails_cpu_ctrl2_held` expected `0x0018`, actual `0x0008`). The new
+  owner is delayed leader status preservation: ROM has delayed status `$20`
+  at f5031 so `loc_1BDCE` carries and clears the auto-jump latch, while the
+  engine history still reports delayed status `$00`.
 - Verification:
-  - `mvn "-Dtest=TestSidekickCpuFollowParity#s2Obj30LatchedPushGraceBypassesFollowSteeringAfterRideClears" test`
-    passed the focused CPU-unit coverage.
-  - `mvn "-Dtest=TestSonic2ObjectBugFixes#htzRisingLavaSubtypeSixUsesCpuSidekickObjectOrderInputDelay" test`
-    passed the existing Obj30 input-sample gate coverage.
-  - `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-Dtrace.context.diagnosticChars=full" test`
-    exited 1 as expected-red with the improved HTZ2 f5011 / 690 frontier.
-  - `$native=(Resolve-Path '.lwjgl\3.3.3+5\x64').Path; $env:JAVA_TOOL_OPTIONS="-Dorg.lwjgl.librarypath=$native"; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" test`
-    exited 1 as expected-red; 19 tests ran, 13 stayed green, and six expected
-    reds remain: ARZ2 f1294 / 2396, CNZ2 f9487 / 288, HTZ2 f5011 / 690,
-    MTZ3 f7853 / 864, OOZ1 f1803 / 1095, OOZ2 f9302 / 401.
-  - `$native=(Resolve-Path '.lwjgl\3.3.3+5\x64').Path; $env:JAVA_TOOL_OPTIONS="-Dorg.lwjgl.librarypath=$native"; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" "-Ds1.rom.path=s1.gen" "-Dsonic1.rom.path=s1.gen" test`
+  - `mvn "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s2Obj30*" test`
+    passed the focused Obj30 CPU bridge and f3384 no-regression units.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+    exited 1 as expected-red with the improved HTZ2 f5031 / 930 frontier.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; 19 S2 traces ran, 13 stayed green, and six
+    expected reds remain: ARZ2 f1294 / 2396, CNZ2 f9487 / 288, HTZ2 f5031 /
+    930, MTZ3 f9035 / 863, OOZ1 f1813 / 1062, OOZ2 f9307 / 444.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
     passed 29 / 29 S1 trace tests.
-  - `$native=(Resolve-Path '.lwjgl\3.3.3+5\x64').Path; $env:JAVA_TOOL_OPTIONS="-Dorg.lwjgl.librarypath=$native"; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS3kAizCompleteRunTraceReplay,TestS3kAizTraceReplay" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsonic3k.rom.path=s3k.gen" test`
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay" "-DfailIfNoTests=false" test`
     exited 1 at the existing AIZ expected-red frontiers: complete-run f1095 /
     4319 (`x_speed` expected `0x0000`, actual `0x000C`) and AIZ f8941 /
     1160 (`camera_y` expected `0x02C1`, actual `0x02B9`).
+
 ## 2026-06-30 - S2 OOZ2 stale roll-animation boss contact (f9302 -> f9307)
 
 - Worktree/branch: `.worktrees/ai-s2-ooz2-round6` /

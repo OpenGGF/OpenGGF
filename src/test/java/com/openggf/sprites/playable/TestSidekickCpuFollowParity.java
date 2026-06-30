@@ -10,7 +10,6 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.sonic2.Sonic2GameModule;
-import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.RisingLavaObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.graphics.GLCommand;
@@ -1423,52 +1422,6 @@ class TestSidekickCpuFollowParity {
                 () -> assertFalse(controller.getInputRight(),
                         "The bypass preserves the already-loaded zero Ctrl_2 word until the next "
                                 + "delayed RIGHT sample arrives."));
-    }
-
-    @Test
-    void s2Obj30LatchedPushGraceBypassesFollowSteeringAfterRideClears() throws Exception {
-        TestableSprite sonic = new TestableSprite("sonic");
-        TestableSprite tails = new TestableSprite("tails_p2");
-        tails.setCpuControlled(true);
-        tails.setAir(false);
-        tails.setOnObject(false);
-        tails.setCentreX((short) 0x1A1B);
-        tails.setCentreY((short) 0x04B0);
-        tails.setDirection(Direction.LEFT);
-
-        short[] xHistory = new short[64];
-        short[] yHistory = new short[64];
-        short[] inputHistory = new short[64];
-        byte[] statusHistory = new byte[64];
-        Arrays.fill(xHistory, (short) 0x1A1B);
-        Arrays.fill(yHistory, (short) 0x04AC);
-        Arrays.fill(statusHistory, (byte) AbstractPlayableSprite.STATUS_FACING_LEFT);
-        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
-
-        RisingLavaObjectInstance lowerRoutePlatform = new RisingLavaObjectInstance(
-                new ObjectSpawn(0x1920, 0x04F0, Sonic2ObjectIds.RISING_LAVA, 0x06, 0, false, 0),
-                "RisingLava");
-        tails.setLatchedSolidObject(Sonic2ObjectIds.RISING_LAVA, lowerRoutePlatform);
-
-        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
-        controller.hydrateFromRomCpuState(0x06, 0, 0, Sonic2ObjectIds.RISING_LAVA,
-                true, 0x1A1B, 0x04AC);
-        setNormalPushingGraceFrames(controller, 8);
-
-        controller.update(0x138A);
-
-        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
-        Assertions.assertAll(
-                () -> assertEquals("latched_push_grace", diagnostics.followBranch()),
-                () -> assertTrue(diagnostics.skipFollowSteering(),
-                        "HTZ2 f5002 keeps Obj30's ROM-visible Status_Push for TailsCPU_Normal "
-                                + "even after the engine ride record has cleared; s2.asm:39297-39300 "
-                                + "branches to the action filter before FollowLeft/FollowRight."),
-                () -> assertFalse(controller.getInputLeft(),
-                        "The push-bypass path preserves the already-loaded zero Ctrl_2 word."),
-                () -> assertEquals(1, controller.getDiagnosticJumpingFlag(),
-                        "The push-bypass path skips the grounded auto-jump clear at s2.asm:39349-39355."));
     }
 
     @Test
@@ -3304,6 +3257,113 @@ class TestSidekickCpuFollowParity {
                 () -> assertEquals(AbstractPlayableSprite.INPUT_JUMP,
                         controller.getDiagnosticGeneratedPressedInput()
                                 & AbstractPlayableSprite.INPUT_JUMP));
+    }
+
+    @Test
+    void s2Obj30ReleasedInteractPushGraceBypassesAutoJumpLatchClear() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic2GameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setAir(false);
+            tails.setPushing(false);
+            tails.setOnObject(false);
+            tails.setCentreX((short) 0x1A1B);
+            tails.setCentreY((short) 0x04B0);
+            tails.setDirection(Direction.LEFT);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            controller.hydrateFromRomCpuState(0x06, 0, 0, 0x30, true, 0, 0);
+
+            RisingLavaObjectInstance obj30 = new RisingLavaObjectInstance(
+                    new ObjectSpawn(0x1920, 0x062D, 0x30, 6, 0, false, 0), "Obj30");
+            obj30.setSlotIndex(41);
+            GameServices.level().getObjectManager().addDynamicObjectAtSlot(obj30, 41);
+            tails.setLatchedSolidObject(0x30, obj30);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x1A1B);
+            Arrays.fill(yHistory, (short) 0x04AC);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+            setNormalPushingGraceFrames(controller, 9);
+
+            controller.update(0x138A);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("interact_push_grace", diagnostics.followBranch(),
+                            "HTZ2 f5002: Obj30 subtype 6 runs after TailsCPU_Normal, so "
+                                    + "s2.asm:39297-39300 still sees Status_Push from the interact slot."),
+                    () -> assertFalse(controller.getInputJump(),
+                            "The push-bypass jumps straight to loc_1BE06; it must not carry "
+                                    + "Tails_CPU_jumping through loc_1BDCE as a held A/B/C input."),
+                    () -> assertEquals(1, controller.getDiagnosticJumpingFlag(),
+                            "Bypassing loc_1BDCE also skips the grounded latch clear."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
+    void s2Obj30ZeroGraceInteractBridgeRequiresStationaryDelayedTarget() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic2GameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setAir(false);
+            tails.setPushing(false);
+            tails.setOnObject(false);
+            tails.setCentreX((short) 0x16CA);
+            tails.setCentreY((short) 0x0710);
+            tails.setDirection(Direction.RIGHT);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            controller.hydrateFromRomCpuState(0x06, 0, 0, 0x30, true, 0, 0);
+
+            RisingLavaObjectInstance obj30 = new RisingLavaObjectInstance(
+                    new ObjectSpawn(0x1760, 0x07C2, 0x30, 6, 0, false, 0), "Obj30");
+            obj30.setSlotIndex(26);
+            GameServices.level().getObjectManager().addDynamicObjectAtSlot(obj30, 26);
+            tails.setLatchedSolidObject(0x30, obj30);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x16EB);
+            Arrays.fill(yHistory, (short) 0x070C);
+            Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_LEFT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            setNormalPushingGraceFrames(controller, 0);
+
+            controller.update(0x0D34);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                            "HTZ2 f3384: with positive dx and no push grace, the released Obj30 "
+                                    + "interact slot must not manufacture a push-bypass."),
+                    () -> assertEquals(0, controller.getDiagnosticJumpingFlag(),
+                            "Falling through loc_1BDCE on the ground clears Tails_CPU_jumping."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
     }
 
     @Test

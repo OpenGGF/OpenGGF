@@ -451,6 +451,34 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a CPU sidekick's persistent {@code interact(a0)} slot should
+     * preserve a just-cleared {@code Status_Push} bit for the ROM CPU read even
+     * after the engine has already released the live ride state.
+     * <p>
+     * This is narrower than {@link #preservesSidekickCpuPushGraceWhileRiding}:
+     * it applies only when the player is no longer riding the object but the ROM
+     * interact slot still dereferences this object's SST status byte before the
+     * object's later solid/drop-floor routine refreshes it.
+     */
+    default boolean preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Minimum remaining push-grace frames for the released-interact CPU bridge.
+     */
+    default int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {
+        return Integer.MAX_VALUE;
+    }
+
+    /**
+     * Maximum remaining push-grace frames for the released-interact CPU bridge.
+     */
+    default int sidekickCpuPushGraceMaximumFramesFromInteractSlot(PlayableEntity player) {
+        return Integer.MIN_VALUE;
+    }
+
+    /**
      * Whether this object's continued-riding path should keep the player's
      * {@code Status_Push} bit set even when the current frame does not produce
      * a fresh side-contact classification.

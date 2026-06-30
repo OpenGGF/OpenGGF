@@ -2115,15 +2115,20 @@ public class SidekickCpuController {
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
                 && preservesSidekickCpuPushGraceWhileRiding(ridingObject);
-        ObjectInstance latchedPushGraceObject = latchedCpuPushGraceObject();
-        boolean latchedObjectPushGrace = !sidekick.getAir()
+        boolean interactObjectPushGrace = !sidekick.getAir()
                 && !sidekick.isOnObject()
                 && !sidekick.getRolling()
-                && normalPushingGraceFrames > 0
+                && normalPushingGraceFrames >= sidekickCpuPushGraceMinimumFramesFromInteractSlot()
+                && normalPushingGraceFrames <= sidekickCpuPushGraceMaximumFramesFromInteractSlot()
+                // Once the ordinary push-grace counter has decayed, only the
+                // stationary local Obj30 release case still matches ROM's
+                // status-byte read. Moving follow samples must fall through
+                // to normal steering (HTZ2 f3384).
+                && (normalPushingGraceFrames > 0 || dx == 0)
                 && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
-                && preservesSidekickCpuPushGraceAfterRideClears(latchedPushGraceObject);
+                && preservesSidekickCpuPushGraceFromInteractSlot();
         int followSnapThreshold = resolveFollowSnapThreshold();
         boolean localBelowTargetFacingIntoFollowSide =
                 (dx > 0 && sidekick.getDirection() == Direction.RIGHT)
@@ -2233,12 +2238,12 @@ public class SidekickCpuController {
         boolean skipFollowSteering = currentPushBypass
                 || localBelowTargetGrace
                 || ridingObjectPushGrace
-                || latchedObjectPushGrace
+                || interactObjectPushGrace
                 || (objectOrderGrace && !supportGraceKeepsFollowSteering);
         String followBranch = currentPushBypass ? "current_push_bypass"
                 : localBelowTargetGrace ? "grace_push_bypass"
                 : ridingObjectPushGrace ? "riding_push_grace"
-                : latchedObjectPushGrace ? "latched_push_grace"
+                : interactObjectPushGrace ? "interact_push_grace"
                 : (objectOrderGrace && !supportGraceKeepsFollowSteering) ? "grace_push_bypass"
                 : leaderStatusOnObject ? "leader_on_object"
                 : effectiveLeader.getGSpeed() >= 0x400 ? "leader_fast"
@@ -2405,7 +2410,7 @@ public class SidekickCpuController {
                         && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0)
                         || objectOrderGrace
                         || ridingObjectPushGrace
-                        || latchedObjectPushGrace);
+                        || interactObjectPushGrace);
         if (jumpingFlag && !autoJumpPushBypass) {
             inputJump = true;
             boolean delayedJumpOnly = (recordedInput & (AbstractPlayableSprite.INPUT_UP
@@ -2490,7 +2495,8 @@ public class SidekickCpuController {
             // 39300, 39369-39378). The preserved-roll flag only suppresses a
             // stale delayed jump hold below; it must not block the push-bypass
             // jump that launches Tails out of the stopper chamber.
-            boolean pushingBypass = currentPushBypass || objectOrderGrace || ridingObjectPushGrace;
+            boolean pushingBypass = currentPushBypass || objectOrderGrace || ridingObjectPushGrace
+                    || interactObjectPushGrace;
             // resolveCpuFrameCounter() already yields the ROM-visible
             // Level_frame_counter: the per-frame sprite cadence is the
             // post-increment value, and bootstrap paths preload LevelManager with
@@ -2735,25 +2741,27 @@ public class SidekickCpuController {
         return sidekick.getLatchedSolidObjectInstance();
     }
 
-    private ObjectInstance latchedCpuPushGraceObject() {
-        ObjectInstance latched = sidekick.getLatchedSolidObjectInstance();
-        if (hasLiveRidingObject(latched)) {
-            return latched;
-        }
+    private ObjectInstance currentInteractSlotObject() {
         int slot = sidekick.getInteractSlotIndex();
         if (slot < 0) {
             return null;
         }
         LevelManager levelManager = sidekick.currentLevelManager();
         if (levelManager == null || levelManager.getObjectManager() == null) {
-            return null;
+            return sidekick.getLatchedSolidObjectInstance();
         }
         for (ObjectInstance instance : levelManager.getObjectManager().getActiveObjects()) {
-            if (instance instanceof AbstractObjectInstance object
-                    && object.getSlotIndex() == slot
+            if (instance instanceof AbstractObjectInstance aoi
+                    && aoi.getSlotIndex() == slot
                     && !instance.isDestroyed()) {
                 return instance;
             }
+        }
+        ObjectInstance latched = sidekick.getLatchedSolidObjectInstance();
+        if (latched instanceof AbstractObjectInstance aoi
+                && aoi.getSlotIndex() == slot
+                && !latched.isDestroyed()) {
+            return latched;
         }
         return null;
     }
@@ -2814,6 +2822,20 @@ public class SidekickCpuController {
         return levelManager.getObjectManager().isActiveObjectInstance(ridingObject);
     }
 
+    private boolean hasLiveInteractSlotObject(ObjectInstance interactObject) {
+        if (interactObject == null || interactObject.isDestroyed()) {
+            return false;
+        }
+        if (interactObject == sidekick.getLatchedSolidObjectInstance()) {
+            return true;
+        }
+        LevelManager levelManager = sidekick.currentLevelManager();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return true;
+        }
+        return levelManager.getObjectManager().isActiveObjectInstance(interactObject);
+    }
+
     private boolean preservesSidekickCpuPushGraceWhileRiding(ObjectInstance ridingObject) {
         if (!hasLiveRidingObject(ridingObject)) {
             return false;
@@ -2824,14 +2846,37 @@ public class SidekickCpuController {
         return false;
     }
 
-    private boolean preservesSidekickCpuPushGraceAfterRideClears(ObjectInstance latchedObject) {
-        if (!hasLiveRidingObject(latchedObject)) {
+    private boolean preservesSidekickCpuPushGraceFromInteractSlot() {
+        ObjectInstance interactObject = currentInteractSlotObject();
+        if (!hasLiveInteractSlotObject(interactObject)) {
             return false;
         }
-        if (latchedObject instanceof SolidObjectProvider provider) {
-            return provider.preservesSidekickCpuPushGraceAfterRideClears(sidekick);
+        if (interactObject instanceof SolidObjectProvider provider) {
+            return provider.preservesSidekickCpuPushGraceFromInteractSlot(sidekick);
         }
         return false;
+    }
+
+    private int sidekickCpuPushGraceMinimumFramesFromInteractSlot() {
+        ObjectInstance interactObject = currentInteractSlotObject();
+        if (!hasLiveInteractSlotObject(interactObject)) {
+            return Integer.MAX_VALUE;
+        }
+        if (interactObject instanceof SolidObjectProvider provider) {
+            return provider.sidekickCpuPushGraceMinimumFramesFromInteractSlot(sidekick);
+        }
+        return Integer.MAX_VALUE;
+    }
+
+    private int sidekickCpuPushGraceMaximumFramesFromInteractSlot() {
+        ObjectInstance interactObject = currentInteractSlotObject();
+        if (!hasLiveInteractSlotObject(interactObject)) {
+            return Integer.MIN_VALUE;
+        }
+        if (interactObject instanceof SolidObjectProvider provider) {
+            return provider.sidekickCpuPushGraceMaximumFramesFromInteractSlot(sidekick);
+        }
+        return Integer.MIN_VALUE;
     }
 
     private int sidekickCpuPushGraceMinimumFramesWhileRiding(ObjectInstance ridingObject) {
