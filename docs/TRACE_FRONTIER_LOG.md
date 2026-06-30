@@ -52,6 +52,52 @@ branch-local measurements.
   MTZ3 f7853 / 864, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. CPZ2 is the
   only moved red frontier in the set, now f9745 / 201.
 
+## 2026-06-30 - S2 OOZ1 Obj36 left-edge CPU bridge (f1790 -> f1794)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-frontier-r3` /
+  `bugfix/ai-s2-ooz1-frontier-r3`, created from integration branch
+  `bugfix/ai-s2-trace-develop`, then fast-forwarded through current
+  integration `26a8efb20` before final verification.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2OozLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix on the accepted OOZ1 baseline: OOZ1 f1790 / 888
+  (`tails_x_speed` expected `0x0080`, actual `-008C`).
+- Triage/evidence: OOZ1 f1790 has matching Sonic/camera state and CPU Tails
+  still riding Obj36 slot `1D` at Obj36's left edge. The ROM keeps Tails'
+  final sampled status as `0x08` while the engine has no live push bit at the
+  CPU slot and falls through follow steering, producing `-008C`. A broad live
+  riding push latch regressed earlier centered/right-edge Obj36 contacts, so
+  the genuine window is the CPU-only Obj36 status visibility bridge, not a
+  final status-byte preservation rule.
+- Disassembly cited: Obj36 Upright runs `MoveSpikes`, prepares width/radius,
+  calls `SolidObject`, and immediately reads the object `status(a0)` standing
+  bits (`docs/s2disasm/s2.asm:29392-29418`). `TailsCPU_Normal` loads delayed
+  leader input/status, then tests Tails' current `Status_Push` before
+  `FollowLeft` / `FollowRight`; a current push with a non-pushing delayed
+  leader status branches to the preserved delayed input path
+  (`docs/s2disasm/s2.asm:39291-39294`). The right-input turn sample is
+  consumed by the Tails movement turn/right path (`docs/s2disasm/s2.asm:39964-39981`).
+- Fix: `SpikeObjectInstance` now lets the Obj36 CPU-only riding push bridge
+  include the `-$80` ground-speed turn sample while CPU Tails is on Obj36's
+  outer-left edge. This models Obj36's ROM object status visibility to the CPU
+  branch and leaves the final player status byte untouched. It does not edit
+  trace data, add tolerance, hydrate/sync from trace data, or add route, frame,
+  zone, game-id, or known-failing carve-outs.
+- Focused target after integration `26a8efb20`:
+  `mvn "-Dtest=TestS2OozLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; OOZ1 advances to f1794 / 905
+  (`tails_x_speed` expected `0x0080`, actual `0x0000`).
+- Current S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exits 0. Individual Surefire reports are clean for all selected green traces,
+  including MTZ2.
+- Red preservation set on integration `26a8efb20`:
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exits nonzero with the expected red failures and preserves ARZ2 f1028 / 2686,
+  CNZ2 f8870 / 447, CPZ2 f7035 / 917, HTZ2 f4136 / 1024,
+  MTZ1 f5713 / 560, MTZ3 f7853 / 864, and OOZ2 f3919 / 1117. OOZ1 is the
+  only moved red frontier in the set, now f1794 / 905.
+
 ## 2026-06-30 - S2 CNZ2 Obj51 electric hurt regions (f8403 -> f8870)
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r10` /
