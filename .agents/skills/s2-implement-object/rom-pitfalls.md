@@ -3014,7 +3014,7 @@ only the high word back (`docs/s2disasm/s2.asm:67059-67079`). Obj51 split
 allocation copies the object after setting split velocities
 (`docs/s2disasm/s2.asm:67082-67108`).
 
-**Originating commit.** `<pending>` S2 CNZ2 Obj51 high-word movement temporary:
+**Originating commit.** `ac491987d` S2 CNZ2 Obj51 high-word movement temporary:
 `TestS2Cnz2LevelSelectTraceReplay` advances f9183 -> f9487.
 
 ---
