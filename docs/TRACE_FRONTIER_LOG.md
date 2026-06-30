@@ -6,6 +6,17 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 campaign combined sweep after CNZ2 + OOZ2 merges
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next`, after merging CNZ2 commit `ac491987d` and OOZ2
+  branch `bugfix/ai-s2-ooz2-frontier-r6`.
+- Verification:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  exited 1 as expected-red; 19 tests ran, 13 stayed green, and six expected
+  reds remain. Current red set: ARZ2 f1294 / 2396, CNZ2 f9487 / 288, HTZ2
+  f4442 / 1033, MTZ3 f7853 / 864, OOZ1 f1803 / 1095, OOZ2 f9291 / 386.
+
 ## 2026-06-30 - S2 CNZ2 Obj51 high-word movement temporary (f9183 -> f9487)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /
@@ -49,6 +60,60 @@ branch-local measurements.
     expected reds held except CNZ2 advancing to f9487 / 288. Remaining reds:
     ARZ2 f1294 / 2396, CNZ2 f9487 / 288, HTZ2 f4442 / 1033, MTZ3 f7853 / 864,
     OOZ1 f1803 / 1095, OOZ2 f8487 / 387.
+
+## 2026-06-30 - S2 OOZ2 Tails Obj02_Dead CPU routine preservation (f8487 -> f9291)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-frontier-r6` /
+  `bugfix/ai-s2-ooz2-frontier-r6`, based on `bugfix/ai-s2-trace-next`
+  after the HTZ2 Obj30 merge.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected nonzero; OOZ2 f8487 / 387
+  (`tails_cpu_routine` expected `0x0008`, actual `0x0006`).
+- Triage/evidence: the f8487 trace context had ROM Tails already entering
+  object routine `$06` / Obj02_Dead after a level-boundary kill while standing
+  on Obj07 oil slot `$0E`, but the separate `Tails_CPU_routine` word remained
+  `$08` / Panic until the later despawn marker. The engine's diagnostic export
+  conflated the object routine 6 death state with CPU routine 6 Normal.
+- ROM basis: S2's Obj02 routine table maps object routine `$06` to
+  `Obj02_Dead`, while the separate `TailsCPU_States` table maps CPU routine
+  `$06` to `TailsCPU_Normal` and `$08` to `TailsCPU_Panic`
+  (`docs/s2disasm/s2.asm:38892-38895,39077-39088`). `Obj02_Dead` calls
+  `Obj02_CheckGameOver`, continues `ObjectMoveAndFall`, and only branches to
+  `TailsCPU_Despawn` after the death-fall threshold path, where the ROM writes
+  `Tails_CPU_routine=2`, `obj_control=$81`, and the despawn marker state
+  (`docs/s2disasm/s2.asm:41131-41154,39397-39401`).
+- Fix: `SidekickCpuController` now snapshots the active ROM CPU routine before
+  entering the engine's `DEAD_FALLING` state and exposes that preserved value
+  through `getDiagnosticRomCpuRoutine()` until the despawn marker is applied.
+  The value is included in sidekick rewind capture/restore and cleared on
+  explicit state hydration/reset paths. This models live ROM state; it does
+  not edit trace data, hydrate engine state from traces, or branch on zone,
+  route, frame, or fixture.
+- Result: `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` advances to
+  f9291 / 386 (`tails_y_speed` expected `0x0000`, actual `0x0878`). The new
+  frontier is a later oil/object landing: ROM lands Tails on Obj07 oil with
+  `Status_OnObj`, zero Y velocity, ground speed `-02F0`, and CPU interact
+  `$0007`, while the engine leaves Tails airborne/rolling with Y velocity
+  `$0878`, ground speed `-0048`, status `$06`, and interact `$0001`.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=TestSidekickCpuDespawnParity" "-DfailIfNoTests=false" test`
+    exited 0; 48 tests passed.
+  - `mvn "-Dmse=off" "-Dtest=TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; OOZ2 advanced to f9291 / 386.
+  - `mvn "-Dtest=TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" test`
+    exited expected-red at the existing OOZ1 frontier f1803 / 1095
+    (`tails_x` expected `0x0CE3`, actual `0x0CE4`).
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.*TraceReplay" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" test`
+    ran the full S2 trace sweep: 19 tests, 13 green and 6 expected-red.
+    Remaining reds: ARZ2 f1294 / 2396, HTZ2 f4442 / 1033, CNZ2 f9183 / 441,
+    MTZ3 f7853 / 864, OOZ1 f1803 / 1095, and OOZ2 f9291 / 386.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" test`
+    exited 0; 1 test passed.
+  - `mvn "-Dmse=off" "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    exited 0; 51 tests passed.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.*TraceReplay" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" test`
+    exited 0; 29 tests passed.
 
 ## 2026-06-30 - S2 HTZ2 Obj30 leading-side ride-wall response (f4422 -> f4442)
 

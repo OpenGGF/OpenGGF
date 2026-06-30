@@ -268,6 +268,7 @@ public record PerObjectRewindSnapshot(
      */
     public record SidekickCpuRewindExtra(
             com.openggf.sprites.playable.SidekickCpuController.State state,
+            int deadFallingRomCpuRoutine,
             int despawnCounter,
             int frameCounter,
             int controlCounter,

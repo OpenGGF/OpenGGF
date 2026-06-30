@@ -213,6 +213,7 @@ public class SidekickCpuController {
     private boolean levelEventDormantMarkerReleasePending;
     private boolean skipPhysicsThisFrame;
     private boolean deadOnObjectReenteredVisibleWindow;
+    private int deadFallingRomCpuRoutine = -1;
     // Set by updateDeadFallingDeferredS2 when running the per-frame Obj02_Dead
     // ObjectMoveAndFall continuation (frame N+1+ of the deferred death-fall,
     // before crossing Tails_Max_Y_pos + $100). ROM Obj02_Dead (s2.asm:40736-40742)
@@ -602,6 +603,9 @@ public class SidekickCpuController {
     }
 
     public int getDiagnosticRomCpuRoutine() {
+        if (state == State.DEAD_FALLING && deadFallingRomCpuRoutine >= 0) {
+            return deadFallingRomCpuRoutine;
+        }
         return romCpuRoutineForState(state);
     }
 
@@ -4356,6 +4360,8 @@ public class SidekickCpuController {
      * marker on Frame N+1 (see updateDeadFalling).
      */
     private void beginLevelBoundaryKill() {
+        int romCpuRoutine = romCpuRoutineForState(state);
+        deadFallingRomCpuRoutine = romCpuRoutine >= 0 ? romCpuRoutine : 0x06;
         state = State.DEAD_FALLING;
         normalFrameCount = 0;
         applyKillCharacterTouchFloorReset();
@@ -4610,6 +4616,7 @@ public class SidekickCpuController {
         state = s3kCatchUpMarker
                 ? State.CATCH_UP_FLIGHT
                 : State.SPAWNING;
+        deadFallingRomCpuRoutine = -1;
         despawnCounter = 0;
         controlCounter = 0;
         approachFrameCount = 0;
@@ -4832,6 +4839,7 @@ public class SidekickCpuController {
      */
     public void setInitialState(State state) {
         this.state = state;
+        deadFallingRomCpuRoutine = -1;
         aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;
         catchUpUsesRomVisibleLevelFrameCounter = false;
@@ -4859,6 +4867,7 @@ public class SidekickCpuController {
                                 int respawnCounter, int interactId,
                                 boolean jumping, int targetX, int targetY) {
         state = mapRomCpuRoutine(cpuRoutine);
+        deadFallingRomCpuRoutine = -1;
         aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;
         catchUpUsesRomVisibleLevelFrameCounter = false;
@@ -4889,6 +4898,7 @@ public class SidekickCpuController {
      */
     void forceStateForTest(State state, int normalFrames) {
         this.state = state;
+        deadFallingRomCpuRoutine = -1;
         aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;
         catchUpUsesRomVisibleLevelFrameCounter = false;
@@ -5119,6 +5129,7 @@ public class SidekickCpuController {
     public SidekickCpuRewindExtra captureRewindState() {
         return new SidekickCpuRewindExtra(
                 state,
+                deadFallingRomCpuRoutine,
                 despawnCounter,
                 frameCounter,
                 controlCounter,
@@ -5179,6 +5190,7 @@ public class SidekickCpuController {
 
     public void restoreRewindState(SidekickCpuRewindExtra snapshot) {
         state = snapshot.state();
+        deadFallingRomCpuRoutine = snapshot.deadFallingRomCpuRoutine();
         despawnCounter = snapshot.despawnCounter();
         frameCounter = snapshot.frameCounter();
         controlCounter = snapshot.controlCounter();
@@ -5291,6 +5303,7 @@ public class SidekickCpuController {
 
     public void reset() {
         state = State.INIT;
+        deadFallingRomCpuRoutine = -1;
         despawnCounter = 0;
         controlCounter = 0;
         approachFrameCount = 0;

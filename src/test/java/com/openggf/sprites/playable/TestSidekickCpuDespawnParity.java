@@ -576,6 +576,29 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s2LevelBoundaryKillPreservesPanicCpuRoutineUntilDespawnMarker() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x2679);
+        tails.setCentreY((short) 0x02E9);
+        tails.setAir(false);
+        tails.setGSpeed((short) 0);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x08, 0, 0x00B0, 0x0007, false, 0x24EE, 0x016C);
+
+        controller.despawn(SidekickCpuController.DespawnCause.LEVEL_BOUNDARY);
+
+        assertEquals(SidekickCpuController.State.DEAD_FALLING, controller.getState());
+        assertEquals(0x0008, controller.getDiagnosticRomCpuRoutine(),
+                "S2 Kill_Character writes Obj02 routine 6 but leaves the separate "
+                        + "Tails_CPU_routine word unchanged until Obj02_CheckGameOver "
+                        + "branches to TailsCPU_Despawn (s2.asm:41131-41154, 39397-39401)");
+    }
+
+    @Test
     void groundedPushAutoJumpFlagPersistsOnPushBypassLikeRom() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
