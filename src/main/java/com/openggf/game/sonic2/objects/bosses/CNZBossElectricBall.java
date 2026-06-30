@@ -315,6 +315,13 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
         return 0x98;
     }
 
+    @Override
+    public boolean requiresRenderFlagForTouch() {
+        // S2 Touch_Boss scans Obj51 child collision_flags directly while the
+        // boss is active; there is no render/on-screen touch gate in that path.
+        return false;
+    }
+
     /**
      * Get collision property (used for enemy bounce/hurt behavior).
      */

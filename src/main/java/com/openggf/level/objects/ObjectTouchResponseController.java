@@ -687,7 +687,7 @@ final class ObjectTouchResponseController {
         }
 
         switch (result.category()) {
-            case HURT -> applySidekickHurt(sidekick, instance);
+            case HURT -> applySidekickHurt(sidekick, instance, result);
             case ENEMY -> {
                 if (isPlayerAttacking(sidekick, instance)) {
                     // ROM: Touch_Enemy_Part2 checks collision_property BEFORE decrementing HP.
@@ -728,7 +728,7 @@ final class ObjectTouchResponseController {
                         }
                     }
                 } else {
-                    applySidekickHurt(sidekick, instance);
+                    applySidekickHurt(sidekick, instance, result);
                 }
             }
             case SPECIAL -> {
@@ -741,7 +741,7 @@ final class ObjectTouchResponseController {
                     }
                     applyBossBounce(sidekick);
                 } else {
-                    applySidekickHurt(sidekick, instance);
+                    applySidekickHurt(sidekick, instance, result);
                 }
             }
         }
@@ -752,8 +752,11 @@ final class ObjectTouchResponseController {
      * From s2.asm HurtCharacter: in 1P mode, branches directly to Hurt_Sidekick
      * which applies hurt animation without checking rings.
      */
-    private void applySidekickHurt(PlayableEntity sidekick, ObjectInstance instance) {
-        int sourceX = instance != null ? instance.getX() : sidekick.getCentreX();
+    private void applySidekickHurt(PlayableEntity sidekick, ObjectInstance instance,
+            TouchResponseResult result) {
+        int sourceX = (result != null && result.hasRegionX())
+                ? result.regionX()
+                : instance != null ? instance.getX() : sidekick.getCentreX();
         // ROM: Hurt_Sidekick in 1P mode - just apply hurt knockback, no ring scatter
         sidekick.applyHurt(sourceX);
     }
