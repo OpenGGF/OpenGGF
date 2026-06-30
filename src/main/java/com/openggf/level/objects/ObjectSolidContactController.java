@@ -1213,6 +1213,17 @@ final class ObjectSolidContactController {
             return null;
         }
         SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+        if (instance != ridingObject
+                && provider.skipsNewContactWhilePlayerAlreadyOnObject(player)
+                && (ridingObject != null || player.isOnObject())) {
+            // S2 PlatformObjectD5 first checks this object's own standing bit.
+            // If it is clear and the player already has Status_OnObj set, the
+            // helper returns d4=0 without resolving a new platform contact
+            // (docs/s2disasm/s2.asm:35860-35894). That lets the current
+            // riding ObjD5 remain authoritative when neighbouring elevator
+            // slots overlap the rider's X range.
+            return null;
+        }
         if (shouldSkipOffscreenSidekickFullSolid(player, instance, solidProfile)) {
             if (instance == ridingObject) {
                 // ROM returns before SolidObjectFull_1P for offscreen Player_2

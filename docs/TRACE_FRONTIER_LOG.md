@@ -6,6 +6,61 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CNZ2 ObjD5 ground-wall deferral narrowing (f6814 -> f6969)
+
+- Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r5` /
+  `bugfix/ai-s2-cnz2-frontier-r5`, based on integration branch
+  `bugfix/ai-s2-trace-develop` at about `ba9148a93`.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: CNZ2 f6814 / 998 (`x_speed` expected `-00B8`,
+  actual `-01B8`).
+- Triage/evidence: `TraceTriageTool` for `s2 cnz2` reported the first
+  mismatch under player physics. Expanded context showed ROM and engine still
+  aligned on position/subpixel at f6814, with Sonic riding the lower ObjD5
+  elevator while a neighbouring ObjD5 slot overlapped the X range. A temporary
+  local diagnostic on `CalcRoomInFront` showed the engine terrain probe already
+  returned the ROM-correct wall distance `-1` for the internal frame producing
+  the f6814 comparison; the extra `-0x100` came from replaying that same
+  response through the S2 repeated object-riding deferred correction, producing
+  `x_speed=-01B8` instead of `-00B8`.
+- Disassembly cited: Obj01 ground-wall collision calls `CalcRoomInFront`,
+  shifts the negative distance by 8, and adds it to `x_vel` for right-wall
+  pushes (`docs/s2disasm/s2.asm:36780-36875`); `CalcRoomInFront` predicts from
+  `x_pos/y_pos + x_vel/y_vel` and dispatches to the right-wall probe
+  (`docs/s2disasm/s2.asm:43945-43997`). `SolidObject_Always` is the shared
+  Obj30 path that preserves the supported player before object-side terrain
+  handling (`docs/s2disasm/s2.asm:35070-35095`), and Obj30 subtypes tail into
+  `DropOnFloor` (`docs/s2disasm/s2.asm:49560-49604,49674-49676`). Plain ObjD5
+  runs `ObjectMove`, its state routine, and `PlatformObjectD5`, whose
+  non-riding-instance path returns immediately when the player already has
+  `Status_OnObj` set (`docs/s2disasm/s2.asm:35860-35894,58905-58915`).
+- Fix: `CollisionSystem` now defers the repeated S2 object-riding ground-wall
+  response only when the current ridden provider opts into `DropOnFloor`, so
+  the Obj30 rising-lava behavior stays on its ROM-backed path while ObjD5
+  receives only the live `CalcRoomInFront` correction. `SolidObjectProvider`
+  also exposes a default-off hook for helpers such as `PlatformObjectD5` that
+  return no new contact while the player is already riding another object, and
+  `ElevatorObjectInstance` opts in. The change models object/helper state and
+  does not hydrate trace data or add tolerance, route, zone, frame, game-id, or
+  known-failing-trace logic.
+- Focused unit check:
+  `mvn -q "-Dmse=off" "-Dtest=TestElevatorObjectInstance" test`
+  exited 0.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CNZ2 advanced to f6969 / 739 (`tails_y`
+  expected `0x0435`, actual `0x0436`).
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Practical red preservation on non-active expected reds:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay" ... test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686 and CPZ2 f5221 / 377;
+  MTZ3 moved forward to f6334 / 928 from the accepted f4575 / 932.
+  `mvn -q "-Dmse=off" "-Dtest=TestS2MtzLevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay" ... test`
+  exited 1 as expected and preserved MTZ1 f5713 / 560 and OOZ1 f1790 / 888.
+
 ## 2026-06-30 - S2 CNZ2 ObjD5 held-input edge after inertia reset (f6809 -> f6814)
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r4` /

@@ -333,13 +333,27 @@ public class CollisionSystem {
         }
     }
 
-    private static boolean shouldDeferRepeatedObjectRideResponse(AbstractPlayableSprite sprite, int mode, short predictedDx) {
+    private boolean shouldDeferRepeatedObjectRideResponse(AbstractPlayableSprite sprite, int mode, short predictedDx) {
         var featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null
-                && featureSet.repeatedObjectRideGroundWallResponseDeferred()
-                && sprite.isOnObject()
-                && sprite.getPushing()
-                && ((mode == 0x40 && predictedDx < 0) || (mode == 0xC0 && predictedDx > 0));
+        if (featureSet == null
+                || !featureSet.repeatedObjectRideGroundWallResponseDeferred()
+                || objectManager == null
+                || !sprite.isOnObject()
+                || !sprite.getPushing()
+                || !((mode == 0x40 && predictedDx < 0) || (mode == 0xC0 && predictedDx > 0))) {
+            return false;
+        }
+        ObjectInstance ridingObject = objectManager.getRidingObject(sprite);
+        if (!(ridingObject instanceof SolidObjectProvider provider)) {
+            return false;
+        }
+        // S2's deferred repeated object-ride correction models platforms that
+        // run SolidObject_Always and then DropOnFloor after player physics
+        // (Obj30, docs/s2disasm/s2.asm:35070-35095, 49560-49604,
+        // 49674-49676). Plain PlatformObjectD5 does not call DropOnFloor
+        // after MvSonicOnPtfm, so deferring here would apply CalcRoomInFront's
+        // wall response twice (docs/s2disasm/s2.asm:35860-35894, 58905-58915).
+        return provider.dropOnFloor();
     }
 
     private boolean shouldDeferFlushWallResponseForRiddenDropOnFloor(
