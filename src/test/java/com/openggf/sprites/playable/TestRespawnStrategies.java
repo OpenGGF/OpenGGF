@@ -583,9 +583,10 @@ class TestRespawnStrategies {
     }
 
     @Test
-    void tailsRespawnBeginWritesNativeBit7FullControl() {
+    void sonic2TailsFlyInKeepsNormalAirPhysicsActive() {
         TestableSprite sk = new TestableSprite("tails_p2");
-        sk.setObjectControlAllowsCpu(true);
+        sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sk.setObjectControlled(true);
         sk.setObjectControlSuppressesMovement(false);
         TestableSprite main = new TestableSprite("sonic");
         SidekickCpuController ctrl = new SidekickCpuController(sk, main);
@@ -593,11 +594,25 @@ class TestRespawnStrategies {
 
         assertTrue(strategy.beginApproach(sk, main));
 
-        assertTrue(sk.isObjectControlled(), "Tails fly-in begins with object_control=$81");
-        assertFalse(sk.isObjectControlAllowsCpu(),
-                "object_control=$81 must clear stale bits-0-to-6 CPU allowance");
-        assertTrue(sk.isObjectControlSuppressesMovement(),
-                "object_control=$81 must suppress normal movement");
+        assertFalse(strategy.requiresPhysics(),
+                "S2 TailsCPU_Respawn returns on the spawn frame before TailsCPU_Flying runs");
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) main.getCentreX());
+        Arrays.fill(yHistory, (short) main.getCentreY());
+        main.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+
+        assertFalse(strategy.updateApproaching(sk, main, 1));
+
+        assertTrue(strategy.requiresPhysics(),
+                "S2 TailsCPU_Flying manually nudges x/y, then Obj02_MdAir still runs ObjectMoveAndFall");
+        assertFalse(sk.isObjectControlSuppressesMovement(),
+                "S2 TailsCPU_Respawn/Flying does not write obj_control=$81 except on the off-screen timeout path");
+        assertFalse(sk.isControlLocked(),
+                "S2 TailsCPU_Respawn leaves normal Obj02 movement dispatch active (s2.asm:39122-39140)");
     }
 
     @Test
