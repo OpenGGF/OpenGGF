@@ -6,6 +6,54 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 OOZ2 Obj3D/Obj48 obj_control without global Control_Locked (f3993 -> f5737)
+
+- Worktree/branch: `.worktrees/trace-s2-ooz2-r5` /
+  `bugfix/ai-s2-ooz2-frontier-r5`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at `7171992ee`, then fast-forwarded to
+  conductor integration `ee41957a7` and finally `38b7dec5c` before final
+  verification.
+- Baseline reproduction after the conductor updates:
+  `mvn "-Dtest=TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`.
+  Result before the fix: OOZ2 f3993 / 749 (`tails_x` expected `0x1175`,
+  actual `0x1174`).
+- Triage/evidence: at f3993 Sonic's position matched the ROM, but Tails'
+  delayed leader input read still contained stale LEFT in the engine while the
+  ROM's delayed `Ctrl_1_Logical` sample was neutral. The mismatch fed
+  `TailsCPU_Normal`'s current-push bypass, producing a one-pixel Tails X drift.
+  The active nearby OOZ launcher flow used native player `obj_control`, but the
+  engine was also setting global `Control_Locked`, which latched the stale
+  logical word and polluted the follower history that Tails consumes.
+- Disassembly cited: `Obj01_Control` only skips the `Ctrl_1` to
+  `Ctrl_1_Logical` copy when global `Control_Locked` is set, and then runs
+  `Sonic_RecordPos` after display/super handling
+  (`docs/s2disasm/s2.asm:36233-36252`). `Sonic_RecordPos` stores `x_pos`,
+  `y_pos`, `Ctrl_1_Logical`, and `status` into the delayed Stat table
+  (`docs/s2disasm/s2.asm:36342-36353`). Obj3D `loc_24FC2` and Obj48
+  `loc_2535E` both write `#$81` to `obj_control(a1)` and capture position,
+  velocity, roll animation, in-air/on-object state, and `interact`, but neither
+  writes global `Control_Locked`
+  (`docs/s2disasm/s2.asm:51123-51158,51341-51367`).
+- Fix: `OOZLauncherObjectInstance` and `LauncherBallObjectInstance` still apply
+  native `obj_control=$81` capture state, but no longer set the global
+  `controlLocked` latch. Focused regression coverage asserts both Obj3D and
+  Obj48 captures keep `Control_Locked` clear and allow a neutral raw input to
+  refresh `Ctrl_1_Logical` before the next follower-history sample. This models
+  ROM object state and ordering; it does not edit trace data, hydrate state
+  from traces, weaken tolerances, or branch on route, frame, zone id, or a
+  known failing fixture.
+- Focused object coverage:
+  `mvn "-Dtest=TestSonic2ObjectBugFixes#oozLauncherBallCaptureUsesObjectControlWithoutGlobalControlLockedLatch+oozInvisibleLauncherCaptureUsesObjectControlWithoutGlobalControlLockedLatch" test`.
+  Result: exits 0; 2 focused tests passed.
+- Focused target after conductor merge:
+  `mvn "-Dtest=TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`.
+  Result: expected nonzero; OOZ2 advances to f5737 / 730 (`y_speed`
+  expected `0x0080`, actual `-0080`).
+- Current S2 green guard:
+  `mvn "-Dtest=TestSonic2ObjectBugFixes#oozLauncherBallCaptureUsesObjectControlWithoutGlobalControlLockedLatch+oozInvisibleLauncherCaptureUsesObjectControlWithoutGlobalControlLockedLatch,TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: exits 0; the two focused tests and the 11 selected S2 green traces
+  passed after syncing conductor integration `38b7dec5c`.
+
 ## 2026-06-30 - S2 MTZ1 Obj68 spike touch render-flag gate removal (f8655 -> green)
 
 - Worktree/branch: `.worktrees/trace-s2-mtz1-r15` /
@@ -63,7 +111,6 @@ branch-local measurements.
   Result: expected nonzero; 19 S2 traces run, 12 green, 7 expected red:
   ARZ2 f1028 / 2686, CNZ2 f9183 / 441, CPZ2 f10601 / 74, HTZ2 f4387 /
   1049, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2 f3993 / 749.
-
 ## 2026-06-30 - S2 CPZ2 Obj5D invented hit latch removed (f10286 -> f10601)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz2-trace-worker` /

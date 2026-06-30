@@ -219,9 +219,10 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x());
         NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y());
 
-        // Setup character state (ROM: move.b #$81,obj_control(a1))
+        // Setup character state (ROM: move.b #$81,obj_control(a1)).
+        // Obj48 does not write global Control_Locked; Obj01_Control keeps
+        // refreshing Ctrl_1_Logical while obj_control owns movement.
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
         player.setAnimationId(Sonic2AnimationIds.ROLL);
         player.setGSpeed((short) 0x1000);
         player.setXSpeed((short) 0);
