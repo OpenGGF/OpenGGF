@@ -26057,3 +26057,54 @@ Verification:
   exited 1 with only expected reds. Non-target accepted frontiers/counts held:
   ARZ2 f1028 / 2686, CNZ2 f8381 / 592, HTZ2 f4136 / 1024, MTZ1 f5713 / 560,
   MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117.
+
+### 2026-06-30 -- S2 CNZ2 slope-repel push clear: f8381 -> f8403
+
+Worktree `bugfix/ai-s2-cnz2-frontier-r9` was created from integration branch
+`bugfix/ai-s2-trace-develop` at accepted HEAD `b2469c840`, then merged cleanly
+with conductor-updated integration heads `7c8612bc8` and `2c6018eda` before
+final verification.
+
+Baseline reproduced before the fix from the original integration parent
+`b2469c840`: `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` failed at
+f8381 / 592 with `tails_status_byte` expected `0x02`, actual `0x22`.
+After the final merge to `2c6018eda`, the same baseline remained f8381 / 592.
+
+Root fixed: CNZ2 puts CPU Tails through the S2 `Tails_SlopeRepel` path while a
+stale push bit is still visible from the preceding solid/object interaction.
+The ROM path reaches `Tails_SlopeRepel`, clears inertia, sets `Status_InAir`,
+and seeds `move_lock=$1E` (`docs/s2disasm/s2.asm:40687-40705`). The same
+frame's `Animate_Tails` pass then clears `Status_Push` when the movement-selected
+animation byte differs from `prev_anim` (`docs/s2disasm/s2.asm:40879-40884`).
+The engine's trace comparison samples before the later render animation pass, so
+`PlayableSpriteMovement#doSlopeRepel` now mirrors that same-frame status clear at
+the transition point for games whose animation system owns the ROM push-clear
+rule. The change is state-driven by the existing physics feature flag; it does
+not branch on zone, route, or frame.
+
+Fix:
+- `PlayableSpriteMovement#doSlopeRepel` clears the live push bit when the
+  S2/S3K animation-change push-clear feature is active and a fresh slope-repel
+  slip sets `Status_InAir` / `move_lock`.
+- `TestS2ObjectOccupancyOracle` now asserts CNZ2 f8381 has CPU Tails airborne,
+  move-locked, and not pushing, matching the ROM trace row.
+
+Result:
+- `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace`: f8381 / 592 errors
+  (`tails_status_byte` expected `0x02`, actual `0x22`) -> f8403 / 591 errors
+  (`y` expected `0x0688`, actual `0x068D`).
+- New owner is the f8403 CNZ2 collision/hurt transition around the boss/flipper
+  stack; the f8381 slope-repel status byte now matches.
+
+Verification:
+- `git merge bugfix/ai-s2-trace-develop` fast-forwarded the worker from
+  `7c8612bc8` to `2c6018eda` and preserved the local fix cleanly.
+- `mvn clean "-Dtest=TestS2ObjectOccupancyOracle,TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 with `TestS2ObjectOccupancyOracle` passing 28/28 and CNZ2 advancing
+  to f8403 / 591.
+- `mvn clean "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0; the current S2 green guard, including MTZ2, remained green.
+- `mvn clean "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 with only expected reds. Non-target accepted frontiers/counts held:
+  ARZ2 f1028 / 2686, CPZ2 f5689 / 317, HTZ2 f4136 / 1024, MTZ1 f5713 / 560,
+  MTZ3 f7853 / 864, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117.

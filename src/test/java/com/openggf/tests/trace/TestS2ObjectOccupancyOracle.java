@@ -301,6 +301,38 @@ public class TestS2ObjectOccupancyOracle {
                         + "the next TailsCPU_Normal follow pass; " + pushCheck.summary());
     }
 
+    @Test
+    public void cnz2SlopeRepelClearsTailsStalePushAtRomFrame8381() throws Exception {
+        PushCheck pushCheck = driveTrace("cnz2", Sonic2ZoneConstants.ZONE_CNZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 8381) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    Assertions.assertNotNull(expected.sidekick(),
+                            "CNZ2 trace row f8381 must include Tails state");
+                    Assertions.assertEquals(0, expected.sidekick().statusByte() & 0x20,
+                            "ROM fixture should have cleared Tails Status_Push at CNZ2 f8381");
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have a CPU Tails sidekick at CNZ2 f8381");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    return new PushCheck(tails.getPushing(), tails.getCentreX(), tails.getCentreY(),
+                            String.format("tails=(x=%04X y=%04X angle=%02X gs=%04X air=%s onObj=%s moveLock=%d) slots %s",
+                                    tails.getCentreX() & 0xFFFF,
+                                    tails.getCentreY() & 0xFFFF,
+                                    tails.getAngle() & 0xFF,
+                                    tails.getGSpeed() & 0xFFFF,
+                                    tails.getAir(),
+                                    tails.isOnObject(),
+                                    tails.getMoveLockTimer(),
+                                    describeSlots(om.occupiedDynamicSlotIds(), 18, 25)));
+                });
+        Assertions.assertNotNull(pushCheck);
+        Assertions.assertFalse(pushCheck.pushing(),
+                "S2 Tails_SlopeRepel f8381 must expose the same-frame Animate_Tails "
+                        + "Status_Push clear before trace comparison; " + pushCheck.summary());
+    }
+
     private record SlotCheck(Integer actualId, String summary) {
     }
 
