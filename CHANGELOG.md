@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S1 SYZ boss block and spike visual parity:** Robotnik's pick-up blocks now render from the Spring Yard level tile palette line used by Obj76 in the ROM, and the retracting spike renders behind the Eggman ship in the engine's collapsed parent/child draw order.
 - **S3K LBZ1 Knuckles bomb/cup sequence parity:** the bomb screen shake now starts after the bomb-drop wait and remains active through the building collapse handoff until the collapse finishes, while the cup elevator keeps captured players locked in their riding state until Knuckles leaves and only releases them on a later jump press.
 - **S3K LBZ lowering grapple fresh-jump release:** LBZLoweringGrapple (Obj0x1F) now releases the grabbed player only on the logical A/B/C press edge, not a held jump bit carried into the grab, while still using held left/right input for the ROM directional launch velocity.
 - **S3K LBZ2 launch-pad detach window:** the post-results launch sequence now preserves the copied Death Egg platform window while Scroll A is cleared behind it, waits for the ROM detach copy/scroll to finish before starting final fall, and spawns the Death Egg miniature cluster relative to the explosion sequencer instead of fixed world coordinates.
