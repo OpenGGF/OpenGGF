@@ -6,6 +6,42 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 OOZ2 boss-arena Obj07 oil Y event write (f9291 -> f9302)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round5` /
+  `bugfix/ai-s2-ooz2-round5`, based on `bugfix/ai-s2-trace-next`
+  `e228013c5` after the CNZ2 Obj51 and OOZ2 r6 merges.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected nonzero; OOZ2 f9291 / 386
+  (`tails_y_speed` expected `0x0000`, actual `0x0878`).
+- Triage/evidence: ROM aux at f9291 had Tails standing on Obj07 oil at
+  slot `$0E` / `y=$02D8`, while the engine still used Obj07's default
+  `y=$0758` support plane and missed the landing. The OOZ2 approach event
+  writes `#$2D8` to `(Oil+y_pos).w` when `Camera_X_pos >= $2668`, alongside
+  the camera/Tails boundary changes (`docs/s2disasm/s2.asm:21343-21349`).
+  Obj07 then tracks each player by copying the player's X into the oil slot and
+  calling `PlatformObject_SingleCharacter`
+  (`docs/s2disasm/s2.asm:50157-50189`).
+- Fix: `OilSurfaceManager` now owns a mutable Obj07 `oilY`, resets it to the
+  ROM default on manager reset, and `Sonic2OOZEvents` mirrors the OOZ2 boss
+  approach event write by setting the oil surface to `$02D8`.
+- Result:
+  `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace`: f9291 / 386 errors
+  (`tails_y_speed` expected `0x0000`, actual `0x0878`) -> f9302 / 401 errors
+  (`tails_g_speed` expected `0x0000`, actual `0x00BC`).
+  The new owner is the immediate OOZ2 boss-contact / Tails hurt transition;
+  the oil support landing at f9291 now matches the ROM.
+- Verification:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  exited 1 with the improved f9302 / 401 OOZ2 frontier above.
+- Full S2 sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  exited 1 as expected-red; 19 tests ran, 13 stayed green, and six expected
+  reds remain. Non-target red frontiers/counts held: ARZ2 f1294 / 2396, CNZ2
+  f9487 / 288, HTZ2 f4442 / 1033, MTZ3 f7853 / 864, and OOZ1 f1803 / 1095.
+  OOZ2 is the only moved trace, now f9302 / 401.
+
 ## 2026-06-30 - S2 campaign combined sweep after CNZ2 + OOZ2 merges
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /

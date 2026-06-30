@@ -35,7 +35,7 @@ import java.util.Map;
 public class OilSurfaceManager {
 
     // Oil surface constants (ROM: Obj07_Init at s2.asm:49671-49677)
-    private final int oilY = Sonic2Constants.OIL_SURFACE_Y;
+    private int oilY = Sonic2Constants.OIL_SURFACE_Y;
     private final int submersionMax = Sonic2Constants.OIL_SUBMERSION_MAX;
 
     // Per-player oil state, keyed by sprite identity.
@@ -145,9 +145,18 @@ public class OilSurfaceManager {
      */
     public void reset() {
         playerStates.clear();
+        oilY = Sonic2Constants.OIL_SURFACE_Y;
         frameCounter = 0;
         frameAdvancedThisTick = false;
         registeredOilPlayers = 0;
+    }
+
+    /**
+     * Mirrors event-script writes to {@code (Oil+y_pos).w}, such as the OOZ2
+     * boss approach lowering the oil support plane to {@code $2D8}.
+     */
+    public void setOilSurfaceY(int oilY) {
+        this.oilY = oilY & 0xFFFF;
     }
 
     // =========================================================================

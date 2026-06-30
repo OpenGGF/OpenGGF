@@ -22,6 +22,7 @@ public class Sonic2OOZEvents extends Sonic2ZoneEvents {
     private static final int APPROACH_TRIGGER_X = 0x2668;
     private static final int ARENA_LOCK_X = 0x2880;
     private static final int ARENA_MAX_X = 0x28C0;
+    private static final int ARENA_OIL_Y = 0x02D8;
     private static final int ARENA_MAX_Y_TARGET = 0x01E0;
     private static final int ARENA_MIN_Y = 0x01D8;
     private static final int SPAWN_DELAY = 0x5A;
@@ -89,6 +90,9 @@ public class Sonic2OOZEvents extends Sonic2ZoneEvents {
             case 0 -> {
                 if (camera().getX() >= APPROACH_TRIGGER_X) {
                     camera().setMinX(camera().getX());
+                    // ROM LevEvents_OOZ2_Routine1 writes (Oil+y_pos).w = $2D8
+                    // when the boss approach starts (docs/s2disasm/s2.asm:21343-21349).
+                    oilManager.setOilSurfaceY(ARENA_OIL_Y);
                     camera().setMaxYTarget((short) ARENA_MAX_Y_TARGET);
                     setSidekickBounds((int) camera().getX(), null, ARENA_MAX_Y_TARGET);
                     eventRoutine += 2;
