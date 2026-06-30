@@ -61,6 +61,7 @@ class TestLbzLaunchRuntimeState {
     @Test
     void launchFieldsRoundTripThroughRewindBytes() {
         LbzZoneRuntimeState original = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_AND_TAILS);
+        original.setLbz1KnucklesCutsceneControlLocked(true);
         original.setLaunchActive(true);
         original.setDeathEggRumble(true);
         original.setFgLaunchSpeed(0x1E00);
@@ -88,6 +89,8 @@ class TestLbzLaunchRuntimeState {
         LbzZoneRuntimeState restored = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_AND_TAILS);
         restored.restoreBytes(original.captureBytes());
 
+        assertTrue(restored.isLbz1KnucklesCutsceneControlLocked(),
+                "LBZ1's _unkFAA9 cutscene input gate must rewind with the zone runtime state.");
         assertTrue(restored.isLaunchActive());
         assertTrue(restored.isDeathEggRumble());
         assertEquals(0x1E00, restored.getFgLaunchSpeed());

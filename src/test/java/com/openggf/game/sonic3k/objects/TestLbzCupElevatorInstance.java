@@ -2,20 +2,24 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.S3kSpriteDataLoader;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kPlcArtRegistry;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
+import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SubpixelMotion;
-import com.openggf.tests.RomTestUtils;
+import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.Sonic;
+import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -228,6 +232,41 @@ class TestLbzCupElevatorInstance {
     }
 
     @Test
+    void knucklesCutsceneGateBlocksCupJumpReleaseUntilExitClearsIt() throws Exception {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0, 0, false, 0));
+        LbzZoneRuntimeState runtimeState = new LbzZoneRuntimeState(0, PlayerCharacter.SONIC_ALONE);
+        runtimeState.setLbz1KnucklesCutsceneControlLocked(true);
+        ZoneRuntimeRegistry registry = new ZoneRuntimeRegistry();
+        registry.install(runtimeState);
+        elevator.setServices(new TestObjectServices().withZoneRuntimeRegistry(registry));
+        Sonic player = new Sonic("sonic", (short) 0x1800, (short) 0x0600);
+        Object p1State = getPrivateField(elevator, "p1");
+        setPlayerStateInside(p1State, true);
+        player.setJumpInputPressed(true, true);
+
+        elevator.update(0, player);
+
+        assertTrue((boolean) getPrivateField(p1State, "inside"),
+                "ROM LBZCupElevator_PlayerControl branches to hold while _unkFAA9 is set.");
+        assertTrue(player.isObjectControlled(),
+                "The cup must keep owning the player during the Knuckles cutscene gate.");
+        assertTrue(player.isObjectMappingFrameControl(),
+                "Pressed jump must not leak through as a normal jump animation while the cup owns mapping frames.");
+
+        runtimeState.setLbz1KnucklesCutsceneControlLocked(false);
+        player.setJumpInputPressed(true, true);
+
+        elevator.update(1, player);
+
+        assertFalse((boolean) getPrivateField(p1State, "inside"),
+                "After Knuckles clears _unkFAA9, the same jump press should release the player from the cup.");
+        assertFalse(player.isObjectControlled());
+        assertEquals(2, player.getAnimationId(),
+                "Allowed cup release uses the ROM jump animation, not the held twist frame.");
+    }
+
+    @Test
     void activeElevatorDoesNotRecaptureReleasedAirbornePlayer() {
         LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
                 0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0, 0, false, 0));
@@ -289,6 +328,12 @@ class TestLbzCupElevatorInstance {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.get(target);
+    }
+
+    private static void setPlayerStateInside(Object state, boolean inside) throws Exception {
+        Field field = state.getClass().getDeclaredField("inside");
+        field.setAccessible(true);
+        field.setBoolean(state, inside);
     }
 
     private static void invokeHoldPlayer(LbzCupElevatorInstance elevator, Sonic player) throws Exception {

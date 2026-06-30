@@ -55,6 +55,12 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             0, 0, -1, -1, -1, -1, -1, -1, 0, 0, 0, 1, 1, 1, 1, 1,
             1, 0, 0, 0, -1, -1, -1, -1, -1, -1, 0, 0, 0, 1, 1, 1
     };
+    private static final byte[] SCREEN_SHAKE_CONTINUOUS = {
+            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
+            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
+            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
+            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
+    };
 
     private static final DeformationPlan.ScrollValueTransform NEGATE_WORD = value -> negWord(value);
 
@@ -112,6 +118,9 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         LbzZoneRuntimeState runtimeState = currentRuntimeState();
         if (runtimeState != null) {
             screenShakeOffset = runtimeState.consumeScreenShakeOffset();
+            if (screenShakeOffset == 0 && runtimeState.isLbz1KnucklesBombShakeActive()) {
+                screenShakeOffset = SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F];
+            }
         }
 
         short fgScroll = negWord(cameraX);

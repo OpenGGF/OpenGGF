@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -103,6 +105,10 @@ public final class CutsceneKnucklesLbz1RangeHelper extends AbstractObjectInstanc
     }
 
     private void applyCapture(AbstractPlayableSprite player) {
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry()).orElse(null);
+        if (state != null) {
+            state.setLbz1KnucklesCutsceneControlLocked(true);
+        }
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         player.clearForcedInputMask();
