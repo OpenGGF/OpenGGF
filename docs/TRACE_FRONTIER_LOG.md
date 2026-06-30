@@ -6,6 +6,57 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CNZ2 ObjD5 held-input edge after inertia reset (f6809 -> f6814)
+
+- Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r4` /
+  `bugfix/ai-s2-cnz2-frontier-r4`, based on integration branch
+  `bugfix/ai-s2-trace-develop` at `da3fc20bf`.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: CNZ2 f6809 / 1059 (`g_speed` expected `0x000C`,
+  actual `0x0000`).
+- Triage/evidence: `TraceTriageTool` for `s2 cnz2` reported first mismatch
+  at f6809 under player physics. Expanded context showed both ROM and engine
+  accelerating right across f6804-f6807, both resetting `g_speed` to zero at
+  f6808 while keeping `x_speed=-00C4`, and then the ROM adding the held-right
+  `0x000C` acceleration at f6809 while the engine suppressed the still-held
+  input through the stale-riding-input window. The engine was dropping the
+  stale-horizontal edge whenever `currentRidingSolidForStaleHorizontalInput`
+  saw nonzero ground speed, so ObjD5's mid-ride inertia reset made the already
+  held right input look newly pressed and re-armed the initial suppression.
+- Disassembly cited: `PlatformObjectD5` only uses the existing-on-object
+  shortcut for riders already standing on the object and otherwise continues
+  through normal platform handling (`docs/s2disasm/s2.asm:35860-35874`);
+  ObjD5 calls `ObjectMove`, its state routine, and then `PlatformObjectD5` for
+  states below 6 (`docs/s2disasm/s2.asm:58905-58915`). Obj01 copies unlocked
+  raw input into `Ctrl_1_Logical`, dispatches movement, and `Sonic_MoveRight`
+  adds acceleration to inertia from the logical right bit
+  (`docs/s2disasm/s2.asm:36233-36243,36560-36567,36945-36962`).
+- Fix: `SolidObjectProvider` now exposes a default-off hook for preserving the
+  stale-horizontal edge while the player is moving on the same solid, and ObjD5
+  elevator instances opt in. The shared movement path only arms the stale
+  suppression on a fresh right edge while `g_speed == 0`, so ObjD5's f6808
+  inertia reset no longer turns a still-held input into a fresh press. A broad
+  version briefly regressed SCZ at f5140; narrowing the behavior behind the
+  object-provider hook restored SCZ. The change models ObjD5/platform-control
+  state and does not hydrate trace data or add tolerance, route, zone, frame,
+  or known-failing-trace logic.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CNZ2 advanced to f6814 / 998 (`x_speed`
+  expected `-00B8`, actual `-01B8`).
+- Focused regression/unit check:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2SczLevelSelectTraceReplay,TestElevatorObjectInstance" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestElevatorObjectInstance" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Red preservation set on current integration:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686, CPZ2 f5221 / 377,
+  HTZ2 f4012 / 1031, MTZ1 f5713 / 560, MTZ2 f6650 / 949,
+  MTZ3 f4575 / 932, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117.
+
 ## 2026-06-30 - S2 CNZ2 map-bumper visible window (f6561 -> f6809)
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r3` /

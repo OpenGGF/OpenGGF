@@ -277,6 +277,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			staleHorizontalInputPreviousHorizontal = horizontal;
 			return false;
 		}
+		if (sprite.getGSpeed() != 0
+				&& !provider.preservesStaleHorizontalInputEdgeWhileMoving(sprite)) {
+			staleHorizontalInputRideSlotIndex = -1;
+			staleHorizontalInputSuppressFrames = 0;
+			staleHorizontalInputRideFrames = 0;
+			staleHorizontalInputPreviousHorizontal = horizontal;
+			return false;
+		}
 		int ridingSlotIndex = slotIndexForStaleHorizontalInput(ridingObject);
 		if (ridingSlotIndex < 0 || ridingSlotIndex != staleHorizontalInputRideSlotIndex) {
 			staleHorizontalInputRideSlotIndex = ridingSlotIndex;
@@ -286,7 +294,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		staleHorizontalInputRideFrames++;
-		if (right
+		// Keep the held-horizontal edge latched while the rider remains on the
+		// same object. S2 ObjD5/PlatformObjectD5 can zero inertia mid-ride, but
+		// the next Obj01_Control still consumes the already-held Ctrl_1_Logical
+		// right bit through Sonic_MoveRight (docs/s2disasm/s2.asm:35860-35874,
+		// 36233-36243, 36560-36567, 36945-36962).
+		if (sprite.getGSpeed() == 0
+				&& right
 				&& !left
 				&& !staleHorizontalInputPreviousHorizontal) {
 			staleHorizontalInputSuppressFrames =
@@ -310,8 +324,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		var objectManager = manager != null ? manager.getObjectManager() : null;
 		if (objectManager == null
 				|| !objectManager.isRidingObject(sprite)
-				|| sprite.getAir()
-				|| sprite.getGSpeed() != 0) {
+				|| sprite.getAir()) {
 			return null;
 		}
 		return objectManager.getRidingObject(sprite);

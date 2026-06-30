@@ -534,6 +534,18 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether the stale-horizontal-input edge tracker should remain attached to
+     * this riding object while the player has nonzero ground speed.
+     * <p>
+     * Most providers keep the historic reset-while-moving behavior. Concrete
+     * ROM routines may opt in when a mid-ride inertia reset should not make a
+     * still-held horizontal input look newly pressed.
+     */
+    default boolean preservesStaleHorizontalInputEdgeWhileMoving(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether full-solid lower-half overlap should use the player's current
      * y-radius rather than the standing y-radius.
      * <p>
