@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -15,6 +16,10 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.ArrayList;
@@ -29,7 +34,7 @@ import java.util.List;
  * ({@code Screen_shake_flag}), and is flung off when the swing children
  * finish their six anchor crossings ({@code $38} bit 3).
  */
-public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance {
+public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int SUBTYPE_LBZ2 = 0x18;
     private static final int SUPPORT_PILLAR_DX = -0xC8;
     private static final int SUPPORT_PILLAR_DY = 0x14;
@@ -406,7 +411,7 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance {
      * crossing where the counter equals 3, and the sixth crossing flings
      * Knuckles ({@code $38} bit 3) and drops the chain into free fall.
      */
-    public static final class SwingChild extends AbstractObjectInstance {
+    public static final class SwingChild extends AbstractObjectInstance implements RewindRecreatable {
         /** ROM word_629FA: (initial x_vel, accel) per subtype. */
         private static final int[][] INITIAL_PARAMS = {
                 {0x100, 0x10},
@@ -422,9 +427,13 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance {
                 {0x080, 0x08}
         };
 
+        @RewindTransient(reason = "Structural parent link; restored by relinking to the live LBZ2 Knuckles cameo.")
         private final CutsceneKnucklesLbz2Instance parent;
+        @RewindTransient(reason = "Constructor-derived from child spawn subtype.")
         private final int subtype;
+        @RewindTransient(reason = "Constructor-derived from child spawn subtype.")
         private final int index;
+        @RewindTransient(reason = "Constructor-derived from parent position at child creation.")
         private final int anchorX;
         private int x;
         private int y;
@@ -456,6 +465,13 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance {
             this.yFixed = y << 16;
             this.accel = INITIAL_PARAMS[index][1];
             updateDynamicSpawn(x, y);
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            CutsceneKnucklesLbz2Instance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                    ctx, CutsceneKnucklesLbz2Instance.class);
+            return liveParent != null ? new SwingChild(liveParent, ctx.spawn().subtype()) : null;
         }
 
         @Override

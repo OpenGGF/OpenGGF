@@ -6,12 +6,17 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.SwingMotion;
@@ -31,7 +36,7 @@ import java.util.List;
  * ({@code Screen_shake_flag} + {@code Events_fg_5}), and finally throws the
  * player into the arena before spawning {@code Obj_LBZFinalBoss1}.
  */
-public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
+public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int OBJ_LBZ_FINAL_BOSS_1 = 0xCA;
     /** ROM sub_8D506: P1 centre = (ship.x - 4, ship.y - $12). */
     private static final int PLAYER_PIN_DX = -4;
@@ -445,13 +450,14 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
         return value & 0xFFFF;
     }
 
-    public static final class ExhaustFlameChild extends AbstractObjectInstance {
+    public static final class ExhaustFlameChild extends AbstractObjectInstance implements RewindRecreatable {
         private static final int OBJ_LBZ2_ROBOTNIK_SHIP = 0xC6;
         private static final int X_OFFSET = -0x1E;
         private static final int Y_OFFSET = 0;
         private static final int FLAME_FRAME = 6;
         private static final int PRIORITY_BUCKET = 5;
 
+        @RewindTransient(reason = "Structural parent link; flame position derives from the live ship.")
         private final Lbz2RobotnikShipInstance parent;
         private boolean visibleThisFrame;
 
@@ -461,6 +467,13 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
                     "LBZ2RobotnikShipExhaustFlame");
             this.parent = parent;
             updateDynamicSpawn(getCentreX(), getCentreY());
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            Lbz2RobotnikShipInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                    ctx, Lbz2RobotnikShipInstance.class);
+            return liveParent != null ? new ExhaustFlameChild(liveParent) : null;
         }
 
         @Override

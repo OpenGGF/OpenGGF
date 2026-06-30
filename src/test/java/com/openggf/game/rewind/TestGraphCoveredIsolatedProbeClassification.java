@@ -64,6 +64,18 @@ class TestGraphCoveredIsolatedProbeClassification {
             "com.openggf.game.sonic3k.objects.TestAizDisappearingFloorGraphRewind";
     private static final String LBZ1_CUTSCENE_GRAPH_TEST =
             "com.openggf.game.sonic3k.objects.TestS3kLbz1CutsceneGraphRewind";
+    private static final String LBZ2_RIDE_CAMEO_TEST =
+            "com.openggf.game.sonic3k.objects.TestLbz2RideCameoInstances";
+    private static final String LBZ_GATE_LASER_TEST =
+            "com.openggf.game.sonic3k.objects.TestLbzGateLaserObjectInstance";
+    private static final String LBZ_PIPE_PLUG_TEST =
+            "com.openggf.game.sonic3k.objects.TestLbzPipePlugObjectInstance";
+    private static final String AUTOMATIC_TUNNEL_TEST =
+            "com.openggf.game.sonic3k.objects.TestAutomaticTunnelObjectInstance";
+    private static final String LBZ_END_BOSS_TEST =
+            "com.openggf.game.sonic3k.objects.TestLbzEndBossInstance";
+    private static final String LBZ_FINAL_BOSS_1_TEST =
+            "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance";
     private static final String HCZ_MINIBOSS_ROCKET_TOUCH_GRAPH_TEST =
             "com.openggf.game.sonic3k.objects.TestHczMinibossRocketTouchRewind";
     private static final String ICZ_BIG_SNOW_PILE_GRAPH_TEST =
@@ -522,6 +534,85 @@ class TestGraphCoveredIsolatedProbeClassification {
                         "TestS3kMgzPulleyGraphRewind"),
                 Map.entry("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot",
                         "TestS3kMonitorGraphRewind"));
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void lbz2EndSequenceRowsAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.ofEntries(
+                Map.entry("com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance",
+                        LBZ2_RIDE_CAMEO_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance$SwingChild",
+                        LBZ2_RIDE_CAMEO_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance$ExhaustFlameChild",
+                        LBZ2_RIDE_CAMEO_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.LbzGateLaserBeamInstance",
+                        LBZ_GATE_LASER_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.LbzPipePlugShardInstance",
+                        LBZ_PIPE_PLUG_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.TunnelExhaustControlObjectInstance",
+                        AUTOMATIC_TUNNEL_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance",
+                        LBZ_END_BOSS_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossCockpitChild",
+                        LBZ_END_BOSS_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossDebrisChild",
+                        LBZ_END_BOSS_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossExplosionControllerChild",
+                        LBZ_END_BOSS_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossGradualMaxXExtenderChild",
+                        LBZ_END_BOSS_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossPlatformChild",
+                        LBZ_END_BOSS_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossRunnerChild",
+                        LBZ_END_BOSS_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossSmokePuffChild",
+                        LBZ_END_BOSS_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossSpikeBallChild",
+                        LBZ_END_BOSS_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossTowerChild",
+                        LBZ_END_BOSS_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance$LbzEndBossTubeSegmentChild",
+                        LBZ_END_BOSS_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$DeathEggExplosionDebrisChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$DeathEggMiniatureChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$DeathEggSmokeChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$DeathEggSmokePuffChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$DebrisChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$EngineFlameChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$ExplosionSequencerChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$ExplosionShowerChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$GunPodChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$HitSparkChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$LaserHeadChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$LaserTrailChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$MuzzleLaserChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$OrbitingPodChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$P2EndingPoseWatcherChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$RobotnikHeadChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$TailsCpuReleaseChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$TopAttachmentChild",
+                        LBZ_FINAL_BOSS_1_TEST),
+                Map.entry("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$TurretSegmentChild",
+                        LBZ_FINAL_BOSS_1_TEST));
 
         expected.forEach(this::assertGraphCovered);
     }

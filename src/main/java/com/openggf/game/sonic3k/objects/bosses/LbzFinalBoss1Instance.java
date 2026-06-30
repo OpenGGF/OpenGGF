@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kLevel;
@@ -24,6 +25,9 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -57,7 +61,7 @@ import java.util.logging.Logger;
  * the results tally, auto-walk, look-up, and the MHZ transition.
  */
 public final class LbzFinalBoss1Instance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(LbzFinalBoss1Instance.class.getName());
 
     private static final String PALETTE_OWNER = "s3k.lbz.finalBoss1";
@@ -1115,10 +1119,12 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
      * Common boss child: tracks the boss at (dx, dy), renders one
      * Map_LBZFinalBoss1 frame, and deletes itself when the boss is defeated.
      */
-    public abstract static class BossChild extends AbstractObjectInstance {
+    public abstract static class BossChild extends AbstractObjectInstance implements RewindRecreatable {
+        @RewindTransient(reason = "Structural parent link; child graph is owned by the final boss reconstruction path.")
         protected final LbzFinalBoss1Instance boss;
         protected int x;
         protected int y;
+        @RewindTransient(reason = "Constructor-derived parent-relative x offset.")
         protected final int dx;
         protected int dy;
         protected int mappingFrame;
@@ -1134,6 +1140,11 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             this.dx = dx;
             this.dy = dy;
             refreshFromBoss();
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return null;
         }
 
         protected void refreshFromBoss() {
@@ -1268,6 +1279,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 {0x200, -0x100}, {-0x300, -0x300}, {0x300, -0x300}
         };
 
+        @RewindTransient(reason = "Constructor-derived segment tag; initial boss child graph recreates it.")
         private final int tag;
         private boolean detached;
         private boolean wasFlashing;
@@ -1363,6 +1375,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         /** byte_734CE has 11 pairs; the parked step (frame $2D) reuses the last. */
         private static final int[] X_OFFSETS = {0x27, 0x24, 0x24, 0x14, 0x0C, 0, -0x0C, -0x14, -0x24, -0x24, -0x27, -0x27};
 
+        @RewindTransient(reason = "Structural sibling link; laser heads are recreated with their segment.")
         private final TurretSegmentChild segment;
         private int step;
         private int stepTimer;
@@ -1445,7 +1458,9 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         /** byte_73849: charge anim frames at delay 0. */
         private static final int[] CHARGE_FRAMES = {0x17, 0x17, 0x18, 0x19, 0x1A, 0x1B};
 
+        @RewindTransient(reason = "Structural sibling link; muzzle state derives from the firing head.")
         private final LaserHeadChild head;
+        @RewindTransient(reason = "Constructor-derived fire direction.")
         private final boolean fireFlip;
         private int countdownTimer;
         private int countdownStep = 8;
@@ -1679,6 +1694,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
                 TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
+        @RewindTransient(reason = "Structural sibling link; gun pods are recreated with their segment.")
         private final TurretSegmentChild segment;
         private int animIndex;
         private int animTimer = 2;
@@ -1865,7 +1881,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
     }
 
-    private abstract static class LaunchForegroundChild extends AbstractObjectInstance {
+    private abstract static class LaunchForegroundChild extends AbstractObjectInstance implements RewindRecreatable {
+        @RewindTransient(reason = "Structural parent link; launch foreground graph is owned by the final boss.")
         protected final LbzFinalBoss1Instance boss;
         protected int x;
         protected int y;
@@ -1883,6 +1900,11 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             this.boss = boss;
             this.x = x & 0xFFFF;
             this.y = y & 0xFFFF;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return null;
         }
 
         @Override
@@ -1955,6 +1977,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         private int phase;
         private int timer = 0x41;
         private int emitTimer;
+        @RewindTransient(reason = "Constructor-derived flame subtype.")
         private final int subtype;
 
         private EngineFlameChild(LbzFinalBoss1Instance boss, int subtype) {
@@ -2078,6 +2101,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 {0, 0}, {1, 0}, {1, 0}, {2, 0}, {2, 1}, {2, 2}, {2, 3}
         };
         private static final int[] Y_VELS = {0x40, 0x38, 0x3C, 0x40, 0x44, 0x48, 0x4C};
+        @RewindTransient(reason = "Constructor-derived miniature index.")
         private final int index;
 
         private DeathEggMiniatureChild(LbzFinalBoss1Instance boss, int baseX, int baseY, int index) {

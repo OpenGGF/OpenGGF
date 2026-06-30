@@ -5,7 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnDefaultArgsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -17,7 +17,8 @@ import java.util.List;
  * <p>ROM reference: {@code loc_275B2} and the falling children allocated by
  * {@code PipePlugSmashObject} ({@code sonic3k.asm:53684-53779}).
  */
-final class LbzPipePlugShardInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+final class LbzPipePlugShardInstance extends AbstractObjectInstance
+        implements SpawnDefaultArgsRewindRecreatable {
     private static final int FALL_GRAVITY = 0x18;
     private static final int PRIORITY_BUCKET = 4;
     private static final int ON_SCREEN_HALF_SIZE = 0x20;

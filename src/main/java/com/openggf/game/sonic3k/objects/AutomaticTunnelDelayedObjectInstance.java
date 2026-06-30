@@ -5,7 +5,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 
 import java.util.List;
 
@@ -18,7 +18,7 @@ import java.util.List;
  * {@code Obj_AutomaticTunnel}.
  */
 final class AutomaticTunnelDelayedObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnTrailingZeroIntsRewindRecreatable {
     private int subtype;
     private int delayTimer;
     private boolean delayElapsed;
