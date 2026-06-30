@@ -2910,6 +2910,44 @@ lifetime: `TestS2Cpz2LevelSelectTraceReplay` advances f5689 -> f7035.
 
 ---
 
+## P71 -- Render-flag checks must use BuildSprites bounds, not solid-contact bounds
+
+**Pattern.** Some object routines wait for or branch on `render_flags.on_screen`
+even when they are not solid objects. That flag is produced by `BuildSprites`,
+not by `SolidObject`, and its vertical bounds depend on whether
+`render_flags.explicit_height` is set.
+
+**Engine symptom.** A badnik or hazard spawns in the correct slot and position,
+but its state machine starts chasing, firing, deleting, or playing SFX dozens of
+frames early/late. In OOZ2, Aquis Obj50 stayed in `WAIT_FOR_SCREEN` 37 frames
+too long because the engine used a 16px solid-contact render box; the ROM
+approximate-Y path had already set `render_flags.on_screen`, so the later
+badnik bounce missed Sonic.
+
+**What to check / fix.**
+1. When a routine tests `btst #render_flags.on_screen,render_flags(a0)`, read
+   the object's init code for `width_pixels`, `y_radius`, and
+   `render_flags.explicit_height`.
+2. If `explicit_height` is clear, model S2 `BuildSprites_ApproxYCheck`: X uses
+   `width_pixels(a0)`, while Y uses the assumed 32px band.
+3. If `explicit_height` is set, use the object's `y_radius(a0)` / custom render
+   half-height.
+4. Do not reuse `isWithinSolidContactBounds()` unless the ROM routine is
+   actually consuming the solid-contact gate. The solid-contact half-height may
+   be narrower than the render flag used by object AI.
+
+**ROM citation.** Aquis Obj50 tests the flag in `Obj50_CheckIfOnScreen`
+(`docs/s2disasm/s2.asm:60662-60671`). Obj50 init sets `width_pixels=$10` and
+does not set `render_flags.explicit_height`
+(`docs/s2disasm/s2.asm:60567-60574`). S2 `BuildSprites` uses `width_pixels` for
+X and the approximate 32px Y band when `explicit_height` is clear
+(`docs/s2disasm/s2.asm:30566-30611`).
+
+**Originating commit.** `<pending>` S2 OOZ2 Aquis render-flag gate:
+`TestS2Ooz2LevelSelectTraceReplay` advances f5737 -> f5762.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

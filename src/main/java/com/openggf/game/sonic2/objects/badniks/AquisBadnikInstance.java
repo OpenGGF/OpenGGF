@@ -113,20 +113,14 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void updateWaitForScreen() {
-        // ROM Obj50_CheckIfOnScreen (s2.asm:60600-60611) tests
-        // render_flags.on_screen and advances routine_secondary to Obj50_Chase
-        // the instant that bit is set. render_flags.on_screen is set by
-        // Render_Sprites (the BuildSprites pass) when the object's rendered
-        // bounding box overlaps the camera viewport; it is NOT contingent on
-        // draw commands being emitted by any particular caller. Model it with
-        // the shared frame-driven camera-bounds overlap test
-        // (isWithinSolidContactBounds == cameraBounds.containsRenderSpriteBounds,
-        // see AbstractObjectInstance.java:580-600), which already carries the
-        // ROM's one-frame "set last frame, tested this frame" lag because the
-        // cached camera bounds reflect the prior frame's Render_Sprites pass.
-        // The previous draw-command-driven flag never fired under headless
-        // trace replay, so the Aquis stayed frozen at spawn and never chased.
-        if (isWithinSolidContactBounds()) {
+        // ROM Obj50_CheckIfOnScreen (docs/s2disasm/s2.asm:60662-60671)
+        // observes render_flags.on_screen from BuildSprites. Obj50_Init sets
+        // width_pixels=$10 and does not set explicit_height (s2.asm:60567-60574),
+        // so S2 BuildSprites takes its approximate-Y path: X uses width_pixels
+        // and Y uses the assumed 32px band (s2.asm:30566-30611). The solid
+        // contact gate uses the object's 16px half-height and keeps this Aquis
+        // waiting 37 frames too long in the OOZ2 route.
+        if (isWithinRenderSpriteBounds(WIDTH_PIXELS, 32)) {
             // ROM Obj50_CheckIfOnScreen (s2.asm:60607-60614) only advances
             // routine_secondary to Obj50_Chase; it does NOT initialise
             // Obj50_timer. The SST timer byte is therefore still 0 from the

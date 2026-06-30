@@ -6,6 +6,67 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 OOZ2 Aquis Obj50 render-flag gate (f5737 -> f5762)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round2` /
+  `bugfix/ai-s2-ooz2-round2`, based on `bugfix/ai-s2-trace-develop`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected nonzero; OOZ2 f5737 / 730 (`y_speed`
+  expected `0x0080`, actual `-0080`). The ROM kills the Aquis body near
+  `$2389,$0348`; the engine Aquis was near `$23AF,$0323`.
+- BizHawk PC-execute diagnostic: untracked local probe
+  `tools/bizhawk/diag_s2_ooz2_obj48_obj50_slot31.lua`, run with
+  `Start-Process -Wait -WindowStyle Hidden` against
+  `src/test/resources/traces/s2/ooz2/s2-lvl-select-OOZ.bk2`. The trace movie
+  has `bk2_frame_offset=13967`, so trace f5737 corresponds to BizHawk f19704.
+  The probe dumped slot 31 `objoff_3C`, `routine_secondary`, x/y, velocity, and
+  the `subq.b #1,Obj50_timer; bmi` follow branch around the requested
+  f5668-f5737 window, plus a wider Obj48 deletion window.
+- ROM slot/timer evidence: slot 31 is Obj48 at f19300, clears at f19472, then
+  Obj50 appears at f19503 at `$23A0,$0328` with `objoff_3C=00`. Obj50 init
+  sets `x_vel=-$100`, shots=3, and does not initialize the timer. At f19607
+  `Obj50_CheckIfOnScreen` advances `routine_secondary` after the
+  `render_flags.on_screen` bit appears; at f19608 the first
+  `Obj50_FollowPlayer` pass underflows the zero timer into
+  `Obj50_DoneFollowing` and seeds `$20`; at f19641
+  `Obj50_WaitForNextShot` expires and starts the post-shot chase with
+  `Obj50_timer=$80` and `y_vel=-$100`; at f19704 the body reaches
+  `$2389,$0348` and is killed by Sonic.
+- Engine isolation: a temporary opt-in `OGGF_AQUIS_DIAG_OUT` logger showed the
+  engine placed the Aquis at the same object coordinate, but left
+  `WAIT_FOR_SCREEN` 37 frames after the ROM. The post-shot chase therefore
+  also started 37 frames late, producing the old f5737 miss at `$23AF,$0323`.
+  The late gate came from using `isWithinSolidContactBounds()`, whose 16px
+  half-height is narrower than the ROM render flag producer.
+- Disassembly cited: Obj50 init sets `width_pixels=$10` and does not set
+  `render_flags.explicit_height` (`docs/s2disasm/s2.asm:60567-60574`).
+  `Obj50_CheckIfOnScreen` only checks `render_flags.on_screen` and increments
+  `routine_secondary` (`docs/s2disasm/s2.asm:60662-60671`). S2 `BuildSprites`
+  uses `width_pixels` for X and the approximate 32px Y band when
+  `explicit_height` is clear (`docs/s2disasm/s2.asm:30566-30611`).
+- Fix: `AquisBadnikInstance.updateWaitForScreen()` now uses
+  `isWithinRenderSpriteBounds(WIDTH_PIXELS, 32)` for the Obj50 render-flag
+  gate. Timer initialization, slot reuse, movement, touch handling, trace
+  fixtures, and comparison logic are unchanged; this models ROM object state
+  rather than branching on route, frame, zone id, or a known failing trace.
+- Focused target after the fix:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; OOZ2 advances to f5762 / 628 (`x_speed`
+  expected `0x0046`, actual `0x0052`). The new first error occurs after the
+  Aquis destruction is aligned and appears to be the downstream grounded
+  speed/inertia frontier.
+- Full S2 trace replay sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; 19 tests run, 13 green, 6 expected red. Current
+  red set: ARZ2 f1028 / 2686 (`obj_extra_s16_x` expected absent, actual
+  `0x0B7B`), CNZ2 f9183 / 441 (`tails_x_speed` expected `0x0000`, actual
+  `0x0200`), HTZ2 f4387 / 1049 (`tails_cpu_respawn_counter` expected
+  `0x0000`, actual `0x002B`), MTZ3 f7853 / 864 (`tails_cpu_interact`
+  expected `0x0065`, actual `0x0070`), OOZ1 f1803 / 1067 (`tails_x` expected
+  `0x0CE3`, actual `0x0CE4`), and OOZ2 f5762 / 628 (`x_speed` expected
+  `0x0046`, actual `0x0052`).
+
 ## 2026-06-30 - S2 CPZ2 Obj5D defeat/retreat camera release (f10907 -> green)
 
 - Worktree/branch: `.worktrees/ai-s2-event-physics-round1` /
