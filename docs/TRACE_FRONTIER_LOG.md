@@ -12,7 +12,8 @@ branch-local measurements.
   `bugfix/ai-s2-trace-next`, after merging
   `bugfix/ai-s2-ooz1-f1803-round8` and
   `bugfix/ai-s2-mtz3-f7853-round8`, then the HTZ2 latched-push bridge
-  from `bugfix/ai-s2-htz2-round6`.
+  from `bugfix/ai-s2-htz2-round6`, then the OOZ2 stale-roll contact fix from
+  `bugfix/ai-s2-ooz2-round6`.
 - Sweep command:
   `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
 - Result: expected nonzero; 19 S2 traces run, 13 green, 6 expected-red.
@@ -22,7 +23,7 @@ branch-local measurements.
   - HTZ2 f5011 / 690 (`tails_cpu_ctrl2_held` expected `0x0000`, actual `0x0010`).
   - MTZ3 f9035 / 863 (`x` expected `0x1BDD`, actual `0x1BD9`).
   - OOZ1 f1813 / 1062 (`tails_x` expected `0x0CE4`, actual `0x0CE3`).
-  - OOZ2 f9302 / 401 (`tails_g_speed` expected `0x0000`, actual `0x00BC`).
+  - OOZ2 f9307 / 444 (`x_speed` expected `0x0150`, actual `-0150`).
 
 ## 2026-06-30 - S2 OOZ1 Obj36 late-edge CPU push grace (f1803 -> f1813)
 
@@ -151,6 +152,49 @@ branch-local measurements.
     exited 1 at the existing AIZ expected-red frontiers: complete-run f1095 /
     4319 (`x_speed` expected `0x0000`, actual `0x000C`) and AIZ f8941 /
     1160 (`camera_y` expected `0x02C1`, actual `0x02B9`).
+## 2026-06-30 - S2 OOZ2 stale roll-animation boss contact (f9302 -> f9307)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round6` /
+  `bugfix/ai-s2-ooz2-round6`, based on `bugfix/ai-s2-trace-next`
+  `6468c4665`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Ooz2LevelSelectTraceReplay" test`.
+  Result before the fix: expected nonzero; OOZ2 f9302 / 401
+  (`tails_g_speed` expected `0x0000`, actual `0x00BC`).
+- Triage/evidence: at the first mismatch ROM Tails had entered the hurt
+  transition from Obj55 contact (`routine=$04`, in-air, `x_vel=$0200`,
+  `y_vel=-$0400`, `inertia=$0000`), while the engine kept CPU Tails standing
+  on the oil support and treated the boss overlap as an attack because the
+  animation byte was still roll (`$02`). The ROM `Touch_Enemy` / `Touch_Boss`
+  path tests invincibility, spindash animation, roll animation, and then
+  branches to `Hurt_Sidekick`; `Hurt_Sidekick` writes routine 4, resets floor
+  state, sets in-air, writes hurt velocities, clears inertia, and starts
+  invulnerability (`docs/s2disasm/s2.asm:85048-85140,85367-85389`). In this
+  trace state the ROM rolling status bit is clear, so the engine's stale roll
+  animation byte was not a valid ROM attack state.
+- Fix: shared touch response now treats `ANIM_SPINDASH` as an attack as before,
+  but requires the ROM rolling status bit for `ANIM_ROLL` to count as a
+  roll/jump attack. This models player status rather than branching on OOZ2,
+  route, fixture, frame, or object slot, and does not edit trace data or
+  hydrate engine state from traces.
+- Result:
+  `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace`: f9302 / 401 errors
+  (`tails_g_speed` expected `0x0000`, actual `0x00BC`) -> f9307 / 444 errors
+  (`x_speed` expected `0x0150`, actual `-0150`). The new owner appears to be a
+  later Obj55 boss body contact/position mismatch around the Sonic bounce path.
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 'C:\Users\farre\IdeaProjects\sonic-engine\s2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn -q "-Dmse=off" "-Dtest=TestTouchResponseManager,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=$env:SONIC_2_ROM_PATH" "-Dsonic2.rom.path=$env:SONIC_2_ROM_PATH" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+    exited 1 as expected-red; `TestTouchResponseManager` passed 49 / 49 tests
+    and OOZ2 advanced to f9307 / 444.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 'C:\Users\farre\IdeaProjects\sonic-engine\s2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn -q "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=$env:SONIC_2_ROM_PATH" "-Dsonic2.rom.path=$env:SONIC_2_ROM_PATH" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; 19 S2 traces ran, 13 stayed green, and six
+    expected reds remain: ARZ2 f1294 / 2396, CNZ2 f9487 / 288, HTZ2 f5002 /
+    690, MTZ3 f7853 / 864, OOZ1 f1803 / 1095, OOZ2 f9307 / 444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 'C:\Users\farre\IdeaProjects\sonic-engine\s1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn -q "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS1*TraceReplay" "-Ds1.rom.path=$env:SONIC_1_ROM_PATH" "-Dsonic1.rom.path=$env:SONIC_1_ROM_PATH" "-DfailIfNoTests=false" test`
+    exited 0; full S1 trace sweep passed.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 'C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen').Path; $env:SONIC3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn -q "-Dmse=off" "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    exited 0; focused S3K AIZ/bootstrap guards passed with existing S3K
+    collision-index and config-save warnings.
 
 ## 2026-06-30 - S2 HTZ2 Obj30 side-gated input bridge + airborne push retention (f4442 -> f5002)
 

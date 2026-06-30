@@ -411,6 +411,33 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void sidekickStaleRollAnimationWithoutRollingStatusDoesNotAttackBoss() {
+        when(player.getCentreX()).thenReturn((short) 500);
+
+        AbstractPlayableSprite sidekick = mock(AbstractPlayableSprite.class);
+        when(sidekick.getCentreX()).thenReturn((short) 160);
+        when(sidekick.getCentreY()).thenReturn((short) 112);
+        when(sidekick.getYRadius()).thenReturn((short) 20);
+        when(sidekick.getCrouching()).thenReturn(false);
+        when(sidekick.getDead()).thenReturn(false);
+        when(sidekick.getInvulnerable()).thenReturn(false);
+        when(sidekick.getInvincibleFrames()).thenReturn(0);
+        when(sidekick.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_2);
+        when(sidekick.getRolling()).thenReturn(false);
+        when(sidekick.getAnimationId()).thenReturn(ObjectManager.ANIM_ROLL);
+
+        MockAttackableEnemy boss = new MockAttackableEnemy(160, 112, 0xC8);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(boss);
+
+        objectManager.update(0, player, List.of(sidekick), 1);
+
+        assertFalse(boss.wasAttacked,
+                "A stale roll animation byte must not make a non-rolling sidekick attack a boss");
+        verify(sidekick).applyHurt(anyInt());
+    }
+
+    @Test
     public void testSidekickTouchResponseStopsAfterFirstOverlappingObject() {
         when(player.getCentreX()).thenReturn((short) 500);
 
@@ -835,6 +862,7 @@ public class TestTouchResponseManager {
         when(player.getCentreY()).thenReturn((short) 112);
         when(player.getYRadius()).thenReturn((short) 20);
         when(player.getAnimationId()).thenReturn(ObjectManager.ANIM_ROLL);
+        when(player.getRolling()).thenReturn(true);
 
         MockSnapshotAttackableEnemy enemy = new MockSnapshotAttackableEnemy(190, 112, 0x02);
         setupTableSize(2, 0x0C, 0x14);
@@ -1409,4 +1437,3 @@ public class TestTouchResponseManager {
         }
     }
 }
-

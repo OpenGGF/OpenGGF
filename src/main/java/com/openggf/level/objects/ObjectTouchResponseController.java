@@ -991,7 +991,16 @@ final class ObjectTouchResponseController {
 
     private boolean isSpinAttackAnimation(PlayableEntity player) {
         int animation = player.getAnimationId();
-        return animation == ObjectManager.ANIM_ROLL || animation == ObjectManager.ANIM_SPINDASH;
+        if (animation == ObjectManager.ANIM_SPINDASH) {
+            return true;
+        }
+        if (animation != ObjectManager.ANIM_ROLL) {
+            return false;
+        }
+        // ROM writes anim=Roll together with the rolling status for real roll/jump
+        // attacks. Guarding on the status bit prevents stale engine roll anim bytes
+        // from turning a standing CPU sidekick into an attacker for one touch pass.
+        return player.getRolling();
     }
 
     private boolean isS3kAbilityAttack(PlayableEntity player, ObjectInstance target) {
