@@ -309,15 +309,26 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
         if (om == null) {
             return isPlayerRiding();
         }
-        if (player != null && om.hasObjectStandingBit(player, this)) {
+        if (player != null && isRomVisibleStandingLatch(om, player)) {
             return true;
         }
         for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick != null && om.hasObjectStandingBit(sidekick, this)) {
+            if (sidekick != null && isRomVisibleStandingLatch(om, sidekick)) {
                 return true;
             }
         }
         return false;
+    }
+
+    private boolean isRomVisibleStandingLatch(ObjectManager om, PlayableEntity player) {
+        if (!om.hasObjectStandingBit(player, this)) {
+            return false;
+        }
+        // Obj18 reads status(a0)&standing_mask before PlatformObject, but
+        // PlatformObject keeps that bit paired with either an active on-object
+        // state or the one-frame airborne stale-rider clear path
+        // (docs/s2disasm/s2.asm:23219-23242, 35742-35755, 35990-36029).
+        return player.isOnObject() || player.getAir();
     }
 
     private void handleFallTrigger(boolean standing) {
