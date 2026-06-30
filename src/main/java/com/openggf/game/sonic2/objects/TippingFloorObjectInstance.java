@@ -23,7 +23,7 @@ import java.util.List;
  * <b>Subtype format:</b>
  * <ul>
  *   <li>Bits 0-3: Delay multiplier -> {@code (value + 1) * 16} frames initial delay</li>
- *   <li>Bits 4-7: Duration -> {@code value + 0x10} frames between animation direction toggles</li>
+ *   <li>Bits 4-7: Duration -> {@code (value & 0xF0) + 0x10} frames between animation direction toggles</li>
  * </ul>
  * <p>
  * <b>Disassembly Reference:</b> s2.asm lines 45379-45485 (Obj0B code)
@@ -60,8 +60,8 @@ public class TippingFloorObjectInstance extends AbstractObjectInstance
         int delayMultiplier = (spawn.subtype() & 0x0F) + 1;
         this.delay = delayMultiplier * 16;
 
-        // ROM: d0 = (subtype >> 4) + 0x10, then subq.w #1,d0
-        int durationValue = ((spawn.subtype() >> 4) & 0x0F) + 0x10;
+        // ROM masks the high nibble in place before adding 0x10, then subq.w #1,d0.
+        int durationValue = (spawn.subtype() & 0xF0) + 0x10;
         this.durationInitial = durationValue - 1;  // ROM subtracts 1 before storing
         this.durationCurrent = durationValue - 1;
     }

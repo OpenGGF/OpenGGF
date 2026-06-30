@@ -6,6 +6,51 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CPZ2 Obj0B high-nibble duration (f9745 -> f9781)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r11` /
+  `bugfix/ai-s2-cpz2-frontier-r11`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at accepted HEAD `3daed8e4b`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: CPZ2 f9745 / 201 (`tails_y` expected `0x04F0`,
+  actual `0x04EF`).
+- Triage/evidence: at f9745 ROM has Tails released from the tipped Obj0B floor
+  (`Status_InAir`, no `Status_OnObj`) while the engine still has the previous
+  one-pixel support outcome. The Obj0B timing setup in the engine shifted the
+  subtype high nibble down before adding `$10`; the ROM keeps the high nibble in
+  place, making high-nibble subtypes wait much longer before toggling animation
+  direction. Matching that duration shifts the tipping-floor phase to the ROM
+  release window and moves the trace to the next water-status mismatch.
+- Disassembly cited: `Obj0B_Init` masks `subtype(a0)` with `$F0`, adds `$10`,
+  subtracts one, and writes both `obj0B_duration_current` and
+  `obj0B_duration_initial` (`docs/s2disasm/s2.asm:45883-45889`). The same init
+  then derives the low-nibble delay with `andi.w #$F`, `addq.w #1`, and
+  `lsl.w #4` (`docs/s2disasm/s2.asm:45890-45895`). Later Obj0B calls
+  `PlatformObject` only while `mapping_frame == 0`, otherwise it clears standing
+  riders and sets `Status_InAir` (`docs/s2disasm/s2.asm:45917-45939`).
+- Fix: `TippingFloorObjectInstance` now initializes the duration as
+  `(subtype & 0xF0) + 0x10`, preserving the ROM high-nibble scale. This models
+  Obj0B's ROM subtype timing; it does not edit trace data, add tolerance,
+  hydrate/sync from trace data, or add route, frame, zone, game-id, or
+  known-failing carve-outs.
+- Focused target:
+  `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CPZ2 advances to f9781 / 123
+  (`tails_status_byte` expected `0x0042`, actual `0x0002`).
+- Current S2 green guard:
+  `mvn clean test "-Dtest=TestS2CpzLevelSelectTraceReplay#replayMatchesTrace,!TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false"`
+  exits 0 for CPZ1. Then
+  `mvn test "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false"`
+  exits 0. The split avoids Surefire's `Cpz` selector also matching the target
+  `Cpz2` class.
+- Red preservation set:
+  `mvn clean test "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dmaven.test.failure.ignore=true"`
+  exits 0 with expected red failures ignored and preserves ARZ2 f1028 / 2686,
+  CNZ2 f8870 / 447, HTZ2 f4138 / 1136, MTZ1 f5713 / 560, MTZ3 f7853 / 864,
+  OOZ1 f1794 / 905, and OOZ2 f3919 / 1117. CPZ2 is the only moved red
+  frontier in the set, now f9781 / 123.
+
 ## 2026-06-30 - S2 HTZ2 Obj18 walk-off standing-bit clear (f4136 -> f4138)
 
 - Worktree/branch: `.worktrees/ai-s2-htz2-frontier-r6` /
