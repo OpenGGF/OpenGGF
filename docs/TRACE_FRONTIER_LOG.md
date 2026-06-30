@@ -6,6 +6,62 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CPZ2 Obj5D invented hit latch removed (f10286 -> f10601)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz2-trace-worker` /
+  `bugfix/ai-s2-cpz2-trace-worker`, created from integration branch
+  `bugfix/ai-s2-trace-develop`, rebased to conductor integration `6b82175cc`
+  before worker verification, then merged by the conductor after OOZ2 r4 and
+  the latest `origin/develop` merge at `7171992ee`.
+- Baseline reproduction on the updated worker base:
+  `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: CPZ2 f10286 / 91 (`y_speed` expected `-02B0`,
+  actual `0x02B0`).
+- Triage/evidence: at f10286 the player position, subpixels, and prior
+  physics state matched the ROM; the divergence was another boss-hit velocity
+  sign flip. Object diagnostics showed the engine CPZ boss body had already
+  returned to roughly `$2A52,$04BF`, while the ROM's nearest Obj5D main/body
+  was still around `$2A91,$04BF`. A throwaway probe showed the engine created
+  the nearby routine `$0C` Mega Mack gunk and requested the main vehicle return
+  earlier than the ROM because `onHitTaken()` set Obj5D status bit 1. The ROM
+  auxiliary state does not show the comparable gunk routine until later.
+- Disassembly cited: `Obj5D_status` is `objoff_2D`
+  (`docs/s2disasm/s2.asm:61447-61462`). The container trigger checks
+  `btst #1,Obj5D_status(a1)` and clears it on that branch
+  (`docs/s2disasm/s2.asm:62588-62594`), while the main boss position/collision
+  tail also clears bit 1 after restoring collision
+  (`docs/s2disasm/s2.asm:61757-61760`). The ordinary boss-hit path only
+  negates player velocity, clears `collision_flags(a0)`, and decrements
+  `collision_property(a0)` (`docs/s2disasm/s2.asm:85339-85345`); no matching
+  `bset #1,Obj5D_status` exists on that path. The gunk routine's landing and
+  offscreen paths set status2 bits and request main routine secondary 2, which
+  is the early return behavior the invented latch exposed
+  (`docs/s2disasm/s2.asm:62825-62844`).
+- Fix: `Sonic2CPZBossInstance.onHitTaken()` no longer sets the engine's
+  `STATUS_HIT` bit. The bit remains modeled because the ROM code reads and
+  clears it, but a Robotnik hit is not its source. The fix changes engine
+  behavior only; it does not edit trace data, add comparison tolerance, hydrate
+  from trace state, or branch on trace route, frame, zone, or fixture.
+- Focused target after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CPZ2 advances to f10601 / 74 (`x_speed`
+  expected `0x014F`, actual `-014F`).
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; 11 selected S2 green traces passed.
+- Updated red preservation set after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero and preserves ARZ2 f1028 / 2686, CNZ2 f9117 /
+  386, HTZ2 f4286 / 1128, MTZ1 f8655 / 53, MTZ3 f7853 / 864, OOZ1 f1803 /
+  1067, and OOZ2 f3993 / 749. CPZ2 is the only moved red frontier in this
+  worker change, now f10601 / 74.
+- Full S2 sweep after conductor merge:
+  `mvn "-Dtest=TestS2*TraceReplay" test`.
+  Result: expected nonzero; 19 S2 traces run, 11 green, 8 expected red:
+  ARZ2 f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10601 / 74, HTZ2 f4286 /
+  1128, MTZ1 f8655 / 53, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2
+  f3993 / 749.
+
 ## 2026-06-30 - S2 OOZ2 Obj3D fragment slot and Obj4A bullet lifetime (f3919 -> f3993)
 
 - Worktree/branch: `.worktrees/ai-s2-ooz2-frontier-r4` /
@@ -67,7 +123,6 @@ branch-local measurements.
   ARZ2 f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10286 / 91, HTZ2 f4286 /
   1128, MTZ1 f8655 / 53, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2
   f3993 / 749.
-
 ## 2026-06-30 - S2 MTZ1 Obj69 stale P1 standing-bit snap (f7906 -> f8655)
 
 - Worktree/branch: `.worktrees/trace-s2-mtz1-r14` /
