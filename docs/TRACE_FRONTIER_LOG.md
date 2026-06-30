@@ -6,12 +6,62 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 MTZ1 Obj69 stale P1 standing-bit snap (f7906 -> f8655)
+
+- Worktree/branch: `.worktrees/trace-s2-mtz1-r14` /
+  `bugfix/ai-s2-mtz1-frontier-r14`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at accepted HEAD `64fe2c690`, fast-forwarded
+  to `64838ad0`, then merged conductor integration `3457f73c` before final
+  verification.
+- Baseline reproduction on initial worker base:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: MTZ1 f7906 / 407 (`x` expected `0x18BB`, actual
+  `0x18C0`).
+- Triage/evidence: f7906 matched ROM through the player physics step
+  (`x=$18BB`), then Obj69 moved Sonic to the nut center (`x=$18C0`) during the
+  object pass. Targeted diagnostics around Obj69 showed no live contact and no
+  live `Status_OnObj` equivalent for P1, but `ObjectManager.hasObjectStandingBit`
+  still returned true. That stale P1 object bit kept Obj69 in the align state
+  and snapped Sonic horizontally even though the ROM had already released the
+  rider.
+- Disassembly cited: Obj69 calls `Obj69_Action` for MainCharacter and Sidekick
+  before the late `SolidObject` call (`docs/s2disasm/s2.asm:53996-54013`).
+  `Obj69_Action` reads the object's p1/p2 standing bit (`btst d6,status(a0)`)
+  before progressing, and `loc_2794C` writes `x_pos(a0)` into the player
+  `x_pos(a1)` only after that gate (`docs/s2disasm/s2.asm:54017-54024,
+  54034-54061`). S2 `SolidObject` skips the Sidekick path while Tails is
+  off-screen (`docs/s2disasm/s2.asm:35022-35025`), but its continued-ride exit
+  clears both `Status_OnObj` on the player and the object's standing bit at
+  `loc_1975A` (`docs/s2disasm/s2.asm:35028-35046`).
+- Fix: `NutObjectInstance.isStandingOnThis()` now requires the controllable
+  player to still expose the live on-object status before treating a standing
+  bit as Obj69 standing. CPU sidekicks retain the previous standing-bit
+  fallback because the ROM's P2 off-screen gate can skip the clearing branch.
+  The fix changes engine behavior only; it does not edit trace data, add
+  comparison tolerance, hydrate from trace state, or branch on trace route,
+  frame, zone, or a known failing fixture.
+- Focused target after merging conductor integration:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2MtzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; MTZ1 advances to f8655 / 53 (`tails_y_speed`
+  expected `-0400`, actual `0x0150`).
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; 11 selected S2 green traces passed.
+- Updated red preservation set:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dmaven.test.failure.ignore=true" test`.
+  Result: exits 0 with expected red failures ignored and preserves ARZ2 f1028 /
+  2686, CNZ2 f9117 / 386, CPZ2 f10286 / 91, HTZ2 f4165 / 1129, MTZ3 f7853 /
+  864, OOZ1 f1803 / 1069, and OOZ2 f3919 / 1117. MTZ1 is the only moved red
+  frontier in the set, now f8655 / 53.
+
 ## 2026-06-30 - S2 CPZ2 Obj5D stop-branch movement overshoot (f10068 -> f10286)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r13` /
   `bugfix/ai-s2-cpz2-frontier-r13`, created from integration branch
   `bugfix/ai-s2-trace-develop` at accepted HEAD `781d62678`, then merged to
-  current accepted integration `84846bc08` before final verification.
+  current accepted integration `84846bc08` before worker verification. The
+  conductor merged it after the latest `origin/develop` merge at `c8a3cf217`,
+  then reran the acceptance guard on the updated integration tree.
 - Baseline reproduction on initial worker base `781d62678`:
   `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
   Result before the fix: CPZ2 f10068 / 128 (`y_speed` expected `-03E0`,
@@ -38,7 +88,7 @@ branch-local measurements.
   when the boss reaches the ROM stop branch. This prevents the extra movement
   step without changing collision tolerances, trace data, route/frame/zone
   carve-outs, or trace-state hydration.
-- Focused target after integration `84846bc08`:
+- Focused target after conductor merge:
   `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
   Result: expected nonzero; CPZ2 advances to f10286 / 91 (`y_speed` expected
   `-02B0`, actual `0x02B0`).
@@ -51,6 +101,12 @@ branch-local measurements.
   386, HTZ2 f4165 / 1129, MTZ1 f7906 / 407, MTZ3 f7853 / 864, OOZ1 f1803 /
   1069, and OOZ2 f3919 / 1117. CPZ2 is the only moved frontier from this
   worker change, now f10286 / 91.
+- Full S2 sweep after conductor merge:
+  `mvn "-Dtest=TestS2*TraceReplay" test`.
+  Result: expected nonzero; 19 S2 traces run, 11 green, 8 expected red:
+  ARZ2 f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10286 / 91, HTZ2 f4165 /
+  1129, MTZ1 f7906 / 407, MTZ3 f7853 / 864, OOZ1 f1803 / 1069, and OOZ2
+  f3919 / 1117.
 
 ## 2026-06-30 - S2 CNZ2 Obj51 player-slot boss touch timing (f8870 -> f9117)
 
