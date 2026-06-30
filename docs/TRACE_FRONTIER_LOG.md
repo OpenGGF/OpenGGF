@@ -6,6 +6,65 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CPZ2 Obj78 delayed leader push bridge (f5221 -> f5285)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r4` /
+  `bugfix/ai-s2-cpz2-frontier-r4`, based on integration branch
+  `bugfix/ai-s2-trace-develop` at `ba9148a93`.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: CPZ2 f5221 / 377 (`tails_x_speed` expected
+  `-000C`, actual `0x0000`).
+- Triage/evidence: `TraceTriageTool` for `s2 cpz2` reported first mismatch
+  at f5221 under sidekick physics. Expanded context showed ROM Tails grounded
+  and pushing Obj78 with `status=0x29`, `x_speed=g_speed=-000C`, and
+  `onObj=slot24`, while the engine had already fallen through the
+  `current_push_bypass` sidekick branch, fired the `$3F` auto-jump gate, and
+  made Tails airborne/rolling with zero horizontal speed. Nearby ROM Obj78
+  slots were the parent plus child staircase pieces; the folded engine object
+  had lost the child-slot delayed leader push context needed by
+  `TailsCPU_Normal`.
+- Disassembly cited: Obj01 records Sonic's position, logical input, and status
+  after movement (`docs/s2disasm/s2.asm:36224-36251,36342-36353`).
+  `TailsCPU_Normal` loads the delayed leader sample, tests current Tails
+  `Status_Push`, then tests the delayed leader `Status_Push`; when current
+  push is set but delayed leader push is clear, it branches to
+  `TailsCPU_FilterAction_Part2` and the `$3F` jump gate
+  (`docs/s2disasm/s2.asm:39260-39300,39346-39381`). Obj78 allocates three
+  child SST slots after the parent and each child calls `SolidObject`, ORing
+  its contact bits into the parent accumulator
+  (`docs/s2disasm/s2.asm:55967-55995,56006-56021`).
+- Fix: `SolidObjectProvider` now exposes a default-off hook for folded objects
+  whose child solid slots can preserve delayed leader push visibility for CPU
+  sidekick follow control. Obj78 staircases opt in only for CPU-controlled
+  sidekicks and only when the staircase is displaced, and
+  `SidekickCpuController` applies the bridge in the local vertical follow band
+  before evaluating the push-bypass branch. A broader version regressed CPZ1 at
+  f4278; narrowing the bridge to the local sidekick follow band restored CPZ1.
+  The accepted change models Obj78 SST child-slot state and Tails CPU branch
+  input; it does not hydrate trace data or add tolerance, route, zone, frame,
+  or known-failing-trace logic.
+- Focused object check:
+  `mvn -q "-Dmse=off" "-Dtest=TestSonic2ObjectBugFixes" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CPZ2 advanced to f5285 / 376
+  (`tails_x_speed` expected `-0018`, actual `-0024`), a separate later
+  sidekick speed frontier.
+- CPZ focused preservation:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected from CPZ2 only; CPZ1 stayed green.
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Practical accepted-red preservation, excluding the target and active-worker
+  traces CNZ2/MTZ2/OOZ2:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686,
+  HTZ2 f4012 / 1031, MTZ1 f5713 / 560, MTZ3 f4575 / 932, and
+  OOZ1 f1790 / 888.
+
 ## 2026-06-30 - S2 CNZ2 ObjD5 held-input edge after inertia reset (f6809 -> f6814)
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r4` /
