@@ -6,6 +6,59 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CNZ2 Obj51 electric hurt regions (f8403 -> f8870)
+
+- Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r10` /
+  `bugfix/ai-s2-cnz2-frontier-r10`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at accepted HEAD `63067d46c`, then
+  fast-forwarded to integration `3a513f6ac` before final verification.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix on the accepted CNZ2 baseline: CNZ2 f8403 / 591
+  (`y` expected `0x0688`, actual `0x068D`).
+- Triage/evidence: f8403 shows the ROM taking the hurt path against Obj51:
+  Sonic enters routine `$04`, rings drop, and lost-ring Obj37 children appear
+  while the boss is near `$299C,$0657` with `Boss_CollisionRoutine=1`.
+  The engine instead decoded the boss body as generic `$CF` BOSS contact and
+  bounced rolling Sonic away from the boss, leaving the hurt transition absent.
+  The mismatch is object collision state, not player physics or trace data.
+- Disassembly cited: `Obj51_Init` writes `collision_flags(a0) = #$F`
+  (`docs/s2disasm/s2.asm:66444-66470`). S2 touch decoding sends category
+  `$00-$3F` through `Touch_Enemy`, where rolling/spindashing players can hit
+  multi-sprite bosses and clear their body collision byte, while `$80-$BF`
+  branches to `Touch_ChkHurt` (`docs/s2disasm/s2.asm:85252-85259,85318-85333`).
+  `BossCollision_CNZ` first checks an electric hurt region at `x_pos,y_pos+$28`
+  with `d1=$80010` when the routine is 1, or `x_pos+4,y_pos+$20` with
+  `d1=$80020` otherwise, then falls through to the Obj51 body
+  `collision_flags` byte (`docs/s2disasm/s2.asm:85793-85810`).
+  `Boss_DoCollision` jumps to `Touch_ChkHurt` on overlap
+  (`docs/s2disasm/s2.asm:85877-85907`).
+- Fix: `Sonic2CNZBossInstance` now exposes the body as `$0F` and supplies
+  electric multi-touch regions `$8A` / `$99` before the body region when
+  `Boss_CollisionRoutine` is active. Defeat and invulnerability still suppress
+  body hits; active electricity remains a hurt region just like the ROM's
+  separate `BossCollision_CNZ` check. This models ROM object state and data; it
+  does not edit trace data, add tolerance, or add route, frame, zone, game-id,
+  or known-failing carve-outs.
+- Focused oracle:
+  `mvn "-Dtest=TestSonic2CNZBossCollision" "-DfailIfNoTests=false" test`
+  exits 0. Before the implementation it failed because the body byte was `$CF`
+  and Obj51 exposed no electric multi-touch region.
+- Focused target after integration `3a513f6ac`:
+  `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CNZ2 advances to f8870 / 447
+  (`tails_x_speed` expected `0x0200`, actual `0x0000`).
+- Current S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exits 0. Individual Surefire reports are clean for all selected green traces,
+  including MTZ2.
+- Red preservation set on integration `3a513f6ac`:
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dmaven.test.failure.ignore=true" test`
+  exits 0 with expected red failures ignored and preserves ARZ2 f1028 / 2686,
+  CPZ2 f7035 / 917, HTZ2 f4136 / 1024, MTZ1 f5713 / 560,
+  MTZ3 f7853 / 864, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. CNZ2 is the
+  only moved red frontier in the set, now f8870 / 447.
+
 ## 2026-06-30 - S2 MTZ3 delayed Sonic jump-press carry (f6334 -> f7853)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz3-frontier-r4` /

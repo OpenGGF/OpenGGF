@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -70,6 +71,9 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
     private static final int COLLISION_OFF = 0;
     private static final int COLLISION_LOWER = 1;   // Lower hurtbox (electrode tips)
     private static final int COLLISION_ZAP = 2;     // Full zap field
+    private static final int BODY_COLLISION_FLAGS = 0x0F;
+    private static final int LOWER_ELECTRIC_HURT_FLAGS = 0x8A;
+    private static final int ZAP_ELECTRIC_HURT_FLAGS = 0x99;
 
     // Player Y thresholds for triggering attacks
     private static final int PLAYER_Y_BALL_TRIGGER = 0x6B0;
@@ -713,15 +717,47 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
 
     @Override
     public int getCollisionFlags() {
-        // Main boss collision
         if (state.routine >= ROUTINE_DEFEAT_EXPLODE || state.defeated) {
             return 0;
         }
         if (state.invulnerable) {
             return 0;
         }
-        // Category BOSS (0xC0) + size index 0x0F
-        return 0xC0 | 0x0F;
+        return BODY_COLLISION_FLAGS;
+    }
+
+    @Override
+    public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
+        if (state.routine >= ROUTINE_DEFEAT_EXPLODE || state.defeated) {
+            return null;
+        }
+        if (bossCollisionRoutine == COLLISION_OFF) {
+            return null;
+        }
+
+        int bodyFlags = getCollisionFlags();
+        TouchResponseProvider.TouchRegion electricRegion;
+        if (bossCollisionRoutine == COLLISION_LOWER) {
+            // ROM: BossCollision_CNZ checks y_pos+$28 with d1=$80010,
+            // then falls through to the Obj51 collision_flags byte.
+            electricRegion = new TouchResponseProvider.TouchRegion(
+                    state.x,
+                    state.y + 0x28,
+                    LOWER_ELECTRIC_HURT_FLAGS);
+        } else {
+            electricRegion = new TouchResponseProvider.TouchRegion(
+                    state.x + 4,
+                    state.y + 0x20,
+                    ZAP_ELECTRIC_HURT_FLAGS);
+        }
+
+        if (bodyFlags == 0) {
+            return new TouchResponseProvider.TouchRegion[] { electricRegion };
+        }
+        return new TouchResponseProvider.TouchRegion[] {
+                electricRegion,
+                new TouchResponseProvider.TouchRegion(state.x, state.y, bodyFlags)
+        };
     }
 
     /**
