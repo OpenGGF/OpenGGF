@@ -301,11 +301,10 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
             return false;
         }
 
-        // ROM: tst.b (Screen_Shaking_Flag_HTZ).w at line 49091
-        // Only solid when HTZ earthquake sequence is active.
-        // Uses the HTZ-specific flag which stays on during delay periods,
-        // unlike the general Screen_Shaking_Flag which gets cleared.
-        return isHtzEarthquakeActive();
+        // ROM Obj30_Main runs Obj30_Modes (SolidObject_Always / DropOnFloor /
+        // hurt-supported-player handling) before testing Screen_Shaking_Flag_HTZ
+        // for MarkObjGone3 (docs/s2disasm/s2.asm:49568-49581,49635-49642).
+        return true;
     }
 
     private boolean isHtzEarthquakeActive() {
@@ -318,6 +317,13 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         return false;
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj30 subtypes call SolidObject_Always before DropOnFloor / hurt
+        // handling (docs/s2disasm/s2.asm:49598-49604,49635-49642).
+        return true;
     }
 
     // ========================================================================
