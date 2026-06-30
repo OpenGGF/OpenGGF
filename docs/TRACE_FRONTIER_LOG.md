@@ -6,6 +6,58 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 ARZ2 Obj8D object-floor collision path (f1627 -> f1648)
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round11-next` /
+  `bugfix/ai-s2-arz2-round11-next`, based on `bugfix/ai-s2-trace-next`
+  campaign head `990a53758`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red ARZ2 f1627 / 2258
+  (`obj_s1A_type` expected `0x8D`, actual missing).
+- Triage/evidence: the comparator reported Obj8D missing because the engine had
+  the Grounder at the right X but 3 px low: ROM slot `$1A` reached
+  `$11E2,$04BB`, while the engine matched `$11E2,$04BE`. BizHawk probes around
+  `ObjCheckFloorDist` showed ROM Obj8D inheriting `Collision_addr =
+  Secondary_Collision` at the same ARZ block descriptor `0x502B`; the descriptor
+  still tests top solidity bit `$C`, but `FindFloor` reads the collision index
+  through `(Collision_addr).w`, so chunk `$2B` uses secondary ARZ collision
+  index `$FF` instead of primary `$B7`. S2 `AnglePos` sets `Collision_addr`
+  from `top_solid_bit(a0)` before floor work, `ObjCheckFloorDist` calls
+  `FindFloor` without resetting that pointer, and Obj8D uses the shared object
+  floor helper in init and walking (`docs/s2disasm/s2.asm:43006-43013,43432,
+  44210-44227,73311-73321,73370-73380`). S3K has the same player collision
+  pointer pattern (`docs/skdisasm/sonic3k.asm:18728-18735,19232,20051-20072`);
+  S1's object/player floor path remains the older unified model with explicit
+  top-solid tests and no comparable `Collision_addr` state
+  (`docs/s1disasm/_incObj/Sonic AnglePos.asm:6-83`).
+- Fix: `LevelManager.getSolidTileForChunkDesc` now has an overload that accepts
+  the collision-table path separately from the solidity bit. `ObjectTerrainUtils`
+  uses that overload so object terrain checks keep testing the object routine's
+  requested solidity bit (`$C` for ObjCheckFloorDist, `$D` for wall/ceiling)
+  while selecting primary vs secondary from the focused player's active
+  `top_solid_bit`, matching the ROM's live `Collision_addr`.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f1627 / 2258 errors
+  (`obj_s1A_type` expected `0x8D`, actual missing) -> f1648 / 2236 errors
+  (`obj_s17_slot` expected `0x17`, actual `0x21`). The new first owner is the
+  later ARZ2 object slot-order cluster exposed after the Grounder Y position
+  aligns.
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; ARZ2 advanced to f1648 / 2236.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; 19 S2 traces ran, 13 stayed green, and six
+    expected reds remain: ARZ2 f1648 / 2236, CNZ2 f9487 / 288, HTZ2 f5031 /
+    930, MTZ3 f9134 / 936, OOZ1 f1813 / 1062, OOZ2 f9307 / 444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    exited 1 at the existing AIZ expected-red frontiers: complete-run f1095 /
+    4319 (`x_speed` expected `0x0000`, actual `0x000C`) and AIZ f8941 / 1160
+    (`camera_y` expected `0x02C1`, actual `0x02B9`). The S3K must-keep
+    non-trace tests in that command passed.
+
 ## 2026-06-30 - S3K fixed Dust slot identity (no frontier movement)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /
