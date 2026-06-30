@@ -206,10 +206,12 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         }
         mappingFrame = STAND_MAPPING_FRAME;
         timer = WAIT_BEFORE_COLLAPSE;
+        setBombShakeActive(true);
         routine = Routine.WAIT_BEFORE_COLLAPSE;
     }
 
     private void routineWaitBeforeCollapse(int frameCounter) {
+        applyCollapseShake(frameCounter);
         timer--;
         if (timer >= 0) {
             return;
@@ -325,6 +327,10 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
                 }
             }
         }
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry()).orElse(null);
+        if (state != null) {
+            state.setLbz1KnucklesCutsceneControlLocked(false);
+        }
         services().camera().setMaxX((short) EXIT_CAMERA_MAX_X);
         services().camera().setMaxXTarget((short) EXIT_CAMERA_MAX_X);
         services().camera().setMaxYTarget((short) EXIT_CAMERA_MAX_Y_TARGET);
@@ -335,6 +341,13 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry()).orElse(null);
         if (state != null) {
             state.requestScreenShakeOffset(SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F]);
+        }
+    }
+
+    private void setBombShakeActive(boolean active) {
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry()).orElse(null);
+        if (state != null) {
+            state.setLbz1KnucklesBombShakeActive(active);
         }
     }
 

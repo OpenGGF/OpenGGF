@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K LBZ1 Knuckles bomb/cup sequence parity:** the bomb screen shake now starts after the bomb-drop wait and remains active through the building collapse handoff until the collapse finishes, while the cup elevator keeps captured players locked in their riding state until Knuckles leaves and only releases them on a later jump press.
 - **S3K LBZ lowering grapple fresh-jump release:** LBZLoweringGrapple (Obj0x1F) now releases the grabbed player only on the logical A/B/C press edge, not a held jump bit carried into the grab, while still using held left/right input for the ROM directional launch velocity.
 - **S3K LBZ2 launch-pad detach window:** the post-results launch sequence now preserves the copied Death Egg platform window while Scroll A is cleared behind it, waits for the ROM detach copy/scroll to finish before starting final fall, and spawns the Death Egg miniature cluster relative to the explosion sequencer instead of fixed world coordinates.
 - **S3K LBZ2 final boss off-screen return:** Obj_LBZFinalBoss1 laser-head children now run the ROM `sub_733FC` arc step before reacting to a detached top turret segment, preserving the final `$38` bit-3 firing-notch strobe that lets Robotnik reposition instead of waiting off-screen after the 5-HP segment break.
