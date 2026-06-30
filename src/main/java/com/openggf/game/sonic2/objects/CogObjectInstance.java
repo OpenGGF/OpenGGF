@@ -197,14 +197,20 @@ public class CogObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        boolean firstMainExecution = !childrenSpawned;
         ensureSlotChildrenSpawned();
 
         // ROM Obj70_Main (s2.asm:54662-54665): move.b (Level_frame_counter+1).w,d0;
         // andi.w #$F,d0; bne loc_286CA. On 68k, +1 reads the low byte of the word
         // label. LevelManager stores the previous completed frame until its late-frame
-        // update(), so object code must use the next visible level counter here.
+        // update(), so established object code must use the next visible level counter.
+        // A just-streamed Obj70 whose first Main pass lands on a low-byte-zero frame has
+        // already reached the ROM-visible tick; rotate once there so the copied tooth
+        // slots do not remain one 16-frame phase behind.
         int levelFrameCounter = services().levelManager().getFrameCounter();
-        if (((levelFrameCounter + 1) & 0x0F) == 0) {
+        boolean rotateThisFrame = ((levelFrameCounter + 1) & 0x0F) == 0
+                || (firstMainExecution && (levelFrameCounter & 0x0F) == 0);
+        if (rotateThisFrame) {
             advanceRotation();
         }
 
@@ -424,6 +430,16 @@ public class CogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // Obj70 passes byte_28706's d1=$10 into SolidObject, and Obj70_Init also
+        // writes width_pixels=$10 (docs/s2disasm/s2.asm:55111, 55189-55209).
+        // SolidObject_Landed re-checks width_pixels(a0) directly
+        // (s2.asm:35588-35620), so the landing window is the same $10 as the
+        // collision half-width, not the usual full-solid d1-$0B narrowing.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
@@ -455,7 +471,10 @@ public class CogObjectInstance extends AbstractObjectInstance
         // airborne side correction (s2.asm:35021-35040, 55039-55141). The
         // engine compresses the teeth into one multi-piece solid, so suppress
         // this Obj70-only fresh side correction to preserve the ROM stale-rider
-        // handoff instead of zeroing Tails' x velocity one frame early.
+        // handoff instead of zeroing Tails' x velocity one frame early. The
+        // solid controller gates this opt-in on Obj70's standing-bit latch so
+        // ordinary grounded side contacts still reach SolidObject_StopCharacter
+        // (s2.asm:35413-35429).
         return player.isCpuControlled();
     }
 

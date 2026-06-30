@@ -216,6 +216,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
             return;
         }
         boolean usesRomRangeUnload = type == ProjectileType.BUZZER_STINGER
+                || type == ProjectileType.OCTUS_BULLET
                 || type == ProjectileType.AQUIS_BULLET;
         // Initial delay: projectile stays stationary (Octus bullet: 16 frames)
         if (initialDelay > 0) {

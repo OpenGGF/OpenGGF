@@ -51,6 +51,28 @@ public class TestPlaybackTimelineController {
 
         timeline.advanceIfPlaying();
         assertEquals(4, timeline.getCursorFrame());
+        assertTrue(timeline.isPlaying());
+
+        timeline.advanceIfPlaying();
+        assertEquals(4, timeline.getCursorFrame());
+        assertFalse(timeline.isPlaying());
+    }
+
+    @Test
+    public void finalFrameRemainsPlayingUntilItHasBeenConsumed() {
+        PlaybackTimelineController timeline = new PlaybackTimelineController(3);
+        timeline.setPlaying(true);
+
+        timeline.advanceIfPlaying();
+        assertEquals(1, timeline.getCursorFrame());
+        assertTrue(timeline.isPlaying());
+
+        timeline.advanceIfPlaying();
+        assertEquals(2, timeline.getCursorFrame());
+        assertTrue(timeline.isPlaying(), "final frame must still be applied on the next gameplay tick");
+
+        timeline.advanceIfPlaying();
+        assertEquals(2, timeline.getCursorFrame());
         assertFalse(timeline.isPlaying());
     }
 
@@ -79,5 +101,3 @@ public class TestPlaybackTimelineController {
         assertFalse(timeline.isPlaying());
     }
 }
-
-

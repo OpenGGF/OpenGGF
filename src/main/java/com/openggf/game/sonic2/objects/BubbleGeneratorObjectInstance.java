@@ -2,12 +2,14 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2Rng;
+import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -41,6 +43,8 @@ import java.util.List;
  * </ol>
  */
 public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+    private static final int GENERATOR_ANIMATION_TICKS = 16;
+    private static final int[] GENERATOR_FRAMES = {14, 15};
 
     // Bubble sequence table (byte_1FAF0 from ROM, line 45055 of s2.asm)
     // 18-entry overlapping table with 4 sequences at offsets 0, 4, 8, 12
@@ -74,6 +78,8 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
 
     // ROM objoff_3C: Current sequence table offset (0, 4, 8, or 12)
     private int sequenceOffset;
+    private int displayFrame = GENERATOR_FRAMES[0];
+    private boolean visible;
 
     // Bit 6 of objoff_36: Used to track if large bubble already spawned this burst
     private static final int FLAG_LARGE_SPAWNED = 0x40;
@@ -103,6 +109,8 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        visible = false;
+
         // ROM: Check if generator is above water (only spawn when underwater)
         if (services().currentLevel() != null) {
             WaterSystem waterSystem = services().waterSystem();
@@ -124,12 +132,17 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
             return;
         }
 
+        visible = true;
+        displayFrame = GENERATOR_FRAMES[(frameCounter / GENERATOR_ANIMATION_TICKS) & 1];
+
         // ROM state machine logic (loc_1F9C0)
         if ((stateFlags & FLAG_ACTIVE_BURST) == 0) {
             // No active burst - check if timer expired to start new burst
-            // ROM: tst.w objoff_36(a0) / bne.s loc_1FA22
-            if (frameTimer > 0) {
-                frameTimer--;
+            // ROM: tst.w objoff_36(a0) / bne.s loc_1FA22,
+            //      subq.w #1,objoff_38(a0) / bpl.w loc_1FAC2.
+            // A zero timer spends one frame counting down to -1 before a burst starts.
+            frameTimer--;
+            if (frameTimer >= 0) {
                 return;
             }
             // Timer expired, start new burst
@@ -255,7 +268,16 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // Invisible object - no rendering
+        if (!visible || isDestroyed()) {
+            return;
+        }
+
+        PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.BUBBLES);
+        if (renderer == null) {
+            return;
+        }
+
+        renderer.drawFrameIndex(displayFrame, spawn.x(), spawn.y(), false, false);
     }
 
     @Override

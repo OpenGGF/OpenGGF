@@ -6,6 +6,7 @@ import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestScriptedVelocityAnimationProfile {
 
@@ -49,6 +50,23 @@ public class TestScriptedVelocityAnimationProfile {
         Integer animId = profile.resolveAnimationId(sprite, 0, 32);
 
         assertEquals(3, animId.intValue()); // rollAnimId, not slideAnimId
+    }
+
+    @Test
+    public void preservesObjectAnimationForAirborneExternalReleaseWithRollingStatus() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAir(true);
+        sprite.setRolling(true);
+        sprite.setJumping(true);
+        sprite.setRollingJump(false);
+        sprite.setSliding(false);
+        sprite.setAnimationId(20);
+
+        Integer animId = profile.resolveAnimationId(sprite, 0, 32);
+
+        assertNull(animId,
+                "Obj80 moving-vine release leaves AniIDSonAni_Hang2 active even when Status_Roll remains set");
     }
 
     @Test
@@ -118,5 +136,3 @@ public class TestScriptedVelocityAnimationProfile {
         }
     }
 }
-
-

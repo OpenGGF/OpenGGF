@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_2)
@@ -43,6 +44,25 @@ public class TestCpzStaircaseWallCollision {
         fixture = HeadlessTestFixture.builder()
                 .withSharedLevel(sharedLevel)
                 .build();
+    }
+
+    @Test
+    public void topContactTimerDoesNotDecrementOnTriggerFrame() {
+        CPZStaircaseObjectInstance staircase = new CPZStaircaseObjectInstance(
+                new com.openggf.level.objects.ObjectSpawn(0x2090, 0x0350, 0x78, 0x00, 0, false, 0),
+                "CPZStaircase");
+
+        staircase.onPieceContact(0, null,
+                new com.openggf.level.objects.SolidContact(true, false, false, false, false), 0);
+        staircase.update(0, null);
+        for (int frame = 1; frame <= 30; frame++) {
+            staircase.update(frame, null);
+        }
+
+        assertEquals(0x0350, staircase.getPieceY(0),
+                "Obj78 loc_292C8 sets objoff_2C=$1E and returns; movement begins one frame later");
+        staircase.update(31, null);
+        assertEquals(0x0351, staircase.getPieceY(0));
     }
 
     @Test
@@ -154,5 +174,3 @@ public class TestCpzStaircaseWallCollision {
 
     private record StepPair(int lowerPiece, int higherPiece, int heightDifference) { }
 }
-
-

@@ -194,6 +194,14 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean suppressesObjectEdgeBalance() {
+        // ROM Obj65_Init sets status.npc.no_balancing when mapping_frame == 1
+        // (s2.asm:52865-52870). Tails_Move tests that bit before object-edge
+        // balance and falls through to look/duck input handling when it is set.
+        return mappingFrame == 1;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
@@ -211,6 +219,16 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
         return moveSubtype == 5;
+    }
+
+    @Override
+    public boolean zeroXSpeedStopsOnLeftSideContact() {
+        // Obj65 calls the shared S2 SolidObject helper after updating its x_pos
+        // (docs/s2disasm/s2.asm:52925-52940). In SolidObject_InsideLeft,
+        // x_vel == 0 does not take the bmi branch to SolidObject_AtEdge; it
+        // falls through to SolidObject_StopCharacter, clearing inertia and
+        // x_vel before side separation (docs/s2disasm/s2.asm:35424-35439).
+        return true;
     }
 
     @Override

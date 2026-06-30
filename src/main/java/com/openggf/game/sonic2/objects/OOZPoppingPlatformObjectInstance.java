@@ -343,15 +343,16 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         // Apply gravity
         velocity += GRAVITY;
 
-        // The engine's shared moving-solid carry can lose the positive obj_control rider
-        // before Obj33 reaches its exact apex. Preserve the existing bridge here until
-        // the shared SolidObject carry path can model this ROM case directly.
-        moveLockedPlayers(player);
-
         // ROM: cmp.w d0,d1 / bne.s + (exact equality check)
         // The physics are calibrated so currentY always hits the exact apex value.
         int apexY = homeY - APEX_OFFSET;
         if (currentY != apexY) {
+            // The engine's shared moving-solid carry can lose the positive obj_control rider
+            // before Obj33 reaches its exact apex. Preserve the existing bridge on rising
+            // frames only. ROM loc_23D20 launches without writing y_pos(a1), then clears
+            // Status_OnObj before Obj33_Main reaches SolidObject, so the apex frame must not
+            // re-seat the player to the platform top.
+            moveLockedPlayers(player);
             return; // Not at apex yet
         }
 
@@ -360,13 +361,13 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         mode = Mode.IDLE;
         ObjectManager objectManager = services().objectManager();
 
-        if (mainCharLocked && player != null && objectManager.isRidingObject(player, this)) {
+        if (player != null && objectManager.isRidingObject(player, this)) {
             launchPlayer(player, frameCounter);
         }
         mainCharLocked = false;
 
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
-        if (sidekickLocked && sidekick != null && objectManager.isRidingObject(sidekick, this)) {
+        if (sidekick != null && objectManager.isRidingObject(sidekick, this)) {
             launchPlayer(sidekick, frameCounter);
         }
         sidekickLocked = false;

@@ -71,7 +71,7 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
 
     // Status bit flags (ROM: Obj5D_status)
     private static final int STATUS_SIDE = 0x08;      // bit3: which side to target
-    private static final int STATUS_HIT = 0x02;       // bit1: was just hit
+    private static final int STATUS_HIT = 0x02;       // bit1: ROM reads this, but Obj5D never sets it on hit
     private static final int STATUS_GUNK_READY = 0x04; // bit2: gunk ready to drop
 
     // Status2 bit flags (ROM: Obj5D_status2)
@@ -149,7 +149,6 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
 
     @Override
     protected void onHitTaken(int remainingHits) {
-        status |= STATUS_HIT;
         if (robotnik != null) {
             robotnik.setAnim(2); // Hurt face
         }
@@ -204,13 +203,15 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
         int diff = Math.abs(target - baseX);
         if (diff <= 3) {
             if ((state.yFixed >> 16) == MAIN_TARGET_Y) {
+                // ROM Obj5D_Main_2_Stop branches straight to Pos_and_Collision after halting.
+                state.xVel = 0;
+                state.yVel = 0;
                 state.routine = MAIN_WAIT;
                 status ^= STATUS_SIDE;
-                // Clear stale container flags before starting new attack cycle
-                status2 &= ~STATUS2_ACTION2;  // Clear container moving
-                status2 &= ~STATUS2_ACTION4;  // Clear container returning
                 status2 |= STATUS2_ACTION0;   // Activate pipe
             }
+            updateMainPositionAndHover();
+            return;
         } else {
             state.xVel = target > baseX ? MAIN_MOVE_VEL : -MAIN_MOVE_VEL;
         }
@@ -421,8 +422,10 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
     }
 
     public void onPipeComplete() {
-        status2 &= ~STATUS2_ACTION0;
-        spawnPipe(); // Prepare for next cycle
+        // Obj5D_Pipe_Retract only deletes the pipe control object. Action 0 is
+        // cleared later by Obj5D_Container_Extend when the fill animation ends
+        // (s2.asm:62740-62742); the next pipe is spawned by the returning
+        // container path (s2.asm:62649-62664).
     }
 
     // Dripper state

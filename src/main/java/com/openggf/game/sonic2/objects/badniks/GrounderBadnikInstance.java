@@ -182,7 +182,8 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance implements Re
 
     /**
      * Spawns wall pieces at offsets relative to Grounder (called during INIT).
-     * ROM: loc_36C64 spawns 4 walls via loc_36C78
+     * ROM: loc_36C64 calls AllocateObject for each Obj8F wall, so each child
+     * takes the current lowest free SST slot (docs/s2disasm/s2.asm:73520-73533).
      */
     private void spawnWalls() {
         // Spawn 4 wall pieces at offsets from byte_36CBC
@@ -191,18 +192,19 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance implements Re
             int wallX = currentX + offset[0];
             int wallY = currentY + offset[1];
             int wallIndex = i;
-            spawnChild(() -> new GrounderWallInstance(wallX, wallY, wallIndex, this));
+            spawnFreeChild(() -> new GrounderWallInstance(wallX, wallY, wallIndex, this));
         }
     }
 
     /**
      * Spawns rock projectiles at Grounder's position (called during DETECTION).
-     * ROM: loc_36C2C spawns 5 rocks via loc_36C40
+     * ROM: loc_36C2C calls AllocateObject for each Obj90 rock, not
+     * AllocateObjectAfterCurrent (docs/s2disasm/s2.asm:73497-73516).
      */
     private void spawnRocks() {
         for (int i = 0; i < 5; i++) {
             int rockIndex = i;
-            spawnChild(() -> new GrounderRockProjectile(currentX, currentY, rockIndex, this));
+            spawnFreeChild(() -> new GrounderRockProjectile(currentX, currentY, rockIndex, this));
         }
     }
 

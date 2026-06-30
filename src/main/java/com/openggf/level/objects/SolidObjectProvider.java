@@ -183,6 +183,47 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a stale riding record that would be consumed by this object's
+     * airborne standing-bit branch is also ineligible for pre-movement
+     * ground-recovery support.
+     * <p>
+     * Most objects that opt into {@link #airborneStaleStandingBitReturnsNoContact}
+     * still use the engine riding record as the best available live-support
+     * signal before their own solid pass runs. Obj69-style callers can opt in
+     * when the ROM object tail reaches standard {@code SolidObject} late enough
+     * that the stale airborne branch must be visible to player movement first.
+     */
+    default boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether a continued-ride exit clears this object's standing bit immediately.
+     * <p>
+     * Default remains false for existing folded/custom solid profiles whose
+     * standing latch is consumed by later object-local code. Concrete ROM
+     * {@code PlatformObject} users can opt in when their own status byte drives
+     * same-frame behavior such as platform sag.
+     */
+    default boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether a fresh standing contact established by this object should keep
+     * {@code Status_OnObj} if object-local code makes the rider airborne later
+     * in the same frame.
+     * <p>
+     * Most solids must return false so their normal airborne stale-rider branch
+     * still clears support. Use this only for ROM routines that run their solid
+     * helper first, then perform a same-frame status write such as a supported
+     * hurt launch.
+     */
+    default boolean keepsOnObjWhenAirborneAfterSameFrameStandingContact(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Optional centre-Y write for objects that preserve a ride while object-local
      * code owns player positioning. Return {@code null} to leave Y unchanged.
      */
@@ -286,6 +327,18 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a zero horizontal velocity on the object's left side still routes
+     * through {@code SolidObject_StopCharacter}.
+     * <p>
+     * Most existing solids keep the established engine-side sign convention.
+     * Objects that have trace coverage for the S2 {@code SolidObject_InsideLeft}
+     * boundary can opt in with a concrete disassembly citation.
+     */
+    default boolean zeroXSpeedStopsOnLeftSideContact() {
+        return false;
+    }
+
+    /**
      * Whether a side classification should return no contact before applying
      * side correction or speed zeroing.
      * <p>
@@ -342,6 +395,62 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a current {@code Status_Push} bypass while the CPU sidekick is
+     * still riding this object should consume the object-order input history
+     * slot rather than the ordinary already-loaded follow slot.
+     * <p>
+     * Most objects must return false: ROM {@code TailsCPU_Normal} loads the
+     * delayed input and delayed status from the same history entry before
+     * testing {@code Status_Push}. Objects whose own solid/drop-floor routine
+     * runs after the sidekick CPU slot can opt in when trace evidence shows the
+     * ROM-visible push bit belongs to that later object-order window.
+     */
+    default boolean usesSidekickCpuCurrentPushObjectOrderInputDelay(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether {@code TailsCPU_Normal}'s delayed leader {@code Status_Push} test
+     * should use the object-order status sample while this CPU sidekick rides
+     * the object.
+     * <p>
+     * This is narrower than {@link #usesSidekickCpuCurrentPushObjectOrderInputDelay(PlayableEntity)}:
+     * it affects the d4-style push-bypass decision, not the delayed Ctrl_1 word
+     * consumed after the branch has already been chosen.
+     */
+    default boolean usesSidekickCpuPushBypassObjectOrderStatusDelay(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether a CPU sidekick riding this object should treat the delayed leader
+     * status sample as still carrying {@code Status_Push} when deciding the
+     * {@code TailsCPU_Normal} push-bypass branch.
+     * <p>
+     * This is for folded engine objects that represent multiple ROM SST solid
+     * slots. ROM stores each slot's standing/pushing bits independently, and the
+     * delayed {@code Sonic_Stat_Record_Buf} sample can still include a child-slot
+     * push bit even when the folded engine history only retained the parent slot.
+     */
+    default boolean preservesSidekickDelayedLeaderPushWhileRiding(PlayableEntity sidekick) {
+        return false;
+    }
+
+    /**
+     * Whether this object's continued-riding path should keep the player's
+     * {@code Status_Push} bit set even when the current frame does not produce
+     * a fresh side-contact classification.
+     * <p>
+     * Ordinary solids should return false: their push bit is owned by current
+     * side contact and the normal movement/animation clear paths. Multi-piece
+     * ROM objects with adjacent-slot geometry can opt in when a rider remains
+     * pressed into a neighbouring step face during the continued ride path.
+     */
+    default boolean preservesRidingPushStatus(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Minimum remaining push-grace frames for the CPU sidekick riding bridge.
      * <p>
      * The default keeps the conservative shared threshold. Objects with ROM
@@ -349,6 +458,17 @@ public interface SolidObjectProvider {
      * to Tails' CPU slot may lower this value locally.
      */
     default int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity player) {
+        return Integer.MAX_VALUE;
+    }
+
+    /**
+     * Maximum remaining push-grace frames for the CPU sidekick riding bridge.
+     * <p>
+     * Some object-local ROM visibility windows are late-tail handoffs rather
+     * than the whole grace span. The default leaves existing providers
+     * unconstrained.
+     */
+    default int sidekickCpuPushGraceMaximumFramesWhileRiding(PlayableEntity player) {
         return Integer.MAX_VALUE;
     }
 
@@ -442,6 +562,31 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object should project a grounded player's pending flat-ground
+     * X movement before running new side-contact geometry.
+     * <p>
+     * Most objects keep the engine's normal pre-movement solid pass. Concrete
+     * S2 objects whose ROM routine runs after the player slot may opt in when
+     * trace evidence shows the object must see the post-player-move X position.
+     */
+    default boolean projectsPreMovementGroundXForSolidContact(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether continued-riding flat-top re-seat should use the object's
+     * pre-update Y for this frame.
+     * <p>
+     * Most objects carry riders against their current post-update Y. Concrete
+     * object ports can opt in when the ROM evidence shows the rider's Y is held
+     * on the pre-move surface for a movement transition, without changing the
+     * object's actual current position or side-contact cleanup.
+     */
+    default boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Number of newly-pressed horizontal-input frames to ignore while this
      * object is the player's current riding solid.
      * <p>
@@ -454,6 +599,36 @@ public interface SolidObjectProvider {
      */
     default int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
         return 0;
+    }
+
+    default int staleHorizontalLogicalInputFramesWhileRiding(
+            PlayableEntity player, int rideFrames, boolean left, boolean right) {
+        return right && !left ? staleHorizontalLogicalInputFramesWhileRiding(player, rideFrames) : 0;
+    }
+
+    /**
+     * Whether the stale-horizontal-input edge tracker should remain attached to
+     * this riding object while the player has nonzero ground speed.
+     * <p>
+     * Most providers keep the historic reset-while-moving behavior. Concrete
+     * ROM routines may opt in when a mid-ride inertia reset should not make a
+     * still-held horizontal input look newly pressed.
+     */
+    default boolean preservesStaleHorizontalInputEdgeWhileMoving(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether this object returns no contact when the player is already riding
+     * another object.
+     * <p>
+     * Most shared solid helpers may still side-push or replace support while
+     * Status_OnObj is set. Concrete object routines can opt in when their ROM
+     * helper explicitly checks the player's on-object bit before resolving a
+     * new contact and returns early for non-riding instances.
+     */
+    default boolean skipsNewContactWhilePlayerAlreadyOnObject(PlayableEntity player) {
+        return false;
     }
 
     /**

@@ -2512,6 +2512,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
 
                 setCrouching(false);
+                // S2 Hurt_Sidekick calls ResetOnFloor_Part2 before setting InAir;
+                // that reset clears Status_Push while leaving Status_OnObj to solids.
+                setPushing(false);
                 setAir(true);
                 setGSpeed((short) 0);
                 int dir = (getCentreX() >= sourceX) ? 1 : -1;
@@ -4089,6 +4092,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return preserveRollingOnNextRollStop;
         }
 
+        public void clearObjectPreservedRollingHandoff() {
+                preserveRollingOnNextRollStop = false;
+                objectPreservedRollBoostFollowup = false;
+                objectPreservedRollWallProbe = false;
+                objectPreservedRollVelocityCarry = false;
+        }
+
         public void markObjectPreservedRollBoostFollowup() {
                 this.objectPreservedRollBoostFollowup = true;
         }
@@ -4669,6 +4679,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 suppressNextGravityStep = false;
                 recordFollowerHistoryForTick();
+                // Forced BK2/action press edges are frame-local. Keep them
+                // through the Sonic_RecordPos-equivalent history write, then
+                // clear so the low-byte Ctrl_1_Logical press cannot leak into
+                // the next Stat_Record slot.
+                forcedJumpPress = false;
                 followerHistoryRecordedThisTick = false;
                 invulnerabilityDisplayTimerTickedThisFrame = false;
         }

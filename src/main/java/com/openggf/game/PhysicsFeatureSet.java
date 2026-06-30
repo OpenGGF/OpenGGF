@@ -68,6 +68,16 @@ public record PhysicsFeatureSet(
          *  27997-28001,28013-28017). S1/S2: false; their corresponding wall
          *  response paths set Status_Push unconditionally. */
         boolean groundWallPushRequiresFacingIntoWall,
+        /** Whether an already-pushing grounded rider stages a second horizontal
+         *  CalcRoomInFront velocity response for the post-ObjectMove state.
+         *  S2: true for the Obj02_MdNormal order where Tails_Move applies the
+         *  wall response before ObjectMove (s2.asm:39603-39608), while
+         *  SolidObject_Always keeps object-rider state alive later in RunObjects
+         *  (s2.asm:35070-35095). This preserves the ROM-visible stored x_vel
+         *  on sustained object-riding terrain pushes without changing the
+         *  ObjectMove position delta. S1 has no CalcRoomInFront in MdNormal;
+         *  S3K's sidekick push bridge is handled separately. */
+        boolean repeatedObjectRideGroundWallResponseDeferred,
         /** Whether the character animation routine clears push status when anim
          *  differs from prev_anim.
          *  S2/S3K: true (s2.asm:38033-38038,40879-40884;
@@ -106,6 +116,16 @@ public record PhysicsFeatureSet(
          *  S3K: true; Player_TouchFloor_Check_Spindash branches around the touch-floor body
          *  while spin_dash_flag is non-zero, leaving AutoSpin tunnel control latched. */
         boolean pinballLandingPreservesPinballMode,
+        /** Whether the ground-rolling jump gate treats {@code pinballMode} as
+         *  ROM {@code pinball_mode} only when the engine's {@code spindash}
+         *  mirror is also set.
+         *  S2: true -- Obj85/Obj86 roll guards use {@code pinballMode} only as
+         *  engine-local roll preservation, while the real Obj84
+         *  {@code pinball_mode} writer is mirrored into {@code spindash}
+         *  (s2.asm:58179-58191,58376-58385,46853-46856).
+         *  S3K: false -- AutoSpin tunnel control is represented by engine
+         *  {@code pinballMode} and must still block the roll jump gate. */
+        boolean rollingJumpPinballGateRequiresSpindashFlag,
         /** Whether top-solid landing accepts the exact edge-contact boundary.
          *  Engine terms: allow a new landing when {@code distY == 0}.
          *  S1/S3K: true for current shared platform parity.
@@ -326,6 +346,20 @@ public record PhysicsFeatureSet(
          * S2.
          */
         boolean sidekickDespawnUsesObjectIdMismatch,
+        /**
+         * Whether {@code TailsCPU_CheckDespawn} can consume a fresh off-screen
+         * to on-screen render-bit transition one CPU tick late.
+         * <p>S2: {@code true} — {@code Obj02_Control} calls
+         * {@code TailsCPU_Control} before {@code Tails_Display}, and
+         * {@code BuildSprites} runs later in {@code Level_MainLoop}
+         * (s2.asm:38963-38970,39016-39024,39409-39440,5095-5111). Narrowed at
+         * the call site to the ROM-visible CPU status shape that shows this
+         * delay in OOZ2: the sidekick and delayed leader Stat_table sample are
+         * both air+rolling.
+         * <p>S3K: {@code false} for the current sidekick catch-up-flight model.
+         * <p>S1: unreachable (no Tails CPU).
+         */
+        boolean sidekickNormalDespawnDelaysFreshRenderEntry,
         /**
          * Mask applied to the recorded leader status byte during the sidekick
          * CPU's "fly-back to leader" exit gate (engine APPROACHING state -&gt;
@@ -964,6 +998,15 @@ public record PhysicsFeatureSet(
          *  Sonic_ChkShoes gates subq.b on (Level_frame_counter+1)&7==0,
          *  sonic3k.asm:22072-22078, init (20*60)/8 at sonic3k.asm:40818). */
         int speedShoesTimerDecimation,
+        /** Initial timer value for the fixed Obj0A/air-countdown sidecar when
+         *  water entry installs it. S1/S2 initialize only the id/subtype/parent
+         *  fields, leaving the sidecar timer at zero; the first countdown pass
+         *  subtracts one, underflows, and can create the first mouth bubble on
+         *  the install frame (S1 Drowning Countdown.asm:31-38, s2.asm:
+         *  36367-36387,39535-39554,42199-42225). S3K zones with fixed
+         *  AirCountdown cadence use level-event managers; the generic fallback
+         *  keeps the prior full-second start. */
+        int initialDrowningCountdownFrameTimer,
         /** Constant bias added to the random Obj0A mouth-bubble respawn timer.
          *  S2/S3K Obj0A_Animate computes the next mouth-bubble delay as
          *  {@code (RandomNumber & $F) + 8} (s2.asm:42201-42204). S1 LZ air
@@ -972,6 +1015,12 @@ public record PhysicsFeatureSet(
          *  not branch on the loaded bubble art key.
          *  S2/S3K: {@code 8}. S1: {@code 0}. */
         int mouthBubbleTimerBias,
+        /** Whether a newly allocated visible Obj0A bubble waits until a later
+         *  object pass before running its first update. S2/S3K allocate the
+         *  child into SST for a later slot pass; S1's fixed countdown manager
+         *  preserves the accepted immediate visible-bubble timing from the S1
+         *  complete-run traces. */
+        boolean breathingBubbleDefersFirstObjectPass,
         /** Obj0A small mouth-bubble rise velocity, in ROM subpixels/frame.
          *  S1/S2 set {@code y_vel=-$88} and call {@code SpeedToPos}
          *  (s1 Drowning Countdown.asm:47,86; s2.asm:41899,41941-41942).
@@ -1060,7 +1109,23 @@ public record PhysicsFeatureSet(
          *  <p>S3K: {@code false}. {@code Process_Sprites} (the object/player loop)
          *  runs BEFORE {@code Handle_Onscreen_Water_Height} (sonic3k.asm main
          *  loop), so the player reads the PREVIOUS frame's water level. */
-        boolean advanceWaterLevelBeforePlayerPhysics
+        boolean advanceWaterLevelBeforePlayerPhysics,
+        /** Whether shared animal objects preserve x_sub through the S2
+         *  ObjectMove/ObjectMoveAndFall longword position update. S2 Obj28
+         *  Walk/Fly uses ObjectMoveAndFall/ObjectMove (s2.asm:24670-24691);
+         *  ObjectMoveAndFall updates the full x_pos longword (s2.asm:
+         *  30164-30174), so fractional leftward ground speeds carry between
+         *  frames. S1 uses a separate animal object implementation; S3K animals
+         *  dispatch through MoveSprite/MoveSprite2 (sonic3k.asm:61104-61170),
+         *  so keep the existing shared-object baseline there until that path is
+         *  validated separately. */
+        boolean animalObjectPreservesObjectMoveXSubpixel,
+        /** Whether shared animal objects self-delete from the ROM render flag
+         *  bounds instead of the engine's legacy 64px margin point test. S2
+         *  Obj28 initializes width_pixels=8 and deletes from Walk/Fly when
+         *  render_flags.on_screen is clear (s2.asm:24570-24594,
+         *  24670-24727). */
+        boolean animalObjectUsesRenderFlagDeleteBounds
 ) {
     /** S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp directly modifies v_lookshift). */
     public static final short LOOK_SCROLL_DELAY_NONE = 0;
@@ -1208,6 +1273,7 @@ public record PhysicsFeatureSet(
                     source.movingCrouchThreshold(),
                     source.groundWallCollisionEnabled(),
                     source.groundWallPushRequiresFacingIntoWall(),
+                    source.repeatedObjectRideGroundWallResponseDeferred(),
                     source.animationChangeClearsPush(),
                     source.airSuperspeedPreserved(),
                     source.slopeResistStartsFromRest(),
@@ -1215,6 +1281,7 @@ public record PhysicsFeatureSet(
                     source.slopeRepelUsesS3kSlipKick(),
                     source.pinballLandingPreservesRoll(),
                     source.pinballLandingPreservesPinballMode(),
+                    source.rollingJumpPinballGateRequiresSpindashFlag(),
                     source.topSolidLandingAllowsZeroDist(),
                     source.airBottomSolidHitClearsGroundSpeed(),
                     source.airRightWallHitContinuesIntoCeilingSeparation(),
@@ -1236,6 +1303,7 @@ public record PhysicsFeatureSet(
                     source.useScreenYWrapValueForVisibility(),
                     source.playerControlAppliesVerticalWrapMask(),
                     source.sidekickDespawnUsesObjectIdMismatch(),
+                    source.sidekickNormalDespawnDelaysFreshRenderEntry(),
                     source.sidekickFlyLandStatusBlockerMask(),
                     source.sidekickFlyLandRequiresLeaderAlive(),
                     source.sidekickCatchUpYOffset(),
@@ -1274,11 +1342,15 @@ public record PhysicsFeatureSet(
                     source.rightWallDeepProbePreservesPenetration(),
                     source.solidObjectBarelyPokingResolvesAsSide(),
                     source.speedShoesTimerDecimation(),
+                    source.initialDrowningCountdownFrameTimer(),
                     source.mouthBubbleTimerBias(),
+                    source.breathingBubbleDefersFirstObjectPass(),
                     source.mouthBubbleRiseVelocity(),
                     source.solidObjectKeepsOnObjWhenJumpedOffSameFrame(),
                     source.levelBoundaryLockUsesScreenLockFlag(),
-                    source.advanceWaterLevelBeforePlayerPhysics()
+                    source.advanceWaterLevelBeforePlayerPhysics(),
+                    source.animalObjectPreservesObjectMoveXSubpixel(),
+                    source.animalObjectUsesRenderFlagDeleteBounds()
             );
         }
     }
@@ -1291,9 +1363,10 @@ public record PhysicsFeatureSet(
             false, null, CollisionModel.UNIFIED, true, LOOK_SCROLL_DELAY_NONE, true, true, false, false, false, false, false, false,
             RING_FLOOR_CHECK_MASK_S1, false, RING_COLLISION_SIZE_S1, RING_COLLISION_SIZE_S1, false,
             null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S1 wall response sets push unconditionally (s1disasm/_incObj/01 Sonic.asm:551-568) */,
+            false /* repeatedObjectRideGroundWallResponseDeferred: S1 MdNormal has no CalcRoomInFront */,
             false /* animationChangeClearsPush: S1 clear is FixBugs-only (s1disasm/_incObj/01 Sonic.asm:2055-2065) */, false,
             false /* slopeResistStartsFromRest: S1 Sonic_SlopeResist returns on zero inertia (s1disasm/_incObj/01 Sonic.asm:1043-1044) */,
-            false, false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2,
+            false, false, false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2,
             true /* uncappedLeftwardHorizontalScroll: S1 ScrollHoriz left move is uncapped (FixBugs=0); docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:84-90 */,
             false /* bossHitNegatesGroundSpeed */,
             true /* bossHitHalvesBounceVelocity: S1 React_BossHit negates THEN asr (halves) x/y vel (docs/s1disasm/_incObj/Sonic ReactToItem.asm:260-263) */,
@@ -1305,6 +1378,7 @@ public record PhysicsFeatureSet(
             true /* sidekickSpawningRequiresGroundedLeader: S1 has no Tails CPU */, false /* useScreenYWrapValueForVisibility: S1 keeps 32-margin */,
             false /* playerControlAppliesVerticalWrapMask: S1 LZ3/SBZ2 masks y_pos only on camera wrap crossing */,
             true /* sidekickDespawnUsesObjectIdMismatch: S1 has no Tails CPU; symmetric with S2 */,
+            false /* sidekickNormalDespawnDelaysFreshRenderEntry: S1 has no Tails CPU */,
             SIDEKICK_FLY_LAND_BLOCKERS_NONE, false /* sidekickFlyLandRequiresLeaderAlive: S1 has no CPU sidekick */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
             SIDEKICK_FLIGHT_MAX_X_STEP_S3K, SIDEKICK_FLIGHT_Y_STEP_S3K,
@@ -1339,11 +1413,15 @@ public record PhysicsFeatureSet(
             false /* rightWallDeepProbePreservesPenetration: preserve S1 baseline until right-wall traces are revalidated */,
             true /* solidObjectBarelyPokingResolvesAsSide: S1 Solid_cont sends d1<=4 to Solid_SideAir (s1disasm/_incObj/sub SolidObject.asm:181-184), which returns moveq #1,d4 = side contact (lines 211-214) */,
             1 /* speedShoesTimerDecimation: S1 per-frame word timer */,
+            60 /* initialDrowningCountdownFrameTimer: S1 fixed in-level Obj0A cadence is owned by Sonic1FixedAirCountdownManager; keep the generic fallback at the prior full-second start so it does not allocate duplicate mouth bubbles before the fixed manager owns the cadence */,
             0 /* mouthBubbleTimerBias: S1 LZ Obj64 air bubbles use a distinct bubble-maker structure with no (RandomNumber&$F)+8 mouth-bubble delay */,
+            false /* breathingBubbleDefersFirstObjectPass: S1 fixed countdown manager preserves the accepted visible bubble slot timing from complete-run traces */,
             -0x88 /* mouthBubbleRiseVelocity: S1 Obj0A small bubbles use y_vel=-$88 with SpeedToPos */,
             false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S1 unaffected (no CPU sidekick; existing same-frame unseat ordering preserved by gating) */,
             true /* levelBoundaryLockUsesScreenLockFlag: S1 Sonic_LevelBound gates the +64 right-extension on f_lockscreen (s1disasm/_incObj/01 Sonic.asm:1047-1049), which persists past boss defeat (FZ has no Egg Prison) */,
-            true /* advanceWaterLevelBeforePlayerPhysics: S1 LZWaterFeatures runs before ExecuteObjects (sonic.asm:2986-2987) */);
+            true /* advanceWaterLevelBeforePlayerPhysics: S1 LZWaterFeatures runs before ExecuteObjects (sonic.asm:2986-2987) */,
+            false /* animalObjectPreservesObjectMoveXSubpixel: S1 uses Sonic1AnimalsObjectInstance */,
+            false /* animalObjectUsesRenderFlagDeleteBounds: S1 uses Sonic1AnimalsObjectInstance */);
 
     /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
      *  preserves high ground speed on input (s2.asm:36610-36616),
@@ -1354,11 +1432,13 @@ public record PhysicsFeatureSet(
     }, CollisionModel.DUAL_PATH, false, LOOK_SCROLL_DELAY_S2, false, false, false, false, false, true, true, false,
             RING_FLOOR_CHECK_MASK_S2, true, RING_COLLISION_SIZE_S2, RING_COLLISION_SIZE_S2, false,
             null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S2 Sonic/Tails set push unconditionally in wall response (s2.asm:36536-36547,39506-39519) */,
+            true /* repeatedObjectRideGroundWallResponseDeferred: sustained object-riding pushes preserve a post-ObjectMove stored velocity correction (s2.asm:39603-39608,35070-35095) */,
             true /* animationChangeClearsPush: S2 Sonic/Tails animation clears pushing on anim change (s2.asm:38033-38038,40879-40884) */, false,
             false /* slopeResistStartsFromRest: S2 Sonic/Tails_SlopeResist returns on zero inertia (s2.asm:37369-37370,40224-40225) */,
             true, false,
             true /* pinballLandingPreservesRoll: S2 skips the Status_Roll clear while pinball_mode is set (s2.asm:37770-37771) */,
             true /* pinballLandingPreservesPinballMode: S2 Sonic_ResetOnFloor / Tails_ResetOnFloor never clear pinball_mode (s2.asm:37770-37771,40625-40626) — both branch to Part3 on pinball_mode, and Part3 only clears in_air/pushing/rolljumping/jumping */,
+            true /* rollingJumpPinballGateRequiresSpindashFlag: S2 Obj85/Obj86 do not write pinball_mode; Obj84 does and is mirrored into spindash (s2.asm:58179-58191,58376-58385,46853-46856) */,
             false, false, false, false,
             true /* fullSolidBottomOverlapUsesCurrentYRadiusOnly: S2 SolidObject_cont uses the player's CURRENT y_radius symmetrically on both halves of the underside box (d2 = obHeight/2 + y_radius(a1); bottom boundary d4 = 2*d2), s2.asm:35355-35367. This matches S1 (s1disasm/_incObj/sub SolidObject.asm:109-119). Only S3K loc_1DFD6 (sonic3k.asm:41422-41436) substitutes default_y_radius for the bottom extra term, giving the taller asymmetric box — so S3K stays false. Previously false here gave Sonic a 5px-too-tall underside box that triggered a phantom Stomper (Obj2A) ceiling hit during a MCZ rolling jump (y_radius 0x0E vs standing 0x13), zeroing y_speed at MCZ1 trace frame 2005 where ROM never collides. */,
             FAST_SCROLL_CAP_S2,
@@ -1373,6 +1453,7 @@ public record PhysicsFeatureSet(
             true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
             true /* playerControlAppliesVerticalWrapMask: S2 Obj01_Control applies the active $7FF y_pos mask in vertical-wrap loops */,
             true /* sidekickDespawnUsesObjectIdMismatch: S2 cmp.b id(a3),d0 in TailsCPU_CheckDespawn (s2.asm:39067) */,
+            true /* sidekickNormalDespawnDelaysFreshRenderEntry: S2 TailsCPU_CheckDespawn reads render_flags before Tails_Display/BuildSprites refreshes it, gated by CPU status context at the call site (s2.asm:38963-38970,39016-39024,39409-39440,5095-5111) */,
             SIDEKICK_FLY_LAND_BLOCKERS_S2, false /* sidekickFlyLandRequiresLeaderAlive: S2 TailsCPU_Flying_Part2 has no Sonic-routine check */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
             SIDEKICK_FLIGHT_MAX_X_STEP_S3K, SIDEKICK_FLIGHT_Y_STEP_S3K,
@@ -1407,11 +1488,15 @@ public record PhysicsFeatureSet(
             false /* rightWallDeepProbePreservesPenetration: preserve S2 baseline until right-wall traces are revalidated */,
             true /* solidObjectBarelyPokingResolvesAsSide: S2 SolidObject_cont sends d1<=4 to SolidObject_SideAir (s2.asm:35404-35412), which returns moveq #1,d4 = side contact (s2.asm:35447-35453); lets MTZ Obj66 Spring Wall fire its in-air -$800,-$800 diagonal bounce (s2.asm:53221-53232,53283-53340) */,
             1 /* speedShoesTimerDecimation: S2 per-frame word timer (s2.asm:36008-36025) */,
+            0 /* initialDrowningCountdownFrameTimer: Sonic_Water/Tails_Water install Obj0A with timer storage left at 0; Obj0A_Countdown underflows before setting #60-1 (s2.asm:36367-36387,39535-39554,42199-42225) */,
             8 /* mouthBubbleTimerBias: S2 Obj0A_Animate next mouth-bubble delay = (RandomNumber&$F)+8 (s2.asm:42201-42204) */,
+            true /* breathingBubbleDefersFirstObjectPass: S2 Obj0A children are allocated into SST and run when ExecuteObjects reaches the child slot */,
             -0x88 /* mouthBubbleRiseVelocity: S2 Obj0A small bubbles use y_vel=-$88 with SpeedToPos (s2.asm:41899,41941-41942) */,
             false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S2 unaffected; existing same-frame unseat ordering preserved by gating */,
             false /* levelBoundaryLockUsesScreenLockFlag: S2 Sonic_LevelBound gates the +$40 right-extension on Current_Boss_ID (s2.asm:37247-37250), i.e. boss-alive; engine uses isBossFightActive() */,
-            true /* advanceWaterLevelBeforePlayerPhysics: S2 WaterEffects runs before RunObjects (s2.asm:5094-5095) */);
+            true /* advanceWaterLevelBeforePlayerPhysics: S2 WaterEffects runs before RunObjects (s2.asm:5094-5095) */,
+            true /* animalObjectPreservesObjectMoveXSubpixel: Obj28_Walk/Fly call ObjectMoveAndFall/ObjectMove, which update full x_pos longword (s2.asm:24670-24691,30164-30199) */,
+            true /* animalObjectUsesRenderFlagDeleteBounds: Obj28 Walk/Fly delete when render_flags.on_screen is clear after BuildSprites width_pixels=8 (s2.asm:24570-24594,24670-24727) */);
 
     /** Sonic 3&K: spindash with same speed table as S2, dual collision paths, delayed look scroll,
      *  preserves high ground speed on input, elemental shields,
@@ -1426,11 +1511,13 @@ public record PhysicsFeatureSet(
             new short[]{
             0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00
     }, (short) 0x100, true, true /* groundWallPushRequiresFacingIntoWall: S3K wall response gates Status_Push on Status_Facing (sonic3k.asm:22752-22756,22768-22772,27997-28001,28013-28017) */,
+            false /* repeatedObjectRideGroundWallResponseDeferred: S3K sidekick push continuity is handled by the explicit push-grace bridge */,
             true /* animationChangeClearsPush: S3K Tails/Tails2P animation clears Status_Push on anim change (sonic3k.asm:29359-29364,29681-29686) */, true,
             true /* slopeResistStartsFromRest: S3K Player_SlopeResist applies abs(slope effect) >= $0D even when ground_vel is zero (sonic3k.asm:23848-23856) */,
             false, true,
             true /* pinballLandingPreservesRoll: S3K Player_TouchFloor_Check_Spindash skips the roll-clear body while spin_dash_flag is set (sonic3k.asm:24325-24327) */,
             true /* pinballLandingPreservesPinballMode: S3K Player_TouchFloor_Check_Spindash leaves spin_dash_flag set while AutoSpin tunnel control is active */,
+            false /* rollingJumpPinballGateRequiresSpindashFlag: S3K AutoSpin is represented by engine pinballMode and still blocks roll jumps */,
             true, true, true, true, false, FAST_SCROLL_CAP_S3K,
             false /* uncappedLeftwardHorizontalScroll: S3K caps both directions at $18 (sonic3k.asm:38403-38406) */,
             true /* bossHitNegatesGroundSpeed: S3K negates ground_vel too (sonic3k.asm:20913-20915) */,
@@ -1443,6 +1530,7 @@ public record PhysicsFeatureSet(
             false, true /* useScreenYWrapValueForVisibility: S3K Render_Sprites height_pixels=0x18 */,
             true /* playerControlAppliesVerticalWrapMask: S3K player control applies Screen_Y_wrap_value */,
             false /* sidekickDespawnUsesObjectIdMismatch: S3K cmp.w (a3),d0 in sub_13EFC (sonic3k.asm:26823) compares routine-pointer high word; all gameplay objects share the same high word so the check almost never fires */,
+            false /* sidekickNormalDespawnDelaysFreshRenderEntry: S3K catch-up-flight traces keep the existing render-bit timing */,
             SIDEKICK_FLY_LAND_BLOCKERS_S3K, true /* sidekickFlyLandRequiresLeaderAlive: sonic3k.asm:26629 cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42 */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
             SIDEKICK_FLIGHT_MAX_X_STEP_S3K, SIDEKICK_FLIGHT_Y_STEP_S3K,
@@ -1477,11 +1565,15 @@ public record PhysicsFeatureSet(
             true /* rightWallDeepProbePreservesPenetration: Player_AnglePos keeps right-wall angle continuity through deep negative probes before later walk-off checks (sonic3k.asm:18782-18842). */,
             false /* solidObjectBarelyPokingResolvesAsSide: S3K SolidObject_cont sends d1<=4 to loc_1E0D4 (TOP/BOTTOM), not SideAir (sonic3k.asm:41463-41466; loc_1E0D4 at 41541-41546) — keep existing absDistY>4 gate */,
             8 /* speedShoesTimerDecimation: S3K byte timer decremented every 8th level frame (sonic3k.asm:22072-22078; init 40818) */,
+            60 /* initialDrowningCountdownFrameTimer: S3K fixed AirCountdown cadence is owned by zone/event managers; keep generic fallback at the previous full-second reset */,
             8 /* mouthBubbleTimerBias: S3K shares the S2 Obj0A mouth-bubble cadence (RandomNumber&$F)+8 */,
+            true /* breathingBubbleDefersFirstObjectPass: S3K AirCountdown visible children use allocated-object pass timing like S2 */,
             -0x100 /* mouthBubbleRiseVelocity: S3K AirCountdown uses y_vel=-$100 with MoveSprite2 (sonic3k.asm:33312,33347) */,
             true /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S3K SolidObjectFull runs once/object/frame. A land-and-jump-off frame keeps Status_OnObj|Status_InAir (RideObject_SetRide bset Status_OnObj sonic3k.asm:42033; Tails_Jump bset Status_InAir without clearing OnObj sonic3k.asm:28553-28554); the airborne-rider unseat (loc_1DC98 41016-41035 / loc_1DCF0 41066-41084) fires only on the NEXT frame. AIZ1 f2590 Tails-on-Spikes: ROM 0x0A, engine was 0x02. */,
             false /* levelBoundaryLockUsesScreenLockFlag: S3K has levelBoundaryRightStrict=true so the +64 extension is never added and this gate is never consulted */,
-            false /* advanceWaterLevelBeforePlayerPhysics: S3K Process_Sprites runs before Handle_Onscreen_Water_Height, so the player reads the previous frame's water level */);
+            false /* advanceWaterLevelBeforePlayerPhysics: S3K Process_Sprites runs before Handle_Onscreen_Water_Height, so the player reads the previous frame's water level */,
+            false /* animalObjectPreservesObjectMoveXSubpixel: S3K Obj_Animal uses MoveSprite/MoveSprite2, not S2 ObjectMoveAndFall/ObjectMove (sonic3k.asm:61104-61170) */,
+            false /* animalObjectUsesRenderFlagDeleteBounds: preserve current S3K animal lifetime baseline until validated */);
 
     /** Returns true when the game supports dual collision paths (primary/secondary). */
     public boolean hasDualCollisionPaths() {

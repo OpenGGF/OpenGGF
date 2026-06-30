@@ -151,6 +151,8 @@ class TestSidekickCpuDespawnParity {
         tails.setXSpeed((short) 0x041C);
         tails.setYSpeed((short) 0x0000);
         tails.setGSpeed((short) 0x041C);
+        tails.setSpindash(true);
+        tails.setSpindashCounter((short) 0x0400);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.setInitialState(SidekickCpuController.State.NORMAL);
@@ -165,6 +167,10 @@ class TestSidekickCpuDespawnParity {
         assertEquals((short) 0x041C, tails.getXSpeed());
         assertEquals((short) 0x0000, tails.getYSpeed());
         assertEquals((short) 0x041C, tails.getGSpeed());
+        assertTrue(tails.getSpindash(),
+                "S2 TailsCPU_Despawn does not clear pinball_mode/spindash_flag");
+        assertEquals((short) 0x0400, tails.getSpindashCounter(),
+                "S2 TailsCPU_Despawn does not touch spindash_counter");
         assertTrue(tails.getAir());
         assertFalse(tails.getRolling());
         assertFalse(tails.getRollingJump());
@@ -211,6 +217,86 @@ class TestSidekickCpuDespawnParity {
         assertEquals(1, controller.getDiagnosticJumpingFlag(),
                 "S2 TailsCPU_Flying timeout does not clear Tails_CPU_jumping "
                         + "(docs/s2disasm/s2.asm:39136-39149)");
+    }
+
+    @Test
+    void s2FlyingRespawnTopEdgeKeepsCounterUntilRomRenderFlagRefreshes() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) 0x1CAE);
+        sonic.setCentreY((short) 0x052C);
+        sonic.resetPositionAndStatTableHistory();
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1C97);
+        tails.setCentreY((short) 0x04AD);
+        tails.setAir(true);
+        tails.setRenderFlagOnScreen(true);
+
+        GameServices.camera().setX((short) 0x1C0E);
+        GameServices.camera().setY((short) 0x04CC);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x04, 0, 0, 0x74, false, 0x1CA4, 0x052C);
+        controller.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
+
+        for (int i = 0; i < 0x3E; i++) {
+            tails.setRenderFlagOnScreen(false);
+            controller.update(i);
+            assertEquals(SidekickCpuController.State.APPROACHING, controller.getState());
+        }
+
+        tails.setCentreX((short) 0x1C97);
+        tails.setCentreY((short) 0x04AD);
+        tails.setRenderFlagOnScreen(true);
+
+        controller.update(0x193F);
+
+        assertEquals(SidekickCpuController.State.APPROACHING, controller.getState());
+        assertEquals(0x003F, controller.getDiagnosticRespawnCounter(),
+                "HTZ1 BizHawk gfc $193F: TailsCPU_Flying still sees render_flags=$04 at relY=-31 "
+                        + "and increments Tails_respawn_counter before BuildSprites refreshes it to $84");
+    }
+
+    @Test
+    void s2FlyingRespawnLaterTopEdgeUsesRefreshedRenderFlag() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) 0x0427);
+        sonic.setCentreY((short) 0x0425);
+        sonic.resetPositionAndStatTableHistory();
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0423);
+        tails.setCentreY((short) 0x03A9);
+        tails.setAir(true);
+        tails.setRenderFlagOnScreen(true);
+
+        GameServices.camera().setX((short) 0x03B1);
+        GameServices.camera().setY((short) 0x03C8);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x04, 0, 0, 0x74, false, 0x0427, 0x0425);
+        controller.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
+
+        for (int i = 0; i < 0x5B; i++) {
+            tails.setRenderFlagOnScreen(false);
+            controller.update(i);
+            assertEquals(SidekickCpuController.State.APPROACHING, controller.getState());
+        }
+
+        tails.setCentreX((short) 0x0423);
+        tails.setCentreY((short) 0x03A9);
+        tails.setRenderFlagOnScreen(true);
+
+        controller.update(0x045A);
+
+        assertEquals(SidekickCpuController.State.APPROACHING, controller.getState());
+        assertEquals(0x0000, controller.getDiagnosticRespawnCounter(),
+                "CNZ f1115 guard: a later TailsCPU_Flying top-edge pass has refreshed render_flags "
+                        + "and must reset Tails_respawn_counter instead of carrying $5C");
     }
 
     @Test
@@ -995,6 +1081,108 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s2NormalDespawnConsumesFreshRenderEntryForAirRollingDelayedLeaderSample() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        seedDelayedLeaderStatus(sonic,
+                (byte) (AbstractPlayableSprite.STATUS_IN_AIR | AbstractPlayableSprite.STATUS_ROLLING),
+                false);
+
+        TestableSprite tails = createS2Ooz2FreshRenderEntrySidekick();
+        SidekickCpuController controller = createS2Ooz2FreshRenderEntryController(tails, sonic);
+
+        tails.setRenderFlagOnScreen(false);
+        controller.update(3671);
+        assertEquals(0x0078, controller.getDiagnosticRespawnCounter());
+
+        tails.setRenderFlagOnScreen(true);
+        controller.update(3672);
+        assertEquals(0x0079, controller.getDiagnosticRespawnCounter(),
+                "OOZ2 f3672 reads the delayed Stat_table status as air+rolling (0x06); "
+                        + "S2 TailsCPU_CheckDespawn must consume this fresh render-entry one CPU tick late");
+
+        tails.setRenderFlagOnScreen(true);
+        controller.update(3673);
+        assertEquals(0x0000, controller.getDiagnosticRespawnCounter());
+    }
+
+    @Test
+    void s2NormalDespawnResetsFreshRenderEntryForNonAirRollingDelayedLeaderSamples() {
+        byte[] protectedStatuses = {
+                0,
+                AbstractPlayableSprite.STATUS_ROLLING,
+                AbstractPlayableSprite.STATUS_ON_OBJECT,
+                AbstractPlayableSprite.STATUS_FACING_LEFT
+                        | AbstractPlayableSprite.STATUS_IN_AIR
+                        | AbstractPlayableSprite.STATUS_ROLLING
+        };
+        for (byte delayedStatus : protectedStatuses) {
+            TestableSprite sonic = new TestableSprite("sonic");
+            seedDelayedLeaderStatus(sonic, delayedStatus,
+                    (delayedStatus & AbstractPlayableSprite.STATUS_FACING_LEFT) != 0);
+
+            TestableSprite tails = createS2Ooz2FreshRenderEntrySidekick();
+            SidekickCpuController controller = createS2Ooz2FreshRenderEntryController(tails, sonic);
+
+            tails.setRenderFlagOnScreen(false);
+            controller.update(3671);
+            assertEquals(0x0078, controller.getDiagnosticRespawnCounter(),
+                    "precondition failed for delayed Stat_table status " + delayedStatus);
+
+            tails.setRenderFlagOnScreen(true);
+            controller.update(3672);
+            assertEquals(0x0000, controller.getDiagnosticRespawnCounter(),
+                    "HTZ2/HTZ1/MTZ1-shaped delayed Stat_table statuses must reset immediately, status="
+                            + delayedStatus);
+        }
+    }
+
+    private static TestableSprite createS2Ooz2FreshRenderEntrySidekick() {
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0F38);
+        tails.setCentreY((short) 0x0296);
+        tails.setAir(true);
+        tails.setRolling(true);
+        GameServices.camera().setX((short) 0x0F49);
+        GameServices.camera().setY((short) 0x01D3);
+        return tails;
+    }
+
+    private static SidekickCpuController createS2Ooz2FreshRenderEntryController(
+            TestableSprite tails,
+            TestableSprite sonic) {
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0x0077, 0x16, false, 0x08FB, 0x01AC);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 16);
+        return controller;
+    }
+
+    private static void seedDelayedLeaderStatus(TestableSprite sonic, byte delayedStatus, boolean delayedLeftInput) {
+        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        sonic.setCentreX((short) 0x08FB);
+        sonic.setCentreY((short) 0x01AC);
+        sonic.resetPositionAndStatTableHistory();
+        applyStatusBits(sonic, delayedStatus);
+        sonic.setLogicalInputState(false, false, delayedLeftInput, false, false, false);
+        sonic.recordFollowerHistoryForTick();
+        sonic.endOfTick();
+        applyStatusBits(sonic, (byte) 0);
+        for (int i = 0; i < 16; i++) {
+            sonic.endOfTick();
+        }
+    }
+
+    private static void applyStatusBits(TestableSprite sprite, byte status) {
+        sprite.setDirection((status & AbstractPlayableSprite.STATUS_FACING_LEFT) != 0
+                ? Direction.LEFT
+                : Direction.RIGHT);
+        sprite.setAir((status & AbstractPlayableSprite.STATUS_IN_AIR) != 0);
+        sprite.setRolling((status & AbstractPlayableSprite.STATUS_ROLLING) != 0);
+        sprite.setOnObject((status & AbstractPlayableSprite.STATUS_ON_OBJECT) != 0);
+    }
+
+    @Test
     void blinkHiddenSidekickDoesNotRefreshRenderFlagFromCameraVisibility() {
         SpriteManager sprites = new SpriteManager();
         Camera camera = new Camera();
@@ -1398,5 +1586,36 @@ class TestSidekickCpuDespawnParity {
         assertEquals(AbstractPlayableSprite.INPUT_JUMP,
                 controller.getDiagnosticGeneratedPressedInput() & AbstractPlayableSprite.INPUT_JUMP,
                 "The movement guard must not rewrite the ROM-visible Ctrl_2_Press_Logical byte");
+    }
+
+    @Test
+    void s2DeadSidekickRoutinePreservesPreviousCtrl2LogicalLatch() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        sonic.setCentreX((short) 0x1200);
+        sonic.setCentreY((short) 0x0324);
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1100);
+        tails.setCentreY((short) 0x0340);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+        controller.setController2Input(AbstractPlayableSprite.INPUT_RIGHT, AbstractPlayableSprite.INPUT_RIGHT);
+        controller.update(1);
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_RIGHT,
+                "The setup frame seeds the ROM-visible Ctrl_2_Logical latch.");
+
+        controller.setController2Input(0, 0);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 16);
+        tails.setDead(true);
+        controller.update(2);
+
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_RIGHT,
+                "S2 Obj02_Dead bypasses TailsCPU_Control, so Ctrl_2_Logical must keep its previous word.");
     }
 }

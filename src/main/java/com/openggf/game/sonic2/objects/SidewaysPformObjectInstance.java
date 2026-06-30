@@ -10,7 +10,10 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -114,6 +117,7 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
         this.linkedPlatform = parent;
         parent.linkedPlatform = this;
         initChild(parent);
+        initialized = true;
     }
 
     @Override
@@ -288,8 +292,7 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
         minX = parent.minX;
         maxX = parent.maxX;
 
-        // Child starts offset from parent
-        x = parent.x + childXOffset;
+        x = spawn.x();
         y = parent.y;
 
         // Child always starts with default direction (0 = moving right)
@@ -311,7 +314,52 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
                 spawn.rawYWord()
         );
 
-        spawnFreeChild(() -> new SidewaysPformObjectInstance(childSpawn, name + "_child", this));
+        ObjectServices svc = services();
+        SidewaysPformObjectInstance child = ObjectConstructionContext.construct(
+                svc, () -> new SidewaysPformObjectInstance(childSpawn, name + "_child", this));
+        ObjectManager objectManager = svc.objectManager();
+        if (objectManager == null) {
+            return;
+        }
+        if (ObjectConstructionContext.isRewindActiveRestore()) {
+            objectManager.registerRewindReconstructionChild(child);
+        } else {
+            // ROM Obj7A_SubObjectLoop uses AllocateObjectAfterCurrent, so the
+            // child must occupy the next free slot after the preallocated parent.
+            // docs/s2disasm/s2.asm:56192-56196
+            objectManager.addDynamicObjectAfterSlot(child, getSlotIndex());
+        }
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean checksOutOfRangeAfterRoutine() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        if (isChild) {
+            return false;
+        }
+        // Obj7A parent owns pair lifetime from its min/max range endpoints;
+        // the child routine only moves/checks collision/displays.
+        // docs/s2disasm/s2.asm:56239-56272
+        boolean out = obj7aEndpointOutOfRange(minX, cameraX)
+                && obj7aEndpointOutOfRange(maxX, cameraX);
+        if (out && linkedPlatform != null && linkedPlatform != this) {
+            linkedPlatform.setDestroyedByOffscreen();
+        }
+        return out;
+    }
+
+    private static boolean obj7aEndpointOutOfRange(int endpointX, int cameraX) {
+        int dist = ((endpointX & 0xFF80) - S2ObjectWindowing.unloadCoarse(cameraX)) & 0xFFFF;
+        return dist > S2ObjectWindowing.UNLOAD_COMPARE;
     }
 
     /**
@@ -337,28 +385,16 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
         }
 
         // Check for linked platform collision (direction toggle)
-        // This check is performed by the CHILD, not the parent (assembly: Obj7A_SubObject)
-        // Note: Original uses exact equality, but our update order (dynamic before active)
-        // means child checks against stale parent position. Use overlap + direction check.
+        // This check is performed by the CHILD, not the parent (assembly: Obj7A_SubObject).
         if (linkedPlatform != null && isChild) {
-            int childLeft = x - HALF_WIDTH;
-            int childRight = x + HALF_WIDTH;
-            int parentLeft = linkedPlatform.x - HALF_WIDTH;
             int parentRight = linkedPlatform.x + HALF_WIDTH;
+            int childLeft = x - HALF_WIDTH;
 
-            // Check if collision boxes overlap or touch
-            boolean touching = (childLeft <= parentRight) && (childRight >= parentLeft);
-
-            if (touching) {
-                // Only toggle if moving toward each other (prevents repeated toggles)
-                boolean childRightOfParent = x > linkedPlatform.x;
-                boolean movingToward = (childRightOfParent && direction == 1 && linkedPlatform.direction == 0) ||
-                                       (!childRightOfParent && direction == 0 && linkedPlatform.direction == 1);
-
-                if (movingToward) {
-                    direction ^= 1;
-                    linkedPlatform.direction ^= 1;
-                }
+            // Obj7A tests exact edge equality before toggling both directions.
+            // docs/s2disasm/s2.asm:56307-56317
+            if (childLeft == parentRight) {
+                direction ^= 1;
+                linkedPlatform.direction ^= 1;
             }
         }
     }

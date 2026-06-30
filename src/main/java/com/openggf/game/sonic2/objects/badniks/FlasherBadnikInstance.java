@@ -290,6 +290,15 @@ public class FlasherBadnikInstance extends AbstractBadnikInstance implements Rew
     }
 
     @Override
+    public boolean requiresRenderFlagForTouch() {
+        // S2 Touch_Loop scans collision_flags directly with no render-flag
+        // gate (s2.asm:85048-85054). ObjA3 starts with collision_flags=$06
+        // from subObjData and sets bit 7 while electrified (s2.asm:76227-76228,
+        // 76144-76148), so off-screen CPU Tails can still be hurt.
+        return false;
+    }
+
+    @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(4);
     }

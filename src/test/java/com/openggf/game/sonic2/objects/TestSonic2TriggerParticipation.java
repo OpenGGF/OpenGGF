@@ -26,7 +26,9 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.sprites.playable.SidekickCpuController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -116,6 +118,31 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void nutSidekickActionSeesLiveObjectStandingBit() {
+        TestablePlayableSprite main = player("sonic", 0x1600, 0x0600);
+        TestablePlayableSprite tails = player("tails", 0x16C0, 0x04D2);
+        tails.setSubpixelRaw(0xB500, 0x8500);
+        NutObjectInstance nut = new NutObjectInstance(
+                new ObjectSpawn(0x16C0, 0x04EE, Sonic2ObjectIds.NUT, 0, 0, false, 0),
+                "Nut");
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.hasObjectStandingBit(tails, nut)).thenReturn(true);
+        nut.setServices(new QueryOnlyPlayerServices(main, List.of(tails)).withObjectManager(objectManager));
+
+        nut.update(0, main);
+
+        tails.setCentreXPreserveSubpixel((short) 0x16C1);
+        tails.setSubpixelRaw(0x4D00, 0x8500);
+        nut.update(1, main);
+
+        assertEquals(0x16C0, tails.getCentreX(),
+                "Obj69's P2 action pass reads status(a0)'s p2 standing bit before SolidObject "
+                        + "and writes x_pos(a0) to x_pos(a1) (s2.asm:54000-54013, 54017-54061, 54095-54107)");
+        assertEquals(0x4D00, tails.getXSubpixelRaw(),
+                "Obj69 writes only the native x_pos word, preserving x_sub");
+    }
+
+    @Test
     void nutSolidBottomBoundsUseLiveRollingRadius() {
         NutObjectInstance nut = new NutObjectInstance(
                 new ObjectSpawn(0x13C0, 0x064C, Sonic2ObjectIds.NUT, 0x15, 0, false, 0),
@@ -124,6 +151,30 @@ class TestSonic2TriggerParticipation {
         assertTrue(nut.fullSolidBottomOverlapUsesCurrentYRadiusOnly(null),
                 "Obj69 SolidObject tail doubles live y_radius(a1), so rolling lower-half contact "
                         + "must not use stand radius");
+    }
+
+    @Test
+    void nutOffscreenSidekickSolidObjectGateReturnsNoContact() {
+        NutObjectInstance nut = new NutObjectInstance(
+                new ObjectSpawn(0x16C0, 0x04E6, Sonic2ObjectIds.NUT, 0, 0, false, 0),
+                "Nut");
+        TestablePlayableSprite tails = player("tails", 0x16C0, 0x04D2);
+        tails.setCpuControlled(true);
+        tails.setRenderFlagOnScreen(false);
+
+        assertTrue(nut.airborneStaleStandingBitReturnsNoContact(tails),
+                "Obj69's native P2 SolidObject tail returns before SolidObject_cont when "
+                        + "the CPU sidekick render_flags.on_screen bit is clear (s2.asm:54006-54013, 35022-35025)");
+
+        tails.setRenderFlagOnScreen(true);
+        assertTrue(nut.airborneStaleStandingBitReturnsNoContact(tails),
+                "Obj69's native P2 SolidObject tail consumes a stale airborne standing bit "
+                        + "before SolidObject_cont even when Tails is on-screen (s2.asm:54006-54013, 35028-35046)");
+        assertTrue(nut.suppressesGroundingRecoveryFromAirborneStaleRide(tails),
+                "Obj69's late SolidObject tail must keep stale airborne ride latches out of "
+                        + "pre-movement grounding recovery (s2.asm:54006-54013, 35028-35046)");
+        assertFalse(nut.airborneStaleStandingBitReturnsNoContact(null));
+        assertFalse(nut.suppressesGroundingRecoveryFromAirborneStaleRide(null));
     }
 
     @Test
@@ -530,6 +581,74 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void oozPoppingPlatformApexLaunchesStandingSidekickWithoutJavaLockLatch() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x0F83);
+        tails.setCpuControlled(true);
+        tails.setOnObject(true);
+        tails.setAir(false);
+
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of(tails));
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        services.withObjectManager(objectManager);
+        OOZPoppingPlatformObjectInstance platform = objectManager.createDynamicObject(
+                () -> new OOZPoppingPlatformObjectInstance(
+                        new ObjectSpawn(0x1000, 0x1000, 0x33, 1, 0, false, 0),
+                        "OOZPoppingPlatform"));
+        objectManager.forceRidingObjectForBootstrap(tails, platform);
+        setField(platform, "mode", oozPoppingPlatformMode("RISE_AND_LAUNCH"));
+        setField(platform, "currentY", 0x0F83);
+        setField(platform, "velocity", 0);
+        setField(platform, "mainCharLocked", false);
+        setField(platform, "sidekickLocked", false);
+
+        platform.update(17, main);
+
+        assertFalse(tails.isOnObject(), "Obj33 loc_23D60 clears Status_OnObj for any standing P2 bit");
+        assertTrue(tails.getAir(), "Obj33 loc_23D60 sets Status_InAir from the platform status bit");
+        assertEquals(0x1000, tails.getCentreX() & 0xFFFF);
+        assertEquals(0x800, tails.getGSpeed() & 0xFFFF);
+        assertEquals(0xF000, tails.getYSpeed() & 0xFFFF);
+        assertEquals(Sonic2AnimationIds.ROLL.id(), tails.getAnimationId());
+    }
+
+    @Test
+    void oozPoppingPlatformApexLaunchPreservesRiderNativeY() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1020, 0x0F75);
+        main.setOnObject(true);
+        main.setAir(false);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(main);
+
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of());
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        services.withObjectManager(objectManager);
+        OOZPoppingPlatformObjectInstance platform = objectManager.createDynamicObject(
+                () -> new OOZPoppingPlatformObjectInstance(
+                        new ObjectSpawn(0x1000, 0x1000, 0x33, 1, 0, false, 0),
+                        "OOZPoppingPlatform"));
+        objectManager.forceRidingObjectForBootstrap(main, platform);
+        setField(platform, "mode", oozPoppingPlatformMode("RISE_AND_LAUNCH"));
+        setField(platform, "currentY", 0x0F83);
+        setField(platform, "velocity", 0);
+        setField(platform, "mainCharLocked", true);
+        setField(platform, "sidekickLocked", false);
+
+        platform.update(17, main);
+
+        assertEquals(0x0F75, main.getCentreY() & 0xFFFF,
+                "ROM Obj33 launch does not write y_pos(a1) at the apex");
+        assertFalse(main.isOnObject(), "ROM clears Status_OnObj when Obj33 launches the rider");
+        assertFalse(main.isObjectControlled(), "ROM clears obj_control after Obj33 launch");
+        assertTrue(main.getAir(), "ROM sets Status_InAir on Obj33 launch");
+        assertEquals(0x1000, main.getCentreX() & 0xFFFF);
+        assertEquals(0x800, main.getGSpeed() & 0xFFFF);
+        assertEquals(0xF000, main.getYSpeed() & 0xFFFF);
+        assertEquals(Sonic2AnimationIds.ROLL.id(), main.getAnimationId());
+    }
+
+    @Test
     void flipperAppliesCheckpointContactToQueryOnlySidekick() {
         TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x1010, 0x1000);
@@ -574,6 +693,57 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void verticalFlipperLaunchReadsLogicalP1ButRawP2JumpPress() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        tails.setCpuControlled(true);
+        SidekickCpuController cpuController = new SidekickCpuController(tails, main);
+        tails.setCpuController(cpuController);
+
+        FlipperObjectInstance flipper = new FlipperObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x86, 0x00, 0, false, 0),
+                "Flipper");
+        Method hasVerticalLaunchPress = FlipperObjectInstance.class
+                .getDeclaredMethod("hasVerticalLaunchPress", AbstractPlayableSprite.class);
+        hasVerticalLaunchPress.setAccessible(true);
+
+        main.setLogicalInputState(false, false, false, false, true, true);
+        assertTrue((boolean) hasVerticalLaunchPress.invoke(flipper, main),
+                "Obj86 reads Ctrl_1_Logical's jump-press bit for the MainCharacter");
+
+        tails.setJumpInputPressed(true, true);
+        cpuController.setController2Input(0, 0);
+        assertFalse((boolean) hasVerticalLaunchPress.invoke(flipper, tails),
+                "CPU Tails' synthesized follow jump is not raw Ctrl_2 and must not trigger Obj86 launch");
+
+        cpuController.setController2Input(0, AbstractPlayableSprite.INPUT_JUMP);
+        assertTrue((boolean) hasVerticalLaunchPress.invoke(flipper, tails),
+                "Obj86 reads raw Ctrl_2 jump press for the Sidekick");
+    }
+
+    @Test
+    void verticalFlipperRollOwnershipClearsStaleObj85PreservedRollLatch() {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        tails.setAir(false);
+        tails.preserveRollingOnNextRollStop();
+        FlipperObjectInstance flipper = new FlipperObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x86, 0x00, 0, false, 0),
+                "Flipper");
+        flipper.setServices(new QueryOnlyPlayerServices(main, List.of(tails))
+                .withCheckpointBatch(new SolidCheckpointBatch(
+                        flipper,
+                        Map.of(tails, standingContact()))));
+
+        flipper.update(0, main);
+
+        assertTrue(tails.getRolling(), "Obj86 first stand curls the player");
+        assertTrue(tails.getPinballMode(), "Obj86 owns a temporary pinball-mode guard while standing");
+        assertFalse(tails.shouldPreserveRollingOnNextRollStop(),
+                "Obj86's explicit roll ownership must clear stale Obj85 preserved-roll handoff state");
+    }
+
+    @Test
     void springboardLaunchesQueryOnlySidekick() {
         TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
@@ -591,6 +761,17 @@ class TestSonic2TriggerParticipation {
         assertTrue(tails.getAir(),
                 "Springboard should launch sidekick participants from ObjectPlayerQuery");
         assertEquals(0xFB00, tails.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
+    void springboardSlopedSolidBypassesOffscreenSolidGate() {
+        SpringboardObjectInstance springboard = new SpringboardObjectInstance(
+                new ObjectSpawn(0x1623, 0x0788, 0x40, 0, 0, false, 0),
+                "Springboard");
+
+        assertTrue(springboard.bypassesOffscreenSolidGate(),
+                "Obj40_Main calls SlopedSolid_SingleCharacter, which jumps to SlopedSolid_cont "
+                        + "without SolidObject_OnScreenTest (s2.asm:52292-52313, 35126, 35263)");
     }
 
     @Test
@@ -696,6 +877,25 @@ class TestSonic2TriggerParticipation {
         assertTrue(block.isDestroyed(),
                 "Obj32 snapshots player anim before SolidObject and breaks on anim==Roll");
         assertEquals(0xFD00, main.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
+    void cpzBreakableBlockRemainsSolidForLaterParticipantsInDestroyPass() {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        main.setRolling(false);
+        main.setAnimationId(Sonic2AnimationIds.ROLL.id());
+        TestablePlayableSprite sidekick = player("tails", 0x1000, 0x1000);
+        BreakableBlockObjectInstance block = new BreakableBlockObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_BLOCK, 0, 0, false, 0),
+                "BreakableBlock");
+        block.setServices(new QueryOnlyPlayerServices(main, List.of(sidekick)).withGameState(new GameStateManager()));
+
+        block.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
+
+        assertTrue(block.isDestroyed(),
+                "Obj32 should destroy as soon as the rolling standing player breaks it");
+        assertTrue(block.isSolidFor(sidekick),
+                "ROM Obj32 computes both players' standing state before the destroy branch");
     }
 
     @Test
@@ -955,6 +1155,19 @@ class TestSonic2TriggerParticipation {
                 PreContactState.ZERO,
                 new PostContactState((short) 0, (short) 0, false, true, false),
                 0);
+    }
+
+    private static void setField(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Enum<?> oozPoppingPlatformMode(String name) throws Exception {
+        Class<?> modeClass = Class.forName(
+                "com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance$Mode");
+        return Enum.valueOf((Class) modeClass, name);
     }
 
     private static final class QueryOnlyPlayerServices extends TestObjectServices {

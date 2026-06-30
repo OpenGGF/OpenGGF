@@ -261,6 +261,10 @@ public final class ConfigCatalog {
         put(PLAYBACK_START_OFFSET_FRAME, of("debug.playback", "startOffsetFrame", INT,
                 "Starting frame offset for BK2 playback"));
 
+        // debug.recording
+        put(RECORDING_RECORD_KEY, of("debug.recording", "recordKey", KEY,
+                "User recording key: Shift+key starts/opens recordings, key alone stops active recording"));
+
         // debug.traceRewind
         put(TRACE_REWIND_KEY, of("debug.traceRewind", "key", KEY,
                 "Key held in Trace Test Mode to rewind deterministic engine state"));

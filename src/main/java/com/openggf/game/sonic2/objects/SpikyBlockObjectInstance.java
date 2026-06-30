@@ -81,7 +81,12 @@ public class SpikyBlockObjectInstance extends AbstractObjectInstance
      */
     private void spawnSpikeChild(int frameCounter) {
         // ROM: move.w (Level_frame_counter).w,d0 / lsr.w #6,d0
-        int d0 = frameCounter >> 6;
+        // ObjectManager's update argument is the VBlank-style object counter;
+        // Obj68 reads the ROM-visible level counter instead.
+        int levelFrameCounter = services().levelManager() != null
+                ? services().levelManager().getFrameCounter() + 1
+                : frameCounter;
+        int d0 = levelFrameCounter >> 6;
         int d1 = d0;
 
         // ROM: andi.w #1,d0 / move.w d0,spikearoundblock_position(a1)

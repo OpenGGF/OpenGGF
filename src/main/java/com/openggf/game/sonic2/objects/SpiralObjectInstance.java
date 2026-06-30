@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
@@ -28,7 +29,7 @@ import java.util.logging.Logger;
  * they traverse it.
  * Effectively creates a "wave" motion and sprite twisting effect.
  */
-public class SpiralObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class SpiralObjectInstance extends AbstractObjectInstance implements PostPlayerUpdateHook, RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(SpiralObjectInstance.class.getName());
 
     // Obj06_FlipAngleTable (sloopdirtbl)
@@ -125,6 +126,16 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Rewi
             if (participant instanceof AbstractPlayableSprite player) {
                 processPlayer(frameCounter, player);
             }
+        }
+    }
+
+    @Override
+    public void updatePostPlayer(int frameCounter, PlayableEntity playerEntity) {
+        if (!isCylinder() || !(playerEntity instanceof AbstractPlayableSprite player)) {
+            return;
+        }
+        if (!ridingPlayers.contains(player)) {
+            tryActivateCylinder(frameCounter, player);
         }
     }
 
@@ -237,13 +248,41 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Rewi
             objectManager.markObjectSupportThisFrame(player);
         }
         player.setOnObject(true);
-        player.setAir(false);
         player.setLatchedSolidObject(Sonic2ObjectIds.SPIRAL, this);
         player.setAngle((byte) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed(player.getXSpeed());
+        applyRideObjectAirborneReset(player);
+        player.setAir(false);
         player.markSpiralActive(frameCounter);
         LOGGER.fine("Spiral Activated: Player engaged at dx=" + (player.getCentreX() - spawn.x()));
+    }
+
+    private void applyRideObjectAirborneReset(AbstractPlayableSprite player) {
+        if (!player.getAir()) {
+            return;
+        }
+        // Obj06_Cylinder calls RideObject_SetRide after snapping y_pos
+        // (docs/s2disasm/s2.asm:47356-47364). RideObject_SetRide then calls
+        // Sonic/Tails_ResetOnFloor_Part2 for airborne players before setting
+        // Status_OnObj (docs/s2disasm/s2.asm:36016-36038). The Part2 routines
+        // clear rolling, restore standing radii, lift y_pos by the radius delta,
+        // and clear landing flags (docs/s2disasm/s2.asm:38128-38140,
+        // 41024-41037).
+        if (player.getRolling()) {
+            int oldCentreY = player.getCentreY();
+            int oldYRadius = player.getYRadius();
+            player.setRolling(false);
+            player.setCentreYPreserveSubpixel((short) (oldCentreY + oldYRadius - player.getStandYRadius()));
+            player.setAnimationId(Sonic2AnimationIds.WALK);
+        }
+        player.setPushing(false);
+        player.setRollingJump(false);
+        player.setJumping(false);
+        player.setFlipAngle(0);
+        player.setFlipTurned(false);
+        player.setFlipsRemaining(0);
+        player.setLookDelayCounter((short) 0);
     }
 
     private void clearPreviousSpiralOwnership(AbstractPlayableSprite player, ObjectManager objectManager) {

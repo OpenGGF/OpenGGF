@@ -15,6 +15,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -180,10 +181,9 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
             return;
         }
 
-        // ROM skips CPU Tails while in the flying routine. The engine does not
-        // expose Tails_CPU_routine directly here, so use the same conservative
-        // physical guard as Obj3D for CPU airborne non-rolling flight.
-        if (player.isCpuControlled() && player.getAir() && !player.getRolling()) {
+        // ROM Obj48 skips Sidekick only while Tails_CPU_routine == 4
+        // (docs/s2disasm/s2.asm:51316-51319), not for every airborne CPU sidekick.
+        if (isCpuSidekickInFlyingRoutine(player)) {
             return;
         }
 
@@ -219,15 +219,17 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x());
         NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y());
 
-        // Setup character state (ROM: move.b #$81,obj_control(a1))
+        // Setup character state (ROM: move.b #$81,obj_control(a1)).
+        // Obj48 does not write global Control_Locked; Obj01_Control keeps
+        // refreshing Ctrl_1_Logical while obj_control owns movement.
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
         player.setAnimationId(Sonic2AnimationIds.ROLL);
         player.setGSpeed((short) 0x1000);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setAir(true);
         player.setOnObject(true);
+        player.setLatchedSolidObject(spawn.objectId(), this);
 
         // Reset mapping frame to initial state
         mappingFrame = startFrame;
@@ -239,6 +241,14 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         } catch (Exception e) {
             // Don't let audio failure break game logic
         }
+    }
+
+    private boolean isCpuSidekickInFlyingRoutine(AbstractPlayableSprite player) {
+        if (!player.isCpuControlled()) {
+            return false;
+        }
+        SidekickCpuController controller = player.getCpuController();
+        return controller != null && controller.getDiagnosticRomCpuRoutine() == 0x04;
     }
 
     /**

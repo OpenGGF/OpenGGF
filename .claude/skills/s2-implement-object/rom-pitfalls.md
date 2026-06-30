@@ -16,6 +16,69 @@ implementation, ROM citation, originating fix commit.
 
 ---
 
+## P0A — Child-to-parent shared counters must be visible in the same object pass
+
+**Symptom.** A parent object waits one extra frame to release the player or
+advance state even though trace diagnostics show the shared child counter has
+already reached zero. The first mismatch is often a player velocity or control
+state written by the parent's release routine.
+
+**Root cause.** The engine keeps the parent counter as a Java field/array and
+only checks it from the parent's scheduled `update`. ROM child routines can
+decrement a parent SST byte through an object pointer, and the parent-visible
+RAM change is immediate even when the child slot runs before the parent slot in
+the same `ExecuteObjects` pass.
+
+**What to check.** For prize displays, multi-part bosses, counters, latches,
+and parent-owned child effects, identify child writes through parent pointers
+(`objoff_2A(a0)`, explicit parent SST addresses, or similar). If a parent
+branches on that byte later in the same frame, notify the parent or otherwise
+make the shared state visible immediately instead of waiting for the parent's
+next frame.
+
+**ROM citation.** CNZ ObjDC decrements ObjD6's active-prize counter through
+`objoff_2A(a0)` before `CollectRing`; ObjD6 checks `objoff_2C` and releases via
+`loc_2BE2E` with `y_vel=$400`
+(`docs/s2disasm/s2.asm:25470-25494,59151-59188,59215-59224`).
+
+**Originating commit.** `fix(s2): advance CNZ2 point pokey prize release`.
+
+---
+
+## P0 — LoadChildObject child accidentally uses lowest-free slot/order
+
+**Symptom.** A boss or compound object is position-correct for most of a trace,
+then a child-to-parent report arrives one frame early or with a player target a
+few pixels off. Slot diagnostics show the child below its parent even though the
+ROM child runs after the parent.
+
+**Root cause.** Engine code used `spawnFreeChild` / lowest-free allocation for a
+ROM path that calls `LoadChildObject`. In S2, `LoadChildObject` allocates after
+the current SST slot, so the child should normally execute after the parent in
+the same `ExecuteObjects` pass. If the child is lower than the parent, it can
+run before the parent and make report bytes like `objoff_28` visible too early.
+If the parent also manually advances that managed child to model a
+body-before-child handoff, the managed child may need to defer its spawn-frame
+update so it does not consume init outside the parent-owned ordering.
+
+**What to check.** When porting a boss part, targeting sensor, projectile, lock
+marker, or other object spawned from a parent routine, verify whether the ROM
+uses `FindFreeObj` / `AllocateObject` or `LoadChildObject` /
+`AllocateObjectAfterCurrent`. Choose `spawnFreeChild` only for the former and
+`spawnChild` for the latter. If the parent keeps an explicit child reference and
+calls the child's `update` inline for ROM order, add focused coverage proving
+both the allocated slot and whether same-frame ObjectManager execution is
+suppressed.
+
+**ROM citation.** `docs/s2disasm/s2.asm:72978-72986` (`LoadChildObject` uses
+`AllocateObjectAfterCurrent`); DEZ Death Egg Robot sensor call site and report
+handoff at `docs/s2disasm/s2.asm:82785-82786,82792-82808,83478-83559`.
+
+**Originating commit.** `fix(s2): advance DEZ robot sensor slot/order trace
+frontier`.
+
+---
+
 ## P1 — Touch-response directional/state guards diverge from ROM
 
 **Symptom.** Object rejects a rolling / spindash / invincible touch under a
@@ -2009,6 +2072,16 @@ chain links `9f47f557f` (`docs/s1disasm/_incObj/15 Swinging Platforms.asm:67-105
 render-only children spawned as real slots). See `s1-implement-object/rom-pitfalls.md`
 P8.
 
+**Follow-up example.** S2 ARZ Grounder Obj8D uses `AllocateObject` for its
+four Obj8F wall children, and Obj8E uses `AllocateObject` for five Obj90 rocks.
+Using after-current child allocation let same-frame Obj0A mouth bubbles take
+the wrong SST slot before the wall pieces in ARZ2. Keep Grounder children on
+`spawnFreeChild`.
+
+**Additional ROM citation.** `docs/s2disasm/s2.asm:73497-73516`
+(`loc_36C2C` Obj90 rocks) and `docs/s2disasm/s2.asm:73520-73533`
+(`loc_36C64` Obj8F walls).
+
 ---
 
 ## P47 — `make_art_tile` priority bit must reach render commands
@@ -2076,9 +2149,11 @@ Point Pokey writes `#$81` to player `obj_control`); `docs/s2disasm/s2.asm:58746-
 (ObjD6 release path clears object-control state without touching global
 `Control_Locked`).
 
-**Originating commit.** `<pending>` S2 CNZ1 Point Pokey capture no longer
+**Originating commits.** `<pending>` S2 CNZ1 Point Pokey capture no longer
 maps player `obj_control` to global control lock; CNZ1 frontier advances from
-frame 1637 to frame 3675 after the preceding Tails live-push fix.
+frame 1637 to frame 3675 after the preceding Tails live-push fix. `8e946a794`
+applies the same rule to Obj86 flippers: per-player `obj_control=1` suppresses
+movement without freezing global logical input, greening the CNZ1 trace.
 
 ---
 
@@ -2217,6 +2292,621 @@ frames). See `s1-implement-object/rom-pitfalls.md` P10.
 **Also covers object SELF-motion.** Same rule when an object moves ITSELF (`add.w speed,obX(a0)` preserves its own x_sub): a rideable object that self-moves via `setCentreX`/`setCentreY` drifts ~1px and surfaces it where the player rides/hits it. Use `SubpixelMotion.moveSprite`/`shiftX`/`shiftY`. (Objects that move in integer pixel steps with no sub-pixel accumulator need no change.) See S1 P15 for the `-Dobjsubpxaudit` method.
 
 **Originating commit (S1 origin).** `b5bc778d4` (S1 Conveyor preserves rider sub-pixel via `shiftX`; SBZ2 f2224 -> f2323). See `s1-implement-object/rom-pitfalls.md` P15.
+
+---
+
+## P54 — Object-written logical input may be consumed one player step later
+
+**Symptom.** A scripted object launches, jumps, or steers the player one frame
+early or stops steering one frame early even though the object's routine,
+timer, and stored state match ROM. Trace context shows the player velocity or
+`air`/`rolling` state diverging on the frame the object writes or clears
+`Ctrl_1_Logical`, while the object's own `routine_secondary` and countdown
+bytes match.
+
+**Root cause.** ROM object routines can write `Ctrl_1_Logical` /
+`Ctrl_2_Logical` during the object pass. Depending on the frame edge, the
+player may consume the previous logical byte for that player step and observe
+the new object-written byte on the following step. The engine often runs object
+script code before player physics and exposes `forcedInputMask` immediately, so
+the same write affects the current physics step and shifts scripted jumps by one
+frame. The inverse edge appears when a ROM routine clears the logical input at
+the end of a countdown: the stored timer is already negative in the trace, but
+the player still received the final frame of logical input.
+
+**What to check.** For any object that writes `Ctrl_1_Logical` or
+`Ctrl_2_Logical`:
+1. Compare the player step that consumes the logical input, not only the object
+   timer field. A matching `objoff_2E` with a one-frame player velocity mismatch
+   usually means the forced input is being exposed on the wrong side of the
+   engine's object/player ordering.
+2. On a prepare/transition frame, do not apply the newly written mask early if
+   ROM's player step has already run. Lock control or update object state
+   separately from the forced input mask when needed.
+3. On a countdown-clear edge, choose the current frame's forced mask from the
+   timer value at routine entry, then decrement the stored timer so the aux
+   state still matches ROM after the object update.
+4. Keep the compensation local to the object routine that writes the logical
+   controller bytes. Do not add zone, route, frame-number, or trace-name gates.
+
+**ROM citation.** S2 WFZ Tornado ObjB2 prepare/jump script
+(`docs/s2disasm/s2.asm:79007-79023`): `ObjB2_Prepare_to_jump` writes
+`Ctrl_1_Logical` and seeds `objoff_2E=$38`; `ObjB2_Jump_to_plane` clears then
+rewrites `Ctrl_1_Logical` around the countdown edge.
+
+**Originating commit.** `d114fae44` S2 WFZ Tornado scripted-input ordering:
+`TestS2WfzLevelSelectTraceReplay` advances f13978 -> f14038.
+
+---
+
+## P55 — Ordered Sonic/Sidekick SolidObject calls can carry later riders from the pre-mutation baseline
+
+**Symptom.** Sidekick is exactly 1px behind ROM while already standing on a
+solid object that Sonic pushes or compresses first in the same object routine.
+The object position and standing slot agree, but the later sidekick participant
+misses the first push delta.
+
+**Root cause.** Some S2 objects call `SolidObject_Always_SingleCharacter` for
+Sonic, mutate the object in response to that result, restore the routine-entry
+registers, then call the same solid routine for Sidekick. The later call can
+therefore compare the current object position against the pre-mutation `d4`
+baseline and carry an already-standing sidekick by Sonic's delta. A naive engine
+loop that only carries the player who caused the mutation drops that ordered
+carry.
+
+**What to check / fix.** When a ROM routine invokes the per-character
+`SolidObject` path more than once with saved/restored `d1-d4`, inspect whether
+the first player's contact mutates `x_pos`/`y_pos` before the later player's
+solid call. If it does, process players in ROM order and carry later existing
+riders from the previous solid-state baseline. Do not key the behavior on a
+zone, route, or trace frame; key it on the object's actual per-player routine
+ordering and standing state.
+
+**ROM citation.** Obj45 OOZ horizontal spring:
+`docs/s2disasm/s2.asm:50393-50420` (`Obj45_Horizontal` Sonic pass, restore,
+Sidekick pass), `s2.asm:50465-50510` (horizontal compression moves object and
+player), and `s2.asm:35193-35234` (`SolidObject45` continued-rider carry from
+`d4`).
+
+**Originating commit.** `fix: advance S2 OOZ2 Obj45 ordered carry`
+(`TestS2Ooz2LevelSelectTraceReplay` advances f1601 -> f1603).
+
+---
+
+## P56 — Table bytes are unsigned when ROM loads them with `moveq #0` then `move.b`
+
+**Pattern.** Some S2 object property tables use byte entries written as negative
+assembly literals (for example `-$18` / `-$58`), but the routine loads them with
+`moveq #0,dN` followed by `move.b (aX)+,dN`. That sequence zero-extends the
+byte; it does not sign-extend it. The value `-$18` is therefore `$E8` (232), not
+`-24`, unless the code later executes `ext.w`.
+
+**Engine symptom.** A moving object reverses at the wrong endpoint because the
+engine used `abs(-0x18)` / `Math.abs(tableByte)` or otherwise treated the table
+literal as signed. In OOZ2, Obj43 subtype `$06` used a 24px travel span instead
+of the ROM's `$E8` span; the upper sliding spike ran past its intended long
+cycle and hurt Sonic at f1751 while the ROM was still in normal airborne motion.
+
+**What to check.** For every byte-sized property table entry:
+1. Read the load instruction, not just the literal in the table.
+2. `moveq #0,dN` + `move.b ... ,dN` means unsigned 0..255.
+3. `move.b ... ,dN` followed by `ext.w dN` means signed -128..127.
+4. Keep signed position offsets (`move.w` table entries like parent/child
+   offsets) separate from unsigned span/count bytes in engine records.
+
+**ROM citation.** Obj43 loads `originXOffset` with `moveq #0,d1` /
+`move.b (a2)+,d1`, then computes `objoff_32/objoff_34` from that unsigned span
+(`docs/s2disasm/s2.asm:49972-50003`). The table rows use `-$18` and `-$58`
+(`docs/s2disasm/s2.asm:49958-49961`), which become `$E8` and `$A8`.
+
+**Originating commit.** `5b5c3ec30` S2 OOZ2 Obj43 unsigned travel span:
+`SlidingSpikeObjectInstance` separates unsigned `originSpan` from signed
+parent/child X offsets; OOZ2 advances from f1751 to f1873.
+
+---
+
+## P57 — Badnik points Obj29 is allocated by S2 Obj28 animal init, not by Obj27 explosion
+
+**Pattern.** The S2 badnik death chain is not a single parent-owned spawn burst.
+`Obj27_InitWithAnimal` allocates Obj28, copies `x_pos`, `y_pos`, and
+`objoff_3E`, then returns through the explosion routine. Obj28's own first
+routine pass later allocates Obj29 and maps the copied `objoff_3E` scratch to
+the points frame.
+
+**Engine symptom.** The points popup appears visually correct but takes the
+wrong SST slot or appears one `ExecuteObjects` pass too early. This is easiest
+to miss when Obj28 receives a lower slot than Obj27: ROM has already passed that
+slot for the current object loop, so Obj28 cannot allocate Obj29 until the next
+frame, while a parent-owned engine spawn creates Obj29 immediately.
+
+**What to check / fix.** Trace which object routine actually owns each
+`AllocateObject` call. If parent object A allocates child B, and B's routine-0
+code allocates child C, spawn C from B's first update rather than from A's
+factory or destruction helper. Preserve the ROM scratch fields copied between
+objects so child B can perform its own allocation without hydrating trace data.
+
+**ROM citation.** `Obj27_InitWithAnimal` allocates Obj28 and copies
+`objoff_3E` (`docs/s2disasm/s2.asm:46707-46715`). `Obj28_InitRandom` allocates
+Obj29 and derives `mapping_frame` from the copied scratch value
+(`docs/s2disasm/s2.asm:24596-24636`).
+
+**Originating commit.** `fix: advance S2 ARZ2 bubble and animal slot cadence`
+(`TestS2Arz2LevelSelectTraceReplay` advances f669 -> f687).
+
+---
+
+## P58 - Some object-local SolidObject wrappers bypass the generic off-screen gate and may see post-player X
+
+**Pattern.** Do not assume an object that uses the shared `SolidObject` geometry
+enters through the generic `SolidObject_OnScreenTest` wrapper, and do not assume
+the engine's usual pre-player object contact pass is equivalent for every
+wrapper. Some S2 object routines call a per-object wrapper after the player
+slots have already moved for the frame, and that wrapper may branch directly to
+`SolidObject_cont`.
+
+**Engine symptom.** A sidekick or player reaches a solid object's side one
+frame late by exactly one pixel. The trace shows the ROM already set
+`Status_Push` and cleared `x_vel`/`inertia`, while the engine still has live
+ground speed and is one pixel beyond the object's side. In the originating MTZ1
+case, Tails at f4835 should have stopped on Obj26 at `x=$16D6`, but the engine
+remained at `$16D7` until the next frame.
+
+**Root cause.** S2 Obj26 monitor `Obj26_Main` calls `SolidObject_Monitor` for
+Sonic and then Sidekick from the object pass (`docs/s2disasm/s2.asm:25579-25605`).
+`SolidObject_Monitor_Sonic` and `SolidObject_Monitor_Tails` branch directly to
+`SolidObject_cont` (`docs/s2disasm/s2.asm:25617-25636`), so a generic off-screen
+solid gate in the engine can skip a ROM-live side contact. Because the ROM
+object routine sees the already-updated player X, an engine pass that evaluates
+object contacts before flat-ground player movement may also miss the first
+side-entry frame.
+
+**What to check / fix.** For any object that appears to be "just a normal
+SolidObject" but shows a one-pixel side-stop delay:
+1. Inspect the object-specific wrapper and confirm whether it branches to
+   `SolidObject_cont` directly or through `SolidObject_OnScreenTest`.
+2. If the wrapper bypasses the on-screen test, expose that as object-local
+   solid profile state (for Obj26, `bypassesOffscreenSolidGate()`), not as a
+   zone or trace exception.
+3. If ROM execution order means the object sees post-player flat-ground X, use
+   a narrow object-local projection hook for fresh grounded side entry only.
+   Do not project airborne, rolling, sloped, continued-riding, or route-specific
+   cases unless the object routine proves the same ROM-state rule.
+4. Preserve the player's subpixel when the projected side contact stops them;
+   ROM `SolidObject_cont` writes the pixel word and leaves `x_sub` intact.
+
+**ROM citation.** Obj26 main/wrapper:
+`docs/s2disasm/s2.asm:25579-25605` and
+`docs/s2disasm/s2.asm:25617-25636`. Shared side stop/push:
+`docs/s2disasm/s2.asm:35424-35456`.
+
+**Originating commit.** `fix: advance S2 MTZ1 monitor side-entry solid timing`
+(`TestS2MtzLevelSelectTraceReplay` advances f4835 -> f5602).
+
+---
+
+## P59 — Fixed Obj0A air-countdown sidecars own S2 mouth-bubble cadence
+
+**Pattern.** S2 player water-entry code installs Obj0A into fixed level-only
+object RAM (`Sonic_BreathingBubbles` / `Tails_BreathingBubbles`). Those fixed
+sidecars own `obj0a_timer`, `obj0a_flags`, `obj0a_next_bubble_timer`, and the
+visible dynamic Obj0A allocations. The visible bubbles are still ordinary
+dynamic SST children, but their allocation happens from the fixed object pass
+after dynamic SST slots, not from the player physics update.
+
+**Engine symptom.** Mouth bubbles appear visually correct but steal a lower SST
+slot before a dynamic object that ROM executes earlier in `RunObjects`. In ARZ2
+f687, a generic player-side mouth-bubble update allocated Obj0A into slot 61
+before Grounder's Obj8D routine allocated its Obj8F wall children, while ROM
+puts Obj8F into slots 61-63 and the mouth bubble into slot 64.
+
+**What to check / fix.** Do not run S2 mouth-bubble RNG/allocation cadence from
+generic per-player water code when the player has a fixed Obj0A sidecar. Model
+the sidecar in the level-event/fixed-object owner, snapshot its timers for
+rewind, and let it allocate visible Obj0A children via the lowest-free dynamic
+object path. Preserve S2's `(RandomNumber & $F) + 8` next-bubble delay. Because
+the fixed sidecar executes after dynamic SST slots, a child allocated into a
+lower dynamic slot should run its first Obj0A dynamic pass on the next
+`RunObjects` scan without an extra engine-only first-update skip.
+
+**ROM citation.** Water-entry installs:
+`docs/s2disasm/s2.asm:36385-36387` and `39552-39554`; fixed object RAM slots:
+`docs/s2disasm/s2.constants.asm:1149-1157`; main loop / `RunObjects` order:
+`docs/s2disasm/s2.asm:5094-5095`; Obj0A countdown and visible bubble
+allocation: `docs/s2disasm/s2.asm:42088-42214`.
+
+**Originating commit.** `fix: advance S2 ARZ2 Grounder bubble cadence`
+(`TestS2Arz2LevelSelectTraceReplay` advances f687 -> f694).
+
+---
+
+## P60 — Launch/effect gates may depend on the current object pushing bits, not stale pending state
+
+**Pattern.** Some S2 solid interactives split their response into two phases:
+the first `SolidObject` pass compresses or arms the object, and a later release
+tail checks the object's live `status(a0)` pushing bits before launching or
+applying the effect. A naive engine port stores a persistent per-player
+`pendingLaunch` flag and consumes it as soon as the object releases, even after
+the ROM `SolidObject_TestClearPush` path has cleared the object/player pushing
+bits or no current side-push occurred.
+
+**Engine symptom.** The object position and visual release can match ROM, but
+the player launches one frame early or at the wrong release strength. In OOZ2,
+Obj45 released from the correct compressed X on f1873, but the engine consumed
+a stale Sonic pending launch while ROM had just cleared the pushing bit and
+kept Sonic at `x=$04A6` for another frame.
+
+**What to check / fix.** When a ROM routine calls a launch/effect tail that
+starts by testing `status(a0) & pushing_mask` or `bclr #pN_pushing_bit,status(a0)`:
+1. Preserve any visual release motion that occurs before the launch tail.
+2. Do not consume a stale engine pending flag after `SolidObject_TestClearPush`
+   or a no-contact result. Require the current per-player object pushing bit
+   to be set, mirroring the ROM `bclr` gate.
+3. Keep the state object-local and per-player. Do not patch by zone, route,
+   frame, or trace name.
+
+**ROM citation.** Obj45 OOZ horizontal spring release/launch:
+`docs/s2disasm/s2.asm:50435-50538`; current pushing bits are cleared by
+`SolidObject_TestClearPush` / `Solid_NotPushing`
+(`docs/s2disasm/s2.asm:35443-35462`) and set by side collision
+(`docs/s2disasm/s2.asm:35276-35299`).
+
+**Originating commit.** `5bf720281` S2 OOZ2 Obj45 current-push launch gate:
+`TestS2Ooz2LevelSelectTraceReplay` advances f1873 -> f2176.
+
+---
+
+## P61 - AnimateSprite `$FC` advances routine before child allocation, and higher-slot children execute same frame
+
+**Pattern.** Some animation scripts use `$FC` as a routine-control opcode, not
+as an immediate callback. S2 `AnimateSprite` handles `$FC` by adding 2 to
+`routine(a0)`, clearing `anim_frame_duration(a0)`, advancing `anim_frame(a0)`,
+and returning. The target routine runs on the object's next dispatch. If that
+routine allocates a child into a higher SST slot, the child can still execute
+later in the same `RunObjects` pass.
+
+**Engine symptom.** A projectile or effect appears in the correct slot family
+but one or more frames too early, or appears at its spawn coordinates instead
+of after its init routine's first movement. In ARZ2, Obj22's arrow occupied slot
+`0x41` at f694 while the ROM did not allocate it until f696; when the ROM did
+allocate it, `Obj22_Arrow_Init` fell through into `Obj22_Arrow/ObjectMove`, so
+the first visible X was already `$0724` rather than the shooter X `$0720`.
+
+**What to check / fix.** When an animation script contains `$FC`:
+1. Model `$FC` as a pending routine dispatch, not as same-call object logic.
+2. Let the destination routine call `AnimateSprite` again if the ROM routine
+   does so after returning to the main routine.
+3. Do not add a blanket first-update skip for children allocated by that
+   destination routine. If `AllocateObject` puts the child in a higher slot,
+   it should execute later in the same object pass; if it lands in a lower or
+   already-processed slot, the manager's slot-order rules should defer it.
+
+**ROM citation.** Generic `$FC` handling:
+`docs/s2disasm/s2.asm:30481-30487`. Obj22 shoot routine and arrow init/move:
+`docs/s2disasm/s2.asm:51570-51607`. Obj22 firing script:
+`docs/s2disasm/s2.asm:51630-51638`.
+
+**Originating commit.** `fix: advance S2 ARZ2 arrow shooter routine timing`
+(`TestS2Arz2LevelSelectTraceReplay` advances f694 -> f723).
+
+---
+
+## P62 - Native sidekick checks may read raw Ctrl_2, not logical CPU follow input
+
+**Pattern.** Some S2 object routines inspect the MainCharacter through
+`Ctrl_1_Logical` but inspect the Sidekick through raw `Ctrl_2` before masking
+button press bits. CPU Tails' autonomous follow jump is written to the logical
+sidekick input path; it is not a raw player-2 pad press.
+
+**Engine symptom.** A CPU sidekick triggers an object action that the ROM only
+allows for a physical P2 input. In CNZ2, Obj86's vertical flipper launched
+Tails from a synthesized follow jump, while ROM continued the flipper slide
+because raw `Ctrl_2` had no A/B/C press edge.
+
+**What to check / fix.** When porting an object that has separate
+MainCharacter and Sidekick input branches:
+1. Read whether the Sidekick branch loads `Ctrl_2`, `Ctrl_2_Logical`, or an
+   object-local control byte.
+2. Use raw P2 helpers for `Ctrl_2` branches; do not treat CPU-generated follow
+   jumps as raw P2 input.
+3. Keep the distinction object-local unless the ROM routine is a shared player
+   control routine. Do not patch by zone, route, frame, or trace name.
+
+**ROM citation.** Obj86 upward flipper input selection:
+`docs/s2disasm/s2.asm:58345-58350`; low-byte A/B/C press mask:
+`docs/s2disasm/s2.asm:58390`.
+
+**Originating commit.** `<pending>` S2 CNZ2 Obj86 raw-P2 launch gate:
+`TestS2Cnz2LevelSelectTraceReplay` advances f4644 -> f4730.
+
+---
+
+## P63 - SolidObject side return can trigger object response even when the push bit is not set
+
+**Pattern.** Some S2 solid interactives distinguish the `SolidObject` return
+code from the object's live pushing bits. A side-contact return (`d4==1`) may
+run a compression/effect routine even when the current contact did not set the
+player's push bit. Later launch/effect tails can still require the live
+`status(a0)` pushing bit.
+
+**Engine symptom.** An airborne player reaches a horizontal pressure spring
+from the side and the engine reports a side contact, but the object does not
+compress because the port only reacts to `pushingNow`. In OOZ2 this left Sonic's
+`g_speed` at `0x0000` on f2484 while ROM had compressed Obj45 by one pixel,
+shifted Sonic's `x_pos`, cleared `x_vel`, and wrote inertia `0x0040`.
+
+**What to check / fix.** When a routine tests the `SolidObject` return value
+(`cmpi.b #1,d4`, `beq`, or equivalent) and separately tests or clears
+`status(a0)` push bits later:
+1. Let the return-code path run from the contact kind (`SIDE`) even if the
+   engine's push bit is false.
+2. Only arm or consume launch/effect state from the current push bit when the
+   ROM tail uses `status(a0)` / `bclr #pN_pushing_bit,status(a0)`.
+3. Keep the distinction object-local and per-player. Do not replace it with a
+   zone, route, frame, or trace-name exception.
+
+**ROM citation.** Obj45 horizontal spring:
+`docs/s2disasm/s2.asm:50393-50432` (`Obj45_Horizontal` checks the
+`SolidObject_Always_SingleCharacter` side return), `s2.asm:50465-50524`
+(`loc_2433C` compresses, moves `x_pos(a0/a1)`, clears `x_vel`, writes inertia),
+and `s2.asm:50529-50540` (`Obj45_LaunchCharacterHorizontal` gates release
+launch on live pushing bits).
+
+**Originating commit.** `d01490049` S2 OOZ2 Obj45 airborne side compression:
+`TestS2Ooz2LevelSelectTraceReplay` advances f2484 -> f2623.
+
+---
+
+## P64 - Negative SolidObject returns are not always ride captures
+
+**Pattern.** Some S2 object-local wrappers branch on `tst.w d4` after
+`SolidObject_Always_SingleCharacter`. A negative return means the player
+contacted the object vertically, but it may be either top or bottom contact.
+Only the top path has the prior `RideObject_SetRide` side effects; bottom
+captures preserve the player's airborne/no-on-object state.
+
+**Engine symptom.** A sidekick enters an object from below and the engine either
+fails to capture them, or captures them as if they were riding on top. In CNZ2,
+ObjD6 Point Pokey missed Tails' bottom capture at f4730, leaving Tails below
+the cage with the wrong `y_pos` and velocity.
+
+**What to check / fix.** When a routine tests `d4` after a single-character
+`SolidObject` call:
+1. Map the ROM return sign and contact kind separately. Negative top and bottom
+   may both enter the object's capture/effect path, but only top should inherit
+   ride/standing state.
+2. Preserve per-player object state words such as ObjD6 `objoff_30` for Sonic
+   and `objoff_34` for Sidekick. A release must target the captured player, not
+   whichever player the engine update happened to receive first.
+3. If the occupied routine releases on an off-screen/render-flag check, run the
+   ROM release tail for the captured player and preserve any post-release
+   cooldown before clearing the per-player state.
+
+**ROM citation.** ObjD6 calls Sonic then Sidekick with separate state words and
+captures on `tst.w d4 / bpl` after `SolidObject_Always_SingleCharacter`
+(`docs/s2disasm/s2.asm:59030-59046`). Its occupied routine releases through
+`loc_2BE2E` and clears the state in `loc_2BE9C`
+(`docs/s2disasm/s2.asm:59188-59256`).
+
+**Originating commit.** `82e595b5b` S2 CNZ2 ObjD6 bottom-capture/sidekick
+ownership fix: `TestS2Cnz2LevelSelectTraceReplay` advances f4730 -> f4892.
+
+---
+
+## P65 - Platform nudge gates may read object standing bits, not live riding state
+
+**Pattern.** Some S2 solid platform routines update bob, sag, nudge, or falling
+state from `status(a0)&standing_mask` before calling `PlatformObject` or
+`SolidObject` in the same object routine. That bit is the object's prior
+standing latch, not a freshly computed current-frame ride query.
+
+**Engine symptom.** A jump-off frame leaves a platform one pixel out of phase
+even though player physics and object allocation otherwise match. In ARZ2, Obj18
+slot `0x1F` relaxed its nudge angle one step early at f888, producing
+`y_pos=$059A` where ROM still had `$059B`.
+
+**What to check / fix.** When a routine reads `status(a0)&standing_mask` before
+its solid helper:
+1. Use the object standing latch from the previous solid pass, such as
+   `ObjectManager.hasObjectStandingBit`, not `isPlayerRiding()` or a
+   current-frame collision query.
+2. Include Sonic and Sidekick bits when the object routine's standing mask
+   covers both players.
+3. Let the later solid helper clear or refresh the latch after movement. Do not
+   replace this order dependency with a zone, route, frame, or trace-name
+   exception.
+
+**ROM citation.** Obj18 `Obj18_TopSolid` and `Obj18_FullSolid` read
+`status(a0)&standing_mask`, run `Obj18_Move`/`Obj18_Nudge`, then call
+`PlatformObject`/`SolidObject` (`docs/s2disasm/s2.asm:23219-23243,
+23273-23301`). `Obj18_Nudge` computes `y_pos` from `obj18_y_offset`
+(`docs/s2disasm/s2.asm:23311-23320`).
+
+**Originating commit.** `38ffa3bb5` S2 ARZ2 Obj18 platform standing-latch
+nudge: `TestS2Arz2LevelSelectTraceReplay` advances f888 -> f1028.
+
+---
+
+## P66 - Collision-result latches may be cleared at the start of every ROM collision pass
+
+**Pattern.** Some object-local flags are not persistent state-machine latches.
+They are cleared at the start of a collision helper, then re-set only if the
+current collision pass produces a specific result. The owning object routine may
+read the flag on the next frame, but if the routine does not consume it
+immediately, the next collision pass clears it.
+
+**Engine symptom.** A boss or object reacts to a player contact long after the
+ROM would have forgotten it. In MCZ2, Obj57 reascended early because the engine
+kept `bossHurtSonic` true from a drill hurt that occurred while
+`Boss_Countdown` was still nonnegative; ROM cleared `boss_hurt_sonic` on each
+`BossCollision_MCZ` pass and only consumed it when the countdown crossed
+negative on the immediately following frame.
+
+**What to check / fix.** When a ROM helper starts with `sf`, `clr`, or `move.b
+#0` on an object-local "event" flag before running collision/effect logic:
+1. Treat that flag as a collision-pass result, not a cycle-long latch.
+2. Preserve the routine's consume timing. If the object routine only reads the
+   flag after a timer crosses a threshold, clear stale values on frames where
+   the ROM would run another helper pass first.
+3. Keep the fix object-local and keyed on the ROM timer/routine state, not on a
+   route or trace frame.
+
+**ROM citation.** Obj57 `BossCollision_MCZ` clears and conditionally re-sets
+`boss_hurt_sonic` (`docs/s2disasm/s2.asm:85732-85763,85769-85788`);
+`Obj57_Main_Sub6` only consumes it after `Boss_Countdown` goes negative
+(`docs/s2disasm/s2.asm:65987-65996`).
+
+**Originating commit.** `9e8c0ca84` S2 MCZ2 Obj57 boss_hurt_sonic latch
+lifetime: `TestS2Mcz2LevelSelectTraceReplay` advances f9662 -> f10111.
+
+---
+
+## P67 - Touch response positions use ROM `x_pos` / `y_pos`, not sprite top-left
+
+**Pattern.** S2 `TouchResponse` tests an object's `collision_flags` size box
+around the object's SST `x_pos(a1)` / `y_pos(a1)`. Objects whose Java
+`getX()` / `getY()` intentionally return sprite top-left render bounds must
+publish an explicit touch region at their ROM center position instead of
+letting the shared touch loop reuse the render coordinate.
+
+**Engine symptom.** A harmful object hurts the player one frame early or from
+several pixels away even though the object's live center position matches ROM.
+In HTZ1, the Obj14 seesaw ball was visually/post-update aligned with ROM, but
+touch response tested its sprite top-left (`x_pos - width_pixels`,
+`y_pos - 8`) and overlapped Sonic where ROM's center-based `TouchResponse`
+missed. The false hurt at f7108 cascaded into Tails/player/camera drift.
+
+**What to check / fix.** For every S2 `TouchResponseProvider` whose
+`getX()` / `getY()` are render extents or sprite bounds:
+1. Compare those methods to the ROM `x_pos` / `y_pos` fields used by the touch
+   routine.
+2. If they differ, implement `getMultiTouchRegions()` with a single
+   `TouchRegion(getCentreX(), getCentreY(), collision_flags)` or the exact
+   ROM child/piece positions.
+3. Keep render/bounds coordinates separate from touch coordinates. Do not fix
+   a touch bug by changing `getX()` / `getY()` if rendering, culling, or
+   balance/out-of-range logic depends on top-left semantics.
+
+**ROM citation.** S2 `TouchResponse` reads `x_pos(a1)` and `y_pos(a1)` for the
+overlap test (`docs/s2disasm/s2.asm:85075,85092`), after loading the size from
+`collision_flags(a1)` (`docs/s2disasm/s2.asm:85048-85063`). Obj14 writes the
+ball's `collision_flags=$8B` during init (`docs/s2disasm/s2.asm:47596`).
+
+**Originating commit.** `63753cbc` S2 HTZ1 Obj14 seesaw ball touch center:
+`TestS2HtzLevelSelectTraceReplay` advances f7108 -> f7805.
+
+---
+
+## P68 - Break paths must clear both player on-object status and engine riding support
+
+**Pattern.** S2 object break/collapse/release routines that force the player
+airborne often clear both the player status bit and the object's standing mask.
+When Java only calls `setAir(true)`, the engine can retain a stale
+`onObject`/riding-provider latch even though the ROM object no longer supports
+the player.
+
+**Engine symptom.** The player becomes grounded again on the next movement
+frame, clears rolling/airborne state, and loses the ROM gravity increment or
+launch velocity. In HTZ1, Obj2F smashable ground set Sonic airborne/rolling in
+ROM and the fragment routine only moved/displayed pieces, but the engine
+recovered stale riding support on the deleted/non-solid support and zeroed
+`y_speed` at f7805.
+
+**What to check / fix.** When porting an object path that writes
+`status.player.in_air`, clears `status.player.on_object`, or clears the
+object's `standing_mask`:
+1. Pair the airborne write with `player.setOnObject(false)`.
+2. Clear the engine solid-contact rider latch with
+   `ObjectManager.clearRidingObject(player)` when the live object was a
+   potential support.
+3. Verify the post-break fragment/display routine. Do not leave fragments solid
+   unless the ROM fragment routine calls `SolidObject`.
+4. Gate the behavior by the object's live ROM state. Do not add zone, route,
+   frame, or trace-specific branches.
+
+**ROM citation.** Obj2F's break path sets rolling/airborne state and clears
+`status.player.on_object` (`docs/s2disasm/s2.asm:49239-49249`), then clears the
+object standing mask before `BreakObjectToPieces`; Obj2F fragments only move,
+apply gravity, delete offscreen, and display (`docs/s2disasm/s2.asm:49272-49294`).
+
+**Originating commit.** `31dd2631` S2 HTZ1 Obj2F smashable-ground support
+release: `TestS2HtzLevelSelectTraceReplay` advances f7805 -> green.
+
+---
+
+## P69 -- Routine-0 init can return before wait/move, while after-current children run initialized
+
+**Pattern.** Some S2 objects do meaningful routine-0 initialization inside the
+first object pass, then `rts` before their wait or movement routine. Children
+allocated after the current slot may still be fully initialized by the parent
+and execute their own wait routine later in that same object pass.
+
+**Engine symptom.** A harmful moving object can touch the player one frame
+early even though the movement formula itself is correct. In CPZ1, Obj1D
+BlueBalls parent init was modeled in the constructor, so the first engine
+`update()` ran the wait routine immediately and the parent entered movement one
+object pass too soon. Touch response then saw the post-move y position at f4547;
+ROM still tested the pre-move position on that frame and did not hurt until
+f4548.
+
+**What to check / fix.**
+1. Read the object's routine-0 init tail before assuming constructor setup is
+   equivalent to a ROM frame. If init ends in `rts`, preserve that object pass.
+2. Check child allocation order separately. If the parent fills child SST fields
+   before `AllocateObjectAfterCurrent`, child constructors may need to start as
+   already initialized even while placed parents wait one pass.
+3. Keep the fix object-local and routine-driven. Do not branch on zone, route,
+   trace frame, or a known failing trace.
+
+**ROM citation.** Obj1D dispatches through its routine table
+(`docs/s2disasm/s2.asm:48317-48329`). `Obj1D_Init` initializes parent and
+children, then returns (`docs/s2disasm/s2.asm:48341-48390`); the child loop
+uses after-current allocation (`docs/s2disasm/s2.asm:48359-48365`).
+`Obj1D_Wait` and `Obj1D_MoveArc` are separate later routines
+(`docs/s2disasm/s2.asm:48393-48421`).
+
+**Originating commit.** `0cba2f7e` S2 CPZ1 BlueBalls init cadence:
+`TestS2CpzLevelSelectTraceReplay` advances f4547 -> green.
+
+---
+
+## P70 -- After-current linked children may need parent-owned lifetime
+
+**Pattern.** Some S2 parent objects allocate fully initialized linked children
+with `AllocateObjectAfterCurrent`, fill the child SST fields directly, and then
+own the whole pair's unload/delete policy from the parent routine. The child may
+have no generic `MarkObjGone` tail even though it moves and displays normally.
+
+**Engine symptom.** A linked platform child appears one slot or one phase away
+from ROM, reruns parent init on its first update, or disappears before it reaches
+the camera because generic dynamic-object lifetime deletes it. In CPZ2, Obj7A
+SidewaysPform's child was gone or phase-shifted by the f5689 Sonic landing
+frame, so Sonic missed the ROM child ride and kept falling with `g_speed=$003C`
+instead of landing with `g_speed=$01F9`.
+
+**What to check / fix.**
+1. For parent init loops that call `AllocateObjectAfterCurrent`, insert the
+   child after the current parent slot, including when the parent itself is
+   still being constructed by object placement.
+2. If the parent writes all child fields during init, mark the child initialized
+   so its first update runs the child routine rather than parent routine 0.
+3. Check whether child start coordinates are already parent-computed spawn
+   fields. Do not reapply the same offset in the child constructor.
+4. Read parent and child lifetime tails separately. If only the parent checks
+   range endpoints or clears the linked child, model that parent-owned lifetime
+   instead of giving the child a generic out-of-range delete.
+5. Keep collision toggles exact when the ROM uses equality tests; do not replace
+   them with overlap heuristics unless the disassembly does.
+
+**ROM citation.** Obj7A allocates children after the current object and fills
+their id/routine/position/linkage fields (`docs/s2disasm/s2.asm:56192-56230`).
+The parent owns pair deletion from range endpoints
+(`docs/s2disasm/s2.asm:56239-56266`), while the child routine only moves,
+checks collision, and displays (`docs/s2disasm/s2.asm:56269-56272`). The child
+toggles both directions only on exact edge equality
+(`docs/s2disasm/s2.asm:56307-56317`).
+
+**Originating commit.** `fca42ed8d` S2 CPZ2 Obj7A after-current child and pair
+lifetime: `TestS2Cpz2LevelSelectTraceReplay` advances f5689 -> f7035.
 
 ---
 

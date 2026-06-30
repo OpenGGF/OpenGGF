@@ -13,6 +13,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -120,6 +121,7 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
     public int getY() {
         return baseY;
     }
+
     // MultiPieceSolidProvider implementation
 
     @Override
@@ -160,6 +162,116 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
         // with the "near vertical edge" check in SolidObject allows smooth walking
         // across adjacent pieces while still having solid sides.
         return false;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // updateDynamicSpawn() tracks the moving parent surface for placement and
+        // diagnostics, but ROM keeps SolidObject standing/pushing bits in the live
+        // Obj78 SST slot status byte while y_pos changes
+        // (docs/s2disasm/s2.asm:56025-56033). Key the folded status latch by this
+        // instance, not by the per-frame dynamic spawn record.
+        return true;
+    }
+
+    @Override
+    public boolean preservesRidingPushStatus(PlayableEntity playerEntity) {
+        int masterOffset = yOffsets[0];
+        if (masterOffset == 0) {
+            return false;
+        }
+        // Obj78's four adjacent pieces are separate ROM solid slots. Preserve
+        // the folded push bit when the rider faces any neighbouring step side:
+        // child SolidObject slots can leave the current Status_Push bit visible
+        // before TailsCPU_Normal samples Tails and the delayed leader status.
+        return isFacingAdjacentStepSide(playerEntity, false);
+    }
+
+    @Override
+    public boolean preservesSidekickCpuPushGraceWhileRiding(PlayableEntity playerEntity) {
+        // TailsCPU_Normal tests Tails' current Status_Push before later Obj78
+        // child SolidObject calls can refresh or clear the live SST push bits
+        // (docs/s2disasm/s2.asm:39291-39294; Obj78 SolidObject at 56006-56021).
+        // The lower-neighbouring-step face is already modelled by the ordinary
+        // live push-status latch above. The CPU-only bridge covers the opposite
+        // folded child-slot ordering case without extending that latch into
+        // later lower-step windows.
+        return playerEntity != null && playerEntity.isCpuControlled()
+                && yOffsets[0] != 0
+                && isFacingAdjacentStepSide(playerEntity, false);
+    }
+
+    @Override
+    public int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity playerEntity) {
+        return preservesSidekickCpuPushGraceWhileRiding(playerEntity) ? 8 : Integer.MAX_VALUE;
+    }
+
+    @Override
+    public boolean usesSidekickCpuPushBypassObjectOrderStatusDelay(PlayableEntity playerEntity) {
+        // Obj78's child SolidObject status can be visible to TailsCPU_Normal at
+        // the adjacent object-order status sample even when the final frame
+        // trace has the leader pushing on the staircase. This lets the first
+        // child-side case branch like ROM without extending the delayed leader
+        // push bridge into CPZ2 f5285.
+        return playerEntity != null && playerEntity.isCpuControlled()
+                && yOffsets[0] != 0
+                && nearestPieceIndex(playerEntity.getCentreX()) == 1
+                && isFacingAdjacentStepSide(playerEntity, false);
+    }
+
+    @Override
+    public boolean preservesSidekickDelayedLeaderPushWhileRiding(PlayableEntity playerEntity) {
+        // Obj78 runs as four separate SST slots: the parent plus three children
+        // allocated after it (docs/s2disasm/s2.asm:55967-55995). Each child calls
+        // SolidObject and ORs its contact bits back into the parent accumulator
+        // (docs/s2disasm/s2.asm:56006-56021), so TailsCPU_Normal's delayed
+        // Sonic_Stat_Record_Buf sample can still see later child-slot push bits
+        // while the folded engine object has already reconciled the visible
+        // parent state. The first child side has already aged out of that delayed
+        // leader window in CPZ2 f5285; keep the bridge to the later child slots.
+        return playerEntity != null && playerEntity.isCpuControlled()
+                && yOffsets[0] != 0
+                && nearestPieceIndex(playerEntity.getCentreX()) >= 2;
+    }
+
+    private boolean isFacingAdjacentStepSide(PlayableEntity playerEntity, boolean requireLowerNeighbor) {
+        if (playerEntity == null) {
+            return false;
+        }
+        Direction direction = playerEntity.getDirection();
+        int step = direction == Direction.RIGHT ? 1 : direction == Direction.LEFT ? -1 : 0;
+        if (step == 0) {
+            return false;
+        }
+
+        int pieceIndex = nearestPieceIndex(playerEntity.getCentreX());
+        int neighbourIndex = pieceIndex + step;
+        if (neighbourIndex < 0 || neighbourIndex >= NUM_PIECES) {
+            return false;
+        }
+        if (requireLowerNeighbor && getPieceY(neighbourIndex) <= getPieceY(pieceIndex)) {
+            return false;
+        }
+
+        SolidObjectParams neighbourParams = getPieceParams(neighbourIndex);
+        int neighbourX = getPieceX(neighbourIndex);
+        int playerX = playerEntity.getCentreX();
+        return step > 0
+                ? playerX >= neighbourX - neighbourParams.halfWidth()
+                : playerX <= neighbourX + neighbourParams.halfWidth();
+    }
+
+    private int nearestPieceIndex(int x) {
+        int bestIndex = 0;
+        int bestDistance = Integer.MAX_VALUE;
+        for (int i = 0; i < NUM_PIECES; i++) {
+            int distance = Math.abs(x - getPieceX(i));
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestIndex = i;
+            }
+        }
+        return bestIndex;
     }
 
     @Override
@@ -214,16 +326,19 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
      * States 0, 4: Wait for player contact on TOP, then 30-frame countdown.
      */
     private void updateWaitTop(boolean touchTop) {
-        if (touchTop && timer == 0) {
-            timer = TOP_CONTACT_DELAY;
+        if (timer == 0) {
+            if (touchTop) {
+                // loc_292C8 writes objoff_2C=$1E and returns; loc_292E0
+                // decrements only on later frames where the timer was already set.
+                timer = TOP_CONTACT_DELAY;
+            }
+            return;
         }
 
-        if (timer > 0) {
-            timer--;
-            if (timer == 0) {
-                // Transition to rise state
-                state++;
-            }
+        timer--;
+        if (timer == 0) {
+            // Transition to rise state
+            state++;
         }
     }
 

@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
@@ -25,6 +26,8 @@ import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.Direction;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -45,6 +48,68 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestSonic2ObjectBugFixes {
+
+    @Test
+    void oozLauncherBallCaptureUsesObjectControlWithoutGlobalControlLockedLatch() {
+        LauncherBallObjectInstance.clearActiveCaptures();
+        ObjectSpawn spawn = new ObjectSpawn(0x1240, 0x02E0, Sonic2ObjectIds.LAUNCHER_BALL, 0x00, 0, false, 0);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) spawn.x(), (short) spawn.y());
+        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setLogicalInputState(false, false, true, false, false);
+        player.endOfTick();
+        assertEquals(AbstractPlayableSprite.INPUT_LEFT, player.getInputHistory(0));
+
+        LauncherBallObjectInstance launcherBall = new LauncherBallObjectInstance(spawn, "LauncherBall");
+        launcherBall.setServices(new StubObjectServices()
+                .withPlayerQuery(new ObjectPlayerQuery(() -> player, () -> List.of())));
+
+        launcherBall.update(0, player);
+
+        assertTrue(player.isObjectControlled(),
+                "Obj48 writes obj_control=$81, so launcher-ball capture must suppress normal movement.");
+        assertFalse(player.isControlLocked(),
+                "Obj48 loc_2535E writes obj_control(a1), not global Control_Locked; Obj01_Control must keep "
+                        + "refreshing Ctrl_1_Logical before Sonic_RecordPos stores the follower-history word "
+                        + "(docs/s2disasm/s2.asm:51341-51367,36233-36252,36342-36353).");
+
+        player.setLogicalInputState(false, false, false, false, false);
+        player.endOfTick();
+        assertEquals(0, player.getInputHistory(0),
+                "With Control_Locked untouched, raw neutral input refreshes Ctrl_1_Logical instead of preserving "
+                        + "stale pre-capture LEFT for TailsCPU_Normal's delayed read.");
+    }
+
+    @Test
+    void oozInvisibleLauncherCaptureUsesObjectControlWithoutGlobalControlLockedLatch() throws Exception {
+        ObjectSpawn spawn = new ObjectSpawn(0x1110, 0x0298, Sonic2ObjectIds.OOZ_LAUNCHER, 0x00, 0, false, 0);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) spawn.x(), (short) spawn.y());
+        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setLogicalInputState(false, false, true, false, false);
+        player.endOfTick();
+        assertEquals(AbstractPlayableSprite.INPUT_LEFT, player.getInputHistory(0));
+
+        OOZLauncherObjectInstance launcher = new OOZLauncherObjectInstance(spawn, "OOZLauncher");
+        launcher.setServices(new StubObjectServices());
+        Method proximity = OOZLauncherObjectInstance.class.getDeclaredMethod(
+                "processProximityDetection", AbstractPlayableSprite.class);
+        proximity.setAccessible(true);
+
+        int nextState = (int) proximity.invoke(launcher, player);
+
+        assertEquals(2, nextState, "Obj3D loc_24FC2 advances the per-player launcher state to tracking.");
+        assertTrue(player.isObjectControlled(),
+                "Obj3D writes obj_control=$81, so invisible-launcher tracking must suppress normal movement.");
+        assertFalse(player.isControlLocked(),
+                "Obj3D loc_24FC2 writes obj_control(a1), not global Control_Locked; Obj01_Control must keep "
+                        + "refreshing Ctrl_1_Logical before Sonic_RecordPos stores the follower-history word "
+                        + "(docs/s2disasm/s2.asm:51123-51158,36233-36252,36342-36353).");
+
+        player.setLogicalInputState(false, false, false, false, false);
+        player.endOfTick();
+        assertEquals(0, player.getInputHistory(0),
+                "With Control_Locked untouched, raw neutral input refreshes Ctrl_1_Logical while Obj3D owns "
+                        + "movement through obj_control.");
+    }
 
     @Test
     void steamSpringLaunchClearsObjectRideState() throws Exception {
@@ -238,6 +303,153 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void mtzLongPlatformMappingFrameOneSuppressesObjectEdgeBalance() {
+        MTZLongPlatformObjectInstance normalPlatform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x0B20, 0x076C, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x00, 0, false, 0));
+        MTZLongPlatformObjectInstance noBalancePlatform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x0B20, 0x076C, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x10, 0, false, 0));
+
+        assertFalse(normalPlatform.suppressesObjectEdgeBalance(),
+                "Obj65 mapping_frame 0 leaves status.npc.no_balancing clear");
+        assertTrue(noBalancePlatform.suppressesObjectEdgeBalance(),
+                "Obj65_Init sets status.npc.no_balancing when mapping_frame == 1 (s2.asm:52865-52870)");
+    }
+
+    @Test
+    void mtzLongPlatformOptsIntoZeroXSpeedLeftSideStopCharacter() {
+        MTZLongPlatformObjectInstance platform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x1090, 0x01EC, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x00, 0, false, 0));
+
+        assertTrue(platform.zeroXSpeedStopsOnLeftSideContact(),
+                "Obj65 reaches S2 SolidObject_InsideLeft with x_vel == 0; that falls through to "
+                        + "SolidObject_StopCharacter and clears inertia (docs/s2disasm/s2.asm:35424-35439)");
+    }
+
+    @Test
+    void mczRotPformsUseSolidObjectContStatusTiming() {
+        MCZRotPformsObjectInstance platform = new MCZRotPformsObjectInstance(
+                new ObjectSpawn(0x0E80, 0x05A0, Sonic2ObjectIds.MCZ_ROT_PFORMS, 0x00, 0, false, 0),
+                "MCZRotPforms");
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0EAB, (short) 0x05F0);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0EAB, (short) 0x05F0);
+        tails.setCpuControlled(true);
+
+        assertTrue(platform.usesInclusiveRightEdge(),
+                "Obj6A reaches JmpTo13_SolidObject, and SolidObject_cont rejects the right edge with bhi "
+                        + "(docs/s2disasm/s2.asm:54276,54301,35344-35354)");
+        assertTrue(platform.usesInstanceSolidStateLatchKey(),
+                "Obj6A rewrites dynamic spawn coordinates while ROM keeps standing/pushing bits in the live SST slot");
+        assertFalse(platform.preservesSidekickCpuPushGraceWhileRiding(sonic));
+        assertTrue(platform.preservesSidekickCpuPushGraceWhileRiding(tails),
+                "TailsCPU_Normal reads Status_Push before the next Obj6A SolidObject pass clears it");
+        assertEquals(8, platform.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
+                "MCZ2 f4485 keeps the post-Obj6A push bit visible to the Tails CPU slot with eight grace frames");
+    }
+
+    @Test
+    void htzRisingLavaSubtypeSixUsesCpuSidekickObjectOrderInputDelay() {
+        RisingLavaObjectInstance lowerRoutePlatform = new RisingLavaObjectInstance(
+                new ObjectSpawn(0x1760, 0x07D4, Sonic2ObjectIds.RISING_LAVA, 0x06, 0, false, 0),
+                "RisingLava");
+        RisingLavaObjectInstance slopedPlatform = new RisingLavaObjectInstance(
+                new ObjectSpawn(0x1760, 0x07D4, Sonic2ObjectIds.RISING_LAVA, 0x08, 0, false, 0),
+                "RisingLavaSlope");
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x170A, (short) 0x074D);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x170A, (short) 0x074D);
+        tails.setCpuControlled(true);
+
+        assertTrue(lowerRoutePlatform.usesSidekickCpuCurrentPushObjectOrderInputDelay(tails),
+                "HTZ2 f3322 reaches Obj30 subtype 6's SolidObject_Always/DropOnFloor ordering with "
+                        + "Tails' current Status_Push still visible but the adjacent delayed input already flipped");
+        assertFalse(lowerRoutePlatform.usesSidekickCpuCurrentPushObjectOrderInputDelay(sonic),
+                "The bridge is only for CPU sidekick Ctrl_2 sampling");
+        assertFalse(slopedPlatform.usesSidekickCpuCurrentPushObjectOrderInputDelay(tails),
+                "Subtype 8 uses SlopedSolid and is not part of the HTZ2 lower-route Obj30 ordering window");
+    }
+
+    @Test
+    void cpzStaircasePreservesRidingPushOnlyAtLowerStepSideOverlap() {
+        CPZStaircaseObjectInstance staircase = new CPZStaircaseObjectInstance(
+                new ObjectSpawn(0x2090, 0x0350, Sonic2ObjectIds.CPZ_STAIRCASE, 0x01, 1, false, 0),
+                "CPZStaircase");
+        for (int frame = 0; frame < 0x20; frame++) {
+            staircase.update(frame, null);
+        }
+
+        TestablePlayableSprite tails = new TestablePlayableSprite(
+                "tails", (short) staircase.getPieceX(2), (short) staircase.getPieceY(2));
+        tails.setCpuControlled(true);
+        tails.setDirection(Direction.RIGHT);
+
+        assertFalse(staircase.preservesRidingPushStatus(tails),
+                "CPZ1 f4351 has Tails near the centre of Obj78 slot 0x1F; ROM has no Status_Push, "
+                        + "so TailsCPU_Normal must still consume the +1 FollowRight nudge");
+
+        tails.setDirection(Direction.LEFT);
+        assertFalse(staircase.preservesSidekickCpuPushGraceWhileRiding(tails),
+                "Obj78 CPU-only grace models child-slot side-push visibility; it must not apply when "
+                        + "Tails is centered on a stair piece with no adjacent side overlap");
+        assertTrue(staircase.preservesSidekickDelayedLeaderPushWhileRiding(tails),
+                "Obj78 child SolidObject slots can keep the delayed Sonic_Stat_Record_Buf push visible "
+                        + "while CPU Tails rides the folded staircase (docs/s2disasm/s2.asm:55967-56021)");
+
+        tails.setDirection(Direction.RIGHT);
+        tails.setCentreX((short) (staircase.getPieceX(3) - staircase.getPieceParams(3).halfWidth()));
+        assertTrue(staircase.preservesRidingPushStatus(tails),
+                "Obj78's folded multi-piece latch is still needed when the rider is actually pressed "
+                        + "into the lower neighbouring child slot's side");
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite(
+                "sonic", (short) staircase.getPieceX(2), (short) staircase.getPieceY(2));
+        assertFalse(staircase.preservesSidekickDelayedLeaderPushWhileRiding(sonic),
+                "The delayed leader push bridge is only for CPU sidekick follow control");
+    }
+
+    @Test
+    void cpzStaircaseKeepsCpuTailsCurrentPushWhenFacingHigherAdjacentStep() {
+        CPZStaircaseObjectInstance staircase = new CPZStaircaseObjectInstance(
+                new ObjectSpawn(0x1510, 0x0702, Sonic2ObjectIds.CPZ_STAIRCASE, 0x01, 1, false, 0),
+                "CPZStaircase");
+        for (int frame = 0; frame < 0x20; frame++) {
+            staircase.update(frame, null);
+        }
+
+        TestablePlayableSprite tails = new TestablePlayableSprite(
+                "tails", (short) (staircase.getPieceX(1) - 5), (short) staircase.getPieceY(1));
+        tails.setCpuControlled(true);
+        tails.setDirection(Direction.LEFT);
+
+        assertTrue(staircase.preservesRidingPushStatus(tails),
+                "CPZ2 f5285 has Tails on the lower Obj78 child facing the higher child slot; "
+                        + "the ROM child SolidObject pass leaves Tails' current Status_Push visible "
+                        + "for TailsCPU_Normal's push bypass");
+        assertFalse(staircase.preservesSidekickDelayedLeaderPushWhileRiding(tails),
+                "When Obj78 already preserves Tails' current Status_Push, the delayed leader sample "
+                        + "must not also be forced to pushing or TailsCPU_Normal misses the auto-jump path");
+        assertTrue(staircase.preservesSidekickCpuPushGraceWhileRiding(tails),
+                "The same child-slot side contact supplies the ROM-visible current push grace when "
+                        + "the folded engine status was already cleared before TailsCPU_Normal");
+        assertTrue(staircase.usesSidekickCpuPushBypassObjectOrderStatusDelay(tails),
+                "TailsCPU_Normal must compare that current push against Obj78's object-order leader "
+                        + "status sample, not the final-frame status column");
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite(
+                "sonic", (short) (staircase.getPieceX(1) - 5), (short) staircase.getPieceY(1));
+        sonic.setDirection(Direction.LEFT);
+        assertTrue(staircase.preservesRidingPushStatus(sonic),
+                "The same folded child-slot push is visible to Sonic_Stat_Record_Buf when Sonic is "
+                        + "also pressed into the higher Obj78 child slot, as at CPZ2 f5221");
+
+        tails.setCentreX((short) (staircase.getPieceX(3) - 5));
+        assertTrue(staircase.preservesSidekickDelayedLeaderPushWhileRiding(tails),
+                "Later Obj78 child-slot contact still preserves the delayed leader push window that "
+                        + "keeps CPZ2 f5221 on the normal follow-steering path");
+        assertFalse(staircase.usesSidekickCpuPushBypassObjectOrderStatusDelay(tails),
+                "The f5221 later-child window must keep the final delayed leader push sample; only "
+                        + "the first-child f5285 handoff uses the object-order status byte");
+    }
+
+    @Test
     void mtzConveyorUsesPlatformObjectD3ForLandingSnap() {
         ConveyorObjectInstance conveyor = new ConveyorObjectInstance(
                 new ObjectSpawn(0x1720, 0x0519, Sonic2ObjectIds.CONVEYOR, 0x01, 0, false, 0),
@@ -255,6 +467,17 @@ class TestSonic2ObjectBugFixes {
 
         assertEquals(0x0B20, platform.getOutOfRangeReferenceX(),
                 "Obj65 loc_26C1C checks objoff_34, not moving x_pos(a0), for MarkObjGone");
+    }
+
+    @Test
+    void genericPlatformOutOfRangeUsesStoredOriginX() throws Exception {
+        ARZPlatformObjectInstance platform = new ARZPlatformObjectInstance(
+                new ObjectSpawn(0x1940, 0x06C8, Sonic2ObjectIds.GENERIC_PLATFORM_A, 0x01, 0, false, 0x06C8),
+                "GenericPlatform");
+        setIntField(platform, "x", 0x190D);
+
+        assertEquals(0x1940, platform.getOutOfRangeReferenceX(),
+                "Obj18_Despawn checks obj18_x_origin, not moving x_pos(a0), before deleting");
     }
 
     @Test
@@ -297,6 +520,33 @@ class TestSonic2ObjectBugFixes {
 
         assertTrue(spikes.airborneStaleStandingBitReturnsNoContact(null),
                 "Obj36 calls the shared SolidObject path; an airborne stale standing bit returns before new contact");
+    }
+
+    @Test
+    void s2SpikesUsePostObj33SidekickPushGraceThreshold() {
+        SpikeObjectInstance spikes = new SpikeObjectInstance(
+                new ObjectSpawn(0x0CF0, 0x0594, Sonic2ObjectIds.SPIKES, 0x30, 2, false, 0x4650),
+                "Spikes");
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0CE3, (short) 0x0574);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0CE3, (short) 0x0574);
+        tails.setCpuControlled(true);
+
+        tails.setGSpeed((short) -0x000C);
+        assertFalse(spikes.preservesSidekickCpuPushGraceWhileRiding(sonic));
+        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(sonic));
+        assertTrue(spikes.preservesSidekickCpuPushGraceWhileRiding(tails));
+        assertEquals(8, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
+                "OOZ1 f1782 reaches Obj36 riding push grace with eight frames remaining");
+
+        tails.setDirection(Direction.LEFT);
+        tails.setGSpeed((short) -0x0018);
+        tails.setXSpeed((short) -0x0018);
+        assertEquals(0, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
+                "OOZ1 f1794 reaches Obj36's inner-left edge with fresh negative inertia before Tails_TurnRight");
+
+        tails.setGSpeed((short) 0x0080);
+        assertEquals(14, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
+                "The faster positive-inertia spike ride keeps the conservative existing bridge window");
     }
 
     @Test
@@ -594,6 +844,199 @@ class TestSonic2ObjectBugFixes {
         cog.update(0x6CC2, new TestablePlayableSprite("sonic", (short) 0x0800, (short) 0x0600));
         assertEquals(0x080D, cog.getPieceX(0),
                 "ROM-visible Level_frame_counter $07F0 advances Obj70 to the next tooth phase");
+    }
+
+    @Test
+    void mtzCogFirstMainExecutionRotatesOnCurrentRomLowByteZero() {
+        LevelManager levelManager = mock(LevelManager.class);
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0380, 0x0400, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+        cog.setServices(new StubObjectServices() {
+            @Override
+            public LevelManager levelManager() {
+                return levelManager;
+            }
+        });
+
+        when(levelManager.getFrameCounter()).thenReturn(0x0520);
+        cog.update(0x3751, new TestablePlayableSprite("sonic", (short) 0x0380, (short) 0x03A0));
+
+        assertEquals(0x038D, cog.getPieceX(0),
+                "A just-streamed Obj70 whose first Main pass lands on Level_frame_counter low byte zero "
+                        + "must take the same rotation tick as the copied ROM tooth slots");
+        assertEquals(0x03B8, cog.getPieceY(0));
+    }
+
+    @Test
+    void mtzCogLandingUsesFullRomWidthPixelsWindow() {
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getFrameCounter()).thenReturn(0x04DB);
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0480, 0x0480, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+        cog.setServices(new StubObjectServices() {
+            @Override
+            public LevelManager levelManager() {
+                return levelManager;
+            }
+        });
+        cog.update(0, new TestablePlayableSprite("sonic", (short) 0x0480, (short) 0x0400));
+        cog.snapshotPreUpdatePosition();
+        ObjectManager manager = buildSingleObjectManager(cog);
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setWidth(18);
+        sonic.setHeight(38);
+        sonic.setAir(false);
+        sonic.setAngle((byte) 0x34);
+        sonic.setGroundMode(com.openggf.game.GroundMode.LEFTWALL);
+        sonic.setXSpeed((short) 0x014B);
+        sonic.setYSpeed((short) 0x0444);
+        sonic.setGSpeed((short) 0x047A);
+        sonic.setCentreX((short) 0x04D0);
+        sonic.setCentreY((short) 0x0464);
+
+        manager.updateSolidContacts(sonic);
+
+        assertTrue(sonic.isOnObject(),
+                "Obj70 SolidObject_Landed re-checks width_pixels=$10, so x_pos +8 from tooth centre must land");
+        assertFalse(sonic.getAir());
+        assertEquals(0, sonic.getAngle() & 0xFF);
+        assertEquals(0, sonic.getYSpeed());
+        assertEquals(0x014B, sonic.getGSpeed());
+    }
+
+    @Test
+    void mtzCogGroundedCpuSideContactWithoutStandingBitReachesRomStopCharacterPath() {
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getFrameCounter()).thenReturn(0x04E7);
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0480, 0x0480, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+        cog.setServices(new StubObjectServices() {
+            @Override
+            public LevelManager levelManager() {
+                return levelManager;
+            }
+        });
+        cog.update(0, new TestablePlayableSprite("sonic", (short) 0x0480, (short) 0x0400));
+        cog.snapshotPreUpdatePosition();
+        ObjectManager manager = buildSingleObjectManager(cog);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x047D, (short) 0x0431);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setXSpeed((short) 0x01E7);
+        tails.setGSpeed((short) 0x01EB);
+
+        manager.updateSolidContacts(tails);
+
+        assertTrue(tails.getPushing(),
+                "Grounded Obj70 side contact without a standing bit must set Status_Push");
+    }
+
+    @Test
+    void mtzCogLeftwardGroundedCpuSideContactWithoutStandingBitStillPushes() {
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getFrameCounter()).thenReturn(0x04E7);
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0480, 0x0480, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+        cog.setServices(new StubObjectServices() {
+            @Override
+            public LevelManager levelManager() {
+                return levelManager;
+            }
+        });
+        cog.update(0, new TestablePlayableSprite("sonic", (short) 0x0480, (short) 0x0400));
+        cog.snapshotPreUpdatePosition();
+        ObjectManager manager = buildSingleObjectManager(cog);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x04B2, (short) 0x042E);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setXSpeed((short) -0x0080);
+        tails.setGSpeed((short) -0x0080);
+
+        manager.updateSolidContacts(tails);
+
+        assertTrue(tails.getPushing(),
+                "Obj70 reaches SolidObject_cont with no standing bit; moving left must not be mistaken "
+                        + "for the stale-standing d4=0 branch (s2.asm:35021-35044, 55080-55141)");
+    }
+
+    @Test
+    void mtzCogHighSpeedLeftwardReleaseStillSkipsFoldedSiblingSideStop() {
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getFrameCounter()).thenReturn(0x04E7);
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0480, 0x0480, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+        cog.setServices(new StubObjectServices() {
+            @Override
+            public LevelManager levelManager() {
+                return levelManager;
+            }
+        });
+        cog.update(0, new TestablePlayableSprite("sonic", (short) 0x0480, (short) 0x0400));
+        cog.snapshotPreUpdatePosition();
+        ObjectManager manager = buildSingleObjectManager(cog);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x04B2, (short) 0x042E);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setXSpeed((short) -0x0700);
+        tails.setGSpeed((short) -0x0700);
+
+        manager.updateSolidContacts(tails);
+
+        assertFalse(tails.getPushing(),
+                "A high-speed leftward Obj70 release is stale folded-slot geometry, not a fresh grounded push");
+        assertEquals(-0x0700, tails.getXSpeed(),
+                "The folded sibling side path must not run SolidObject_StopCharacter for the stale release");
+    }
+
+    @Test
+    void mtzCogAirborneHurtCpuSideContactWithoutStandingBitReachesRomStopCharacterPath() {
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getFrameCounter()).thenReturn(0x04E7);
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0480, 0x0480, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+        cog.setServices(new StubObjectServices() {
+            @Override
+            public LevelManager levelManager() {
+                return levelManager;
+            }
+        });
+        cog.update(0, new TestablePlayableSprite("sonic", (short) 0x0480, (short) 0x0400));
+        cog.snapshotPreUpdatePosition();
+        ObjectManager manager = buildSingleObjectManager(cog);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x04B2, (short) 0x042E);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCpuControlled(true);
+        tails.setAir(true);
+        tails.setHurt(true);
+        tails.setXSpeed((short) -0x0200);
+        tails.setYSpeed((short) 0x0170);
+        tails.setGSpeed((short) -0x0200);
+
+        manager.updateSolidContacts(tails);
+
+        assertEquals(0, tails.getXSpeed(),
+                "Obj02_Hurt does not self-clear x_vel until landing; an airborne clear-bit Obj70 side hit "
+                        + "must still reach SolidObject_StopCharacter (s2.asm:41063-41110,35413-35436)");
+        assertEquals(0, tails.getGSpeed(),
+                "SolidObject_StopCharacter clears inertia/g_speed together with x_vel");
     }
 
     private static int intField(Object target, String fieldName) throws Exception {

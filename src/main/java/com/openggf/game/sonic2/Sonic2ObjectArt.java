@@ -595,8 +595,28 @@ public class Sonic2ObjectArt {
     }
 
     public ObjectSpriteSheet loadBubblesSheet() {
-        return buildArtSheetFromRom(Sonic2Constants.ART_NEM_BUBBLES_ADDR,
-                Sonic2Constants.MAP_UNC_SMALL_BUBBLES_ADDR, 1, 1);
+        Pattern[] bigBubblePatterns = safeLoadNemesisPatterns(
+                Sonic2Constants.ART_NEM_BUBBLE_GENERATOR_ADDR, "BigBubbles");
+        Pattern[] standardBubblePatterns = safeLoadNemesisPatterns(
+                Sonic2Constants.ART_NEM_BUBBLES_ADDR, "Bubbles");
+        if (bigBubblePatterns.length == 0 && standardBubblePatterns.length == 0) {
+            return null;
+        }
+
+        int standardBubbleOffset = Sonic2Constants.ART_TILE_STANDARD_WATER_BUBBLES
+                - Sonic2Constants.ART_TILE_BUBBLES;
+        int requiredSize = Math.max(bigBubblePatterns.length,
+                standardBubbleOffset + standardBubblePatterns.length);
+        Pattern[] patterns = createBlankPatterns(requiredSize);
+        System.arraycopy(bigBubblePatterns, 0, patterns, 0,
+                Math.min(bigBubblePatterns.length, patterns.length));
+        if (standardBubbleOffset >= 0 && standardBubbleOffset < patterns.length) {
+            System.arraycopy(standardBubblePatterns, 0, patterns, standardBubbleOffset,
+                    Math.min(standardBubblePatterns.length, patterns.length - standardBubbleOffset));
+        }
+
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_SMALL_BUBBLES_ADDR);
+        return new ObjectSpriteSheet(patterns, mappings, 0, 1);
     }
 
     public ObjectSpriteSheet loadLeavesSheet() {

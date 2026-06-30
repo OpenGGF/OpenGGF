@@ -131,7 +131,7 @@ class TestSolidOrderingSentinelsHeadless {
     }
 
     @Test
-    void flipperClearsControlLockOnSameFrameNoContactResult() throws Exception {
+    void flipperRestoresPreExistingPinballFlagOnSameFrameNoContactResult() throws Exception {
         HeadlessTestFixture localFixture = HeadlessTestFixture.builder()
                 .withSharedLevel(sharedLevel)
                 .build();
@@ -141,10 +141,12 @@ class TestSolidOrderingSentinelsHeadless {
         localPlayer.setCentreX((short) 0x0120);
         localPlayer.setCentreY((short) 0x00F4);
         localPlayer.setAir(false);
+        localPlayer.setPinballMode(true);
         localFixture.camera().updatePosition(true);
 
         localFixture.stepFrame(false, false, false, false, false);
-        assertTrue(localPlayer.isControlLocked(), "Vertical flipper should lock the player while standing");
+        assertTrue(localPlayer.isObjectControlSuppressesMovement(),
+                "Vertical flipper should suppress movement while standing");
 
         localPlayer.setCentreX((short) 0x0180);
         localFixture.stepFrame(false, false, false, false, false);
@@ -154,8 +156,10 @@ class TestSolidOrderingSentinelsHeadless {
                 (java.util.IdentityHashMap<AbstractPlayableSprite, Integer>) getField(flipper, "playerFlipperState");
         assertEquals(0, flipperState.getOrDefault(localPlayer, 0),
                 "Vertical flipper should clear same-frame standing state on an explicit no-contact result");
-        assertFalse(localPlayer.isControlLocked(),
-                "Vertical flipper should clear the control lock on the same no-contact frame");
+        assertFalse(localPlayer.isObjectControlSuppressesMovement(),
+                "Vertical flipper should clear movement suppression on the same no-contact frame");
+        assertTrue(localPlayer.getPinballMode(),
+                "Obj86 release clears its own temporary pinball state without erasing Obj84's pre-existing flag");
     }
 
     @Test

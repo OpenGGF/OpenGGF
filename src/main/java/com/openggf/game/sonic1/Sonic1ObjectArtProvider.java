@@ -2778,8 +2778,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             patterns[i] = level.getPattern(i);
         }
 
-        // make_art_tile(ArtTile_Level,2,0) — palette line 2
-        ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 3);
+        // ROM: make_art_tile(ArtTile_Level,2,0) — palette line 2
+        ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.SYZ_BOSS_BLOCK, sheet);
     }
 

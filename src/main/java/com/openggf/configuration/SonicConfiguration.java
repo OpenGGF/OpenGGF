@@ -272,6 +272,12 @@ public enum SonicConfiguration {
 	PLAYBACK_START_OFFSET_FRAME,
 
 	/**
+	 * Key used with Shift to open/start user recordings, and alone to stop an
+	 * active recording.
+	 */
+	RECORDING_RECORD_KEY,
+
+	/**
 	 * Key held in visual Trace Test Mode to rewind deterministic engine state.
 	 */
 	TRACE_REWIND_KEY,

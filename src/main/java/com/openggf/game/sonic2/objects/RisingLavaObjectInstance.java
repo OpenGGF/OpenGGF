@@ -301,11 +301,10 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
             return false;
         }
 
-        // ROM: tst.b (Screen_Shaking_Flag_HTZ).w at line 49091
-        // Only solid when HTZ earthquake sequence is active.
-        // Uses the HTZ-specific flag which stays on during delay periods,
-        // unlike the general Screen_Shaking_Flag which gets cleared.
-        return isHtzEarthquakeActive();
+        // ROM Obj30_Main runs Obj30_Modes (SolidObject_Always / DropOnFloor /
+        // hurt-supported-player handling) before testing Screen_Shaking_Flag_HTZ
+        // for MarkObjGone3 (docs/s2disasm/s2.asm:49568-49581,49635-49642).
+        return true;
     }
 
     private boolean isHtzEarthquakeActive() {
@@ -318,6 +317,13 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         return false;
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj30 subtypes call SolidObject_Always before DropOnFloor / hurt
+        // handling (docs/s2disasm/s2.asm:49598-49604,49635-49642).
+        return true;
     }
 
     // ========================================================================
@@ -351,6 +357,9 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
         if ((subtype == 4 || subtype == 6) && contact.standing()) {
             if (!player.getInvulnerable()) {
                 applyHurt(player);
+                // Obj30 hurts supported players after SolidObject_Always and DropOnFloor.
+                // Hurt_Sidekick does not clear Status_OnObj; the next solid pass owns unseating.
+                player.setOnObject(true);
             }
         }
     }
@@ -361,6 +370,16 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesSidekickCpuCurrentPushObjectOrderInputDelay(PlayableEntity player) {
+        // Obj30 subtype 6 runs SolidObject_Always, DropOnFloor, then the
+        // supported-player hurt path after TailsCPU_Normal has already sampled
+        // Ctrl_2 (docs/s2disasm/s2.asm:49636-49643,39291-39294). The HTZ2
+        // lower-route platform keeps that object-order push visible to the CPU
+        // slot while the adjacent history input word has already flipped.
+        return subtype == 6 && player != null && player.isCpuControlled();
+    }
+
+    @Override
     public int getOnScreenHalfWidth() {
         return widthPixels;
     }
@@ -368,6 +387,14 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     @Override
     public int getOnScreenHalfHeight() {
         return getSolidParams().groundHalfHeight();
+    }
+
+    @Override
+    public boolean keepsOnObjWhenAirborneAfterSameFrameStandingContact(PlayableEntity player) {
+        // Obj30 subtype 4/6 runs SolidObject_Always/DropOnFloor before
+        // Obj30_HurtSupportedPlayers; Hurt_Sidekick then sets InAir without
+        // clearing OnObj (docs/s2disasm/s2.asm:49603-49615,49635-49642,85468-85472).
+        return subtype == 4 || subtype == 6;
     }
 
     // ========================================================================

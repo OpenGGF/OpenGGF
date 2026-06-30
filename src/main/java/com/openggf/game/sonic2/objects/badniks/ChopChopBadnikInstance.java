@@ -7,6 +7,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
+import com.openggf.level.objects.BreathingBubbleInstance;
+import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -42,6 +44,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
     // Movement constants from disassembly
     private static final int PATROL_SPEED = 0x40;           // 64 subpixels/frame (move.w #$40,x_vel(a0))
     private static final int MOVE_TIMER_INIT = 0x200;       // 512 frames (move.w #$200,objoff_36(a0))
+    private static final int BUBBLE_TIMER_RESET = 0x50;     // 80 frames (move.w #$50,Obj91_bubble_timer(a0))
     private static final int WAIT_TIME = 0x10;              // 16 frames (move.b #$10,anim_frame_duration(a0))
     private static final int CHARGE_SPEED_X = 2;            // 2 pixels/frame
     private static final int CHARGE_SPEED_Y_SUBPIXEL = 0x80; // 0.5 pixels/frame (addi.w #$80,y_pos(a0))
@@ -63,21 +66,25 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
 
     private State state;
     private int moveTimer;           // objoff_36 - frames until direction switch
+    private int bubbleTimer;         // Obj91_bubble_timer - frames until next small bubble
     private int waitTimer;           // anim_frame_duration - frames until charge
     private int xSubpixel;           // Subpixel accumulator for x movement (ObjectMove 16.16 carry)
     private int ySubpixel;           // Subpixel accumulator for y movement during charge
     private boolean chargeLatched;   // Have charge velocities been latched (Obj91_MoveTowardsPlayer)?
     private int startX;              // Initial X position for direction reference
+    private boolean initFrame;        // ROM Obj91_Init returns before Obj91_Main can move
 
     public ChopChopBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "ChopChop", Sonic2BadnikConfig.DESTRUCTION);
         this.state = State.PATROLLING;
         this.moveTimer = MOVE_TIMER_INIT;
+        this.bubbleTimer = 0;
         this.waitTimer = 0;
         this.xSubpixel = 0;
         this.ySubpixel = 0;
         this.chargeLatched = false;
         this.startX = spawn.x();
+        this.initFrame = true;
 
         // Initial facing based on render_flags (status.npc.x_flip bit)
         // From disassembly: if x_flip bit is SET, velocity stays positive (moving RIGHT)
@@ -111,13 +118,27 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
      * - Check for player detection
      */
     private void updatePatrolling(int frameCounter, AbstractPlayableSprite player) {
+        if (initFrame) {
+            // Obj91_Init (s2.asm:73672-73684) sets timers/x_vel and returns.
+            // Obj91_Main's ObjectMove starts on the following ExecuteObjects pass.
+            initFrame = false;
+            return;
+        }
+
         // Apply velocity via ObjectMove-style subpixel integration.
-        // Obj91_Main calls JmpTo26_ObjectMove (s2.asm:73642), and ObjectMove
+        // Obj91_Main calls JmpTo26_ObjectMove (s2.asm:73698), and ObjectMove
         // integrates x_pos(32) += x_vel<<8 (s2.asm:30185-30199): the velocity's
         // low byte accumulates into the sub-pixel and carries into the whole
         // pixel. PATROL_SPEED=0x40 = 0.25px/frame, so a plain `>>8` would
         // discard it entirely and the badnik would never advance.
         applyXVelocitySubpixel();
+
+        // ROM Obj91_Main pre-decrements the low byte of Obj91_bubble_timer and
+        // calls Obj91_MakeBubble when it reaches zero (s2.asm:73687-73769).
+        bubbleTimer = (bubbleTimer - 1) & 0xFF;
+        if (bubbleTimer == 0) {
+            spawnPatrolBubble();
+        }
 
         // Decrement direction switch timer
         moveTimer--;
@@ -137,7 +158,22 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
             chargeLatched = false; // charge velocities re-latched at Waiting->Charge
         }
 
-        // ROM parity gap: Obj91 spawns an Obj0A-style small bubble every 80 frames while patrolling.
+    }
+
+    private void spawnPatrolBubble() {
+        bubbleTimer = BUBBLE_TIMER_RESET;
+        int bubbleX = currentX + (facingLeft ? 0x14 : -0x14);
+        int bubbleY = currentY + 6;
+        spawnFreeChild(() -> new BreathingBubbleInstance(
+                bubbleX,
+                bubbleY,
+                !facingLeft,
+                -1,
+                ObjectArtKeys.BUBBLES,
+                null,
+                3,
+                -0x88,
+                false));
     }
 
     /**

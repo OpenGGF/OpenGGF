@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
@@ -182,8 +183,26 @@ public class NutObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
+    }
+
+    @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // Obj69 tail-calls S2 SolidObject after its action passes
+        // (docs/s2disasm/s2.asm:54006-54013). Once the helper reaches the
+        // per-player stale-standing branch, an already-airborne rider clears
+        // Status_OnObj and returns before SolidObject_cont regardless of player
+        // slot; native P2 has an additional off-screen early return before this
+        // branch (s2.asm:35022-35046).
+        return player instanceof AbstractPlayableSprite;
+    }
+
+    @Override
+    public boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
+        // Obj69 runs player movement before its late SolidObject tail, so a
+        // stale airborne ride must not be converted back into ground support
+        // before Obj69 can clear it (s2.asm:35028-35046,54006-54013).
+        return player instanceof AbstractPlayableSprite;
     }
 
     @Override
@@ -273,14 +292,34 @@ public class NutObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite sidekickPlayer = resolveSidekick();
 
         if (mainPlayer != null) {
-            processPlayerAction(p1, mainPlayer, standingP1);
+            processPlayerAction(p1, mainPlayer, isStandingOnThis(mainPlayer, standingP1));
         }
         // Only run the sidekick pass when the routine is still MAIN. (The first
         // pass can advance routine to FALLING; the ROM would still fall through
         // to loc_278F4, but the second Obj69_Action selector reads objoff_3C and
         // would no-op on a falling nut since the sidekick's standing bit clears.)
         if (sidekickPlayer != null && routine == ROUTINE_MAIN) {
-            processPlayerAction(p2, sidekickPlayer, standingP2);
+            processPlayerAction(p2, sidekickPlayer, isStandingOnThis(sidekickPlayer, standingP2));
+        }
+    }
+
+    private boolean isStandingOnThis(AbstractPlayableSprite player, boolean callbackStanding) {
+        if (callbackStanding) {
+            return true;
+        }
+        try {
+            ObjectManager objectManager = services().objectManager();
+            // Obj69_Action reads the object's standing bit, but S2 SolidObject
+            // clears both Status_OnObj and that bit on a continued-ride exit.
+            // CPU Tails can be skipped by the P2 off-screen gate before that
+            // branch, so preserve the existing object-bit fallback for CPU
+            // sidekicks while requiring live Status_OnObj for P1.
+            boolean statusOnObjectVisible = player.isCpuControlled() || player.isOnObject();
+            return statusOnObjectVisible
+                    && objectManager != null
+                    && objectManager.hasObjectStandingBit(player, this);
+        } catch (RuntimeException e) {
+            return false;
         }
     }
 

@@ -277,6 +277,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			staleHorizontalInputPreviousHorizontal = horizontal;
 			return false;
 		}
+		if (sprite.getGSpeed() != 0
+				&& !provider.preservesStaleHorizontalInputEdgeWhileMoving(sprite)) {
+			staleHorizontalInputRideSlotIndex = -1;
+			staleHorizontalInputSuppressFrames = 0;
+			staleHorizontalInputRideFrames = 0;
+			staleHorizontalInputPreviousHorizontal = horizontal;
+			return false;
+		}
 		int ridingSlotIndex = slotIndexForStaleHorizontalInput(ridingObject);
 		if (ridingSlotIndex < 0 || ridingSlotIndex != staleHorizontalInputRideSlotIndex) {
 			staleHorizontalInputRideSlotIndex = ridingSlotIndex;
@@ -286,11 +294,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		staleHorizontalInputRideFrames++;
-		if (right
-				&& !left
+		// Keep the held-horizontal edge latched while the rider remains on the
+		// same object. S2 ObjD5/PlatformObjectD5 can zero inertia mid-ride, but
+		// the next Obj01_Control still consumes the already-held Ctrl_1_Logical
+		// right bit through Sonic_MoveRight (docs/s2disasm/s2.asm:35860-35874,
+		// 36233-36243, 36560-36567, 36945-36962).
+		if (sprite.getGSpeed() == 0
+				&& horizontal
 				&& !staleHorizontalInputPreviousHorizontal) {
 			staleHorizontalInputSuppressFrames =
-					provider.staleHorizontalLogicalInputFramesWhileRiding(sprite, staleHorizontalInputRideFrames);
+					provider.staleHorizontalLogicalInputFramesWhileRiding(sprite, staleHorizontalInputRideFrames, left, right);
 		}
 		staleHorizontalInputPreviousHorizontal = horizontal;
 
@@ -310,8 +323,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		var objectManager = manager != null ? manager.getObjectManager() : null;
 		if (objectManager == null
 				|| !objectManager.isRidingObject(sprite)
-				|| sprite.getAir()
-				|| sprite.getGSpeed() != 0) {
+				|| sprite.getAir()) {
 			return null;
 		}
 		return objectManager.getRidingObject(sprite);
@@ -609,7 +621,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 
-		if (!sprite.getPinballMode() && inputJumpPress && doJump()) {
+		if (inputJumpPress && !romPinballModeBlocksRollingJump() && doJump()) {
 			// ROM: Sonic_Jump uses addq.l #4,sp to pop the return address,
 			// skipping the rest of Obj01_MdRoll (RollRepel, RollSpeed,
 			// SpeedToPos, AnglePos, SlopeRepel). Air physics and position
@@ -624,6 +636,24 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		doSlopeRepel();
+	}
+
+	private boolean romPinballModeBlocksRollingJump() {
+		if (!sprite.getPinballMode()) {
+			return false;
+		}
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (featureSet != null
+				&& featureSet.rollingJumpPinballGateRequiresSpindashFlag()
+				&& !sprite.getSpindash()) {
+			// S2 Obj85/Obj86 do not write pinball_mode; the engine uses
+			// pinballMode there only to carry a temporary roll-preservation
+			// guard. Clear it before Sonic_Jump/Tails_Jump so later airborne
+			// pinball_mode tests also see the ROM byte as zero.
+			sprite.setPinballMode(false);
+			return false;
+		}
+		return true;
 	}
 
 	/** Obj01_MdAir/MdJump: Airborne state */
@@ -726,6 +756,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			boolean deferredContinuation =
 					kc != null && kc.isDeferredDespawnDeadFallContinuingThisFrame();
 			if (!deferredContinuation) {
+				// Boundary-kill frame N still resumes inside Obj02_MdAir after
+				// KillCharacter; S2 then applies the normal underwater gravity
+				// reduction before Tails_DoLevelCollision (s2.asm:39616-39627).
+				// Frame N+1 and later run Obj02_Dead, which only calls
+				// ObjectMoveAndFall (s2.asm:41131-41137).
+				applyUnderwaterAirGravityReduction();
 				sprite.updateSensors(originalX, originalY);
 				doLevelCollision(sprite.isForceFloorCheck());
 			}
@@ -734,23 +770,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		doObjectMoveAndFall();
 
-		// Underwater gravity reduction
-		// Normal airborne: net gravity = 0x38 - 0x28 = 0x10 (s2.asm:36170)
-		// Hurt airborne:   net gravity = 0x30 - 0x20 = 0x10 (s2.asm:37802, s1:01 Sonic.asm:1410)
-		// The ROM hurt routine (Obj01_Hurt) uses a separate code path with $20 reduction,
-		// NOT the $28 used in Obj01_MdAir/MdJump. All three games (S1/S2/S3K) are identical.
-		if (sprite.isInWater()) {
-			short reduction = 0x28;
-			var modifiers = sprite.getPhysicsModifiers();
-			if (modifiers != null) {
-				reduction = sprite.isHurt()
-						? modifiers.waterHurtGravityReduction()
-						: modifiers.waterGravityReduction();
-			} else if (sprite.isHurt()) {
-				reduction = 0x20;
-			}
-			sprite.setYSpeed((short) (sprite.getYSpeed() - reduction));
-		}
+		applyUnderwaterAirGravityReduction();
 
 		// ROM: Sonic_JumpAngle runs in Obj01_MdAir / MdJump but NOT in
 		// Obj01_Hurt (S1: 01 Sonic.asm:1410, S2: s2.asm:37806).
@@ -887,6 +907,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		short preReleaseXSpeed = sprite.getXSpeed();
 		short preReleaseYSpeed = sprite.getYSpeed();
+		short preReleaseCentreX = sprite.getCentreX();
 
 		// Keep a temporary derived release velocity for the AnglePos threshold
 		// check that still runs on the release frame.
@@ -899,6 +920,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		audioManager.playSfx(GameSound.SPINDASH_RELEASE);
 		doLevelBoundaryAndAnglePos();
 		if (!sprite.getAir()) {
+			// ROM's release path runs LevelBound + AnglePos but not SpeedToPos;
+			// the first rolling displacement happens on the next MdRoll frame.
+			// Keep the temporary velocity from moving the player horizontally
+			// through the engine's attachment pass.
+			sprite.setCentreXPreserveSubpixel(preReleaseCentreX);
+			sprite.setGSpeed(spindashGSpeed);
 			sprite.setXSpeed(preReleaseXSpeed);
 			sprite.setYSpeed(preReleaseYSpeed);
 		}
@@ -1977,8 +2004,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// normal time by updateCrouchState(), so other traces are unaffected.
 			boolean lookGateActive = isOnFlatGround() && gSpeed == 0;
 			boolean balancingNow = lookGateActive && computeCurrentFrameBalancing();
-			if (lookGateActive && !balancingNow) {
+			if (lookGateActive && !inputLeft && !inputRight) {
+				// ROM clears Status_Push before choosing Wait/Balance/Look/Duck,
+				// so a released direction exits the push display even when the
+				// standing-on-object balance branch diverts to ResetScr
+				// (S1 01 Sonic.asm:327-351; S2 s2.asm:36242-36271;
+				// S3K sonic3k.asm:22450-22473).
 				sprite.setPushing(false);
+			}
+			if (lookGateActive && !balancingNow) {
 				short lookDelay = sprite.getLookDelayCounter();
 				PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 				short lookScrollDelay = (featureSet != null) ? featureSet.lookScrollDelay()
@@ -2652,6 +2686,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setAir(true);
 		sprite.setSlopeRepelJustSlipped(true);
 		sprite.setMoveLockTimer(MOVE_LOCK_FRAMES);
+		if (fs != null && fs.animationChangeClearsPush()) {
+			// S2/S3K SlopeRepel sets Status_InAir and move_lock from the
+			// ground movement path; the same frame's Animate_Tails/Sonic
+			// then clears Status_Push when the movement-selected anim byte
+			// differs from prev_anim (docs/s2disasm/s2.asm:40687-40705,
+			// 40879-40884). Trace comparison samples before the engine's
+			// later animation pass, so mirror that same-frame status clear
+			// at the transition point.
+			sprite.setPushing(false);
+		}
 	}
 
 	/** Sonic_DoLevelCollision: Full airborne collision (s2.asm:37540) */
@@ -3186,15 +3230,36 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// bounce: the flip frame's wall hit re-sets push, but ROM's prev_anim
 		// sentinel still clears it that frame, so push is gone entering the next
 		// no-hit frame.)
-		if (left && !right && sprite.getDirection() == Direction.RIGHT && gSpeed <= 0) {
+		if (left && !right && sprite.getDirection() == Direction.RIGHT && gSpeed <= 0 && !sprite.getRolling()) {
 			sprite.setPushing(false);
 			forceGroundFacingFlipAnimationRestart();
 			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
-		} else if (right && !left && sprite.getDirection() == Direction.LEFT && gSpeed >= 0) {
+		} else if (right && !left && sprite.getDirection() == Direction.LEFT && gSpeed >= 0 && !sprite.getRolling()) {
 			sprite.setPushing(false);
 			forceGroundFacingFlipAnimationRestart();
 			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
 		}
+	}
+
+	private void applyUnderwaterAirGravityReduction() {
+		// Underwater gravity reduction
+		// Normal airborne: net gravity = 0x38 - 0x28 = 0x10 (s2.asm:39620-39623)
+		// Hurt airborne:   net gravity = 0x30 - 0x20 = 0x10 (s2.asm:41066-41069, s1:01 Sonic.asm:1410)
+		// The ROM hurt routine (Obj01_Hurt) uses a separate code path with $20 reduction,
+		// NOT the $28 used in Obj01_MdAir/MdJump. All three games (S1/S2/S3K) are identical.
+		if (!sprite.isInWater()) {
+			return;
+		}
+		short reduction = 0x28;
+		var modifiers = sprite.getPhysicsModifiers();
+		if (modifiers != null) {
+			reduction = sprite.isHurt()
+					? modifiers.waterHurtGravityReduction()
+					: modifiers.waterGravityReduction();
+		} else if (sprite.isHurt()) {
+			reduction = 0x20;
+		}
+		sprite.setYSpeed((short) (sprite.getYSpeed() - reduction));
 	}
 
 	private void forceGroundFacingFlipAnimationRestart() {
@@ -3675,9 +3740,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		// ROM: Check if object allows balancing (status.npc.no_balancing bit)
-		// Some objects (like spinning platforms) disable balancing
-		// We skip this check for now as most objects allow balancing
+		if (ridingObject instanceof com.openggf.level.objects.AbstractObjectInstance objectInstance
+				&& objectInstance.suppressesObjectEdgeBalance()) {
+			return;
+		}
 
 		// For multi-piece solid objects (e.g., CPZ Staircase), use the piece-specific
 		// position and params rather than the overall object's base position.

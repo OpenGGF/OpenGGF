@@ -13,9 +13,10 @@ public final class Sonic2BadnikConfig {
     /** Standard S2 badnik destruction: explosion SFX, spawn animal, award points. */
     public static final DestructionConfig DESTRUCTION = new DestructionConfig(
             Sonic2Sfx.EXPLOSION.id,
-            AnimalObjectInstance::new,
+            (spawn, svc) -> AnimalObjectInstance.sonic2DeferredArtVariant(spawn, svc,
+                    (pointsSpawn, pointsSvc, points) -> new PointsObjectInstance(pointsSpawn, pointsSvc, points)),
             true,   // useRespawnTracking for placements with the ROM respawn bit set
-            (spawn, svc, pts) -> new PointsObjectInstance(spawn, svc, pts),
+            null,   // S2 Obj28_InitRandom, not Obj27, allocates Obj29.
             null,
             false
     );

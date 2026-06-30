@@ -5,6 +5,7 @@ import com.openggf.game.GroundMode;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
@@ -231,7 +232,10 @@ public class CollisionSystem {
     }
 
     public boolean hasGroundingObjectSupport(AbstractPlayableSprite player) {
-        return isRidingObject(player) || hasStandingContact(player);
+        if (player == null || objectManager == null) {
+            return false;
+        }
+        return objectManager.hasGroundingObjectSupport(player);
     }
 
     private boolean hasActiveLatchedObjectSupport(AbstractPlayableSprite player) {
@@ -314,11 +318,65 @@ public class CollisionSystem {
         // the per-frame follow nudge (loc_13E34 addq.w #1,x_pos,
         // sonic3k.asm:26734-26741), so no zero-distance seam override is required.
         int distance = result.distance();
+        if (distance == 0 && shouldDeferFlushWallResponseForRiddenDropOnFloor(sprite, mode, gSpeed)) {
+            sprite.deferGroundWallVelocityResponse(mode, -1);
+            return;
+        }
         if (distance >= 0) {
             return;
         }
 
+        boolean deferRepeatedObjectRideResponse = shouldDeferRepeatedObjectRideResponse(sprite, mode, predictedDx);
         applyGroundWallVelocityResponse(sprite, mode, distance);
+        if (deferRepeatedObjectRideResponse) {
+            sprite.deferGroundWallVelocityResponse(mode, distance);
+        }
+    }
+
+    private boolean shouldDeferRepeatedObjectRideResponse(AbstractPlayableSprite sprite, int mode, short predictedDx) {
+        var featureSet = sprite.getPhysicsFeatureSet();
+        if (featureSet == null
+                || !featureSet.repeatedObjectRideGroundWallResponseDeferred()
+                || objectManager == null
+                || !sprite.isOnObject()
+                || !sprite.getPushing()
+                || !((mode == 0x40 && predictedDx < 0) || (mode == 0xC0 && predictedDx > 0))) {
+            return false;
+        }
+        ObjectInstance ridingObject = objectManager.getRidingObject(sprite);
+        if (!(ridingObject instanceof SolidObjectProvider provider)) {
+            return false;
+        }
+        // S2's deferred repeated object-ride correction models platforms that
+        // run SolidObject_Always and then DropOnFloor after player physics
+        // (Obj30, docs/s2disasm/s2.asm:35070-35095, 49560-49604,
+        // 49674-49676). Plain PlatformObjectD5 does not call DropOnFloor
+        // after MvSonicOnPtfm, so deferring here would apply CalcRoomInFront's
+        // wall response twice (docs/s2disasm/s2.asm:35860-35894, 58905-58915).
+        return provider.dropOnFloor();
+    }
+
+    private boolean shouldDeferFlushWallResponseForRiddenDropOnFloor(
+            AbstractPlayableSprite sprite, int mode, short gSpeed) {
+        var featureSet = sprite.getPhysicsFeatureSet();
+        if (featureSet == null
+                || !featureSet.repeatedObjectRideGroundWallResponseDeferred()
+                || objectManager == null
+                || !sprite.isOnObject()
+                || !sprite.getPushing()) {
+            return false;
+        }
+        ObjectInstance ridingObject = objectManager.getRidingObject(sprite);
+        if (!(ridingObject instanceof SolidObjectProvider provider)
+                || !provider.dropOnFloor()) {
+            return false;
+        }
+        // S2 Obj30 routes its SolidObject_Always/SlopedSolid helper through
+        // DropOnFloor (s2.asm:49560-49604,49674-49676). While riding that support,
+        // the ROM stores the repeated push correction after this frame's position
+        // update, so the engine must defer this exact flush-wall correction.
+        return (mode == 0x40 && gSpeed <= -0x18)
+                || (mode == 0xC0 && gSpeed >= 0x18);
     }
 
     public void applyDeferredGroundWallVelocityResponse(AbstractPlayableSprite sprite) {

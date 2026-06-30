@@ -14,6 +14,8 @@ import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SolidTile;
 import com.openggf.level.WaterSystem;
+import com.openggf.physics.Direction;
+import com.openggf.trace.TraceCharacterState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -127,6 +129,28 @@ class TestRespawnStrategies {
         KnucklesRespawnStrategy strategy = new KnucklesRespawnStrategy(ctrl);
         // beginApproach always returns true for Knuckles
         assertTrue(strategy.beginApproach(sk, main));
+    }
+
+    @Test
+    void tailsS2FlyingTimeoutClearsFacingBit() {
+        TestableSprite sk = new TestableSprite("tails_p2");
+        TestableSprite main = new TestableSprite("sonic");
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        TailsRespawnStrategy strategy = new TailsRespawnStrategy(ctrl);
+        main.prefillPositionHistoryWithCentre((short) 0, (short) 1000);
+        sk.setDirection(Direction.LEFT);
+        sk.setAir(true);
+        sk.setRenderFlagOnScreen(false);
+
+        for (int i = 0; i < 300; i++) {
+            assertFalse(strategy.updateApproaching(sk, main, i),
+                    "S2 off-screen flying timeout should stay in the approach/spawning loop");
+        }
+
+        assertEquals(0, sk.getCentreX());
+        assertEquals(0, sk.getCentreY());
+        assertEquals(0x02, TraceCharacterState.statusByteFromSprite(sk),
+                "S2 TailsCPU_Flying timeout writes status=Status_InAir, clearing the facing bit");
     }
 
     @Test
@@ -583,9 +607,10 @@ class TestRespawnStrategies {
     }
 
     @Test
-    void tailsRespawnBeginWritesNativeBit7FullControl() {
+    void sonic2TailsFlyInKeepsNormalAirPhysicsActive() {
         TestableSprite sk = new TestableSprite("tails_p2");
-        sk.setObjectControlAllowsCpu(true);
+        sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sk.setObjectControlled(true);
         sk.setObjectControlSuppressesMovement(false);
         TestableSprite main = new TestableSprite("sonic");
         SidekickCpuController ctrl = new SidekickCpuController(sk, main);
@@ -593,11 +618,25 @@ class TestRespawnStrategies {
 
         assertTrue(strategy.beginApproach(sk, main));
 
-        assertTrue(sk.isObjectControlled(), "Tails fly-in begins with object_control=$81");
-        assertFalse(sk.isObjectControlAllowsCpu(),
-                "object_control=$81 must clear stale bits-0-to-6 CPU allowance");
-        assertTrue(sk.isObjectControlSuppressesMovement(),
-                "object_control=$81 must suppress normal movement");
+        assertFalse(strategy.requiresPhysics(),
+                "S2 TailsCPU_Respawn returns on the spawn frame before TailsCPU_Flying runs");
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) main.getCentreX());
+        Arrays.fill(yHistory, (short) main.getCentreY());
+        main.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+
+        assertFalse(strategy.updateApproaching(sk, main, 1));
+
+        assertTrue(strategy.requiresPhysics(),
+                "S2 TailsCPU_Flying manually nudges x/y, then Obj02_MdAir still runs ObjectMoveAndFall");
+        assertFalse(sk.isObjectControlSuppressesMovement(),
+                "S2 TailsCPU_Respawn/Flying does not write obj_control=$81 except on the off-screen timeout path");
+        assertFalse(sk.isControlLocked(),
+                "S2 TailsCPU_Respawn leaves normal Obj02 movement dispatch active (s2.asm:39122-39140)");
     }
 
     @Test

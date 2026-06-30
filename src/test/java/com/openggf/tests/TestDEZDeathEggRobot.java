@@ -7,14 +7,17 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.boss.BossChildComponent;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -66,6 +69,18 @@ public class TestDEZDeathEggRobot {
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void setPrivateInt(Object target, String fieldName, int value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(target, value);
+    }
+
+    private static int getPrivateInt(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(target);
     }
 
     @BeforeEach
@@ -552,6 +567,64 @@ public class TestDEZDeathEggRobot {
         int[] yBuf = (int[]) yBufField.get(sensor);
         assertEquals(4, xBuf.length, "xVelBuffer should have 4 elements (3-frame delay)");
         assertEquals(4, yBuf.length, "yVelBuffer should have 4 elements (3-frame delay)");
+    }
+
+    @Test
+    public void targetingSensorAllocatesAfterBodyAndDefersSpawnFrameUpdate() throws Exception {
+        // ROM loc_3D744 spawns ChildObjC7_TargettingSensor through LoadChildObject,
+        // whose helper calls AllocateObjectAfterCurrent (s2.asm:82785-82786,
+        // 72978-72986). The Java parent also owns the phase-6 sensor step so the
+        // body reads objoff_28 before loc_3DE62 can report; the managed child must
+        // not consume its init routine on the same ObjectManager frame it is inserted.
+        com.openggf.camera.Camera camera = mock(com.openggf.camera.Camera.class);
+        when(camera.getX()).thenReturn((short) 0);
+        when(camera.getY()).thenReturn((short) 0);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        when(camera.isVerticalWrapEnabled()).thenReturn(false);
+
+        ObjectManager[] holder = new ObjectManager[1];
+        ObjectServices managerServices = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return holder[0];
+            }
+        };
+        ObjectManager manager = new ObjectManager(
+                List.of(), null, 0, null, null, null, camera, managerServices);
+        holder[0] = manager;
+
+        Sonic2DeathEggRobotInstance managedBoss =
+                com.openggf.level.objects.ObjectConstructionContext.construct(
+                        managerServices,
+                        () -> new Sonic2DeathEggRobotInstance(new ObjectSpawn(
+                                0x40, 0x120, 0, 0, 0, false, 0)));
+        managedBoss.setServices(managerServices);
+
+        int bossSlot = 36;
+        manager.addDynamicObjectAtSlot(managedBoss, bossSlot);
+        setPrivateInt(managedBoss, "bodyRoutine", 0x0C);
+        setPrivateInt(managedBoss, "currentAttack", 2);
+        setPrivateInt(managedBoss, "attackPhase", 4);
+        setPrivateInt(managedBoss, "actionTimer", 0);
+
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 0x080C);
+        when(player.getCentreY()).thenReturn((short) 0x016C);
+
+        manager.update(0, player, List.of(), 1, false);
+
+        AbstractObjectInstance sensor = manager.getActiveObjects().stream()
+                .filter(AbstractObjectInstance.class::isInstance)
+                .map(AbstractObjectInstance.class::cast)
+                .filter(object -> object.getClass().getSimpleName().equals("SensorChild"))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("SensorChild should be spawned"));
+
+        assertEquals(bossSlot + 1, sensor.getSlotIndex(),
+                "Targeting sensor must use AllocateObjectAfterCurrent semantics");
+        assertEquals(0, getPrivateInt(sensor, "sensorRoutine"),
+                "Sensor init routine must wait for the parent-owned phase-6 step");
     }
 
     @Test

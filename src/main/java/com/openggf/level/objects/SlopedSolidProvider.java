@@ -5,6 +5,22 @@ public interface SlopedSolidProvider extends SolidObjectProvider {
 
     boolean isSlopeFlipped();
 
+    /**
+     * Returns the signed slope sample at the already-transformed byte index.
+     * <p>
+     * Most callers use a bounded table, but the original 68000 helpers perform
+     * 16-bit index arithmetic before reading {@code (a2,d5.w)}. Objects that
+     * intentionally depend on wrapped ROM bytes can override this method and
+     * source those bytes from the loaded ROM.
+     */
+    default Integer sampleSlopeByte(int sampleIndex) {
+        byte[] data = getSlopeData();
+        if (data == null || sampleIndex < 0 || sampleIndex >= data.length) {
+            return null;
+        }
+        return (int) (byte) data[sampleIndex];
+    }
+
     default SlopedSolidRoutineProfile getSlopedSolidRoutineProfile() {
         return SlopedSolidRoutineProfile.fromProvider(this);
     }

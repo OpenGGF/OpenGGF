@@ -42,7 +42,7 @@ import java.util.logging.Logger;
  * 16 fragments and spawns an invisible child object that tracks the player and
  * launches them toward the nearest LauncherBall (Object 0x48).
  * <p>
- * <b>Disassembly Reference:</b> s2.asm lines 50465-50742 (Obj3D)
+ * <b>Disassembly Reference:</b> docs/s2disasm/s2.asm Obj3D (around 50934-51211)
  * <p>
  * <h3>Subtypes</h3>
  * <table border="1">
@@ -111,6 +111,17 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     private boolean isVertical;    // subtype == 0 → vertical (launch right)
     private boolean broken = false;
     private boolean launcherActive = false;
+    private boolean invisibleLauncherOnly = false;
+    private int sameFrameLauncherScanFrame = Integer.MIN_VALUE;
+    private boolean parentFragmentActive = false;
+    private int parentFragmentX;
+    private int parentFragmentY;
+    private int parentFragmentSubX;
+    private int parentFragmentSubY;
+    private int parentFragmentVelX;
+    private int parentFragmentVelY;
+    private int parentFragmentFrameIndex;
+    private int parentFragmentPieceIndex;
 
     // Invisible launcher states per player (ROM routine 6 states).
     private final Map<AbstractPlayableSprite, LauncherPlayerState> playerStates = new IdentityHashMap<>();
@@ -119,9 +130,18 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     private final SolidObjectParams solidParams;
 
     public OOZLauncherObjectInstance(ObjectSpawn spawn, String name) {
+        this(spawn, name, false);
+    }
+
+    private OOZLauncherObjectInstance(ObjectSpawn spawn, String name, boolean invisibleLauncherOnly) {
         super(spawn, name);
         this.isVertical = (spawn.subtype() & 0xFF) == 0;
         this.solidParams = new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HEIGHT_D2, SOLID_HALF_HEIGHT);
+        this.invisibleLauncherOnly = invisibleLauncherOnly;
+        if (invisibleLauncherOnly) {
+            this.broken = true;
+            this.launcherActive = true;
+        }
     }
 
     @Override
@@ -136,10 +156,14 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        if (!broken) {
+        if (invisibleLauncherOnly) {
+            if (launcherActive && frameCounter != sameFrameLauncherScanFrame) {
+                updateInvisibleLauncher(frameCounter, player);
+            }
+        } else if (parentFragmentActive) {
+            updateParentFragment();
+        } else if (!broken) {
             updateMainBlock(frameCounter, player);
-        } else if (launcherActive) {
-            updateInvisibleLauncher(frameCounter, player);
         }
     }
 
@@ -192,7 +216,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
                     launchPlayer(participant, participantYVel, frameCounter);
                 }
             }
-            breakBlock(frameCounter);
+            breakBlock(frameCounter, player);
         }
     }
 
@@ -218,14 +242,23 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     /**
      * Break the block into fragments and spawn invisible launcher (ROM: loc_24F04).
      */
-    private void breakBlock(int frameCounter) {
+    private void breakBlock(int frameCounter, AbstractPlayableSprite player) {
         broken = true;
-        launcherActive = true;
+        launcherActive = false;
         for (LauncherPlayerState state : playerStates.values()) {
             state.launcherState = 0;
         }
 
-        spawnFragments();
+        // Obj3D loc_24F04 allocates the invisible routine-6 launcher with
+        // AllocateObjectAfterCurrent before BreakObjectToPieces mutates the
+        // current object into fragment routine 4 (s2.asm:51040-51062).
+        OOZLauncherObjectInstance invisibleLauncher =
+                spawnChild(() -> new OOZLauncherObjectInstance(spawn, "OOZLauncher", true));
+        invisibleLauncher.updateInvisibleLauncher(frameCounter, player);
+        invisibleLauncher.sameFrameLauncherScanFrame = frameCounter;
+        int fragmentFrameIndex = isVertical ? 1 : 3;
+        startParentFragment(fragmentFrameIndex);
+        spawnFragmentChildren(fragmentFrameIndex);
 
         // Play smash sound
         try {
@@ -233,12 +266,29 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         } catch (Exception e) {
             // Don't let audio failure break game logic
         }
+
+        updateParentFragment();
     }
 
     /**
-     * Spawn 16 fragment pieces with velocities from ROM table (ROM: JmpTo2_BreakObjectToPieces).
+     * Keep the current Obj3D slot as fragment piece 0.
      */
-    private void spawnFragments() {
+    private void startParentFragment(int fragmentFrameIndex) {
+        parentFragmentActive = true;
+        parentFragmentX = spawn.x();
+        parentFragmentY = spawn.y();
+        parentFragmentSubX = parentFragmentX << 8;
+        parentFragmentSubY = parentFragmentY << 8;
+        parentFragmentVelX = FRAGMENT_VELOCITIES[0][0];
+        parentFragmentVelY = FRAGMENT_VELOCITIES[0][1];
+        parentFragmentFrameIndex = fragmentFrameIndex;
+        parentFragmentPieceIndex = 0;
+    }
+
+    /**
+     * Spawn remaining fragment pieces with velocities from ROM table.
+     */
+    private void spawnFragmentChildren(int fragmentFrameIndex) {
         ObjectManager objectManager = services().objectManager();
         ObjectRenderManager renderManager = services().renderManager();
         if (objectManager == null || renderManager == null) {
@@ -252,9 +302,6 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM Obj3D_Init starts horizontal subtype mappings at frame 2; the
-        // fragment routine increments to frame 3 before piece rendering.
-        int fragmentFrameIndex = isVertical ? 1 : 3;
         SpriteMappingFrame fragmentFrame = sheet.getFrameCount() > fragmentFrameIndex
                 ? sheet.getFrame(fragmentFrameIndex) : null;
         if (fragmentFrame == null) {
@@ -264,13 +311,26 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         List<SpriteMappingPiece> pieces = fragmentFrame.pieces();
         int count = Math.min(pieces.size(), FRAGMENT_VELOCITIES.length);
 
-        for (int i = 0; i < count; i++) {
+        for (int i = 1; i < count; i++) {
             SpriteMappingPiece piece = pieces.get(i);
             final int index = i;
-            spawnFreeChild(() -> new LauncherFragmentInstance(
+            spawnChild(() -> new LauncherFragmentInstance(
                     spawn.x(), spawn.y(),
                     FRAGMENT_VELOCITIES[index][0], FRAGMENT_VELOCITIES[index][1],
                     piece, renderer));
+        }
+    }
+
+    private void updateParentFragment() {
+        parentFragmentSubX += parentFragmentVelX;
+        parentFragmentSubY += parentFragmentVelY;
+        parentFragmentX = parentFragmentSubX >> 8;
+        parentFragmentY = parentFragmentSubY >> 8;
+        parentFragmentVelY += FRAGMENT_GRAVITY;
+
+        Camera camera = services().camera();
+        if (camera != null && parentFragmentY > camera.getY() + 224 + 32) {
+            setDestroyed(true);
         }
     }
 
@@ -294,9 +354,14 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             anyActive |= state.launcherState != 0;
         }
 
-        // Delete when all tracked player states are 0 (ROM: beq.w JmpTo3_MarkObjGone3)
+        // With no tracked player, Obj3D branches to MarkObjGone3. That helper
+        // returns while the object is inside the coarse camera range and only
+        // deletes after it scrolls out (s2.asm:30259-30269).
         if (!anyActive) {
-            launcherActive = false;
+            if (!isInRange()) {
+                launcherActive = false;
+                setDestroyed(true);
+            }
         }
     }
 
@@ -342,10 +407,10 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             return 0;
         }
 
-        // Launch the player (ROM: loc_24FC2)
-        // ROM: move.b #$81,obj_control(a1)
+        // Launch the player (ROM: loc_24FC2).
+        // Obj3D does not write global Control_Locked; Obj01_Control keeps
+        // refreshing Ctrl_1_Logical while obj_control owns movement.
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
         // ROM: move.b #AniIDSonAni_Roll,anim(a1)
         player.setAnimationId(Sonic2AnimationIds.ROLL);
         // ROM: move.w #$800,inertia(a1)
@@ -453,6 +518,21 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     @Override
+    public int getX() {
+        return parentFragmentActive ? parentFragmentX : spawn.x();
+    }
+
+    @Override
+    public int getY() {
+        return parentFragmentActive ? parentFragmentY : spawn.y();
+    }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        return getX();
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         return solidParams;
     }
@@ -473,12 +553,36 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         return false;
     }
 
+    @Override
+    public boolean landingPreservesRolling(PlayableEntity playerEntity) {
+        // Obj3D_Main calls JmpTo7_SolidObject, then loc_24EB8 restores the
+        // rolling bit and ball radii itself before forcing the player airborne
+        // (docs/s2disasm/s2.asm:50981, 51003-51017). It never runs
+        // Sonic_ResetOnFloor, so the SolidObject_Landed y_pos must survive
+        // without the generic roll-clear's stand-radius lift.
+        return true;
+    }
+
+    @Override
+    public int getTopLandingSnapAdjustment(PlayableEntity playerEntity, int solidTopYRadius) {
+        // The shared S2 full-solid overlap keeps the standing radius on the
+        // bottom half, but Obj3D's break-frame top landing is immediately
+        // followed by loc_24EB8's explicit roll-radius restore. Move the
+        // SolidObject_Landed snap back to the live rolling y_radius surface
+        // before that object-local launch state runs.
+        return Math.max(0, solidTopYRadius - playerEntity.getYRadius());
+    }
+
     // ========================================================================
     // Rendering
     // ========================================================================
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (parentFragmentActive) {
+            appendParentFragmentRenderCommands();
+            return;
+        }
         if (broken) {
             return;
         }
@@ -495,6 +599,28 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         }
 
         renderer.drawFrameIndex(isVertical ? 0 : 2, spawn.x(), spawn.y(), false, false);
+    }
+
+    private void appendParentFragmentRenderCommands() {
+        ObjectRenderManager renderManager = services().renderManager();
+        if (renderManager == null) {
+            return;
+        }
+
+        String artKey = isVertical ? Sonic2ObjectArtKeys.OOZ_LAUNCHER_VERT : Sonic2ObjectArtKeys.OOZ_LAUNCHER_HORIZ;
+        PatternSpriteRenderer renderer = renderManager.getRenderer(artKey);
+        ObjectSpriteSheet sheet = renderManager.getSheet(artKey);
+        if (renderer == null || !renderer.isReady() || sheet == null
+                || sheet.getFrameCount() <= parentFragmentFrameIndex) {
+            return;
+        }
+
+        SpriteMappingFrame fragmentFrame = sheet.getFrame(parentFragmentFrameIndex);
+        if (fragmentFrame.pieces().size() <= parentFragmentPieceIndex) {
+            return;
+        }
+        renderer.drawPieces(List.of(fragmentFrame.pieces().get(parentFragmentPieceIndex)),
+                parentFragmentX, parentFragmentY, false, false);
     }
 
     @Override
@@ -523,7 +649,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        return launcherActive;
+        return invisibleLauncherOnly && launcherActive;
     }
 
     // ========================================================================
@@ -578,18 +704,16 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
                 return;
             }
 
-            // ROM: JmpTo10_ObjectMove + addi.w #$18,y_vel(a0)
-            velY += GRAVITY;
-
-            // Update position (8.8 fixed point)
+            // ROM: JmpTo10_ObjectMove, then addi.w #$18,y_vel(a0)
             subX += velX;
             subY += velY;
             currentX = subX >> 8;
             currentY = subY >> 8;
+            velY += GRAVITY;
 
             // ROM: btst #render_flags.on_screen; beq JmpTo26_DeleteObject
-            int cameraY = services().camera().getY();
-            if (currentY > cameraY + 224 + 32) {
+            Camera camera = services().camera();
+            if (camera != null && currentY > camera.getY() + 224 + 32) {
                 setDestroyed(true);
             }
         }

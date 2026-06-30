@@ -501,8 +501,8 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
                 services().renderManager()));
 
         // Spawn animal
-        spawnFreeChild(() -> new AnimalObjectInstance(
-                new ObjectSpawn(currentX, currentY, 0x28, 0, 0, false, 0), services()));
+        spawnFreeChild(() -> AnimalObjectInstance.sonic2DeferredArtVariant(
+                new ObjectSpawn(currentX, currentY, 0x28, 0, 0, false, 0), services(), null));
 
         // Calculate and award points
         int pointsValue = 100;

@@ -19,6 +19,7 @@ import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.Sensor;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,14 +27,17 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestMonitorObjectInstance {
 
@@ -155,6 +159,50 @@ class TestMonitorObjectInstance {
     }
 
     @Test
+    void staleSidekickMonitorBitDoesNotReleaseSeparateObjectRideOnBreak() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        SpriteManager spriteManager = mock(SpriteManager.class);
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x16F0, 0x06F1, 0x26, 0x00, 0, false, 0),
+                "Monitor");
+        monitor.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+
+            @Override
+            public SpriteManager spriteManager() {
+                return spriteManager;
+            }
+        });
+
+        DummyPlayer sonic = new DummyPlayer();
+        sonic.setRolling(true);
+        sonic.setAnimationId(Sonic2AnimationIds.ROLL);
+        sonic.setYSpeed((short) 0x0120);
+
+        DummyPlayer tails = new DummyPlayer();
+        tails.setCpuControlled(true);
+        tails.setOnObject(true);
+        tails.setAir(true);
+        tails.setPushing(false);
+        when(spriteManager.getAllSprites()).thenReturn(List.of(tails));
+        when(objectManager.isRidingObject(tails, monitor)).thenReturn(false);
+
+        monitor.onSolidContact(tails, new com.openggf.level.objects.SolidContact(
+                false, true, false, false, true), 0);
+
+        monitor.onTouchResponse(sonic, TOUCH_RESULT, 1);
+
+        verify(spriteManager, never()).deferCrossPlayableMutationUntilPostTick(
+                any(AbstractPlayableSprite.class), any(Runnable.class));
+        assertTrue(tails.isOnObject(),
+                "A stale Obj26 p2 bit must not clear Tails' separate Obj69 Status_OnObj latch");
+        assertTrue(tails.getAir());
+    }
+
+    @Test
     void sidekickCannotBreakMonitorFromAbove() {
         ObjectManager objectManager = mock(ObjectManager.class);
         MonitorObjectInstance monitor = new MonitorObjectInstance(
@@ -233,6 +281,9 @@ class TestMonitorObjectInstance {
         assertFalse(profile.monitorSolidity());
         assertEquals(0, profile.monitorVerticalOffset());
         assertFalse(profile.stickyContactBuffer());
+        assertTrue(profile.inclusiveRightEdge());
+        assertTrue(profile.bypassesOffscreenSolidGate());
+        assertTrue(monitor.projectsPreMovementGroundXForSolidContact(null));
     }
 
     private static boolean isBroken(MonitorObjectInstance monitor) {

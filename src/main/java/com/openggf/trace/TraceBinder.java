@@ -754,7 +754,6 @@ public class TraceBinder {
             TraceCharacterState actualSidekick) {
         if ((expected.interact() & 0xFF) == (actual.interact() & 0xFF)
                 || (expected.interact() & 0xFF) == 0
-                || (actual.interact() & 0xFF) == 0
                 || (expected.tailsInteract() & 0xFF) == 0
                 || (expected.tailsInteract() & 0xFF) == (expected.interact() & 0xFF)
                 || expected.cpuRoutine() != 0x06

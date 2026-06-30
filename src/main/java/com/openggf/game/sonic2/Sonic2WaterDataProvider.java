@@ -89,6 +89,18 @@ public class Sonic2WaterDataProvider implements WaterDataProvider {
     }
 
     @Override
+    public int getGameplayWaterLevelOffset(int zoneId, int actId) {
+        // ROM MoveWater writes Water_Level_1 = Water_Level_2 +
+        // ((Oscillating_Data).w >> 1) for non-ARZ water before Sonic_Water
+        // compares y_pos against Water_Level_1.
+        // Refs: docs/s2disasm/s2.asm:5275-5282, 36375-36380.
+        if (zoneId == ZONE_CPZ) {
+            return OscillationManager.getByte(0) >> 1;
+        }
+        return 0;
+    }
+
+    @Override
     public int getVisualWaterLevelOffset(int zoneId, int actId) {
         // CPZ: water oscillation using oscillator index 0 (limit=0x10, range 0..16).
         // Center the bob around 0 by subtracting half the limit (8) so it

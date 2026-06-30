@@ -117,9 +117,14 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
      * Handles the expand/retract/wait cycle and direction rotation.
      */
     private void updateAction(int frameCounter) {
+        // ROM Obj68_Spike_Action reads Level_frame_counter, not the
+        // VBlank-style object update counter passed into ObjectManager.
+        int levelFrameCounter = services().levelManager() != null
+                ? services().levelManager().getFrameCounter() + 1
+                : frameCounter;
         if (waiting != 0) {
             // ROM: move.b (Level_frame_counter+1).w,d0 / andi.b #$3F,d0
-            int timerByte = frameCounter & 0xFF;
+            int timerByte = levelFrameCounter & 0xFF;
             if ((timerByte & WAIT_MASK) != 0) {
                 return;
             }
@@ -209,6 +214,15 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public boolean requiresRenderFlagForTouch() {
+        // S2 Touch_Loop branches only on collision_flags(a1)
+        // (docs/s2disasm/s2.asm:85048-85054). Obj68's render flag check
+        // gates only the spike movement SFX (s2.asm:53828-53831), while the
+        // child keeps collision_flags from Obj68_CollisionFlags.
+        return false;
     }
 
     @Override

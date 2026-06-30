@@ -51,9 +51,8 @@ public class SlidingSpikeObjectInstance extends AbstractObjectInstance
         this.childOffsetX = properties.childOffsetX;
         this.direction = child ? 1 : 0;
 
-        int range = Math.abs(properties.originRange);
-        this.minX = originX - range;
-        this.maxX = originX + range;
+        this.minX = originX - properties.originSpan;
+        this.maxX = originX + properties.originSpan;
         this.currentX = originX + (child ? properties.childOffsetX : properties.parentOffsetX);
         this.currentY = originY;
         updateDynamicSpawn(currentX, currentY);
@@ -170,11 +169,6 @@ public class SlidingSpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean usesEnemyTouchCategoryOverride() {
-        return true;
-    }
-
-    @Override
     public int getOnScreenHalfWidth() {
         return WIDTH_PIXELS;
     }
@@ -217,11 +211,13 @@ public class SlidingSpikeObjectInstance extends AbstractObjectInstance
 
     private static Properties propertiesFor(int subtype) {
         return switch (subtype & 0xFF) {
-            case 0x06 -> new Properties(-0x18, -0x18, 0x18);
-            case 0x0C -> new Properties(-0x58, -0x58, -0x28);
+            // Obj43_Init: move.b originXOffset,d1 after moveq #0, so negative
+            // table bytes become unsigned travel spans ($E8 / $A8).
+            case 0x06 -> new Properties(0xE8, -0x18, 0x18);
+            case 0x0C -> new Properties(0xA8, -0x58, -0x28);
             default -> new Properties(0x68, 0, 0);
         };
     }
 
-    private record Properties(int originRange, int parentOffsetX, int childOffsetX) {}
+    private record Properties(int originSpan, int parentOffsetX, int childOffsetX) {}
 }

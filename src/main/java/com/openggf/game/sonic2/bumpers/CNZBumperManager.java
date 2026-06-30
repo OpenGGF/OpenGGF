@@ -462,25 +462,9 @@ public class CNZBumperManager {
 
         int incomingAngle = TrigLookupTable.calcAngle((short) xVel, (short) yVel);
 
-        // Step 2: Calculate delta from surface angle
-        // ROM: sub.w d3,d0  (d0 = incomingAngle - surfaceAngle)
-        int delta = (incomingAngle - surfaceAngle) & 0xFF;
-
-        // Handle signed comparison (convert to signed -128..127 range)
-        int signedDelta = (delta > 127) ? delta - 256 : delta;
-        int absDelta = StrictMath.abs(signedDelta);
-
-        // Step 3: Determine output angle
-        // ROM: cmpi.b #$38,d1 / blo.s loc_17618 / move.w d3,d0
-        int outAngle;
-        if (absDelta < 0x38) {
-            // Reflect: outAngle = -delta + surfaceAngle
-            // ROM: neg.w d0 / add.w d3,d0
-            outAngle = (-signedDelta + surfaceAngle) & 0xFF;
-        } else {
-            // Too steep - force redirect to surface angle
-            outAngle = surfaceAngle & 0xFF;
-        }
+        // Step 2/3: Resolve the outgoing angle with the ROM's word-sized
+        // subtract/absolute-value semantics.
+        int outAngle = resolveAngleBounceOutAngle(incomingAngle, surfaceAngle);
 
         // Step 4: Apply velocity using CalcSine
         // ROM: jsr CalcSine returns sin in d0, cos in d1
@@ -494,21 +478,46 @@ public class CNZBumperManager {
         player.setYSpeed((short) newYVel);
     }
 
+    static int resolveAngleBounceOutAngle(int incomingAngle, int surfaceAngle) {
+        int deltaWord = toSignedWord((incomingAngle & 0xFF) - (surfaceAngle & 0xFF));
+        int absDeltaWord = StrictMath.abs(deltaWord);
+
+        // ROM: cmpi.b #$38,d1 / blo.s loc_17618. The compare uses the low byte
+        // of the word absolute value as an unsigned byte, not a signed 8-bit delta.
+        if ((absDeltaWord & 0xFF) < 0x38) {
+            return toSignedWord(-deltaWord + (surfaceAngle & 0xFF)) & 0xFF;
+        }
+
+        return surfaceAngle & 0xFF;
+    }
+
+    private static int toSignedWord(int value) {
+        value &= 0xFFFF;
+        return value >= 0x8000 ? value - 0x10000 : value;
+    }
+
+    static int romWindowStartForCamera(int cameraX) {
+        return Placement.romWindowStart(cameraX);
+    }
+
+    static int romWindowEndExclusiveForCamera(int cameraX) {
+        return Placement.romWindowEndExclusive(cameraX);
+    }
+
     private static final class Placement extends AbstractPlacementManager<CNZBumperSpawn> {
-        private static final int EXTRA_AHEAD = 320; // native -> 640 window
-        private static final int UNLOAD_BEHIND = 768;
+        private static final int ROM_LEFT_OFFSET = 8;
+        private static final int ROM_WINDOW_WIDTH = 0x150;
 
         private int lastWindowStart = -1;
         private int lastWindowEnd = -1;
 
         private Placement(List<CNZBumperSpawn> bumpers) {
-            super(bumpers, EXTRA_AHEAD, UNLOAD_BEHIND,
-                    com.openggf.level.spawn.PlacementViewportWidth::current);
+            super(bumpers, 0, 0);
         }
 
         private void update(int cameraX) {
-            int windowStart = getWindowStart(cameraX);
-            int windowEnd = getWindowEnd(cameraX);
+            int windowStart = romWindowStart(cameraX);
+            int windowEnd = romWindowEndExclusive(cameraX);
 
             if (windowStart == lastWindowStart && windowEnd == lastWindowEnd) {
                 return;
@@ -520,11 +529,11 @@ public class CNZBumperManager {
             active.clear();
 
             int startIdx = lowerBound(windowStart);
-            int endIdx = upperBound(windowEnd);
+            int endIdx = lowerBound(windowEnd);
 
             for (int i = startIdx; i < endIdx && i < spawns.size(); i++) {
                 CNZBumperSpawn bumper = spawns.get(i);
-                if (bumper.x() >= windowStart && bumper.x() <= windowEnd) {
+                if (bumper.x() >= windowStart && bumper.x() < windowEnd) {
                     active.add(bumper);
                 }
             }
@@ -535,6 +544,14 @@ public class CNZBumperManager {
             lastWindowStart = -1;
             lastWindowEnd = -1;
             update(cameraX);
+        }
+
+        static int romWindowStart(int cameraX) {
+            return cameraX > ROM_LEFT_OFFSET ? cameraX - ROM_LEFT_OFFSET : 1;
+        }
+
+        static int romWindowEndExclusive(int cameraX) {
+            return romWindowStart(cameraX) + ROM_WINDOW_WIDTH;
         }
     }
 }

@@ -52,6 +52,11 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     private boolean pendingMainHorizontalLaunch;
     private boolean pendingSidekickHorizontalLaunch;
     private boolean compressedThisFrame;
+    private boolean mainHorizontalPushingThisFrame;
+    private boolean sidekickHorizontalPushingThisFrame;
+    private boolean horizontalLaunchRequiresCurrentPush;
+    private boolean mainFreshOrderedCarry;
+    private boolean sidekickFreshOrderedCarry;
 
     public OOZSpringObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -95,14 +100,23 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
 
     private void updateHorizontal(PlayableEntity playerEntity) {
         compressedThisFrame = false;
+        mainHorizontalPushingThisFrame = false;
+        sidekickHorizontalPushingThisFrame = false;
+        horizontalLaunchRequiresCurrentPush = !solidExecutionIsInert();
         List<PlayableEntity> participants = playerParticipants(playerEntity);
-        if (!solidExecutionIsInert()) {
+        if (horizontalLaunchRequiresCurrentPush) {
             SolidCheckpointBatch batch = checkpointAll();
-            for (PlayableEntity participant : participants) {
+            for (int i = 0; i < participants.size(); i++) {
+                PlayableEntity participant = participants.get(i);
                 PlayerSolidContactResult result = batch.perPlayer().get(participant);
-                if (result != null && result.kind() != ContactKind.NONE && result.pushingNow()
+                if (result != null && result.kind() == ContactKind.SIDE
                         && participant instanceof AbstractPlayableSprite player) {
-                    compressHorizontalSpring(player);
+                    if (result.pushingNow()) {
+                        markHorizontalPushingThisFrame(player);
+                    }
+                    int beforeX = currentX;
+                    handleHorizontalPush(player, result.sideDistX(), result.pushingNow());
+                    carryLaterStandingRiders(participants, i + 1, player, currentX - beforeX);
                 }
             }
         }
@@ -150,7 +164,7 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         }
         if (horizontal) {
             if (contact.pushing()) {
-                compressHorizontalSpring(player);
+                handleHorizontalPush(player, contact.sideDistX(), true);
             }
             return;
         }
@@ -159,7 +173,31 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void compressHorizontalSpring(AbstractPlayableSprite player) {
+    private void handleHorizontalPush(AbstractPlayableSprite player, int sideDistX, boolean armLaunch) {
+        if (sideDistX == 0) {
+            holdHorizontalSpringAtExactEdge(player);
+            return;
+        }
+        compressHorizontalSpring(player, armLaunch);
+    }
+
+    private void holdHorizontalSpringAtExactEdge(AbstractPlayableSprite player) {
+        boolean flipped = isXFlipped();
+        if (flipped) {
+            if (player.getDirection() != Direction.RIGHT || player.getGSpeed() <= 0) {
+                return;
+            }
+        } else if (player.getDirection() != Direction.LEFT || player.getGSpeed() >= 0) {
+            return;
+        }
+
+        // ROM Obj45_Horizontal loc_2433C reaches loc_243C8 when d0 == 0 and
+        // inertia points into the spring: it sets objoff_36, but does not move
+        // the spring, add to x_pos(a1), or clear x_vel(a1) (s2.asm:50475-50525).
+        compressedThisFrame = true;
+    }
+
+    private void compressHorizontalSpring(AbstractPlayableSprite player, boolean armLaunch) {
         boolean flipped = isXFlipped();
         if (flipped) {
             if (player.getDirection() != Direction.RIGHT) {
@@ -183,9 +221,63 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
             }
         }
         mappingFrame = Math.abs(originalX - currentX) + HORIZONTAL_IDLE_FRAME;
-        setPendingHorizontalLaunch(player);
+        if (armLaunch) {
+            setPendingHorizontalLaunch(player);
+        }
         compressedThisFrame = true;
         updateDynamicSpawn(currentX, currentY);
+    }
+
+    private void carryLaterStandingRiders(
+            List<PlayableEntity> participants,
+            int startIndex,
+            AbstractPlayableSprite pusher,
+            int deltaX) {
+        if (deltaX == 0) {
+            return;
+        }
+        ObjectServices services = tryServices();
+        if (services == null || services.solidExecutionRegistry() == null) {
+            return;
+        }
+        for (int i = startIndex; i < participants.size(); i++) {
+            PlayableEntity participant = participants.get(i);
+            if (participant == pusher || !(participant instanceof AbstractPlayableSprite rider) || rider.getAir()) {
+                continue;
+            }
+            if (consumeFreshOrderedCarry(rider)) {
+                continue;
+            }
+            PlayerStandingState previous = services.solidExecutionRegistry().previousStanding(this, participant);
+            if (previous.standing()) {
+                // ROM Obj45_Horizontal restores routine-entry d4 before the later
+                // Sidekick SolidObject call, so later existing riders inherit
+                // another player's first push delta (s2.asm:50393-50510). The
+                // engine-side riding baseline observes that carry one frame
+                // later, so suppress this same ordered carry on the next pass.
+                NativePositionOps.addXPosPreserveSubpixel(rider, deltaX);
+                markFreshOrderedCarry(rider);
+            }
+        }
+    }
+
+    private boolean consumeFreshOrderedCarry(AbstractPlayableSprite rider) {
+        if (isNativeSidekick(rider)) {
+            boolean pending = sidekickFreshOrderedCarry;
+            sidekickFreshOrderedCarry = false;
+            return pending;
+        }
+        boolean pending = mainFreshOrderedCarry;
+        mainFreshOrderedCarry = false;
+        return pending;
+    }
+
+    private void markFreshOrderedCarry(AbstractPlayableSprite rider) {
+        if (isNativeSidekick(rider)) {
+            sidekickFreshOrderedCarry = true;
+        } else {
+            mainFreshOrderedCarry = true;
+        }
     }
 
     private void releaseHorizontalSpring(List<PlayableEntity> participants) {
@@ -210,10 +302,24 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         }
 
         for (PlayableEntity participant : participants) {
-            if (participant instanceof AbstractPlayableSprite player && consumePendingHorizontalLaunch(player)) {
+            if (participant instanceof AbstractPlayableSprite player
+                    && shouldLaunchHorizontalDuringRelease(player)) {
+                clearPendingHorizontalLaunch(player);
                 launchHorizontal(player);
             }
         }
+    }
+
+    private boolean shouldLaunchHorizontalDuringRelease(AbstractPlayableSprite player) {
+        boolean pushingThisFrame = isHorizontalPushingThisFrame(player);
+        if (horizontalLaunchRequiresCurrentPush && !pushingThisFrame) {
+            return false;
+        }
+        // ROM Obj45_LaunchCharacterHorizontal keys the release launch off
+        // status(a0)'s p1/p2 pushing bits after the spring has stepped back
+        // toward obj45_original_x_pos, not off a one-shot pending flag
+        // (docs/s2disasm/s2.asm:50435-50459,50529-50540).
+        return hasPendingHorizontalLaunch(player) || pushingThisFrame;
     }
 
     private void updateVerticalForStandingPlayer(AbstractPlayableSprite player) {
@@ -377,15 +483,28 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private boolean consumePendingHorizontalLaunch(AbstractPlayableSprite player) {
+    private void markHorizontalPushingThisFrame(AbstractPlayableSprite player) {
         if (isNativeSidekick(player)) {
-            boolean pending = pendingSidekickHorizontalLaunch;
-            pendingSidekickHorizontalLaunch = false;
-            return pending;
+            sidekickHorizontalPushingThisFrame = true;
+        } else {
+            mainHorizontalPushingThisFrame = true;
         }
-        boolean pending = pendingMainHorizontalLaunch;
-        pendingMainHorizontalLaunch = false;
-        return pending;
+    }
+
+    private boolean isHorizontalPushingThisFrame(AbstractPlayableSprite player) {
+        return isNativeSidekick(player) ? sidekickHorizontalPushingThisFrame : mainHorizontalPushingThisFrame;
+    }
+
+    private boolean hasPendingHorizontalLaunch(AbstractPlayableSprite player) {
+        return isNativeSidekick(player) ? pendingSidekickHorizontalLaunch : pendingMainHorizontalLaunch;
+    }
+
+    private void clearPendingHorizontalLaunch(AbstractPlayableSprite player) {
+        if (isNativeSidekick(player)) {
+            pendingSidekickHorizontalLaunch = false;
+        } else {
+            pendingMainHorizontalLaunch = false;
+        }
     }
 
     private boolean isNativeSidekick(AbstractPlayableSprite player) {

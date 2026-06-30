@@ -1,6 +1,8 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.level.objects.ObjectArtKeys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.data.Rom;
@@ -50,6 +52,32 @@ public class TestSonic2PlcParser {
         Set<Integer> addrs = collectAddresses(plc);
         assertTrue(addrs.contains(Sonic2Constants.ART_NEM_CHECKPOINT_ADDR), "Std2 should contain checkpoint art");
         assertTrue(addrs.contains(Sonic2Constants.ART_NEM_MONITOR_ADDR), "Std2 should contain monitor art");
+    }
+
+    @Test
+    public void testParseStdWaterIncludesSmallBubbles() throws IOException {
+        PlcDefinition plc = Sonic2PlcLoader.parsePlc(rom, Sonic2Constants.PLC_STD_WATER);
+        assertNotNull(plc);
+        assertFalse(plc.entries().isEmpty(), "StdWtr PLC should have entries");
+
+        Set<Integer> addrs = collectAddresses(plc);
+        assertTrue(addrs.contains(Sonic2Constants.ART_NEM_BUBBLES_ADDR),
+                "StdWtr should contain ArtNem_Bubbles for Obj0A breathing bubbles");
+        assertEquals(Sonic2ObjectArtKeys.BUBBLES,
+                Sonic2PlcArtRegistry.lookup(Sonic2Constants.ART_NEM_BUBBLES_ADDR).key(),
+                "StdWtr ArtNem_Bubbles should dispatch to the shared S2 bubble sheet");
+    }
+
+    @Test
+    public void testLoadArtForArzRegistersStdWaterBubblesRenderer() throws IOException {
+        Sonic2ObjectArtProvider provider = new Sonic2ObjectArtProvider();
+
+        provider.loadArtForZone(Sonic2ZoneConstants.ROM_ZONE_ARZ);
+
+        assertNotNull(provider.getRenderer(ObjectArtKeys.BUBBLES),
+                "ARZ Obj0A mouth bubbles need the StdWtr ArtNem_Bubbles renderer");
+        assertNotNull(provider.getSheet(ObjectArtKeys.BUBBLES),
+                "ARZ Obj0A mouth bubbles need the StdWtr ArtNem_Bubbles sheet");
     }
 
     @Test
@@ -128,5 +156,4 @@ public class TestSonic2PlcParser {
         }
     }
 }
-
 

@@ -432,7 +432,29 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
 
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.fullSolid(false, usesInclusiveRightEdge(), false);
+        return SolidRoutineProfile.fullSolid(false, usesInclusiveRightEdge(), bypassesOffscreenSolidGate());
+    }
+
+    @Override
+    public boolean projectsPreMovementGroundXForSolidContact(PlayableEntity player) {
+        // Obj26 calls SolidObject_Monitor for Sonic and Tails from Obj26_Main
+        // after the player slots have already run for the frame
+        // (docs/s2disasm/s2.asm:25579-25605). The helper then branches to
+        // SolidObject_cont for a fresh side hit (docs/s2disasm/s2.asm:25617-25636),
+        // whose left-side path zeroes x_vel/inertia when the player has crossed
+        // into the monitor (docs/s2disasm/s2.asm:35424-35439). The engine's
+        // object pass runs before grounded player movement, so project that
+        // pending flat-ground X step only for Obj26's new side-entry check.
+        return true;
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj26's monitor wrappers branch directly to SolidObject_cont, not to
+        // SolidObject_OnScreenTest (docs/s2disasm/s2.asm:25617-25636). Keep
+        // monitor side/top collision live even when the generic full-solid
+        // on-screen optimisation would skip it.
+        return true;
     }
 
     @Override
@@ -478,6 +500,17 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                 continue;
             }
             if (!wasTouchingMonitor(playable)) {
+                continue;
+            }
+            if (objectManager != null
+                    && !objectManager.isRidingObject(playable, this)
+                    && !playable.getPushing()) {
+                // Obj26_Break clears another character only when this
+                // monitor's own p1/p2 standing or pushing bit still describes
+                // live contact (docs/s2disasm/s2.asm:25675-25688). A stale
+                // monitor bit must not clear a separate object latch, e.g. an
+                // offscreen Sidekick still carrying MTZ Obj69's Status_OnObj.
+                clearTouchingMonitor(playable);
                 continue;
             }
             spriteManager.deferCrossPlayableMutationUntilPostTick(

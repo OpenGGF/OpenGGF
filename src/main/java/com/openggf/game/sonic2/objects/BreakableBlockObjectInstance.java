@@ -73,6 +73,7 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
 
     private int halfWidth;
     private boolean broken;
+    private boolean solidForRemainingParticipantsThisFrame;
     private boolean initialized;
 
     public BreakableBlockObjectInstance(ObjectSpawn spawn, String name) {
@@ -124,7 +125,7 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         // Block is not solid once broken. ROM keeps the block fully solid before it
         // breaks (Obj32_Main always invokes SolidObject); a rolling player moving
         // upward hits the underside as a ceiling collision, not a break.
-        return !broken;
+        return !broken || solidForRemainingParticipantsThisFrame;
     }
 
     @Override
@@ -160,6 +161,12 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         }
 
         broken = true;
+        // ROM Obj32_Main runs one SolidObject pass for both players before it
+        // branches on the block standing bits and destroys itself. The engine
+        // receives per-player callbacks; keep the block solid for later
+        // participants in this same callback batch so the first breaker does not
+        // erase the other player's pre-destroy support one frame early.
+        solidForRemainingParticipantsThisFrame = true;
 
         // Mark as broken in persistence table (stays broken on respawn/revisit)
         ObjectManager objectManager = services().objectManager();

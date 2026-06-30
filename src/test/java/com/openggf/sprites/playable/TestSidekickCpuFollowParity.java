@@ -1,6 +1,7 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.tests.TestEnvironment;
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
@@ -8,6 +9,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -618,6 +620,40 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s2PanicRevPulseEmitsJumpOnThirtyTwoFramePhase() {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic2GameModule());
+            TestableSprite sonic = new TestableSprite("sonic");
+            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            sonic.setCentreX((short) 0x0AF6);
+
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setCentreX((short) 0x0ACB);
+            tails.setGSpeed((short) 0);
+            tails.setMoveLockTimer(0);
+            tails.setAnimationId(tails.resolveAnimationId(CanonicalAnimation.DUCK));
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.PANIC, 0);
+
+            controller.update(0x0A20);
+
+            assertTrue(controller.getInputDown(),
+                    "S2 TailsCPU_Panic holds DOWN before the release phase (s2.asm:39478-39490)");
+            assertTrue(controller.getInputJump(),
+                    "S2 TailsCPU_Panic ORs A/B/C on phase $20 while ducking (s2.asm:39478-39490)");
+            assertTrue((controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP) != 0,
+                    "Trace diagnostics must expose the panic rev jump bit");
+        } finally {
+            GameModuleRegistry.setCurrent(previous);
+            SessionManager.clear();
+        }
+    }
+
+    @Test
     void panicFacesLeftWhenHorizontallyAlignedWithLeader() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -880,6 +916,56 @@ class TestSidekickCpuFollowParity {
         } finally {
             installStandaloneGameModule(previous);
         }
+    }
+
+    @Test
+    void s2Obj85PreservedRollPushBypassStillGeneratesAutoJumpAndPreservesLatch() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(false);
+        tails.setRolling(true);
+        tails.setPushing(true);
+        tails.setPinballMode(true);
+        tails.preserveRollingOnNextRollStop();
+        tails.setCentreX((short) 0x106A);
+        tails.setCentreY((short) 0x06F1);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0E5B);
+        Arrays.fill(yHistory, (short) 0x0398);
+        inputHistory[4] = AbstractPlayableSprite.INPUT_RIGHT;
+        statusHistory[4] = AbstractPlayableSprite.STATUS_FACING_LEFT | AbstractPlayableSprite.STATUS_IN_AIR;
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x0F80);
+
+        Assertions.assertAll(
+                () -> assertTrue(controller.getInputRight()),
+                () -> assertTrue(controller.getInputJump()),
+                () -> assertTrue(controller.getInputJumpPress(),
+                        "S2 TailsCPU_Normal branches from live Status_Push directly to "
+                                + "FilterAction_Part2 and still fires the $3F auto-jump gate "
+                                + "while Obj85's preserved-roll handoff is active "
+                                + "(docs/s2disasm/s2.asm:39287-39300,39369-39378)."),
+                () -> assertEquals(1, controller.getDiagnosticJumpingFlag()));
+
+        controller.update(0x0F81);
+
+        Assertions.assertAll(
+                () -> assertFalse(controller.getInputJump(),
+                        "Push-bypass frames skip the auto-jump carry path, so Ctrl_2 "
+                                + "returns to the delayed directional word."),
+                () -> assertEquals(1, controller.getDiagnosticJumpingFlag(),
+                        "The same push-bypass path also skips the grounded latch clear "
+                                + "in FilterAction, so Tails_CPU_jumping remains set."));
     }
 
     @Test
@@ -3127,6 +3213,49 @@ class TestSidekickCpuFollowParity {
                 () -> assertEquals(0,
                         controller.getDiagnosticGeneratedPressedInput() & AbstractPlayableSprite.INPUT_JUMP),
                 () -> assertEquals(1, controller.getDiagnosticJumpingFlag()));
+    }
+
+    @Test
+    void s2AirborneAutoJumpFlagPreservesDelayedLeaderPressByte() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(true);
+        tails.setRolling(true);
+        tails.setCentreX((short) 0x1675);
+        tails.setCentreY((short) 0x05E7);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x16B2);
+        Arrays.fill(yHistory, (short) 0x0451);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_JUMP);
+        Arrays.fill(statusHistory, (byte) (AbstractPlayableSprite.STATUS_IN_AIR
+                | AbstractPlayableSprite.STATUS_ROLLING));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        int delayedSlot = sonic.getHistorySlotIndex(SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES);
+        setJumpPressHistorySlot(sonic, delayedSlot, true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        controller.hydrateFromRomCpuState(0x06, 0, 0, 0, true, 0, 0);
+
+        controller.update(0x187B);
+
+        Assertions.assertAll(
+                () -> assertTrue(controller.getInputJump(),
+                        "S2 loc_1BDCE carries Tails_CPU_jumping by ORing only high-byte A/B/C held bits."),
+                () -> assertTrue(controller.getInputJumpPress(),
+                        "S2 TailsCPU_Normal sends the delayed Ctrl_1_Logical word unchanged; "
+                                + "the loc_1BDCE high-byte carry must not clear a real low-byte "
+                                + "press from Sonic_Stat_Record_Buf (s2.asm:39348-39382)."),
+                () -> assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+                        controller.getDiagnosticGeneratedPressedInput()
+                                & AbstractPlayableSprite.INPUT_JUMP));
     }
 
     @Test

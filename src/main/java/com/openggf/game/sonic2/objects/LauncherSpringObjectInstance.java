@@ -269,16 +269,36 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         boolean wasRolling = player.getRolling();
         boolean wasRollingLastFrame =
                 (player.getStatusHistory(1) & AbstractPlayableSprite.STATUS_ROLLING) != 0;
-        if (!isDiagonal() && isTails(player) && !wasRolling && !wasRollingLastFrame) {
+        if (!isDiagonal() && isTails(player)
+                && ((!wasRolling && !wasRollingLastFrame) || (wasRolling && player.wasPrePhysicsAir()))) {
+            // Tails' default y_radius is $0F, one pixel taller than Obj85's
+            // capture radius write ($0E). ROM runs SolidObject_Landed before
+            // Obj85 writes y_radius=$0E (s2.asm:58004-58023). Preserve the
+            // established first-capture lift, and also apply it to the
+            // airborne rolling re-capture case where Tails entered the physics
+            // tick as InAir|Roll before Obj85 re-established Status_OnObj.
             player.setCentreYPreserveSubpixel((short) (player.getCentreY() - 1));
         }
+        int heightBeforeRolling = player.getHeight();
         player.setRolling(true);
         if (!wasRolling) {
-            // Obj85 writes the rolling flag/radii directly without changing
-            // y_pos (s2.asm:57535-57538, 57715-57718). The engine's height
-            // change is top-left based, so move by the radius delta only to
-            // keep the ROM centre coordinate stable.
-            player.setY((short) (player.getY() + (player.getRollHeightAdjustment() / 2)));
+            if (isDiagonal()) {
+                // Diagonal Obj85 writes y_pos(a1)=y_pos(a0)-$13 before setting
+                // y_radius=$E (s2.asm:58179-58191). Preserve that centre write
+                // by compensating only for the actual engine height delta; some
+                // trace states already have roll-sized dimensions while the
+                // rolling bit is clear.
+                int centrePreserveDelta = (heightBeforeRolling - player.getHeight()) / 2;
+                if (centrePreserveDelta != 0) {
+                    player.setY((short) (player.getY() + centrePreserveDelta));
+                }
+            } else {
+                // Vertical Obj85 relies on the generic SolidObject_Landed seat
+                // before its radius write (s2.asm:57949-57968). Preserve the
+                // historical radius-delta lift used by the vertical recapture
+                // path.
+                player.setY((short) (player.getY() + (player.getRollHeightAdjustment() / 2)));
+            }
         }
         // Explicitly set roll animation (ROM: move.b #AniIDSonAni_Roll,anim(a1))
         player.setAnimationId(Sonic2AnimationIds.ROLL);
@@ -561,10 +581,9 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         if (!isDiagonal() && isTails(player)) {
             // Vertical Obj85 leaves the player curled after loc_2AE0C launch
             // without making the airborne CPU path behave like Obj84 pinball
-            // mode. Preserve the next landing/zero-speed roll-clear decisions
-            // only for Tails's shorter standing radius handoff observed in
-            // CNZ; Sonic_ResetOnFloor clears rolling normally (s2.asm:37780-37786).
-            player.preserveRollingOnNextLanding();
+            // mode. Preserve only the zero-speed roll-stop handoff; the next
+            // ordinary Tails_ResetOnFloor landing still clears rolling normally
+            // (s2.asm:41020-41033).
             player.preserveRollingOnNextRollStop();
         }
         resetPlayerState(ps);

@@ -666,21 +666,39 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
 
     /**
      * Per-object {@code width_pixels(a1)} as read by the player on-object
-     * balance routines (s2.asm:36586/39707 {@code move.b width_pixels(a1),d1};
-     * sonic3k.asm:22455). This is the object's own {@code width_pixels} SST
-     * byte, which is NOT necessarily the rendered on-screen footprint nor the
-     * (possibly extended) SolidObject X-collision width. It defaults to
-     * {@link #getOnScreenHalfWidth()} (16 for the shared sprite footprint, e.g.
-     * SmashableGround whose balance uses {@code width_pixels=$10} even though
-     * SolidObject extends it), and is overridden by objects whose balance
-     * {@code width_pixels} differs from the default — e.g. the CPZ/WFZ moving
-     * platform (Obj19), whose subtype-driven {@code width_pixels} is $20/$18/$40.
+     * balance routines (S1 {@code obActWid} at
+     * docs/s1disasm/_incObj/01 Sonic.asm:340-351; S2
+     * s2.asm:36259-36271; S3K sonic3k.asm:22460-22473). This is the object's
+     * own width byte, which is NOT necessarily the rendered on-screen footprint
+     * nor the possibly-extended full-solid X-collision width.
+     *
+     * <p>Top-solid platform helpers pass their standable half-width as
+     * {@link SolidObjectParams#halfWidth()}, so use that by default. Full-solid
+     * objects that extend their collision width beyond the ROM width byte (for
+     * example SmashableGround's {@code width_pixels=$10} plus SolidObject side
+     * padding) should continue to override this method with the exact
+     * disassembly-backed width.
      * Using the wrong width here shifts the {@code d1 = player_x + width -
      * object_x} edge test and makes the player balance/flip facing on the wrong
      * object edge.
      */
     public int getBalanceWidthPixels() {
+        if (this instanceof SolidObjectProvider provider && provider.isTopSolidOnly()) {
+            SolidObjectParams params = provider.getSolidParams();
+            if (params != null) {
+                return params.halfWidth();
+            }
+        }
         return getOnScreenHalfWidth();
+    }
+
+    /**
+     * ROM {@code status.npc.no_balancing}: when set, player look/duck logic skips
+     * the object-edge balance branch for riders and falls through to up/down input
+     * handling instead.
+     */
+    public boolean suppressesObjectEdgeBalance() {
+        return false;
     }
 
     /**

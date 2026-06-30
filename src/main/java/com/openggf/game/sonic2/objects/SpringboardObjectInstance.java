@@ -303,6 +303,11 @@ public class SpringboardObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean bypassesOffscreenSolidGate() {
+        return true;
+    }
+
+    @Override
     public byte[] getSlopeData() {
         // ROM: Obj40_Main selects slope data based on mapping_frame
         // frame 0 = diagonal (idle), frame 1 = straight (compressed)

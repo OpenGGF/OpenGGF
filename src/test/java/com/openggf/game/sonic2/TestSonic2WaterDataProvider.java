@@ -132,6 +132,33 @@ public class TestSonic2WaterDataProvider {
     }
 
     // =========================================================================
+    // getGameplayWaterLevelOffset() tests
+    // =========================================================================
+
+    @Test
+    public void testCpz2GameplayOffsetTracksRawRomOscillationAfterStepping() {
+        // ROM MoveWater writes Water_Level_1 = Water_Level_2 +
+        // ((Oscillating_Data).w >> 1), then Sonic_Water compares against
+        // Water_Level_1. Refs: docs/s2disasm/s2.asm:5273-5282 and
+        // docs/s2disasm/s2.asm:36375-36380.
+        OscillationManager.reset();
+        for (int frame = 1; frame <= 50; frame++) {
+            OscillationManager.update(frame);
+        }
+        int byte0 = OscillationManager.getByte(0);
+        assertNotEquals(0, byte0, "Oscillator 0 should have advanced after 50 update() calls");
+        assertEquals(byte0 >> 1, provider.getGameplayWaterLevelOffset(ZONE_CPZ, 1));
+    }
+
+    @Test
+    public void testArzGameplayOffsetIsZero() {
+        // ROM MoveWater skips the oscillator for ARZ before writing Water_Level_1.
+        // Refs: docs/s2disasm/s2.asm:5275-5282.
+        OscillationManager.reset();
+        assertEquals(0, provider.getGameplayWaterLevelOffset(ZONE_ARZ, 0));
+    }
+
+    // =========================================================================
     // getVisualWaterLevelOffset() tests
     // =========================================================================
 
@@ -171,5 +198,4 @@ public class TestSonic2WaterDataProvider {
         assertEquals(0, provider.getVisualWaterLevelOffset(ZONE_EHZ, 0));
     }
 }
-
 

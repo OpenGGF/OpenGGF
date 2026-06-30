@@ -7,6 +7,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +15,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestForcedSpinObjectInstance {
@@ -39,6 +41,29 @@ class TestForcedSpinObjectInstance {
         assertEquals((short) (centreY + 5), player.getCentreY());
         assertTrue(player.getRolling());
         assertTrue(player.getPinballMode());
+        assertTrue(player.getSpindash(),
+                "S2 Obj84 writes pinball_mode, which aliases the spindash flag byte");
+    }
+
+    @Test
+    void disableClearsPinballSpindashAliasWithoutTouchingCounter() throws Exception {
+        ForcedSpinObjectInstance trigger = new ForcedSpinObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, Sonic2ObjectIds.FORCED_SPIN, 0, 0, false, 0),
+                "ForcedSpin");
+        TestablePlayableSprite player = new TestablePlayableSprite("tails_p2", (short) 0x0100, (short) 0x0100);
+        player.setPinballMode(true);
+        player.setSpindash(true);
+        player.setSpindashCounter((short) 0x0400);
+
+        Method disablePinballMode = ForcedSpinObjectInstance.class
+                .getDeclaredMethod("disablePinballMode", AbstractPlayableSprite.class);
+        disablePinballMode.setAccessible(true);
+        disablePinballMode.invoke(trigger, player);
+
+        assertFalse(player.getPinballMode());
+        assertFalse(player.getSpindash());
+        assertEquals((short) 0x0400, player.getSpindashCounter(),
+                "Obj84 only clears pinball_mode/spindash_flag; spindash_counter is a separate word");
     }
 
     @Test
@@ -56,6 +81,36 @@ class TestForcedSpinObjectInstance {
 
         assertTrue(sidekick.getPinballMode(),
                 "Obj84 has only native P1/P2 crossing flags, so P2 must come from ObjectPlayerQuery NATIVE_P1_P2");
+        assertTrue(sidekick.getSpindash(),
+                "Obj84's pinball_mode byte is the same flag Tails_UpdateSpindash later consumes");
+        assertTrue(sidekick.getRolling());
+    }
+
+    @Test
+    void nativeP2FlightAutoRecoverySkipsHorizontalForcedSpinUntilNormalCpuRoutine() {
+        ForcedSpinObjectInstance trigger = new ForcedSpinObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, Sonic2ObjectIds.FORCED_SPIN, 0, 0, false, 0),
+                "ForcedSpin");
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0080, (short) 0x0100);
+        TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x00F0, (short) 0x0100);
+        sidekick.setCpuControlled(true);
+        SidekickCpuController controller = new SidekickCpuController(sidekick, main);
+        controller.setInitialState(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY);
+        trigger.setServices(new QueryOnlyPlayerServices(main, List.of(sidekick)));
+
+        trigger.update(0, main);
+        sidekick.setCentreX((short) 0x0100);
+        trigger.update(1, main);
+
+        assertFalse(sidekick.getPinballMode(),
+                "ROM Obj84 skips native P2 while Tails_CPU_routine is $04");
+        assertFalse(sidekick.getRolling());
+
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        trigger.update(2, main);
+
+        assertTrue(sidekick.getPinballMode(),
+                "Once Tails leaves routine $04, Obj84 should consume the still-pending crossing");
         assertTrue(sidekick.getRolling());
     }
 

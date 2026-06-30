@@ -25,6 +25,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     private int offscreenFlightFrames;
     private int diagnosticTargetX;
     private int diagnosticTargetY;
+    private boolean approachRunsObjectPhysics;
 
     public TailsRespawnStrategy(SidekickCpuController controller) {
         this.controller = controller;
@@ -40,12 +41,14 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         sidekick.setCentreXPreserveSubpixel(leader.getCentreX());
         sidekick.setCentreYPreserveSubpixel((short) (leader.getCentreY() - RESPAWN_Y_OFFSET));
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        if (fs != null && fs.sidekickRespawnEntersCatchUpFlight()) {
+        boolean catchUpMarker = fs != null && fs.sidekickRespawnEntersCatchUpFlight();
+        approachRunsObjectPhysics = false;
+        if (catchUpMarker) {
             // S3K Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26503-26506)
             // zeroes x_vel, y_vel, and ground_vel immediately after teleporting.
-            // S2 TailsCPU_Respawn (s2.asm:38768-38779) only writes routine,
+            // S2 TailsCPU_Respawn (s2.asm:39122-39140) only writes routine,
             // position, priority, and spindash fields; TailsCPU_Flying clears
-            // velocities later when it enters NORMAL (s2.asm:38877-38882).
+            // velocities later when it enters NORMAL (s2.asm:39229-39245).
             sidekick.setXSpeed((short) 0);
             sidekick.setYSpeed((short) 0);
             sidekick.setGSpeed((short) 0);
@@ -56,8 +59,17 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         sidekick.setSpindash(false);
         sidekick.setSpindashCounter((short) 0);
         sidekick.setForcedAnimationId(flyAnimId);
-        sidekick.setControlLocked(true);
-        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        if (catchUpMarker) {
+            sidekick.setControlLocked(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        } else {
+            // S2 TailsCPU_Respawn does not write obj_control (s2.asm:
+            // 39122-39140), and ordinary TailsCPU_Flying only writes $81 on
+            // the off-screen timeout path (s2.asm:39142-39159). Preserve the
+            // inherited object-control byte; when it is already clear, Obj02's
+            // normal airborne movement path remains active after the manual
+            // +/-1 TailsCPU_Flying nudge.
+        }
         return true;
     }
 
@@ -88,8 +100,17 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     public boolean updateApproaching(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader,
                                      int frameCounter) {
         sidekick.setForcedAnimationId(flyAnimId);
-        sidekick.setControlLocked(true);
-        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        boolean catchUpMarker = fs != null && fs.sidekickRespawnEntersCatchUpFlight();
+        approachRunsObjectPhysics = !catchUpMarker && !sidekick.isObjectControlSuppressesMovement();
+        if (catchUpMarker) {
+            sidekick.setControlLocked(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        } else {
+            // S2 TailsCPU_Flying does not touch obj_control during ordinary
+            // fly-in updates. Preserve the live suppression bit and let
+            // requiresPhysics() mirror whether Obj02_Control would fall through.
+        }
 
         if (handleS2FlyingOffscreenTimeout(sidekick)) {
             return false;
@@ -145,7 +166,6 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         //   * S3K (sonic3k.asm:26625, 26629-26630) andi.b #$80,d2 (bit 7 only) AND
         //     cmpi.b #6,(Player_1+routine).w / bhs (skip if Sonic dead).
         // Resolved through PhysicsFeatureSet so each game's ROM behavior is preserved.
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         int statusBlockerMask = fs != null
                 ? fs.sidekickFlyLandStatusBlockerMask()
                 : FLY_LAND_BLOCKERS_FALLBACK;
@@ -162,6 +182,11 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     @Override
     public boolean handlesApproachDespawn() {
         return true;
+    }
+
+    @Override
+    public boolean requiresPhysics() {
+        return approachRunsObjectPhysics;
     }
 
     @Override
@@ -217,6 +242,9 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         boolean onScreen = sidekick.hasRenderFlagOnScreenState()
                 ? sidekick.isRenderFlagOnScreen()
                 : sidekick.currentCamera() != null && sidekick.currentCamera().isOnScreen(sidekick);
+        if (onScreen && consumesTopEdgeRenderFlagOneStepLate(sidekick)) {
+            onScreen = false;
+        }
         if (onScreen) {
             offscreenFlightFrames = 0;
             return false;
@@ -237,6 +265,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         sidekick.setPushing(false);
         sidekick.setLatchedSolidObjectId(0);
         sidekick.setAir(true);
+        sidekick.setDirection(Direction.RIGHT);
         sidekick.setCentreXPreserveSubpixel((short) 0);
         sidekick.setCentreYPreserveSubpixel((short) 0);
         sidekick.setForcedAnimationId(flyAnimId);
@@ -244,5 +273,25 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         controller.returnApproachToSpawningAfterFlyingTimeout();
         return true;
+    }
+
+    private boolean consumesTopEdgeRenderFlagOneStepLate(AbstractPlayableSprite sidekick) {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (fs != null && fs.sidekickRespawnEntersCatchUpFlight()) {
+            return false;
+        }
+        var camera = sidekick.currentCamera();
+        if (camera == null) {
+            return false;
+        }
+        int relY = sidekick.getRenderCentreY() - camera.getY();
+        // ROM TailsCPU_Flying tests render_flags.on_screen before the current
+        // fly-in movement can refresh that cached bit. At HTZ1 gfc $193F,
+        // BizHawk shows y=$04AD, camY=$04CC, render_flags=$04 and
+        // Tails_respawn_counter=$003F; the bit flips to $84 on the next frame.
+        // CNZ's later fly-in reaches the same top edge with flight_timer=$5B
+        // and has already refreshed render_flags, so keep this to the first
+        // $3E..$3F window where the stale flag is observed.
+        return offscreenFlightFrames >= 0x3E && offscreenFlightFrames <= 0x3F && relY <= -31;
     }
 }

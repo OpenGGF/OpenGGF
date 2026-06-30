@@ -189,6 +189,8 @@ public class SidekickCpuController {
      * slot-id-mismatch despawn compare until a real id is observed.
      */
     private int lastInteractObjectId = -1;
+    private boolean normalDespawnLastRenderFlagOffscreen;
+    private boolean normalDespawnFreshRenderEntryDelayConsumed;
     /**
      * S3K mirror of ROM {@code Tails_CPU_interact}: word 0 of the stood-on
      * object SST, sampled by {@code sub_13EFC} during Tails CPU control
@@ -776,6 +778,23 @@ public class SidekickCpuController {
         finishNormalStepDiagnosticsWithCtrl2(base, branch,
                 followDelayFrames, followHistorySlot, recordedInput, recordedStatus, pushBypassStatus,
                 dx, dy, diagnosticGeneratedInput(), diagnosticGeneratedPressedInput,
+                skipFollowSteering, appliedFollowNudge);
+    }
+
+    private void finishNormalStepDiagnosticsPreservingCtrl2(NormalStepDiagnostics base,
+                                                            String branch,
+                                                            int followDelayFrames,
+                                                            int followHistorySlot,
+                                                            int recordedInput,
+                                                            int recordedStatus,
+                                                            int pushBypassStatus,
+                                                            int dx,
+                                                            int dy,
+                                                            boolean skipFollowSteering,
+                                                            int appliedFollowNudge) {
+        finishNormalStepDiagnosticsWithCtrl2(base, branch,
+                followDelayFrames, followHistorySlot, recordedInput, recordedStatus, pushBypassStatus,
+                dx, dy, diagnosticCtrl2HeldLatch, diagnosticCtrl2PressedLatch,
                 skipFollowSteering, appliedFollowNudge);
     }
 
@@ -1833,7 +1852,10 @@ public class SidekickCpuController {
             normalPushingGraceFrames = 0;
             suppressNextAirbornePushFollowSteering = false;
             clearStaleDeadOnObjectAfterVisibleWindow();
-            finishNormalStepDiagnostics(diagnostics, "sidekick_dead", -1, -1,
+            // Obj02_Dead bypasses TailsCPU_Control; the global Ctrl_2_Logical
+            // word keeps the last CPU-written value until a later routine
+            // explicitly writes it.
+            finishNormalStepDiagnosticsPreservingCtrl2(diagnostics, "sidekick_dead", -1, -1,
                     0, 0, 0, 0, 0, false, 0);
             return;
         }
@@ -2001,7 +2023,16 @@ public class SidekickCpuController {
                 delayedDirectionalPress(effectiveLeader, followStatDelayFrames, recordedInput)
                         | (recordedJumpPress ? AbstractPlayableSprite.INPUT_JUMP : 0);
 
+        ObjectInstance ridingObject = currentRidingObject();
+        if ((recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && dy >= -JUMP_HEIGHT_THRESHOLD
+                && preservesSidekickDelayedLeaderPushWhileRiding(ridingObject)) {
+            recordedStatus |= AbstractPlayableSprite.STATUS_PUSHING;
+        }
         byte pushBypassStatus = effectiveLeader.getStatusHistory(OBJECT_ORDER_INPUT_DELAY_FRAMES);
+        byte pushBypassLeaderStatus = usesSidekickCpuPushBypassObjectOrderStatusDelay(ridingObject)
+                ? pushBypassStatus
+                : recordedStatus;
         // ROM loads delayed Ctrl_1_Logical/status into d1/d4, then tests Tails'
         // current Status_Push before loc_13E9C. If current push is set and the
         // delayed status byte does not also have Status_Push, S2/S3K branch
@@ -2029,7 +2060,7 @@ public class SidekickCpuController {
         boolean frameStartStatusPush = sidekick.getPushingAtFrameStart();
         boolean frameStartPushBypass = frameStartStatusPush
                 && !rollingNonzeroGroundSpeedStalePush
-                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && isCurrentPushBypassContext(delayedObjectOrPushContext, dy);
         // Live Status_Push is the direct ROM branch in TailsCPU_Normal
         // (S2 s2.asm:39291-39294, S3K sonic3k.asm:26702-26705) and can skip
@@ -2050,7 +2081,7 @@ public class SidekickCpuController {
         // carrying an engine-stale push bit, not the ROM-visible status byte
         // tested by loc_13DD0.
         boolean currentPushBypass = (romVisibleCurrentStatusPush
-                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (!sidekick.isInWater()
                 || !restrictUnderwaterPushBypassToContactPulses
                 || delayedObjectOrPushContext
@@ -2063,19 +2094,19 @@ public class SidekickCpuController {
         boolean gracePushBypass = !sidekick.getAir()
                 && pushBypassGraceEnabled
                 && normalPushingGraceFrames > 0
-                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0;
         boolean localGracePushBypass = gracePushBypass
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
         boolean objectOrderFollowSteeringContext = isObjectOrderFollowSteeringContext(effectiveLeader);
         boolean supportGraceKeepsFollowSteering =
                 localGracePushBypass && isDoorSupportGraceFollowSteeringContext();
-        ObjectInstance ridingObject = currentRidingObject();
         boolean ridingObjectPushGrace = !sidekick.getAir()
                 && sidekick.isOnObject()
                 && !sidekick.getRolling()
                 && normalPushingGraceFrames >= sidekickCpuPushGraceMinimumFramesWhileRiding(ridingObject)
-                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && normalPushingGraceFrames <= sidekickCpuPushGraceMaximumFramesWhileRiding(ridingObject)
+                && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
                 && preservesSidekickCpuPushGraceWhileRiding(ridingObject);
@@ -2225,10 +2256,16 @@ public class SidekickCpuController {
                 && objectOrderFollowSteeringContext
                 && delayedObjectOrPushContext
                 && !sidekick.getAir();
+        boolean ridingObjectCurrentPushObjectOrderInputSample = currentPushBypass
+                && sidekick.isOnObject()
+                && !sidekick.getAir()
+                && usesSidekickCpuCurrentPushObjectOrderInputDelay(ridingObject);
         int bridgedInputDelayFrames = currentPushObjectOrderInputSample
                 ? ROM_FOLLOW_DELAY_FRAMES
+                : ridingObjectCurrentPushObjectOrderInputSample
+                ? OBJECT_ORDER_INPUT_DELAY_FRAMES
                 : OBJECT_ORDER_INPUT_DELAY_FRAMES;
-        if (objectOrderGrace || currentPushObjectOrderInputSample) {
+        if (objectOrderGrace || currentPushObjectOrderInputSample || ridingObjectCurrentPushObjectOrderInputSample) {
             recordedInput = effectiveLeader.getInputHistory(bridgedInputDelayFrames);
             recordedJumpPress = delayedJumpPress(effectiveLeader, bridgedInputDelayFrames, recordedInput);
             inputLeft = (recordedInput & AbstractPlayableSprite.INPUT_LEFT) != 0;
@@ -2349,18 +2386,26 @@ public class SidekickCpuController {
         // remains an additional engine-side bridge for the same loc_13DD0 read.
         boolean autoJumpPushBypass =
                 ((currentStatusPush
-                        && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0)
-                        || objectOrderGrace)
-                        && !(sidekick.getRolling() && sidekick.shouldPreserveRollingOnNextRollStop());
+                        && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0)
+                        || objectOrderGrace
+                        || ridingObjectPushGrace);
         if (jumpingFlag && !autoJumpPushBypass) {
             inputJump = true;
             boolean delayedJumpOnly = (recordedInput & (AbstractPlayableSprite.INPUT_UP
                     | AbstractPlayableSprite.INPUT_DOWN
                     | AbstractPlayableSprite.INPUT_LEFT
                     | AbstractPlayableSprite.INPUT_RIGHT)) == 0;
+            // S2 stores the real low-byte press in Sonic_Stat_Record_Buf; do not
+            // clear it when the delayed sample is a plain airborne roll jump.
+            boolean delayedLeaderJumpTakeoff = recordedJumpPress
+                    && (recordedStatus & AbstractPlayableSprite.STATUS_IN_AIR) != 0
+                    && (recordedStatus & AbstractPlayableSprite.STATUS_ROLLING) != 0
+                    && (recordedStatus & AbstractPlayableSprite.STATUS_ON_OBJECT) == 0
+                    && (fs == null || !fs.sidekickDelayedJumpPressUsesHistoryEdge());
             if (sidekick.getAir()
                     && delayedJumpOnly
-                    && normalPushingGraceFrames <= 2) {
+                    && normalPushingGraceFrames <= 2
+                    && !delayedLeaderJumpTakeoff) {
                 // ROM loc_13E64 carries Tails_CPU_auto_jump_flag by ORing the
                 // high-byte A/B/C held bits into Ctrl_2_Logical, then branches
                 // directly to the final write while airborne. It does not
@@ -2394,6 +2439,7 @@ public class SidekickCpuController {
         // grounded pushing sidekick that re-qualifies on a later $3F frame
         // (S2 HTZ2 f1343: Tails pushing the breakable block, dy=-10 so only the
         // bypass passes the height gate, latch stuck from the prior $3F jump).
+        boolean generatedAutoJumpThisFrame = false;
         if (!jumpingFlag || autoJumpPushBypass) {
             // ROM runs the auto-jump distance/height/gate path regardless of
             // Status_InAir; the in-air check only belongs to the existing
@@ -2422,15 +2468,12 @@ public class SidekickCpuController {
             // Ordinary stale grace still falls through loc_13E7C and must pass
             // the normal distance/height gates.
             // Vertical S2 Obj85 can hand Tails into a curled, zero-speed push
-            // state after release. That object-owned state preserves rolling
-            // without ROM's pinball-mode auto-push, and the CNZ trace shows it
-            // must not take the generic push auto-jump shortcut at the $3F
-            // frame gate (s2.asm:38943-38946, 39015-39022; Obj85 release:
-            // s2.asm:57611-57625).
-            boolean suppressObjectPreservedPushJump =
-                    sidekick.getRolling() && sidekick.shouldPreserveRollingOnNextRollStop();
-            boolean pushingBypass = (currentPushBypass || objectOrderGrace)
-                    && !suppressObjectPreservedPushJump;
+            // state after release, but ROM still lets the current-push bypass
+            // reach the $3F auto-jump gate in TailsCPU_Normal (s2.asm:39287-
+            // 39300, 39369-39378). The preserved-roll flag only suppresses a
+            // stale delayed jump hold below; it must not block the push-bypass
+            // jump that launches Tails out of the stopper chamber.
+            boolean pushingBypass = currentPushBypass || objectOrderGrace || ridingObjectPushGrace;
             // resolveCpuFrameCounter() already yields the ROM-visible
             // Level_frame_counter: the per-frame sprite cadence is the
             // post-increment value, and bootstrap paths preload LevelManager with
@@ -2456,6 +2499,7 @@ public class SidekickCpuController {
                 diagnosticGeneratedPressedInput |= AbstractPlayableSprite.INPUT_JUMP;
                 lastNormalAutoJumpPressFrameCounter = autoJumpFrameCounter;
                 jumpingFlag = true;
+                generatedAutoJumpThisFrame = true;
             }
         }
 
@@ -2468,6 +2512,8 @@ public class SidekickCpuController {
         if (sidekick.getRolling()
                 && sidekick.shouldPreserveRollingOnNextRollStop()
                 && !sidekick.getAir()
+                && !generatedAutoJumpThisFrame
+                && !autoJumpPushBypass
                 && (currentPushBypass || localGracePushBypass || !recordedJumpPress)) {
             inputJump = false;
             inputJumpPress = false;
@@ -2752,6 +2798,46 @@ public class SidekickCpuController {
             }
         }
         return Integer.MAX_VALUE;
+    }
+
+    private int sidekickCpuPushGraceMaximumFramesWhileRiding(ObjectInstance ridingObject) {
+        if (!hasLiveRidingObject(ridingObject)) {
+            return Integer.MIN_VALUE;
+        }
+        if (ridingObject instanceof SolidObjectProvider provider) {
+            return provider.sidekickCpuPushGraceMaximumFramesWhileRiding(sidekick);
+        }
+        return Integer.MAX_VALUE;
+    }
+
+    private boolean usesSidekickCpuCurrentPushObjectOrderInputDelay(ObjectInstance ridingObject) {
+        if (!hasLiveRidingObject(ridingObject)) {
+            return false;
+        }
+        if (ridingObject instanceof SolidObjectProvider provider) {
+            return provider.usesSidekickCpuCurrentPushObjectOrderInputDelay(sidekick);
+        }
+        return false;
+    }
+
+    private boolean usesSidekickCpuPushBypassObjectOrderStatusDelay(ObjectInstance ridingObject) {
+        if (!hasLiveRidingObject(ridingObject)) {
+            return false;
+        }
+        if (ridingObject instanceof SolidObjectProvider provider) {
+            return provider.usesSidekickCpuPushBypassObjectOrderStatusDelay(sidekick);
+        }
+        return false;
+    }
+
+    private boolean preservesSidekickDelayedLeaderPushWhileRiding(ObjectInstance ridingObject) {
+        if (!hasLiveRidingObject(ridingObject)) {
+            return false;
+        }
+        if (ridingObject instanceof SolidObjectProvider provider) {
+            return provider.preservesSidekickDelayedLeaderPushWhileRiding(sidekick);
+        }
+        return false;
     }
 
     private boolean usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge() {
@@ -3899,6 +3985,21 @@ public class SidekickCpuController {
         boolean onScreen = sidekick.hasRenderFlagOnScreenState()
                 ? sidekick.isRenderFlagOnScreen()
                 : isCurrentlyVisible();
+        boolean delayingFreshRenderEntry = false;
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (onScreen
+                && fs != null
+                && fs.sidekickNormalDespawnDelaysFreshRenderEntry()
+                && normalDespawnLastRenderFlagOffscreen
+                && !normalDespawnFreshRenderEntryDelayConsumed
+                && sidekick.getAir()
+                && sidekick.getRolling()
+                && delayedLeaderSampleIsUncontrolledAirRoll()
+                && isNearHorizontalRenderEntryEdge()) {
+            onScreen = false;
+            delayingFreshRenderEntry = true;
+            normalDespawnFreshRenderEntryDelayConsumed = true;
+        }
 
         // RAW id of the LIVE object currently occupying the persistent
         // interact(a0) slot. -1 == slot empty in the engine (covers BOTH
@@ -3919,15 +4020,20 @@ public class SidekickCpuController {
         if (onScreen) {
             // ROM TailsCPU_ResetRespawnTimer -> TailsCPU_UpdateObjInteract.
             despawnCounter = 0;
+            normalDespawnLastRenderFlagOffscreen = false;
+            normalDespawnFreshRenderEntryDelayConsumed = false;
             refreshInteractIdSnapshot(snapshotSeedId);
             return false;
         }
 
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         boolean useRidingInstanceLossDespawn = fs != null
                 && fs.sidekickDespawnUsesRidingInstanceLoss();
         boolean useSlotIdMismatchDespawn = fs == null
                 || fs.sidekickDespawnUsesObjectIdMismatch();
+        normalDespawnLastRenderFlagOffscreen = true;
+        if (!delayingFreshRenderEntry) {
+            normalDespawnFreshRenderEntryDelayConsumed = false;
+        }
 
         if (sidekick.isOnObject()) {
             // S3K: sub_13EFC's only practical trigger is a slot freed by
@@ -3973,6 +4079,29 @@ public class SidekickCpuController {
         // ROM falls through to TailsCPU_UpdateObjInteract.
         refreshInteractIdSnapshot(snapshotSeedId);
         return false;
+    }
+
+    private boolean delayedLeaderSampleIsUncontrolledAirRoll() {
+        AbstractPlayableSprite effectiveLeader = resolveActiveFollowLeader();
+        if (effectiveLeader == null) {
+            return false;
+        }
+        int delayFrames = resolveFollowStatDelayFrames();
+        int status = effectiveLeader.getStatusHistory(delayFrames) & 0xFF;
+        int required = AbstractPlayableSprite.STATUS_IN_AIR | AbstractPlayableSprite.STATUS_ROLLING;
+        int input = effectiveLeader.getInputHistory(delayFrames) & 0xFFFF;
+        return status == required && input == 0;
+    }
+
+    private boolean isNearHorizontalRenderEntryEdge() {
+        var camera = sidekick.currentCamera();
+        if (camera == null) {
+            return false;
+        }
+        int widthPixels = sidekick.getRenderFlagWidthPixels();
+        int relX = sidekick.getRenderCentreX() - camera.getX();
+        return (relX > -widthPixels && relX < 0)
+                || (relX >= camera.getWidth() && relX < camera.getWidth() + widthPixels);
     }
 
     /**
@@ -4534,8 +4663,6 @@ public class SidekickCpuController {
         }
         sidekick.setDead(false);
         sidekick.setDeathCountdown(0);
-        sidekick.setSpindash(false);
-        sidekick.setSpindashCounter((short) 0);
         clearRespawnAnimationState();
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
@@ -4552,8 +4679,9 @@ public class SidekickCpuController {
         // before this marker warp on Frame N+1.
         // S2 TailsCPU_Despawn (docs/s2disasm/s2.asm:39391-39400) and S3K
         // sub_13ECA (docs/skdisasm/sonic3k.asm:26800-26809) do not write the
-        // ROM-visible interact latch. Preserve it until the next active-play
-        // update samples another stood-on object or RAM is explicitly reset.
+        // pinball/spindash flag, spindash_counter, or ROM-visible interact
+        // latch. Preserve them until the next active-play update samples
+        // another stood-on object or RAM is explicitly reset.
     }
 
     /**
@@ -5004,6 +5132,8 @@ public class SidekickCpuController {
                 minYBound,
                 maxYBound,
                 lastInteractObjectId,
+                normalDespawnLastRenderFlagOffscreen,
+                normalDespawnFreshRenderEntryDelayConsumed,
                 diagnosticS3kInteractWord,
                 normalFrameCount,
                 approachFrameCount,
@@ -5062,6 +5192,8 @@ public class SidekickCpuController {
         minYBound = snapshot.minYBound();
         maxYBound = snapshot.maxYBound();
         lastInteractObjectId = snapshot.lastInteractObjectId();
+        normalDespawnLastRenderFlagOffscreen = snapshot.normalDespawnLastRenderFlagOffscreen();
+        normalDespawnFreshRenderEntryDelayConsumed = snapshot.normalDespawnFreshRenderEntryDelayConsumed();
         diagnosticS3kInteractWord = snapshot.diagnosticS3kInteractWord();
         normalFrameCount = snapshot.normalFrameCount();
         approachFrameCount = snapshot.approachFrameCount();
@@ -5178,6 +5310,8 @@ public class SidekickCpuController {
         // construction time, not per-level state. Clearing it would break the sidekick
         // permanently since findLeader() scanning was removed in favor of explicit assignment.
         lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
+        normalDespawnLastRenderFlagOffscreen = false;
+        normalDespawnFreshRenderEntryDelayConsumed = false;
         diagnosticS3kInteractWord = 0;
         minXBound = Integer.MIN_VALUE;
         maxXBound = Integer.MIN_VALUE;

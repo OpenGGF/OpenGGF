@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestCNZSlotMachineRng {
     @Test
@@ -47,9 +48,29 @@ class TestCNZSlotMachineRng {
         setIntField(manager, "slot23Target",
                 (CNZSlotMachineManager.FACE_RING << 4) | CNZSlotMachineManager.FACE_BAR);
 
-        assertEquals(CNZSlotMachineManager.FACE_EGGMAN, invokeGetTargetForSlot(manager, 0));
+        assertEquals(CNZSlotMachineManager.FACE_BAR, invokeGetTargetForSlot(manager, 0));
         assertEquals(CNZSlotMachineManager.FACE_RING, invokeGetTargetForSlot(manager, 1));
-        assertEquals(CNZSlotMachineManager.FACE_BAR, invokeGetTargetForSlot(manager, 2));
+        assertEquals(CNZSlotMachineManager.FACE_EGGMAN, invokeGetTargetForSlot(manager, 2));
+    }
+
+    @Test
+    void fineTuneUsesRomPackedTargetOrderForThirdReel() throws Exception {
+        CNZSlotMachineManager manager = new CNZSlotMachineManager();
+        setIntField(manager, "routine", 0x10);
+        setIntField(manager, "slotTimer", 0xE2);
+        setIntField(manager, "slotIndex", 0x00);
+        setIntField(manager, "slot1Target", CNZSlotMachineManager.FACE_EGGMAN);
+        setIntField(manager, "slot23Target", 0x03);
+        setIntArray(manager, "slotIndices", new int[]{0x00, 0x01, 0xF5});
+        setIntArray(manager, "slotOffsets", new int[]{0x00, 0x00, 0x96});
+        setIntArray(manager, "slotSpeeds", new int[]{0x00, 0x00, 0x63});
+        setIntArray(manager, "slotSubroutines", new int[]{0x0C, 0x0C, 0x00});
+
+        manager.update(0x1047);
+        manager.update(0x1048);
+
+        assertEquals(0x04, intArray(manager, "slotSubroutines")[2]);
+        assertEquals(0x60, intArray(manager, "slotSpeeds")[2]);
     }
 
     @Test
@@ -60,14 +81,43 @@ class TestCNZSlotMachineRng {
                 (CNZSlotMachineManager.FACE_TAILS << 4) | CNZSlotMachineManager.FACE_RING);
 
         invokeSetTargetForSlot(manager, 0, CNZSlotMachineManager.FACE_EGGMAN);
-        assertEquals(CNZSlotMachineManager.FACE_EGGMAN, intField(manager, "slot1Target") & 0x07);
-        assertEquals((CNZSlotMachineManager.FACE_TAILS << 4) | CNZSlotMachineManager.FACE_RING,
+        assertEquals(CNZSlotMachineManager.FACE_SONIC, intField(manager, "slot1Target") & 0x07);
+        assertEquals((CNZSlotMachineManager.FACE_TAILS << 4) | CNZSlotMachineManager.FACE_EGGMAN,
                 intField(manager, "slot23Target"));
 
         invokeSetTargetForSlot(manager, 2, CNZSlotMachineManager.FACE_BAR);
-        assertEquals(CNZSlotMachineManager.FACE_EGGMAN, intField(manager, "slot1Target") & 0x07);
-        assertEquals((CNZSlotMachineManager.FACE_TAILS << 4) | CNZSlotMachineManager.FACE_BAR,
+        assertEquals(CNZSlotMachineManager.FACE_BAR, intField(manager, "slot1Target") & 0x07);
+        assertEquals((CNZSlotMachineManager.FACE_TAILS << 4) | CNZSlotMachineManager.FACE_EGGMAN,
                 intField(manager, "slot23Target"));
+    }
+
+    @Test
+    void linkedCageReleaseKeepsReelsRunningToRomCompletion() throws Exception {
+        CNZSlotMachineManager manager = new CNZSlotMachineManager();
+        setIntField(manager, "routine", 0x18);
+        setIntArray(manager, "slotIndices", new int[]{0x64, 0x8C, 0x91});
+        setIntArray(manager, "slotOffsets", new int[]{0x00, 0x00, 0x00});
+        manager.update(0x41E6);
+        manager.activate();
+
+        for (int frame = 0x41E7; frame <= 0x4207; frame++) {
+            manager.update(frame);
+        }
+        manager.releaseUse();
+
+        assertFalse((boolean) booleanField(manager, "inUse"),
+                "releaseUse mirrors ObjD6 clearing SlotMachineInUse");
+        assertEquals(0x10, intField(manager, "routine"),
+                "clearing SlotMachineInUse must not stop SlotMachine_Routine");
+
+        for (int frame = 0x4208; frame <= 0x42BF; frame++) {
+            manager.update(frame);
+        }
+
+        assertEquals(0x18, intField(manager, "routine"));
+        assertTrue(manager.isComplete());
+        assertArrayEquals(new int[]{0x00, 0x00, 0x00}, maskedSlots(manager, "slotOffsets"));
+        assertArrayEquals(new int[]{0x00, 0x00, 0x00}, maskedSlots(manager, "slotSpeeds"));
     }
 
     @Test
@@ -92,10 +142,26 @@ class TestCNZSlotMachineRng {
         field.setInt(target, value);
     }
 
+    private static boolean booleanField(Object target, String fieldName) throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getBoolean(target);
+    }
+
+    private static void setIntArray(Object target, String fieldName, int[] values) throws ReflectiveOperationException {
+        int[] array = intArray(target, fieldName);
+        System.arraycopy(values, 0, array, 0, values.length);
+    }
+
     private static int[] intArray(Object target, String fieldName) throws ReflectiveOperationException {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return (int[]) field.get(target);
+    }
+
+    private static int[] maskedSlots(Object target, String fieldName) throws ReflectiveOperationException {
+        int[] source = intArray(target, fieldName);
+        return new int[]{source[0] & 0xFF, source[1] & 0xFF, source[2] & 0xFF};
     }
 
     private static int invokeGetTargetForSlot(CNZSlotMachineManager manager, int slot)
@@ -112,5 +178,3 @@ class TestCNZSlotMachineRng {
         method.invoke(manager, slot, face);
     }
 }
-
-

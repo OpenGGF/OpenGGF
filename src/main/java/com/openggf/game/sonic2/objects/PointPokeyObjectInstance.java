@@ -4,7 +4,9 @@ import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.Sonic2ZoneFeatureProvider;
 import com.openggf.graphics.GLCommand;
@@ -74,6 +76,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     private static final int STATE_OCCUPIED = 1;
     private static final int STATE_WAITING_SLOT = 2;
     private static final int STATE_SPAWNING_PRIZES = 3;
+    private static final int STATE_RELEASE_COOLDOWN = 4;
 
     // Animation frames
     private static final int FRAME_IDLE = 0;
@@ -112,6 +115,9 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
     // Track when player is occupied for priority control (Bug fix #4)
     private boolean playerOccupied = false;
+    private boolean capturedPlayerUsesRideState = false;
+    private boolean capturedPlayerPinballMode = false;
+    private int capturedSidekickIndex = -1;
 
     // Reference to level manager (for spawning prizes)
 
@@ -180,13 +186,26 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * Based on loc_2BABE - loc_2BB10 in s2.asm.
      */
     private void capturePlayer(AbstractPlayableSprite player) {
+        capturePlayer(player, true, sidekickIndexFor(player));
+    }
+
+    private void capturePlayer(AbstractPlayableSprite player, PlayerSolidContactResult solidResult) {
+        capturePlayer(player, solidResult != null && solidResult.kind() == ContactKind.TOP, sidekickIndexFor(player));
+    }
+
+    private void capturePlayer(AbstractPlayableSprite player, boolean useRideState, int sidekickIndex) {
         // Force rolling state FIRST - this changes player height from 38 to 28.
         // Must be done before setCentreY, otherwise the center calculation uses
         // wrong height and shifts when setRolling changes it.
+        capturedPlayerPinballMode = player.getPinballMode();
         player.setPinballMode(true);
         player.setRolling(true);
 
-        maintainCapturedRideState(player);
+        capturedPlayerUsesRideState = useRideState;
+        capturedSidekickIndex = sidekickIndex;
+        if (capturedPlayerUsesRideState) {
+            maintainCapturedRideState(player);
+        }
 
         // ROM: move.b #$81,obj_control(a1). This is player obj_control, not
         // global Control_Locked; Obj01_Control still refreshes Ctrl_1_Logical
@@ -265,10 +284,24 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         // Release player obj_control; ObjD6 does not touch global Control_Locked
         // (s2.asm:58746-58756).
         ObjectControlState.none().applyTo(player);
-        player.setPinballMode(false);
+        // ObjD6 does not write pinball_mode on release. Restore the ROM byte
+        // mirror that was active before the engine-only cage hold set it.
+        player.setPinballMode(capturedPlayerPinballMode);
 
-        // Reset cage internal state
-        resetCageState();
+        // Enter the ROM post-release delay. loc_2BE9C clears the cage state
+        // and SlotMachineInUse only after this timer expires.
+        playerState = STATE_RELEASE_COOLDOWN;
+        countdown = 0x1E;
+        mappingFrame = FRAME_IDLE;
+        animationTimer = 0;
+        playerOccupied = false;
+        capturedPlayerUsesRideState = false;
+        capturedPlayerPinballMode = false;
+        capturedSidekickIndex = -1;
+        activePrizeCount[0] = 0;
+        prizesToSpawn = 0;
+        prizeAngle = 0;
+        prizeSpawnTimer = 0;
     }
 
     /**
@@ -280,10 +313,14 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         mappingFrame = FRAME_IDLE;
         animationTimer = 0;
         playerOccupied = false;
+        capturedPlayerUsesRideState = false;
+        capturedPlayerPinballMode = false;
 
-        // Deactivate slot machine state (preserves visual reel positions)
+        // Clear the cage ownership latch without stopping the reels. ROM
+        // ObjD6 clears SlotMachineInUse here, while LevEvents_CNZ keeps
+        // SlotMachine_Routine ticking until the reel sequence finishes.
         if (slotMachineManager != null) {
-            slotMachineManager.deactivate();
+            slotMachineManager.releaseUse();
         }
         slotMachineManager = null;
         slotReward = 0;
@@ -319,10 +356,17 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             return;
         }
 
+        AbstractPlayableSprite activePlayer = capturedPlayerFor(player);
+        if (activePlayer.isDebugMode()) {
+            resetCageState();
+            return;
+        }
+
         switch (playerState) {
-            case STATE_OCCUPIED -> updateOccupied(player, frameCounter);
-            case STATE_WAITING_SLOT -> updateWaitingSlot(player, frameCounter);
-            case STATE_SPAWNING_PRIZES -> updateSpawningPrizes(player, frameCounter);
+            case STATE_OCCUPIED -> updateOccupied(activePlayer, frameCounter);
+            case STATE_WAITING_SLOT -> updateWaitingSlot(activePlayer, frameCounter);
+            case STATE_SPAWNING_PRIZES -> updateSpawningPrizes(activePlayer, frameCounter);
+            case STATE_RELEASE_COOLDOWN -> updateReleaseCooldown();
         }
     }
 
@@ -331,6 +375,10 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * For this mode, SFX plays when countdown & 0x0F == 0 (s2.asm line 58731-58735).
      */
     private void updateOccupied(AbstractPlayableSprite player, int frameCounter) {
+        if (releaseIfOccupiedOffScreen(player)) {
+            return;
+        }
+
         // Decrement countdown
         countdown--;
 
@@ -367,6 +415,10 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * SFX plays when (Vint_runcount+3) & 0x0F == 0 (s2.asm line 58704-58708).
      */
     private void updateWaitingSlot(AbstractPlayableSprite player, int frameCounter) {
+        if (releaseIfOccupiedOffScreen(player)) {
+            return;
+        }
+
         // Keep player locked
         keepPlayerLocked(player);
 
@@ -435,11 +487,80 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             }
         }
 
-        // Check if all prizes spawned AND all collected/expired
-        // (eject when prizesToSpawn == 0 AND activePrizeCount == 0)
-        if (prizesToSpawn <= 0 && activePrizeCount[0] <= 0) {
-            ejectPlayer(player);
+        releaseIfAllPrizesSettled(player);
+    }
+
+    void onPrizeCounterChanged(AbstractPlayableSprite contextPlayer) {
+        releaseIfAllPrizesSettled(contextPlayer);
+    }
+
+    private void releaseIfAllPrizesSettled(AbstractPlayableSprite contextPlayer) {
+        // ObjDC/ObjD3 decrement ObjD6's objoff_2C through a shared pointer.
+        // If a child runs earlier than the cage slot, the release path must see
+        // that decrement in the same frame rather than waiting for ObjD6's next
+        // scheduled update.
+        if (playerState != STATE_SPAWNING_PRIZES
+                || prizesToSpawn > 0
+                || activePrizeCount[0] > 0
+                || !playerOccupied) {
+            return;
         }
+        AbstractPlayableSprite activePlayer = capturedPlayerFor(contextPlayer);
+        if (activePlayer != null) {
+            ejectPlayer(activePlayer);
+        }
+    }
+
+    private boolean releaseIfOccupiedOffScreen(AbstractPlayableSprite player) {
+        // ROM ObjD6 occupied routine tests render_flags.on_screen before the
+        // simple countdown or linked-slot handling. If bit 7 is clear, it jumps
+        // directly to loc_2BE2E and releases the player (s2.asm:59152-59156).
+        if (isWithinSolidContactBounds()) {
+            return false;
+        }
+        ejectPlayer(player);
+        return true;
+    }
+
+    private AbstractPlayableSprite capturedPlayerFor(AbstractPlayableSprite mainPlayer) {
+        if (capturedSidekickIndex < 0) {
+            return mainPlayer;
+        }
+        try {
+            List<PlayableEntity> sidekicks = services().sidekicks();
+            if (capturedSidekickIndex < sidekicks.size()
+                    && sidekicks.get(capturedSidekickIndex) instanceof AbstractPlayableSprite sidekick) {
+                return sidekick;
+            }
+        } catch (Exception ignored) {
+            // Fall back to main if a minimal test service does not expose sidekicks.
+        }
+        return mainPlayer;
+    }
+
+    private int sidekickIndexFor(AbstractPlayableSprite player) {
+        try {
+            List<PlayableEntity> sidekicks = services().sidekicks();
+            for (int i = 0; i < sidekicks.size(); i++) {
+                if (sidekicks.get(i) == player) {
+                    return i;
+                }
+            }
+        } catch (Exception ignored) {
+            // Main-player captures and reflection-based unit tests use -1.
+        }
+        return -1;
+    }
+
+    private void updateReleaseCooldown() {
+        // loc_2BE9C decrements the release timer and only clears the per-player
+        // state after the signed result goes negative. Linked cages clear
+        // SlotMachineInUse at the same point, not on the release frame.
+        countdown--;
+        if (countdown >= 0) {
+            return;
+        }
+        resetCageState();
     }
 
     /**
@@ -460,7 +581,9 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * Keep player locked in cage position.
      */
     private void keepPlayerLocked(AbstractPlayableSprite player) {
-        maintainCapturedRideState(player);
+        if (capturedPlayerUsesRideState) {
+            maintainCapturedRideState(player);
+        }
         // Occupied routines keep the high-word position locked without
         // touching the subpixel words, matching 68000 word stores.
         player.setCentreXPreserveSubpixel((short) spawn.x());
@@ -475,10 +598,34 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         // capture routine. Once objoff_30/34 moves to occupied state, the ROM
         // dispatches to cage-owned routines instead of re-running SolidObject
         // (s2.asm:58554-58566, 58694-58756).
-        PlayerSolidContactResult result = services().solidExecution().resolveSolidNow(player);
-        if (result != null && result.standingNow()) {
-            capturePlayer(player);
+        SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
+        PlayerSolidContactResult result = batch.perPlayer().get(player);
+        if (capturesFromSolidReturn(result)) {
+            capturePlayer(player, result);
+            return;
         }
+        // ROM ObjD6 processes Sidekick immediately after MainCharacter with
+        // its own objoff_34 state bytes (s2.asm:59040-59044). Manual solid
+        // checkpoints do not fire compatibility callbacks, so consume the
+        // native-P2 checkpoint result directly instead of relying on
+        // onSolidContact().
+        for (var entry : batch.perPlayer().entrySet()) {
+            if (entry.getKey() == player || !(entry.getKey() instanceof AbstractPlayableSprite sidekick)) {
+                continue;
+            }
+            PlayerSolidContactResult sidekickResult = entry.getValue();
+            if (capturesFromSolidReturn(sidekickResult)) {
+                capturePlayer(sidekick, sidekickResult);
+                return;
+            }
+        }
+    }
+
+    private static boolean capturesFromSolidReturn(PlayerSolidContactResult result) {
+        // ROM ObjD6 captures when SolidObject_Always_SingleCharacter returns a
+        // negative d4: -1 top or -2 bottom (s2.asm:59045-59046). Side contact
+        // returns +1 and must not enter the cage.
+        return result != null && (result.kind() == ContactKind.TOP || result.kind() == ContactKind.BOTTOM);
     }
 
     private void maintainCapturedRideState(AbstractPlayableSprite player) {
@@ -546,13 +693,13 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             // Bombs
             spawnFreeChild(() -> new BombPrizeObjectInstance(
                     startX, startY, spawn.x(), spawn.y(),
-                    displayDelay, activePrizeCount));
+                    displayDelay, activePrizeCount, this));
             prizeAngle += BOMB_ANGLE_INCREMENT;
         } else {
             // Rings
             spawnFreeChild(() -> new RingPrizeObjectInstance(
                     startX, startY, spawn.x(), spawn.y(),
-                    displayDelay, activePrizeCount));
+                    displayDelay, activePrizeCount, this));
             prizeAngle += RING_ANGLE_INCREMENT;
         }
 

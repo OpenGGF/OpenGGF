@@ -17,6 +17,7 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -37,6 +38,9 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
     private static final int TYPE_VERTICAL = 0;
     private static final int TYPE_HORIZONTAL = 1;
+    private static final int SLOPE_CURVE_0_ROM_ADDR = 0x2B3C6;
+    private static final int SLOPE_CURVE_1_ROM_ADDR = 0x2B3EA;
+    private static final int SLOPE_CURVE_2_ROM_ADDR = 0x2B40E;
 
     // Slope curves from s2.asm byte_2B3C6, byte_2B3EA, byte_2B40E
     private static final byte[] SLOPE_CURVE_0 = {
@@ -118,6 +122,8 @@ public class FlipperObjectInstance extends BoxObjectInstance
     // (objoff_36 / objoff_37 are independent).
     private final IdentityHashMap<AbstractPlayableSprite, Boolean> lockedPlayerPrevSuppressed =
             new IdentityHashMap<>();
+    private final IdentityHashMap<AbstractPlayableSprite, Boolean> lockedPlayerPrevPinballMode =
+            new IdentityHashMap<>();
 
     public FlipperObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name, 8, 8, 0.8f, 0.4f, 0.2f, false);
@@ -145,12 +151,6 @@ public class FlipperObjectInstance extends BoxObjectInstance
         if (player == null || result == null) {
             return;
         }
-        // ROM parity: cooldown is per-player (objoff_36/37 are independent
-        // bytes in s2.asm).  Skip launch only when THIS player just got
-        // launched, not when the other character did.
-        if (launchCooldown.getOrDefault(player, 0) > 0) {
-            return;
-        }
 
         // If player entered debug mode while on the flipper, reset flipper state
         if (player.isDebugMode() && playerFlipperState.getOrDefault(player, 0) != 0) {
@@ -161,7 +161,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
         if (isHorizontal()) {
             // Horizontal flipper: launch on push (loc_2B35C)
-            if (result.pushingNow()) {
+            if (result.pushingNow() && launchCooldown.getOrDefault(player, 0) <= 0) {
                 applyHorizontalLaunch(player);
             }
         } else {
@@ -170,17 +170,17 @@ public class FlipperObjectInstance extends BoxObjectInstance
             // once after every player is processed (see processVerticalLaunch()),
             // matching ROM's objoff_38 trigger at s2.asm:58296-58303.
             if (result.standingNow()) {
-                // ROM: move.b #1,obj_control(a1) - locks ALL player input including jumping
-                // This is set every frame while standing on the flipper
-                player.setControlLocked(true);
                 // Obj01_Control skips the player movement dispatch while
-                // obj_control bit 0 is set, then still runs display/record/
-                // animation/TouchResponse (s2.asm:35937-35962).
+                // obj_control bit 0 is set, but Ctrl_1 -> Ctrl_1_Logical was
+                // already copied before that per-player bit is tested
+                // (s2.asm:36227-36237). Do not toggle global Control_Locked.
                 suppressMovementForLockedPlayer(player);
 
                 if (playerFlipperState.getOrDefault(player, 0) == 0) {
+                    applySkippedRideObjectRollClear(player, result);
                     // First frame standing: enter rolling state (loc_2B20A)
                     // We use pinball_mode to prevent rolling from being cleared
+                    player.clearObjectPreservedRollingHandoff();
                     player.setPinballMode(true);
                     // ROM: bset #status.player.rolling / bne.s loc_2B238 / addq.w #5,y_pos
                     // (s2.asm:58323-58325): on the first stand frame the flipper
@@ -207,22 +207,55 @@ public class FlipperObjectInstance extends BoxObjectInstance
                     // loc_2B288 sets the SHARED objoff_38 trigger).  ROM tests
                     // d5 & (A|B|C): the leader's d5 is Ctrl_1_Logical, the
                     // sidekick's is raw Ctrl_2 (s2.asm:58288/58293,58333).
-                    if (player.isJumpPressed()) {
+                    if (hasVerticalLaunchPress(player)) {
                         verticalLaunchTriggered = true;
                     } else {
                         // Slide player based on animation frame (loc_2B254)
                         applyFlipperSlide(player);
                     }
                 }
-            } else if (result.kind() == ContactKind.NONE) {
-                // Player left flipper without jumping (loc_2B23C branch to clear)
-                // ROM: move.b #0,obj_control(a1)
+            } else {
+                // Player left the vertical flipper's standing contact without
+                // jumping (loc_2B23C). ROM gates release on Obj86's per-player
+                // standing bit, not on all contact being absent; a side overlap
+                // after sliding off must still clear obj_control before the next
+                // Obj01_Control publishes Ctrl_1_Logical.
                 if (playerFlipperState.getOrDefault(player, 0) != 0) {
                     releaseLockedPlayer(player);
                     playerFlipperState.remove(player);
                 }
             }
         }
+    }
+
+    private boolean hasVerticalLaunchPress(AbstractPlayableSprite player) {
+        if (player == null) {
+            return false;
+        }
+        // Obj86 reads the low byte of Ctrl_1_Logical for the MainCharacter and
+        // raw Ctrl_2 for the Sidekick (s2.asm:58345-58350,58390). CPU Tails'
+        // follow jump is written to Ctrl_2_Logical, never raw Ctrl_2, so it must
+        // not trigger the shared objoff_38 launch.
+        if (player.isCpuControlled()) {
+            return player.isRawControllerJumpJustPressed();
+        }
+        return player.isLogicalJumpPressActive();
+    }
+
+    private void applySkippedRideObjectRollClear(AbstractPlayableSprite player, PlayerSolidContactResult result) {
+        if (player == null || result == null
+                || !result.preContact().air()
+                || !result.preContact().rolling()
+                || !player.getRolling()) {
+            return;
+        }
+        // ROM RideObject_SetRide calls Tails/Sonic_ResetOnFloor_Part2 directly
+        // for airborne object landings (s2.asm:35986-36030), bypassing the
+        // terrain landing pinball_mode guard. If the shared landing path
+        // preserved pinball rolling, restore the direct Part2 side effect here
+        // before Obj86's first-stand bset/addq #5 branch runs (s2.asm:58371-58386).
+        player.setRolling(false);
+        player.setY((short) (player.getY() - player.getRollHeightAdjustment()));
     }
 
     /**
@@ -293,9 +326,10 @@ public class FlipperObjectInstance extends BoxObjectInstance
         player.setXSpeed((short) xVel);
         player.setAir(true);
         player.setOnObject(false);
-        player.setPushing(false);  // Clear pushing state - matches BumperObjectInstance pattern
-        // ROM Obj86 launch writes x_vel/y_vel but leaves inertia unchanged
-        // (s2.asm:57982-57988).
+        // ROM Obj86 launch writes x_vel/y_vel, sets in_air, clears on_object,
+        // and restores obj_control without clearing Status_Push
+        // (docs/s2disasm/s2.asm:58420-58449). TailsCPU_Normal can read the
+        // live push bit before the next movement/animation pass.
 
         // ROM: move.b #0,obj_control(a1) at loc_2B2E2 - release control lock
         releaseLockedPlayer(player);
@@ -348,6 +382,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
         // ROM: move.w #$F,move_lock(a1) - lock player input for 15 frames
         player.setMoveLockTimer(15);
+        player.clearObjectPreservedRollingHandoff();
         // ROM: bset #status.player.rolling / bne.s loc_2B3BC / addq.w #5,y_pos
         // Only adjust Y if not already rolling
         if (!player.getRolling()) {
@@ -425,6 +460,30 @@ public class FlipperObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public Integer sampleSlopeByte(int sampleIndex) {
+        byte[] slopeData = getSlopeData();
+        if (slopeData == null) {
+            return null;
+        }
+        if (sampleIndex >= 0 && sampleIndex < slopeData.length) {
+            return (int) (byte) slopeData[sampleIndex];
+        }
+        try {
+            return (int) services().rom().readByte(currentSlopeCurveRomAddress() + sampleIndex);
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    private int currentSlopeCurveRomAddress() {
+        return switch (mappingFrame % 3) {
+            case 1 -> SLOPE_CURVE_1_ROM_ADDR;
+            case 2 -> SLOPE_CURVE_2_ROM_ADDR;
+            default -> SLOPE_CURVE_0_ROM_ADDR;
+        };
+    }
+
+    @Override
     public boolean isSlopeFlipped() {
         return isFlippedHorizontal();
     }
@@ -445,11 +504,12 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
     @Override
     public boolean usesInclusiveRightEdge() {
-        // Obj86 horizontal uses SolidObject_Always_SingleCharacter
-        // (s2.asm:58002/58011), whose right-edge rejection is `bhi`
-        // via SolidObject_cont (s2.asm:35157). relX == width*2 remains a
-        // valid edge push and lets loc_2B35C fire on the same frame.
-        return isHorizontal();
+        // Obj86 uses ROM helpers whose right-edge rejection is `bhi`, so
+        // relX == width*2 remains a valid contact. Horizontal flippers route
+        // through SolidObject_cont (docs/s2disasm/s2.asm:58467-58485,
+        // 35355-35364); vertical flippers route through SlopedSolid_cont
+        // (docs/s2disasm/s2.asm:58250-58279,35263-35272).
+        return true;
     }
 
     @Override
@@ -527,24 +587,25 @@ public class FlipperObjectInstance extends BoxObjectInstance
     }
 
     /**
-     * Release the control lock on the given player.
+     * Release the movement suppression on the given player.
      * ROM: move.b #0,obj_control(a1) at loc_2B23C when player leaves flipper.
      * Per-player so releasing Sonic does not disturb a still-locked Tails
      * (objoff_36 / objoff_37 are independent in s2.asm:58286-58295).
      */
     private void releaseLockedPlayer(AbstractPlayableSprite player) {
         Boolean prevSuppressed = lockedPlayerPrevSuppressed.remove(player);
+        Boolean prevPinballMode = lockedPlayerPrevPinballMode.remove(player);
         if (prevSuppressed != null) {
-            player.setControlLocked(false);
             ObjectControlState.setMovementSuppressionPreservingOwnership(
                     player, prevSuppressed);
-            player.setPinballMode(false);
+            player.setPinballMode(Boolean.TRUE.equals(prevPinballMode));
         }
     }
 
     private void suppressMovementForLockedPlayer(AbstractPlayableSprite player) {
         if (!lockedPlayerPrevSuppressed.containsKey(player)) {
             lockedPlayerPrevSuppressed.put(player, player.isObjectControlSuppressesMovement());
+            lockedPlayerPrevPinballMode.put(player, player.getPinballMode());
         }
         ObjectControlState.setMovementSuppressionPreservingOwnership(player, true);
     }

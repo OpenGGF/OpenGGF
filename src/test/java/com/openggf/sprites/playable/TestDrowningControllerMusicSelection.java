@@ -16,6 +16,7 @@ import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.game.GameRng;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
@@ -23,13 +24,21 @@ import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestDrowningControllerMusicSelection {
 
@@ -127,6 +136,61 @@ class TestDrowningControllerMusicSelection {
                 "same-frame air events must not consume the stale pending mouth-bubble RNG first");
     }
 
+    @Test
+    void s2CountdownResetStartsFromRomSidecarZeroTimer() throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
+        GameServices.level().resetState();
+
+        Sonic sonic = new Sonic("test", (short) 0, (short) 0);
+        sonic.setPhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        DrowningController controller = new DrowningController(sonic);
+        controller.reset();
+
+        assertEquals(0, getPrivateInt(controller, "frameTimer"));
+        assertFalse(controller.update());
+        assertEquals(29, getPrivateInt(controller, "remainingAir"),
+                "S2 Obj0A_Countdown starts from zero and runs its first air event immediately");
+        assertEquals(60, getPrivateInt(controller, "frameTimer"));
+    }
+
+    @Test
+    void s3kGenericCountdownFallbackKeepsFullSecondReset() throws Exception {
+        Sonic sonic = new Sonic("test", (short) 0, (short) 0);
+        sonic.setPhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        DrowningController controller = new DrowningController(sonic);
+        controller.reset();
+
+        assertEquals(60, getPrivateInt(controller, "frameTimer"));
+        assertFalse(controller.update());
+        assertEquals(30, getPrivateInt(controller, "remainingAir"));
+        assertEquals(59, getPrivateInt(controller, "frameTimer"));
+    }
+
+    @Test
+    void bubbleArtResolutionUsesRendererPresenceBeforeGpuCacheReadiness() throws Exception {
+        AudioManager audioManager = AudioManager.getInstance();
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.currentAudioManager()).thenReturn(audioManager);
+        DrowningController controller = new DrowningController(player);
+
+        LevelManager levelManager = mock(LevelManager.class);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+        when(renderManager.getRenderer(ObjectArtKeys.LZ_BUBBLES)).thenReturn(null);
+        when(renderManager.getRenderer(ObjectArtKeys.BUBBLES)).thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(false);
+
+        Method method = DrowningController.class.getDeclaredMethod("resolveBubbleConfig", LevelManager.class);
+        method.setAccessible(true);
+        method.invoke(controller, levelManager);
+
+        assertEquals(ObjectArtKeys.BUBBLES, getPrivateString(controller, "bubbleArtKey"),
+                "Obj0A allocation should not depend on GPU pattern-cache readiness");
+        verify(renderer, never()).isReady();
+    }
+
     private static void setPrivateInt(DrowningController controller, String fieldName, int value) throws Exception {
         Field field = DrowningController.class.getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -137,6 +201,12 @@ class TestDrowningControllerMusicSelection {
         Field field = DrowningController.class.getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(controller);
+    }
+
+    private static String getPrivateString(DrowningController controller, String fieldName) throws Exception {
+        Field field = DrowningController.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return (String) field.get(controller);
     }
 
     private static final class CapturingBackend implements AudioBackend {
@@ -244,5 +314,3 @@ class TestDrowningControllerMusicSelection {
         }
     }
 }
-
-

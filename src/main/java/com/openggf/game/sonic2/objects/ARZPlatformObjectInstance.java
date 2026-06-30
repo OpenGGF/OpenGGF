@@ -11,6 +11,7 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PlatformBobHelper;
@@ -97,7 +98,7 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         x = baseX;
 
-        boolean standing = isPlayerRiding();
+        boolean standing = hasAnyPlayerStandingLatch(playerEntity);
         if (routine == 2 || routine == 8) {
             bobHelper.update(standing);
         }
@@ -172,6 +173,11 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOutOfRangeReferenceX() {
+        return baseX;
+    }
+
+    @Override
     public int getBalanceWidthPixels() {
         return widthPixels;
     }
@@ -191,6 +197,14 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
+    }
+
+    @Override
+    public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
+        // Obj18 reads status(a0)&standing_mask before Obj18_Move/Obj18_Nudge,
+        // then PlatformObject clears status(a0)'s player bit on air/walk-off
+        // exits (docs/s2disasm/s2.asm:23219-23242,35737-35755).
+        return true;
     }
 
     private void init() {
@@ -288,6 +302,33 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
                 return false;
             }
         }
+    }
+
+    private boolean hasAnyPlayerStandingLatch(PlayableEntity player) {
+        ObjectManager om = services().objectManager();
+        if (om == null) {
+            return isPlayerRiding();
+        }
+        if (player != null && isRomVisibleStandingLatch(om, player)) {
+            return true;
+        }
+        for (PlayableEntity sidekick : services().sidekicks()) {
+            if (sidekick != null && isRomVisibleStandingLatch(om, sidekick)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isRomVisibleStandingLatch(ObjectManager om, PlayableEntity player) {
+        if (!om.hasObjectStandingBit(player, this)) {
+            return false;
+        }
+        // Obj18 reads status(a0)&standing_mask before PlatformObject, but
+        // PlatformObject keeps that bit paired with either an active on-object
+        // state or the one-frame airborne stale-rider clear path
+        // (docs/s2disasm/s2.asm:23219-23242, 35742-35755, 35990-36029).
+        return player.isOnObject() || player.getAir();
     }
 
     private void handleFallTrigger(boolean standing) {

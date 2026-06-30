@@ -80,6 +80,11 @@ public class BubbleObjectInstance extends AbstractObjectInstance
     // Whether this bubble has been breathed (collected)
     private boolean breathed;
 
+    // ROM render_flags bit 7 as observed by Obj24 after ObjectMove. Obj24_Init
+    // starts with render_flags=$84, so a just-allocated offscreen bubble survives
+    // one execution before the next Render_Sprites result can delete it.
+    private boolean romRenderOnScreen;
+
     /**
      * Creates a rising bubble at the specified position.
      *
@@ -99,6 +104,7 @@ public class BubbleObjectInstance extends AbstractObjectInstance
         this.wobbleAngle = wobbleAngle & 0xFF;
         this.bubbleSize = bubbleSize;
         this.breathed = false;
+        this.romRenderOnScreen = true;
 
         // Determine initial mapping frame based on size
         // ROM: Obj24_ChooseBubble selects frame 0-5 based on random
@@ -119,6 +125,7 @@ public class BubbleObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        boolean observedRomRenderOnScreen = romRenderOnScreen;
         if (breathed) {
             setDestroyed(true);
             return;
@@ -158,6 +165,12 @@ public class BubbleObjectInstance extends AbstractObjectInstance
                 }
             }
         }
+
+        if (!observedRomRenderOnScreen) {
+            setDestroyed(true);
+            return;
+        }
+        romRenderOnScreen = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
 
         // Check for player collision if this is a breathable bubble
         if (player != null && isBreathable()) {

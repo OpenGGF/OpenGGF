@@ -141,8 +141,9 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         registerSheet(ObjectArtKeys.SPRING_DIAGONAL_RED, artData.springDiagonalRedSheet());
         // Checkpoint star (same art as checkpoint, different mappings)
         registerSheet(ObjectArtKeys.CHECKPOINT_STAR, artData.checkpointStarSheet());
-        // Explosion, boss explosion, and Super Sonic stars are in PLCStdWtr (PLC 2),
-        // not zone PLCs, but the old code loaded them unconditionally for all zones.
+        // Explosion, boss explosion, and Super Sonic stars were historically loaded
+        // manually. The title-card teardown also requests PLCStdWtr, which carries
+        // the small breathing-bubble art used by Obj0A.
         registerSheet(ObjectArtKeys.EXPLOSION, artLoader.loadExplosionSheet());
         registerSheet(Sonic2ObjectArtKeys.BOSS_EXPLOSION, artLoader.loadBossExplosionSheet());
         registerSheet(Sonic2ObjectArtKeys.SUPER_SONIC_STARS, artLoader.loadSuperSonicStarsSheet());
@@ -156,6 +157,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         int[] plcIds = Sonic2PlcLoader.getZonePlcIds(rom, zoneIndex);
         loadPlcEntries(rom, Sonic2Constants.PLC_STD1);
         loadPlcEntries(rom, Sonic2Constants.PLC_STD2);
+        loadPlcEntries(rom, Sonic2Constants.PLC_STD_WATER);
         loadPlcEntries(rom, plcIds[0]);  // Zone primary PLC
         loadPlcEntries(rom, plcIds[1]);  // Zone secondary PLC
 

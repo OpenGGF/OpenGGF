@@ -121,7 +121,8 @@ public class DrowningController {
      */
     public void reset() {
         remainingAir = INITIAL_AIR;
-        frameTimer = FRAMES_PER_SECOND;
+        PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
+        frameTimer = fs != null ? fs.initialDrowningCountdownFrameTimer() : FRAMES_PER_SECOND;
         drowningMusicStarted = false;
         bubbleFlags = 0;
         bubblesRemainingInBurst = -1;
@@ -266,6 +267,10 @@ public class DrowningController {
      * @param countdownNumber Countdown number (-1 for regular bubble)
      */
     private void spawnBubble(int countdownNumber) {
+        spawnBubble(countdownNumber, true);
+    }
+
+    private void spawnBubble(int countdownNumber, boolean skipFirstUpdate) {
         LevelManager levelManager = player.currentLevelManagerIfAvailable();
         if (levelManager == null || levelManager.getObjectManager() == null) {
             return;
@@ -288,15 +293,21 @@ public class DrowningController {
 
         PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
         int riseVelocity = fs != null ? fs.mouthBubbleRiseVelocity() : -0x88;
+        boolean deferFirstPass = fs == null || fs.breathingBubbleDefersFirstObjectPass();
         boolean startsFacingLeft = player.getDirection() == Direction.LEFT;
 
         // Create bubble with game-specific art configuration
         BreathingBubbleInstance bubble = new BreathingBubbleInstance(
             bubbleX, bubbleY, startsFacingLeft, countdownNumber,
-            bubbleArtKey, bubbleCountdownFrames, bubbleMaxFrame, riseVelocity
+            bubbleArtKey, bubbleCountdownFrames, bubbleMaxFrame, riseVelocity,
+            skipFirstUpdate && deferFirstPass
         );
 
-        levelManager.getObjectManager().addDynamicObject(bubble);
+        if (deferFirstPass) {
+            levelManager.getObjectManager().addDynamicObjectNextFrame(bubble);
+        } else {
+            levelManager.getObjectManager().addDynamicObject(bubble);
+        }
     }
 
     /**
@@ -305,6 +316,16 @@ public class DrowningController {
      */
     public void spawnFixedCountdownBubble(int countdownNumber) {
         spawnBubble(countdownNumber);
+    }
+
+    /**
+     * S2's fixed Obj0A sidecars run after dynamic SST slots. Their visible
+     * child bubble therefore reaches its first dynamic Obj0A pass on the next
+     * RunObjects scan, without the extra skip needed by player-side early
+     * allocation paths.
+     */
+    public void spawnFixedCountdownBubble(int countdownNumber, boolean skipFirstUpdate) {
+        spawnBubble(countdownNumber, skipFirstUpdate);
     }
 
     /**
@@ -318,9 +339,10 @@ public class DrowningController {
             return;
         }
 
-        // Check for S1 bubble art (LZ_BUBBLES)
+        // Check for S1 bubble art (LZ_BUBBLES). Obj0A allocation is ROM object
+        // state, so it is keyed on loaded art metadata, not on GPU cache readiness.
         PatternSpriteRenderer s1Renderer = renderManager.getRenderer(ObjectArtKeys.LZ_BUBBLES);
-        if (s1Renderer != null && s1Renderer.isReady()) {
+        if (s1Renderer != null) {
             bubbleArtKey = ObjectArtKeys.LZ_BUBBLES;
             bubbleCountdownFrames = S1_COUNTDOWN_FRAMES;
             bubbleMaxFrame = S1_MAX_BUBBLE_FRAME;
@@ -329,7 +351,7 @@ public class DrowningController {
 
         // Check for S2 bubble art (BUBBLES)
         PatternSpriteRenderer s2Renderer = renderManager.getRenderer(ObjectArtKeys.BUBBLES);
-        if (s2Renderer != null && s2Renderer.isReady()) {
+        if (s2Renderer != null) {
             bubbleArtKey = ObjectArtKeys.BUBBLES;
             bubbleCountdownFrames = S2_COUNTDOWN_FRAMES;
             bubbleMaxFrame = S2_MAX_BUBBLE_FRAME;

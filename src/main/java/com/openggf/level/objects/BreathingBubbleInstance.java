@@ -65,11 +65,13 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
     private static final int COUNTDOWN_NUMBER_VISIBLE_UPDATES = 91;
 
     /**
-     * Drown_ChkWater does not delete a small bubble immediately at the water
-     * surface. It changes routine to Drown_Display, bumps the animation, and
-     * AnimateSprite advances to Drown_Delete on the following display tail.
+     * Obj0A_ChkWater does not delete a small bubble immediately at the water
+     * surface. It changes routine to Obj0A_Display and lets AnimateSprite run
+     * once before the delete script frees the slot.
+     *
+     * @see docs/s2disasm/s2.asm:41913-41921,41966-41980,30330-30346
      */
-    private static final int SURFACE_POP_DISPLAY_UPDATES = 2;
+    private static final int SURFACE_POP_DISPLAY_UPDATES = 1;
 
     /** Current X position */
     private int currentX;
@@ -104,6 +106,13 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
 
     /** Frames since spawn, used only for diagnostics. */
     private int lifetime;
+
+    /**
+     * Obj0A children allocated by the countdown controller exist in the SST on
+     * the allocation frame, but their own Obj0A_Init/Animate pass does not run
+     * until ExecuteObjects reaches the child slot on a later pass.
+     */
+    private boolean spawnFrameSkipPending;
 
     /** ROM Drown_Display tail after Drown_ChkWater detects the water surface. */
     private int surfacePopUpdatesRemaining;
@@ -142,6 +151,13 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
     public BreathingBubbleInstance(int x, int y, boolean startsFacingLeft, int countdownNumber,
                                    String artKey, int[] countdownFrameMap, int maxBubbleFrame,
                                    int riseVelocity) {
+        this(x, y, startsFacingLeft, countdownNumber, artKey, countdownFrameMap, maxBubbleFrame,
+                riseVelocity, true);
+    }
+
+    public BreathingBubbleInstance(int x, int y, boolean startsFacingLeft, int countdownNumber,
+                                   String artKey, int[] countdownFrameMap, int maxBubbleFrame,
+                                   int riseVelocity, boolean skipFirstUpdate) {
         super(buildSpawn(x, y, startsFacingLeft, countdownNumber, artKey, riseVelocity),
                 "BreathingBubble");
         this.currentX = x;
@@ -154,6 +170,7 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
         this.countdownFrame = 0;
         this.numberFormed = false;
         this.lifetime = 0;
+        this.spawnFrameSkipPending = skipFirstUpdate;
         this.artKey = artKey;
         this.countdownFrameMap = countdownFrameMap;
         this.maxBubbleFrame = maxBubbleFrame;
@@ -222,6 +239,11 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        if (spawnFrameSkipPending) {
+            spawnFrameSkipPending = false;
+            return;
+        }
+
         boolean observedRomRenderOnScreen = romRenderOnScreen;
         lifetime++;
 
@@ -246,9 +268,11 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
             if (waterSystem.hasWater(zoneId, actId)) {
                 int waterY = waterSystem.getGameplayWaterLevelY(zoneId, actId);
                 if (currentY <= waterY) {
-                    // docs/s1disasm/s1disasm/_incObj/0A LZ Drowning Countdown.asm:
-                    // Drown_ChkWater sets routine 6 and falls into Drown_Display;
-                    // Drown_Delete is reached after the display animation tail.
+                    // S2 Obj0A_ChkWater sets routine 6 and falls into
+                    // Obj0A_Display; the next AnimateSprite tail reaches
+                    // DeleteObject, freeing the SST slot before later
+                    // FindFreeObj scans (docs/s2disasm/s2.asm:41913-41921,
+                    // 41966-41980,30330-30346).
                     surfacePopUpdatesRemaining = SURFACE_POP_DISPLAY_UPDATES;
                     return;
                 }

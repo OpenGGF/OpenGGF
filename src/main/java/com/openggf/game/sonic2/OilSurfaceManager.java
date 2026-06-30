@@ -421,10 +421,13 @@ public class OilSurfaceManager {
         int friction = 4;
         int inertia = player.getGSpeed();
 
+        // ROM OilSlides copies Ctrl_1_Held_Logical/Ctrl_2_Held_Logical into d2
+        // before the player slot refreshes input (s2.asm:5537-5540).
+        // Use the published logical word, not the current raw pressed state.
         // ROM: Process left input (s2.asm:5602-5609)
         // sub.w d1,d0 / tst.w d0 / bpl.s + / sub.w d1,d0
         // Extra friction only when result is negative (already moving left or crossed zero)
-        if (player.isLeftPressed()) {
+        if (logicalLeftPressed(player)) {
             player.setAnimationId(Sonic2AnimationIds.WALK);
             player.setDirection(Direction.LEFT);
             inertia -= friction;
@@ -436,7 +439,7 @@ public class OilSurfaceManager {
         // ROM: Process right input (s2.asm:5611-5618)
         // add.w d1,d0 / tst.w d0 / bmi.s + / add.w d1,d0
         // Extra acceleration only when result is positive (already moving right or crossed zero)
-        if (player.isRightPressed()) {
+        if (logicalRightPressed(player)) {
             player.setAnimationId(Sonic2AnimationIds.WALK);
             player.setDirection(Direction.RIGHT);
             inertia += friction;
@@ -465,6 +468,14 @@ public class OilSurfaceManager {
 
         player.setGSpeed((short) inertia);
         player.setSliding(true);
+    }
+
+    private boolean logicalLeftPressed(AbstractPlayableSprite player) {
+        return (player.getLogicalInputState() & AbstractPlayableSprite.INPUT_LEFT) != 0;
+    }
+
+    private boolean logicalRightPressed(AbstractPlayableSprite player) {
+        return (player.getLogicalInputState() & AbstractPlayableSprite.INPUT_RIGHT) != 0;
     }
 
     /**

@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -143,12 +144,13 @@ public class SpikerBadnikInstance extends AbstractBadnikInstance implements Rewi
     }
 
     private boolean checkForThrow(AbstractPlayableSprite player) {
-        if (hasThrown || player == null || !isOnScreenX()) {
+        AbstractPlayableSprite target = closestNativePlayer(player);
+        if (hasThrown || target == null || !isOnScreenX()) {
             return false;
         }
 
-        int dx = currentX - player.getCentreX();
-        int dy = currentY - player.getCentreY();
+        int dx = currentX - target.getCentreX();
+        int dy = currentY - target.getCentreY();
 
         int adjustedDx = dx + DETECT_RANGE_X;
         if (adjustedDx < 0 || adjustedDx >= (DETECT_RANGE_X * 2)) {
@@ -164,6 +166,18 @@ public class SpikerBadnikInstance extends AbstractBadnikInstance implements Rewi
         state = State.THROW_PREP;
         throwTimer = THROW_TIMER_INIT;
         return true;
+    }
+
+    private AbstractPlayableSprite closestNativePlayer(AbstractPlayableSprite fallbackPlayer) {
+        var svc = tryServices();
+        if (svc == null) {
+            return fallbackPlayer;
+        }
+        var nearest = svc.playerQuery().nearestByRomX(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2, currentX);
+        return nearest != null && nearest.player() instanceof AbstractPlayableSprite sprite
+                ? sprite
+                : fallbackPlayer;
     }
 
     private void spawnDrill() {

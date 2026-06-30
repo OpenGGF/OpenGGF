@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -479,6 +480,23 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0; // No special property
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TouchResponseProvider.super.getTouchResponseProfile(multiRegionSource);
+    }
+
+    /**
+     * ROM parity: S2 {@code TouchResponse} reads {@code x_pos(a1)} and
+     * {@code y_pos(a1)} from the object SST when testing collision
+     * (docs/s2disasm/s2.asm:85075,85092). Obj14's sprite bounds are offset
+     * from that center position for drawing, so publish an explicit touch
+     * region at the ROM position instead of the sprite top-left.
+     */
+    @Override
+    public TouchRegion[] getMultiTouchRegions() {
+        return new TouchRegion[] { new TouchRegion(getCentreX(), getCentreY(), COLLISION_FLAGS) };
     }
 
     @Override

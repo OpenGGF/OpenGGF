@@ -222,8 +222,16 @@ public class CPZBossPipe extends AbstractObjectInstance implements RewindRecreat
             return;
         }
 
+        beginRetractFromPump();
+    }
+
+    void beginRetractFromPump() {
+        // Obj5D_Pipe_Pump_4 switches the control segment to Obj5D_Pipe_Retract
+        // with Obj5D_y_offset = $B*8 before deleting the pump head (s2.asm:62208).
         routine = ROUTINE_RETRACT;
+        routineSecondary = SUB_RETRACT;
         yOffset = 0x58;
+        retractFlag = false;
     }
 
     private void updateRetract() {
