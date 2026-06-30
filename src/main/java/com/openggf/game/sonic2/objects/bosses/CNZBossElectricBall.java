@@ -42,12 +42,13 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
     private static final int DELETE_Y = 0x705;
 
     // Animation constants
-    // Frame 17 = Map_obj51_0144 = 3x3 spiked ball (24x24 pixels)
-    // Frame 18 = Map_obj51_014E = 1x1 small orb 1 (8x8 pixels)
-    // Frame 19 = Map_obj51_0158 = 1x1 small orb 2 (8x8 pixels)
-    private static final int FRAME_SPIKED_BALL = 17;
-    private static final int FRAME_ORB_1 = 18;
-    private static final int FRAME_ORB_2 = 19;
+    // Obj51 preserves frame 0 as a null frame, so these are the ROM mapping_frame values.
+    // Frame $12 = Map_obj51_0144 = 3x3 spiked ball (24x24 pixels)
+    // Frame $13 = Map_obj51_014E = 1x1 small orb 1 (8x8 pixels)
+    // Frame $14 = Map_obj51_0158 = 1x1 small orb 2 (8x8 pixels)
+    private static final int FRAME_SPIKED_BALL = 0x12;
+    private static final int FRAME_ORB_1 = 0x13;
+    private static final int FRAME_ORB_2 = 0x14;
     private Sonic2CNZBossInstance mainBoss;
 
     // Position
