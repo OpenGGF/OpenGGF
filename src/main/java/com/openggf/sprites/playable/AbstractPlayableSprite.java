@@ -337,6 +337,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected int interactSlotIndex = -1;
 
         /**
+         * Engine-only interact marker for ROM support objects hosted by manager
+         * code instead of live {@code ObjectInstance}s. The latched object id
+         * remains the ROM id byte that CPU despawn logic re-dereferences.
+         */
+        public static final int SYNTHETIC_INTERACT_SLOT = -2;
+
+        /**
          * Set when {@code Player_SlopeRepel} slipped the player into air on the
          * current physics frame (sonic3k.asm:23929 {@code bset #Status_InAir}).
          * Cleared at the start of each player update tick. Used by per-object
@@ -1918,6 +1925,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 this.interactSlotIndex = slot;
                         }
                 }
+        }
+
+        /**
+         * Records a ROM support contact whose behaviour is hosted by a manager
+         * rather than an {@code ObjectInstance}. This preserves the
+         * {@code RideObject_SetRide} contract for later CPU despawn checks:
+         * the live dereference should read this ROM object id, while the
+         * specific SST slot is intentionally synthetic.
+         */
+        public void setSyntheticLatchedSolidObject(int latchedSolidObjectId) {
+                this.latchedSolidObjectId = latchedSolidObjectId & 0xFF;
+                this.latchedSolidObjectInstance = null;
+                this.interactSlotIndex = SYNTHETIC_INTERACT_SLOT;
         }
 
         /**
