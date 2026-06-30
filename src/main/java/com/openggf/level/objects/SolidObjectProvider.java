@@ -533,6 +533,11 @@ public interface SolidObjectProvider {
         return 0;
     }
 
+    default int staleHorizontalLogicalInputFramesWhileRiding(
+            PlayableEntity player, int rideFrames, boolean left, boolean right) {
+        return right && !left ? staleHorizontalLogicalInputFramesWhileRiding(player, rideFrames) : 0;
+    }
+
     /**
      * Whether full-solid lower-half overlap should use the player's current
      * y-radius rather than the standing y-radius.

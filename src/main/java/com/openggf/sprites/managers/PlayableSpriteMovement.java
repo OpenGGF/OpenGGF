@@ -286,11 +286,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		staleHorizontalInputRideFrames++;
-		if (right
-				&& !left
-				&& !staleHorizontalInputPreviousHorizontal) {
+		if (horizontal && !staleHorizontalInputPreviousHorizontal) {
 			staleHorizontalInputSuppressFrames =
-					provider.staleHorizontalLogicalInputFramesWhileRiding(sprite, staleHorizontalInputRideFrames);
+					provider.staleHorizontalLogicalInputFramesWhileRiding(sprite, staleHorizontalInputRideFrames, left, right);
 		}
 		staleHorizontalInputPreviousHorizontal = horizontal;
 

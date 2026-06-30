@@ -73,6 +73,8 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
     // From disassembly: move.b #4,objoff_3A(a0)
     private static final int WAYPOINT_STEP = 4;
 
+    private static final int STALE_LOGICAL_HORIZONTAL_FRAMES = 3;
+
     /**
      * Path waypoint tables from off_28252.
      * Each path is an array of (x_offset, y_offset) pairs relative to the base position.
@@ -365,6 +367,19 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
     public boolean isTopSolidOnly() {
         // Obj6C uses PlatformObject (JmpTo5_PlatformObject) - top-solid only
         return true;
+    }
+
+    @Override
+    public int staleHorizontalLogicalInputFramesWhileRiding(
+            PlayableEntity player, int rideFrames, boolean left, boolean right) {
+        /*
+         * Obj6C_Main moves the platform, restores the saved pre-move x_pos as d4, then
+         * jumps through PlatformObject. When Obj6C has horizontal displacement, that
+         * PlatformObject ride step can carry Sonic before Sonic_Move consumes
+         * Ctrl_1_Held_Logical for rider acceleration.
+         */
+        boolean inputOpposesHorizontalCarry = (xVel > 0 && left && !right) || (xVel < 0 && right && !left);
+        return inputOpposesHorizontalCarry ? STALE_LOGICAL_HORIZONTAL_FRAMES : 0;
     }
 
     @Override

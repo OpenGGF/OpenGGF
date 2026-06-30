@@ -6,6 +6,49 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 MTZ2 Obj6C horizontal carry opposing input (f8587 -> f8659)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz2-frontier-r4` /
+  `bugfix/ai-s2-mtz2-frontier-r4`, based on integration branch
+  `bugfix/ai-s2-trace-develop` at `8204ce87f`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Mtz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: MTZ2 f8587 / 705 (`x_speed` expected `0x0000`,
+  actual `-000C`).
+- Triage/evidence: f8587 has Sonic standing on Obj6C while the recorder's
+  V-int-aligned input row has newly pressed left. The ROM remains at zero
+  inertia for the first opposing-input frames while the platform carries Sonic
+  horizontally; applying the input immediately in replay produced
+  `x_speed=-000C`. A blanket Obj6C delay moved the trace backward to f334 on a
+  vertical-only pulley where the ROM accelerates immediately, so the accepted
+  predicate is the actual Obj6C horizontal carry opposing the new input.
+- Disassembly cited: Obj6C saves its old `x_pos`, runs its movement routine,
+  restores that old position as d4, then jumps to `PlatformObject`
+  (`docs/s2disasm/s2.asm:54777-54784`). Player control refresh copies
+  `Ctrl_1` into `Ctrl_1_Logical` before mode dispatch
+  (`docs/s2disasm/s2.asm:36233-36243`), and `Sonic_Move` accelerates from
+  `Ctrl_1_Held_Logical` rather than raw input
+  (`docs/s2disasm/s2.asm:36552-36568`).
+- Fix: `SolidObjectProvider` now exposes a direction-aware stale logical input
+  hook while preserving the legacy right-input behavior for existing providers.
+  Obj6C uses it only when its current horizontal velocity is nonzero and the
+  newly pressed direction opposes that horizontal carry. This is ROM
+  object/input state; no trace hydration, tolerance, route, frame, zone, or
+  known-failing-trace carve-out is used.
+- Focused trace:
+  `mvn "-Dtest=TestS2Mtz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; MTZ2 advances to f8659 / 429 (`x_speed` expected
+  `0x0200`, actual `-00BC`), a separate later Obj68/player-physics frontier.
+- Current S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: passed 10/10.
+- Practical red preservation set, excluding MTZ2 and active CNZ2/HTZ2/OOZ2
+  worktrees:
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero and preserved ARZ2 f1028 / 2686,
+  CPZ2 f5221 / 377, MTZ1 f5713 / 560, MTZ3 f4575 / 932,
+  and OOZ1 f1790 / 888.
+
 ## 2026-06-30 - S2 MTZ2 Obj70 hurt-sidekick side stop (f6650 -> f8587)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz2-frontier-r3` /
