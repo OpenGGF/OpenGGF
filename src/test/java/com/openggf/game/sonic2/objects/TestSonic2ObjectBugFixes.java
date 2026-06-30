@@ -342,6 +342,50 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void cpzStaircaseKeepsCpuTailsCurrentPushWhenFacingHigherAdjacentStep() {
+        CPZStaircaseObjectInstance staircase = new CPZStaircaseObjectInstance(
+                new ObjectSpawn(0x1510, 0x0702, Sonic2ObjectIds.CPZ_STAIRCASE, 0x01, 1, false, 0),
+                "CPZStaircase");
+        for (int frame = 0; frame < 0x20; frame++) {
+            staircase.update(frame, null);
+        }
+
+        TestablePlayableSprite tails = new TestablePlayableSprite(
+                "tails", (short) (staircase.getPieceX(1) - 5), (short) staircase.getPieceY(1));
+        tails.setCpuControlled(true);
+        tails.setDirection(Direction.LEFT);
+
+        assertTrue(staircase.preservesRidingPushStatus(tails),
+                "CPZ2 f5285 has Tails on the lower Obj78 child facing the higher child slot; "
+                        + "the ROM child SolidObject pass leaves Tails' current Status_Push visible "
+                        + "for TailsCPU_Normal's push bypass");
+        assertFalse(staircase.preservesSidekickDelayedLeaderPushWhileRiding(tails),
+                "When Obj78 already preserves Tails' current Status_Push, the delayed leader sample "
+                        + "must not also be forced to pushing or TailsCPU_Normal misses the auto-jump path");
+        assertTrue(staircase.preservesSidekickCpuPushGraceWhileRiding(tails),
+                "The same child-slot side contact supplies the ROM-visible current push grace when "
+                        + "the folded engine status was already cleared before TailsCPU_Normal");
+        assertTrue(staircase.usesSidekickCpuPushBypassObjectOrderStatusDelay(tails),
+                "TailsCPU_Normal must compare that current push against Obj78's object-order leader "
+                        + "status sample, not the final-frame status column");
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite(
+                "sonic", (short) (staircase.getPieceX(1) - 5), (short) staircase.getPieceY(1));
+        sonic.setDirection(Direction.LEFT);
+        assertTrue(staircase.preservesRidingPushStatus(sonic),
+                "The same folded child-slot push is visible to Sonic_Stat_Record_Buf when Sonic is "
+                        + "also pressed into the higher Obj78 child slot, as at CPZ2 f5221");
+
+        tails.setCentreX((short) (staircase.getPieceX(3) - 5));
+        assertTrue(staircase.preservesSidekickDelayedLeaderPushWhileRiding(tails),
+                "Later Obj78 child-slot contact still preserves the delayed leader push window that "
+                        + "keeps CPZ2 f5221 on the normal follow-steering path");
+        assertFalse(staircase.usesSidekickCpuPushBypassObjectOrderStatusDelay(tails),
+                "The f5221 later-child window must keep the final delayed leader push sample; only "
+                        + "the first-child f5285 handoff uses the object-order status byte");
+    }
+
+    @Test
     void mtzConveyorUsesPlatformObjectD3ForLandingSnap() {
         ConveyorObjectInstance conveyor = new ConveyorObjectInstance(
                 new ObjectSpawn(0x1720, 0x0519, Sonic2ObjectIds.CONVEYOR, 0x01, 0, false, 0),

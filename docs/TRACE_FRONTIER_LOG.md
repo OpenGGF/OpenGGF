@@ -6,6 +6,69 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CPZ2 Obj78 first-child push-bypass auto-jump (f5285 -> f5464)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r5` /
+  `bugfix/ai-s2-cpz2-frontier-r5`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at `fa2509b40`, then merged forward through
+  `78cb8d8bb` and `9853be498` before final verification.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: CPZ2 f5285 / 376 (`tails_x_speed` expected `-0018`,
+  actual `-0024`).
+- Triage/evidence: expanded CPZ2 context at f5285 showed ROM Tails leaving the
+  Obj78 staircase with `Status_InAir|Status_Roll|Status_XFlip` (`0x07`),
+  `y_vel=-$0680`, and unchanged `x_vel=-$0018`, while the engine stayed riding
+  Obj78 with `status=0x09` and accelerated to `x_vel=-$0024`. The CPU trace
+  identified the wrong branch: before the accepted fix, engine Tails used
+  `leader_on_object`; after the object-order status hook, it reached
+  `riding_push_grace` but still skipped the `$3F` auto-jump gate until
+  riding-object grace was included in the push-bypass auto-jump path. A broader
+  attempt that applied the object-order status sample to all Obj78 adjacent
+  child slots moved CPZ2 backward to f5221 (`tails_x_speed` expected `-000C`,
+  actual `0x0000`); the accepted hook is restricted to the first-child side
+  handoff and leaves the later-child delayed-leader bridge intact.
+- Disassembly cited: S2 `TailsCPU_Normal` loads delayed Sonic input/status from
+  `Sonic_Stat_Record_Buf`, tests Tails' current `Status_Push`, then tests the
+  delayed leader `Status_Push` and branches to
+  `TailsCPU_Normal_FilterAction_Part2` when only Tails is pushing
+  (`docs/s2disasm/s2.asm:39291-39300`). The target gate reads
+  `(Level_frame_counter+1).w`, masks `$3F`, rejects ducking, ORs A/B/C into
+  `Ctrl_2_Logical`, and sets `Tails_CPU_jumping`
+  (`docs/s2disasm/s2.asm:39369-39380`). Obj78 allocates the parent and three
+  children as separate SST slots (`docs/s2disasm/s2.asm:55967-55995`); each
+  child copies its Y offset from the parent, calls `SolidObject`, swaps `d6`,
+  and ORs the child contact byte into the parent accumulator
+  (`docs/s2disasm/s2.asm:56006-56021`).
+- Fix: `CPZStaircaseObjectInstance` now preserves folded Obj78 push state for
+  any adjacent child side, keeps the older delayed-leader push bridge only for
+  later child slots, and opts the first child into a new
+  `SolidObjectProvider.usesSidekickCpuPushBypassObjectOrderStatusDelay` hook.
+  `SidekickCpuController` uses that hook only for the delayed leader status byte
+  used by the push-bypass decision, and treats provider-approved riding-object
+  push grace as a direct push-bypass route to the auto-jump trigger gate. The
+  change models ROM object slot/contact timing; it does not hydrate trace data
+  or add tolerance, route, zone, frame, game-id, or known-failing-trace logic.
+- Focused unit check:
+  `mvn -q "-Dmse=off" "-Dtest=TestSonic2ObjectBugFixes#cpzStaircaseKeepsCpuTailsCurrentPushWhenFacingHigherAdjacentStep" "-DfailIfNoTests=false" test`
+  exited 0. The regression covers first-child current-push preservation,
+  object-order leader-status sampling, and later-child delayed-leader
+  preservation.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CPZ2 advanced to f5464 / 351
+  (`tails_x_speed` expected `0x00F4`, actual `0x007A`), a later Obj7A sideways
+  platform / sidekick movement frontier.
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Red preservation set on current integration:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686, CNZ2 f7156 / 738,
+  HTZ2 f4012 / 1031, MTZ1 f5713 / 560, MTZ2 f8825 / 366,
+  MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. No checked
+  red trace moved backward.
+
 ## 2026-06-30 - S2 MTZ2 Obj68 spike phase level counter (f8659 -> f8825)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz2-frontier-r5` /

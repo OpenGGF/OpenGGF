@@ -2030,6 +2030,9 @@ public class SidekickCpuController {
             recordedStatus |= AbstractPlayableSprite.STATUS_PUSHING;
         }
         byte pushBypassStatus = effectiveLeader.getStatusHistory(OBJECT_ORDER_INPUT_DELAY_FRAMES);
+        byte pushBypassLeaderStatus = usesSidekickCpuPushBypassObjectOrderStatusDelay(ridingObject)
+                ? pushBypassStatus
+                : recordedStatus;
         // ROM loads delayed Ctrl_1_Logical/status into d1/d4, then tests Tails'
         // current Status_Push before loc_13E9C. If current push is set and the
         // delayed status byte does not also have Status_Push, S2/S3K branch
@@ -2057,7 +2060,7 @@ public class SidekickCpuController {
         boolean frameStartStatusPush = sidekick.getPushingAtFrameStart();
         boolean frameStartPushBypass = frameStartStatusPush
                 && !rollingNonzeroGroundSpeedStalePush
-                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && isCurrentPushBypassContext(delayedObjectOrPushContext, dy);
         // Live Status_Push is the direct ROM branch in TailsCPU_Normal
         // (S2 s2.asm:39291-39294, S3K sonic3k.asm:26702-26705) and can skip
@@ -2078,7 +2081,7 @@ public class SidekickCpuController {
         // carrying an engine-stale push bit, not the ROM-visible status byte
         // tested by loc_13DD0.
         boolean currentPushBypass = (romVisibleCurrentStatusPush
-                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (!sidekick.isInWater()
                 || !restrictUnderwaterPushBypassToContactPulses
                 || delayedObjectOrPushContext
@@ -2091,7 +2094,7 @@ public class SidekickCpuController {
         boolean gracePushBypass = !sidekick.getAir()
                 && pushBypassGraceEnabled
                 && normalPushingGraceFrames > 0
-                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0;
         boolean localGracePushBypass = gracePushBypass
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
@@ -2103,7 +2106,7 @@ public class SidekickCpuController {
                 && !sidekick.getRolling()
                 && normalPushingGraceFrames >= sidekickCpuPushGraceMinimumFramesWhileRiding(ridingObject)
                 && normalPushingGraceFrames <= sidekickCpuPushGraceMaximumFramesWhileRiding(ridingObject)
-                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
                 && preservesSidekickCpuPushGraceWhileRiding(ridingObject);
@@ -2383,8 +2386,9 @@ public class SidekickCpuController {
         // remains an additional engine-side bridge for the same loc_13DD0 read.
         boolean autoJumpPushBypass =
                 ((currentStatusPush
-                        && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0)
-                        || objectOrderGrace);
+                        && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0)
+                        || objectOrderGrace
+                        || ridingObjectPushGrace);
         if (jumpingFlag && !autoJumpPushBypass) {
             inputJump = true;
             boolean delayedJumpOnly = (recordedInput & (AbstractPlayableSprite.INPUT_UP
@@ -2461,7 +2465,7 @@ public class SidekickCpuController {
             // 39300, 39369-39378). The preserved-roll flag only suppresses a
             // stale delayed jump hold below; it must not block the push-bypass
             // jump that launches Tails out of the stopper chamber.
-            boolean pushingBypass = currentPushBypass || objectOrderGrace;
+            boolean pushingBypass = currentPushBypass || objectOrderGrace || ridingObjectPushGrace;
             // resolveCpuFrameCounter() already yields the ROM-visible
             // Level_frame_counter: the per-frame sprite cadence is the
             // post-increment value, and bootstrap paths preload LevelManager with
@@ -2804,6 +2808,16 @@ public class SidekickCpuController {
         }
         if (ridingObject instanceof SolidObjectProvider provider) {
             return provider.usesSidekickCpuCurrentPushObjectOrderInputDelay(sidekick);
+        }
+        return false;
+    }
+
+    private boolean usesSidekickCpuPushBypassObjectOrderStatusDelay(ObjectInstance ridingObject) {
+        if (!hasLiveRidingObject(ridingObject)) {
+            return false;
+        }
+        if (ridingObject instanceof SolidObjectProvider provider) {
+            return provider.usesSidekickCpuPushBypassObjectOrderStatusDelay(sidekick);
         }
         return false;
     }

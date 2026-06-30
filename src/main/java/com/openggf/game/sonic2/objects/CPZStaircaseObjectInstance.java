@@ -181,10 +181,10 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
             return false;
         }
         // Obj78's four adjacent pieces are separate ROM solid slots. Preserve
-        // the ordinary folded push bit only when the rider faces the lower
-        // neighbouring step; broader CPU slot timing is handled by the
-        // sidekick-specific grace hook below.
-        return isFacingAdjacentStepSide(playerEntity, true);
+        // the folded push bit when the rider faces any neighbouring step side:
+        // child SolidObject slots can leave the current Status_Push bit visible
+        // before TailsCPU_Normal samples Tails and the delayed leader status.
+        return isFacingAdjacentStepSide(playerEntity, false);
     }
 
     @Override
@@ -198,8 +198,7 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
         // later lower-step windows.
         return playerEntity != null && playerEntity.isCpuControlled()
                 && yOffsets[0] != 0
-                && isFacingAdjacentStepSide(playerEntity, false)
-                && !preservesRidingPushStatus(playerEntity);
+                && isFacingAdjacentStepSide(playerEntity, false);
     }
 
     @Override
@@ -208,15 +207,31 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesSidekickCpuPushBypassObjectOrderStatusDelay(PlayableEntity playerEntity) {
+        // Obj78's child SolidObject status can be visible to TailsCPU_Normal at
+        // the adjacent object-order status sample even when the final frame
+        // trace has the leader pushing on the staircase. This lets the first
+        // child-side case branch like ROM without extending the delayed leader
+        // push bridge into CPZ2 f5285.
+        return playerEntity != null && playerEntity.isCpuControlled()
+                && yOffsets[0] != 0
+                && nearestPieceIndex(playerEntity.getCentreX()) == 1
+                && isFacingAdjacentStepSide(playerEntity, false);
+    }
+
+    @Override
     public boolean preservesSidekickDelayedLeaderPushWhileRiding(PlayableEntity playerEntity) {
         // Obj78 runs as four separate SST slots: the parent plus three children
         // allocated after it (docs/s2disasm/s2.asm:55967-55995). Each child calls
         // SolidObject and ORs its contact bits back into the parent accumulator
         // (docs/s2disasm/s2.asm:56006-56021), so TailsCPU_Normal's delayed
-        // Sonic_Stat_Record_Buf sample can still see a child-slot push while the
-        // folded engine object has already reconciled the visible parent state.
+        // Sonic_Stat_Record_Buf sample can still see later child-slot push bits
+        // while the folded engine object has already reconciled the visible
+        // parent state. The first child side has already aged out of that delayed
+        // leader window in CPZ2 f5285; keep the bridge to the later child slots.
         return playerEntity != null && playerEntity.isCpuControlled()
-                && yOffsets[0] != 0;
+                && yOffsets[0] != 0
+                && nearestPieceIndex(playerEntity.getCentreX()) >= 2;
     }
 
     private boolean isFacingAdjacentStepSide(PlayableEntity playerEntity, boolean requireLowerNeighbor) {
