@@ -6,6 +6,23 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 round-8 merged sweep baseline
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next`, after merging
+  `bugfix/ai-s2-ooz1-f1803-round8` and
+  `bugfix/ai-s2-mtz3-f7853-round8`.
+- Sweep command:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+- Result: expected nonzero; 19 S2 traces run, 13 green, 6 expected-red.
+  Remaining red frontiers:
+  - ARZ2 f1294 / 2396 (`obj_extra_s11_x` expected absent, actual `0x0F3F`).
+  - CNZ2 f9487 / 288 (`g_speed` expected `0x0000`, actual `0x0100`).
+  - HTZ2 f5002 / 690 (`tails_cpu_ctrl2_held` expected `0x0000`, actual `0x0010`).
+  - MTZ3 f9035 / 863 (`x` expected `0x1BDD`, actual `0x1BD9`).
+  - OOZ1 f1813 / 1062 (`tails_x` expected `0x0CE4`, actual `0x0CE3`).
+  - OOZ2 f9302 / 401 (`tails_g_speed` expected `0x0000`, actual `0x00BC`).
+
 ## 2026-06-30 - S2 OOZ1 Obj36 late-edge CPU push grace (f1803 -> f1813)
 
 - Worktree/branch: `.worktrees/ai-s2-ooz1-f1803-round8` /
