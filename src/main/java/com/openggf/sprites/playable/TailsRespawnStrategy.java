@@ -265,6 +265,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         sidekick.setPushing(false);
         sidekick.setLatchedSolidObjectId(0);
         sidekick.setAir(true);
+        sidekick.setDirection(Direction.RIGHT);
         sidekick.setCentreXPreserveSubpixel((short) 0);
         sidekick.setCentreYPreserveSubpixel((short) 0);
         sidekick.setForcedAnimationId(flyAnimId);
