@@ -6,6 +6,65 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 MTZ2 Obj41 spring inclusive right edge (f8825 -> f11277)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz2-frontier-r6` /
+  `bugfix/ai-s2-mtz2-frontier-r6`, created from integration branch
+  `bugfix/ai-s2-trace-develop` after the MTZ2 r5 merge at `9853be498`, then
+  merged forward through CPZ2 r5 (`56b44a392`), CNZ2 r7 (`e9f399488`), and
+  CPZ2 r6 (`bba3372ce`) before final verification.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Mtz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix on current integration: MTZ2 f8825 / 366
+  (`tails_cpu_ctrl2_held` expected `0x0008`, actual `0x0018`).
+- Triage/evidence: expanded context around f8824/f8825 showed ROM Tails
+  landing beside Obj41 slot 38 at `$1914,$060C` with `tails_status=$21` and
+  the object's P2 pushing bit set (`status=$40`) before `TailsCPU_Normal`
+  read the live sidekick status. The engine matched Tails' position, subpixels,
+  velocity, and ground state at `$192F,$0600`, but reported the nearby spring as
+  `no-touch` and kept `Status_Push` clear. The failing CPU frame then missed
+  the live-push bypass and carried the previous jump button, producing
+  `Ctrl_2_Held=$0018` instead of the ROM's `$0008`. The geometry is the exact
+  right edge for an up spring: Obj41_Up passes `d1=$1B`, so
+  `x_pos(Tails)-x_pos(Obj41)+d1 = $36 = 2*d1`. ROM accepts that value because
+  `SolidObject_cont` rejects only `bhi` (`>`), while the engine had limited the
+  inclusive edge to horizontal springs.
+- Disassembly cited: Obj41_Up loads `d1=$1B`, `d2=8`, `d3=$10` and calls
+  `SolidObject_Always_SingleCharacter` for both MainCharacter and Sidekick
+  (`docs/s2disasm/s2.asm:33898-33916`). Obj41_Horizontal and Obj41_Down use
+  the same SolidObject helper shape for their non-sloped spring contact paths
+  (`docs/s2disasm/s2.asm:33973-34000,34151-34167`). `SolidObject_cont` computes
+  `relX = x_pos(a1)-x_pos(a0)+d1`, doubles `d1` for width, and branches to the
+  no-contact path only with `bhi` after `cmp.w d3,d0`, making `relX == 2*d1`
+  valid (`docs/s2disasm/s2.asm:35347-35354`). The accepted side path sets the
+  object pushing bit and player `status.player.pushing`
+  (`docs/s2disasm/s2.asm:35438-35445`). `TailsCPU_Normal` then tests Tails'
+  current pushing bit and the delayed leader pushing bit before branching to
+  `TailsCPU_Normal_FilterAction_Part2`; without that branch it reaches the
+  jump-latch carry path (`docs/s2disasm/s2.asm:39297-39300,39349-39354`).
+- Fix: `SpringObjectInstance.usesInclusiveRightEdge()` now returns true for
+  the shared S2 spring solid profile instead of only `TYPE_HORIZONTAL`. This
+  models the ROM `SolidObject_cont` boundary check used by Obj41's solid
+  helper paths; it does not edit trace data, add tolerance, or add route, frame,
+  zone, game-id, or known-failing carve-outs.
+- Focused unit check:
+  `mvn -q "-Dmse=off" "-Dtest=TestSpringObjectInstance" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0. The added regression covers Obj41_Up at `relX == 2*d1` setting
+  `Status_Push`.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Mtz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; MTZ2 advanced to f11277 / 200 (`y` expected
+  `0x0368`, actual `0x036D`), a later player vertical-position frontier.
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Red preservation set on current integration:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686, CNZ2 f7984 / 680,
+  CPZ2 f5494 / 352, HTZ2 f4012 / 1031, MTZ1 f5713 / 560,
+  MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. No checked red
+  trace moved backward.
+
 ## 2026-06-30 - S2 CNZ2 S2 pinball-mode rolling jump gate (f7156 -> f7984)
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r7` /
