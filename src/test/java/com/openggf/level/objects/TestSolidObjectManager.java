@@ -307,6 +307,13 @@ public class TestSolidObjectManager {
         assertTrue(manager.isRidingObject(sidekick));
         assertTrue(manager.hasGroundingObjectSupport(sidekick));
 
+        sidekick.setOnObject(true);
+        sidekick.setAir(true);
+        sidekick.setYSpeed((short) 0x0038);
+        assertFalse(manager.hasGroundingObjectSupport(sidekick),
+                "A stale airborne SolidObject standing bit is not active grounding support because "
+                        + "the helper returns before SolidObject_cont (s2.asm:35028-35046)");
+
         sidekick.setRenderFlagOnScreen(false);
         sidekick.setOnObject(true);
         sidekick.setAir(true);
@@ -1755,6 +1762,11 @@ public class TestSolidObjectManager {
 
         @Override
         public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+            return true;
+        }
+
+        @Override
+        public boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
             return true;
         }
     }

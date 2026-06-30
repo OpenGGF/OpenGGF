@@ -1896,12 +1896,15 @@ final class ObjectSolidContactController {
         if (ridingObject != null) {
             // S2 SolidObject gates Player_2 on render_flags.on_screen before
             // testing the object's standing bit or reaching SolidObject_cont
-            // (docs/s2disasm/s2.asm:35022-35031). The stale offscreen latch
-            // survives for Obj69's action pass, but it is not active grounding.
+            // (docs/s2disasm/s2.asm:35022-35031). Obj69-style tails can also
+            // opt their stale airborne branch out of pre-movement grounding
+            // when the standard SolidObject cleanup has not run yet
+            // (docs/s2disasm/s2.asm:35028-35046,54006-54013).
             if (player.getAir()
-                    && shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)
                     && ridingObject instanceof SolidObjectProvider provider
-                    && provider.airborneStaleStandingBitReturnsNoContact(player)) {
+                    && provider.airborneStaleStandingBitReturnsNoContact(player)
+                    && (shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)
+                            || provider.suppressesGroundingRecoveryFromAirborneStaleRide(player))) {
                 return false;
             }
             return true;

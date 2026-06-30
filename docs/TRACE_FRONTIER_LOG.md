@@ -6,6 +6,56 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 MTZ1 Obj69 stale airborne grounding recovery (f5713 -> f7906)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz1-frontier-r3` /
+  `bugfix/ai-s2-mtz1-frontier-r3`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at accepted HEAD `3daed8e4b`, merged through
+  accepted integration `aa77abe09`, then merged to current integration
+  `4221b6065` before final verification.
+- Baseline reproduction:
+  `mvn "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2MtzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: MTZ1 f5713 / 560 (`tails_y_speed` expected
+  `0x0ED0`, actual `0x0000`).
+- Triage/evidence: around f5713 ROM Tails is already airborne after the Obj69
+  nut's stale rider branch, with `Status_InAir` set and `Status_OnObj` cleared,
+  while the engine's pre-movement recovery converted the stale riding record
+  back into ground support and zeroed `y_vel` before Obj69's own late
+  `SolidObject` tail could consume the latch. The trace context showed Tails
+  still riding Obj69 slot 38 at `$16C0,$04C1` with `y_vel=$0E98` pre-physics
+  and `y_vel=$0000` post-physics; the ROM keeps the fall and reaches the next
+  frame with `y_vel=$0ED0`.
+- Disassembly cited: Obj69 runs its action pass for MainCharacter and Sidekick
+  before tail-calling `SolidObject` (`docs/s2disasm/s2.asm:53996-54014`).
+  `SolidObject` tests the object's standing bit first; when the player is
+  already airborne, it clears `Status_OnObj`, sets `Status_InAir`, clears the
+  object's standing bit, sets `d4=0`, and returns before `SolidObject_cont`
+  can make a new landing (`docs/s2disasm/s2.asm:35028-35046`). Obj69's action
+  itself clears its action mode when its standing bit is clear
+  (`docs/s2disasm/s2.asm:54017-54025`).
+- Fix: `SolidObjectProvider` now has a narrow opt-in for objects whose stale
+  airborne ride latch must be excluded from pre-movement grounding recovery.
+  `NutObjectInstance` opts Obj69 into that hook while preserving the existing
+  stale-standing no-contact behavior. This models object routine timing and
+  status bits; it does not edit trace data, add tolerance, hydrate/sync from
+  trace data, or add route, frame, zone, game-id, or known-failing carve-outs.
+- Focused coverage:
+  `mvn clean test "-Dmse=relaxed" "-Dtest=com.openggf.level.objects.TestSolidObjectManager#s2OffscreenSidekickStaleRideLatchIsNotGroundingSupport,com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#nutOffscreenSidekickSolidObjectGateReturnsNoContact" "-DfailIfNoTests=false"`.
+  Result: exits 0.
+- Focused target after integration `4221b6065`:
+  `mvn test "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2MtzLevelSelectTraceReplay" "-DfailIfNoTests=false"`.
+  Result: expected nonzero; MTZ1 advances to f7906 / 407 (`x` expected
+  `0x18BB`, actual `0x18C0`).
+- Current S2 green guard:
+  `mvn clean test "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false"`.
+  Result: exits 0; 11 selected S2 green traces passed.
+- Red preservation set:
+  `mvn clean test "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dmaven.test.failure.ignore=true"`.
+  Result: exits 0 with expected red failures ignored and preserves ARZ2 f1028 /
+  2686, CNZ2 f8870 / 447, CPZ2 f9781 / 123, HTZ2 f4165 / 1129, MTZ3 f7853 /
+  864, OOZ1 f1795 / 1058, and OOZ2 f3919 / 1117. MTZ1 is the only moved red
+  frontier in the set, now f7906 / 407.
+
 ## 2026-06-30 - S2 HTZ2 Obj18 grounded stale standing latch filter (f4138 -> f4165)
 
 - Worktree/branch: `.worktrees/ai-s2-htz2-frontier-r7` /

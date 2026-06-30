@@ -167,9 +167,14 @@ class TestSonic2TriggerParticipation {
                         + "the CPU sidekick render_flags.on_screen bit is clear (s2.asm:54006-54013, 35022-35025)");
 
         tails.setRenderFlagOnScreen(true);
-        assertFalse(nut.airborneStaleStandingBitReturnsNoContact(tails),
-                "On-screen Obj69 contacts still run the regular SolidObject path");
+        assertTrue(nut.airborneStaleStandingBitReturnsNoContact(tails),
+                "Obj69's native P2 SolidObject tail consumes a stale airborne standing bit "
+                        + "before SolidObject_cont even when Tails is on-screen (s2.asm:54006-54013, 35028-35046)");
+        assertTrue(nut.suppressesGroundingRecoveryFromAirborneStaleRide(tails),
+                "Obj69's late SolidObject tail must keep stale airborne ride latches out of "
+                        + "pre-movement grounding recovery (s2.asm:54006-54013, 35028-35046)");
         assertFalse(nut.airborneStaleStandingBitReturnsNoContact(null));
+        assertFalse(nut.suppressesGroundingRecoveryFromAirborneStaleRide(null));
     }
 
     @Test

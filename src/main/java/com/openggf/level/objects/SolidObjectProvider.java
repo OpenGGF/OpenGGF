@@ -183,6 +183,21 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a stale riding record that would be consumed by this object's
+     * airborne standing-bit branch is also ineligible for pre-movement
+     * ground-recovery support.
+     * <p>
+     * Most objects that opt into {@link #airborneStaleStandingBitReturnsNoContact}
+     * still use the engine riding record as the best available live-support
+     * signal before their own solid pass runs. Obj69-style callers can opt in
+     * when the ROM object tail reaches standard {@code SolidObject} late enough
+     * that the stale airborne branch must be visible to player movement first.
+     */
+    default boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether a continued-ride exit clears this object's standing bit immediately.
      * <p>
      * Default remains false for existing folded/custom solid profiles whose
