@@ -119,6 +119,24 @@ branch-local measurements.
   CPZ2 f5494 / 352, HTZ2 f4136 / 1024, MTZ1 f5713 / 560,
   MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. No checked red
   trace moved backward.
+- Composed integration verification after merging CPZ2 r7 and this MTZ2 r7
+  into `bugfix/ai-s2-trace-develop` at `12582be98`:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSpiralObjectInstance,TestS2Mtz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0; MTZ2 remains green and focused Obj06 coverage passes.
+- Composed S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Composed red preservation set:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686, CNZ2 f7984 / 680,
+  CPZ2 f5578 / 323, HTZ2 f4136 / 1024, MTZ1 f5713 / 560,
+  MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117.
+- Full S2 composed sweep:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected with 19 tests run, 8 failures, 0 errors: ARZ2 f1028 /
+  2686, CNZ2 f7984 / 680, CPZ2 f5578 / 323, HTZ2 f4136 / 1024,
+  MTZ1 f5713 / 560, MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 /
+  1117. MTZ2 is green.
 
 ## 2026-06-30 - S2 HTZ2 ride-transfer standing bit clear (f4012 -> f4136)
 
