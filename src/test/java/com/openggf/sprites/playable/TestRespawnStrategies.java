@@ -14,6 +14,8 @@ import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SolidTile;
 import com.openggf.level.WaterSystem;
+import com.openggf.physics.Direction;
+import com.openggf.trace.TraceCharacterState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -127,6 +129,28 @@ class TestRespawnStrategies {
         KnucklesRespawnStrategy strategy = new KnucklesRespawnStrategy(ctrl);
         // beginApproach always returns true for Knuckles
         assertTrue(strategy.beginApproach(sk, main));
+    }
+
+    @Test
+    void tailsS2FlyingTimeoutClearsFacingBit() {
+        TestableSprite sk = new TestableSprite("tails_p2");
+        TestableSprite main = new TestableSprite("sonic");
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        TailsRespawnStrategy strategy = new TailsRespawnStrategy(ctrl);
+        main.prefillPositionHistoryWithCentre((short) 0, (short) 1000);
+        sk.setDirection(Direction.LEFT);
+        sk.setAir(true);
+        sk.setRenderFlagOnScreen(false);
+
+        for (int i = 0; i < 300; i++) {
+            assertFalse(strategy.updateApproaching(sk, main, i),
+                    "S2 off-screen flying timeout should stay in the approach/spawning loop");
+        }
+
+        assertEquals(0, sk.getCentreX());
+        assertEquals(0, sk.getCentreY());
+        assertEquals(0x02, TraceCharacterState.statusByteFromSprite(sk),
+                "S2 TailsCPU_Flying timeout writes status=Status_InAir, clearing the facing bit");
     }
 
     @Test

@@ -6,6 +6,51 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 MTZ2 Tails flying-timeout status clear (f4375 -> f6650)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz2-frontier-r2` /
+  `bugfix/ai-s2-mtz2-frontier-r2`, based on integration head `341b53088`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: MTZ2 f4375 / 950 (`tails_status_byte` expected
+  `0x0002`, actual `0x0003`).
+- Triage/evidence: `TraceTriageTool` confirmed the first divergence was the
+  same f4375 Tails status-byte mismatch:
+  `mvn "-Dmse=off" exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=s2 mtz2"`.
+  Engine diagnostics showed the normal S2 CPU despawn marker reached
+  `status=0x02`, `x_pos=$4000`, but the compared trace frame had already
+  transitioned through the S2 `TailsCPU_Flying` off-screen timeout path:
+  `x_pos=$0000`, `status=0x03`. That path was preserving the stale LEFT
+  facing bit from the approach state while writing the hidden timeout marker.
+- Disassembly cited: `TailsCPU_Flying` increments
+  `Tails_respawn_counter` while off-screen; on timeout it writes
+  `Tails_CPU_routine=2`, `obj_control=$81`,
+  `status(a0)=Status_InAir`, `x_pos=0`, `y_pos=0`, and Fly animation
+  (`docs/s2disasm/s2.asm:39142-39155`).
+- Fix: `TailsRespawnStrategy.handleS2FlyingOffscreenTimeout` now clears the
+  sidekick facing bit when the ROM writes `Status_InAir`, by forcing the
+  neutral/right direction before the hidden marker coordinates are written.
+  No trace hydration, tolerance band, route, frame, or zone carve-out is
+  used.
+- Focused regression check:
+  `mvn "-Dtest=com.openggf.sprites.playable.TestRespawnStrategies#tailsS2FlyingTimeoutClearsFacingBit" test`.
+  Result: passed 1/1.
+- Focused trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; MTZ2 advances to f6650 / 949
+  (`tails_x_speed` expected `0x0000`, actual `-0200`), a separate later
+  sidekick movement frontier.
+- MTZ neighbor and green-guard sweep:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero from accepted reds only. MTZ1 remains f5713 / 560;
+  MTZ3 remains f4575 / 932. ARZ1, CNZ1, DEZ ending, EHZ1, HTZ1, MCZ1,
+  MCZ2, SCZ, and WFZ passed.
+- Broader red preservation sweep:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; all accepted first-error frontiers were preserved:
+  ARZ2 f1028 / 2687, CNZ2 f6144 / 994, CPZ1 f4547 / 177, CPZ2 f4018 /
+  1334, HTZ2 f3618 / 999, OOZ1 f1790 / 614, and OOZ2 f3835 / 797.
+
 ## 2026-06-30 - S2 MTZ3 Obj6E dead-sidekick stale standing clear (f3618 -> f4575)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz3-frontier-r2` /
