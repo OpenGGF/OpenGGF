@@ -217,6 +217,15 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean requiresRenderFlagForTouch() {
+        // S2 Touch_Loop branches only on collision_flags(a1)
+        // (docs/s2disasm/s2.asm:85048-85054). Obj68's render flag check
+        // gates only the spike movement SFX (s2.asm:53828-53831), while the
+        // child keeps collision_flags from Obj68_CollisionFlags.
+        return false;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager == null) {
