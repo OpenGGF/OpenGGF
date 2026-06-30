@@ -174,6 +174,65 @@ branch-local measurements.
   1049, MTZ1 f8655 / 53, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2
   f3993 / 749.
 
+## 2026-06-30 - S2 CNZ2 Obj86 cooldown no longer skips flipper standing maintenance (f9117 -> f9183)
+
+- Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r12` /
+  `bugfix/ai-s2-cnz2-frontier-r12`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at `832cf928f`, fast-forwarded through
+  `c8a3cf217`, `2a932d405`, `6b82175cc`, `224f25a35`, `7171992e`, and
+  finally conductor integration `ee41957a` before final verification.
+- Baseline reproduction before the fix:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: CNZ2 f9117 / 386 (`y` expected `0x0686`, actual `0x0681`).
+- Triage/evidence: at f9117 ROM Sonic lands on Obj86 slot 18 at
+  `$2910,$06A8`, is no longer airborne, and is rolling at `y=$0686`. Engine
+  diagnostics showed the same top contact, but generic sloped-solid landing had
+  already cleared rolling and seated Sonic at `y=$0681`. A throwaway stack trace
+  confirmed the roll clear came from the shared object-landing path; filtered
+  Obj86 diagnostics then showed `applyCheckpointContact` returning before
+  Obj86's first-stand branch because `launchCooldown` was still nonzero from the
+  prior flipper launch.
+- Disassembly cited: `Obj86_UpwardsType` calls `SlopedSolid` and then always
+  runs `loc_2B20A` for MainCharacter and Sidekick
+  (`docs/s2disasm/s2.asm:58327-58352`). `loc_2B20A` first checks Obj86's
+  per-player state byte; when clear and the object standing bit is set, it sets
+  `obj_control`, writes rolling radii/animation, sets `Status_Roll`, adds a
+  fixed `+5` to `y_pos` only when newly rolling, and increments the state byte
+  (`docs/s2disasm/s2.asm:58371-58386`). Once the state byte is nonzero,
+  `loc_2B23C` falls through to `loc_2B254` and writes the slide `x_pos`,
+  `x_vel`, `inertia`, and zero `y_vel` while the standing bit remains set
+  (`docs/s2disasm/s2.asm:58389-58411`). The generic sloped-solid landing path
+  can call `RideObject_SetRide`, which calls `Sonic_ResetOnFloor_Part2`; that
+  reset clears rolling and subtracts five from `y_pos` before Obj86's own
+  standing branch reapplies the flipper roll state
+  (`docs/s2disasm/s2.asm:35986-36025,38128-38140`).
+- Fix: `FlipperObjectInstance.applyCheckpointContact()` no longer returns early
+  from all Obj86 standing maintenance while the per-player launch cooldown is
+  active. The cooldown now only gates the horizontal launch trigger and the
+  already-existing vertical launch pass. This lets the vertical first-stand and
+  slide branches run every Obj86 update like the ROM, without changing trace
+  data, weakening tolerances, hydrating engine state from traces, or adding a
+  route/frame/zone carve-out.
+- Focused target after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CNZ2 advances to f9183 / 441
+  (`tails_x_speed` expected `0x0000`, actual `0x0200`).
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; 11 selected S2 green traces passed.
+- Updated red preservation set after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`.
+  Result: expected nonzero and preserves ARZ2 f1028 / 2686, CPZ2 f10601 /
+  74, HTZ2 f4387 / 1049, MTZ1 f8655 / 53, MTZ3 f7853 / 864, OOZ1 f1803 /
+  1067, and OOZ2 f3993 / 749. CNZ2 is the only moved red frontier in this
+  worker change, now f9183 / 441.
+- Full S2 sweep after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; 19 S2 traces run, 11 green, 8 expected red:
+  ARZ2 f1028 / 2686, CNZ2 f9183 / 441, CPZ2 f10601 / 74, HTZ2 f4387 /
+  1049, MTZ1 f8655 / 53, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2
+  f3993 / 749.
+
 ## 2026-06-30 - S2 MTZ1 Obj69 stale P1 standing-bit snap (f7906 -> f8655)
 
 - Worktree/branch: `.worktrees/trace-s2-mtz1-r14` /

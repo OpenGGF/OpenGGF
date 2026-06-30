@@ -151,12 +151,6 @@ public class FlipperObjectInstance extends BoxObjectInstance
         if (player == null || result == null) {
             return;
         }
-        // ROM parity: cooldown is per-player (objoff_36/37 are independent
-        // bytes in s2.asm).  Skip launch only when THIS player just got
-        // launched, not when the other character did.
-        if (launchCooldown.getOrDefault(player, 0) > 0) {
-            return;
-        }
 
         // If player entered debug mode while on the flipper, reset flipper state
         if (player.isDebugMode() && playerFlipperState.getOrDefault(player, 0) != 0) {
@@ -167,7 +161,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
         if (isHorizontal()) {
             // Horizontal flipper: launch on push (loc_2B35C)
-            if (result.pushingNow()) {
+            if (result.pushingNow() && launchCooldown.getOrDefault(player, 0) <= 0) {
                 applyHorizontalLaunch(player);
             }
         } else {
