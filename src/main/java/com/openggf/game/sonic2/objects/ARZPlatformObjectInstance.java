@@ -173,6 +173,11 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOutOfRangeReferenceX() {
+        return baseX;
+    }
+
+    @Override
     public int getBalanceWidthPixels() {
         return widthPixels;
     }

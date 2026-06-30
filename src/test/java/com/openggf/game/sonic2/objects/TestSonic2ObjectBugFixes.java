@@ -354,6 +354,17 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void genericPlatformOutOfRangeUsesStoredOriginX() throws Exception {
+        ARZPlatformObjectInstance platform = new ARZPlatformObjectInstance(
+                new ObjectSpawn(0x1940, 0x06C8, Sonic2ObjectIds.GENERIC_PLATFORM_A, 0x01, 0, false, 0x06C8),
+                "GenericPlatform");
+        setIntField(platform, "x", 0x190D);
+
+        assertEquals(0x1940, platform.getOutOfRangeReferenceX(),
+                "Obj18_Despawn checks obj18_x_origin, not moving x_pos(a0), before deleting");
+    }
+
+    @Test
     void largeRotPformOutOfRangeUsesStoredBaseX() throws Exception {
         LargeRotPformObjectInstance platform = new LargeRotPformObjectInstance(
                 new ObjectSpawn(0x0BC0, 0x06C0, Sonic2ObjectIds.LARGE_ROT_PFORM, 0x20, 1, false, 0x26C0),
