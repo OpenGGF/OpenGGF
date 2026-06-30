@@ -309,7 +309,15 @@ public class NutObjectInstance extends AbstractObjectInstance
         }
         try {
             ObjectManager objectManager = services().objectManager();
-            return objectManager != null && objectManager.hasObjectStandingBit(player, this);
+            // Obj69_Action reads the object's standing bit, but S2 SolidObject
+            // clears both Status_OnObj and that bit on a continued-ride exit.
+            // CPU Tails can be skipped by the P2 off-screen gate before that
+            // branch, so preserve the existing object-bit fallback for CPU
+            // sidekicks while requiring live Status_OnObj for P1.
+            boolean statusOnObjectVisible = player.isCpuControlled() || player.isOnObject();
+            return statusOnObjectVisible
+                    && objectManager != null
+                    && objectManager.hasObjectStandingBit(player, this);
         } catch (RuntimeException e) {
             return false;
         }
