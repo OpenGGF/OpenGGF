@@ -6,6 +6,64 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 MTZ1 Obj68 spike touch render-flag gate removal (f8655 -> green)
+
+- Worktree/branch: `.worktrees/trace-s2-mtz1-r15` /
+  `bugfix/ai-s2-mtz1-frontier-r15`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at `6b82175cc`, then fast-forwarded to the
+  conductor baseline `7171992ee` after the accepted OOZ2 r4 and
+  `origin/develop` merge.
+- Baseline reproduction before the fix:
+  `mvn "-Dtest=TestS2MtzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: MTZ1 f8655 / 53 (`tails_y_speed` expected `-0400`, actual
+  `0x0150`).
+- Triage/evidence: the f8655 context showed ROM Tails entering routine 4
+  (hurt) from a nearby Obj68 spike child at slot `$38`, while the engine had
+  the corresponding `SpikyBlock-Spike` in range with collision `$84` but
+  skipped touch as `offscreenTouch`. This was not a sidekick landing mismatch:
+  it was the Obj68 child contact being filtered before S2 `Touch_Loop`
+  semantics.
+- Disassembly cited: Obj68 parent allocation creates the routine-4 spike
+  child after the current object, copies the block position into its
+  `x_pos/y_pos`, writes `render_flags.level_fg`, and seeds
+  `collision_flags(a1)` from `Obj68_CollisionFlags`
+  (`docs/s2disasm/s2.asm:53730-53754`). Obj68's spike action checks
+  `render_flags.on_screen` only before `PlaySound` for the spike movement SFX,
+  then continues the expand/retract state machine
+  (`docs/s2disasm/s2.asm:53821-53831`). The active collision bytes are
+  `$84,$A6,$84,$A6` (`docs/s2disasm/s2.asm:53862-53864`). S2
+  `Touch_Loop` iterates object RAM and branches to collision checking solely
+  when `collision_flags(a1)` is nonzero, with no render-flag test
+  (`docs/s2disasm/s2.asm:85048-85054`).
+- Fix: `SpikyBlockSpikeInstance` now opts out of the generic render-flag touch
+  gate, matching S2's collision-flags-driven touch loop while leaving Obj68
+  movement, phase, sound gating, collision bytes, and despawn behavior
+  unchanged. The fix changes engine behavior only; it does not edit trace
+  data, add comparison tolerance, hydrate from trace state, or branch on
+  trace route, frame, zone, game id, or a known failing fixture.
+- Focused object coverage:
+  `mvn "-Dtest=TestSpikyBlockSpikeInstance" "-DfailIfNoTests=false" test`.
+  Result: exits 0.
+- Focused target after conductor merge:
+  stale `target/trace-reports/s2_mtz1_*` files were removed, then
+  `mvn -q "-Dmse=off" "-Dtest=TestS2MtzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; MTZ1 is green and no new `s2_mtz1` divergence report is
+  produced.
+- Focused object coverage plus current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestSpikyBlockSpikeInstance,TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; the focused Obj68 spike test and 11 selected S2 green
+  traces passed.
+- Updated red preservation set after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`.
+  Result: expected nonzero and preserves ARZ2 f1028 / 2686, CNZ2 f9183 /
+  441, CPZ2 f10601 / 74, HTZ2 f4387 / 1049, MTZ3 f7853 / 864, OOZ1
+  f1803 / 1067, and OOZ2 f3993 / 749. MTZ1 is no longer in the red set.
+- Full S2 sweep after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; 19 S2 traces run, 12 green, 7 expected red:
+  ARZ2 f1028 / 2686, CNZ2 f9183 / 441, CPZ2 f10601 / 74, HTZ2 f4387 /
+  1049, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2 f3993 / 749.
+
 ## 2026-06-30 - S2 CPZ2 Obj5D invented hit latch removed (f10286 -> f10601)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz2-trace-worker` /
@@ -61,7 +119,6 @@ branch-local measurements.
   ARZ2 f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10601 / 74, HTZ2 f4286 /
   1128, MTZ1 f8655 / 53, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2
   f3993 / 749.
-
 ## 2026-06-30 - S2 OOZ2 Obj3D fragment slot and Obj4A bullet lifetime (f3919 -> f3993)
 
 - Worktree/branch: `.worktrees/ai-s2-ooz2-frontier-r4` /
