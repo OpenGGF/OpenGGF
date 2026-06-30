@@ -87,7 +87,9 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
         // The sharp -$80 turn sample, and the immediate +$80 rebound after it,
         // are only bridged at Obj36's left edge: wider/centered rides fall
         // through TailsCPU_Normal's ordinary follow steering before the next
-        // SolidObject status sample becomes visible.
+        // SolidObject status sample becomes visible. The final +$0C step from
+        // inertia $30 still samples Obj36's previous push status at OOZ f1813;
+        // once inertia reaches $3C, the dx=-$0C cap below lets f1814 turn left.
         int gSpeed = player.getGSpeed();
         if (!usesInnerLeftEdgeSidekickPushGraceLadder(player)) {
             return gSpeed < 0 ? 8 : 14;
@@ -110,8 +112,8 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
         }
         int gSpeed = player.getGSpeed();
         return isFreshPositiveTurnBridge(player) ? 0
+                : gSpeed == 0x30 ? 6
                 : isLatePositiveInnerLeftEdgeBridge(player) ? 3
-                : gSpeed == 0x30 ? 3
                 : Integer.MAX_VALUE;
     }
 
