@@ -32,7 +32,7 @@ class TestSonic2CPZEvents {
                 "CPZ water trigger compares against player x_pos, not top-left sprite bounds");
         assertEquals(0x0D, water.zoneId);
         assertEquals(1, water.actId);
-        assertEquals(0x508, water.targetY);
+        assertEquals(0x510, water.targetY);
     }
 
     private static final class TestableCPZEvents extends Sonic2CPZEvents {
