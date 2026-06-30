@@ -6,6 +6,59 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CPZ2 Obj40 springboard sloped solid gate (f5494 -> f5578)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r7` /
+  `bugfix/ai-s2-cpz2-frontier-r7`, created from integration branch
+  `bugfix/ai-s2-trace-develop`, merged forward through MTZ2 r6
+  (`d5895ee07`) and HTZ2 r4 (`cbde673e4`) before final verification.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix on current integration: CPZ2 f5494 / 352 (`tails_y`
+  expected `0x076D`, actual `0x076C`).
+- Triage/evidence: f5494 showed ROM Tails landing on Obj40 slot 20 at
+  `$1623,$0788`, clearing `Status_InAir` / `Status_Roll`, setting
+  `Status_OnObj`, and zeroing `y_vel`. The engine had matching Tails position
+  through the approach but reported the same springboard as `no-touch`, kept
+  Tails airborne/rolling with `y_vel=$038E`, and only found terrain several
+  pixels later. A temporary collision probe (removed before commit) showed the
+  generic off-screen solid gate returned before Springboard's sloped contact
+  sampling ran, while the ROM Obj40 path does not call that on-screen helper.
+- Disassembly cited: Obj40 animates, loads `d1=$27`, `d2=8`, `d4=x_pos(a0)`,
+  selects `Obj40_SlopeData_DiagUp` or `Obj40_SlopeData_Straight`, then calls
+  `JmpTo_SlopedSolid_SingleCharacter` for `MainCharacter` and again for
+  `Sidekick` (`docs/s2disasm/s2.asm:52292-52315`).
+  `SlopedSolid_SingleCharacter` branches directly to `SlopedSolid_cont` when
+  the object's standing bit is clear (`docs/s2disasm/s2.asm:35124-35126`).
+  `SlopedSolid_cont` performs the x/slope/y overlap work
+  (`docs/s2disasm/s2.asm:35263-35271`). The separate
+  `SolidObject_OnScreenTest` helper checks `render_flags.on_screen` before
+  `SolidObject_cont` (`docs/s2disasm/s2.asm:35337-35344`), and is not on the
+  Obj40 sloped-solid path above.
+- Fix: `SpringboardObjectInstance` now returns true from
+  `bypassesOffscreenSolidGate()`, preserving the generic solid gate for other
+  objects while modeling Obj40's ROM-backed sloped helper path. This does not
+  edit trace data, add tolerance, or add route, frame, zone, game-id, or
+  known-failing carve-outs.
+- Focused oracle:
+  `mvn -q "-Dmse=off" "-Dtest=TestSonic2TriggerParticipation#springboardSlopedSolidBypassesOffscreenSolidGate" "-DfailIfNoTests=false" test`
+  was run before the implementation and failed because Obj40 did not bypass
+  the gate; after the fix and latest integration merge it exits 0.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CPZ2 advanced to f5578 / 323 (`tails_y_speed`
+  expected `-06F0`, actual `-06C8`), a later launch/vertical-speed frontier.
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Red preservation set on current integration:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686, CNZ2 f7984 / 680,
+  HTZ2 f4136 / 1024, MTZ1 f5713 / 560, MTZ2 f11277 / 200,
+  MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. No checked red
+  trace moved backward; the run emitted non-fatal `config.yaml` save
+  `AccessDeniedException` warnings after producing the expected trace results.
+
 ## 2026-06-30 - S2 HTZ2 ride-transfer standing bit clear (f4012 -> f4136)
 
 - Worktree/branch: `.worktrees/ai-s2-htz2-frontier-r4` /
