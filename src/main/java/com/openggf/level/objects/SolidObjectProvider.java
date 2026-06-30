@@ -210,6 +210,20 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a fresh standing contact established by this object should keep
+     * {@code Status_OnObj} if object-local code makes the rider airborne later
+     * in the same frame.
+     * <p>
+     * Most solids must return false so their normal airborne stale-rider branch
+     * still clears support. Use this only for ROM routines that run their solid
+     * helper first, then perform a same-frame status write such as a supported
+     * hurt launch.
+     */
+    default boolean keepsOnObjWhenAirborneAfterSameFrameStandingContact(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Optional centre-Y write for objects that preserve a ride while object-local
      * code owns player positioning. Return {@code null} to leave Y unchanged.
      */

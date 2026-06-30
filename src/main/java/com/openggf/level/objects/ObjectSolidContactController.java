@@ -233,7 +233,7 @@ final class ObjectSolidContactController {
      */
     private void markStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance,
             int pieceIndex) {
-        if (player == null || !keepsOnObjWhenJumpedOffSameFrame(player)) {
+        if (player == null || !keepsOnObjWhenAirborneAfterSameFrameStandingContact(player, instance)) {
             return;
         }
         Object key = airUnseatLatchKeyFor(instance, pieceIndex);
@@ -261,6 +261,15 @@ final class ObjectSolidContactController {
     private static boolean keepsOnObjWhenJumpedOffSameFrame(PlayableEntity player) {
         PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
         return featureSet != null && featureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame();
+    }
+
+    private static boolean keepsOnObjWhenAirborneAfterSameFrameStandingContact(
+            PlayableEntity player, ObjectInstance instance) {
+        if (keepsOnObjWhenJumpedOffSameFrame(player)) {
+            return true;
+        }
+        return instance instanceof SolidObjectProvider provider
+                && provider.keepsOnObjWhenAirborneAfterSameFrameStandingContact(player);
     }
 
     /**
@@ -1122,10 +1131,11 @@ final class ObjectSolidContactController {
                 // the loc_1DCF0 air-unseat cannot fire on the same frame the
                 // ride was established by RideObject_SetRide. Skip the
                 // same-frame unseat when this ride was just established this
-                // frame (gated by
-                // PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame;
-                // sonic3k.asm:41066-41084, 42033-42034, 28553-28554).
-                && !(keepsOnObjWhenJumpedOffSameFrame(player)
+                // frame. Games can opt in globally via PhysicsFeatureSet;
+                // individual solid routines can opt in for same-frame status
+                // writes after their solid helper runs (sonic3k.asm:41066-41084,
+                // 42033-42034, 28553-28554).
+                && !(keepsOnObjWhenAirborneAfterSameFrameStandingContact(player, ridingObject)
                         && wasStandingBitEstablishedThisFrame(player, ridingObject, ridingPieceIndex))
                 // ROM: on the S3K Obj_CollapsingPlatform collapse-transition
                 // frame, ObjPlatformCollapse_CreateFragments jmps to Play_SFX
@@ -1167,9 +1177,9 @@ final class ObjectSolidContactController {
                 // clear (sonic3k.asm:41017-41035) only observes the standing
                 // bit on a frame AFTER RideObject_SetRide set it. Skip when the
                 // bit was just established this frame so a same-frame jump-off
-                // keeps Status_OnObj (gated by
-                // PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame).
-                && !(keepsOnObjWhenJumpedOffSameFrame(player)
+                // keeps Status_OnObj when the game or object routine opts into
+                // same-frame airborne ride preservation.
+                && !(keepsOnObjWhenAirborneAfterSameFrameStandingContact(player, instance)
                         && wasStandingBitEstablishedThisFrame(player, instance, -1))
                 // Same collapse-transition-frame skip as the loc_1DCF0 block
                 // above: the platform's SolidObjectTopSloped2 does not run on
@@ -1569,6 +1579,17 @@ final class ObjectSolidContactController {
             putRidingState(player, instance, currentX, currentY, ridingPieceIndex);
             setObjectStandingBit(player, instance, ridingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
+            inlineSupportedPlayers.add(player);
+            return SolidContact.STANDING;
+        }
+
+        if (player.getAir()
+                && keepsOnObjWhenAirborneAfterSameFrameStandingContact(player, instance)
+                && wasStandingBitEstablishedThisFrame(player, instance, ridingPieceIndex)) {
+            putRidingState(player, instance, currentX, currentY, ridingPieceIndex);
+            setObjectStandingBit(player, instance, ridingPieceIndex);
+            clearGroundWallSuppressionForNormalSolidSupport(player, instance);
+            player.setOnObject(true);
             inlineSupportedPlayers.add(player);
             return SolidContact.STANDING;
         }
@@ -2167,7 +2188,9 @@ final class ObjectSolidContactController {
         // (docs/skdisasm/sonic3k.asm:41006-41010 before 41021-41034).
         if (ridingObject != null && player.getAir()
                 && !preserveAirborneRideForEarlierPieces
-                && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)) {
+                && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)
+                && !(keepsOnObjWhenAirborneAfterSameFrameStandingContact(player, ridingObject)
+                        && wasStandingBitEstablishedThisFrame(player, ridingObject, ridingPieceIndex))) {
             SolidObjectProvider rideExitProvider = ridingObject instanceof SolidObjectProvider solid
                     ? solid
                     : null;
@@ -2658,7 +2681,7 @@ final class ObjectSolidContactController {
                     && hasObjectStandingBit(player, instance, i)
                     // Same-frame unseat suppression (ROM once-per-frame
                     // SolidObjectFull): keep a piece ride established this frame.
-                    && !(keepsOnObjWhenJumpedOffSameFrame(player)
+                    && !(keepsOnObjWhenAirborneAfterSameFrameStandingContact(player, instance)
                             && wasStandingBitEstablishedThisFrame(player, instance, i))) {
                 snapshotObjectStandingBit(player, instance, i);
                 clearObjectStandingBit(player, instance, i);

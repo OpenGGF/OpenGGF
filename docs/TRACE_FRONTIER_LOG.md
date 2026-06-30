@@ -6,6 +6,61 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 HTZ2 Obj30 late supported hurt status preservation (f4165 -> f4286)
+
+- Worktree/branch: `.worktrees/trace-s2-htz2-r13` /
+  `bugfix/ai-trace-s2-htz2-r13`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at `4221b6065`, then fast-forwarded through
+  integration `64fe2c690`, `781d62678`, and the accepted CPZ2 r13 integration
+  before conductor merge verification.
+- Baseline reproduction before the fix:
+  `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: HTZ2 f4165 / 1129 (`tails_status_byte` expected `0x000A`,
+  actual `0x0022`).
+- Triage/evidence: at f4165 ROM Tails has routine `$04`, hurt launch velocity
+  `$FE00,$FC00`, and status `$0A` (`Status_InAir|Status_OnObj`) after riding
+  HTZ Obj30 subtype 6. The engine had the same position and hurt velocity, but
+  cleared `Status_OnObj` and left `Status_Push` set. A broad S2 same-frame
+  OnObj flag advanced HTZ2 but regressed accepted CPZ1 and WFZ traces, so the
+  committed fix is object-local to Obj30's late supported hurt path.
+- Disassembly cited: Obj30 subtype 6 runs `SolidObject_Always`, then
+  `DropOnFloor`, then branches to `Obj30_HurtSupportedPlayers`
+  (`docs/s2disasm/s2.asm:49635-49642`); that routine calls
+  `Touch_ChkHurt` for standing P1/P2 bits (`docs/s2disasm/s2.asm:49615-49630`).
+  `Hurt_Sidekick` calls `Sonic_ResetOnFloor_Part2` and then sets
+  `Status_InAir` (`docs/s2disasm/s2.asm:85468-85472`), while
+  `Tails_ResetOnFloor_Part3` clears `Status_Push` but not `Status_OnObj`
+  (`docs/s2disasm/s2.asm:41033-41035`).
+- Fix: `AbstractPlayableSprite.applyHurt` now clears `Status_Push` during the
+  hurt launch reset, and `ObjectSolidContactController` has a provider-level
+  same-frame airborne ride preservation hook. `RisingLavaObjectInstance` opts
+  only Obj30 subtype 4/6 into that hook and reasserts `Status_OnObj` after its
+  supported-player hurt callback. This models ROM object/status ordering; it
+  does not edit trace data, hydrate state from traces, weaken tolerances, or
+  branch on route/frame/zone ids.
+- Focused coverage:
+  `mvn clean test "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2ObjectOccupancyOracle#htz2RisingLavaHurtClearsTailsPushButKeepsOnObjectAtRomFrame4165" "-DfailIfNoTests=false"`.
+  Result: exits 0.
+- Focused target after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; HTZ2 advances to f4286 / 1128
+  (`tails_y_speed` expected `0x0000`, actual `0x0630`).
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; 11 selected S2 green traces passed.
+- Updated red preservation set after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero and preserves ARZ2 f1028 / 2686, CNZ2 f9117 /
+  386, CPZ2 f10286 / 91, MTZ1 f7906 / 407, MTZ3 f7853 / 864, OOZ1 f1803 /
+  1069, and OOZ2 f3919 / 1117. HTZ2 is the only moved red frontier in this
+  worker change, now f4286 / 1128.
+- Full S2 sweep after conductor merge:
+  `mvn "-Dtest=TestS2*TraceReplay" test`.
+  Result: expected nonzero; 19 S2 traces run, 11 green, 8 expected red:
+  ARZ2 f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10286 / 91, HTZ2 f4286 /
+  1128, MTZ1 f7906 / 407, MTZ3 f7853 / 864, OOZ1 f1803 / 1069, and OOZ2
+  f3919 / 1117.
+
 ## 2026-06-30 - S2 CPZ2 Obj5D stop-branch movement overshoot (f10068 -> f10286)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r13` /
@@ -164,7 +219,6 @@ branch-local measurements.
   ARZ2 f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10068 / 128, HTZ2 f4165 /
   1129, MTZ1 f7906 / 407, MTZ3 f7853 / 864, OOZ1 f1803 / 1069, and OOZ2
   f3919 / 1117.
-
 ## 2026-06-30 - S2 MTZ1 Obj69 stale airborne grounding recovery (f5713 -> f7906)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz1-frontier-r3` /
