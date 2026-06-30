@@ -9,7 +9,7 @@ branch-local measurements.
 ## 2026-06-30 - S2 OOZ2 Aquis Obj50 render-flag gate (f5737 -> f5762)
 
 - Worktree/branch: `.worktrees/ai-s2-ooz2-round2` /
-  `bugfix/ai-s2-ooz2-round2`, based on `bugfix/ai-s2-trace-develop`.
+  `bugfix/ai-s2-ooz2-round2`, merged onto `bugfix/ai-s2-trace-next`.
 - Baseline reproduction:
   `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
   Result before the fix: expected nonzero; OOZ2 f5737 / 730 (`y_speed`
@@ -66,6 +66,59 @@ branch-local measurements.
   expected `0x0065`, actual `0x0070`), OOZ1 f1803 / 1067 (`tails_x` expected
   `0x0CE3`, actual `0x0CE4`), and OOZ2 f5762 / 628 (`x_speed` expected
   `0x0046`, actual `0x0052`).
+
+## 2026-06-30 - S2 HTZ2 camera-copy render flag despawn bridge (f4387 -> f4422)
+
+- Worktree/branch: `.worktrees/ai-s2-sidekick-round2` /
+  `bugfix/ai-s2-sidekick-round2`, merged onto `bugfix/ai-s2-trace-next`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: HTZ2 f4387 / 1049
+  (`tails_cpu_respawn_counter` expected `0x0000`, actual `0x002B`).
+- BizHawk evidence: a local PC-execute probe on `TailsCPU_CheckDespawn` and
+  `BuildSprites` around movie frames 16302-16308 showed ROM Tails still
+  off-screen through the f16304 CPU check (`render_flags=$04`,
+  `Tails_respawn_counter=$0029`), then `BuildSprites` drew the sidekick when
+  `x_pos=$1987`, `y_pos=$063F`, `Camera_X_pos_copy=$18DE`,
+  `Camera_Y_pos_copy=$0540`, so `relY=$00FF` is inside the S2
+  `BuildSprites_ApproxYCheck` bottom band. The next CPU check at f16305 saw
+  `render_flags=$85` and reset `Tails_respawn_counter` to zero. This matches
+  the trace's f4387 expected `tails_cpu_respawn_counter=0`.
+- Fix: `Camera.isVisibleForRenderFlag` now subtracts `getXWithShake()` /
+  `getYWithShake()` (the engine's `Camera_X_pos_copy` /
+  `Camera_Y_pos_copy`) for playable render-flag visibility instead of raw
+  camera `x/y`. This models the ROM camera-copy state that `BuildSprites`
+  reads; it does not branch on HTZ, frame number, route, or fixture, and it
+  does not hydrate engine state from trace data.
+- Unit guard:
+  `mvn -Dmse=off "-Dtest=com.openggf.camera.TestCamera,com.openggf.sprites.playable.TestSidekickCpuDespawnParity" test`.
+  Result: exits 0; 74 tests passed. The new camera test pins the HTZ-style
+  bottom-edge case where raw camera visibility is false but the shaken camera
+  copy gives `relY=$00FF`.
+- Focused HTZ2 target:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; HTZ2 advances to f4422 / 1047
+  (`tails_g_speed` expected `-0018`, actual `0x0000`; `tails_x_speed`
+  expected `-0018`, actual `0x00E8`). The new context has ROM Tails on
+  object slot 27 near Obj92/Obj30/Obj18 contacts, so the next owner is a
+  distinct sidekick/contact handoff, not the despawn counter reset.
+- Full S2 trace replay sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; 19 tests run, 13 green. Remaining reds are ARZ2
+  f1028 / 2686 (`obj_extra_s16_x` expected absent, actual `0x0B7B`), CNZ2
+  f9183 / 441 (`tails_x_speed` expected `0x0000`, actual `0x0200`), HTZ2
+  f4422 / 1047, MTZ3 f7853 / 864 (`tails_cpu_interact` expected `0x0065`,
+  actual `0x0070`), OOZ1 f1803 / 1067 (`tails_x` expected `0x0CE3`, actual
+  `0x0CE4`), and OOZ2 f5737 / 730 (`y_speed` expected `0x0080`, actual
+  `-0080`).
+- Cross-game checks for the shared camera visibility path:
+  `mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" test`
+  with `SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path` exits 0. The S3K
+  keep-green smoke
+  `mvn -Dmse=off "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test`
+  exits 0 with 51 tests passed. A parallel attempt to run S1 and S3K traces
+  concurrently was discarded because Maven's git-hook setup raced on the
+  shared git config lock; rerunning S1 alone passed.
 
 ## 2026-06-30 - S2 CPZ2 Obj5D defeat/retreat camera release (f10907 -> green)
 
