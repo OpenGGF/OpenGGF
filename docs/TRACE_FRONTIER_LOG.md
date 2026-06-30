@@ -6,6 +6,49 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 HTZ2 Obj30 released-interact CPU push bridge (f5002 -> f5031)
+
+- Worktree/branch: `.worktrees/ai-s2-htz2-f5002-round8` /
+  `bugfix/ai-s2-htz2-f5002-round8`, based on campaign head
+  `6468c4665` (`bugfix/ai-s2-trace-next`).
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`.
+  Result before the fix: expected-red HTZ2 f5002 / 690
+  (`tails_cpu_ctrl2_held` expected `0x0000`, actual `0x0010`).
+- Triage/evidence: f5002 showed ROM Tails at `status=$21` with
+  `Tails_CPU_jumping=1` and `Ctrl_2=0`, while the engine had already cleared
+  the live push bit (`status=$01`) and carried `Tails_CPU_jumping` through
+  `loc_1BDCE` into held jump. The engine still had the persistent
+  `interact(a0)` slot pointing at Obj30 subtype 6, but no live ride state.
+  S2 `TailsCPU_Normal` tests current `Status_Push` before the auto-jump
+  carry/clear block, and Obj30 subtype 6 runs `SolidObject_Always`,
+  `DropOnFloor`, then supported-player handling after the CPU slot
+  (`docs/s2disasm/s2.asm:39291-39300,49635-49642`).
+- Fix: `SolidObjectProvider` now has a released-interact sidekick CPU push
+  hook. `SidekickCpuController` consults the object occupying the persistent
+  interact slot when CPU Tails is grounded, no longer riding, in the local
+  Obj30 band, and the delayed leader samples are not already pushing. Obj30
+  subtype 6 opts in for CPU sidekicks. Once normal push grace has decayed to
+  zero, the bridge also requires exact delayed-target X alignment; that keeps
+  the earlier HTZ2 f3384 moving-follow case on the normal steering path.
+- Result:
+  `TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace`: f5002 / 690 errors
+  (`tails_cpu_ctrl2_held` expected `0x0000`, actual `0x0010`) -> f5031 / 930
+  errors (`tails_cpu_ctrl2_held` expected `0x0018`, actual `0x0008`). The new
+  owner is delayed leader status preservation: ROM has delayed status `$20`
+  at f5031 so `loc_1BDCE` carries and clears the auto-jump latch, while the
+  engine history still reports delayed status `$00`.
+- Verification:
+  - `mvn "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s2Obj30*" test`
+    passed the focused Obj30 CPU bridge and f3384 no-regression units.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+    exited 1 as expected-red with the improved HTZ2 f5031 / 930 frontier.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" test`
+    passed 1 / 1 as a representative S1 sidekick no-regression check.
+  - `mvn "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    exited 0; the selected S3K keep-green tests passed. MSE printed a stale
+    HTZ2 trace failure summary from a previous run despite the zero exit code.
+
 ## 2026-06-30 - S2 HTZ2 Obj30 side-gated input bridge + airborne push retention (f4442 -> f5002)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /
