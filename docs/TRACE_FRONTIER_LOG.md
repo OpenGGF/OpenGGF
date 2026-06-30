@@ -6,6 +6,68 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CPZ2 Obj5D defeat/retreat camera release (f10907 -> green)
+
+- Worktree/branch: `.worktrees/ai-s2-event-physics-round1` /
+  `bugfix/ai-s2-event-physics-round1`, based on
+  `bugfix/ai-s2-trace-develop`.
+- Baseline reproduction:
+  `mvn "-Dmse=off" "-Dtrace.context.diagnosticChars=full" "-Dtest=TestS2Cpz2LevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  with `SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path`.
+  Result: expected nonzero. CPZ2 f10907 / 37 (`camera_x` expected
+  `0x2A20`, actual `0x2A22`); OOZ2 f5737 / 730 (`y_speed` expected
+  `0x0080`, actual `-0080`).
+- CPZ2 triage/evidence: the ROM camera series legitimately overshoots the
+  arena-entry lock for one frame (`camera_x=$2A21` at f9744, then `$2A20` at
+  f9745), so snapping the camera on the lock write is wrong. The f10907
+  failure instead matches a one-frame-early boss defeat/retreat release:
+  ROM keeps `Camera_X_pos=$2A20` through f10907 and starts moving at f10908,
+  while the engine had already widened `Camera_Max_X_pos` enough to scroll.
+  A temporary local retreat log showed the engine's generic out-of-range
+  unload removed Obj5D after `Camera_Max_X_pos=$2BD6`, before the ROM retreat
+  routine's `$2C30` camera-max gate.
+- Disassembly cited: Obj5D detects the defeated status at
+  `Obj5D_Main_Pos_and_Collision`, sets `routine_secondary=8`, seeds
+  `Obj5D_defeat_timer=60*3-1`, and returns, so `Obj5D_Main_Explode` first
+  decrements the timer next frame (`docs/s2disasm/s2.asm:61723-61772`).
+  `Obj5D_Main_Retreat` widens `Camera_Max_X_pos` by 2 until `$2C30` before
+  testing the on-screen bit and deleting (`docs/s2disasm/s2.asm:61684-61704`).
+- Fix: `Sonic2CPZBossInstance` opts into the existing one-frame defeat
+  dispatch deferral for ROM routines that select defeat at their own update
+  tail, and marks Obj5D persistent so the shared object-window unload cannot
+  remove it before its retreat camera gate. This models ROM object state and
+  ordering; it does not edit trace data, hydrate from trace state, weaken
+  tolerances, or branch on route, frame, zone id, or a known failing fixture.
+- Focused CPZ2 target:
+  `mvn "-Dmse=off" "-Dtrace.context.diagnosticChars=full" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: exits 0; CPZ2 is green.
+- Focused preservation run:
+  `mvn "-Dmse=off" "-Dtrace.context.diagnosticChars=full" "-Dtest=TestS2Cpz2LevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero from OOZ2 only; CPZ2 passes, OOZ2 remains f5737 /
+  730 (`y_speed` expected `0x0080`, actual `-0080`).
+- Trace invariant guard:
+  `mvn "-Dmse=off" "-Dtest=TestTraceReplayInvariantGuard" "-DfailIfNoTests=false" test`.
+  Result: fails before this branch can be committed because
+  `TestRespawnStrategies` contains six pre-existing `main.hydrateRecordedHistory(...)`
+  calls (`src/test/java/com/openggf/sprites/playable/TestRespawnStrategies.java:472,524,630,676,700,758`);
+  this CPZ2 change does not touch that file.
+- Full S2 trace replay sweep:
+  `$native=(Resolve-Path '.lwjgl\3.3.3+5\x64').Path; $env:JAVA_TOOL_OPTIONS="-Dorg.lwjgl.librarypath=$native"; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; 19 tests run, 13 green including CPZ2, with the
+  existing red frontier set preserved at ARZ2 f1028 / 2686, CNZ2 f9183 / 441,
+  HTZ2 f4387 / 1049, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2 f5737 /
+  730.
+- OOZ2 blocker carried forward: at f5737 the ROM adds `$100` to Sonic's
+  negative y speed through `Touch_KillEnemy` (`FF80 -> 0080`) when the Aquis
+  body is at `$2389,$0348`; the engine Aquis is near `$23AF,$0323`, so the
+  bounce formula is not the root cause. Aux traces show ROM slot 31 reused from
+  Obj48 before Obj50 appears, and Obj50 does not initialize `objoff_3C`.
+  Bluntly seeding the engine Aquis timer to `$80` regressed OOZ2 to f389.
+  Next diagnostic probe: a BizHawk PC-execute probe on `Obj50_CheckIfOnScreen`
+  / `Obj50_FollowPlayer` and the preceding Obj48 deletion path, dumping
+  slot 31 `objoff_3C`, routine_secondary, x/y, x/y velocity, and the
+  `subq.b #1,Obj50_timer; bmi` branch around frames 5668-5737.
+
 ## 2026-06-30 - S1 guard restored after S2 ARZ2 breathing-bubble regression
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
