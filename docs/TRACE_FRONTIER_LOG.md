@@ -6,6 +6,58 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CNZ2 Tails fly-in object-control preservation (f6144 -> f6561)
+
+- Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r2` /
+  `bugfix/ai-s2-cnz2-frontier-r2`, based on integration branch
+  `bugfix/ai-s2-trace-develop` at/after merge `bbed44de4`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: CNZ2 f6144 / 994 (`tails_y_speed` expected
+  `0x0038`, actual `0x0000`).
+- Triage/evidence:
+  `mvn "-Dmse=off" exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=s2 cnz2"`
+  pointed at the sidekick subsystem. The f6144 context showed ROM Tails had
+  just entered the fly-in path: f6143 still has `tails_y_speed=0000`, then
+  f6144 has `tails_y_speed=0038` from ordinary airborne gravity. The engine
+  was still suppressing object physics during APPROACHING, so the manual
+  `TailsCPU_Flying` position nudge ran without the subsequent `Obj02_MdAir`
+  `ObjectMoveAndFall` step.
+- Disassembly cited: `TailsCPU_Respawn` writes routine/position/priority and
+  spindash fields but not `obj_control`
+  (`docs/s2disasm/s2.asm:39122-39140`); the `TailsCPU_Flying` off-screen
+  timeout path is the path that writes `obj_control=$81`
+  (`docs/s2disasm/s2.asm:39142-39159`); ordinary fly-in completion clears
+  `obj_control` and velocities (`docs/s2disasm/s2.asm:39229-39245`);
+  `Obj02_MdAir` calls `ObjectMoveAndFall`, applying the `$38` gravity step
+  (`docs/s2disasm/s2.asm:39616-39628`).
+- Fix: S2 Tails fly-in now preserves the live object-control byte during
+  ordinary respawn/fly-in updates instead of forcing full control lock. The
+  respawn setup frame still skips object physics, matching `TailsCPU_Respawn`
+  returning immediately; subsequent fly-in frames run physics only when the
+  preserved movement-suppression bit is clear. S3K catch-up flight still uses
+  the existing native bit-7 full-control path through `PhysicsFeatureSet`.
+  No trace hydration, tolerance, route, frame, or zone carve-out is used.
+- Focused unit check:
+  `mvn "-Dtest=com.openggf.sprites.playable.TestRespawnStrategies#sonic2TailsFlyInKeepsNormalAirPhysicsActive" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Targeted trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.context.diagnosticChars=full" "-DfailIfNoTests=false" test`
+  exited 1 with the improved f6561 / 1093 frontier
+  (`tails_x_speed` expected `0x0060`, actual `-0A00`).
+- Current S2 green guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0; ARZ1, CNZ1, DEZ ending, EHZ1, HTZ1, MCZ1, MCZ2, SCZ, and WFZ
+  remain green.
+- Red preservation set:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved the accepted red frontiers/counts:
+  ARZ2 f1028 / 2688, CPZ1 f4547 / 177, CPZ2 f4018 / 1334, HTZ2 f3618 / 993,
+  MTZ1 f5713 / 560, MTZ2 f4375 / 950, MTZ3 f3618 / 933, OOZ1 f1790 / 614,
+  OOZ2 f3835 / 797. The MSE aggregate line also included the stale CNZ2
+  f6561 report from the targeted run; per-class preservation rows matched the
+  accepted set above.
+
 ## 2026-06-29 - S2 HTZ2 Obj30 sidekick input slot bridge (f3322 -> f3618)
 
 - Worktree/branch: `.worktrees/ai-s2-htz2-frontier` /
