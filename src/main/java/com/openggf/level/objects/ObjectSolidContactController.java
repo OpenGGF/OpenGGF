@@ -1071,10 +1071,12 @@ final class ObjectSolidContactController {
     }
 
     private SolidContact processInlineObjectForPlayer(ObjectInstance instance, PlayableEntity player) {
-        if (player == null || objectManager == null || player.getDead()) {
-            if (player != null) {
-                ridingStates.remove(player);
-            }
+        if (player == null || objectManager == null) {
+            return null;
+        }
+        if (player.getDead()) {
+            clearDeadPlayerStaleStandingBit(player, instance);
+            ridingStates.remove(player);
             return null;
         }
         if (player.isDebugMode()) {
@@ -2083,8 +2085,15 @@ final class ObjectSolidContactController {
         multiPieceEarlierPiecesResolvedUpTo = -1;
         multiPieceEarlierPiecesInstance = null;
         multiPieceEarlierPiecesPushing = false;
-        if (player == null || objectManager == null || player.getDead()) {
-            if (player != null) ridingStates.remove(player);
+        if (player == null || objectManager == null) {
+            return;
+        }
+        if (player.getDead()) {
+            RidingState state = ridingStates.get(player);
+            if (state != null && state.object != null) {
+                clearDeadPlayerStaleStandingBit(player, state.object);
+            }
+            ridingStates.remove(player);
             return;
         }
 
@@ -3992,6 +4001,37 @@ final class ObjectSolidContactController {
         if (instance instanceof SolidObjectProvider provider) {
             provider.onRejectedZeroDistanceTopSolidLanding(player);
         }
+    }
+
+    private boolean clearDeadPlayerStaleStandingBit(PlayableEntity player, ObjectInstance instance) {
+        if (player == null
+                || instance == null
+                || !player.getDead()
+                || !player.getAir()
+                || !hasObjectStandingBit(player, instance)
+                || !(instance instanceof SolidObjectProvider provider)) {
+            return false;
+        }
+        SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+        if (shouldSkipOffscreenSidekickFullSolid(player, instance, solidProfile)
+                || suppressesSolidPassThisFrame(instance, player)) {
+            return false;
+        }
+
+        // S2 Obj6E calls the shared SolidObject helper after updating position
+        // (docs/s2disasm/s2.asm:54979-55010). SolidObject still checks on-screen
+        // Player 2 even when Tails is in Obj02_Dead; if the object's standing
+        // bit is set and Status_InAir is already set, it clears Status_OnObj and
+        // the object's P2 standing bit before returning (s2.asm:35022-35044).
+        snapshotObjectStandingBit(player, instance);
+        clearObjectStandingBit(player, instance);
+        ridingStates.remove(player);
+        inlineSupportedPlayers.remove(player);
+        latestStandingSnapshots.remove(player);
+        forceAirOnStaleSupportLoss.remove(player);
+        player.setOnObject(false);
+        player.setAir(true);
+        return true;
     }
 
     private boolean clearsGroundSpeedOnAirBottomSolidHit(PlayableEntity player) {
