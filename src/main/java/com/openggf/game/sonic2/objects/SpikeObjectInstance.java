@@ -91,7 +91,7 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
         if (!usesInnerLeftEdgeSidekickPushGraceLadder(player)) {
             return gSpeed < 0 ? 8 : 14;
         }
-        return isOnInnerLeftEdge(player) && gSpeed == -0x80 ? 0
+        return isOnInnerLeftEdge(player) && (gSpeed == -0x80 || isFreshNegativeTurnBridge(player)) ? 0
                 : gSpeed == 0 && player.getXSpeed() == 0 && player.getDirection() == Direction.LEFT ? 6
                 : gSpeed > 0 && gSpeed < 0x30 ? 2
                 : gSpeed == 0x30 ? 2
@@ -121,6 +121,14 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
     private boolean isOnInnerLeftEdge(PlayableEntity player) {
         int dx = player.getCentreX() - currentX;
         return dx >= -0x10 && dx <= -0x0C;
+    }
+
+    private boolean isFreshNegativeTurnBridge(PlayableEntity player) {
+        int gSpeed = player.getGSpeed();
+        return gSpeed <= -0x18
+                && gSpeed >= -0x80
+                && player.getDirection() == Direction.LEFT
+                && player.getXSpeed() == gSpeed;
     }
 
 }

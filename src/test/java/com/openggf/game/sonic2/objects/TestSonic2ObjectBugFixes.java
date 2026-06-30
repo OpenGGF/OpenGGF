@@ -474,6 +474,12 @@ class TestSonic2ObjectBugFixes {
         assertEquals(8, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
                 "OOZ1 f1782 reaches Obj36 riding push grace with eight frames remaining");
 
+        tails.setDirection(Direction.LEFT);
+        tails.setGSpeed((short) -0x0018);
+        tails.setXSpeed((short) -0x0018);
+        assertEquals(0, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
+                "OOZ1 f1794 reaches Obj36's inner-left edge with fresh negative inertia before Tails_TurnRight");
+
         tails.setGSpeed((short) 0x0080);
         assertEquals(14, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
                 "The faster positive-inertia spike ride keeps the conservative existing bridge window");

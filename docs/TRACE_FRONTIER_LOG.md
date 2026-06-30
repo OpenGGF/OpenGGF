@@ -6,6 +6,55 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 OOZ1 Obj36 fresh negative turn bridge (f1794 -> f1795)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-frontier-r4` /
+  `bugfix/ai-s2-ooz1-frontier-r4`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at accepted HEAD `3daed8e4b`, then
+  fast-forwarded to latest integration `aa77abe09` before final verification.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: OOZ1 f1794 / 905 (`tails_x_speed` expected
+  `0x0080`, actual `0x0000`).
+- Triage/evidence: f1794 has CPU Tails still riding Obj36 slot 29 at
+  `$0CF0,$0594` on the spike's inner left edge with negative inertia
+  `-$18`, delayed RIGHT in the sampled Sonic input, and no delayed Sonic
+  `Status_Push`. ROM has Obj36's standing/push status visible to the sidekick
+  CPU slot, so `TailsCPU_Normal` bypasses FollowLeft and preserves delayed
+  RIGHT into `Tails_TurnRight`. The engine had already cleared the local push
+  bit before the CPU read, synthesized LEFT, and zeroed the speed on the spike
+  side contact.
+- Disassembly cited: Obj36 Upright calls `MoveSpikes`, sets the solid width,
+  calls `SolidObject`, and then reads `status(a0)&standing_mask`
+  (`docs/s2disasm/s2.asm:29392-29418`). `TailsCPU_Normal` loads delayed
+  Sonic input/status, tests Tails' current `Status_Push`, and branches to
+  `TailsCPU_Normal_FilterAction_Part2` when delayed Sonic was not pushing
+  (`docs/s2disasm/s2.asm:39291-39300`). `Tails_TurnRight` adds turn
+  deceleration and clamps the sign-crossing case to `+$80`
+  (`docs/s2disasm/s2.asm:39985-39990`).
+- Fix: S2 `SpikeObjectInstance` extends its CPU-only Obj36 riding push bridge
+  for the inner-left-edge fresh negative turn sample (`-$18..-$80`, facing
+  left, `x_speed == ground_vel`). This is data-driven by live Obj36 ride,
+  sidekick CPU state, position within the spike's solid edge, and player
+  inertia; it does not hydrate trace data and does not branch on zone, route,
+  frame number, or known failing trace.
+- Focused coverage:
+  `mvn "-Dtest=TestSidekickCpuControllerLevelStart,TestSonic2ObjectBugFixes" test`
+  exits 0. Before the implementation, the real Obj36 threshold assertion
+  failed with minimum grace `8` instead of `0`.
+- Focused target after integration `aa77abe09`:
+  `mvn test "-Dtest=TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full"`.
+  Result: expected nonzero; OOZ1 advances to f1795 / 1058
+  (`tails_x_speed` expected `0x008C`, actual `0x0000`).
+- Current S2 green guard:
+  `mvn clean test "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false"`
+  exits 0 with 11 selected S2 green traces passing.
+- Updated red preservation set:
+  `mvn clean test "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false"`
+  exits nonzero as expected and preserves ARZ2 f1028 / 2686, CNZ2 f8870 /
+  447, CPZ2 f9781 / 123, HTZ2 f4138 / 1136, MTZ1 f5713 / 560, MTZ3
+  f7853 / 864, and OOZ2 f3919 / 1117.
+
 ## 2026-06-30 - S2 CPZ2 Obj0B high-nibble duration (f9745 -> f9781)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r11` /
