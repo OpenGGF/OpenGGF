@@ -102,6 +102,54 @@ branch-local measurements.
     4319 (`x_speed` expected `0x0000`, actual `0x000C`) and AIZ f8941 / 1160
     (`camera_y` expected `0x02C1`, actual `0x02B9`). The S3K must-keep
     non-trace tests in that command passed.
+## 2026-07-01 - S2 HTZ2 Obj30 held-input delayed-push fall-through (f5031 -> f7351)
+
+- Worktree/branch: `.worktrees/ai-s2-htz2-round11-next` /
+  `bugfix/ai-s2-htz2-round11-next`, based on campaign branch
+  `bugfix/ai-s2-trace-next` at `990a53758`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red HTZ2 f5031 / 930
+  (`tails_cpu_ctrl2_held` expected `0x0018`, actual `0x0008`).
+- Triage/evidence: the f5031 context had ROM `TailsCPU_Normal` reading
+  delayed target `$1A1B,$04AC`, delayed input RIGHT, and delayed
+  `Status_Push=$20`, so it fell through `loc_1BDCE`, ORed the held A/B/C
+  bit from `Tails_CPU_jumping`, then cleared that latch on grounded Tails.
+  The engine's released Obj30 interact bridge still bypassed the fall-through
+  with delayed status clear. Neighboring f5011/f5030 samples showed why this
+  is not a blanket zero-grace bridge: no delayed direction and a fresh RIGHT
+  press respectively must stay on the push-bypass path.
+- Fix: `SolidObjectProvider` now exposes a delayed-leader-push interact-slot
+  hook. HTZ2 Obj30 subtype 6 opts in, and `SidekickCpuController` applies it
+  only for the zero-grace stationary released-interact window with held
+  delayed left/right input, excluding no-input and fresh directional-press
+  samples. This models S2 `TailsCPU_Normal` loading delayed
+  `Ctrl_1_Logical`/status before the push branch and Obj30 refreshing support
+  later in its object pass (`docs/s2disasm/s2.asm:39285-39300,39348-39355,
+  49635-49642`).
+- Result:
+  `TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace`: f5031 / 930 errors
+  (`tails_cpu_ctrl2_held` expected `0x0018`, actual `0x0008`) -> f7351 /
+  687 errors (`x_speed` expected `0x0000`, actual `0x0200`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s2Obj30ReleasedInteractPushGraceBypassesAutoJumpLatchClear+s2Obj30InteractPushGraceWithDelayedLeaderPushCarriesAndClearsAutoJumpLatch+s2Obj30ZeroGraceStationaryInteractPreservesDelayedLeaderPushFallThrough+s2Obj30ZeroGraceStationaryInteractDirectionalPressKeepsPushBypass+s2Obj30ZeroGraceStationaryInteractWithoutDelayedDirectionKeepsPushBypass+s2Obj30ZeroGraceInteractBridgeRequiresStationaryDelayedTarget" "-DfailIfNoTests=false" test`
+    passed 6 / 6 focused tests.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtrace.context.diagnosticChars=full" "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at f7351 / 687.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; 19 S2 traces ran, 13 stayed green, and six
+    expected reds remain: ARZ2 f1627 / 2258, CNZ2 f9487 / 288, HTZ2 f7351 /
+    687, MTZ3 f9134 / 936, OOZ1 f1813 / 1062, OOZ2 f9307 / 444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests.
+  - `$env:S3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:SONIC_3K_ROM_PATH=$env:S3K_ROM_PATH; mvn "-Dmse=off" "-Ds3k.rom.path=$env:S3K_ROM_PATH" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading" "-DfailIfNoTests=false" test`
+    exited 1 at the existing AIZ expected-red frontiers: complete-run f1095 /
+    4319 (`x_speed` expected `0x0000`, actual `0x000C`) and AIZ f8941 /
+    1160 (`camera_y` expected `0x02C1`, actual `0x02B9`). The S3K AIZ
+    headless and level-loading smoke tests in that command passed.
+  - `$env:S3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:SONIC_3K_ROM_PATH=$env:S3K_ROM_PATH; mvn "-Dmse=off" "-Ds3k.rom.path=$env:S3K_ROM_PATH" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    passed 8 / 8 S3K bootstrap/decoding smoke tests.
+
 ## 2026-06-30 - S3K fixed Dust slot identity (no frontier movement)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /

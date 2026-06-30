@@ -3315,6 +3315,225 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s2Obj30InteractPushGraceWithDelayedLeaderPushCarriesAndClearsAutoJumpLatch() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic2GameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setAir(false);
+            tails.setPushing(false);
+            tails.setOnObject(false);
+            tails.setCentreX((short) 0x1A1B);
+            tails.setCentreY((short) 0x04B0);
+            tails.setDirection(Direction.RIGHT);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            controller.hydrateFromRomCpuState(0x06, 0, 0, 0x30, true, 0, 0);
+
+            RisingLavaObjectInstance obj30 = new RisingLavaObjectInstance(
+                    new ObjectSpawn(0x1920, 0x062D, 0x30, 6, 0, false, 0), "Obj30");
+            obj30.setSlotIndex(41);
+            GameServices.level().getObjectManager().addDynamicObjectAtSlot(obj30, 41);
+            tails.setLatchedSolidObject(0x30, obj30);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x1A1B);
+            Arrays.fill(yHistory, (short) 0x04AC);
+            Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+            Arrays.fill(statusHistory, AbstractPlayableSprite.STATUS_PUSHING);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+            setNormalPushingGraceFrames(controller, 9);
+
+            controller.update(0x13A3);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                            "When delayed d4 still has Status_Push, S2 TailsCPU_Normal falls through "
+                                    + "loc_1BDCE instead of branching to loc_1BE06 "
+                                    + "(docs/s2disasm/s2.asm:39297-39300,39348-39355)."),
+                    () -> assertTrue(controller.getInputRight()),
+                    () -> assertTrue(controller.getInputJump(),
+                            "loc_1BDCE carries Tails_CPU_jumping into Ctrl_2_Logical before clearing it."),
+                    () -> assertEquals(0, controller.getDiagnosticJumpingFlag(),
+                            "Grounded Tails clears Tails_CPU_jumping on the fall-through path."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
+    void s2Obj30ZeroGraceStationaryInteractPreservesDelayedLeaderPushFallThrough() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic2GameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setAir(false);
+            tails.setPushing(false);
+            tails.setOnObject(false);
+            tails.setCentreX((short) 0x1A1B);
+            tails.setCentreY((short) 0x04B0);
+            tails.setDirection(Direction.RIGHT);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            controller.hydrateFromRomCpuState(0x06, 0, 0, 0x30, true, 0, 0);
+
+            RisingLavaObjectInstance obj30 = new RisingLavaObjectInstance(
+                    new ObjectSpawn(0x1920, 0x062D, 0x30, 6, 0, false, 0), "Obj30");
+            obj30.setSlotIndex(41);
+            GameServices.level().getObjectManager().addDynamicObjectAtSlot(obj30, 41);
+            tails.setLatchedSolidObject(0x30, obj30);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x1A1B);
+            Arrays.fill(yHistory, (short) 0x04AC);
+            Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            setNormalPushingGraceFrames(controller, 0);
+
+            controller.update(0x13A3);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                            "HTZ2 stationary Obj30 release preserves delayed d4 Status_Push, "
+                                    + "so S2 TailsCPU_Normal falls through loc_1BDCE "
+                                    + "(docs/s2disasm/s2.asm:39297-39300,39348-39355)."),
+                    () -> assertTrue(controller.getInputRight()),
+                    () -> assertTrue(controller.getInputJump()),
+                    () -> assertEquals(0, controller.getDiagnosticJumpingFlag(),
+                            "Grounded fall-through carries then clears Tails_CPU_jumping."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
+    void s2Obj30ZeroGraceStationaryInteractDirectionalPressKeepsPushBypass() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic2GameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setAir(false);
+            tails.setPushing(false);
+            tails.setOnObject(false);
+            tails.setCentreX((short) 0x1A1B);
+            tails.setCentreY((short) 0x04B0);
+            tails.setDirection(Direction.RIGHT);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            controller.hydrateFromRomCpuState(0x06, 0, 0, 0x30, true, 0, 0);
+
+            RisingLavaObjectInstance obj30 = new RisingLavaObjectInstance(
+                    new ObjectSpawn(0x1920, 0x0626, 0x30, 6, 0, false, 0), "Obj30");
+            obj30.setSlotIndex(41);
+            GameServices.level().getObjectManager().addDynamicObjectAtSlot(obj30, 41);
+            tails.setLatchedSolidObject(0x30, obj30);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x1A1B);
+            Arrays.fill(yHistory, (short) 0x04AC);
+            int historyPos = 20;
+            inputHistory[(historyPos - 16 + inputHistory.length) % inputHistory.length] =
+                    AbstractPlayableSprite.INPUT_RIGHT;
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, historyPos);
+            setNormalPushingGraceFrames(controller, 0);
+
+            controller.update(0x13A2);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("interact_push_grace", diagnostics.followBranch(),
+                            "HTZ2 Obj30 delayed RIGHT press is still the push-bypass frame; "
+                                    + "the delayed-push fall-through begins on the held-RIGHT sample."),
+                    () -> assertFalse(controller.getInputJump()),
+                    () -> assertEquals(1, controller.getDiagnosticJumpingFlag()));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
+    void s2Obj30ZeroGraceStationaryInteractWithoutDelayedDirectionKeepsPushBypass() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic2GameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setAir(false);
+            tails.setPushing(false);
+            tails.setOnObject(false);
+            tails.setCentreX((short) 0x1A1B);
+            tails.setCentreY((short) 0x04B0);
+            tails.setDirection(Direction.LEFT);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            controller.hydrateFromRomCpuState(0x06, 0, 0, 0x30, true, 0, 0);
+
+            RisingLavaObjectInstance obj30 = new RisingLavaObjectInstance(
+                    new ObjectSpawn(0x1920, 0x062B, 0x30, 6, 0, false, 0), "Obj30");
+            obj30.setSlotIndex(41);
+            GameServices.level().getObjectManager().addDynamicObjectAtSlot(obj30, 41);
+            tails.setLatchedSolidObject(0x30, obj30);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x1A1B);
+            Arrays.fill(yHistory, (short) 0x04AC);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            setNormalPushingGraceFrames(controller, 0);
+
+            controller.update(0x138F);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("interact_push_grace", diagnostics.followBranch(),
+                            "HTZ2 stationary Obj30 release with delayed Ctrl_1=0 must keep the "
+                                    + "push-bypass path and skip loc_1BDCE."),
+                    () -> assertFalse(controller.getInputJump()),
+                    () -> assertEquals(1, controller.getDiagnosticJumpingFlag(),
+                            "Bypassing loc_1BDCE leaves Tails_CPU_jumping latched."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
     void s2Obj30ZeroGraceInteractBridgeRequiresStationaryDelayedTarget() throws Exception {
         GameModule previous = GameModuleRegistry.getCurrent();
         try {

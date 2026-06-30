@@ -2034,6 +2034,16 @@ public class SidekickCpuController {
                 && preservesSidekickDelayedLeaderPushWhileRiding(ridingObject)) {
             recordedStatus |= AbstractPlayableSprite.STATUS_PUSHING;
         }
+        if ((recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && normalPushingGraceFrames == 0
+                && dx == 0
+                && (recordedInput & (AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_RIGHT)) != 0
+                && (diagnosticGeneratedPressedInput
+                & (AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_RIGHT)) == 0
+                && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
+                && preservesSidekickDelayedLeaderPushFromInteractSlot()) {
+            recordedStatus |= AbstractPlayableSprite.STATUS_PUSHING;
+        }
         byte pushBypassStatus = effectiveLeader.getStatusHistory(OBJECT_ORDER_INPUT_DELAY_FRAMES);
         byte pushBypassLeaderStatus = usesSidekickCpuPushBypassObjectOrderStatusDelay(ridingObject)
                 ? pushBypassStatus
@@ -2853,6 +2863,17 @@ public class SidekickCpuController {
         }
         if (interactObject instanceof SolidObjectProvider provider) {
             return provider.preservesSidekickCpuPushGraceFromInteractSlot(sidekick);
+        }
+        return false;
+    }
+
+    private boolean preservesSidekickDelayedLeaderPushFromInteractSlot() {
+        ObjectInstance interactObject = currentInteractSlotObject();
+        if (!hasLiveInteractSlotObject(interactObject)) {
+            return false;
+        }
+        if (interactObject instanceof SolidObjectProvider provider) {
+            return provider.preservesSidekickDelayedLeaderPushFromInteractSlot(sidekick);
         }
         return false;
     }
