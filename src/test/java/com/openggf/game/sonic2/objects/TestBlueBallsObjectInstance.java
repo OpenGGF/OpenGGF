@@ -71,6 +71,40 @@ public class TestBlueBallsObjectInstance {
         }
     }
 
+    @Test
+    public void placedParentWaitsOnePassAfterInitBeforeMoving() {
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = cameraAtOrigin();
+        ObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return holder[0];
+            }
+
+            @Override
+            public Camera camera() {
+                return camera;
+            }
+        };
+        ObjectManager manager = new ObjectManager(
+                List.of(), null, 0, null, null,
+                GraphicsManager.getInstance(), camera, services);
+        holder[0] = manager;
+
+        ObjectSpawn spawn = new ObjectSpawn(0x80, 0x100, Sonic2ObjectIds.BLUE_BALLS,
+                0, 0, false, 0);
+        BlueBallsObjectInstance parent = new BlueBallsObjectInstance(spawn, "BlueBalls");
+        manager.addDynamicObjectAtSlot(parent, 40);
+
+        manager.update(0, null, List.of(), 1);
+        assertEquals(0x100, parent.getY(),
+                "Obj1D_Init initializes and returns without running Obj1D_Wait");
+
+        manager.update(0, null, List.of(), 2);
+        assertEquals(0x100, parent.getY(),
+                "Obj1D_Wait only arms routine 4; Obj1D_MoveArc starts on the following pass");
+    }
+
     private static Camera cameraAtOrigin() {
         Camera camera = mock(Camera.class);
         when(camera.getX()).thenReturn((short) 0);
@@ -81,5 +115,4 @@ public class TestBlueBallsObjectInstance {
         return camera;
     }
 }
-
 

@@ -2833,6 +2833,41 @@ release: `TestS2HtzLevelSelectTraceReplay` advances f7805 -> green.
 
 ---
 
+## P69 -- Routine-0 init can return before wait/move, while after-current children run initialized
+
+**Pattern.** Some S2 objects do meaningful routine-0 initialization inside the
+first object pass, then `rts` before their wait or movement routine. Children
+allocated after the current slot may still be fully initialized by the parent
+and execute their own wait routine later in that same object pass.
+
+**Engine symptom.** A harmful moving object can touch the player one frame
+early even though the movement formula itself is correct. In CPZ1, Obj1D
+BlueBalls parent init was modeled in the constructor, so the first engine
+`update()` ran the wait routine immediately and the parent entered movement one
+object pass too soon. Touch response then saw the post-move y position at f4547;
+ROM still tested the pre-move position on that frame and did not hurt until
+f4548.
+
+**What to check / fix.**
+1. Read the object's routine-0 init tail before assuming constructor setup is
+   equivalent to a ROM frame. If init ends in `rts`, preserve that object pass.
+2. Check child allocation order separately. If the parent fills child SST fields
+   before `AllocateObjectAfterCurrent`, child constructors may need to start as
+   already initialized even while placed parents wait one pass.
+3. Keep the fix object-local and routine-driven. Do not branch on zone, route,
+   trace frame, or a known failing trace.
+
+**ROM citation.** Obj1D dispatches through its routine table
+(`docs/s2disasm/s2.asm:48317-48329`). `Obj1D_Init` initializes parent and
+children, then returns (`docs/s2disasm/s2.asm:48341-48390`); the child loop
+uses after-current allocation (`docs/s2disasm/s2.asm:48359-48365`).
+`Obj1D_Wait` and `Obj1D_MoveArc` are separate later routines
+(`docs/s2disasm/s2.asm:48393-48421`).
+
+**Originating commit.** `fix(s2): green CPZ1 BlueBalls init cadence`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

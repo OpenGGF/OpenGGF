@@ -195,6 +195,13 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
     /** X-flip status (from Sonic's facing direction at spawn time, stored in renderFlags). */
     private boolean xFlipped;
 
+    /**
+     * ROM routine-0 init has run. Placed Obj1D parents spend their first object
+     * pass in Obj1D_Init, which initializes/spawns and returns; children created
+     * by AllocateObjectAfterCurrent are already initialized by the parent.
+     */
+    private boolean initialized;
+
     public BlueBallsObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         this.currentX = spawn.x() << 8; // Convert to subpixels
@@ -226,6 +233,7 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
         // (ROM: 0 - 1 = -1, which is negative, so skip wait)
         this.waitTimer = 0;
         this.hasSpawnedSiblings = false;
+        this.initialized = false;
 
         // Global instance tracking
         activeInstanceCount++;
@@ -258,6 +266,7 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
         this.xDistance = xDistance;
         this.siblingCount = 0; // Siblings don't spawn more
         this.hasSpawnedSiblings = true; // Prevent future spawning
+        this.initialized = true;
         // Siblings start with staggered wait timer (3, 6, 9...)
         // They wait this many frames before firing
         this.waitTimer = initialWaitTimer;
@@ -284,10 +293,17 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
             return;
         }
 
-        // Spawn siblings on first update
-        if (!hasSpawnedSiblings && siblingCount > 0) {
-            spawnSiblings();
-            hasSpawnedSiblings = true;
+        // ROM Obj1D_Init (s2.asm:48341-48390) initializes all balls and returns
+        // without falling through into Obj1D_Wait. Children are constructed as
+        // already-initialized because the parent filled their SST fields before
+        // AllocateObjectAfterCurrent lets higher slots execute in the same pass.
+        if (!initialized) {
+            if (!hasSpawnedSiblings && siblingCount > 0) {
+                spawnSiblings();
+                hasSpawnedSiblings = true;
+            }
+            initialized = true;
+            return;
         }
 
         // State machine update
