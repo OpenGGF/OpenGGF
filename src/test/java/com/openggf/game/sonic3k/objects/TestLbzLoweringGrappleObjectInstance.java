@@ -141,6 +141,7 @@ class TestLbzLoweringGrappleObjectInstance {
         clearInvocations(player);
         when(player.getLogicalInputState()).thenReturn(
                 AbstractPlayableSprite.INPUT_JUMP | AbstractPlayableSprite.INPUT_LEFT);
+        when(player.isLogicalJumpPressActive()).thenReturn(true);
 
         grapple.update(1, player);
 
@@ -158,6 +159,25 @@ class TestLbzLoweringGrappleObjectInstance {
     }
 
     @Test
+    void heldJumpWithoutFreshLogicalPressDoesNotReleaseGrabbedPlayer() {
+        AbstractPlayableSprite player = playerAt(GRAPPLE_X, GRAPPLE_Y + 0x90);
+        RecordingServices services = services(player, null);
+        LbzLoweringGrappleObjectInstance grapple = grapple(services, 0x1A);
+        grapple.update(0, player);
+        clearInvocations(player);
+        when(player.getLogicalInputState()).thenReturn(AbstractPlayableSprite.INPUT_JUMP);
+        when(player.isLogicalJumpPressActive()).thenReturn(false);
+
+        grapple.update(1, player);
+
+        assertTrue(grapple.grabbedForTesting(0));
+        assertEquals(0, grapple.cooldownForTesting(0));
+        verify(player).setCentreYPreserveSubpixel((short) (GRAPPLE_Y + 2 + 0x94));
+        verify(player, never()).releaseFromObjectControl(1);
+        verify(player, never()).setYSpeed((short) -0x0380);
+    }
+
+    @Test
     void perPlayerCooldownDoesNotBlockNativeP2Capture() {
         AbstractPlayableSprite main = playerAt(GRAPPLE_X, GRAPPLE_Y + 0x90);
         AbstractPlayableSprite sidekick = playerAt(GRAPPLE_X, GRAPPLE_Y + 0x200);
@@ -166,6 +186,7 @@ class TestLbzLoweringGrappleObjectInstance {
         LbzLoweringGrappleObjectInstance grapple = grapple(services, 0x1A);
         grapple.update(0, main);
         when(main.getLogicalInputState()).thenReturn(AbstractPlayableSprite.INPUT_JUMP);
+        when(main.isLogicalJumpPressActive()).thenReturn(true);
         when(sidekick.getCentreY()).thenReturn((short) (GRAPPLE_Y + 0x90));
 
         grapple.update(1, main);

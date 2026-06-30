@@ -153,7 +153,9 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
         }
 
         int input = player.getLogicalInputState();
-        if ((input & AbstractPlayableSprite.INPUT_JUMP) != 0) {
+        // ROM sub_290F2 receives Ctrl_1/2_logical: the low byte is the A/B/C
+        // press edge, while directional release speed comes from held bits.
+        if (player.isLogicalJumpPressActive()) {
             releaseJumpingPlayer(player, slot, frameCounter, input);
             return;
         }
