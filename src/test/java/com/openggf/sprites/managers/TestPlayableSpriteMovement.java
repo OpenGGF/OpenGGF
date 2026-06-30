@@ -965,6 +965,63 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s2GroundedFixedSkidDustAllocatesFromPostMovementPosition() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
+                objectManagerField.setAccessible(true);
+                objectManagerField.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
+
+                mockSprite.setSpindashDustController(new SpindashDustController(
+                        mockSprite, mock(PlayerSpriteRenderer.class)));
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                        .setSkidAnimId(Sonic2AnimationIds.SKID));
+                mockSprite.setAnimationId(Sonic2AnimationIds.SKID);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setHurt(false);
+                mockSprite.setCentreX((short) 0x0F3F);
+                mockSprite.setCentreY((short) 0x04BC);
+                mockSprite.setSkidDustTimer(0);
+
+                Method advanceSkidDustTimer = PlayableSpriteMovement.class
+                        .getDeclaredMethod("advanceSkidDustTimer");
+                advanceSkidDustTimer.setAccessible(true);
+                advanceSkidDustTimer.invoke(manager);
+
+                assertEquals(0, GameServices.level().getObjectManager()
+                        .activeObjectsOfType(SkidDustObjectInstance.class).size(),
+                        "S2/S3K fixed Obj08 skid dust should arm during input handling, not allocate pre-move");
+
+                mockSprite.setCentreX((short) 0x0F44);
+                mockSprite.setCentreY((short) 0x04BE);
+                manager.advanceFixedSkidDustWhileStopAnimPersists();
+
+                List<SkidDustObjectInstance> dust = GameServices.level().getObjectManager()
+                        .activeObjectsOfType(SkidDustObjectInstance.class);
+                assertEquals(1, dust.size(),
+                        "Post-movement fixed Obj08 tick should allocate the skid dust child");
+                assertEquals(0x0F44, dust.get(0).getSpawn().x());
+                assertEquals(0x04CE, dust.get(0).getSpawn().y());
+        }
+
+        @Test
+        public void s2SkidDustDeletesOnRomRoutineFourFrame() {
+                SkidDustObjectInstance dust = new SkidDustObjectInstance(
+                        0x0F44, 0x04CE, mock(PlayerSpriteRenderer.class), false);
+
+                for (int i = 0; i < 17; i++) {
+                        dust.update(i, mockSprite);
+                }
+                assertFalse(dust.isDestroyed(),
+                        "Obj08 skid child should remain allocated on the first routine-4 display frame");
+
+                dust.update(17, mockSprite);
+
+                assertTrue(dust.isDestroyed(),
+                        "Obj08 routine 4 tails to DeleteObject on the next object pass");
+        }
+
+        @Test
         public void s2FixedSkidDustDoesNotTickDuringHurtRoutine() throws Exception {
                 setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
                 Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");

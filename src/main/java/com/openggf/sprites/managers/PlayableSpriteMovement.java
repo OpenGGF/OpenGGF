@@ -109,6 +109,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// frame" so updateCrouchState falls back to the live g_speed.
 	private static final int NO_PRE_FRICTION_SNAPSHOT = Integer.MIN_VALUE;
 	private int preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
+	private boolean fixedSkidDustTickPending;
+	private boolean processingFixedSkidDustTick;
 	private int staleHorizontalInputRideSlotIndex;
 	private int staleHorizontalInputSuppressFrames;
 	private int staleHorizontalInputRideFrames;
@@ -3349,9 +3351,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		int skidAnimId = profile.getSkidAnimId();
 		if (skidAnimId < 0 || sprite.getAnimationId() != skidAnimId) {
+			fixedSkidDustTickPending = false;
 			return;
 		}
-		advanceSkidDustTimer();
+		if (!fixedSkidDustTickPending && !sprite.getAir()) {
+			return;
+		}
+		fixedSkidDustTickPending = false;
+		processingFixedSkidDustTick = true;
+		try {
+			advanceSkidDustTimer();
+		} finally {
+			processingFixedSkidDustTick = false;
+		}
 	}
 
 	private void advanceSkidDustTimer() {
@@ -3360,6 +3372,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Sonic_TurnLeft/Right only switches the dust object into that routine
 		// and seeds mapping_frame=$15 (docs/s2disasm/s2.asm:36927-36929,
 		// 36988-36990, 42759-42797).
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (!processingFixedSkidDustTick
+				&& featureSet != null
+				&& featureSet.waterSplashUsesFixedDustObject()) {
+			fixedSkidDustTickPending = true;
+			return;
+		}
 		int dustTimer = sprite.getSkidDustTimer() - 1;
 		if (dustTimer < 0) {
 			dustTimer = 3;
