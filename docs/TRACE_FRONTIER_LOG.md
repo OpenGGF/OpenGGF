@@ -6,6 +6,61 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CPZ2 Obj1E live lower-bound handoff (f4018 -> f5221)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r3` /
+  `bugfix/ai-s2-cpz2-frontier-r3`, based on integration branch
+  `bugfix/ai-s2-trace-develop` at `5c0a388e1`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: CPZ2 f4018 / 1334 (`x` expected `0x0490`,
+  actual `0x0480`).
+- Triage/evidence: the f4018 context showed Sonic already object-controlled by
+  an earlier Obj1E owner at `x=0x0478`, with the owning tube moving him to
+  `x=0x0480` before destination tube slot 22 ran. ROM Obj1E tests the live
+  player `x_pos` / `y_pos` when the tube slot runs, so the destination gate
+  should see the current lower-bound crossing and capture to the first entry
+  waypoint at `0x0490`. The earlier accepted CPZ2 f2888/f2889 Tails handoff is
+  the opposite edge: Tails crosses from `0x1100` to `0x10F8`, where the
+  frame-start right-edge rejection must still hold and the existing owner-
+  overwrite move must run on the subsequent capture frame.
+- Disassembly cited: Obj1E dispatches through the main-character and sidekick
+  state bytes in slot order (`docs/s2disasm/s2.asm:48501-48511`);
+  `loc_225FC` reads live `x_pos(a1)` / `y_pos(a1)` for the capture gate
+  (`docs/s2disasm/s2.asm:48521-48532`); capture writes the entry waypoint and
+  sets `obj_control=$81` (`docs/s2disasm/s2.asm:48585-48625`); both entry and
+  main path movement consume the current player velocity through
+  `Obj1E_MoveCharacter` / `_2` (`docs/s2disasm/s2.asm:48657-48669,48732-48752`).
+- Fix: CPZ Obj1E now tracks the active tube owner per playable sprite. If an
+  earlier owner slot has already moved the object-controlled player this frame,
+  a destination tube samples the current position only when that movement
+  crossed the destination gate's lower X/Y bound. Otherwise it keeps the
+  frame-start basis and, when that basis captures, applies the existing
+  owner-overwrite movement step. This is object-state and entry-gate driven;
+  no trace hydration, tolerance, zone/route/frame carve-out, or game-id branch
+  is used.
+- Focused target:
+  `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CPZ2 advanced to f5221 / 377
+  (`tails_x_speed` expected `-000C`, actual `0x0000`).
+- Current S2 green guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  exited 0 under MSE. Surefire also selected the expected-red CPZ2 class due
+  the CPZ class-name pattern; the XML reports confirm ARZ1, CNZ1, CPZ1, DEZ
+  ending, EHZ1, HTZ1, MCZ1, MCZ2, SCZ, and WFZ each passed, with CPZ2 the only
+  failing class at f5221 / 377.
+- Red preservation set on current integration:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved the accepted non-CPZ2 first frontiers:
+  ARZ2 f1028 / 2686, CNZ2 f6561 / 1093, HTZ2 f4012 / 1031,
+  MTZ1 f5713 / 560, MTZ2 f6650 / 949, MTZ3 f4575 / 932, OOZ1 f1790 / 888,
+  OOZ2 f3919 / 1117. CPZ2 is the intentional movement to f5221 / 377.
+- Full current S2 sweep:
+  `mvn "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected with 19 run, 10 green, and 9 expected red. CPZ2 is now
+  f5221 / 377; all other first-error frontiers match the preservation set
+  above.
+
 ## 2026-06-30 - S2 OOZ2 Obj3D routine-6 launcher child (f3835 -> f3919)
 
 - Worktree/branch: `.worktrees/ai-s2-ooz2-frontier-r2` /
@@ -114,7 +169,6 @@ branch-local measurements.
   exited 1 as expected with 19 run, 10 green, and 9 expected red. MTZ2 is now
   f6650 / 949; all other first-error frontiers match the preservation set
   above.
-
 ## 2026-06-30 - S2 CNZ2 Tails fly-in object-control preservation (f6144 -> f6561)
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r2` /
