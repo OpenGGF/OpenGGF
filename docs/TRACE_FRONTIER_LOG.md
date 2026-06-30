@@ -6,6 +6,56 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 OOZ1 Obj36 final positive sidekick push bridge (f1813 -> f4637)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-round11-next` /
+  `bugfix/ai-s2-ooz1-round11-next`, based on
+  `bugfix/ai-s2-trace-next` at `990a53758`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay" "-Dtrace.context.diagnosticChars=full" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red OOZ1 f1813 / 1062
+  (`tails_x` expected `0x0CE4`, actual `0x0CE3`).
+- Triage/evidence: frame 1813 had ROM Tails at `$0CE4.3200`,
+  inertia/x speed `$003C`, status `$08`, on Obj36 slot `$1D`; the engine had
+  `$0CE3.7600`, inertia/x speed `-$0080`, still riding Obj36 slot `$1D`.
+  `TailsCPU_Normal` loads the delayed Ctrl/status, then tests Tails' current
+  `Status_Push`; if Tails is pushing and the delayed leader status is not,
+  it branches around FollowLeft/FollowRight and preserves the already-loaded
+  delayed RIGHT word (`docs/s2disasm/s2.asm:39291-39300`). Obj36 Upright runs
+  `MoveSpikes`, then `SolidObject`, and only later inspects its standing bits
+  (`docs/s2disasm/s2.asm:29392-29418`), while the shared `SolidObject_cont`
+  path owns the standing/pushing set/clear (`docs/s2disasm/s2.asm:35344-35466`).
+  The engine's object-local Obj36 ladder already modeled the late left-edge
+  status bridge, but its `dx=-$0C` positive-speed cap intercepted the final
+  inertia `$30` sample. Allowing that one sample through lets `Tails_MoveRight`
+  apply the ordinary `+$0C` acceleration (`docs/s2disasm/s2.asm:39964-39981`);
+  the following inertia `$3C` sample still falls through FollowLeft because
+  the existing late-edge cap remains at grace 3.
+- Fix: `SpikeObjectInstance.sidekickCpuPushGraceMaximumFramesWhileRiding`
+  now checks the inertia `$30` bridge before the late positive inner-left-edge
+  cap and permits it through grace 6. This is S2 Obj36-local; no shared
+  contact or trace-hydration behavior changed.
+- Result:
+  `TestS2OozLevelSelectTraceReplay#replayMatchesTrace`: f1813 / 1062 errors
+  (`tails_x` expected `0x0CE4`, actual `0x0CE3`) -> f4637 / 815 errors
+  (`tails_y` expected `0x021D`, actual `0x0220`). The new owner is Obj33
+  popping-platform airborne release: ROM has Tails airborne with status `$02`
+  after Obj33 slot `$22`, while the engine keeps Tails grounded on Obj33 slot
+  `$22` / engine slot 34.
+- Verification:
+  - Target replay command above exits 1 as expected-red at f4637 / 815.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    exits 1 as expected-red; 19 S2 traces run, 13 green, and the six red
+    frontiers are ARZ2 f1627 / 2258, CNZ2 f9487 / 288, HTZ2 f5031 / 930,
+    MTZ3 f9134 / 936, OOZ1 f4637 / 815, and OOZ2 f9307 / 444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passes 29 / 29 S1 trace tests.
+  - `$env:S3K_ROM_PATH=(Resolve-Path 'Sonic and Knuckles & Sonic 3 (W) [!].gen').Path; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Ds3k.rom.path=$env:S3K_ROM_PATH" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kBootstrapResolver,com.openggf.tests.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    exits 1 at the existing S3K AIZ expected-red frontiers: complete-run
+    f1095 / 4319 (`x_speed` expected `0x0000`, actual `0x000C`) and AIZ
+    f8941 / 1160 (`camera_y` expected `0x02C1`, actual `0x02B9`). The
+    must-keep non-trace tests in that command pass.
+
 ## 2026-06-30 - S3K fixed Dust slot identity (no frontier movement)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /
