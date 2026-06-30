@@ -6,6 +6,52 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CPZ2 Mega Mack target height (f7035 -> f9745)
+
+- Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r10` /
+  `bugfix/ai-s2-cpz2-frontier-r10`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at accepted HEAD `3a513f6ac`, then
+  fast-forwarded to integration `26a8efb20` before final verification.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix on the accepted CPZ2 baseline: CPZ2 f7035 / 917
+  (`y_speed` expected `-0220`, actual `-0110`).
+- Triage/evidence: f7035 has matching Sonic position/subpixels and camera,
+  but ROM status clears `Status_Underwater` while the engine remains
+  underwater and applies only the underwater gravity step. A temporary
+  diagnostic probe (removed before commit) showed the engine CPZ2 water base
+  pinned at `$508`, making gameplay `Water_Level_1` too low for the ROM exit
+  frame. Raising the base to the ROM target `$510` makes `MoveWater` plus the
+  CPZ oscillation put `Water_Level_1` at the frame-7035 crossing height, so
+  `Sonic_Water` clears underwater status and doubles `y_vel` like the trace.
+- Disassembly cited: `MoveWater` writes `Water_Level_1 = Water_Level_2 +
+  ((Oscillating_Data).w >> 1)` for non-ARZ water before player object
+  execution (`docs/s2disasm/s2.asm:5273-5282`). `DynamicWaterCPZ2` writes
+  `Water_Level_3 = #$510` once `Camera_X_pos >= $1DE0`
+  (`docs/s2disasm/s2.asm:5460-5464`). `Sonic_Water` compares player `y_pos`
+  against `Water_Level_1`, clears `Status_Underwater`, and doubles `y_vel` on
+  exit when not hurt (`docs/s2disasm/s2.asm:36375-36424`).
+- Fix: `Sonic2CPZEvents` now targets `$510` for the CPZ2 water rise trigger.
+  This models the ROM dynamic water target; it does not edit trace data, add
+  tolerance, or add route, frame, zone, game-id, or known-failing carve-outs.
+- Focused oracle:
+  `mvn clean test "-Dtest=TestSonic2CPZEvents"`
+  exits 0.
+- Focused target:
+  `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CPZ2 advances to f9745 / 201
+  (`tails_y` expected `0x04F0`, actual `0x04EF`).
+- Current S2 green guard:
+  `mvn clean test "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false"`
+  exits 0. Individual Surefire reports are clean for all selected green traces,
+  including MTZ2.
+- Red preservation set on integration `26a8efb20`:
+  `mvn clean test "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dmaven.test.failure.ignore=true"`
+  exits 0 with expected red failures ignored and preserves ARZ2 f1028 / 2686,
+  CNZ2 f8870 / 447, HTZ2 f4136 / 1024, MTZ1 f5713 / 560,
+  MTZ3 f7853 / 864, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. CPZ2 is the
+  only moved red frontier in the set, now f9745 / 201.
+
 ## 2026-06-30 - S2 CNZ2 Obj51 electric hurt regions (f8403 -> f8870)
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r10` /
