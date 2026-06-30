@@ -183,6 +183,18 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a continued-ride exit clears this object's standing bit immediately.
+     * <p>
+     * Default remains false for existing folded/custom solid profiles whose
+     * standing latch is consumed by later object-local code. Concrete ROM
+     * {@code PlatformObject} users can opt in when their own status byte drives
+     * same-frame behavior such as platform sag.
+     */
+    default boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Optional centre-Y write for objects that preserve a ride while object-local
      * code owns player positioning. Return {@code null} to leave Y unchanged.
      */

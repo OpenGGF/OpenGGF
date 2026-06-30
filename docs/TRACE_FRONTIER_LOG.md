@@ -6,6 +6,58 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 HTZ2 Obj18 walk-off standing-bit clear (f4136 -> f4138)
+
+- Worktree/branch: `.worktrees/ai-s2-htz2-frontier-r6` /
+  `bugfix/ai-s2-htz2-frontier-r6`, created from integration branch
+  `bugfix/ai-s2-trace-develop` at accepted HEAD `63067d46c`, fast-forwarded
+  to `3a513f6ac`, then fast-forwarded again to current integration
+  `26a8efb20` before final verification.
+- Baseline reproduction on merged integration `26a8efb20`:
+  `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: HTZ2 f4136 / 1024 (`y_speed` expected `0x0000`,
+  actual `0x02D8`).
+- Triage/evidence: at f4136 the target Obj18 platform's base movement matches
+  ROM (`x=$1860`, `base y=$065B`), but the engine surface remains two pixels
+  low because Obj18 still has residual sag from a stale Tails standing bit.
+  A temporary diagnostic around f4104 showed Tails was no longer `Status_OnObj`
+  and no longer riding the platform, while `ObjectManager.hasObjectStandingBit`
+  for Obj18 at `x=$1860` stayed set. ROM aux for the same object shows
+  `status(a0)&$18 == 0` from f4103 until Sonic's real landing at f4136.
+- Disassembly cited: Obj18 reads `status(a0)&standing_mask`, adjusts
+  `obj18_y_offset`, then calls `Obj18_Move`, `Obj18_Nudge`, and
+  `PlatformObject` (`docs/s2disasm/s2.asm:23219-23242`). `Obj18_Nudge`
+  turns `obj18_y_offset` into the final `y_pos`
+  (`docs/s2disasm/s2.asm:23311-23320`). `PlatformObject_SingleCharacter`
+  clears the object's standing bit when the rider is airborne or leaves the
+  X bounds (`docs/s2disasm/s2.asm:35737-35755`).
+- Fix: `SolidObjectProvider` now exposes an object-profile hook for solids
+  whose continued-ride exit clears their standing bit immediately, and S2
+  Obj18 opts in. `ObjectSolidContactController` uses that hook on the
+  continued-ride air/walk-off/drop exits. This models ROM object status; it
+  does not add trace data hydration, tolerance, or any zone/route/frame carve.
+  A broad shared version of the same clear was rejected because it regressed
+  MTZ3 to f2047 / 1170; the committed form is object-profile scoped and keeps
+  MTZ3 at f7853 / 864.
+- Focused oracle:
+  `mvn "-Dtest=TestS2ObjectOccupancyOracle#htz2Obj18SidekickWalkOffClearsSagStandingBitAtRomFrame4104" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exits 0. Before the implementation it failed because Tails' Obj18 standing
+  bit was still set at f4104.
+- Focused target after integration `26a8efb20`:
+  `mvn "-Dtest=TestS2Htz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; HTZ2 advances to f4138 / 1136 (`y` expected
+  `0x0642`, actual `0x0643`).
+- Current S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exits 0. Individual Surefire reports are clean for all selected green traces,
+  including MTZ2.
+- Red preservation set on integration `26a8efb20`:
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dmaven.test.failure.ignore=true" test`
+  exits 0 with expected red failures ignored and preserves ARZ2 f1028 / 2686,
+  CNZ2 f8870 / 447, CPZ2 f7035 / 917, MTZ1 f5713 / 560, MTZ3 f7853 / 864,
+  OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. HTZ2 is the only moved red
+  frontier in the set, now f4138 / 1136.
+
 ## 2026-06-30 - S2 CPZ2 Mega Mack target height (f7035 -> f9745)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r10` /
