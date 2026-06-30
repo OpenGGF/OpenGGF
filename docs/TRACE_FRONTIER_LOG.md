@@ -6,6 +6,64 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 OOZ2 Obj3D routine-6 launcher child (f3835 -> f3919)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-frontier-r2` /
+  `bugfix/ai-s2-ooz2-frontier-r2`, based on integration branch
+  `bugfix/ai-s2-trace-develop` at `09becc1c8`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: OOZ2 f3835 / 797 (`x` expected `0x1140`,
+  actual `0x114C`).
+- Triage/evidence: at f3835 the ROM has Sonic owned by Obj3D slot `$1F`
+  near the broken launcher at `$1140,$0270`; the engine had no separate
+  routine-6 Obj3D child and the original launcher instance was still carrying
+  the invisible-launcher state. Moving the state to an after-current child
+  makes the same break-frame proximity scan capture Sonic and apply the ROM
+  horizontal launcher state.
+- Disassembly cited: `Obj3D` `loc_24F04` calls
+  `AllocateObjectAfterCurrent`, copies the current object into the new slot,
+  sets the child `routine` to 6, then calls `BreakObjectToPieces` on the
+  current object (`docs/s2disasm/s2.asm:51040-51062`). The routine-6 path
+  scans players and calls `Obj3D_MoveCharacter` while captured
+  (`docs/s2disasm/s2.asm:51079-51189,51201-51214`). When no player is
+  captured, it branches to `MarkObjGone3`, which returns while the object is
+  still within the coarse camera range and deletes only after it scrolls out
+  (`docs/s2disasm/s2.asm:30259-30269`).
+- Fix: `OOZLauncherObjectInstance` now spawns a dedicated invisible
+  routine-6 child through `spawnChild` / after-current allocation, performs
+  the break-frame scan on that child, and prevents the broken parent from
+  owning persistent launcher state. The zero-active routine-6 child now uses
+  the same in-range lifetime rule as `MarkObjGone3`. This is object-local ROM
+  state and slot cadence; no trace hydration, tolerance, route, frame, or
+  zone carve-out is used.
+- Focused regression check:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestOOZLauncherObjectInstance,com.openggf.game.sonic2.objects.TestLauncherBallObjectInstance" "-DfailIfNoTests=false" test`.
+  Result: exit 0; Surefire XML showed `TestOOZLauncherObjectInstance` 5/5 and
+  `TestLauncherBallObjectInstance` 3/3 with zero failures.
+- Focused trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.context.diagnosticChars=full" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; OOZ2 advances to f3919 / 1117 (`x` expected
+  `0x1240`, actual `0x1230`), a separate Obj48 launcher-ball capture/slot
+  ordering frontier.
+- OOZ1 preservation:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.context.diagnosticChars=full" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; OOZ1 preserves first error f1790
+  (`tails_x_speed` expected `0x0080`, actual `-008C`) with downstream error
+  count 888 on this integration merge.
+- Current green guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: passed 10/10.
+- Coverage check:
+  `mvn "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero from pre-existing unrelated S3K LBZ coverage gaps;
+  no S2 OOZ launcher gap was reported.
+- Full current S2 sweep:
+  `mvn "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected with 19 run, 10 green, and 9 expected red. OOZ2 is now
+  f3919 / 1117; OOZ1 is f1790 / 888; all other first-error frontiers match
+  the current accepted baseline.
+
 ## 2026-06-30 - S2 MTZ2 Tails flying-timeout status clear (f4375 -> f6650)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz2-frontier-r2` /
@@ -110,7 +168,6 @@ branch-local measurements.
   `mvn "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
   exited 1 as expected with 19 run, 10 green, and 9 expected red. CNZ2 is now
   f6561 / 1093; all other red frontiers match the preservation set above.
-
 ## 2026-06-30 - S2 CPZ1 Obj1D BlueBalls parent init return (f4547 -> green)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz1-frontier-r2` /

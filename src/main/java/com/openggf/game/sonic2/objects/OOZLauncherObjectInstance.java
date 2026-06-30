@@ -111,6 +111,8 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     private boolean isVertical;    // subtype == 0 → vertical (launch right)
     private boolean broken = false;
     private boolean launcherActive = false;
+    private boolean invisibleLauncherOnly = false;
+    private int sameFrameLauncherScanFrame = Integer.MIN_VALUE;
 
     // Invisible launcher states per player (ROM routine 6 states).
     private final Map<AbstractPlayableSprite, LauncherPlayerState> playerStates = new IdentityHashMap<>();
@@ -119,9 +121,18 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     private final SolidObjectParams solidParams;
 
     public OOZLauncherObjectInstance(ObjectSpawn spawn, String name) {
+        this(spawn, name, false);
+    }
+
+    private OOZLauncherObjectInstance(ObjectSpawn spawn, String name, boolean invisibleLauncherOnly) {
         super(spawn, name);
         this.isVertical = (spawn.subtype() & 0xFF) == 0;
         this.solidParams = new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HEIGHT_D2, SOLID_HALF_HEIGHT);
+        this.invisibleLauncherOnly = invisibleLauncherOnly;
+        if (invisibleLauncherOnly) {
+            this.broken = true;
+            this.launcherActive = true;
+        }
     }
 
     @Override
@@ -136,10 +147,12 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        if (!broken) {
+        if (invisibleLauncherOnly) {
+            if (launcherActive && frameCounter != sameFrameLauncherScanFrame) {
+                updateInvisibleLauncher(frameCounter, player);
+            }
+        } else if (!broken) {
             updateMainBlock(frameCounter, player);
-        } else if (launcherActive) {
-            updateInvisibleLauncher(frameCounter, player);
         }
     }
 
@@ -192,7 +205,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
                     launchPlayer(participant, participantYVel, frameCounter);
                 }
             }
-            breakBlock(frameCounter);
+            breakBlock(frameCounter, player);
         }
     }
 
@@ -218,13 +231,20 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     /**
      * Break the block into fragments and spawn invisible launcher (ROM: loc_24F04).
      */
-    private void breakBlock(int frameCounter) {
+    private void breakBlock(int frameCounter, AbstractPlayableSprite player) {
         broken = true;
-        launcherActive = true;
+        launcherActive = false;
         for (LauncherPlayerState state : playerStates.values()) {
             state.launcherState = 0;
         }
 
+        // Obj3D loc_24F04 allocates the invisible routine-6 launcher with
+        // AllocateObjectAfterCurrent before BreakObjectToPieces mutates the
+        // current object into fragment routine 4 (s2.asm:51040-51062).
+        OOZLauncherObjectInstance invisibleLauncher =
+                spawnChild(() -> new OOZLauncherObjectInstance(spawn, "OOZLauncher", true));
+        invisibleLauncher.updateInvisibleLauncher(frameCounter, player);
+        invisibleLauncher.sameFrameLauncherScanFrame = frameCounter;
         spawnFragments();
 
         // Play smash sound
@@ -294,9 +314,14 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             anyActive |= state.launcherState != 0;
         }
 
-        // Delete when all tracked player states are 0 (ROM: beq.w JmpTo3_MarkObjGone3)
+        // With no tracked player, Obj3D branches to MarkObjGone3. That helper
+        // returns while the object is inside the coarse camera range and only
+        // deletes after it scrolls out (s2.asm:30259-30269).
         if (!anyActive) {
-            launcherActive = false;
+            if (!isInRange()) {
+                launcherActive = false;
+                setDestroyed(true);
+            }
         }
     }
 
@@ -543,7 +568,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        return launcherActive;
+        return invisibleLauncherOnly && launcherActive;
     }
 
     // ========================================================================
