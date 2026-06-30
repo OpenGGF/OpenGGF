@@ -6,6 +6,52 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CNZ2 map-bumper visible window (f6561 -> f6809)
+
+- Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r3` /
+  `bugfix/ai-s2-cnz2-frontier-r3`, based on integration branch
+  `bugfix/ai-s2-trace-develop` at `5c0a388e1`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: CNZ2 f6561 / 1093 (`tails_x_speed` expected
+  `0x0060`, actual `-0A00`).
+- Triage/evidence:
+  `TraceTriageTool` classified the first mismatch under sidekick state, but a
+  focused write trace showed Tails' movement/collision ended the frame with
+  `x_speed=0060`; the later `-0A00` write came from
+  `CNZBumperManager.applyNarrowTopBounce`. The hit was type 2 at
+  `0x1EC0,0x05E0` while Tails was at `0x1E77.4600,0x05CD`. The ROM trace's
+  `camera_x=0x2015` means `SpecialCNZBumpers_Main` should scan only from
+  `0x200D` to `0x215D`, so `0x1EC0` is already behind the ROM-visible bumper
+  list.
+- Disassembly cited:
+  `SpecialCNZBumpers_Init`/`Main` derive the visible list from
+  `Camera_X_pos - 8`, clamp underflow to 1, and advance the end by `$150`
+  (`docs/s2disasm/s2.asm:32387-32410,32414-32455`). `Check_CNZ_bumpers`
+  scans only the visible start/end pointers and selects the P2 list for Tails
+  (`docs/s2disasm/s2.asm:32499-32508`), then uses `x_pos`, `y_pos`, and
+  `y_radius-3` for the box (`docs/s2disasm/s2.asm:32509-32515`). Type 2
+  narrow-top contact can write `x_vel=-$A00`
+  (`docs/s2disasm/s2.asm:32721-32737`).
+- Fix: `CNZBumperManager` now uses the ROM map-bumper scan window
+  `[max(cameraX - 8, 1), +0x150)` instead of the shared object placement
+  behind/ahead window. The f6561 false hit is no longer considered active.
+  The change is S2 CNZ map-bumper state, not trace hydration, tolerance,
+  route, frame, or known-failing-trace logic.
+- Focused unit check:
+  `mvn "-Dtest=com.openggf.game.sonic2.bumpers.TestCNZBumperManager,TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  ran 4 tests: the bumper window unit passed, and CNZ2 advanced to f6809 /
+  1059 (`g_speed` expected `0x000C`, actual `0x0000`).
+- Current S2 green guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  exited 0 / MSE OK. Maven also matched the target CNZ2 class, which remained
+  expected-red at f6809 / 1059; the requested green traces did not regress.
+- Red preservation set:
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2687, CPZ2 f4018 / 1334,
+  HTZ2 f4012 / 1031, MTZ1 f5713 / 560, MTZ2 f4375 / 950,
+  MTZ3 f4575 / 932, OOZ1 f1790 / 614, and OOZ2 f3835 / 797.
+
 ## 2026-06-30 - S2 CNZ2 Tails fly-in object-control preservation (f6144 -> f6561)
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r2` /
