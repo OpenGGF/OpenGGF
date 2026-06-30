@@ -6,6 +6,57 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 MTZ2 Obj68 spike phase level counter (f8659 -> f8825)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz2-frontier-r5` /
+  `bugfix/ai-s2-mtz2-frontier-r5`, based on integration branch
+  `bugfix/ai-s2-trace-develop` after the CNZ2 r6 merge at `78cb8d8bb`.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Mtz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: MTZ2 f8659 / 429 (`x_speed` expected `0x0200`,
+  actual `-00BC`).
+- Triage/evidence: `TraceTriageTool` for `s2 mtz2` reported f8659 with Sonic
+  expected to be in the hurt routine (`routine=04`, `in_air=1`,
+  `x_speed=$0200`, `y_speed=-$0400`) after touching the Obj68 spike child
+  attached to the block at `$18D0,$03B0`. The engine instead kept Sonic
+  grounded on the parent block with `x_speed=-00BC`. Expanded context showed
+  the engine Obj68 child at that anchor was in the horizontal `$A6` spike phase
+  while the ROM child cadence at the same anchor placed the damaging vertical
+  phase at the hit window. A temporary local probe showed the placed Obj68
+  parent seeded its child from ObjectManager's VBlank-style object counter,
+  causing subtype `$01` to start one direction later than the ROM-visible level
+  counter used by Obj68.
+- Disassembly cited: `Obj68_Init` allocates the child after the parent, copies
+  the parent `x_pos/y_pos`, then reads `(Level_frame_counter).w`, shifts by 6,
+  uses bit 0 for `spikearoundblock_position`, combines the next bit with
+  `subtype`, and writes `routine_secondary`, `mapping_frame`, and
+  `collision_flags` (`docs/s2disasm/s2.asm:53722-53755`). `Obj68_Spike_Action`
+  reads `(Level_frame_counter+1).w`, masks `$3F` for the wait gate, and only
+  then advances expand/retract state and direction/collision flags
+  (`docs/s2disasm/s2.asm:53821-53857`). S2 `Touch_Loop` consumes
+  `collision_flags` directly (`docs/s2disasm/s2.asm:85048-85054`), and
+  `HurtCharacter` applies the `$0200/-$0400` knockback visible in the trace
+  (`docs/s2disasm/s2.asm:85443-85490`).
+- Fix: Obj68 spike parent/child code now reads the ROM-visible level frame
+  counter from `LevelManager` for both the child initial phase and the 64-frame
+  wait gate, using the object update argument only as fallback. The change
+  models Obj68 timer state; it does not hydrate trace data or add tolerance,
+  route, zone, frame, game-id, or known-failing-trace logic.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Mtz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; MTZ2 advanced to f8825 / 366
+  (`tails_cpu_ctrl2_held` expected `0x0008`, actual `0x0018`), a later
+  sidekick-control frontier.
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
+- Red preservation set on current integration:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686, CNZ2 f7156 / 738,
+  CPZ2 f5285 / 376, HTZ2 f4012 / 1031, MTZ1 f5713 / 560,
+  OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. MTZ3 stayed at f6334 and did not
+  move backward (total errors 865 in this branch versus the accepted 928).
+
 ## 2026-06-30 - S2 CNZ2 Obj85 diagonal launcher capture center write (f6969 -> f7156)
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r6` /
