@@ -1269,6 +1269,53 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s2ObjectOnlyPinballGuardDoesNotBlockRollingJump() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(true);
+                mockSprite.setPinballMode(true);
+                mockSprite.setSpindash(false);
+                mockSprite.setAngle((byte) 0x00);
+                mockSprite.setYSpeed((short) 0);
+                setMovementField("inputJumpPress", true);
+                setMovementField("inputJump", true);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("modeRoll");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertTrue(mockSprite.getAir(),
+                                "S2 Obj02_MdRoll should run Tails_Jump when only the engine Obj85/Obj86 roll guard is set");
+                assertTrue(mockSprite.getRollingJump(),
+                                "Rolling jump should set Status_RollJump");
+                assertFalse(mockSprite.getPinballMode(),
+                                "The synthetic object guard must be cleared before later pinball_mode tests");
+                assertEquals((short) -0x0680, mockSprite.getYSpeed(),
+                                "Flat rolling jump should apply Tails/Sonic jump velocity");
+        }
+
+        @Test
+        public void s2RomBackedPinballStillBlocksRollingJump() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(true);
+                mockSprite.setPinballMode(true);
+                mockSprite.setSpindash(true);
+                mockSprite.setAngle((byte) 0x00);
+                setMovementField("inputJumpPress", true);
+                setMovementField("inputJump", true);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("romPinballModeBlocksRollingJump");
+                method.setAccessible(true);
+                boolean blocked = (Boolean) method.invoke(manager);
+
+                assertTrue(blocked,
+                                "S2 Obj84's ROM-backed pinball_mode/spindash mirror must still skip Tails_Jump");
+                assertTrue(mockSprite.getPinballMode(),
+                                "ROM-backed pinball_mode remains latched while the roll path continues");
+        }
+
+        @Test
         public void jumpFromWallModeEnteringRollPreservesRomXPos() throws Exception {
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);

@@ -621,7 +621,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 
-		if (!sprite.getPinballMode() && inputJumpPress && doJump()) {
+		if (inputJumpPress && !romPinballModeBlocksRollingJump() && doJump()) {
 			// ROM: Sonic_Jump uses addq.l #4,sp to pop the return address,
 			// skipping the rest of Obj01_MdRoll (RollRepel, RollSpeed,
 			// SpeedToPos, AnglePos, SlopeRepel). Air physics and position
@@ -636,6 +636,24 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		doSlopeRepel();
+	}
+
+	private boolean romPinballModeBlocksRollingJump() {
+		if (!sprite.getPinballMode()) {
+			return false;
+		}
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (featureSet != null
+				&& featureSet.rollingJumpPinballGateRequiresSpindashFlag()
+				&& !sprite.getSpindash()) {
+			// S2 Obj85/Obj86 do not write pinball_mode; the engine uses
+			// pinballMode there only to carry a temporary roll-preservation
+			// guard. Clear it before Sonic_Jump/Tails_Jump so later airborne
+			// pinball_mode tests also see the ROM byte as zero.
+			sprite.setPinballMode(false);
+			return false;
+		}
+		return true;
 	}
 
 	/** Obj01_MdAir/MdJump: Airborne state */

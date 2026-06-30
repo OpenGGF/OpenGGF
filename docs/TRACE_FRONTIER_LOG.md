@@ -6,6 +6,69 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CNZ2 S2 pinball-mode rolling jump gate (f7156 -> f7984)
+
+- Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r7` /
+  `bugfix/ai-s2-cnz2-frontier-r7`, based on integration branch
+  `bugfix/ai-s2-trace-develop` after the MTZ2 r5 merge at `9853be498`, then
+  merged forward to CPZ2 r5 integration commit `56b44a392` before final
+  verification.
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: CNZ2 f7156 / 738 (`tails_x_speed` expected `0x0A3D`,
+  actual `0x0A37`).
+- Triage/evidence: f7156 showed ROM Tails still grounded/rolling after Obj85
+  slope-mode handoff and taking the CPU-generated rolling jump, producing
+  `y_vel=-$0680`, `Status_InAir|Status_Roll|Status_RollJump`, and preserved
+  `ground_vel=$0A3D`. The engine had the same generated jump press visible in
+  CPU diagnostics but skipped `Tails_Jump` because its shared `pinballMode`
+  field was still true from an Obj85/Obj86 roll-preservation guard. The failed
+  state therefore decelerated once more to `$0A37`, stayed grounded, and kept
+  `y_vel=0`. A broader experiment that stopped preserving Obj85 slope-mode
+  pinball through launch moved CNZ2 backward to f1159, so the accepted change
+  leaves object roll preservation intact and narrows only the ROM pinball-mode
+  interpretation at the rolling jump gate.
+- Disassembly cited: S2 `Obj02_MdRoll` tests `pinball_mode(a0)` and only calls
+  `Tails_Jump` when that byte is zero (`docs/s2disasm/s2.asm:39633-39639`);
+  `Tails_Jump` writes jumping/roll-jump state and applies the normal `$0680`
+  jump impulse (`docs/s2disasm/s2.asm:40371-40426`). Obj85 diagonal capture
+  writes `obj_control=$81`, player `x_pos/y_pos`, zero velocities/inertia,
+  rolling status, radii, and roll animation but does not write `pinball_mode`
+  (`docs/s2disasm/s2.asm:58179-58191`). Obj86 first-standing/release and
+  launch paths write control, radii, roll/air/velocity state but likewise do
+  not write `pinball_mode` (`docs/s2disasm/s2.asm:58371-58385,58389-58396,
+  58423-58463`). Obj84 is the relevant S2 pinball writer and explicitly
+  sets/clears `pinball_mode(a1)` (`docs/s2disasm/s2.asm:46853-46856,
+  46878-46881,46934-46937,46959-46962`). `Tails_UpVelCap` later tests the same
+  ROM byte, so the engine-only guard must be cleared before the accepted jump
+  (`docs/s2disasm/s2.asm:40453-40454`).
+- Fix: `PhysicsFeatureSet` now exposes
+  `rollingJumpPinballGateRequiresSpindashFlag`. S2 enables it so
+  `PlayableSpriteMovement` treats `pinballMode` as ROM `pinball_mode` at
+  `Obj01/Obj02_MdRoll` only when the engine's Obj84 `spindash` mirror is also
+  set; engine-only Obj85/Obj86 roll-preservation guards are cleared before
+  `Sonic_Jump` / `Tails_Jump`. S3K leaves the flag disabled because AutoSpin
+  tunnel control is represented by engine `pinballMode` and still owns the
+  roll-jump block. The change models ROM-backed state, with no trace hydration,
+  tolerance, route, zone, frame, or known-failing carve-out.
+- Focused unit check:
+  `mvn -q "-Dmse=off" "-Dtest=TestPlayableSpriteMovement#s2ObjectOnlyPinballGuardDoesNotBlockRollingJump+s2RomBackedPinballStillBlocksRollingJump" test`
+  exited 0.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CNZ2 advanced to f7984 / 680 (`tails_x` expected
+  `0x29DE`, actual `0x29DF`), a later sidekick position frontier.
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0 on retry after one transient LWJGL native-load failure in the
+  interrupted run; the passing run emitted only non-fatal config-save warnings.
+- Red preservation set on current integration:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686, CPZ2 f5464 / 351,
+  HTZ2 f4012 / 1031, MTZ1 f5713 / 560, MTZ2 f8825 / 366,
+  MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. No checked red
+  trace moved backward.
+
 ## 2026-06-30 - S2 CPZ2 Obj78 first-child push-bypass auto-jump (f5285 -> f5464)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r5` /

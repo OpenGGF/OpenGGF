@@ -116,6 +116,16 @@ public record PhysicsFeatureSet(
          *  S3K: true; Player_TouchFloor_Check_Spindash branches around the touch-floor body
          *  while spin_dash_flag is non-zero, leaving AutoSpin tunnel control latched. */
         boolean pinballLandingPreservesPinballMode,
+        /** Whether the ground-rolling jump gate treats {@code pinballMode} as
+         *  ROM {@code pinball_mode} only when the engine's {@code spindash}
+         *  mirror is also set.
+         *  S2: true -- Obj85/Obj86 roll guards use {@code pinballMode} only as
+         *  engine-local roll preservation, while the real Obj84
+         *  {@code pinball_mode} writer is mirrored into {@code spindash}
+         *  (s2.asm:58179-58191,58376-58385,46853-46856).
+         *  S3K: false -- AutoSpin tunnel control is represented by engine
+         *  {@code pinballMode} and must still block the roll jump gate. */
+        boolean rollingJumpPinballGateRequiresSpindashFlag,
         /** Whether top-solid landing accepts the exact edge-contact boundary.
          *  Engine terms: allow a new landing when {@code distY == 0}.
          *  S1/S3K: true for current shared platform parity.
@@ -1265,6 +1275,7 @@ public record PhysicsFeatureSet(
                     source.slopeRepelUsesS3kSlipKick(),
                     source.pinballLandingPreservesRoll(),
                     source.pinballLandingPreservesPinballMode(),
+                    source.rollingJumpPinballGateRequiresSpindashFlag(),
                     source.topSolidLandingAllowsZeroDist(),
                     source.airBottomSolidHitClearsGroundSpeed(),
                     source.airRightWallHitContinuesIntoCeilingSeparation(),
@@ -1348,7 +1359,7 @@ public record PhysicsFeatureSet(
             false /* repeatedObjectRideGroundWallResponseDeferred: S1 MdNormal has no CalcRoomInFront */,
             false /* animationChangeClearsPush: S1 clear is FixBugs-only (s1disasm/_incObj/01 Sonic.asm:2055-2065) */, false,
             false /* slopeResistStartsFromRest: S1 Sonic_SlopeResist returns on zero inertia (s1disasm/_incObj/01 Sonic.asm:1043-1044) */,
-            false, false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2,
+            false, false, false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2,
             true /* uncappedLeftwardHorizontalScroll: S1 ScrollHoriz left move is uncapped (FixBugs=0); docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:84-90 */,
             false /* bossHitNegatesGroundSpeed */,
             true /* bossHitHalvesBounceVelocity: S1 React_BossHit negates THEN asr (halves) x/y vel (docs/s1disasm/_incObj/Sonic ReactToItem.asm:260-263) */,
@@ -1419,6 +1430,7 @@ public record PhysicsFeatureSet(
             true, false,
             true /* pinballLandingPreservesRoll: S2 skips the Status_Roll clear while pinball_mode is set (s2.asm:37770-37771) */,
             true /* pinballLandingPreservesPinballMode: S2 Sonic_ResetOnFloor / Tails_ResetOnFloor never clear pinball_mode (s2.asm:37770-37771,40625-40626) — both branch to Part3 on pinball_mode, and Part3 only clears in_air/pushing/rolljumping/jumping */,
+            true /* rollingJumpPinballGateRequiresSpindashFlag: S2 Obj85/Obj86 do not write pinball_mode; Obj84 does and is mirrored into spindash (s2.asm:58179-58191,58376-58385,46853-46856) */,
             false, false, false, false,
             true /* fullSolidBottomOverlapUsesCurrentYRadiusOnly: S2 SolidObject_cont uses the player's CURRENT y_radius symmetrically on both halves of the underside box (d2 = obHeight/2 + y_radius(a1); bottom boundary d4 = 2*d2), s2.asm:35355-35367. This matches S1 (s1disasm/_incObj/sub SolidObject.asm:109-119). Only S3K loc_1DFD6 (sonic3k.asm:41422-41436) substitutes default_y_radius for the bottom extra term, giving the taller asymmetric box — so S3K stays false. Previously false here gave Sonic a 5px-too-tall underside box that triggered a phantom Stomper (Obj2A) ceiling hit during a MCZ rolling jump (y_radius 0x0E vs standing 0x13), zeroing y_speed at MCZ1 trace frame 2005 where ROM never collides. */,
             FAST_SCROLL_CAP_S2,
@@ -1496,6 +1508,7 @@ public record PhysicsFeatureSet(
             false, true,
             true /* pinballLandingPreservesRoll: S3K Player_TouchFloor_Check_Spindash skips the roll-clear body while spin_dash_flag is set (sonic3k.asm:24325-24327) */,
             true /* pinballLandingPreservesPinballMode: S3K Player_TouchFloor_Check_Spindash leaves spin_dash_flag set while AutoSpin tunnel control is active */,
+            false /* rollingJumpPinballGateRequiresSpindashFlag: S3K AutoSpin is represented by engine pinballMode and still blocks roll jumps */,
             true, true, true, true, false, FAST_SCROLL_CAP_S3K,
             false /* uncappedLeftwardHorizontalScroll: S3K caps both directions at $18 (sonic3k.asm:38403-38406) */,
             true /* bossHitNegatesGroundSpeed: S3K negates ground_vel too (sonic3k.asm:20913-20915) */,
