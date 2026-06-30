@@ -397,6 +397,14 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean preservesSidekickDelayedLeaderPushFromInteractSlot(PlayableEntity player) {
+        // Same Obj30 object-order window, but for the delayed d4 Status_Push
+        // fall-through at s2.asm:39297-39300 after the current push grace has
+        // decayed and Tails is stationary on the released interact target.
+        return preservesSidekickCpuPushGraceFromInteractSlot(player);
+    }
+
+    @Override
     public int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {
         return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MAX_VALUE;
     }

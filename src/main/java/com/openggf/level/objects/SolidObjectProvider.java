@@ -465,6 +465,18 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a CPU sidekick's persistent {@code interact(a0)} slot should keep
+     * the delayed leader status sample in the push-visible branch after the live
+     * push-grace window has expired.
+     * <p>
+     * This affects {@code TailsCPU_Normal}'s delayed d4 {@code Status_Push}
+     * fall-through decision, not the current sidekick push-bypass branch.
+     */
+    default boolean preservesSidekickDelayedLeaderPushFromInteractSlot(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Minimum remaining push-grace frames for the released-interact CPU bridge.
      */
     default int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {
