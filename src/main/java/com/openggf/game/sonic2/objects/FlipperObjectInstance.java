@@ -17,6 +17,7 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -37,6 +38,9 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
     private static final int TYPE_VERTICAL = 0;
     private static final int TYPE_HORIZONTAL = 1;
+    private static final int SLOPE_CURVE_0_ROM_ADDR = 0x2B3C6;
+    private static final int SLOPE_CURVE_1_ROM_ADDR = 0x2B3EA;
+    private static final int SLOPE_CURVE_2_ROM_ADDR = 0x2B40E;
 
     // Slope curves from s2.asm byte_2B3C6, byte_2B3EA, byte_2B40E
     private static final byte[] SLOPE_CURVE_0 = {
@@ -328,9 +332,10 @@ public class FlipperObjectInstance extends BoxObjectInstance
         player.setXSpeed((short) xVel);
         player.setAir(true);
         player.setOnObject(false);
-        player.setPushing(false);  // Clear pushing state - matches BumperObjectInstance pattern
-        // ROM Obj86 launch writes x_vel/y_vel but leaves inertia unchanged
-        // (s2.asm:57982-57988).
+        // ROM Obj86 launch writes x_vel/y_vel, sets in_air, clears on_object,
+        // and restores obj_control without clearing Status_Push
+        // (docs/s2disasm/s2.asm:58420-58449). TailsCPU_Normal can read the
+        // live push bit before the next movement/animation pass.
 
         // ROM: move.b #0,obj_control(a1) at loc_2B2E2 - release control lock
         releaseLockedPlayer(player);
@@ -461,6 +466,30 @@ public class FlipperObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public Integer sampleSlopeByte(int sampleIndex) {
+        byte[] slopeData = getSlopeData();
+        if (slopeData == null) {
+            return null;
+        }
+        if (sampleIndex >= 0 && sampleIndex < slopeData.length) {
+            return (int) (byte) slopeData[sampleIndex];
+        }
+        try {
+            return (int) services().rom().readByte(currentSlopeCurveRomAddress() + sampleIndex);
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    private int currentSlopeCurveRomAddress() {
+        return switch (mappingFrame % 3) {
+            case 1 -> SLOPE_CURVE_1_ROM_ADDR;
+            case 2 -> SLOPE_CURVE_2_ROM_ADDR;
+            default -> SLOPE_CURVE_0_ROM_ADDR;
+        };
+    }
+
+    @Override
     public boolean isSlopeFlipped() {
         return isFlippedHorizontal();
     }
@@ -481,11 +510,12 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
     @Override
     public boolean usesInclusiveRightEdge() {
-        // Obj86 horizontal uses SolidObject_Always_SingleCharacter
-        // (s2.asm:58002/58011), whose right-edge rejection is `bhi`
-        // via SolidObject_cont (s2.asm:35157). relX == width*2 remains a
-        // valid edge push and lets loc_2B35C fire on the same frame.
-        return isHorizontal();
+        // Obj86 uses ROM helpers whose right-edge rejection is `bhi`, so
+        // relX == width*2 remains a valid contact. Horizontal flippers route
+        // through SolidObject_cont (docs/s2disasm/s2.asm:58467-58485,
+        // 35355-35364); vertical flippers route through SlopedSolid_cont
+        // (docs/s2disasm/s2.asm:58250-58279,35263-35272).
+        return true;
     }
 
     @Override

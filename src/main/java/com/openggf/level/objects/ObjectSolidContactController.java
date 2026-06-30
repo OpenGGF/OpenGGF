@@ -3254,23 +3254,27 @@ final class ObjectSolidContactController {
 
         int relX = playerCenterX - anchorX + halfWidth;
         int width2 = halfWidth * 2;
-        if (relX < 0 || relX >= width2) {
+        boolean inclusiveRightEdge = instance instanceof SolidObjectProvider provider
+                && provider.usesInclusiveRightEdge();
+        if (relX < 0 || (inclusiveRightEdge ? relX > width2 : relX >= width2)) {
             return null;
         }
 
-        int sampleX = relX;
+        int sampleX = relX & 0xFFFF;
         if (slopedAdapter.isSlopeFlipped()) {
             // ROM: move.w d0,d5 / not.w d5 / add.w d3,d5 / lsr.w #1,d5
-            // where d0=relX and d3=halfWidth*2. For in-range relX this is
-            // equivalent to (width2 - relX - 1) >> 1.
-            sampleX = width2 - sampleX - 1;
+            // where d0=relX and d3=halfWidth*2. This is 16-bit word
+            // arithmetic; at the inclusive right edge, d5 becomes $7FFF
+            // rather than a signed -1.
+            sampleX = ((~sampleX) + width2) & 0xFFFF;
         }
-        sampleX = sampleX >> 1;
-        if (sampleX < 0 || sampleX >= slopeData.length) {
+        sampleX = sampleX >>> 1;
+        Integer slopeSampleValue = slopedAdapter.provider().sampleSlopeByte(sampleX);
+        if (slopeSampleValue == null) {
             return null;
         }
 
-        int slopeSample = (byte) slopeData[sampleX];
+        int slopeSample = slopeSampleValue;
         int slopeBase = slopedProfile.slopeBaseline();
         boolean riding = useStickyBuffer && isRidingCurrentPlayerObject(instance);
         int minRelY = riding ? -16 : 0;

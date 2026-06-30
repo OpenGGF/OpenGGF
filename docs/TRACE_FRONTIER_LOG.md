@@ -6,6 +6,65 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CNZ2 Obj86 flipped sloped right edge (f7984 -> f8381)
+
+- Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r8` /
+  `bugfix/ai-s2-cnz2-frontier-r8`, created from integration branch
+  `bugfix/ai-s2-trace-develop`. Final verification was run after merging
+  current integration `0f053d056` (CPZ2 r7, MTZ2 r7, and composed evidence).
+- Baseline reproduction:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix on current integration: CNZ2 f7984 / 680 (`tails_x`
+  expected `0x29DE`, actual `0x29DF`).
+- Triage/evidence: f7983 had ROM Tails at matching position/angle with
+  `Status_Push=$20`, while the engine had matching position/angle but no live
+  push bit. On f7984 the engine then let `TailsCPU_Normal` run follow steering,
+  nudging Tails one pixel ahead (`0x29DF` vs `0x29DE`). Terrain probes showed
+  `CalcRoomInFront` had positive room and did not own the push bit. Obj86 slot
+  24 at `$29B8,$06A8` was a flipped vertical flipper with Tails exactly on the
+  right X edge: `x_pos(Tails)-x_pos(Obj86)+$23 == $46 == 2*d1`.
+- Disassembly cited: Obj86 vertical loads `d1=$23`, `d2=6`, `d4=x_pos(a0)`,
+  then calls `SlopedSolid` (`docs/s2disasm/s2.asm:58338-58342`).
+  `SlopedSolid_cont` rejects the right edge only with `bhi`, then for flipped
+  objects performs 16-bit `not.w d5`, `add.w d3,d5`, `lsr.w #1,d5`, and reads
+  `move.b (a2,d5.w),d3` (`docs/s2disasm/s2.asm:35263-35279`). At the exact
+  flipped right edge this yields sample index `$7FFF`, so Obj86 reads the ROM
+  byte at `byte_2B3C6+$7FFF` (`0x333C5`, value `0xD8`) instead of rejecting the
+  contact as an engine array underflow. The side-contact path sets both the
+  object pushing bit and player `Status_Push`
+  (`docs/s2disasm/s2.asm:35438-35445`). Obj86's vertical launch routine writes
+  velocity, sets `Status_InAir`, clears `Status_OnObj`, restores `obj_control`,
+  and clears the Obj86 latch without clearing `Status_Push`
+  (`docs/s2disasm/s2.asm:58423-58462`). `TailsCPU_Normal` reads Tails'
+  current push bit and branches away from follow steering when delayed Sonic is
+  not also pushing (`docs/s2disasm/s2.asm:39291-39300`).
+- Fix: sloped solid contact now honors providers that opt into the ROM
+  inclusive right edge and computes flipped slope sample indexes with 16-bit
+  word arithmetic. `SlopedSolidProvider` exposes a bounded default sample hook,
+  and Obj86 overrides it to source wrapped sample bytes from the loaded Sonic 2
+  ROM. Obj86 vertical launch no longer clears `Status_Push`, matching the ROM
+  launch path. This models ROM state and data; it does not edit trace data, add
+  tolerance, or add route, frame, zone, game-id, or known-failing carve-outs.
+- Focused oracle:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ObjectOccupancyOracle#cnz2VerticalFlipperRightEdgeKeepsTailsPushBeforeCpuFollowAtRomFrame7983" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0 after the fix. Before implementation it failed because Tails'
+  post-frame push bit was false at f7983.
+- Focused target:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CNZ2 advanced to f8381 / 592
+  (`tails_status_byte` expected `0x02`, actual `0x22`), a later push-clear
+  frontier.
+- Current S2 green guard after merging integration `0f053d056`:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0. Test startup logged a non-fatal Windows `config.yaml` atomic-save
+  warning before continuing.
+- Red preservation set on current integration:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected and preserved ARZ2 f1028 / 2686, CPZ2 f5578 / 323,
+  HTZ2 f4136 / 1024, MTZ1 f5713 / 560, MTZ3 f6334 / 865,
+  OOZ1 f1790 / 888, and OOZ2 f3919 / 1117. MTZ2 is green and was covered by
+  the green guard. No checked trace moved backward.
+
 ## 2026-06-30 - S2 CPZ2 Obj40 springboard sloped solid gate (f5494 -> f5578)
 
 - Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r7` /

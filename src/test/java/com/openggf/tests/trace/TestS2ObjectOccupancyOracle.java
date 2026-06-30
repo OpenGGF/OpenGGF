@@ -270,6 +270,37 @@ public class TestS2ObjectOccupancyOracle {
                         + slotCheck.summary());
     }
 
+    @Test
+    public void cnz2VerticalFlipperRightEdgeKeepsTailsPushBeforeCpuFollowAtRomFrame7983() throws Exception {
+        PushCheck pushCheck = driveTrace("cnz2", Sonic2ZoneConstants.ZONE_CNZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 7983) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    Assertions.assertNotNull(expected.sidekick(),
+                            "CNZ2 trace row f7983 must include Tails state");
+                    Assertions.assertEquals(0x20, expected.sidekick().statusByte() & 0x20,
+                            "ROM fixture should have Tails Status_Push set at CNZ2 f7983");
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have a CPU Tails sidekick at CNZ2 f7983");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    return new PushCheck(tails.getPushing(), tails.getCentreX(), tails.getCentreY(),
+                            String.format("tails=(x=%04X y=%04X angle=%02X gs=%04X air=%s onObj=%s) slots %s",
+                                    tails.getCentreX() & 0xFFFF,
+                                    tails.getCentreY() & 0xFFFF,
+                                    tails.getAngle() & 0xFF,
+                                    tails.getGSpeed() & 0xFFFF,
+                                    tails.getAir(),
+                                    tails.isOnObject(),
+                                    describeSlots(om.occupiedDynamicSlotIds(), 18, 25)));
+                });
+        Assertions.assertNotNull(pushCheck);
+        Assertions.assertTrue(pushCheck.pushing(),
+                "S2 Obj86 vertical flipper right-edge contact must leave Tails Status_Push set before "
+                        + "the next TailsCPU_Normal follow pass; " + pushCheck.summary());
+    }
+
     private record SlotCheck(Integer actualId, String summary) {
     }
 
