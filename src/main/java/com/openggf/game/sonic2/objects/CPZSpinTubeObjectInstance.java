@@ -196,6 +196,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         int expectedSegmentCount = 0;      // Expected number of segments to traverse
         int completedSegmentCount = 0;     // Number of segments actually completed
         String expectedExitDirection = ""; // Expected exit direction (UP, DOWN, LEFT, RIGHT)
+        boolean skipMoveAfterOwnerExit = false;
     }
 
     // One independent state slot per playable, mirroring ROM objoff_2C (main)
@@ -314,6 +315,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         cs.path = null;
         cs.completedSegmentCount = 0;
         cs.expectedSegmentCount = 0;
+        cs.skipMoveAfterOwnerExit = false;
     }
 
     /**
@@ -344,6 +346,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         // for an already-controlled player defers that capture to the ROM frame.
         boolean midTraversal = player.isObjectControlled()
                 && player.isObjectControlSuppressesMovement();
+        boolean priorOwnerAlreadyMoved = midTraversal
+                && (player.getCentreX() != player.getPrePhysicsCentreX()
+                || player.getCentreY() != player.getPrePhysicsCentreY());
         int playerX = midTraversal ? player.getPrePhysicsCentreX() : player.getCentreX();
         int playerY = midTraversal ? player.getPrePhysicsCentreY() : player.getCentreY();
 
@@ -480,12 +485,32 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         player.setGSpeed((short) TUBE_SPEED);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
+        // ROM: move.b #0,jumping(a1). Without clearing this latch, normal
+        // airborne movement treats the tube release as a jump-button release
+        // and clamps the upward exit speed to -$400 instead of preserving
+        // Obj1E's -$800 launch velocity (docs/s2disasm/s2.asm:48130-48141).
+        player.setJumping(false);
         // ROM: bclr #high_priority_bit,art_tile(a1) - render behind tube graphics
         player.setHighPriority(false);
         player.setPriorityBucket(RenderPriority.MIN);
 
         // Calculate velocity to next waypoint
         calculateVelocity(player, cs, nextX, nextY, TUBE_SPEED);
+
+        // ROM runs Obj1E in SST slot order (docs/s2disasm/s2.asm:47981-48029).
+        // During a tube-to-tube handoff the capturing tube may run before the
+        // previous owner, so the previous owner still applies its same-frame
+        // movement after this capture. Engine slot reuse can put the previous
+        // owner before the capturing tube; when that has already happened
+        // (current centre differs from frame-start centre), replay that missing
+        // owner movement now and skip the new tube's next move if the old owner
+        // exits before this tube runs on the following frame.
+        if (priorOwnerAlreadyMoved) {
+            moveCharacter(player);
+            cs.skipMoveAfterOwnerExit = true;
+        } else {
+            cs.skipMoveAfterOwnerExit = false;
+        }
 
         // Play rolling sound
         playSound(GameSound.ROLLING);
@@ -505,6 +530,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
     private void updateEntryPath(AbstractPlayableSprite player, CharacterState cs) {
         cs.duration--;
         if (cs.duration >= 0) {
+            if (shouldSkipMoveAfterPriorOwnerExit(player, cs)) {
+                return;
+            }
             // Continue moving along current segment
             moveCharacter(player);
             return;
@@ -652,6 +680,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
 
         cs.duration--;
         if (cs.duration >= 0) {
+            if (shouldSkipMoveAfterPriorOwnerExit(player, cs)) {
+                return;
+            }
             // Continue moving along current segment
             moveCharacter(player);
             return;
@@ -740,7 +771,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
 
         // Clear Y position high bits (mask to 0x7FF) - using center coordinates
         int y = player.getCentreY() & 0x7FF;
-        player.setCentreY((short) y);
+        NativePositionOps.writeYPosPreserveSubpixel(player, y);
 
         // Restore player-local object control with cooldown to prevent immediate re-capture.
         // ROM: clr.b obj_control(a1)
@@ -754,11 +785,6 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         // skip both the roll-clear and pinball-clear, locking the player rolling forever
         // when they land without hitting the exit spring. Do not re-add it.
 
-        // Set springing frames to give the player ceiling collision immunity.
-        // This prevents the movement manager from immediately zeroing ySpeed when the
-        // exit point is inside the tube's solid geometry. 15 frames matches springs.
-        player.setSpringing(15);
-
         // Restore normal render priority
         player.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
 
@@ -769,6 +795,22 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         cs.state = 6;
 
         LOGGER.fine("Player exited spin tube");
+    }
+
+    private boolean shouldSkipMoveAfterPriorOwnerExit(AbstractPlayableSprite player, CharacterState cs) {
+        if (!cs.skipMoveAfterOwnerExit) {
+            return false;
+        }
+        if (player.isObjectControlled()) {
+            return false;
+        }
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        player.setAnimationId(Sonic2AnimationIds.ROLL);
+        player.setAir(true);
+        player.setHighPriority(false);
+        player.setPriorityBucket(RenderPriority.MIN);
+        cs.skipMoveAfterOwnerExit = false;
+        return true;
     }
 
     /**

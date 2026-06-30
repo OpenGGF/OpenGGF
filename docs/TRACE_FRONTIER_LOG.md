@@ -18789,6 +18789,37 @@ the capture to the ROM frame via slot-order-accurate position basis. Remaining
 CPZ2 frontier f2889 (ROM -16 = owner + second-tube re-capture) is the next link:
 the deferred second-tube capture still does not fire at f2889 -- next target.
 
+## 2026-06-30 -- CPZ2 spin-tube handoff/release parity (f2889 -> f3077)
+
+Reviewed Obj1E against `docs/s2disasm/s2.asm:47981-48387` and fixed the next
+two tube-specific mismatches:
+- Tube-to-tube handoff at f2889: when engine object-slot order has the old owner
+  tube run before the capturing tube, the capture must still model the ROM case
+  where the capturing tube runs first and the old owner applies its same-frame
+  movement afterward. `CPZSpinTubeObjectInstance` now detects that prior owner
+  movement already happened (current centre differs from pre-physics centre),
+  replays that missing owner step on capture, and reasserts Obj1E control if the
+  old owner exits before the new tube's next update.
+- Tube release at f2976: Obj1E capture clears `jumping(a1)` (`move.b #0,jumping`
+  at s2.asm:48138). The engine kept the jump latch set, so normal airborne
+  movement treated the tube exit as a jump-button release and capped the upward
+  `-$800` exit velocity to about `-$400`. Clearing the latch preserves the ROM
+  `-$800` launch, then gravity advances it to `-$7C8`.
+- Removed the non-ROM springing-frame shim on tube exit; Obj1E only masks
+  `y_pos`, clears `obj_control`, and plays the spindash-release sound.
+
+Verification on `develop`:
+- `mvn -Dmse=off -Ds2.rom.path="Sonic The Hedgehog 2 (W) (REV01) [!].gen" -Dtest=com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace test -DfailIfNoTests=false`
+  now advances CPZ2 from f2889 to f3077. New frontier: `tails_air` expected 0,
+  actual 1 while position/velocity match; ROM has Tails landed on object slot
+  0x3B, so this is a downstream object-contact landing issue, not active Obj1E
+  tube control.
+- `mvn -Dmse=off -Ds2.rom.path="Sonic The Hedgehog 2 (W) (REV01) [!].gen" -Dtest=com.openggf.game.sonic2.objects.TestCPZSpinTubeObjectInstance test -DfailIfNoTests=false`
+  passes.
+- `mvn -Dmse=off -Ds2.rom.path="Sonic The Hedgehog 2 (W) (REV01) [!].gen" -Dtest=com.openggf.tests.trace.s2.TestS2CpzLevelSelectTraceReplay#replayMatchesTrace test -DfailIfNoTests=false`
+  remains at CPZ1 f3365 (`tails_x` expected 0x24AB, actual 0x24AA), matching the
+  existing one-pixel frontier family; no new CPZ1 tube fall-out regression.
+
 ## 2026-06-21 -- Cluster 2 (radius/rolling): airborne-rolling y_vel reflection (MZ2 f2578, HTZ2 f1078)
 
 Clustered the 53 failures by signature; highest-leverage non-CPZ cluster is an
