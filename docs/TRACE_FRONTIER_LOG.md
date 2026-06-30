@@ -61,7 +61,9 @@ branch-local measurements.
 - Worktree/branch: `.worktrees/ai-s2-cpz2-frontier-r12` /
   `bugfix/ai-s2-cpz2-frontier-r12`, created from integration branch
   `bugfix/ai-s2-trace-develop` at accepted HEAD `aa77abe09`, then
-  fast-forwarded to latest integration `4221b6065` before final verification.
+  fast-forwarded to latest integration `4221b6065` before worker verification.
+  The conductor merged it after MTZ1 r3 and the latest `origin/develop` merge,
+  then reran the acceptance guard on the updated integration tree.
 - Baseline reproduction on integration `9962fc504`:
   `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Dtrace.context.diagnosticChars=full" test`.
   Result before the fix: CPZ2 f9781 / 123 (`tails_status_byte` expected
@@ -87,7 +89,7 @@ branch-local measurements.
   matching the ROM Obj02_Dead continuation window without skipping normal CPU
   following, zone-specific water checks, route-specific frames, or trace data
   hydration.
-- Focused target after integration `4221b6065`:
+- Focused target after conductor merge:
   `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay" test`.
   Result: expected nonzero; CPZ2 advances to f10068 / 128 (`y_speed`
   expected `-03E0`, actual `0x03E0`). The new boundary is a CPZ boss body
@@ -99,9 +101,15 @@ branch-local measurements.
 - Updated red preservation set:
   `mvn test "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dmaven.test.failure.ignore=true"`
   exits 0 with expected red failures ignored and preserves ARZ2 f1028 / 2686,
-  CNZ2 f8870 / 447, HTZ2 f4165 / 1129, MTZ1 f5713 / 560, MTZ3 f7853 / 864,
+  CNZ2 f8870 / 447, HTZ2 f4165 / 1129, MTZ1 f7906 / 407, MTZ3 f7853 / 864,
   OOZ1 f1795 / 1058, and OOZ2 f3919 / 1117. CPZ2 is the only moved red
   frontier in the set, now f10068 / 128.
+- Full S2 sweep after conductor merge:
+  `mvn "-Dtest=TestS2*TraceReplay" test`.
+  Result: expected nonzero; 19 S2 traces run, 11 green, 8 expected red:
+  ARZ2 f1028 / 2686, CNZ2 f8870 / 447, CPZ2 f10068 / 128, HTZ2 f4165 /
+  1129, MTZ1 f7906 / 407, MTZ3 f7853 / 864, OOZ1 f1795 / 1058, and OOZ2
+  f3919 / 1117.
 
 ## 2026-06-30 - S2 HTZ2 Obj18 grounded stale standing latch filter (f4138 -> f4165)
 
