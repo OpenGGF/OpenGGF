@@ -756,6 +756,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			boolean deferredContinuation =
 					kc != null && kc.isDeferredDespawnDeadFallContinuingThisFrame();
 			if (!deferredContinuation) {
+				// Boundary-kill frame N still resumes inside Obj02_MdAir after
+				// KillCharacter; S2 then applies the normal underwater gravity
+				// reduction before Tails_DoLevelCollision (s2.asm:39616-39627).
+				// Frame N+1 and later run Obj02_Dead, which only calls
+				// ObjectMoveAndFall (s2.asm:41131-41137).
+				applyUnderwaterAirGravityReduction();
 				sprite.updateSensors(originalX, originalY);
 				doLevelCollision(sprite.isForceFloorCheck());
 			}
@@ -764,23 +770,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		doObjectMoveAndFall();
 
-		// Underwater gravity reduction
-		// Normal airborne: net gravity = 0x38 - 0x28 = 0x10 (s2.asm:36170)
-		// Hurt airborne:   net gravity = 0x30 - 0x20 = 0x10 (s2.asm:37802, s1:01 Sonic.asm:1410)
-		// The ROM hurt routine (Obj01_Hurt) uses a separate code path with $20 reduction,
-		// NOT the $28 used in Obj01_MdAir/MdJump. All three games (S1/S2/S3K) are identical.
-		if (sprite.isInWater()) {
-			short reduction = 0x28;
-			var modifiers = sprite.getPhysicsModifiers();
-			if (modifiers != null) {
-				reduction = sprite.isHurt()
-						? modifiers.waterHurtGravityReduction()
-						: modifiers.waterGravityReduction();
-			} else if (sprite.isHurt()) {
-				reduction = 0x20;
-			}
-			sprite.setYSpeed((short) (sprite.getYSpeed() - reduction));
-		}
+		applyUnderwaterAirGravityReduction();
 
 		// ROM: Sonic_JumpAngle runs in Obj01_MdAir / MdJump but NOT in
 		// Obj01_Hurt (S1: 01 Sonic.asm:1410, S2: s2.asm:37806).
@@ -3232,6 +3222,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			forceGroundFacingFlipAnimationRestart();
 			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
 		}
+	}
+
+	private void applyUnderwaterAirGravityReduction() {
+		// Underwater gravity reduction
+		// Normal airborne: net gravity = 0x38 - 0x28 = 0x10 (s2.asm:39620-39623)
+		// Hurt airborne:   net gravity = 0x30 - 0x20 = 0x10 (s2.asm:41066-41069, s1:01 Sonic.asm:1410)
+		// The ROM hurt routine (Obj01_Hurt) uses a separate code path with $20 reduction,
+		// NOT the $28 used in Obj01_MdAir/MdJump. All three games (S1/S2/S3K) are identical.
+		if (!sprite.isInWater()) {
+			return;
+		}
+		short reduction = 0x28;
+		var modifiers = sprite.getPhysicsModifiers();
+		if (modifiers != null) {
+			reduction = sprite.isHurt()
+					? modifiers.waterHurtGravityReduction()
+					: modifiers.waterGravityReduction();
+		} else if (sprite.isHurt()) {
+			reduction = 0x20;
+		}
+		sprite.setYSpeed((short) (sprite.getYSpeed() - reduction));
 	}
 
 	private void forceGroundFacingFlipAnimationRestart() {

@@ -25944,3 +25944,57 @@ Verification:
   exited 1 with the accepted red preservation set unchanged: ARZ2 f1028 /
   2686, CNZ2 f7984 / 680, HTZ2 f4012 / 1031, MTZ1 f5713 / 560, MTZ2 f8825 /
   366, MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117.
+
+### 2026-06-30 -- S2 CPZ2 underwater boundary-kill gravity: f5578 -> f5689
+
+Worktree `bugfix/ai-s2-cpz2-frontier-r8` was created from integration branch
+`bugfix/ai-s2-trace-develop` at accepted HEAD `0f053d056`, then merged cleanly
+with the conductor-updated integration HEAD `b2469c840` before final
+verification.
+
+Baseline reproduced before the fix from `0f053d056`:
+`TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace` failed at f5578 / 323
+with `tails_y_speed` expected `-06F0`, actual `-06C8`.
+
+Root fixed: CPZ2 launches CPU Tails from the Obj40 springboard while underwater
+and below the boundary-kill plane. Obj40 writes `y_vel = -$400 - boost`,
+sets `Status_InAir`, clears `Status_OnObj`, and leaves control in the player
+routine (`docs/s2disasm/s2.asm:52353-52380,52392-52431`). The boundary-kill
+frame still resumes in `Obj02_MdAir`: after `Tails_LevelBound` reaches
+`KillCharacter`, `Obj02_MdAir` runs `ObjectMoveAndFall`, tests the underwater
+status bit, and subtracts `$28` from `y_vel`
+(`docs/s2disasm/s2.asm:39616-39627`). `ObjectMoveAndFall` itself adds `$38`
+gravity after moving by the old velocity (`docs/s2disasm/s2.asm:30164-30179`),
+so the ROM-visible end-of-frame velocity is `-$700 + $38 - $28 = -$6F0`.
+The engine's CPU sidekick boundary-kill branch stopped after `ObjectMoveAndFall`,
+producing `-$6C8`. Deferred continuation frames must remain different:
+`Obj02_Dead` calls `ObjectMoveAndFall` without `Tails_DoLevelCollision` and
+without the underwater `$28` reduction (`docs/s2disasm/s2.asm:41131-41137`).
+
+Fix:
+- `PlayableSpriteMovement` now factors the normal airborne underwater gravity
+  reduction into `applyUnderwaterAirGravityReduction()`.
+- The CPU sidekick boundary-kill frame calls that helper before its post-kill
+  collision pass, but only when the controller has not flagged an
+  `Obj02_Dead` deferred continuation frame. The deferred path still runs only
+  `ObjectMoveAndFall`.
+
+Result:
+- `TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace`: f5578 / 323 errors
+  (`tails_y_speed` expected `-06F0`, actual `-06C8`) -> f5689 / 317 errors
+  (`g_speed` expected `0x01F9`, actual `0x003C`).
+- The new owner is Sonic landing on CPZ's sideways Obj7A platform at f5689;
+  the underwater Tails boundary-kill velocity window now matches through the
+  previous frontier.
+
+Verification:
+- `git merge bugfix/ai-s2-trace-develop` fast-forwarded the worker from
+  `0f053d056` to `b2469c840` and preserved the local fix cleanly.
+- `mvn -q "-Dmse=off" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 with the improved f5689 / 317 CPZ2 frontier above.
+- `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0; the current S2 green guard, including MTZ2, remained green.
+- `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 with only expected reds. Non-target accepted frontiers/counts held:
+  ARZ2 f1028 / 2686, CNZ2 f8381 / 592, HTZ2 f4136 / 1024, MTZ1 f5713 / 560,
+  MTZ3 f6334 / 865, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117.
