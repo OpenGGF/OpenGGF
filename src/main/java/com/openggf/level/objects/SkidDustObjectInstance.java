@@ -28,7 +28,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     // Skid animation frames from obj08.asm Obj08Ani_Skid
     private static final int[] SKID_FRAMES = { 0x11, 0x12, 0x13, 0x14 };
     private static final int FRAME_DELAY = 3; // 4 game ticks per frame
-    private static final int DELETE_ROUTINE_DELAY = 2;
+    private static final int DELETE_ROUTINE_DELAY = 1;
 
     // Frame 0x15 (21) has the DPLC that loads skid dust tiles.
     // Frames 0x11-0x14 have empty DPLCs and reuse tiles from frame 0x15.

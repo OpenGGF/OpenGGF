@@ -215,8 +215,14 @@ public final class LevelFrameStep {
         //     transitions. ROM runs the zone handler (DLE_Index) here, after the
         //     scroll, so camera-X gates and the left-boundary lock see the
         //     post-scroll camera. fixed-in-level objects run alongside.
+        SpriteManager spriteManager = context.spriteManager();
         if (levelEvents != null) {
             wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
+        }
+        if (spriteManager != null) {
+            wrapper.wrap("fixed-dust", spriteManager::advanceFixedSkidDustAfterObjectExecution);
+        }
+        if (levelEvents != null) {
             levelEvents.update();
         }
 
@@ -252,7 +258,6 @@ public final class LevelFrameStep {
 
         // 7. Cache BuildSprites on-screen results for next frame's logic.
         levelManager.refreshObjectPostCameraRenderState();
-        SpriteManager spriteManager = context.spriteManager();
         if (spriteManager != null) {
             spriteManager.refreshPlayableRenderFlags(camera);
         }

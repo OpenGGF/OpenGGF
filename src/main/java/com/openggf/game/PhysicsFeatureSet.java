@@ -1125,7 +1125,14 @@ public record PhysicsFeatureSet(
          *  Obj28 initializes width_pixels=8 and deletes from Walk/Fly when
          *  render_flags.on_screen is clear (s2.asm:24570-24594,
          *  24670-24727). */
-        boolean animalObjectUsesRenderFlagDeleteBounds
+        boolean animalObjectUsesRenderFlagDeleteBounds,
+        /** Whether fixed Obj08 skid dust arms during player movement and
+         *  allocates its visible child from the later post-dynamic-object fixed
+         *  sidecar pass. S2 does this through Sonic_Dust/Tails_Dust in
+         *  LevelOnly_Object_RAM (s2.asm:36927-36935,36988-36996,42792-42813).
+         *  Keep S3K on its existing trace-preserving timing until that sidecar
+         *  order is separately validated. */
+        boolean fixedSkidDustAllocatesAfterDynamicObjectPass
 ) {
     /** S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp directly modifies v_lookshift). */
     public static final short LOOK_SCROLL_DELAY_NONE = 0;
@@ -1350,7 +1357,8 @@ public record PhysicsFeatureSet(
                     source.levelBoundaryLockUsesScreenLockFlag(),
                     source.advanceWaterLevelBeforePlayerPhysics(),
                     source.animalObjectPreservesObjectMoveXSubpixel(),
-                    source.animalObjectUsesRenderFlagDeleteBounds()
+                    source.animalObjectUsesRenderFlagDeleteBounds(),
+                    source.fixedSkidDustAllocatesAfterDynamicObjectPass()
             );
         }
     }
@@ -1421,7 +1429,8 @@ public record PhysicsFeatureSet(
             true /* levelBoundaryLockUsesScreenLockFlag: S1 Sonic_LevelBound gates the +64 right-extension on f_lockscreen (s1disasm/_incObj/01 Sonic.asm:1047-1049), which persists past boss defeat (FZ has no Egg Prison) */,
             true /* advanceWaterLevelBeforePlayerPhysics: S1 LZWaterFeatures runs before ExecuteObjects (sonic.asm:2986-2987) */,
             false /* animalObjectPreservesObjectMoveXSubpixel: S1 uses Sonic1AnimalsObjectInstance */,
-            false /* animalObjectUsesRenderFlagDeleteBounds: S1 uses Sonic1AnimalsObjectInstance */);
+            false /* animalObjectUsesRenderFlagDeleteBounds: S1 uses Sonic1AnimalsObjectInstance */,
+            false /* fixedSkidDustAllocatesAfterDynamicObjectPass: S1 has no fixed Obj08 skid-dust sidecar */);
 
     /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
      *  preserves high ground speed on input (s2.asm:36610-36616),
@@ -1496,7 +1505,8 @@ public record PhysicsFeatureSet(
             false /* levelBoundaryLockUsesScreenLockFlag: S2 Sonic_LevelBound gates the +$40 right-extension on Current_Boss_ID (s2.asm:37247-37250), i.e. boss-alive; engine uses isBossFightActive() */,
             true /* advanceWaterLevelBeforePlayerPhysics: S2 WaterEffects runs before RunObjects (s2.asm:5094-5095) */,
             true /* animalObjectPreservesObjectMoveXSubpixel: Obj28_Walk/Fly call ObjectMoveAndFall/ObjectMove, which update full x_pos longword (s2.asm:24670-24691,30164-30199) */,
-            true /* animalObjectUsesRenderFlagDeleteBounds: Obj28 Walk/Fly delete when render_flags.on_screen is clear after BuildSprites width_pixels=8 (s2.asm:24570-24594,24670-24727) */);
+            true /* animalObjectUsesRenderFlagDeleteBounds: Obj28 Walk/Fly delete when render_flags.on_screen is clear after BuildSprites width_pixels=8 (s2.asm:24570-24594,24670-24727) */,
+            true /* fixedSkidDustAllocatesAfterDynamicObjectPass: S2 fixed Sonic_Dust/Tails_Dust allocates visible Obj08 skid dust after dynamic object execution */);
 
     /** Sonic 3&K: spindash with same speed table as S2, dual collision paths, delayed look scroll,
      *  preserves high ground speed on input, elemental shields,
@@ -1573,7 +1583,8 @@ public record PhysicsFeatureSet(
             false /* levelBoundaryLockUsesScreenLockFlag: S3K has levelBoundaryRightStrict=true so the +64 extension is never added and this gate is never consulted */,
             false /* advanceWaterLevelBeforePlayerPhysics: S3K Process_Sprites runs before Handle_Onscreen_Water_Height, so the player reads the previous frame's water level */,
             false /* animalObjectPreservesObjectMoveXSubpixel: S3K Obj_Animal uses MoveSprite/MoveSprite2, not S2 ObjectMoveAndFall/ObjectMove (sonic3k.asm:61104-61170) */,
-            false /* animalObjectUsesRenderFlagDeleteBounds: preserve current S3K animal lifetime baseline until validated */);
+            false /* animalObjectUsesRenderFlagDeleteBounds: preserve current S3K animal lifetime baseline until validated */,
+            false /* fixedSkidDustAllocatesAfterDynamicObjectPass: preserve current S3K AIZ trace baseline until fixed sidecar order is validated */);
 
     /** Returns true when the game supports dual collision paths (primary/secondary). */
     public boolean hasDualCollisionPaths() {

@@ -19,7 +19,7 @@ branch-local measurements.
   `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
 - Result: expected nonzero; 19 S2 traces run, 13 green, 6 expected-red.
   Remaining red frontiers:
-  - ARZ2 f1294 / 2396 (`obj_extra_s11_x` expected absent, actual `0x0F3F`).
+  - ARZ2 f1627 / 2258 (`obj_s1A_type` expected `0x8D`, actual missing).
   - CNZ2 f9487 / 288 (`g_speed` expected `0x0000`, actual `0x0100`).
   - HTZ2 f5031 / 930 (`tails_cpu_ctrl2_held` expected `0x0018`, actual `0x0008`).
   - MTZ3 f9134 / 936 (`x_speed` expected `0x0000`, actual `0x000C`).
@@ -68,6 +68,77 @@ branch-local measurements.
     exited 1 at the existing AIZ expected-red frontiers: complete-run f1095 /
     4319 (`x_speed` expected `0x0000`, actual `0x000C`) and AIZ f8941 /
     1160 (`camera_y` expected `0x02C1`, actual `0x02B9`).
+
+## 2026-06-30 - S2 ARZ2 Obj08 LevelOnly skid-dust order (f1294 -> f1627)
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-f1294-round9` /
+  `bugfix/ai-s2-arz2-f1294-round9`, based on `bugfix/ai-s2-trace-next`
+  campaign head `896953556`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected nonzero; ARZ2 f1294 / 2396
+  (`obj_extra_s11_x` expected absent, actual `0x0F3F`).
+- Triage/evidence: the extra engine slot was the Obj08 skid-dust puff.
+  ROM trace context had slot `$11` Obj08 at `$0F44,$04CE`, while the engine
+  spawned the same puff at the pre-adjusted player position `$0F3F,$04CC`.
+  Moving the tick to post-playable movement fixed X but left Y one pixel early,
+  because S2 runs `Sonic_Dust` / `Tails_Dust` from `LevelOnly_Object_RAM`
+  after dynamic object RAM (`docs/s2disasm/s2.constants.asm:1139-1160`;
+  `docs/s2disasm/s2.asm:29817-29859`). `Sonic_TurnLeft` / `Sonic_TurnRight`
+  only arm fixed Obj08 routine 6 and `mapping_frame=$15`
+  (`docs/s2disasm/s2.asm:36927-36935,36988-36996`); the child is allocated
+  later by `Obj08_CheckSkid`, and the routine-4 skid child tails into
+  `DeleteObject` on the next display/delete pass
+  (`docs/s2disasm/s2.asm:42792-42813`).
+- Fix: S2 fixed skid-dust timer ticks now become pending during movement and
+  are consumed from `LevelFrameStep` after dynamic objects and fixed sidecars.
+  `SkidDustObjectInstance` also deletes on the ROM routine-4 cadence instead
+  of surviving one extra engine object pass. S3K keeps its existing
+  trace-preserving sidecar timing behind `PhysicsFeatureSet` until its fixed
+  object order is separately validated.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f1294 / 2396 errors
+  (`obj_extra_s11_x` expected absent, actual `0x0F3F`) -> f1627 / 2258 errors
+  (`obj_s1A_type` expected `0x8D`, actual missing). The new owner is a later
+  ARZ2 object-spawn/lifetime mismatch around slot `$1A`.
+- Verification:
+  - `mvn "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#s2FixedSkidDustTicksWhileAirborneStopAnimationPersists+s2GroundedFixedSkidDustAllocatesFromPostMovementPosition+s2SkidDustDeletesOnRomRoutineFourFrame+s2FixedSkidDustDoesNotTickDuringHurtRoutine" "-DfailIfNoTests=false" test`
+    passed the focused fixed-dust unit coverage (4 tests, 0 failures in
+    `TEST-com.openggf.sprites.managers.TestPlayableSpriteMovement.xml`).
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red with the improved ARZ2 f1627 / 2258 frontier.
+  - Integration on `.worktrees/ai-s2-trace-next` rechecked S2 vs S3K
+    disassembly before merge. S2 has explicit fixed `Sonic_Dust` /
+    `Tails_Dust` slots in `LevelOnly_Object_RAM` and `Obj08_CheckSkid`
+    allocates the visible child after the dynamic object pass
+    (`docs/s2disasm/s2.constants.asm:1149-1176`,
+    `docs/s2disasm/s2.asm:29817-29859,36927-36935,36988-36996,42792-42813`).
+    S3K also has fixed `Dust` / `Dust_P2` slots, but they live in
+    `Level_object_RAM` and are processed by S3K's distinct `Process_Sprites`
+    object-order path (`docs/skdisasm/sonic3k.constants.asm:306-319`,
+    `docs/skdisasm/sonic3k.asm:21421-21436,22841-22848,33954-34175,35965-36022`).
+    A temporary broad S2/S3K application moved S3K AIZ from the existing
+    f8941 / 1160 camera-Y frontier to f7539 / 2718 y-speed, so the final
+    merge gates the delayed skid-dust allocation to S2 via `PhysicsFeatureSet`
+    and leaves S3K on its existing trace-preserving timing.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; 19 S2 traces ran, 13 stayed green, and six
+    expected reds remain: ARZ2 f1627 / 2258, CNZ2 f9487 / 288, HTZ2 f5031 /
+    930, MTZ3 f9134 / 936, OOZ1 f1813 / 1062, OOZ2 f9307 / 444.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 at the existing AIZ expected-red frontiers: complete-run f1095 /
+    4319 (`x_speed` expected `0x0000`, actual `0x000C`) and AIZ f8941 /
+    1160 (`camera_y` expected `0x02C1`, actual `0x02B9`).
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" "-DfailIfNoTests=false" "-Dmaven.test.failure.ignore=true" test`
+    preserved S2 ARZ1, S2 EHZ1, and S1 GHZ1; S3K AIZ was blocked before trace
+    replay by `UnsatisfiedLinkError: Failed to locate library: lwjgl.dll` in
+    this worktree environment.
+  - `mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    passed the small S3K non-GL guard.
+  - `mvn "-Dtest=TestRewindCoverageGuard" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" test`
+    passed the rewind coverage guard.
 
 ## 2026-06-30 - S2 OOZ1 Obj36 late-edge CPU push grace (f1803 -> f1813)
 

@@ -612,17 +612,19 @@ public class SpriteManager {
 					activePlayableUpdate = null;
 				}
 			}
-			advanceFixedSkidDustAfterCpuInteractSampling(playables);
 			sweepFlyoffDespawnedTemporarySidekicks();
 		} finally {
 			endPlayableFrame();
 		}
 	}
 
-	private void advanceFixedSkidDustAfterCpuInteractSampling(List<AbstractPlayableSprite> playables) {
+	public void advanceFixedSkidDustAfterObjectExecution() {
+		Collection<Sprite> sprites = getAllSprites();
+		List<AbstractPlayableSprite> playables = buildPlayableUpdateOrderInto(
+				sprites, sidekicks, isCpuSidekickSuppressed(),
+				playableOrderScratch, playableScheduledScratch, playableAvailableScratch);
 		for (AbstractPlayableSprite playable : playables) {
-			if (!playable.getAir()
-					|| !(playable.getMovementManager() instanceof PlayableSpriteMovement movement)) {
+			if (!(playable.getMovementManager() instanceof PlayableSpriteMovement movement)) {
 				continue;
 			}
 			movement.advanceFixedSkidDustWhileStopAnimPersists();
