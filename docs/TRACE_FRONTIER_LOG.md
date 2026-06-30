@@ -6,6 +6,58 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 CNZ2 Obj51 player-slot boss touch timing (f8870 -> f9117)
+
+- Worktree/branch: `.worktrees/trace-s2-cnz2-r15` /
+  `bugfix/ai-trace-s2-cnz2-r15`, created from integration branch
+  `bugfix/ai-s2-trace-develop`, then merged to conductor integration
+  `781d62678` before final verification.
+- Baseline reproduction on integration `4221b6065`:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result before the fix: CNZ2 f8870 / 447 (`tails_x_speed` expected
+  `0x0200`, actual `0x0000`).
+- Triage/evidence: at f8870 ROM Tails enters routine `$04` with
+  `x_vel=$0200`, `y_vel=-$0400`, `move_lock=$001E`, and `stand_obj_slot=22`.
+  Nearby Obj51 is the active CNZ boss at about `$29C0,$0650`. The engine was
+  skipping Obj51 touch as `offscreenTouch`, so Tails stayed in routine `$02`
+  with falling `y_vel=$0B98`. Broadly removing that gate made the engine hurt
+  Tails at f8869 because the folded Obj51 body region used the post-object
+  position visible in diagnostics; ROM `Touch_Boss` runs in the player slot
+  before Obj51's later object-slot movement, so f8869 still sees the prior
+  object position and misses, while f8870 sees the next prior-position sample
+  and hurts.
+- Disassembly cited: S2 `TouchResponse` branches to `Touch_Boss` when
+  `Current_Boss_ID` is nonzero, bypassing the normal dynamic touch loop
+  (`docs/s2disasm/s2.asm:85021-85249`). `BossSpecificCollision` dispatches by
+  `Current_Boss_ID`, and `BossCollision_CNZ` performs the electric
+  `Boss_DoCollision` check before falling through to Obj51's own
+  `collision_flags` byte (`docs/s2disasm/s2.asm:85626-85642,85793-85809`).
+  `Boss_DoCollision` branches to `Touch_ChkHurt` on overlap
+  (`docs/s2disasm/s2.asm:85877-85907`), and `HurtCharacter` / `Hurt_Sidekick`
+  sets routine `$04`, `y_vel=-$400`, `x_vel=-$200`, then negates `x_vel` when
+  the player is right of the hurt source (`docs/s2disasm/s2.asm:85437-85498`).
+- Fix: `Sonic2CNZBossInstance` now latches the previous player-slot
+  collision x/y for its folded multi-region touch checks, and CNZ Obj51 boss
+  providers opt out of the render flag touch gate that S2 `Touch_Boss` does
+  not apply. The sidekick hurt path now uses the matched multi-region X source
+  for the ROM knockback direction, matching the main-player path. This models
+  object-slot timing and source coordinates; it does not edit trace data, add
+  tolerance, hydrate/sync from trace data, or add route, frame, zone, game-id,
+  or known-failing carve-outs.
+- Focused target after integration `781d62678`:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Cnz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; CNZ2 advances to f9117 / 386 (`y` expected
+  `0x0686`, actual `0x0681`).
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; 11 selected S2 green traces passed.
+- Updated red preservation set:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dmaven.test.failure.ignore=true" test`.
+  Result: exits 0 with expected red failures ignored and preserves ARZ2 f1028 /
+  2686, CPZ2 f10068 / 128, HTZ2 f4165 / 1129, MTZ1 f7906 / 407, MTZ3 f7853 /
+  864, OOZ1 f1795 / 1058, and OOZ2 f3919 / 1117. CNZ2 is the only moved red
+  frontier in the set, now f9117 / 386.
+
 ## 2026-06-30 - S2 MTZ1 Obj69 stale airborne grounding recovery (f5713 -> f7906)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz1-frontier-r3` /

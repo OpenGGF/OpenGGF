@@ -154,6 +154,9 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
 
     // Render state
     private int lastFrameCounter;
+    private int touchCollisionX;
+    private int touchCollisionY;
+    private boolean touchCollisionSnapshotReady;
 
     private final Sonic2CNZEvents cnzEvents;
 
@@ -299,6 +302,19 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
 
         alignGeneratorPositions();
         updateFaceAnimation(player);
+    }
+
+    @Override
+    public void snapshotTouchResponseState() {
+        if (touchCollisionSnapshotReady) {
+            touchCollisionX = getPreUpdateX();
+            touchCollisionY = getPreUpdateY();
+        } else {
+            touchCollisionX = state.x;
+            touchCollisionY = state.y;
+            touchCollisionSnapshotReady = true;
+        }
+        super.snapshotTouchResponseState();
     }
 
     /**
@@ -738,16 +754,18 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
         int bodyFlags = getCollisionFlags();
         TouchResponseProvider.TouchRegion electricRegion;
         if (bossCollisionRoutine == COLLISION_LOWER) {
-            // ROM: BossCollision_CNZ checks y_pos+$28 with d1=$80010,
+            // ROM: player-slot Touch_Boss runs before Obj51 updates this frame;
+            // use the previous object-slot x/y, not the post-update diagnostic position.
+            // BossCollision_CNZ checks y_pos+$28 with d1=$80010,
             // then falls through to the Obj51 collision_flags byte.
             electricRegion = new TouchResponseProvider.TouchRegion(
-                    state.x,
-                    state.y + 0x28,
+                    touchCollisionX,
+                    touchCollisionY + 0x28,
                     LOWER_ELECTRIC_HURT_FLAGS);
         } else {
             electricRegion = new TouchResponseProvider.TouchRegion(
-                    state.x + 4,
-                    state.y + 0x20,
+                    touchCollisionX + 4,
+                    touchCollisionY + 0x20,
                     ZAP_ELECTRIC_HURT_FLAGS);
         }
 
@@ -756,8 +774,15 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
         }
         return new TouchResponseProvider.TouchRegion[] {
                 electricRegion,
-                new TouchResponseProvider.TouchRegion(state.x, state.y, bodyFlags)
+                new TouchResponseProvider.TouchRegion(touchCollisionX, touchCollisionY, bodyFlags)
         };
+    }
+
+    @Override
+    public boolean requiresRenderFlagForTouch() {
+        // S2 Touch_Boss scans collision_flags directly when Current_Boss_ID is
+        // nonzero; it does not apply the render/on-screen gate used by S1.
+        return false;
     }
 
     /**
