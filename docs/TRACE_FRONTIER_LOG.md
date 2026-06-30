@@ -26108,3 +26108,62 @@ Verification:
   exited 1 with only expected reds. Non-target accepted frontiers/counts held:
   ARZ2 f1028 / 2686, CPZ2 f5689 / 317, HTZ2 f4136 / 1024, MTZ1 f5713 / 560,
   MTZ3 f7853 / 864, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117.
+
+### 2026-06-30 -- S2 CPZ2 Obj7A after-current child and pair lifetime: f5689 -> f7035
+
+Worktree `bugfix/ai-s2-cpz2-frontier-r9` was created from integration branch
+`bugfix/ai-s2-trace-develop` at accepted HEAD `7c8612bc8`, then merged cleanly
+with conductor-updated integration heads `2c6018eda` and `63067d46c` before
+final verification.
+
+Baseline reproduced before the fix from the original integration parent
+`7c8612bc8`: `TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace` failed at
+f5689 / 317 with `g_speed` expected `0x01F9`, actual `0x003C`. After the final
+merge to `63067d46c`, the same baseline remained f5689 / 317.
+
+Root fixed: CPZ2 reaches an Obj7A SidewaysPform pair at f5689. ROM slot order has
+the parent at `x=$16CF` and its child at `x=$1731`, letting Sonic land on the
+child in slot `$1B`; the engine's child was constructed as a normal dynamic
+child, could rerun parent init on its first update, and used generic
+`MarkObjGone` lifetime while still outside the camera's generic unload window.
+Obj7A instead allocates the companion with `AllocateObjectAfterCurrent`, writes
+its fields directly from the parent's init loop, links parent and child through
+`objoff_3C`, and gives the parent ownership of deleting both halves by the
+pair's min/max range endpoints (`docs/s2disasm/s2.asm:56192-56230,56239-56272`).
+The child routine only moves, checks platform collision, and displays; its
+direction toggle uses exact edge equality against the linked parent
+(`docs/s2disasm/s2.asm:56269-56272,56307-56317`).
+
+Fix:
+- `SidewaysPformObjectInstance` now constructs Obj7A's companion platform with
+  the same active `ObjectServices`, marks it initialized from the parent-filled
+  fields, and inserts it through `ObjectManager.addDynamicObjectAfterSlot(...)`
+  rather than lowest-free child allocation.
+- The child starts from the parent-computed child spawn position, so subtype
+  `$0C` reaches the ROM phase pair (`$16CF/$1731`) at the landing frame.
+- Obj7A now opts into a custom post-routine out-of-range check: children do not
+  generic-unload themselves, while the parent deletes both linked halves only
+  when both ROM range endpoints are outside the unload compare.
+- The child-side collision toggle now uses the ROM exact left-edge/right-edge
+  equality instead of overlap/direction heuristics.
+
+Result:
+- `TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace`: f5689 / 317 errors
+  (`g_speed` expected `0x01F9`, actual `0x003C`) -> f7035 / 917 errors
+  (`y_speed` expected `-0220`, actual `-0110`).
+- New owner is a later CPZ2 vertical-speed divergence after the Obj7A landing
+  window; the f5689 platform ride now matches ROM state.
+
+Verification:
+- `git merge bugfix/ai-s2-trace-develop` fast-forwarded the worker from
+  `2c6018eda` to `63067d46c` and preserved the local Obj7A fix cleanly.
+- `mvn "-Dtest=TestS2Cpz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 with the improved f7035 / 917 CPZ2 frontier above.
+- `mvn clean "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0; the current S2 green guard, including MTZ2, remained green.
+- `mvn clean "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 with only expected reds. Non-target accepted frontiers/counts held:
+  ARZ2 f1028 / 2686, CNZ2 f8403 / 591, HTZ2 f4136 / 1024, MTZ1 f5713 / 560,
+  MTZ3 f7853 / 864, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117.
+- `mvn clean "-Dtest=TestS2SidewaysPformGraphRewind,TestTopSolidRoutineProfileAdoption" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 0.
