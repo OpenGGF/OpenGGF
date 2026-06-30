@@ -87,13 +87,11 @@ public final class PlaybackTimelineController {
         if (!playing) {
             return;
         }
-        int previous = cursorFrame;
-        seek(cursorFrame + getRate());
-        if (cursorFrame == frameCount - 1 && previous == cursorFrame) {
+        if (cursorFrame >= frameCount - 1) {
             playing = false;
-        } else if (cursorFrame == frameCount - 1) {
-            playing = false;
+            return;
         }
+        seek(cursorFrame + getRate());
     }
 
     private int clamp(int frame) {

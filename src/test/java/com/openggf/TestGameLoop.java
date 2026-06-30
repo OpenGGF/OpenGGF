@@ -43,6 +43,8 @@ import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.dataselect.S3kDataSelectManager;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.game.recording.UserRecordingPlaybackOptions;
+import com.openggf.game.recording.UserRecordingPlaybackState;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.TestEnvironment;
@@ -239,6 +241,124 @@ public class TestGameLoop {
         assertTrue(bridge >= 0, "GameLoop must bridge playback input");
         assertTrue(rewind < bridge,
                 "Rewind release must seek/play the playback timeline before forced input is sampled");
+    }
+
+    @Test
+    public void userRecordingPlaybackPolicyObservesAppliedMovieFrameBeforeCursorAdvance() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+
+        assertTrue(source.contains("int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();"),
+                "GameLoop must capture the BK2 frame before advancing the playback cursor");
+        assertTrue(source.contains("userRecordingControls.afterPlaybackFrame(\n" +
+                        "                    appliedPlaybackFrame,"),
+                "Target/completion policy must classify the frame that was just applied");
+    }
+
+    @Test
+    public void userRecordingPlaybackPolicyRunsForLevelBoundaryReturns() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int helperStart = source.indexOf("private void finishUserRecordingPlaybackAtLevelBoundary(");
+        int helperEnd = source.indexOf("private void updateSpecialStageMode()", helperStart);
+        assertTrue(helperStart >= 0 && helperEnd > helperStart,
+                "GameLoop must centralize user-recording playback boundary handling");
+        String helperBody = source.substring(helperStart, helperEnd);
+
+        int appliedFrame = helperBody.indexOf("appliedPlaybackFrame = playbackDebugManager.getCursorFrame();");
+        int rememberAppliedFrame = helperBody.indexOf(
+                "lastAppliedUserRecordingPlaybackFrame = appliedPlaybackFrame;");
+        int reuseLastAppliedFrame = helperBody.indexOf(
+                "appliedPlaybackFrame = lastAppliedUserRecordingPlaybackFrame;");
+        int skipUnappliedFrame = helperBody.indexOf("if (appliedPlaybackFrame < 0)");
+        int advance = helperBody.indexOf("playbackDebugManager.onLevelFrameAdvanced();");
+        int classify = helperBody.indexOf("userRecordingControls.afterPlaybackFrame(\n" +
+                "                appliedPlaybackFrame,\n" +
+                "                true,");
+        assertTrue(appliedFrame >= 0,
+                "Advancing boundary playback handling must capture the BK2 row applied by the boundary");
+        assertTrue(rememberAppliedFrame > appliedFrame,
+                "Advancing boundary playback handling must remember the applied BK2 row");
+        assertTrue(reuseLastAppliedFrame > advance,
+                "Non-advancing boundary playback handling must reuse the last actually-applied BK2 row");
+        assertTrue(skipUnappliedFrame > reuseLastAppliedFrame,
+                "Non-advancing boundary playback handling must skip classification before any BK2 row applied");
+        assertTrue(advance > appliedFrame,
+                "Boundary playback handling must capture the applied BK2 frame before advancing the cursor");
+        assertTrue(classify > advance,
+                "Boundary playback handling must mark levelEnded after the boundary cursor advance");
+
+        int updateLevel = source.indexOf("private boolean updateLevelMode(");
+        int updateLevelEnd = source.indexOf("private void updateBonusStageMode(", updateLevel);
+        assertTrue(updateLevel >= 0 && updateLevelEnd > updateLevel, "updateLevelMode method must exist");
+        String levelBody = source.substring(updateLevel, updateLevelEnd);
+
+        for (String required : List.of(
+                "finishUserRecordingPlaybackAtLevelBoundary(true);",
+                "finishUserRecordingPlaybackAtLevelBoundary(false);")) {
+            assertTrue(levelBody.contains(required),
+                    "Level-boundary returns must notify playback policy via " + required);
+        }
+    }
+
+    @Test
+    public void userRecordingBoundaryDoesNotClassifyCursorZeroBeforeAnyMovieFrameApplied() throws Exception {
+        com.openggf.debug.playback.PlaybackDebugManager playback =
+                mock(com.openggf.debug.playback.PlaybackDebugManager.class);
+        when(playback.getCursorFrame()).thenReturn(0);
+        when(playback.getMovieFrameCount()).thenReturn(2);
+        when(playback.isSessionPlaying()).thenReturn(true);
+        GameLoop loop = new GameLoop(new EngineContext(
+                SonicConfigurationService.getInstance(),
+                mock(com.openggf.graphics.GraphicsManager.class),
+                mock(AudioManager.class),
+                mock(com.openggf.data.RomManager.class),
+                mock(com.openggf.debug.PerformanceProfiler.class),
+                mock(com.openggf.debug.DebugOverlayManager.class),
+                playback,
+                mock(com.openggf.game.RomDetectionService.class),
+                mock(com.openggf.game.CrossGameFeatureProvider.class)));
+        Object launcher = getPrivateField(loop, "userRecordingSessionLauncher");
+        setPrivateField(launcher, "activePlaybackOptions", new UserRecordingPlaybackOptions(0, true, false));
+        setPrivateField(launcher, "activePlaybackState", UserRecordingPlaybackState.PLAYING);
+
+        invokePrivateMethod(loop, "finishUserRecordingPlaybackAtLevelBoundary",
+                new Class<?>[] { boolean.class }, false);
+
+        assertEquals(UserRecordingPlaybackState.PLAYING,
+                getPrivateField(launcher, "activePlaybackState"),
+                "A title-card/boundary return before frame 0 is simulated must not complete playback");
+        verify(playback, never()).onLevelFrameAdvanced();
+    }
+
+    @Test
+    public void returnToMasterTitleTearsDownUserRecordingSessionsBeforeLeavingLevel() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int methodStart = source.indexOf("void returnToMasterTitle()");
+        int methodEnd = source.indexOf("private void startEscapeToMasterTitleTransition()", methodStart);
+        assertTrue(methodStart >= 0 && methodEnd > methodStart, "returnToMasterTitle method must exist");
+        String methodBody = source.substring(methodStart, methodEnd);
+
+        assertTrue(methodBody.contains("userRecordingSessionLauncher.stopActiveRecording"),
+                "Escape/return-to-title must finalize active user recordings");
+        assertTrue(methodBody.contains("userRecordingSessionLauncher.endPlaybackSession"),
+                "Escape/return-to-title must end user recording playback and forced BK2 input");
+        assertTrue(methodBody.indexOf("userRecordingSessionLauncher.stopActiveRecording")
+                        < methodBody.indexOf("masterTitleLaunchCoordinator.returnToMasterTitle()"),
+                "Recording teardown must run before gameplay is handed back to master title");
+        assertTrue(methodBody.indexOf("userRecordingSessionLauncher.endPlaybackSession")
+                        < methodBody.indexOf("masterTitleLaunchCoordinator.returnToMasterTitle()"),
+                "Playback teardown must run before gameplay is handed back to master title");
+    }
+
+    @Test
+    public void playbackStartInputFeedsGameplayPauseEdge() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int updateLevel = source.indexOf("private boolean updateLevelMode(");
+        int levelEnd = source.indexOf("private void updateBonusStageMode(", updateLevel);
+        assertTrue(updateLevel >= 0 && levelEnd > updateLevel, "updateLevelMode method must exist");
+        String levelBody = source.substring(updateLevel, levelEnd);
+
+        assertTrue(levelBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
+                "Recorded P1 Start must route to the same gameplay pause edge as live Start");
     }
 
     @Test
