@@ -369,6 +369,19 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether {@code TailsCPU_Normal}'s delayed leader {@code Status_Push} test
+     * should use the object-order status sample while this CPU sidekick rides
+     * the object.
+     * <p>
+     * This is narrower than {@link #usesSidekickCpuCurrentPushObjectOrderInputDelay(PlayableEntity)}:
+     * it affects the d4-style push-bypass decision, not the delayed Ctrl_1 word
+     * consumed after the branch has already been chosen.
+     */
+    default boolean usesSidekickCpuPushBypassObjectOrderStatusDelay(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether a CPU sidekick riding this object should treat the delayed leader
      * status sample as still carrying {@code Status_Push} when deciding the
      * {@code TailsCPU_Normal} push-bypass branch.
