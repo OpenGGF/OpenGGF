@@ -71,7 +71,7 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
 
     // Status bit flags (ROM: Obj5D_status)
     private static final int STATUS_SIDE = 0x08;      // bit3: which side to target
-    private static final int STATUS_HIT = 0x02;       // bit1: was just hit
+    private static final int STATUS_HIT = 0x02;       // bit1: ROM reads this, but Obj5D never sets it on hit
     private static final int STATUS_GUNK_READY = 0x04; // bit2: gunk ready to drop
 
     // Status2 bit flags (ROM: Obj5D_status2)
@@ -149,7 +149,6 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
 
     @Override
     protected void onHitTaken(int remainingHits) {
-        status |= STATUS_HIT;
         if (robotnik != null) {
             robotnik.setAnim(2); // Hurt face
         }
