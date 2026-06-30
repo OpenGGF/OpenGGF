@@ -756,8 +756,8 @@ public class TraceBinder {
                 || (expected.interact() & 0xFF) == 0
                 || (expected.tailsInteract() & 0xFF) == 0
                 || (expected.tailsInteract() & 0xFF) == (expected.interact() & 0xFF)
-                || expected.cpuRoutine() != 0x06
-                || actual.cpuRoutine() != 0x06
+                || !isSidekickCpuInteractRefreshBeforeObjectContactRoutine(expected.cpuRoutine())
+                || !isSidekickCpuInteractRefreshBeforeObjectContactRoutine(actual.cpuRoutine())
                 || expectedSidekick == null
                 || actualSidekick == null
                 || !expectedSidekick.present()
@@ -778,8 +778,8 @@ public class TraceBinder {
         if ((expected.interact() & 0xFF) != 0
                 || (expected.tailsInteract() & 0xFF) == 0
                 || (expected.interact() & 0xFF) == (actual.interact() & 0xFF)
-                || expected.cpuRoutine() != 0x06
-                || actual.cpuRoutine() != 0x06
+                || !isSidekickCpuInteractRefreshBeforeObjectContactRoutine(expected.cpuRoutine())
+                || !isSidekickCpuInteractRefreshBeforeObjectContactRoutine(actual.cpuRoutine())
                 || expectedSidekick == null
                 || actualSidekick == null
                 || !expectedSidekick.present()
@@ -789,6 +789,10 @@ public class TraceBinder {
             return false;
         }
         return sameSidekickMotionState(expectedSidekick, actualSidekick);
+    }
+
+    private static boolean isSidekickCpuInteractRefreshBeforeObjectContactRoutine(int cpuRoutine) {
+        return cpuRoutine == 0x06 || cpuRoutine == 0x08;
     }
 
     private static boolean sameSidekickMotionState(

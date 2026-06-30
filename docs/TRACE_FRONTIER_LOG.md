@@ -45,6 +45,47 @@ branch-local measurements.
   - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
     exited 1 as expected-red and preserved OOZ2 f9302 / 401.
 
+## 2026-06-30 - S2 MTZ3 Tails CPU panic landing interact diagnostic (f7853 -> f9035)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz3-f7853-round8` /
+  `bugfix/ai-s2-mtz3-f7853-round8`, based on `bugfix/ai-s2-trace-next`
+  `6468c4665`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected nonzero; MTZ3 f7853 / 864
+  (`tails_cpu_interact` expected `0x0065`, actual `0x0070`).
+- Triage/evidence: raw S2 aux around f7853 shows ROM `tails_interact`
+  changing from `$16` to `$45` on the landing frame while
+  `Tails_interact_ID` stays `$65`; on f7854 the CPU global updates to `$70`.
+  This is the same one-frame landing diagnostic lag already accepted for
+  `TailsCPU_Normal`, but f7853 is in `TailsCPU_Panic`. ROM routine 8 also
+  calls `TailsCPU_CheckDespawn` before object contact for the frame, and
+  `TailsCPU_UpdateObjInteract` refreshes `Tails_interact_ID` only on that CPU
+  pass (`docs/s2disasm/s2.asm:39458-39459,39441-39451`). The sidekick motion
+  state is otherwise byte-identical at f7853, so this was a diagnostic-only
+  frontier, not trace hydration or gameplay state.
+- Fix: `TraceBinder` now applies the landing-frame interact refresh-lag filter
+  to CPU routines `$06` and `$08`, with a focused unit reproducing the MTZ3
+  panic landing shape.
+- Result:
+  `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace`: f7853 / 864 errors
+  -> f9035 / 863 errors. New first error is `x` expected `$1BDD`, actual
+  `$1BD9`; context shows both Sonic and Tails riding engine slot 18
+  (`Obj65 @1BBE,04C8`) while ROM rides slot `$2D` (`Obj65 @1BC2,04C8`), so
+  the next owner is the later Obj65 platform/slot-cadence cluster.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.TestTraceBinder" "-DfailIfNoTests=false" test`
+    passed the focused binder coverage.
+  - `mvn "-Dtest=com.openggf.tests.trace.TestTraceBinder,com.openggf.tests.trace.s2.TestS2Ehz1LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    passed after clearing generated surefire reports (62 tests, 0 failures),
+    covering the shared binder and an S2 green replay.
+  - `mvn "-Dtrace.context.diagnosticChars=full" "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red with the improved MTZ3 f9035 / 863 frontier.
+  - `mvn "-Dtest=com.openggf.tests.TestTraceReplayInvariantGuard" "-DfailIfNoTests=false" test`
+    still fails independently on existing `TestRespawnStrategies` helper calls
+    to `hydrateRecordedHistory(...)` at lines 472, 524, 630, 676, 700, and
+    758; this branch does not touch that test-helper issue.
+
 ## 2026-06-30 - S2 HTZ2 Obj30 side-gated input bridge + airborne push retention (f4442 -> f5002)
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /

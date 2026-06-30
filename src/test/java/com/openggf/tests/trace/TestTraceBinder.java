@@ -854,6 +854,39 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testPanicLandingFrameStaleSidekickCpuInteractIdDoesNotOwnFrontier() {
+        TraceCharacterState landedTails = new TraceCharacterState(true,
+                (short) 0x1A38, (short) 0x014A,
+                (short) 0x0180, (short) 0x0000, (short) 0x0180,
+                (byte) 0x00, false, false, 0,
+                0x4C00, 0x0300, 0x02, 0x09, 0x45);
+        TraceFrame frame = frameWithSidekick(7853, landedTails);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                7853, "tails", 0x65, 0, 0, 0x08,
+                (short) 0x19F0, (short) 0x012C, 0,
+                0, 0x00, 0x00, 0, 0x0800,
+                0xFC, 0xB8, (short) 0x1A23, (short) 0x0132,
+                0x0800, 0x00, 0x09, 0x45, 0x0180);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x70, 0x08, 0x19F0, 0x012C,
+                0x00, 0x00, 0x43, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x08D3, (short) 0x0693,
+                (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+                (byte) 0xCC, false, true, 3,
+                null, null, "tails", landedTails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_interact").severity());
+        assertFalse(result.hasError(),
+                "MTZ3 f7853 lands while TailsCPU_Panic has already run "
+                        + "TailsCPU_CheckDespawn for the frame; ROM refreshes "
+                        + "Tails_interact_ID on the next CPU pass "
+                        + "(docs/s2disasm/s2.asm:39458-39459,39441-39451)");
+    }
+
+    @Test
     void testLandingFrameClearedEngineSidekickCpuInteractIdStillReportsWithMotionDelta() {
         TraceCharacterState expectedTails = new TraceCharacterState(true,
                 (short) 0x0640, (short) 0x01B8,
