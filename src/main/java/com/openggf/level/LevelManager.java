@@ -2276,6 +2276,11 @@ public class LevelManager {
     }
 
     public SolidTile getSolidTileForChunkDesc(ChunkDesc chunkDesc, int solidityBitIndex) {
+        return getSolidTileForChunkDesc(chunkDesc, solidityBitIndex, solidityBitIndex >= 0x0E);
+    }
+
+    public SolidTile getSolidTileForChunkDesc(
+            ChunkDesc chunkDesc, int solidityBitIndex, boolean useSecondaryCollisionPath) {
         try {
             if (chunkDesc == null) {
                 return null;
@@ -2290,9 +2295,9 @@ public class LevelManager {
             }
             // Get collision index - ROM treats index 0 as "no collision"
             // (s2.asm FindFloor line 42963: beq.s loc_1E7E2)
-            int collisionIndex = (solidityBitIndex < 0x0E)
-                    ? chunk.getSolidTileIndex()
-                    : chunk.getSolidTileAltIndex();
+            int collisionIndex = useSecondaryCollisionPath
+                    ? chunk.getSolidTileAltIndex()
+                    : chunk.getSolidTileIndex();
             if (collisionIndex == 0) {
                 return null; // No collision shape assigned
             }
