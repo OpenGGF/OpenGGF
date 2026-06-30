@@ -110,6 +110,30 @@ class TestOOZLauncherObjectInstance {
     }
 
     @Test
+    void brokenParentImmediatelyRunsFirstFragmentInOriginalSlot() {
+        OOZLauncherObjectInstance launcher = newLauncherAt(0x1140, 0x0270, 1);
+        TestablePlayableSprite player = player("sonic");
+        RecordingObjectManager objectManager = new RecordingObjectManager();
+        player.setAnimationId(Sonic2AnimationIds.ROLL);
+        player.setRolling(true);
+        player.setYSpeed((short) 0x0418);
+        launcher.setServices(new QueryOnlyPlayerServices(player, List.of(), objectManager));
+        player.setCentreX((short) 0x114C);
+        player.setCentreY((short) 0x0263);
+
+        launcher.update(0, player);
+        launcher.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+
+        assertEquals(0x113C, launcher.getX(),
+                "Obj3D loc_24F28/BreakObjectToPieces uses the current object as fragment 0");
+        assertEquals(0x026C, launcher.getY(),
+                "Obj3D_Fragment falls through on the break frame and moves before returning");
+        launcher.update(1, player);
+        assertEquals(0x1138, launcher.getX(),
+                "The broken placement object must keep running routine 4 instead of occupying a stale slot");
+    }
+
+    @Test
     void horizontalLauncherDeletesIfNeitherPlayerEntersWindow() {
         OOZLauncherObjectInstance launcher = newLauncherAt(0x1140, 0x0270, 1);
         TestablePlayableSprite player = player("sonic");

@@ -6,6 +6,68 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 OOZ2 Obj3D fragment slot and Obj4A bullet lifetime (f3919 -> f3993)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-frontier-r4` /
+  `bugfix/ai-s2-ooz2-frontier-r4`, created from integration branch
+  `bugfix/ai-s2-trace-develop`, fast-forwarded to conductor integration
+  `2a932d405` before worker verification, then merged by the conductor after
+  accepted MTZ1 r14 at `6b82175cc`.
+- Baseline reproduction before the fix:
+  `mvn "-Dtest=TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`.
+  Result: OOZ2 f3919 / 1117 (`x` expected `0x1240`, actual `0x1230`).
+- Triage/evidence: the f3919 object-slot oracle showed the engine kept the
+  broken Obj3D placement object as a stale non-fragment slot after spawning
+  its debris children, shifting later object allocation relative to the ROM.
+  After fixing that slot owner, the next mismatch showed an Obj48 allocation
+  filling slot `$13` before the ROM released the prior Obj4A bullet there; the
+  engine had deleted the Octus projectile with the local small screen-margin
+  path instead of the ROM coarse `MarkObjGone` window.
+- Disassembly cited: Obj3D's break path clears standing bits, allocates the
+  copied invisible launcher after the current slot, then falls through to
+  `loc_24F28` and `JmpTo2_BreakObjectToPieces`
+  (`docs/s2disasm/s2.asm:51040-51062`). `BreakObjectToPieces` starts with
+  `a1=a0`, initializes the current object as routine 4 fragment piece 0, then
+  allocates later pieces with `AllocateObjectAfterCurrent`
+  (`docs/s2disasm/s2.asm:29727-29759`). `Obj3D_Fragment` calls
+  `ObjectMove` before adding `$18` to `y_vel`
+  (`docs/s2disasm/s2.asm:51064-51068`). Octus `Obj4A_FireBullet` creates a
+  routine 6 bullet with delay `$F`, collision `$98`, and `x_vel=+/-$200`
+  (`docs/s2disasm/s2.asm:60481-60505`); `Obj4A_Bullet` runs `ObjectMove`,
+  animates, then jumps to `MarkObjGone`
+  (`docs/s2disasm/s2.asm:60353-60363`), whose unload test uses
+  `(x_pos&$FF80)-Camera_X_pos_coarse` against the coarse `$280` window
+  (`docs/s2disasm/s2.asm:30220-30233`).
+- Fix: `OOZLauncherObjectInstance` now keeps the original Obj3D slot alive as
+  moving fragment piece 0, spawns the remaining fragment children after the
+  current slot, and applies the ROM fragment movement order on the break
+  frame. `BadnikProjectileInstance` now lets Octus bullets use the shared S2
+  coarse ROM range unload path instead of the generic local projectile margin.
+  This does not edit trace data, hydrate engine state from traces, weaken
+  tolerances, or add route/frame/zone carve-outs.
+- Focused object coverage:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestOOZLauncherObjectInstance,com.openggf.game.sonic2.objects.badniks.TestS2OozBadnikParity" test`.
+  Result: exits 0; 12 tests passed.
+- Focused target after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`.
+  Result: expected nonzero; OOZ2 advances to f3993 / 749 (`tails_x`
+  expected `0x1175`, actual `0x1174`).
+- Current S2 green guard:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: exits 0; 11 selected S2 green traces passed.
+- Updated red preservation set after conductor merge:
+  `mvn -q "-Dmse=off" "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`.
+  Result: expected nonzero and preserves ARZ2 f1028 / 2686, CNZ2 f9117 /
+  386, CPZ2 f10286 / 91, HTZ2 f4286 / 1128, MTZ1 f8655 / 53, MTZ3 f7853 /
+  864, and OOZ1 f1803 / 1067. OOZ2 is the only moved frontier in this worker
+  change, now f3993 / 749.
+- Full S2 sweep after conductor merge:
+  `mvn "-Dtest=TestS2*TraceReplay" test`.
+  Result: expected nonzero; 19 S2 traces run, 11 green, 8 expected red:
+  ARZ2 f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10286 / 91, HTZ2 f4286 /
+  1128, MTZ1 f8655 / 53, MTZ3 f7853 / 864, OOZ1 f1803 / 1067, and OOZ2
+  f3993 / 749.
+
 ## 2026-06-30 - S2 MTZ1 Obj69 stale P1 standing-bit snap (f7906 -> f8655)
 
 - Worktree/branch: `.worktrees/trace-s2-mtz1-r14` /
@@ -60,7 +122,6 @@ branch-local measurements.
   ARZ2 f1028 / 2686, CNZ2 f9117 / 386, CPZ2 f10286 / 91, HTZ2 f4286 /
   1128, MTZ1 f8655 / 53, MTZ3 f7853 / 864, OOZ1 f1803 / 1069, and OOZ2
   f3919 / 1117.
-
 ## 2026-06-30 - S2 HTZ2 Obj30 late supported hurt status preservation (f4165 -> f4286)
 
 - Worktree/branch: `.worktrees/trace-s2-htz2-r13` /
