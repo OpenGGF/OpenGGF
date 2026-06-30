@@ -2023,6 +2023,12 @@ public class SidekickCpuController {
                 delayedDirectionalPress(effectiveLeader, followStatDelayFrames, recordedInput)
                         | (recordedJumpPress ? AbstractPlayableSprite.INPUT_JUMP : 0);
 
+        ObjectInstance ridingObject = currentRidingObject();
+        if ((recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && dy >= -JUMP_HEIGHT_THRESHOLD
+                && preservesSidekickDelayedLeaderPushWhileRiding(ridingObject)) {
+            recordedStatus |= AbstractPlayableSprite.STATUS_PUSHING;
+        }
         byte pushBypassStatus = effectiveLeader.getStatusHistory(OBJECT_ORDER_INPUT_DELAY_FRAMES);
         // ROM loads delayed Ctrl_1_Logical/status into d1/d4, then tests Tails'
         // current Status_Push before loc_13E9C. If current push is set and the
@@ -2092,7 +2098,6 @@ public class SidekickCpuController {
         boolean objectOrderFollowSteeringContext = isObjectOrderFollowSteeringContext(effectiveLeader);
         boolean supportGraceKeepsFollowSteering =
                 localGracePushBypass && isDoorSupportGraceFollowSteeringContext();
-        ObjectInstance ridingObject = currentRidingObject();
         boolean ridingObjectPushGrace = !sidekick.getAir()
                 && sidekick.isOnObject()
                 && !sidekick.getRolling()
@@ -2799,6 +2804,16 @@ public class SidekickCpuController {
         }
         if (ridingObject instanceof SolidObjectProvider provider) {
             return provider.usesSidekickCpuCurrentPushObjectOrderInputDelay(sidekick);
+        }
+        return false;
+    }
+
+    private boolean preservesSidekickDelayedLeaderPushWhileRiding(ObjectInstance ridingObject) {
+        if (!hasLiveRidingObject(ridingObject)) {
+            return false;
+        }
+        if (ridingObject instanceof SolidObjectProvider provider) {
+            return provider.preservesSidekickDelayedLeaderPushWhileRiding(sidekick);
         }
         return false;
     }

@@ -369,6 +369,20 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a CPU sidekick riding this object should treat the delayed leader
+     * status sample as still carrying {@code Status_Push} when deciding the
+     * {@code TailsCPU_Normal} push-bypass branch.
+     * <p>
+     * This is for folded engine objects that represent multiple ROM SST solid
+     * slots. ROM stores each slot's standing/pushing bits independently, and the
+     * delayed {@code Sonic_Stat_Record_Buf} sample can still include a child-slot
+     * push bit even when the folded engine history only retained the parent slot.
+     */
+    default boolean preservesSidekickDelayedLeaderPushWhileRiding(PlayableEntity sidekick) {
+        return false;
+    }
+
+    /**
      * Whether this object's continued-riding path should keep the player's
      * {@code Status_Push} bit set even when the current frame does not produce
      * a fresh side-contact classification.

@@ -325,12 +325,20 @@ class TestSonic2ObjectBugFixes {
         assertFalse(staircase.preservesSidekickCpuPushGraceWhileRiding(tails),
                 "Obj78 CPU-only grace models child-slot side-push visibility; it must not apply when "
                         + "Tails is centered on a stair piece with no adjacent side overlap");
+        assertTrue(staircase.preservesSidekickDelayedLeaderPushWhileRiding(tails),
+                "Obj78 child SolidObject slots can keep the delayed Sonic_Stat_Record_Buf push visible "
+                        + "while CPU Tails rides the folded staircase (docs/s2disasm/s2.asm:55967-56021)");
 
         tails.setDirection(Direction.RIGHT);
         tails.setCentreX((short) (staircase.getPieceX(3) - staircase.getPieceParams(3).halfWidth()));
         assertTrue(staircase.preservesRidingPushStatus(tails),
                 "Obj78's folded multi-piece latch is still needed when the rider is actually pressed "
                         + "into the lower neighbouring child slot's side");
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite(
+                "sonic", (short) staircase.getPieceX(2), (short) staircase.getPieceY(2));
+        assertFalse(staircase.preservesSidekickDelayedLeaderPushWhileRiding(sonic),
+                "The delayed leader push bridge is only for CPU sidekick follow control");
     }
 
     @Test

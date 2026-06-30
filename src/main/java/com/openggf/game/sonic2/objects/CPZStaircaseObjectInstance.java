@@ -207,6 +207,18 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
         return preservesSidekickCpuPushGraceWhileRiding(playerEntity) ? 8 : Integer.MAX_VALUE;
     }
 
+    @Override
+    public boolean preservesSidekickDelayedLeaderPushWhileRiding(PlayableEntity playerEntity) {
+        // Obj78 runs as four separate SST slots: the parent plus three children
+        // allocated after it (docs/s2disasm/s2.asm:55967-55995). Each child calls
+        // SolidObject and ORs its contact bits back into the parent accumulator
+        // (docs/s2disasm/s2.asm:56006-56021), so TailsCPU_Normal's delayed
+        // Sonic_Stat_Record_Buf sample can still see a child-slot push while the
+        // folded engine object has already reconciled the visible parent state.
+        return playerEntity != null && playerEntity.isCpuControlled()
+                && yOffsets[0] != 0;
+    }
+
     private boolean isFacingAdjacentStepSide(PlayableEntity playerEntity, boolean requireLowerNeighbor) {
         if (playerEntity == null) {
             return false;
