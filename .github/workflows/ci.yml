@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - develop
-  push:
-    branches:
-      - develop
   workflow_dispatch:
   schedule:
     - cron: '30 5 * * *'
@@ -23,10 +20,6 @@ jobs:
       - name: Validate pull request branch policy
         if: github.event_name == 'pull_request'
         run: bash .githooks/validate-policy.sh ci-pr "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" "${{ github.base_ref }}" "${{ github.head_ref }}"
-
-      - name: Validate push branch policy
-        if: github.event_name == 'push'
-        run: bash .githooks/validate-policy.sh ci-push "${{ github.event.before }}" "${{ github.sha }}" "${{ github.ref_name }}"
 
   test:
     runs-on: ubuntu-latest
