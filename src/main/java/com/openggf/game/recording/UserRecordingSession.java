@@ -1,8 +1,9 @@
-package com.openggf.recording;
+package com.openggf.game.recording;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.game.session.EngineServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.version.AppVersion;
 
@@ -38,7 +39,7 @@ public final class UserRecordingSession {
         this(
                 launchContext,
                 outputBk2Path,
-                SonicConfigurationService.getInstance(),
+                EngineServices.current().configuration(),
                 UserRecordingWriter::write,
                 DesyncLiteSnapshotter::capture,
                 Instant::now);

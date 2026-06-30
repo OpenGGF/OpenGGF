@@ -1,4 +1,4 @@
-package com.openggf.recording;
+package com.openggf.game.recording;
 
 public enum UserRecordingStopReason {
     UNKNOWN,

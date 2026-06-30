@@ -74,14 +74,14 @@ import com.openggf.integration.presence.PresenceManager;
 import com.openggf.integration.presence.RuntimePresenceSnapshotProvider;
 import com.openggf.integration.presence.discord.DiscordIpcPresenceClient;
 import com.openggf.integration.presence.discord.DiscordIpcTransports;
-import com.openggf.recording.RecordingLaunchContext;
-import com.openggf.recording.UserRecordingHudState;
-import com.openggf.recording.UserRecordingRuntimeControls;
-import com.openggf.recording.UserRecordingSessionLauncher;
-import com.openggf.recording.UserRecordingStopReason;
-import com.openggf.recording.UserRecordingPlaybackState;
-import com.openggf.recording.UserRecordingVerificationResult;
-import com.openggf.recording.menu.UserRecordingMenu;
+import com.openggf.game.recording.RecordingLaunchContext;
+import com.openggf.game.recording.UserRecordingHudState;
+import com.openggf.game.recording.UserRecordingRuntimeControls;
+import com.openggf.game.recording.UserRecordingSessionLauncher;
+import com.openggf.game.recording.UserRecordingStopReason;
+import com.openggf.game.recording.UserRecordingPlaybackState;
+import com.openggf.game.recording.UserRecordingVerificationResult;
+import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.testmode.TraceCameraFocusController;
 
 import java.io.IOException;
@@ -256,7 +256,7 @@ public class GameLoop {
         }
 
         @Override
-        public com.openggf.recording.UserRecordingPlaybackOptions activePlaybackOptions() {
+        public com.openggf.game.recording.UserRecordingPlaybackOptions activePlaybackOptions() {
             return userRecordingSessionLauncher.currentPlaybackOptions();
         }
 

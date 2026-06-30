@@ -2,7 +2,7 @@ package com.openggf.tests.playback;
 
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
-import com.openggf.recording.UserRecordingWriter;
+import com.openggf.game.recording.UserRecordingWriter;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 

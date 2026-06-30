@@ -1,4 +1,4 @@
-package com.openggf.recording;
+package com.openggf.game.recording;
 
 public final class UserRecordingHud {
     public static final String HOLD_PROMPT_TEXT = "Hold Shift+Record for 1 Sec to Begin Recording";

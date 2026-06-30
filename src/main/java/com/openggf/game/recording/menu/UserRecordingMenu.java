@@ -1,9 +1,9 @@
-package com.openggf.recording.menu;
+package com.openggf.game.recording.menu;
 
 import com.openggf.control.InputHandler;
 import com.openggf.graphics.PixelFont;
-import com.openggf.recording.UserRecordingEntry;
-import com.openggf.recording.UserRecordingPlaybackOptions;
+import com.openggf.game.recording.UserRecordingEntry;
+import com.openggf.game.recording.UserRecordingPlaybackOptions;
 
 import java.util.List;
 import java.util.Objects;

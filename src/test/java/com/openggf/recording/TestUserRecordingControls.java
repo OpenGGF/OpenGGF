@@ -1,4 +1,4 @@
-package com.openggf.recording;
+package com.openggf.game.recording;
 
 import com.openggf.GameLoop;
 import com.openggf.audio.AudioManager;
@@ -15,7 +15,7 @@ import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.RomDetectionService;
 import com.openggf.game.session.EngineContext;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.recording.menu.UserRecordingMenu;
+import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;

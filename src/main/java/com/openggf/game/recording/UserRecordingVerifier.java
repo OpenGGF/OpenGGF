@@ -1,4 +1,4 @@
-package com.openggf.recording;
+package com.openggf.game.recording;
 
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.PlaybackDebugManager;

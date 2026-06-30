@@ -1,4 +1,4 @@
-package com.openggf.recording;
+package com.openggf.game.recording;
 
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
