@@ -6,6 +6,49 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 ARZ2 Obj8C Whisp routine cadence (f1178 -> f1225)
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round3` /
+  `bugfix/ai-s2-arz2-round3`, based on `bugfix/ai-s2-trace-next` at
+  `60af61772940555156f678172bc320f6c1dfeaae`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected nonzero; ARZ2 f1178 / 2412
+  (`obj_extra_s35_x` expected absent, actual `0x0D60`).
+- Triage/evidence: aux trace rows showed raw slot `$35` / decimal 53 became
+  Obj8C Whisp at f1045 near `$0D60,$0499`; at f1178 ROM had the same Whisp at
+  `$0D5F,$0497`, while the engine still had `$0D60,$0499`. The nearby ROM
+  object row was `s53 0x8C @0D5F,0497 rtn=04`, so the owner was Obj8C
+  routine cadence, not a missing placement entry.
+- ROM basis: `Obj8C_WaitUntilOnscreen` tests `render_flags.on_screen` and
+  branches to `loc_36970`; `loc_36970` decrements the attack counter, either
+  starts fly-away immediately or falls through `loc_36996` into
+  `Obj8C_ChasePlayer`; `Obj8C_ChasePlayer` pre-decrements `Obj8C_timer` and
+  branches to pause before orientation and `ObjectMove`; pause setup consumes
+  the RNG only at that pre-movement underflow (`docs/s2disasm/s2.asm:73199-73231,73231-73268,73271-73275`).
+- Fix: `WhispBadnikInstance` now computes the ROM-visible on-screen predicate
+  at the wait gate, takes the `loc_36970` branch/fallthrough in the same object
+  pass, starts chase or fly-away immediately after the attack decrement, and
+  pre-decrements the chase timer so the pause/RNG path runs before movement on
+  the underflow frame. This models Obj8C state and routine timing only; it does
+  not edit trace data, hydrate engine state from traces, weaken comparison, or
+  branch on zone id/name, route, frame, or fixture.
+- Result: `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances to
+  f1225 / 2404 (`obj_extra_s13_x` expected absent, actual `0x0D79`). The prior
+  slot `$35` Whisp now matches at that window; the next owner is a separate
+  slot `$13` Obj8C Whisp one-pixel trajectory/timing mismatch near
+  `$0D79,$049D`.
+- Verification:
+  - `mvn "-Dtest=TestSonic2Rng" "-DfailIfNoTests=false" test` exited 0;
+    `com.openggf.game.sonic2.TestSonic2Rng` ran 10 tests with 0 failures.
+    Maven Silent Extension also echoed the accepted ARZ2 expected-red report
+    from the prior focused replay.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 with the improved f1225 / 2404 ARZ2 frontier above.
+  - `TestRewindCoverageGuard` was not run because this change does not alter
+    object recreate/lifetime/rewind coverage. Full `TestS2*TraceReplay` was
+    not run because ARZ2 is still expected-red rather than green.
+
 ## 2026-06-30 - S2 ARZ2 Obj24 RNG/render cadence (f1028 -> f1178)
 
 - Worktree/branch: `.worktrees/ai-s2-arz2-round2` /

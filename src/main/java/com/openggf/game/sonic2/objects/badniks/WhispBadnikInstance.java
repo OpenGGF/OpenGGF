@@ -120,9 +120,9 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case INIT -> updateInit();
-            case WAIT_ONSCREEN -> updateWaitOnscreen();
+            case WAIT_ONSCREEN -> updateWaitOnscreen(player);
             case CHASE -> updateChase(player);
-            case PAUSE -> updatePause();
+            case PAUSE -> updatePause(player);
             case FLY_AWAY -> updateFlyAway();
         }
 
@@ -142,18 +142,14 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
      * WAIT_ONSCREEN state: Wait until the whisp is visible on screen.
      * When visible, decrement attacks and start chase (matching loc_36970 flow).
      */
-    private void updateWaitOnscreen() {
-        // Obj8C_WaitUntilOnscreen (s2.asm:73138-73140): test render_flags.on_screen,
-        // and on a set bit branch to loc_36970 to begin the first attack. The flag
-        // reflects the PREVIOUS frame's BuildSprites pass, so we observe last frame's
-        // computed value first, then recompute it from this frame's geometry for the
-        // next frame. This deferred ordering is what aligns the engine's chase start
-        // with the ROM's (a live same-frame check started the chase ~2 frames early,
-        // drifting the Whisp ahead of ROM into Sonic's touch box -> ARZ frame 2169).
-        boolean wasOnScreen = onScreenFlag;
+    private void updateWaitOnscreen(AbstractPlayableSprite player) {
+        // Obj8C_WaitUntilOnscreen (s2.asm:73199-73202): test render_flags.on_screen,
+        // and on a set bit branch to loc_36970. Headless replay has no separate
+        // BuildSprites producer for this local flag, so compute the same ROM
+        // overlap predicate here before taking the ROM branch/fallthrough.
         onScreenFlag = computeOnScreen();
-        if (wasOnScreen) {
-            startNextAttackOrEscape();
+        if (onScreenFlag) {
+            startNextAttackOrEscape(player);
         }
     }
 
@@ -179,18 +175,23 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
      * Common routine for starting next attack or escaping (loc_36970).
      * Decrements attack counter BEFORE starting chase, not after.
      */
-    private void startNextAttackOrEscape() {
+    private void startNextAttackOrEscape(AbstractPlayableSprite player) {
         attacksRemaining--;
         if (attacksRemaining < 0) {
-            // All attacks exhausted - fly away (routine 8)
+            // Obj8C loc_36970 falls through to Obj8C_FlyAway in the same object pass
+            // after the final attack counter underflow (s2.asm:73215-73223).
             state = State.FLY_AWAY;
             xVelFixed = ESCAPE_VELOCITY_X;
             yVelFixed = ESCAPE_VELOCITY_Y;
+            updateFlyAway();
         } else {
-            // Start chase with initial upward velocity (routine 4)
+            // Obj8C loc_36996 sets routine/timer and falls through immediately to
+            // Obj8C_ChasePlayer, so the first chase movement occurs in this pass
+            // rather than waiting for the next frame (s2.asm:73226-73231).
             state = State.CHASE;
             timer = CHASE_DURATION;
-            yVelFixed = INITIAL_CHASE_Y_VEL;  // -0x100 upward (line 72711)
+            yVelFixed = INITIAL_CHASE_Y_VEL;
+            updateChase(player);
         }
     }
 
@@ -205,11 +206,11 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
      * pause one frame early (P frames per cycle). Using {@code timer < 0}
      * reproduces the ROM {@code bmi} timing exactly.
      */
-    private void updatePause() {
+    private void updatePause(AbstractPlayableSprite player) {
         timer--;
         if (timer < 0) {
             // Timer underflowed (bmi.s loc_36970) - check attacks and start next chase
-            startNextAttackOrEscape();
+            startNextAttackOrEscape(player);
         }
     }
 
@@ -218,6 +219,17 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
      * When timer expires, transition to PAUSE with random duration.
      */
     private void updateChase(AbstractPlayableSprite player) {
+        // Obj8C_ChasePlayer pre-decrements obj8C_timer and branches to the pause
+        // routine on negative before orientation/movement (s2.asm:73231-73265).
+        timer--;
+        if (timer < 0) {
+            state = State.PAUSE;
+            timer = Sonic2Rng.nextWhispPauseTimer(services().rng());  // Random 0-31 frames
+            xVelFixed = 0;
+            yVelFixed = 0;
+            return;
+        }
+
         if (player != null) {
             // Calculate direction to player
             int playerX = player.getCentreX();
@@ -255,14 +267,6 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
         // Apply velocity to position
         xPosFixed += xVelFixed;
         yPosFixed += yVelFixed;
-
-        // Decrement chase timer
-        timer--;
-        if (timer <= 0) {
-            // Chase finished - transition to pause with random duration (lines 72744-72747)
-            state = State.PAUSE;
-            timer = Sonic2Rng.nextWhispPauseTimer(services().rng());  // Random 0-31 frames
-        }
     }
 
     /**
