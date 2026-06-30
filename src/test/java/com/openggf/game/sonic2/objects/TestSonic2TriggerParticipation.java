@@ -759,6 +759,17 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void springboardSlopedSolidBypassesOffscreenSolidGate() {
+        SpringboardObjectInstance springboard = new SpringboardObjectInstance(
+                new ObjectSpawn(0x1623, 0x0788, 0x40, 0, 0, false, 0),
+                "Springboard");
+
+        assertTrue(springboard.bypassesOffscreenSolidGate(),
+                "Obj40_Main calls SlopedSolid_SingleCharacter, which jumps to SlopedSolid_cont "
+                        + "without SolidObject_OnScreenTest (s2.asm:52292-52313, 35126, 35263)");
+    }
+
+    @Test
     void lateralCannonDropsQueryOnlyRidingSidekickOnRetract() {
         TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
