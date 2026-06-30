@@ -6,6 +6,8 @@ The canonical trace replay documentation now lives in:
 
 Use this folder for the recorder scripts and local BizHawk assets:
 
+- `run_bizhawk_lua.bat` launches any Lua/BK2/ROM combination safely for
+  diagnostics and one-off probes
 - `record_trace.bat` launches headless recording
 - `s1_trace_recorder.lua` captures the ROM-side trace data using schema v3
 - `record_s2_trace.bat` launches the Sonic 2 headless recorder
@@ -58,3 +60,22 @@ zone/act in aux diagnostics.
 
 If you update the trace workflow, update the guide page above first so the contributor docs stay in
 sync with the tools.
+
+For one-off diagnostics, copy `diag_template_fast.lua`, set the capture window
+environment variables, and run the reusable launcher instead of constructing a
+PowerShell `Start-Process` argument array:
+
+```bat
+set OGGF_START=16300
+set OGGF_STOP=16320
+set OGGF_OUT=C:\tmp\htz2_diag.txt
+tools\bizhawk\run_bizhawk_lua.bat ^
+  tools\bizhawk\diag_s2_htz2_obj30.lua ^
+  src\test\resources\traces\s2\htz2\s2-lvl-select-HTZ.bk2 ^
+  s2.gen
+```
+
+The launcher resolves all three input paths to absolute paths and invokes
+EmuHawk with normal Windows quoting. This avoids BizHawk 2.11 failures such as
+`Unrecognized command or argument '<path>\s2.gen'` and
+`System.ArgumentException: The path is not of a legal form`.
